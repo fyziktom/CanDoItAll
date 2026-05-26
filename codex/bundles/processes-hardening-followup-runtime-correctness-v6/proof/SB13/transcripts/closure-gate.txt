@@ -1,0 +1,18 @@
+Command: SB13 proof transcript: closure-gate.txt
+ExitCode: 0
+
+SB13 closure gate self-check
+PASS exists: bundle://proof/SB13/manifest.md
+PASS exists: bundle://proof/SB13/semantic-invariants.md
+PASS exists: bundle://proof/SB13/transcripts/failing-first.txt
+PASS exists: bundle://proof/SB13/transcripts/passing.txt
+PASS exists: bundle://proof/SB13/transcripts/passing-integration.txt
+PASS exists: bundle://proof/SB13/transcripts/component-proof.txt
+PASS exists: bundle://proof/SB13/transcripts/regression-integration.txt
+PASS exists: bundle://proof/SB13/transcripts/regression-components.txt
+PASS exists: bundle://proof/SB13/transcripts/source-assertions.txt
+PASS exists: bundle://proof/SB13/transcripts/anti-stub-audit.txt
+PASS exists: bundle://proof/SB13/transcripts/changed-file-hashes.txt
+PASS exists: bundle://proof/SB13/transcripts/diff-check.txt
+PASS no pending placeholders in SB13 proof/subbundle docs.
+

@@ -63,6 +63,14 @@ public enum ProcessOutboxHealthStatus {
     DeadLettered
 }
 
+public enum ProcessRuntimeInvariantDiagnosticKind {
+    AliasConflict,
+    WeakArtifactRecord,
+    BlockedRecoveryState,
+    DuplicateLineageIdentity,
+    ManualTransitionValidationFailure
+}
+
 public sealed record ProcessArtifactExpectationSatisfactionViewModel(
     Guid StepRunId,
     Guid ArtifactExpectationId,
@@ -100,6 +108,10 @@ public sealed record ProcessStepRunHealthViewModel(
     int DeadLetteredOutboxCount,
     IReadOnlyList<ProcessStepExecutionAttemptViewModel> Attempts)
 {
+    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+
+    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+
     public static ProcessStepRunHealthViewModel Empty { get; } = new(
         0,
         string.Empty,
@@ -141,6 +153,10 @@ public sealed record ProcessRunHealthSummaryViewModel(
     ProcessRecoveryClassification RecoveryClassification,
     string ActionableReason)
 {
+    public int InvariantDiagnosticCount { get; init; }
+
+    public ProcessStepRecoveryOption RecommendedAction { get; init; } = ProcessStepRecoveryOption.None;
+
     public static ProcessRunHealthSummaryViewModel Empty { get; } = new(
         0,
         0,
@@ -154,6 +170,19 @@ public sealed record ProcessRunHealthSummaryViewModel(
         ProcessRecoveryClassification.None,
         string.Empty);
 }
+
+public sealed record ProcessRuntimeInvariantDiagnosticViewModel(
+    ProcessRuntimeInvariantDiagnosticKind Kind,
+    ProcessConformanceSeverity Severity,
+    Guid? StepRunId,
+    string StepTitle,
+    Guid? ArtifactRecordId,
+    Guid? JournalEntryId,
+    string Title,
+    string Detail,
+    string RecommendedAction,
+    string EvidenceKey,
+    DateTimeOffset ObservedAtUtc);
 
 public sealed record ProcessLaunchPlanListItem(
     Guid Id,
@@ -715,6 +744,8 @@ public sealed class ProcessStepTransitionRequest
     public ProcessStepRunStatus TargetStatus { get; set; } = ProcessStepRunStatus.InProgress;
 
     public string Reason { get; set; } = string.Empty;
+
+    public ProcessStepBlockCause? BlockCause { get; set; }
 
     public Guid? SelectedBranchOutcomeId { get; set; }
 

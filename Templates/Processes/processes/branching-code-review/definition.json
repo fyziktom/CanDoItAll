@@ -239,7 +239,7 @@
       "OutputContractSummary": "Explicit next-lane selection for the reviewed change.",
       "EvidenceContractSummary": "Review notes, chosen route, and reasons for the selected lane.",
       "DecisionRightsSummary": "Review lead owns the switch outcome and must keep the route explicit on the canvas.",
-      "ExceptionPolicySummary": "Do not bury routing logic inside comments or verbal agreements; the chosen lane must stay modeled and replayable.",
+      "ExceptionPolicySummary": "Artifact recovery: block when the required review routing decision record is missing or invalid before selecting the next branch. Do not bury routing logic inside comments or verbal agreements; the chosen lane must stay modeled and replayable.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "prepare-pull-request",
       "DependsOnBranchOutcomeKey": "",

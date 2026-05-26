@@ -1,3 +1,18 @@
-# SB01 passing.txt
+Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~AgentWorkspaceToolAccessMetadataTests|FullyQualifiedName~AgentToolInvocationPolicyTests"
+ExitCode: 0
 
-Fill during execution.
+SB01-INV-001 passing proof after production fix.
+
+Test name: CanDoItAll.Tests.Unit.AgentWorkspaceToolAccessMetadataTests.GroundPromptExternalTargetAliases_does_not_add_same_trusted_writable_alias_as_read_only
+Test name: CanDoItAll.Tests.Unit.AgentWorkspaceToolAccessMetadataTests.GroundPromptExternalTargetAliases_does_not_add_child_alias_covered_by_writable_parent_as_read_only
+Test name: CanDoItAll.Tests.Unit.AgentWorkspaceToolAccessMetadataTests.GroundPromptExternalTargetAliases_adds_sibling_alias_outside_writable_parent_as_read_only
+Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_allows_product_file_mutation_when_external_target_is_trusted_writable_despite_readonly_overlap
+Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_does_not_let_readonly_parent_deny_writable_child_alias
+Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_denies_product_file_mutation_when_external_target_is_only_read_only
+
+Result excerpt:
+- Failed: 0
+- Passed: 110
+- Skipped: 0
+- Total: 110
+

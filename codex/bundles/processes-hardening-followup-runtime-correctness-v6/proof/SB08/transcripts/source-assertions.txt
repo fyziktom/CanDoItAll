@@ -1,3 +1,24 @@
-# SB08 source-assertions.txt
+Command: SB08 proof transcript: source-assertions.txt
+ExitCode: 0
 
-Fill during execution.
+# SB08 Source Assertions
+
+Command:
+`rg -n "StorageBackedProcessArtifactContentReader|WorkspaceProcessArtifactContentReader|CreateProcessArtifactContentReader|ValidateRequiredArtifactsForCompletion|managedArtifactContentReader|IProcessArtifactContentReader|StorageJson.TryParseReference|OpenReadAsync|TransitionStepAsync_SB08_INV_001" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S`
+
+Key findings:
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:41` calls `ValidateRequiredArtifactsForCompletion` during manual/API completion.
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:46` passes `CreateProcessArtifactContentReader()` into manual/API completion validation.
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:394` defines the manual/API required-artifact validation wrapper with a content reader parameter.
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:413` forwards `managedArtifactContentReader` into the shared validator.
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:442` creates `StorageBackedProcessArtifactContentReader`.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:87` defines `IProcessArtifactContentReader`.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:139` defines `WorkspaceProcessArtifactContentReader`.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:223` defines `StorageBackedProcessArtifactContentReader`.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:232` detects storage reference JSON.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:273` reads storage content through the driver `OpenReadAsync`.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:564` keeps automated finalizer validation on the storage-backed reader.
+- `tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:527` contains the SB08 manual completion red-team test.
+- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:13831` directly tests storage-backed reader validation.
+- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:13932` and later tests directly cover workspace reader fallback behavior.
+

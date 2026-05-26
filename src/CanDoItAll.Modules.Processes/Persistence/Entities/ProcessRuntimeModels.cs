@@ -207,6 +207,8 @@ public sealed class ProcessStepRun : IHasConcurrencyToken {
 
     public string RecoveryOptionsJson { get; set; } = "[]";
 
+    public ProcessStepRecoveryOption NextRecoveryAction { get; set; } = ProcessStepRecoveryOption.None;
+
     public string RefusalReason { get; set; } = string.Empty;
 
     public string ExceptionSummary { get; set; } = string.Empty;

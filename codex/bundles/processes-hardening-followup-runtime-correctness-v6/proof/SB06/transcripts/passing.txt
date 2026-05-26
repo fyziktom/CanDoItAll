@@ -1,3 +1,27 @@
-# SB06 passing.txt
+Command: SB06 proof transcript: passing.txt
+ExitCode: 0
 
-Fill during execution.
+# SB06 Passing Transcript
+
+Command:
+
+```powershell
+dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~WorkspaceCommandExecutionServiceTests"
+```
+
+Result:
+
+```text
+Successful! - Failed: 0, Passed: 120, Skipped: 0, Total: 120, Duration: 419 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+```
+
+Known warnings:
+
+```text
+MSB3277: conflicts between different versions of Microsoft.EntityFrameworkCore.Relational
+```
+
+The warning pattern existed in prior focused validation and is unrelated to SB06.
+
+
+Invariant ID: SB06-INV-001

@@ -235,7 +235,7 @@ public sealed partial class ProcessesService
         var externalReferenceKey = BoundProcessArtifactText(
             request.ExternalReferenceKey.Trim(),
             MaxProcessArtifactExternalReferenceKeyLength);
-        var projectionLineage = ProcessArtifactProjectionLineageJson.Normalize(request.ProjectionLineage);
+        var projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(request.ProjectionLineage);
         var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
         {
@@ -327,7 +327,7 @@ public sealed partial class ProcessesService
             ReviewSummary = request.ReviewSummary.Trim(),
             ManagedStoragePath = request.ManagedStoragePath.Trim(),
             ExternalReferenceKey = externalReferenceKey,
-            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(projectionLineage),
+            ProjectionLineageJson = ProcessArtifactIdentityService.SerializeNormalizedProjectionLineage(projectionLineage),
             ProjectionIdentityHash = projectionIdentityHash,
             CreatedAtUtc = clock.GetUtcNow()
         };

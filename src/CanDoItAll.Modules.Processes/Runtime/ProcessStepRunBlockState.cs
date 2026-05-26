@@ -13,15 +13,28 @@ internal static class ProcessStepRunBlockState
 
         stepRun.BlockReasonCode = ProcessStepBlockReasonCode.None;
         stepRun.RecoveryOptionsJson = "[]";
+        stepRun.NextRecoveryAction = ProcessStepRecoveryOption.None;
     }
 
-    public static void Apply(ProcessStepRun stepRun, string reason)
+    public static ProcessRecoveryRoutingDecision Apply(ProcessStepRun stepRun, string reason, ProcessStepBlockCause? cause = null)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
 
-        var code = InferBlockReasonCode(reason);
+        var classification = ProcessBlockStateClassifier.Classify(reason, cause);
+        var code = classification.ReasonCode;
+        var recoveryOptions = classification.RecoveryOptions;
+        var routingDecision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
+            code,
+            cause,
+            reason,
+            recoveryOptions,
+            [],
+            ProcessRecoveryRouter.BuildEvidenceFingerprint(code, cause, reason),
+            HasNewEvidence: true));
         stepRun.BlockReasonCode = code;
-        stepRun.RecoveryOptionsJson = SerializeRecoveryOptions(ResolveRecoveryOptions(code));
+        stepRun.RecoveryOptionsJson = SerializeRecoveryOptions(recoveryOptions);
+        stepRun.NextRecoveryAction = routingDecision.NextAction;
+        return routingDecision;
     }
 
     public static IReadOnlyList<ProcessStepRecoveryOption> ResolveRecoveryOptions(ProcessStepRun stepRun)
@@ -47,112 +60,32 @@ internal static class ProcessStepRunBlockState
 
     public static bool IsMissingUpstreamArtifactBlock(ProcessStepRun stepRun)
     {
-        ArgumentNullException.ThrowIfNull(stepRun);
-
-        return stepRun.BlockReasonCode == ProcessStepBlockReasonCode.MissingUpstreamArtifact ||
-               ProcessRuntimeProgressionPlanner.IsMissingUpstreamArtifactBlock(stepRun.BlockedReason);
+        return ProcessBlockStateClassifier.IsMissingUpstreamArtifactBlock(stepRun);
     }
 
     internal static ProcessStepBlockReasonCode InferBlockReasonCode(string reason)
     {
-        var normalized = (reason ?? string.Empty).Trim();
-        if (ProcessRuntimeProgressionPlanner.IsMissingUpstreamArtifactBlock(normalized) ||
-            ContainsAny(normalized, "missing required artifact", "required artifacts remain missing", "missing upstream artifact"))
-        {
-            return ProcessStepBlockReasonCode.MissingUpstreamArtifact;
-        }
-
-        if (ContainsAny(normalized, "policy", "permission", "denied", "external-target", "not authorized"))
-        {
-            return ProcessStepBlockReasonCode.PolicyDeniedExternalPath;
-        }
-
-        if (ContainsAny(normalized, "credential", "api key", "secret"))
-        {
-            return ProcessStepBlockReasonCode.MissingCredential;
-        }
-
-        if (ContainsAny(normalized, "tool", "capability gap", "unavailable"))
-        {
-            return ProcessStepBlockReasonCode.ToolUnavailable;
-        }
-
-        if (ContainsAny(normalized, "validation", "test failed", "build failed"))
-        {
-            return ProcessStepBlockReasonCode.ValidationFailed;
-        }
-
-        if (ContainsAny(normalized, "no progress", "repeated", "loop"))
-        {
-            return ProcessStepBlockReasonCode.NoProgress;
-        }
-
-        if (ContainsAny(normalized, "runtime invariant", "invariant violation"))
-        {
-            return ProcessStepBlockReasonCode.RuntimeInvariantViolation;
-        }
-
-        if (ContainsAny(normalized, "artifact contract", "required artifact expectation"))
-        {
-            return ProcessStepBlockReasonCode.ArtifactContractUnsatisfied;
-        }
-
-        return string.IsNullOrWhiteSpace(normalized)
-            ? ProcessStepBlockReasonCode.Unknown
-            : ProcessStepBlockReasonCode.AgentExecutionFailed;
+        return ProcessBlockStateClassifier.InferBlockReasonCode(reason);
     }
 
-    private static IReadOnlyList<ProcessStepRecoveryOption> ResolveRecoveryOptions(ProcessStepBlockReasonCode code)
+    internal static ProcessStepBlockCause? InferBlockCause(string reason)
     {
-        return code switch
-        {
-            ProcessStepBlockReasonCode.MissingUpstreamArtifact =>
-            [
-                ProcessStepRecoveryOption.WaitForArtifactMaterialization,
-                ProcessStepRecoveryOption.RecoverArtifactsOnly,
-                ProcessStepRecoveryOption.HumanEscalation
-            ],
-            ProcessStepBlockReasonCode.PolicyDeniedExternalPath =>
-            [
-                ProcessStepRecoveryOption.HumanEscalation,
-                ProcessStepRecoveryOption.ReworkContinuation
-            ],
-            ProcessStepBlockReasonCode.ValidationFailed =>
-            [
-                ProcessStepRecoveryOption.RerunValidation,
-                ProcessStepRecoveryOption.RepairImplementation
-            ],
-            ProcessStepBlockReasonCode.RuntimeInvariantViolation =>
-            [
-                ProcessStepRecoveryOption.HumanEscalation,
-                ProcessStepRecoveryOption.ReworkContinuation
-            ],
-            ProcessStepBlockReasonCode.NoProgress =>
-            [
-                ProcessStepRecoveryOption.FreshAgentSession,
-                ProcessStepRecoveryOption.HumanEscalation
-            ],
-            ProcessStepBlockReasonCode.MissingCredential or ProcessStepBlockReasonCode.ToolUnavailable =>
-            [
-                ProcessStepRecoveryOption.HumanEscalation,
-                ProcessStepRecoveryOption.RetryAgent
-            ],
-            _ =>
-            [
-                ProcessStepRecoveryOption.RetryAgent,
-                ProcessStepRecoveryOption.HumanEscalation
-            ]
-        };
+        return ProcessBlockStateClassifier.InferBlockCause(reason);
+    }
+
+    internal static ProcessStepBlockReasonCode ResolveBlockReasonCode(ProcessStepBlockCause cause)
+    {
+        return ProcessBlockStateClassifier.ResolveBlockReasonCode(cause);
+    }
+
+    internal static IReadOnlyList<ProcessStepRecoveryOption> ResolveRecoveryOptions(ProcessStepBlockReasonCode code)
+    {
+        return ProcessBlockStateClassifier.ResolveRecoveryOptions(code);
     }
 
     private static string SerializeRecoveryOptions(IReadOnlyList<ProcessStepRecoveryOption> options)
     {
         return JsonSerializer.Serialize(options, SerializerOptions);
-    }
-
-    private static bool ContainsAny(string value, params string[] tokens)
-    {
-        return tokens.Any(token => value.Contains(token, StringComparison.OrdinalIgnoreCase));
     }
 
     private static JsonSerializerOptions CreateSerializerOptions()

@@ -15,6 +15,12 @@ public enum ProcessVersionStatus
     Archived
 }
 
+public enum ProcessDefinitionContractMode
+{
+    Compatibility,
+    Strict
+}
+
 public enum ProcessCriticality
 {
     Low,
@@ -86,8 +92,17 @@ public enum ProcessStepBlockReasonCode
     Unknown
 }
 
+public enum ProcessStepBlockCause
+{
+    OwnOutput,
+    UpstreamInput,
+    RuntimeEvidence,
+    PolicyDenied
+}
+
 public enum ProcessStepRecoveryOption
 {
+    None,
     WaitForArtifactMaterialization,
     RecoverArtifactsOnly,
     RetryAgent,

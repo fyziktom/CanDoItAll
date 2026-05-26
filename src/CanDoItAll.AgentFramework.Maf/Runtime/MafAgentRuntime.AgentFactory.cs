@@ -468,10 +468,14 @@ public sealed partial class MafAgentRuntime
             var redactedArguments = AgentToolInvocationPolicyMetadata.RedactArguments(invocationArguments);
             var classification = AgentToolInvocationPolicyMetadata.Classify(functionName);
             var auditScope = WorkspaceExecutionAuditContext.Current;
+            var scriptSideEffectManifestJson = TryGetStringArgument(
+                invocationArguments,
+                GovernedScriptSideEffectManifest.ArgumentName) ?? string.Empty;
             var scriptInspection = ResolveScriptContentInspectionForPolicy(
                 functionName,
                 invocationArguments,
-                auditScope);
+                auditScope,
+                scriptSideEffectManifestJson);
             var policyContext = new ToolInvocationPolicyContext(
                 AgentId: agentDefinition.Id,
                 AgentName: agentDefinition.Name,
@@ -494,7 +498,8 @@ public sealed partial class MafAgentRuntime
                 ProcessStepAllowedOperations: auditScope?.ProcessStepAllowedOperations ?? [],
                 ProcessStepTargetScope: auditScope?.ProcessStepTargetScope ?? string.Empty,
                 InspectedScriptContent: scriptInspection.Content,
-                ScriptInspectionFailure: scriptInspection.FailureMessage);
+                ScriptInspectionFailure: scriptInspection.FailureMessage,
+                ScriptSideEffectManifestJson: scriptSideEffectManifestJson);
             var policyDecision = await toolPolicy.EvaluateAsync(policyContext, cancellationToken);
             using var activity = AgentFrameworkTelemetry.ActivitySource.StartActivity("maf.function.invoke", ActivityKind.Internal);
             AgentFrameworkTelemetry.ApplyCurrentAuditScope(activity);
@@ -1054,7 +1059,8 @@ public sealed partial class MafAgentRuntime
     private ScriptContentInspection ResolveScriptContentInspectionForPolicy(
         string functionName,
         IReadOnlyList<KeyValuePair<string, object?>> arguments,
-        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)
+        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope,
+        string scriptSideEffectManifestJson)
     {
         if (!IsWorkspaceScriptExecutionTool(functionName))
         {
@@ -1091,7 +1097,26 @@ public sealed partial class MafAgentRuntime
                     $"script path '{scriptPath}' is larger than the {MaxPolicyInspectedScriptBytes} byte policy inspection limit.");
             }
 
-            return new ScriptContentInspection(File.ReadAllText(fullPath), string.Empty);
+            var inspectedContent = File.ReadAllText(fullPath);
+            if (GovernedScriptSideEffectManifest.TryParse(
+                    scriptSideEffectManifestJson,
+                    out var manifest,
+                    out _) &&
+                manifest.DeclaredChildScripts.Length > 0)
+            {
+                var childInspection = ResolveDeclaredChildScriptInspection(manifest, auditScope);
+                if (!string.IsNullOrWhiteSpace(childInspection.FailureMessage))
+                {
+                    return childInspection;
+                }
+
+                inspectedContent = string.Join(
+                    Environment.NewLine,
+                    inspectedContent,
+                    childInspection.Content);
+            }
+
+            return new ScriptContentInspection(inspectedContent, string.Empty);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
         {
@@ -1099,6 +1124,53 @@ public sealed partial class MafAgentRuntime
                 string.Empty,
                 $"script path '{scriptPath}' could not be read for policy inspection: {exception.Message}");
         }
+    }
+
+    private ScriptContentInspection ResolveDeclaredChildScriptInspection(
+        GovernedScriptSideEffectManifest manifest,
+        WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)
+    {
+        var inspectedChildScripts = new List<string>();
+        foreach (var childScript in manifest.DeclaredChildScripts)
+        {
+            if (!TryResolvePolicyReadableScriptPath(childScript, auditScope, out var childFullPath, out var failureMessage))
+            {
+                return new ScriptContentInspection(
+                    string.Empty,
+                    $"declared child script '{childScript}' could not be resolved for policy inspection: {failureMessage}");
+            }
+
+            try
+            {
+                var childFileInfo = new FileInfo(childFullPath);
+                if (!childFileInfo.Exists)
+                {
+                    return new ScriptContentInspection(
+                        string.Empty,
+                        $"declared child script '{childScript}' does not exist.");
+                }
+
+                if (childFileInfo.Length > MaxPolicyInspectedScriptBytes)
+                {
+                    return new ScriptContentInspection(
+                        string.Empty,
+                        $"declared child script '{childScript}' is larger than the {MaxPolicyInspectedScriptBytes} byte policy inspection limit.");
+                }
+
+                inspectedChildScripts.Add(DefaultAgentToolInvocationPolicy.BuildInspectedChildScriptMarker(childScript));
+                inspectedChildScripts.Add(File.ReadAllText(childFullPath));
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                return new ScriptContentInspection(
+                    string.Empty,
+                    $"declared child script '{childScript}' could not be read for policy inspection: {exception.Message}");
+            }
+        }
+
+        return new ScriptContentInspection(
+            string.Join(Environment.NewLine, inspectedChildScripts),
+            string.Empty);
     }
 
     private bool TryResolvePolicyReadableScriptPath(

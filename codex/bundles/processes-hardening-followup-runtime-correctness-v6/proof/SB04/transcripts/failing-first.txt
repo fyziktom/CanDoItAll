@@ -1,3 +1,16 @@
+Command: SB04 proof transcript: failing-first.txt
+ExitCode: 1
+
 # SB04 failing-first.txt
 
-Fill during execution.
+Red-team target: checkpoint extraction must not be a prompt-only or source-only change.
+
+Pre-refactor gap:
+- Metadata, operation-contract resolution, and target-grounding ledger assembly were reachable mostly through private `ProcessRunAutomationDispatchService` methods.
+- Existing metadata tests used private-method reflection around `BuildProcessInvocationMetadataJson`.
+
+Closure strategy:
+- Add production-callable extracted boundaries.
+- Add direct focused tests for `ProcessInvocationMetadataBuilder`, `ProcessStepOperationContractResolver`, and `ProcessTargetGroundingLedgerBuilder`.
+- Preserve an existing stale-upstream alias regression test to prove behavior did not change during extraction.
+

@@ -22,7 +22,7 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private sealed record DispatchCandidate(
+    internal sealed record DispatchCandidate(
         ProcessRun Run,
         ProcessDefinition Definition,
         ProcessStepRun StepRun,
@@ -76,7 +76,7 @@ internal sealed record SubprocessCapabilityGapStep(
     Guid? CurrentExecutorPartyId,
     string CurrentExecutorName);
 
-    private sealed record DispatchArtifactInput(
+    internal sealed record DispatchArtifactInput(
         string SourceStepTitle,
         string ExpectedArtifactTitle,
         Guid ArtifactExpectationId,
@@ -87,7 +87,7 @@ internal sealed record SubprocessCapabilityGapStep(
         bool SourceStepHasAgentExecutor,
         IReadOnlyList<DispatchArtifactReference> Artifacts);
 
-    private sealed record DispatchArtifactReference(
+    internal sealed record DispatchArtifactReference(
         string Title,
         string ArtifactKind,
         string ManagedStoragePath,
@@ -136,7 +136,7 @@ internal sealed record SubprocessCapabilityGapStep(
         string BranchOutcomeKey,
         string BranchOutcomeTitle);
 
-    private sealed record DispatchBranchOutcome(
+    internal sealed record DispatchBranchOutcome(
         Guid Id,
         string Key,
         string Title,

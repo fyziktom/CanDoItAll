@@ -475,7 +475,7 @@
       "OutputContractSummary": "Integrated plan approved, blocked, or returned for specific corrections.",
       "EvidenceContractSummary": "Review note identifies decision status, assumptions, risks, and next actions.",
       "DecisionRightsSummary": "Business strategist recommends; governance owner approves or blocks the plan.",
-      "ExceptionPolicySummary": "Block when finance and marketing assumptions conflict or critical source data is missing.",
+      "ExceptionPolicySummary": "Block when finance and marketing assumptions conflict or critical source data is missing. Artifact recovery: block when the required integrated review decision artifact is missing or invalid before branch routing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "marketing-plan",
       "DependsOnBranchOutcomeKey": "",

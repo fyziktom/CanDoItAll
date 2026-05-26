@@ -145,6 +145,12 @@
                                 Recovery: @stepRun.Health.RecoveryClassification
                             </p>
                         }
+                        @if (stepRun.Health.NextRecoveryAction != ProcessStepRecoveryOption.None)
+                        {
+                            <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
+                                Recommended action: @Presenter.FormatRecoveryAction(stepRun.Health.NextRecoveryAction)
+                            </p>
+                        }
 
                         <CompactStatStrip Class="mt-5">
                             <CompactStat Label="wait"

@@ -2,19 +2,19 @@
 
 ## Invariant SB10-INV-001
 
-Expected behavior: Make recovery options executable and deterministic.
+- Invariant ID: SB10-INV-001
+- Source raw note: RN06.
+- Expected behavior: Recovery router persists deterministic executable next actions and escalates repeated no-progress recovery.
+- Disallowed shallow implementation: Prompt-only changes, source-assertion-only proof, fixture-only branching, text-only heuristics, or tests that avoid the production runtime path.
+- Failing-first test: bundle://proof/SB10/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB10/transcripts/passing.txt
+- Changed source files: repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs
+- Production assertions: bundle://proof/SB10/manifest.md records the exact source assertions, tests, anti-stub audit, and changed-file hashes for this invariant.
+- Red-team negative case: bundle://proof/SB10/transcripts/failing-first.txt
+- Downstream dependency check: SB11 and SB13 consume recovery routing state.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
-- adding more fragile text heuristics without typed state
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative proof |
+| --- | --- | --- | --- | --- |
+| SB10 verified runtime behavior | repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs | bundle://proof/SB10/manifest.md | bundle://proof/SB10/transcripts/passing.txt | bundle://proof/SB10/transcripts/failing-first.txt |

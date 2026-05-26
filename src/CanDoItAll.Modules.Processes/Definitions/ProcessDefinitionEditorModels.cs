@@ -96,6 +96,8 @@ public sealed class ProcessDefinitionEditorModel
 
     public ProcessAutonomyLevel AutonomyLevel { get; set; } = ProcessAutonomyLevel.Assisted;
 
+    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Strict;
+
     public ProcessDefinitionStatus Status { get; set; } = ProcessDefinitionStatus.Draft;
 
     public ProcessDefinitionLintResult LintResult { get; set; } = ProcessDefinitionLintResult.Empty;
@@ -285,6 +287,14 @@ public sealed class ProcessArtifactExpectationEditorModel
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ValidationRequirementSummary { get; set; } = string.Empty;
+
+    public string WorkflowOutputId { get; set; } = string.Empty;
+
+    public string WorkflowOutputName { get; set; } = string.Empty;
+
+    public WorkflowArtifactKind? WorkflowOutputKind { get; set; }
+
+    public Guid? SubprocessChildArtifactExpectationId { get; set; }
 }
 
 public sealed class ProcessStepArtifactInputEditorModel

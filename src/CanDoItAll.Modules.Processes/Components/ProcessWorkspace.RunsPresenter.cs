@@ -116,6 +116,8 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline => workspace.attemptTimeline;
 
+        public IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> InvariantDiagnostics => workspace.invariantDiagnostics;
+
         public IReadOnlyList<ProcessActiveRunSummaryViewModel> ActiveRunSummaries => workspace.activeRunSummaries;
 
         public IReadOnlyList<ProjectPartyOption> PartyOptions => workspace.partyOptions;
@@ -585,6 +587,11 @@ public partial class ProcessWorkspace
         public string ResolveConformanceTone(ProcessConformanceSeverity severity)
         {
             return ProcessWorkspace.ResolveConformanceTone(severity);
+        }
+
+        public string FormatRecoveryAction(ProcessStepRecoveryOption action)
+        {
+            return ProcessWorkspace.FormatRecoveryAction(action);
         }
 
         public string ResolveEscalationStatusTone(ProcessEscalationViewModel escalation)

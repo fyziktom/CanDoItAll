@@ -64,6 +64,7 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(step => step.BlockedReason).HasColumnType("TEXT");
         builder.Property(step => step.BlockReasonCode).HasConversion<string>().HasMaxLength(80);
         builder.Property(step => step.RecoveryOptionsJson).HasColumnType("TEXT");
+        builder.Property(step => step.NextRecoveryAction).HasConversion<string>().HasMaxLength(80);
         builder.Property(step => step.RefusalReason).HasColumnType("TEXT");
         builder.Property(step => step.ExceptionSummary).HasColumnType("TEXT");
         builder.Property(step => step.InputQualitySummary).HasColumnType("TEXT");

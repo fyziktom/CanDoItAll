@@ -225,7 +225,11 @@ internal sealed class ProcessDefinitionDraftCloneEngine
                     SensitivityLevel = artifactExpectation.SensitivityLevel,
                     RetentionDays = artifactExpectation.RetentionDays,
                     AllowedFutureUsageSummary = artifactExpectation.AllowedFutureUsageSummary,
-                    ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary
+                    ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary,
+                    WorkflowOutputId = artifactExpectation.WorkflowOutputId,
+                    WorkflowOutputName = artifactExpectation.WorkflowOutputName,
+                    WorkflowOutputKind = artifactExpectation.WorkflowOutputKind,
+                    SubprocessChildArtifactExpectationId = artifactExpectation.SubprocessChildArtifactExpectationId
                 },
                 cancellationToken);
         }

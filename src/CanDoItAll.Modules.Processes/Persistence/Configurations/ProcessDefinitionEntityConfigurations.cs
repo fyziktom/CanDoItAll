@@ -54,6 +54,7 @@ internal sealed class ProcessDefinitionVersionConfiguration : IEntityTypeConfigu
         builder.Property(version => version.ManagerAgentOverrideName).HasMaxLength(200);
         builder.Property(version => version.ImportedFrom).HasMaxLength(200);
         builder.Property(version => version.ImportWarnings).HasColumnType("TEXT");
+        builder.Property(version => version.ContractMode).HasConversion<string>().HasMaxLength(40);
         builder.Property(version => version.PublishedBy).HasMaxLength(160);
         builder.Property(version => version.ConcurrencyToken).IsConcurrencyToken();
         builder.HasIndex(version => version.ManagerAgentOverrideId);
@@ -319,7 +320,11 @@ internal sealed class ProcessArtifactExpectationConfiguration : IEntityTypeConfi
         builder.Property(expectation => expectation.SensitivityLevel).HasConversion<string>().HasMaxLength(48);
         builder.Property(expectation => expectation.AllowedFutureUsageSummary).HasColumnType("TEXT");
         builder.Property(expectation => expectation.ValidationRequirementSummary).HasColumnType("TEXT");
+        builder.Property(expectation => expectation.WorkflowOutputId).HasMaxLength(160);
+        builder.Property(expectation => expectation.WorkflowOutputName).HasMaxLength(160);
+        builder.Property(expectation => expectation.WorkflowOutputKind).HasConversion<string>().HasMaxLength(48);
         builder.HasIndex(expectation => expectation.StepDefinitionId);
+        builder.HasIndex(expectation => expectation.SubprocessChildArtifactExpectationId);
         builder.HasOne<ProcessStepDefinition>()
             .WithMany()
             .HasForeignKey(expectation => expectation.StepDefinitionId)

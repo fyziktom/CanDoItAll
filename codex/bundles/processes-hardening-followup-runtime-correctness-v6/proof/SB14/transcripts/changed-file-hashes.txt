@@ -1,3 +1,20 @@
-# SB14 changed-file-hashes.txt
+Command: Get-FileHash -Algorithm SHA256 <SB14 source/proof files>
+ExitCode: 0
 
-Fill during execution.
+SB14-INV-001 changed-file hashes.
+
+D4C1C46BE7E3CE55C42D08D2BBF65753F555462B1E352D4049EECD8DCA4A1A2A  repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+DE70499461691FFA2E30598D06896FD73FBBB9FDF58E1D9DCDD30C7A49BC654C  repo://tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs
+2A2C301A4F1280C722E5921F50C2697577F59EAAB53C49608BE6ED313BFF5FB7  repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+0754AB45AAE46A0A0625810BD1667492A8906B28D94119103467C4157BE9A0BC  repo://tests/CanDoItAll.Tests.Integration/ProcessWorkflowRepairDefinitionTestFixture.cs
+E7CBE989CDF1E6C8CD5B92C0E6406AC496AD98C954C44D011DFCDC391020F78A  repo://src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.cs
+3C709E81701DC372BA9A6CF7CD89BC2A2A6352A32B1189E47D417EEE3B410BCF  repo://src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs
+3A6106CCAAC6580BB0DD5107F3541F145ABAF475919BE436579C46C11AFF23B6  repo://Templates/Processes/processes/business-plan-development/definition.json
+759D5D5425EC4669023938CEA73F2195099C091D4E3C6669675C78E8739951DC  repo://Templates/Processes/processes/software-delivery/definition.json
+2DF81C1EC0BC7D3BE4E5F1135506D00B96CBDC2A1BCE6BB3AEF4B0F42A1191B0  repo://Templates/Processes/processes/software-delivery/projection/current-module.import-envelope.json
+18435EB5F542BD6844ED47679967DE93FF24CC17FA588D127EA5BA4872FA8BDC  repo://Templates/Processes/processes/branching-code-review/definition.json
+1E46F2D4F29E872BFCC46C76942E71836F589D8C2D9F29029A1AC0BC813B7C0E  repo://codex/bundles/processes-hardening-followup-runtime-correctness-v6/proof/SB14/manifest.md
+BA5F07A3D9717888A5E623AE96462C64C87D7267DCE8FD9407B2BBDADAA4520A  repo://codex/bundles/processes-hardening-followup-runtime-correctness-v6/proof/SB14/semantic-invariants.md
+B2D371405570EEE09D222538A5A3454A19A3CEDCB255FF482D472B79DDFFF3C9  repo://codex/bundles/processes-hardening-followup-runtime-correctness-v6/subbundles/14-generic-scenario-harness-and-final-red-team-closure/README.md
+F6FD93F032C6F014694F56B2B11BE9BE9B9868D42C4B539439E3B006CE1D4649  repo://codex/bundles/processes-hardening-followup-runtime-correctness-v6/reviews/01-execution-report.md
+D796124D4CB13AFC1B5BC75F1279686215959A31CC23E9774D16E8ECA659B0E5  repo://codex/bundles/processes-hardening-followup-runtime-correctness-v6/README.md

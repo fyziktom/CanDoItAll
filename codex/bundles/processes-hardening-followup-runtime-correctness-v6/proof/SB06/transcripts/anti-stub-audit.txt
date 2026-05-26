@@ -1,3 +1,35 @@
-# SB06 anti-stub-audit.txt
+Command: SB06 proof transcript: anti-stub-audit.txt
+ExitCode: 0
 
-Fill during execution.
+# SB06 Anti-Stub Audit
+
+Command:
+
+```powershell
+rg -n "GovernedScriptSideEffectManifest|ProductTargetMutationAudit|Post-execution product target audit|PowerShellEncodedCommandRegex|PythonWriteSignalRegex|sideEffectManifest" src tests -S
+```
+
+Result summary:
+
+- `GovernedScriptSideEffectManifest` is a typed model with enum side-effect modes and JSON parsing validation.
+- `AgentToolInvocationPolicy` requires the manifest for non-mutating governed scripts and denies risky script constructs.
+- `MafAgentRuntime.AgentFactory` passes the manifest into policy and inspects declared child scripts.
+- `WorkspaceCommandProcessRunner` performs a post-execution `ProductTargetMutationAudit`.
+- Unit tests cover red-team denial paths and positive declared paths.
+
+This proves the fix is not prompt-only and not regex-only: manifest validation happens before execution, and a file-system product-root diff audit happens after execution.
+
+## PostgreSQL-Only Audit
+
+Command:
+
+```powershell
+rg -n "Sqlite|SQLite|UseSqlite|Migrations.Sqlite" src tests codex/bundles/processes-hardening-followup-runtime-correctness-v6 -S
+```
+
+Result summary:
+
+- Existing retired/legacy SQLite quarantine strings and tests are still present.
+- Bundle text still states that SQLite runtime and migration paths must not be added.
+- SB06 added no `UseSqlite`, `Migrations.Sqlite`, runtime provider switching, or SQLite migration dependency.
+

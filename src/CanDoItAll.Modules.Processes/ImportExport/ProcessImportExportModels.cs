@@ -58,6 +58,8 @@ public sealed class ProcessDefinitionImportExportModel
 
     public ProcessAutonomyLevel AutonomyLevel { get; set; } = ProcessAutonomyLevel.Assisted;
 
+    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Compatibility;
+
     public ProcessDefinitionStatus Status { get; set; } = ProcessDefinitionStatus.Draft;
 
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];

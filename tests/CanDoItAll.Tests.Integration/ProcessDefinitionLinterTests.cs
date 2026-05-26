@@ -95,6 +95,35 @@ public sealed class ProcessDefinitionLinterTests
     }
 
     [Fact]
+    public void Analyze_SB12_INV_001_strict_rejects_text_inferred_operation_contract()
+    {
+        var model = CreateBaseDefinition();
+        model.Steps.Add(new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Implement Blazor product component",
+            StepKind = ProcessStepKind.Work,
+            OutputContractSummary = "Operation contract: allowed operations MutateProductTarget; target scope ExternalProductTargetMutable. Implement the Blazor component in the product root.",
+            ArtifactExpectations =
+            [
+                new ProcessArtifactExpectationEditorModel
+                {
+                    Title = "Implementation change set",
+                    ArtifactKind = ProcessArtifactKind.Deliverable,
+                    ValidationRequirementSummary = "Must list product files changed."
+                }
+            ]
+        });
+
+        var result = ProcessDefinitionLinter.Analyze(model, ProcessDefinitionLintMode.Strict);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-inferred" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Error);
+        Assert.True(result.HasErrors);
+    }
+
+    [Fact]
     public void Analyze_SB08_INV_001_accepts_typed_operation_contract_without_text_markers()
     {
         var model = CreateBaseDefinition();

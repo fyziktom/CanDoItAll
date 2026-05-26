@@ -1,3 +1,128 @@
-# SB10 source-assertions.txt
+Command: SB10 proof transcript: source-assertions.txt
+ExitCode: 0
 
-Fill during execution.
+SB10 source assertions captured from production and test source.
+
+## Router maps typed block causes to executable recovery actions
+rg -n MissingUpstreamArtifact|ArtifactContractUnsatisfied|ValidationFailed|NoProgress|PolicyDenied|MissingCredential|ToolUnavailable|RuntimeInvariant|CapabilityGap|AgentExecutionFailed|ManualRerun|WaitForArtifactMaterialization|RecoverArtifactsOnly|RepairImplementation|FreshAgentSession|HumanEscalation|ReworkContinuation src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs
+28:    bool IsNoProgressGuarded);
+45:        var noProgressGuarded = IsRepeatedNoProgressWithoutNewEvidence(
+51:            selectedAction = SelectAvailableAction(ProcessStepRecoveryOption.HumanEscalation, availableActions);
+94:        if (failureOwnership == ProcessStepBlockCause.PolicyDenied)
+96:            return ProcessStepRecoveryOption.HumanEscalation;
+101:            ProcessStepBlockReasonCode.MissingUpstreamArtifact => ProcessStepRecoveryOption.WaitForArtifactMaterialization,
+102:            ProcessStepBlockReasonCode.ArtifactContractUnsatisfied => ProcessStepRecoveryOption.RecoverArtifactsOnly,
+103:            ProcessStepBlockReasonCode.ValidationFailed => ProcessStepRecoveryOption.RepairImplementation,
+104:            ProcessStepBlockReasonCode.NoProgress => ProcessStepRecoveryOption.FreshAgentSession,
+105:            ProcessStepBlockReasonCode.PolicyDeniedExternalPath or
+106:            ProcessStepBlockReasonCode.MissingCredential or
+107:            ProcessStepBlockReasonCode.ToolUnavailable or
+108:            ProcessStepBlockReasonCode.RuntimeInvariantViolation or
+109:            ProcessStepBlockReasonCode.CapabilityGap => ProcessStepRecoveryOption.HumanEscalation,
+110:            ProcessStepBlockReasonCode.ManualRerun => ProcessStepRecoveryOption.ReworkContinuation,
+111:            ProcessStepBlockReasonCode.AgentExecutionFailed => ProcessStepRecoveryOption.FreshAgentSession,
+112:            _ when ContainsValidationRepairSignal(diagnostic) => ProcessStepRecoveryOption.RepairImplementation,
+133:        return availableActions.FirstOrDefault(ProcessStepRecoveryOption.HumanEscalation);
+136:    private static bool IsRepeatedNoProgressWithoutNewEvidence(
+141:        return request.BlockReasonCode == ProcessStepBlockReasonCode.NoProgress &&
+154:            ProcessStepRecoveryOption.WaitForArtifactMaterialization or
+155:            ProcessStepRecoveryOption.RecoverArtifactsOnly => ProcessRecoveryClassification.MissingArtifact,
+156:            ProcessStepRecoveryOption.FreshAgentSession => ProcessRecoveryClassification.ContextResetRetry,
+157:            ProcessStepRecoveryOption.RepairImplementation or
+159:            ProcessStepRecoveryOption.ReworkContinuation => ProcessRecoveryClassification.ProviderRepairRetry,
+160:            ProcessStepRecoveryOption.HumanEscalation => blockReasonCode == ProcessStepBlockReasonCode.NoProgress
+162:                : ProcessRecoveryClassification.ManualRerun,
+
+## Router prevents repeated no-progress attempts without new evidence
+rg -n BuildEvidenceFingerprint|IsNoProgressGuarded|PriorAttempts|HumanEscalation|NoProgress src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs
+28:    bool IsNoProgressGuarded);
+42:            ? BuildEvidenceFingerprint(request.BlockReasonCode, request.FailureOwnership, request.Diagnostic)
+45:        var noProgressGuarded = IsRepeatedNoProgressWithoutNewEvidence(
+51:            selectedAction = SelectAvailableAction(ProcessStepRecoveryOption.HumanEscalation, availableActions);
+65:    public static string BuildEvidenceFingerprint(
+96:            return ProcessStepRecoveryOption.HumanEscalation;
+104:            ProcessStepBlockReasonCode.NoProgress => ProcessStepRecoveryOption.FreshAgentSession,
+109:            ProcessStepBlockReasonCode.CapabilityGap => ProcessStepRecoveryOption.HumanEscalation,
+133:        return availableActions.FirstOrDefault(ProcessStepRecoveryOption.HumanEscalation);
+136:    private static bool IsRepeatedNoProgressWithoutNewEvidence(
+141:        return request.BlockReasonCode == ProcessStepBlockReasonCode.NoProgress &&
+160:            ProcessStepRecoveryOption.HumanEscalation => blockReasonCode == ProcessStepBlockReasonCode.NoProgress
+
+## Runtime persists next recovery action and clears it on unblock
+rg -n NextRecoveryAction|RecoveryOptionsJson|ProcessRecoveryRouter.Route|ProcessStepRecoveryOption.None src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessRuntimeEntityConfigurations.cs
+src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs:208:    public string RecoveryOptionsJson { get; set; } = "[]";
+src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs:210:    public ProcessStepRecoveryOption NextRecoveryAction { get; set; } = ProcessStepRecoveryOption.None;
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:15:        stepRun.RecoveryOptionsJson = "[]";
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:16:        stepRun.NextRecoveryAction = ProcessStepRecoveryOption.None;
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:27:        var routingDecision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:36:        stepRun.RecoveryOptionsJson = SerializeRecoveryOptions(recoveryOptions);
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:37:        stepRun.NextRecoveryAction = routingDecision.NextAction;
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:45:        if (string.IsNullOrWhiteSpace(stepRun.RecoveryOptionsJson))
+src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs:53:                    stepRun.RecoveryOptionsJson,
+src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessRuntimeEntityConfigurations.cs:66:        builder.Property(step => step.RecoveryOptionsJson).HasColumnType("TEXT");
+src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessRuntimeEntityConfigurations.cs:67:        builder.Property(step => step.NextRecoveryAction).HasConversion<string>().HasMaxLength(80);
+
+## Runtime records recovery-routing lifecycle events
+rg -n RecoveryRoutingDecisionRecorded|BuildRecoveryRoutingJournalEntry|NextAction|EvidenceFingerprint|IsNoProgressGuarded src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeEventTypes.cs
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeEventTypes.cs:8:    public const string RecoveryRoutingDecisionRecorded = "recovery-routing-decision-recorded";
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:133:                    BuildRecoveryRoutingJournalEntry(
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:576:    private ProcessJournalEntry BuildRecoveryRoutingJournalEntry(
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:587:            EventType = ProcessRuntimeEventTypes.RecoveryRoutingDecisionRecorded,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:589:            Description = $"{stepRun.Title}: {decision.NextAction}. {diagnostic}",
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:590:            CorrelationId = decision.EvidenceFingerprint,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:600:                NextAction = decision.NextAction.ToString(),
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:603:                decision.EvidenceFingerprint,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs:604:                decision.IsNoProgressGuarded,
+
+## Read model exposes actionable recovery state
+rg -n NextRecoveryAction|RecoveryOptions src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs:455:        var recoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(stepRun);
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs:461:            NextRecoveryAction = stepRun.NextRecoveryAction,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs:462:            RecoveryOptions = recoveryOptions
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs:103:    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs:105:    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+
+## PostgreSQL migration persists next recovery action
+rg -n NextRecoveryAction|defaultValue: "None" src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.cs src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.Designer.cs src/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.cs:12:                name: "NextRecoveryAction",
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.cs:17:                defaultValue: "None");
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.cs:23:                name: "NextRecoveryAction",
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.Designer.cs:12940:                    b.Property<string>("NextRecoveryAction")
+src/CanDoItAll.Migrations.PostgreSql/Migrations/AppDbContextModelSnapshot.cs:12938:                    b.Property<string>("NextRecoveryAction")
+
+## Tests cover deterministic actions and lifecycle persistence
+rg -n ProcessRecoveryRouter_SB10_INV|TransitionStepAsync_SB10_INV_001|WaitForArtifactMaterialization|RecoverArtifactsOnly|FreshAgentSession|HumanEscalation|RepairImplementation tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1342:            downstream.RecoveryOptionsJson = "[\"WaitForArtifactMaterialization\"]";
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1527:        Assert.Contains(ProcessStepRecoveryOption.HumanEscalation, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1578:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1579:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1629:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1630:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1634:    public async Task TransitionStepAsync_SB10_INV_001_persists_recovery_router_next_action_and_lifecycle_event()
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1683:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, persistedStep.NextRecoveryAction);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1684:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, routedStep.Health.NextRecoveryAction);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1685:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, routedStep.Health.RecoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:1686:        Assert.Contains("RecoverArtifactsOnly", routingEvent.ReplayContextJson, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2717:        var repairImplementationStep = GetStepRunByKey(stepRuns, fixture, StepKeys.RepairImplementation);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2770:        Assert.Contains(ArtifactTitles.RepairImplementation, artifactTitles);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4149:            fixture.Editor.Steps.Single(item => item.Key == StepKeys.RepairImplementation).Dependencies);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4155:        Assert.Equal(fixture.StepId(StepKeys.RepairImplementation), qaRecheckDependency.DependsOnStepId);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4251:            StepKeys.RepairImplementation => ArtifactTitles.RepairImplementation,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:86:    [InlineData(ProcessStepBlockReasonCode.MissingUpstreamArtifact, ProcessStepBlockCause.UpstreamInput, ProcessStepRecoveryOption.WaitForArtifactMaterialization)]
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:87:    [InlineData(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, ProcessStepBlockCause.OwnOutput, ProcessStepRecoveryOption.RecoverArtifactsOnly)]
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:88:    [InlineData(ProcessStepBlockReasonCode.NoProgress, ProcessStepBlockCause.RuntimeEvidence, ProcessStepRecoveryOption.FreshAgentSession)]
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:89:    [InlineData(ProcessStepBlockReasonCode.PolicyDeniedExternalPath, ProcessStepBlockCause.PolicyDenied, ProcessStepRecoveryOption.HumanEscalation)]
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:90:    [InlineData(ProcessStepBlockReasonCode.ValidationFailed, ProcessStepBlockCause.RuntimeEvidence, ProcessStepRecoveryOption.RepairImplementation)]
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:91:    public void ProcessRecoveryRouter_SB10_INV_001_selects_deterministic_next_action(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:111:    public void ProcessRecoveryRouter_SB10_INV_002_escalates_repeated_no_progress_without_new_evidence()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:114:            ProcessStepRecoveryOption.FreshAgentSession,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:127:        Assert.Equal(ProcessStepRecoveryOption.HumanEscalation, decision.NextAction);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14334:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14335:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14350:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14351:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+
+## No SB10 SQLite runtime or migration dependency
+rg -n SQLite|Sqlite|UseSqlite src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526015652_ProcessRecoveryNextAction.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+<no matches>
+

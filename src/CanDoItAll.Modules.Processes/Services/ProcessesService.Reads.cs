@@ -35,6 +35,14 @@ public sealed partial class ProcessesService {
         return await runtimeReadQueryService.GetRunDetailsAsync(dbContext, runId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel>> ListRuntimeInvariantDiagnosticsAsync(
+        Guid runId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await runtimeReadQueryService.ListRuntimeInvariantDiagnosticsAsync(dbContext, runId, cancellationToken);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, ProcessActiveRunHealthMetrics>> GetActiveRunHealthMetricsAsync(
         IReadOnlyCollection<Guid> runIds,
         CancellationToken cancellationToken = default)

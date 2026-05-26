@@ -32,7 +32,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             StepRuns = stepRuns,
             ExecutionRuns = executionRuns,
             WorkflowRuns = workflowRuns,
-            Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords),
+            Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords, runDetails.InvariantDiagnostics),
             Escalations = escalations,
             OperatorApprovals = operatorApprovals,
             AttemptTimeline = BuildAttemptTimeline(
@@ -631,7 +631,8 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
     private static ProcessRunHealthSummaryViewModel BuildRunHealth(
         IReadOnlyList<ProcessStepRunViewModel> stepRuns,
         IReadOnlyList<ProcessExecutionRunViewModel> executionRuns,
-        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords)
+        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords,
+        IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> invariantDiagnostics)
     {
         var missingArtifactCount = stepRuns
             .Where(item => item.Status != ProcessStepRunStatus.Skipped)
@@ -657,7 +658,11 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             pendingOutboxCount,
             deadLetteredOutboxCount,
             recoveryClassification,
-            BuildRunActionableReason(stepRuns, deadLetteredOutboxCount, missingArtifactCount));
+            BuildRunActionableReason(stepRuns, deadLetteredOutboxCount, missingArtifactCount, invariantDiagnostics))
+        {
+            InvariantDiagnosticCount = invariantDiagnostics.Count,
+            RecommendedAction = ResolveRunRecommendedAction(stepRuns, invariantDiagnostics)
+        };
     }
 
     private static ProcessRecoveryClassification ResolveRunRecoveryClassification(
@@ -683,7 +688,8 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
     private static string BuildRunActionableReason(
         IReadOnlyList<ProcessStepRunViewModel> stepRuns,
         int deadLetteredOutboxCount,
-        int missingArtifactCount)
+        int missingArtifactCount,
+        IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> invariantDiagnostics)
     {
         if (deadLetteredOutboxCount > 0)
         {
@@ -695,9 +701,31 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             return "One or more required artifact obligations are still missing.";
         }
 
+        if (invariantDiagnostics.Count > 0)
+        {
+            return "One or more runtime invariant diagnostics need review.";
+        }
+
         return stepRuns
             .Select(item => item.Health.ActionableReason)
             .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item)) ?? string.Empty;
+    }
+
+    private static ProcessStepRecoveryOption ResolveRunRecommendedAction(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> invariantDiagnostics)
+    {
+        var stepAction = stepRuns
+            .Select(item => item.Health.NextRecoveryAction)
+            .FirstOrDefault(item => item != ProcessStepRecoveryOption.None);
+        if (stepAction != ProcessStepRecoveryOption.None)
+        {
+            return stepAction;
+        }
+
+        return invariantDiagnostics.Any(item => item.Severity is ProcessConformanceSeverity.Critical or ProcessConformanceSeverity.High)
+            ? ProcessStepRecoveryOption.HumanEscalation
+            : ProcessStepRecoveryOption.None;
     }
 
     private static string BuildActiveRunHealthSummary(
@@ -854,6 +882,8 @@ public sealed record ProcessWorkspaceRunDetails(
     public IReadOnlyList<ProcessWorkflowRunViewModel> WorkflowRuns { get; init; } = [];
 
     public ProcessRunHealthSummaryViewModel Health { get; init; } = ProcessRunHealthSummaryViewModel.Empty;
+
+    public IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> InvariantDiagnostics { get; init; } = [];
 
     public IReadOnlyList<ProcessEscalationViewModel> Escalations { get; init; } = [];
 

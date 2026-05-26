@@ -18,7 +18,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DirectAgent,
         WorkflowBackedRole,
         SubprocessParent,
-        ManagerArtifactRecovery
+        ManagerArtifactRecovery,
+        Manual
     }
 
     internal enum ProcessArtifactExpectationMode
@@ -329,6 +330,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private sealed record ProcessStepCompletionFinalizerResult(
         ProcessStepRunStatus CompletionStatus,
         string CompletionReason,
+        ProcessStepBlockCause? BlockCause,
         Guid? SelectedBranchOutcomeId,
         Guid StepRunConcurrencyToken,
         IReadOnlyList<ProcessArtifactExpectationValidationResult> ArtifactValidationResults);
@@ -394,6 +396,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var completionStatus = context.CompletionStatus;
         var completionReason = context.CompletionReason;
+        ProcessStepBlockCause? blockCause = null;
         var selectedBranchOutcomeId = context.SelectedBranchOutcomeId;
 
         if (context.ExecutionDetail is not null && context.ProjectExecutionArtifacts)
@@ -464,6 +467,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 {
                     completionStatus = ProcessStepRunStatus.Blocked;
                     completionReason = BuildArtifactContractBlockedReason(unsatisfiedResults);
+                    blockCause = ResolveArtifactContractBlockCause(unsatisfiedResults);
                     selectedBranchOutcomeId = null;
                 }
             }
@@ -484,12 +488,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             completionStatus = ProcessStepRunStatus.Blocked;
             completionReason = $"Runtime invariant violation: {severeInvariant.Observation}";
+            blockCause = ProcessStepBlockCause.RuntimeEvidence;
             selectedBranchOutcomeId = null;
+        }
+
+        if (completionStatus is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed &&
+            !blockCause.HasValue)
+        {
+            blockCause = ProcessBlockStateClassifier.InferBlockCause(completionReason);
         }
 
         return new ProcessStepCompletionFinalizerResult(
             completionStatus,
             completionReason,
+            blockCause,
             selectedBranchOutcomeId,
             stepRunSnapshot.ConcurrencyToken,
             validationResults);
@@ -508,6 +520,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 StepRunConcurrencyToken = finalizerResult.StepRunConcurrencyToken,
                 TargetStatus = finalizerResult.CompletionStatus,
                 Reason = finalizerResult.CompletionReason,
+                BlockCause = finalizerResult.BlockCause,
                 SelectedBranchOutcomeId = finalizerResult.SelectedBranchOutcomeId,
                 DecidedBy = AutomationActor,
                 SuppressAutomationDispatch = finalizerResult.CompletionStatus != ProcessStepRunStatus.Completed
@@ -703,212 +716,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? recoveryExecutionRunId = null,
         Guid? recoveredForExecutionRunId = null,
         IProcessArtifactContentReader? managedArtifactContentReader = null)
-    {
-        ArgumentNullException.ThrowIfNull(expectation);
-        ArgumentNullException.ThrowIfNull(artifacts);
-
-        var mode = ResolveArtifactExpectationMode(expectation);
-        var candidateArtifacts = artifacts
-            .Where(artifact => IsArtifactCandidateForExpectation(expectation, artifact))
-            .OrderBy(artifact => ResolveArtifactCandidatePriority(expectation, artifact))
-            .ThenByDescending(artifact => artifact.CreatedAtUtc)
-            .ToList();
-
-        if (candidateArtifacts.Count == 0)
-        {
-            return CreateArtifactValidationResult(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                ProcessArtifactValidationStatus.Missing,
-                ProcessArtifactProducerKind.Unknown,
-                null,
-                string.Empty,
-                "No current step artifact record matches the required expectation.",
-                "Recover or block with the exact missing artifact.",
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        ProcessArtifactExpectationValidationResult? firstFailure = null;
-        foreach (var artifact in candidateArtifacts)
-        {
-            var result = ValidateArtifactCandidate(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                artifact,
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId,
-                managedArtifactContentReader);
-            if (result.IsSatisfied)
-            {
-                return result;
-            }
-
-            firstFailure ??= result;
-        }
-
-        return firstFailure!;
-    }
-
-    private static ProcessArtifactExpectationValidationResult ValidateArtifactCandidate(
-        Guid processRunId,
-        Guid stepRunId,
-        DispatchArtifactExpectation expectation,
-        ProcessArtifactExpectationMode mode,
-        ProcessArtifactRecord artifact,
-        ProcessStepCompletionExecutorKind executorKind,
-        Guid? executionRunId,
-        Guid? workflowRunId,
-        Guid? subprocessRunId,
-        Guid? recoveryExecutionRunId,
-        Guid? recoveredForExecutionRunId,
-        IProcessArtifactContentReader? managedArtifactContentReader)
-    {
-        var producerKind = ResolveArtifactProducerKind(artifact);
-        if (ContainsPlaceholderArtifactSignal(artifact, mode))
-        {
-            return CreateArtifactValidationResult(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                ProcessArtifactValidationStatus.PlaceholderOnly,
-                producerKind,
-                artifact,
-                artifact.ManagedStoragePath,
-                "The candidate artifact is a placeholder, gap marker, or missing-artifact diagnostic.",
-                "Produce a real current-run artifact or block with the evidence gap.",
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        if (!IsProducerAllowedForMode(mode, producerKind, expectation))
-        {
-            return CreateArtifactValidationResult(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                ProcessArtifactValidationStatus.WrongProducerMode,
-                producerKind,
-                artifact,
-                artifact.ManagedStoragePath,
-                $"Producer {producerKind} is not allowed to satisfy {mode} artifact expectations.",
-                "Recover from an allowed producer or block with an exact producer-mode diagnostic.",
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        if (!IsCurrentRunArtifact(
-                artifact,
-                producerKind,
-                processRunId,
-                stepRunId,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId))
-        {
-            return CreateArtifactValidationResult(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                ProcessArtifactValidationStatus.StaleOrWrongRun,
-                producerKind,
-                artifact,
-                artifact.ManagedStoragePath,
-                "The candidate artifact is not bound to the current process run, step, execution run, or workflow run.",
-                "Recover using current-run evidence or block instead of carrying stale artifacts forward.",
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        if (RequiresManagedEvidencePath(mode, producerKind) && string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
-        {
-            return CreateArtifactValidationResult(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                ProcessArtifactValidationStatus.InsufficientEvidence,
-                producerKind,
-                artifact,
-                artifact.ManagedStoragePath,
-                "The candidate artifact has no managed storage path for a file-backed expectation.",
-                "Write or recover a durable managed artifact with current-run provenance.",
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        if (!MatchesDeclaredFormat(expectation, artifact, mode, producerKind, managedArtifactContentReader, out var formatDiagnostic))
-        {
-            return CreateArtifactValidationResult(
-                processRunId,
-                stepRunId,
-                expectation,
-                mode,
-                ProcessArtifactValidationStatus.InvalidFormat,
-                producerKind,
-                artifact,
-                artifact.ManagedStoragePath,
-                formatDiagnostic,
-                "Regenerate the artifact in the declared format or block with the format mismatch.",
-                executorKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        return CreateArtifactValidationResult(
+        => ProcessCompletionArtifactValidator.ValidateArtifactExpectationForRecordedArtifacts(
             processRunId,
             stepRunId,
             expectation,
-            mode,
-            ProcessArtifactValidationStatus.Satisfied,
-            producerKind,
-            artifact,
-            artifact.ManagedStoragePath,
-            "Required artifact expectation is satisfied by a current-run, mode-compatible artifact.",
-            "Complete",
+            artifacts,
             executorKind,
             executionRunId,
             workflowRunId,
             subprocessRunId,
             recoveryExecutionRunId,
-            recoveredForExecutionRunId);
-    }
+            recoveredForExecutionRunId,
+            managedArtifactContentReader);
 
     private async Task PersistArtifactValidationDiagnosticsAsync(
         ProcessStepCompletionFinalizerContext context,
@@ -1011,6 +830,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .Take(5)
                 .Select(result => $"{result.ExpectationTitle}: {result.Status} ({result.Diagnostic})"));
         return $"Required artifact contract validation failed: {summary}. The process step is blocked instead of completing with missing, malformed, stale, placeholder, or weakly produced artifacts.";
+    }
+
+    internal static ProcessStepBlockCause ResolveArtifactContractBlockCause(
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> unsatisfiedResults)
+    {
+        ArgumentNullException.ThrowIfNull(unsatisfiedResults);
+
+        if (unsatisfiedResults.Any(result => result.FailureOwnership == ProcessArtifactFailureOwnership.UpstreamInput))
+        {
+            return ProcessStepBlockCause.UpstreamInput;
+        }
+
+        if (unsatisfiedResults.Any(result => result.FailureOwnership == ProcessArtifactFailureOwnership.RuntimeEvidence))
+        {
+            return ProcessStepBlockCause.RuntimeEvidence;
+        }
+
+        return ProcessStepBlockCause.OwnOutput;
     }
 
     private static DispatchBranchOutcome? ResolveArtifactContractDispositionBranchOutcome(

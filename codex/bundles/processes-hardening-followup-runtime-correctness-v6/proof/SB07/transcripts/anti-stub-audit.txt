@@ -1,3 +1,21 @@
-# SB07 anti-stub-audit.txt
+Command: SB07 proof transcript: anti-stub-audit.txt
+ExitCode: 0
 
-Fill during execution.
+# SB07 anti-stub audit
+
+Command:
+`rg -n "class ProcessToolOperationAuthorizer|class ProcessScriptSideEffectAnalyzer|class ProcessCompletionArtifactValidator|class ProcessArtifactIdentityService|TODO|throw new NotImplementedException|return default|return null;\s*//" src/CanDoItAll.AgentFramework.Core/ToolPolicy src/CanDoItAll.Modules.Processes/Automation/Dispatch src/CanDoItAll.Modules.Processes/Runtime tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S`
+
+Findings:
+- Extracted classes are present in production code.
+- No `throw new NotImplementedException`, `return default`, or annotated stub `return null` was found in the extracted production files.
+- `TODO` matches are pre-existing business test fixture text around a "TODO register" artifact and are not stub code.
+
+Command:
+`rg -n "Sqlite|SQLite|UseSqlite|Migrations.Sqlite" src tests codex/bundles/processes-hardening-followup-runtime-correctness-v6 -S`
+
+SQLite audit:
+- Existing retired/legacy SQLite quarantine strings and tests remain present.
+- Bundle text still states that SQLite runtime and migration paths must not be added.
+- SB07 added no `UseSqlite`, `Migrations.Sqlite`, runtime provider switching, or SQLite migration dependency.
+

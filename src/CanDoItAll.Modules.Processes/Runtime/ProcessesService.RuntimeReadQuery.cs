@@ -28,6 +28,11 @@ public interface IProcessRuntimeReadQueryService
         Guid runId,
         CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel>> ListRuntimeInvariantDiagnosticsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyDictionary<Guid, ProcessActiveRunHealthMetrics>> GetActiveRunHealthMetricsAsync(
         AppDbContext dbContext,
         IReadOnlyCollection<Guid> runIds,
@@ -345,6 +350,7 @@ public sealed partial class ProcessRuntimeReadQueryService(
         var workflowRunLinks = await EnrichWorkflowRunsAsync(
             await ListWorkflowRunsAsync(dbContext, runId, cancellationToken),
             cancellationToken);
+        var invariantDiagnostics = await ListRuntimeInvariantDiagnosticsAsync(dbContext, runId, cancellationToken);
 
         return new ProcessWorkspaceRunDetails(
             stepRuns,
@@ -356,8 +362,60 @@ public sealed partial class ProcessRuntimeReadQueryService(
             conformanceObservations,
             directMessageThreads)
         {
-            WorkflowRuns = workflowRunLinks
+            WorkflowRuns = workflowRunLinks,
+            InvariantDiagnostics = invariantDiagnostics
         };
+    }
+
+    public async Task<IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel>> ListRuntimeInvariantDiagnosticsAsync(
+        AppDbContext dbContext,
+        Guid runId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        var run = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == runId, cancellationToken);
+        if (run is null)
+        {
+            return [];
+        }
+
+        var stepRuns = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runId)
+            .OrderBy(item => item.Sequence)
+            .ToListAsync(cancellationToken);
+        var stepDefinitionIds = stepRuns
+            .Select(item => item.StepDefinitionId)
+            .Distinct()
+            .ToList();
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations = stepDefinitionIds.Count == 0
+            ? []
+            : await dbContext.Set<ProcessArtifactExpectation>()
+                .AsNoTracking()
+                .Where(item => stepDefinitionIds.Contains(item.StepDefinitionId))
+                .ToListAsync(cancellationToken);
+        var artifactRecords = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runId)
+            .ToListAsync(cancellationToken);
+        var journalEntries = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(item =>
+                item.ProcessRunId == runId &&
+                (item.EventType == ProcessRuntimeEventTypes.RuntimeInvariantViolationRecorded ||
+                    item.EventType == ProcessRuntimeEventTypes.ArtifactValidationDiagnostic))
+            .ToListAsync(cancellationToken);
+
+        return ProcessRuntimeInvariantAuditor.Audit(
+            new ProcessRuntimeInvariantAuditInput(
+                run,
+                stepRuns,
+                artifactExpectations,
+                artifactRecords,
+                journalEntries));
     }
 
     private async Task<IReadOnlyList<ProcessWorkflowRunViewModel>> EnrichWorkflowRunsAsync(

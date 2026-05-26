@@ -52,7 +52,7 @@ public sealed partial class ProcessesService
                 return Result.Failure(publishError);
             }
 
-            var lintMode = ResolveEffectiveLintMode(request.LintMode, definition);
+            var lintMode = ResolveEffectiveLintMode(request.LintMode, definition, draftVersion.ContractMode);
             var lintResult = ProcessDefinitionLinter.Analyze(
                 BuildLintEditorModel(
                     definition,
@@ -393,6 +393,7 @@ public sealed partial class ProcessesService
             ManagerAgentOverrideName = publishedVersion.ManagerAgentOverrideName,
             ImportedFrom = publishedVersion.ImportedFrom,
             ImportWarnings = publishedVersion.ImportWarnings,
+            ContractMode = publishedVersion.ContractMode,
             CreatedAtUtc = now,
             UpdatedAtUtc = now
         };

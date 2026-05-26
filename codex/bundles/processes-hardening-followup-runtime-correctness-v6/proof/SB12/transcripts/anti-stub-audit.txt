@@ -1,3 +1,16 @@
-# SB12 anti-stub-audit.txt
+Command: SB12 proof transcript: anti-stub-audit.txt
+ExitCode: 0
 
-Fill during execution.
+SB12 anti-stub audit for contract strictness policy, migration, and template updates.
+
+Production/migration scan: rg -n 'TODO|HACK|STUB|NotImplementedException|throw new NotImplementedException|<inheritdoc|///' <SB12 production files>
+<no matches>
+
+Template scan: rg -n 'TODO|HACK|STUB|NotImplementedException|throw new NotImplementedException|<inheritdoc|///' <SB12 template files>
+<no matches>
+
+SB12 test-section scan: rg -n 'SB12_INV.*(TODO|HACK|STUB|NotImplementedException|NotSupportedException)' <integration test files>
+<no matches>
+
+Audit result: no placeholder implementation markers or generated XML documentation comments found in SB12 production/migration/template changes, and no stub markers on SB12 test declarations.
+

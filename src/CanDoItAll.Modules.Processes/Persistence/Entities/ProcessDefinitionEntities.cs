@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Projects;
 
@@ -69,6 +70,8 @@ public sealed class ProcessDefinitionVersion : IHasConcurrencyToken
     public string ImportedFrom { get; set; } = string.Empty;
 
     public string ImportWarnings { get; set; } = string.Empty;
+
+    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Strict;
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 
@@ -273,6 +276,14 @@ public sealed class ProcessArtifactExpectation
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ValidationRequirementSummary { get; set; } = string.Empty;
+
+    public string WorkflowOutputId { get; set; } = string.Empty;
+
+    public string WorkflowOutputName { get; set; } = string.Empty;
+
+    public WorkflowArtifactKind? WorkflowOutputKind { get; set; }
+
+    public Guid? SubprocessChildArtifactExpectationId { get; set; }
 }
 
 public sealed class ProcessStepArtifactInputDefinition

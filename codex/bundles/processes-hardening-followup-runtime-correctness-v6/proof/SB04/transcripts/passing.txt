@@ -1,3 +1,22 @@
+Command: SB04 proof transcript: passing.txt
+ExitCode: 0
+
 # SB04 passing.txt
 
-Fill during execution.
+Command: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~BuildProcessInvocationMetadataJson_SB04_INV_001|FullyQualifiedName~ProcessInvocationMetadataBuilder_SB04_INV_001|FullyQualifiedName~ProcessStepOperationContractResolver_SB04_INV_001|FullyQualifiedName~ProcessTargetGroundingLedgerBuilder_SB04_INV_001"`
+ExitCode: 0
+
+SB04-INV-001 passing proof.
+
+Test names:
+- `CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.BuildProcessInvocationMetadataJson_SB04_INV_001_keeps_stale_upstream_product_alias_read_only_for_mutating_step`
+- `CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessInvocationMetadataBuilder_SB04_INV_001_builds_external_artifact_destination_metadata_without_reflection`
+- `CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessStepOperationContractResolver_SB04_INV_001_resolves_persisted_contract_without_reflection`
+- `CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessTargetGroundingLedgerBuilder_SB04_INV_001_resolves_current_run_grounding_without_reflection`
+
+Result excerpt:
+- Failed: 0
+- Passed: 4
+- Skipped: 0
+- Total: 4
+

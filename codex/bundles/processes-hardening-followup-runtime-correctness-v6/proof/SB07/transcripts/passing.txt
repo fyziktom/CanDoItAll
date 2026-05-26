@@ -1,3 +1,23 @@
-# SB07 passing.txt
+Command: SB07 proof transcript: passing.txt
+ExitCode: 0
 
-Fill during execution.
+# SB07 passing transcript
+
+Command:
+`dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests"`
+
+Result:
+`Successful! - Failed: 0, Passed: 107, Skipped: 0, Total: 107`
+
+Command:
+`dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests"`
+
+Result:
+`Successful! - Failed: 0, Passed: 432, Skipped: 0, Total: 432`
+
+Notes:
+- Existing Czech-localized MSB3277 warnings for Microsoft.EntityFrameworkCore.Relational version conflicts were emitted during build, consistent with prior subbundle validation.
+- No browser validation was required for this non-UI checkpoint.
+
+
+Invariant ID: SB07-INV-001

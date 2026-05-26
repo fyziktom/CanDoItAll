@@ -424,7 +424,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         => Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
             .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
 
-    public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".py", StringComparison.OrdinalIgnoreCase))
@@ -452,7 +452,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".ps1", StringComparison.OrdinalIgnoreCase))

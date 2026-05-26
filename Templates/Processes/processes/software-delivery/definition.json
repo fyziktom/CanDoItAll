@@ -370,7 +370,7 @@
       "OutputContractSummary": "Reviewable implementation change set that satisfies the current project-structure source of truth, with blockers and rollout checklist inputs visible from the parent process.",
       "EvidenceContractSummary": "Changed or created deliverables, validation outputs, output-placement notes, migration steps when applicable, and touched-surface inventory.",
       "DecisionRightsSummary": "Parent delivery manager owns sequencing and escalation, while the selected implementation role owns the concrete changes.",
-      "ExceptionPolicySummary": "Do not complete the implementation step if any explicit project-structure requirement is omitted, deferred, stack-switched, or unverifiable without an accepted decision record.",
+      "ExceptionPolicySummary": "Do not complete the implementation step if any explicit project-structure requirement is omitted, deferred, stack-switched, or unverifiable without an accepted decision record. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 36,
       "DependsOnStepKey": "architecture-review",
       "DependsOnBranchOutcomeKey": "",
@@ -458,7 +458,16 @@
       ],
       "DocRefs": [
         "processes/software-delivery/steps/implementation.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 3,
@@ -564,7 +573,7 @@
           "OutputContractSummary": "Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, residual quality risk, and an explicit accepted or repair-required branch. Browser-workflow quality acceptance requires process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.",
           "EvidenceContractSummary": "Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, and current-run process-visible browser artifacts when a visible browser workflow is in scope.",
       "DecisionRightsSummary": "QA lead selects an explicit quality disposition: accepted evidence may continue, while reproducible defects or proof gaps route to repair.",
-      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence.",
+      "ExceptionPolicySummary": "Do not let schedule pressure replace proof with verbal confidence. Artifact recovery: block when required QA evidence, browser/runtime proof, or repair-required evidence is missing or invalid before branch routing.",
       "TargetLeadHours": 10,
       "DependsOnStepKey": "peer-review",
       "DependsOnBranchOutcomeKey": "",
@@ -652,7 +661,17 @@
       ],
       "DocRefs": [
         "processes/software-delivery/steps/qa-validation.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -765,7 +784,7 @@
           "OutputContractSummary": "Recheck result with warning-free validation, nonzero executed-test proof when tests are expected, shipped entrypoint/runtime consistency, runtime/API/browser evidence as applicable, regression evidence, and explicit quality disposition. Browser-workflow repair acceptance requires fresh process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.",
           "EvidenceContractSummary": "Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, repair verification, unresolved defects if any, and fresh current-run process-visible browser artifacts when a visible browser workflow is in scope.",
       "DecisionRightsSummary": "QA lead may accept the repaired evidence or escalate when repair remains insufficient.",
-      "ExceptionPolicySummary": "Do not approve repaired work when the same failing flow, launch, or proof gap remains unresolved.",
+      "ExceptionPolicySummary": "Artifact recovery: block when the required repaired regression evidence artifact is missing or invalid before selecting quality-accepted or repair-escalation. Do not approve repaired work when the same failing flow, launch, or proof gap remains unresolved.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "quality-repair",
       "DependsOnBranchOutcomeKey": "",
@@ -851,6 +870,16 @@
       "PromptRefs": [
         "prompt-qa-risk-review"
       ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "DocRefs": [
         "processes/software-delivery/steps/qa-recheck.md"
       ]
@@ -1313,7 +1342,7 @@
       "OutputContractSummary": "Explicit no-go, scope reset, or replan decision with accountable owner.",
       "EvidenceContractSummary": "Escalation decision, unresolved defect list, required next repair scope, and owner.",
       "DecisionRightsSummary": "Delivery manager owns escalation and cannot treat unresolved repair evidence as release-ready.",
-      "ExceptionPolicySummary": "Do not continue to security or release approval while quality remains unresolved.",
+      "ExceptionPolicySummary": "Artifact recovery: block when the required repair escalation decision artifact is missing or invalid before closing the no-go branch. Do not continue to security or release approval while quality remains unresolved.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "qa-recheck",
       "DependsOnBranchOutcomeKey": "repair-escalation",

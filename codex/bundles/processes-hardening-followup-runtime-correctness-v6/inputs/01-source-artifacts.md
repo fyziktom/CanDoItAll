@@ -1,0 +1,24 @@
+# Source Artifacts
+
+- `bundle://README.md`
+- `bundle://analysis/01-current-state.md`
+- `bundle://analysis/02-verified-findings.md`
+- `bundle://analysis/03-skipped-or-partial-items.md`
+- `bundle://architecture/01-target-architecture.md`
+- `bundle://architecture/02-refactoring-checkpoints.md`
+- `bundle://requirements/01-normalized-requirements.md`
+- `bundle://traceability/01-requirement-traceability.md`
+- `bundle://subbundles/01-alias-ledger-overlap-and-readonly-autopromotion/README.md`
+- `bundle://subbundles/02-projection-identity-hash-and-artifact-dedupe/README.md`
+- `bundle://subbundles/03-unified-completion-artifact-validation/README.md`
+- `bundle://subbundles/04-refactor-checkpoint-a-metadata-contract-grounding/README.md`
+- `bundle://subbundles/05-typed-block-cause-propagation/README.md`
+- `bundle://subbundles/06-script-side-effect-manifest-and-post-audit/README.md`
+- `bundle://subbundles/07-refactor-checkpoint-b-tool-policy-and-artifact-validator/README.md`
+- `bundle://subbundles/08-storage-service-backed-artifact-content-reader/README.md`
+- `bundle://subbundles/09-explicit-workflow-subprocess-output-mapping/README.md`
+- `bundle://subbundles/10-recovery-router-and-actionable-lifecycle/README.md`
+- `bundle://subbundles/11-refactor-checkpoint-c-recovery-health-services/README.md`
+- `bundle://subbundles/12-contract-strictness-lint-gates-and-template-migration/README.md`
+- `bundle://subbundles/13-process-health-invariant-dashboard-and-diagnostics/README.md`
+- `bundle://subbundles/14-generic-scenario-harness-and-final-red-team-closure/README.md`

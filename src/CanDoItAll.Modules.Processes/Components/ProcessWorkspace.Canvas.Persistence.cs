@@ -462,7 +462,11 @@ public partial class ProcessWorkspace
                     SensitivityLevel = artifact.SensitivityLevel,
                     RetentionDays = artifact.RetentionDays,
                     AllowedFutureUsageSummary = artifact.AllowedFutureUsageSummary,
-                    ValidationRequirementSummary = artifact.ValidationRequirementSummary
+                    ValidationRequirementSummary = artifact.ValidationRequirementSummary,
+                    WorkflowOutputId = artifact.WorkflowOutputId,
+                    WorkflowOutputName = artifact.WorkflowOutputName,
+                    WorkflowOutputKind = artifact.WorkflowOutputKind,
+                    SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId
                 })
                 .ToList(),
             ArtifactInputs = source.ArtifactInputs

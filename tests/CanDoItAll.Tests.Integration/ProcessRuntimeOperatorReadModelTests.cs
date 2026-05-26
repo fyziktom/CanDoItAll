@@ -227,6 +227,11 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
         var runDetailsLoader = scope.ServiceProvider.GetRequiredService<ProcessWorkspaceRunDetailsLoader>();
         var stepRun = await StartStepAsync(processesService, fixture);
         var expectation = Assert.Single(Assert.Single((await processesService.GetRunDetailsAsync(fixture.RunId)).StepRuns).ArtifactExpectations);
+        const string artifactPath = "artifacts/test/manual-rerun-completed-proof.md";
+        await WriteWorkspaceArtifactAsync(
+            application,
+            artifactPath,
+            "Implementation report evidence is present before the operator invalidates proof.");
 
         var artifactResult = await processesService.RecordArtifactAsync(
             new ProcessArtifactRecordRequest
@@ -239,7 +244,9 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
                 TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
                 SensitivityLevel = ProcessSensitivityLevel.Internal,
                 ProvenanceSummary = "Recorded by integration test before the operator invalidates proof.",
-                AllowedFutureUsageSummary = "Manual rerun validation."
+                AllowedFutureUsageSummary = "Manual rerun validation.",
+                ReviewSummary = "Implementation report evidence is present.",
+                ManagedStoragePath = artifactPath
             });
         Assert.True(artifactResult.IsSuccess, string.Join(" | ", artifactResult.Errors.Select(error => error.Message)));
 
@@ -484,6 +491,113 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
             item.OutboxRecordId == outboxRecord.Id);
     }
 
+    [Fact]
+    public async Task Runtime_invariant_diagnostics_SB13_INV_001_exposes_generic_audit_issues()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateGenericRunFixtureAsync(scope.ServiceProvider, "Supplier reconciliation invariant diagnostics");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var stepRun = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == fixture.StepRunId);
+            var expectation = await dbContext.Set<ProcessArtifactExpectation>().SingleAsync(item => item.StepDefinitionId == stepRun.StepDefinitionId);
+            var now = DateTimeOffset.UtcNow;
+            var lineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                new ProcessArtifactProjectionLineage
+                {
+                    SourceKind = ProcessArtifactProjectionSourceKind.Manual,
+                    SourceExternalReferenceKey = "supplier-ledger:may-close"
+                });
+
+            stepRun.Status = ProcessStepRunStatus.Blocked;
+            stepRun.BlockedReason = "Legacy import left the supplier reconciliation blocked without a typed recovery action.";
+            stepRun.BlockReasonCode = ProcessStepBlockReasonCode.None;
+            stepRun.RecoveryOptionsJson = "[]";
+            stepRun.NextRecoveryAction = ProcessStepRecoveryOption.None;
+
+            await dbContext.Set<ProcessArtifactRecord>().AddRangeAsync(
+                new ProcessArtifactRecord
+                {
+                    ProcessRunId = fixture.RunId,
+                    StepRunId = stepRun.Id,
+                    ArtifactExpectationId = expectation.Id,
+                    ArtifactKind = expectation.ArtifactKind,
+                    Title = expectation.Title,
+                    TrustStatus = ProcessArtifactTrustStatus.Draft,
+                    SensitivityLevel = expectation.SensitivityLevel,
+                    ProvenanceSummary = "Legacy supplier note imported without approval.",
+                    ProjectionLineageJson = lineageJson,
+                    CreatedAtUtc = now
+                },
+                new ProcessArtifactRecord
+                {
+                    ProcessRunId = fixture.RunId,
+                    StepRunId = stepRun.Id,
+                    ArtifactExpectationId = expectation.Id,
+                    ArtifactKind = expectation.ArtifactKind,
+                    Title = $"{expectation.Title} duplicate",
+                    TrustStatus = ProcessArtifactTrustStatus.Draft,
+                    SensitivityLevel = expectation.SensitivityLevel,
+                    ProvenanceSummary = "Duplicate legacy supplier note imported without identity hash.",
+                    ProjectionLineageJson = lineageJson,
+                    CreatedAtUtc = now.AddSeconds(1)
+                });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var diagnostics = await processesService.ListRuntimeInvariantDiagnosticsAsync(fixture.RunId);
+
+        Assert.Contains(diagnostics, item =>
+            item.Kind == ProcessRuntimeInvariantDiagnosticKind.WeakArtifactRecord &&
+            item.StepTitle.Contains("Reconcile supplier statement", StringComparison.Ordinal));
+        Assert.Contains(diagnostics, item =>
+            item.Kind == ProcessRuntimeInvariantDiagnosticKind.DuplicateLineageIdentity &&
+            item.RecommendedAction.Contains("deduplicate", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(diagnostics, item =>
+            item.Kind == ProcessRuntimeInvariantDiagnosticKind.BlockedRecoveryState &&
+            item.RecommendedAction.Contains("reclassify", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB13_INV_001_records_manual_transition_validation_failure()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateGenericRunFixtureAsync(scope.ServiceProvider, "Manual transition invariant diagnostics");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var stepRun = Assert.Single(await processesService.ListStepRunsAsync(fixture.RunId));
+
+        var invalidTransition = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                Reason = "Operator attempted to settle the step before it was ready.",
+                DecidedBy = "integration-tests"
+            });
+
+        Assert.False(invalidTransition.IsSuccess);
+
+        var diagnostics = await processesService.ListRuntimeInvariantDiagnosticsAsync(fixture.RunId);
+        var diagnostic = Assert.Single(diagnostics, item => item.Kind == ProcessRuntimeInvariantDiagnosticKind.ManualTransitionValidationFailure);
+
+        Assert.Equal(stepRun.Id, diagnostic.StepRunId);
+        Assert.Contains("Cannot move step", diagnostic.Detail, StringComparison.Ordinal);
+        Assert.Contains("Refresh", diagnostic.RecommendedAction, StringComparison.OrdinalIgnoreCase);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        Assert.True(await dbContext.Set<ProcessJournalEntry>().AnyAsync(item =>
+            item.ProcessRunId == fixture.RunId &&
+            item.StepRunId == stepRun.Id &&
+            item.EventType == ProcessRuntimeEventTypes.RuntimeInvariantViolationRecorded &&
+            item.CorrelationId == diagnostic.EvidenceKey));
+    }
+
     private static async Task<AgentRunFixture> CreateAgentRunFixtureAsync(IServiceProvider services, string name)
     {
         var projectsService = services.GetRequiredService<ProjectsService>();
@@ -520,6 +634,51 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
                 DisplayName = $"{name} agent",
                 ExecutorKind = "AI agent",
                 BindingReason = "Integration test binds an agent-owned process step.",
+                AllowsDirectMessaging = true
+            });
+
+        Assert.True(assignmentResult.IsSuccess, string.Join(" | ", assignmentResult.Errors.Select(error => error.Message)));
+
+        var stepRun = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value));
+        return new AgentRunFixture(projectId, saveResult.Value, runResult.Value, stepRun.Id);
+    }
+
+    private static async Task<AgentRunFixture> CreateGenericRunFixtureAsync(IServiceProvider services, string name)
+    {
+        var projectsService = services.GetRequiredService<ProjectsService>();
+        var partyDirectoryService = services.GetRequiredService<PartyDirectoryService>();
+        var processesService = services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, name);
+        var roleId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var definition = BuildGenericDefinition(projectId, roleId, stepId);
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = $"{name} run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Generic runtime invariant validation."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var partyId = await CreatePartyAsync(partyDirectoryService, $"{name} analyst");
+        var assignmentResult = await processesService.ResolveAssignmentAsync(
+            new ProcessAssignmentResolutionRequest
+            {
+                ProcessRunId = runResult.Value,
+                RoleRequirementId = roleId,
+                PartyId = partyId,
+                DisplayName = $"{name} analyst",
+                ExecutorKind = "person",
+                BindingReason = "Integration test binds a generic reconciliation role.",
                 AllowsDirectMessaging = true
             });
 
@@ -625,6 +784,73 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
         };
     }
 
+    private static ProcessDefinitionEditorModel BuildGenericDefinition(Guid projectId, Guid roleId, Guid stepId)
+    {
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Supplier reconciliation process",
+            Summary = "Validates generic process runtime invariant diagnostics.",
+            ValueStatement = "Keep reconciliation blockers and weak evidence visible.",
+            CustomerName = "Operations customer",
+            OwnerName = "Operations owner",
+            GovernancePolicySummary = "Supplier reconciliation evidence must be approved before closure.",
+            ChangeSummary = "Runtime invariant validation.",
+            ConstitutionRuleSummary = "Do not complete reconciliation with weak evidence.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic tests.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = roleId,
+                    Key = "reconciliation-analyst",
+                    DisplayName = "Reconciliation analyst",
+                    Purpose = "Reconcile supplier statements against ledger records.",
+                    StaffingIntent = "Operations-owned reconciliation role.",
+                    PreferredExecutorKind = "person",
+                    DefaultAllocationPercent = 100
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = stepId,
+                    Key = "reconcile-supplier-statement",
+                    Title = "Reconcile supplier statement",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Supplier statement and ledger period.",
+                    OutputContractSummary = "Reconciliation note is approved.",
+                    EvidenceContractSummary = "Approved reconciliation note must be recorded.",
+                    DecisionRightsSummary = "Analyst completes only with approved evidence.",
+                    ExceptionPolicySummary = "Block when evidence is weak or duplicated.",
+                    TargetLeadHours = 4,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Approved reconciliation note",
+                            IsRequired = true,
+                            TrustRequirement = ProcessArtifactTrustRequirement.HumanApproved,
+                            ValidationRequirementSummary = "Reconciliation note must be reviewed and approved."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
     private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
     {
         var result = await projectsService.SaveAsync(
@@ -654,6 +880,18 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
 
         Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
         return result.Value;
+    }
+
+    private static async Task WriteWorkspaceArtifactAsync(
+        TestApplication application,
+        string relativePath,
+        string content)
+    {
+        var fullPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, content);
     }
 
     private sealed record AgentRunFixture(

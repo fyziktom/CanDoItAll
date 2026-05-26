@@ -1,3 +1,23 @@
-# SB08 anti-stub-audit.txt
+Command: SB08 proof transcript: anti-stub-audit.txt
+ExitCode: 0
 
-Fill during execution.
+# SB08 Anti-Stub and SQLite Audit
+
+Command:
+`rg -n "TODO|throw new NotImplementedException|return default|return null;\s*//|StorageBackedProcessArtifactContentReader|CreateProcessArtifactContentReader|TransitionStepAsync_SB08_INV_001" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S`
+
+Findings:
+- No `throw new NotImplementedException` or stub `return null` was found in the changed SB08 paths.
+- `StorageBackedProcessArtifactContentReader` and `CreateProcessArtifactContentReader` are real production code paths.
+- `TransitionStepAsync_SB08_INV_001_rejects_malformed_storage_backed_json_required_artifact_on_manual_completion` is present as the SB08 red-team test.
+- `TODO` hits are existing business test fixture strings for a TODO register, not implementation stubs.
+- `return defaultOutcome is null` hits in `ProcessCanvasBranching.cs` are existing business logic, not stub code.
+
+Command:
+`rg -n "Sqlite|SQLite|UseSqlite|Migrations.Sqlite" src tests codex/bundles/processes-hardening-followup-runtime-correctness-v6 -S`
+
+SQLite audit:
+- Existing retired/legacy SQLite quarantine strings and tests remain present.
+- Bundle text still states that SQLite runtime and migration paths must not be added.
+- SB08 added no `UseSqlite`, `Migrations.Sqlite`, runtime provider switching, or SQLite migration dependency.
+

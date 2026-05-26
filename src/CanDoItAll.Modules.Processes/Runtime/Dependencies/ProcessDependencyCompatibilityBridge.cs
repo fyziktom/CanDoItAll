@@ -30,6 +30,7 @@ internal static class ProcessDependencyCompatibilityBridge
             ManagerAgentOverrideName = model.ManagerAgentOverrideName,
             Criticality = model.Criticality,
             AutonomyLevel = model.AutonomyLevel,
+            ContractMode = model.ContractMode,
             Status = model.Status,
             Roles = model.Roles
                 .Select(CloneRole)
@@ -71,6 +72,7 @@ internal static class ProcessDependencyCompatibilityBridge
             ManagerAgentOverrideName = definition.ManagerAgentOverrideName,
             Criticality = definition.Criticality,
             AutonomyLevel = definition.AutonomyLevel,
+            ContractMode = definition.ContractMode,
             Status = definition.Status,
             Roles = definition.Roles
                 .Select(CloneRole)
@@ -192,7 +194,11 @@ internal static class ProcessDependencyCompatibilityBridge
                         SensitivityLevel = artifact.SensitivityLevel,
                         RetentionDays = artifact.RetentionDays,
                         AllowedFutureUsageSummary = artifact.AllowedFutureUsageSummary,
-                        ValidationRequirementSummary = artifact.ValidationRequirementSummary
+                        ValidationRequirementSummary = artifact.ValidationRequirementSummary,
+                        WorkflowOutputId = artifact.WorkflowOutputId,
+                        WorkflowOutputName = artifact.WorkflowOutputName,
+                        WorkflowOutputKind = artifact.WorkflowOutputKind,
+                        SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId
                     })
                 .ToList(),
             ArtifactInputs = step.ArtifactInputs
@@ -269,7 +275,11 @@ internal static class ProcessDependencyCompatibilityBridge
                         SensitivityLevel = artifact.SensitivityLevel,
                         RetentionDays = artifact.RetentionDays,
                         AllowedFutureUsageSummary = artifact.AllowedFutureUsageSummary,
-                        ValidationRequirementSummary = artifact.ValidationRequirementSummary
+                        ValidationRequirementSummary = artifact.ValidationRequirementSummary,
+                        WorkflowOutputId = artifact.WorkflowOutputId,
+                        WorkflowOutputName = artifact.WorkflowOutputName,
+                        WorkflowOutputKind = artifact.WorkflowOutputKind,
+                        SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId
                     })
                 .ToList(),
             ArtifactInputs = step.ArtifactInputs

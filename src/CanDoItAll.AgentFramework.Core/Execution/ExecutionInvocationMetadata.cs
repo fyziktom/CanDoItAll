@@ -108,6 +108,7 @@ public static class ExecutionInvocationMetadata
             metadata,
             targetMetadataKey,
             aliases);
+        RemoveWritableCoveredReadOnlyExternalTargetAliases(metadata);
 
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
@@ -560,6 +561,62 @@ public static class ExecutionInvocationMetadata
                 .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                 .Select(alias => JsonValue.Create(alias))
                 .ToArray());
+    }
+
+    private static void RemoveWritableCoveredReadOnlyExternalTargetAliases(JsonObject metadata)
+    {
+        var writableAliases = ReadExternalTargetAliases(metadata, AllowedExternalTargetAliasesMetadataKey);
+        if (writableAliases.Count == 0 ||
+            metadata[ReadOnlyExternalTargetAliasesMetadataKey] is not JsonArray)
+        {
+            return;
+        }
+
+        var readOnlyAliases = ReadExternalTargetAliases(metadata, ReadOnlyExternalTargetAliasesMetadataKey);
+        var filteredAliases = readOnlyAliases
+            .Where(readOnlyAlias => !IsExternalTargetAliasCoveredByAny(readOnlyAlias, writableAliases))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (filteredAliases.Length == 0)
+        {
+            metadata.Remove(ReadOnlyExternalTargetAliasesMetadataKey);
+            return;
+        }
+
+        metadata[ReadOnlyExternalTargetAliasesMetadataKey] = new JsonArray(
+            filteredAliases
+                .Select(alias => JsonValue.Create(alias))
+                .ToArray());
+    }
+
+    private static IReadOnlyList<string> ReadExternalTargetAliases(
+        JsonObject metadata,
+        string metadataKey)
+    {
+        if (metadata[metadataKey] is not JsonArray aliases)
+        {
+            return [];
+        }
+
+        return aliases
+            .Select(item => item?.GetValue<string>())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool IsExternalTargetAliasCoveredByAny(
+        string alias,
+        IReadOnlyList<string> roots)
+    {
+        return roots.Any(root =>
+            string.Equals(alias, root, StringComparison.OrdinalIgnoreCase) ||
+            alias.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsPathCandidateStart(string value, int index)

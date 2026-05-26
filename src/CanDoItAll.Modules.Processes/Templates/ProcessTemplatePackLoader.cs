@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
@@ -7,6 +9,7 @@ namespace CanDoItAll.Modules.Processes;
 public sealed class ProcessTemplatePackLoader
 {
     private const string ManifestFileName = "manifest.json";
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     private readonly string? configuredPackRoot;
     private readonly Lazy<ProcessTemplatePack> pack;
@@ -135,7 +138,17 @@ public sealed class ProcessTemplatePackLoader
     private static T ReadJson<T>(string path)
         where T : class, new()
     {
-        return JsonFileLoader.ReadRequired<T>(path);
+        return JsonFileLoader.ReadRequired<T>(path, JsonOptions);
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private static string ResolvePackRoot(string? explicitRoot)

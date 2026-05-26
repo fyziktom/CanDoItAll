@@ -77,7 +77,8 @@ public sealed class ProcessTemplateProjectionService
             OperatingModeSummary = process.OperatingModeSummary,
             SimulationReadinessSummary = process.SimulationReadinessSummary,
             Criticality = EnumValueParser.ParseOrDefault(process.Criticality, ProcessCriticality.Standard),
-            AutonomyLevel = EnumValueParser.ParseOrDefault(process.AutonomyLevel, ProcessAutonomyLevel.Assisted)
+            AutonomyLevel = EnumValueParser.ParseOrDefault(process.AutonomyLevel, ProcessAutonomyLevel.Assisted),
+            ContractMode = EnumValueParser.ParseOrDefault(process.ContractMode, ProcessDefinitionContractMode.Strict)
         };
 
         var roleIdsByKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);

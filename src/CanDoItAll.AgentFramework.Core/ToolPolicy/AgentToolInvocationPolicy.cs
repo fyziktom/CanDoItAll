@@ -83,7 +83,8 @@ public sealed record ToolInvocationPolicyContext(
     IReadOnlyList<string>? ProcessStepAllowedOperations = null,
     string ProcessStepTargetScope = "",
     string InspectedScriptContent = "",
-    string ScriptInspectionFailure = "")
+    string ScriptInspectionFailure = "",
+    string ScriptSideEffectManifestJson = "")
 {
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -239,12 +240,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "integration-map",
         "output"
     ];
-    private static readonly Regex PowerShellWriteSignalRegex = new(
-        @"\b(?:Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|Rename-Item|Clear-Content|Set-ItemProperty|New-ItemProperty)\b",
-        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-    private static readonly Regex PythonWriteSignalRegex = new(
-        @"(?:\.(?:write_text|write_bytes|unlink|rename|replace|mkdir|rmdir)\s*\(|\bshutil\.(?:copy|copyfile|copytree|move|rmtree)\b|\bos\.(?:remove|unlink|rename|replace|makedirs|rmdir)\b|\bopen\s*\([^,\r\n]+,\s*[""'][^""']*[wax+][^""']*[""'])",
-        RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
     private static readonly HashSet<string> BrowserProofTools = new(StringComparer.OrdinalIgnoreCase)
     {
         "browser_console_messages",
@@ -404,32 +399,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         ToolInvocationPolicyContext context,
         string signature)
     {
-        if (!IsGovernedProcessRun(context))
-        {
-            return null;
-        }
-
-        var allowedOperations = NormalizeOperationNames(context.ProcessStepAllowedOperations);
-        if (allowedOperations.Count == 0)
-        {
-            return null;
-        }
-
-        var requirements = ResolveOperationRequirements(context);
-        foreach (var requirement in requirements)
-        {
-            if (requirement.AnyOf.Count == 0 ||
-                requirement.AnyOf.Any(allowedOperations.Contains))
-            {
-                continue;
-            }
-
-            return ToolInvocationPolicyDecision.Deny(
-                signature,
-                $"This governed step target scope '{context.ProcessStepTargetScope}' is not authorized to use tool '{context.ToolName}'. Required operation: {string.Join(" or ", requirement.AnyOf)}. Allowed operations: {string.Join(", ", allowedOperations.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
-        }
-
-        return null;
+        return ProcessToolOperationAuthorizer.Evaluate(context, signature, ResolveOperationRequirements(context));
     }
 
     private static IReadOnlyList<OperationRequirement> ResolveOperationRequirements(ToolInvocationPolicyContext context)
@@ -509,8 +479,25 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
     private static OperationRequirement ResolveWorkspaceScriptRequirement(ToolInvocationPolicyContext context)
     {
+        var manifest = TryParseScriptSideEffectManifestForRequirement(context);
+        if (manifest?.Mode == GovernedScriptSideEffectMode.ProductMutation)
+        {
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
+        if (manifest?.Mode == GovernedScriptSideEffectMode.ExternalArtifactDestination)
+        {
+            return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
+        }
+
+        if (manifest?.Mode == GovernedScriptSideEffectMode.ManagedProcessArtifacts)
+        {
+            return OperationRequirement.Any(OperationWriteManagedProcessArtifacts);
+        }
+
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
             .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
+            .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (referencedAliases.Any(alias => !IsExternalArtifactDestinationPath(alias)))
@@ -526,7 +513,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
         }
 
-        if (HasScriptProductWriteSignal(context.ToolName, context.InspectedScriptContent) ||
+        var analysis = ProcessScriptSideEffectAnalyzer.Analyze(context.ToolName, context.InspectedScriptContent);
+        if (analysis.HasWriteSignal ||
             ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
                 .Select(NormalizeManagedWorkspacePath)
                 .Any(path => IsAllowedExternalRunManagedPath(path) && !IsManagedOutputPath(path)))
@@ -542,6 +530,22 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             OperationRecoverArtifactsOnly);
     }
 
+    private static GovernedScriptSideEffectManifest? TryParseScriptSideEffectManifestForRequirement(
+        ToolInvocationPolicyContext context)
+    {
+        if (string.IsNullOrWhiteSpace(context.ScriptSideEffectManifestJson))
+        {
+            return null;
+        }
+
+        return GovernedScriptSideEffectManifest.TryParse(
+            context.ScriptSideEffectManifestJson,
+            out var manifest,
+            out _)
+                ? manifest
+                : null;
+    }
+
     private static OperationRequirement ResolveProcessArtifactRecordRequirement(ToolInvocationPolicyContext context)
     {
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
@@ -551,14 +555,6 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return OperationRequirement.Any(OperationWriteManagedProcessArtifacts, OperationRecoverArtifactsOnly);
-    }
-
-    private static HashSet<string> NormalizeOperationNames(IReadOnlyList<string>? operations)
-    {
-        return operations?
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase) ?? [];
     }
 
     private static ToolInvocationPolicyDecision? EvaluateGovernedBrowserToolBounds(
@@ -708,7 +704,31 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' must be inspected before execution; use current-run artifact writes or a read-only validation command instead.");
         }
 
-        var declaredOutputDecision = EvaluateScriptDeclaredOutputBoundary(context, signature);
+        if (!GovernedScriptSideEffectManifest.TryParse(
+                context.ScriptSideEffectManifestJson,
+                out var manifest,
+                out var manifestFailureMessage))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run scripts without declared side effects. Script '{ResolveScriptPathDisplay(context)}' was denied because {manifestFailureMessage}");
+        }
+
+        if (manifest.Mode == GovernedScriptSideEffectMode.ProductMutation)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' declared product mutation in its side-effect manifest.");
+        }
+
+        var analysis = ProcessScriptSideEffectAnalyzer.Analyze(context.ToolName, context.InspectedScriptContent);
+        var manifestDecision = EvaluateScriptSideEffectManifestBoundary(context, signature, manifest, analysis);
+        if (manifestDecision is not null)
+        {
+            return manifestDecision;
+        }
+
+        var declaredOutputDecision = EvaluateScriptDeclaredOutputBoundary(context, signature, manifest);
         if (declaredOutputDecision is not null)
         {
             return declaredOutputDecision;
@@ -716,6 +736,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
             .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
+            .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
@@ -731,12 +752,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
-                    $"Governed scripts may only reference external-target paths grounded by the current run. Script '{ResolveScriptPathDisplay(context)}' references '{referencedAlias}', which is outside the current run boundary.");
+                $"Governed scripts may only reference external-target paths grounded by the current run. Script '{ResolveScriptPathDisplay(context)}' references '{referencedAlias}', which is outside the current run boundary.");
             }
         }
 
-        var hasWriteSignal = HasScriptProductWriteSignal(context.ToolName, context.InspectedScriptContent);
-        if (!hasWriteSignal)
+        if (!analysis.HasWriteSignal)
         {
             return null;
         }
@@ -760,12 +780,96 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return null;
     }
 
+    private static ToolInvocationPolicyDecision? EvaluateScriptSideEffectManifestBoundary(
+        ToolInvocationPolicyContext context,
+        string signature,
+        GovernedScriptSideEffectManifest manifest,
+        ProcessScriptSideEffectAnalysis analysis)
+    {
+        var declaredWritePaths = ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+            .Concat(manifest.DeclaredWritePaths)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (analysis.EncodedCommandSignals.Count > 0)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run encoded script content. Script '{ResolveScriptPathDisplay(context)}' contains encoded command usage that cannot be inspected: {string.Join(", ", analysis.EncodedCommandSignals)}.");
+        }
+
+        if (analysis.ShellDelegationSignals.Count > 0 && !manifest.AllowShellDelegation)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run undeclared shell delegation. Script '{ResolveScriptPathDisplay(context)}' contains: {string.Join(", ", analysis.ShellDelegationSignals)}.");
+        }
+
+        var undeclaredChildScripts = analysis.ChildScriptSignals
+            .Where(childScript => !ProcessScriptSideEffectAnalyzer.IsDeclaredChildScript(childScript, manifest.DeclaredChildScripts))
+            .ToArray();
+        if (undeclaredChildScripts.Length > 0)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run undeclared child scripts. Script '{ResolveScriptPathDisplay(context)}' invokes: {string.Join(", ", undeclaredChildScripts)}.");
+        }
+
+        if (analysis.ChildScriptSignals.Count > 0)
+        {
+            var uninspectedChildScripts = manifest.DeclaredChildScripts
+                .Where(childScript => !ProcessScriptSideEffectAnalyzer.HasInspectedChildScriptMarker(context.InspectedScriptContent, childScript))
+                .ToArray();
+            if (uninspectedChildScripts.Length > 0)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to run child scripts that were not inspected. Script '{ResolveScriptPathDisplay(context)}' declared but did not inspect: {string.Join(", ", uninspectedChildScripts)}.");
+            }
+        }
+
+        if (manifest.Mode == GovernedScriptSideEffectMode.NoMutation)
+        {
+            if (declaredWritePaths.Length > 0)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"Script '{ResolveScriptPathDisplay(context)}' declared no mutation but also declared write paths: {string.Join(", ", declaredWritePaths)}.");
+            }
+
+            if (analysis.HasWriteSignal)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"Script '{ResolveScriptPathDisplay(context)}' declared no mutation but contains write-capable operations.");
+            }
+        }
+
+        if (analysis.HasWriteSignal &&
+            manifest.Mode is not GovernedScriptSideEffectMode.ManagedProcessArtifacts and not GovernedScriptSideEffectMode.ExternalArtifactDestination)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Script '{ResolveScriptPathDisplay(context)}' contains write-capable operations but did not declare an allowed non-product write mode.");
+        }
+
+        if (analysis.HasWriteSignal && declaredWritePaths.Length == 0)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Script '{ResolveScriptPathDisplay(context)}' contains write-capable operations but did not declare the write target paths in `{GovernedScriptSideEffectManifest.ArgumentName}`.");
+        }
+
+        return null;
+    }
+
     private static ToolInvocationPolicyDecision? EvaluateScriptDeclaredOutputBoundary(
         ToolInvocationPolicyContext context,
-        string signature)
+        string signature,
+        GovernedScriptSideEffectManifest manifest)
     {
         var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
-        foreach (var outputPath in ResolveScriptDeclaredOutputPaths(context.RedactedArguments))
+        foreach (var outputPath in ResolveScriptDeclaredOutputPaths(context.RedactedArguments).Concat(manifest.DeclaredWritePaths))
         {
             var normalizedPath = NormalizeManagedWorkspacePath(outputPath);
             if (string.IsNullOrWhiteSpace(normalizedPath))
@@ -787,7 +891,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                     $"This governed step is not authorized to mutate product targets. Script output path '{normalizedPath}' is outside an allowed external artifact destination.");
             }
 
-            if (IsManagedOutputPath(normalizedPath))
+            if (IsManagedOutputPath(normalizedPath) ||
+                !IsCurrentRunManagedArtifactPath(normalizedPath, context))
             {
                 return ToolInvocationPolicyDecision.Deny(
                     signature,
@@ -846,24 +951,28 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             .ToArray();
     }
 
-    private static bool HasScriptProductWriteSignal(string toolName, string scriptContent)
+    private static IReadOnlyList<string> ResolveExternalTargetAliasesFromManifest(
+        GovernedScriptSideEffectManifest? manifest)
     {
-        if (string.IsNullOrWhiteSpace(scriptContent))
+        if (manifest is null)
         {
-            return false;
+            return [];
         }
 
-        if (string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript, StringComparison.OrdinalIgnoreCase))
-        {
-            return PowerShellWriteSignalRegex.IsMatch(scriptContent);
-        }
+        return manifest.DeclaredReadPaths
+            .Concat(manifest.DeclaredWritePaths)
+            .Concat(manifest.DeclaredChildScripts)
+            .SelectMany(ResolveExternalTargetAliasesFromText)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 
-        if (string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile, StringComparison.OrdinalIgnoreCase))
-        {
-            return PythonWriteSignalRegex.IsMatch(scriptContent);
-        }
+    private static bool HasScriptProductWriteSignal(string toolName, string scriptContent)
+        => ProcessScriptSideEffectAnalyzer.Analyze(toolName, scriptContent).HasWriteSignal;
 
-        return false;
+    public static string BuildInspectedChildScriptMarker(string childScript)
+    {
+        return ProcessScriptSideEffectAnalyzer.BuildInspectedChildScriptMarker(childScript);
     }
 
     private static IEnumerable<string> EnumerateArgumentTextValues(string? value)
@@ -1194,7 +1303,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
         var matchedAlias = referencedAliases.FirstOrDefault(referencedAlias =>
+            !IsAllowedExternalTargetAlias(referencedAlias, allowedAliases) &&
             readOnlyAliases.Any(readOnlyAlias =>
                 string.Equals(referencedAlias, readOnlyAlias, StringComparison.OrdinalIgnoreCase) ||
                 referencedAlias.StartsWith(readOnlyAlias + "/", StringComparison.OrdinalIgnoreCase)));
@@ -1478,6 +1589,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return string.IsNullOrWhiteSpace(context.ProcessRunId)
             ? "artifacts/process-runs/<current-run-id>"
             : $"artifacts/process-runs/{context.ProcessRunId.Trim()}";
+    }
+
+    private static bool IsCurrentRunManagedArtifactPath(string normalizedPath, ToolInvocationPolicyContext context)
+    {
+        var currentRunRoot = BuildCurrentRunManagedArtifactRoot(context);
+        return !string.IsNullOrWhiteSpace(normalizedPath) &&
+               (string.Equals(normalizedPath, currentRunRoot, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith(currentRunRoot + "/", StringComparison.OrdinalIgnoreCase));
     }
 
     private static string NormalizeManagedWorkspacePath(string? path)

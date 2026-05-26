@@ -117,6 +117,7 @@ internal static class ProcessDefinitionSyncComparer
             model.ManagerAgentOverrideName,
             model.Criticality,
             model.AutonomyLevel,
+            model.ContractMode,
             Roles = model.Roles
                 .OrderBy(item => item.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(item => new
@@ -231,7 +232,11 @@ internal static class ProcessDefinitionSyncComparer
                             item.SensitivityLevel,
                             item.RetentionDays,
                             item.AllowedFutureUsageSummary,
-                            item.ValidationRequirementSummary
+                            item.ValidationRequirementSummary,
+                            item.WorkflowOutputId,
+                            item.WorkflowOutputName,
+                            item.WorkflowOutputKind,
+                            item.SubprocessChildArtifactExpectationId
                         })
                         .ToArray(),
                     ArtifactInputs = step.ArtifactInputs

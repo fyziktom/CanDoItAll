@@ -134,7 +134,7 @@ public static class ProcessDefinitionLinter
                 issues,
                 step,
                 "processes.lint.step-operation-contract-inferred",
-                ProcessDefinitionLintSeverity.Warning,
+                StrictSeverity(mode),
                 "This step relies on a text-inferred operation contract. Persisted allowed operations and target scope are required for a durable runtime boundary.",
                 "Move the operation contract into the typed allowed operations and target scope fields.");
             return;

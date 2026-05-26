@@ -298,6 +298,63 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Runs_operator_console_SB13_INV_001_surfaces_invariant_diagnostics_and_recommended_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Invariant diagnostics component project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Invariant diagnostics component run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test invariant diagnostics."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+        var stepRun = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Title == "Review rendered workspace" && step.Status == ProcessStepRunStatus.Pending);
+        var invalidTransition = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                Reason = "Component test attempted a manual transition before the step could complete.",
+                DecidedBy = "component-tests"
+            });
+
+        Assert.False(invalidTransition.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        await ActivateRunsTabAsync(cut);
+        cut.WaitForAssertion(() => Assert.Contains("Invariant diagnostics component run", cut.Markup));
+        await ActivateRunControlTabAsync(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-invariant-diagnostics']"));
+            Assert.Contains("Manual transition validation failure", cut.Markup);
+            Assert.Contains("Recommended action", cut.Markup);
+            Assert.Contains("Refresh the run state", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task Steps_canvas_toolbar_switches_between_authoring_and_delete_modes()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();

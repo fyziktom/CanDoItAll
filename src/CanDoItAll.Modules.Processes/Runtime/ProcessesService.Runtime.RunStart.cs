@@ -452,7 +452,7 @@ public sealed partial class ProcessesService
             : await dbContext.Set<ProcessArtifactExpectation>()
                 .Where(item => stepIds.Contains(item.StepDefinitionId))
                 .ToListAsync(cancellationToken);
-        var lintMode = ResolveEffectiveLintMode(request.LintMode, definition);
+        var lintMode = ResolveEffectiveLintMode(request.LintMode, definition, publishedVersion.ContractMode);
         var lintResult = ProcessDefinitionLinter.Analyze(
             BuildLintEditorModel(
                 definition,

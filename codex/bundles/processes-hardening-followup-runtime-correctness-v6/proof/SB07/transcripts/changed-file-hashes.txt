@@ -1,3 +1,16 @@
-# SB07 changed-file-hashes.txt
+Command: SB07 proof transcript: changed-file-hashes.txt
+ExitCode: 0
 
-Fill during execution.
+# SB07 changed-file SHA-256 hashes
+
+B7C06C3B06D24ADCA0D4218E1116851D2604F928D08F22CFD2CE0CDDD7723565  C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs
+C5615DD8C99760E33934520F804E22BAA193C838100F2B403560ACFB888042A8  C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\ToolPolicy\ProcessScriptSideEffectAnalyzer.cs
+D9471DAA34CBD2D76EEA626C1C305FB4BC9A0138F9E5CD22DB9EF667611A5B51  C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\ToolPolicy\ProcessToolOperationAuthorizer.cs
+12EE01601B6F0C3027348F76D4B7686491D73F828EC9994C66AED72A3D389F0B  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+C60358D8B285B718C2EEE3B3DB48010C5CE391248324078F0B0BD070D66E7374  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs
+ABFB8D50432C0221222936ACDC1FDCEDE73DA050B37B4FA435C5EAB444C40D23  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs
+376AE9AAFE968BBB157765DCE2102ADF737C676CD53BE9C69F842C18E8FB37C0  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs
+99CD9A390EBC634BF3368CA4CA967391939F7C1A79CDC30D6F7FCD95C726421F  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs
+A14F76A2A4F025EA74EB261EB0586820791A1FD22CABF5BACD5F8D0EEA4AA4DA  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs
+34DDDA73683C07EDC8A72BDAC0A6A0CDEBFE897DB71417CDAD3AD3365C114621  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+

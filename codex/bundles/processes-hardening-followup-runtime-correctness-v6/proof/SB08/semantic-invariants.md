@@ -2,19 +2,19 @@
 
 ## Invariant SB08-INV-001
 
-Expected behavior: Replace workspace-only artifact content validation with storage abstraction.
+- Invariant ID: SB08-INV-001
+- Source raw note: RN08 and RN02.
+- Expected behavior: Artifact validation reads managed storage content instead of trusting workspace path metadata alone.
+- Disallowed shallow implementation: Prompt-only changes, source-assertion-only proof, fixture-only branching, text-only heuristics, or tests that avoid the production runtime path.
+- Failing-first test: bundle://proof/SB08/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB08/transcripts/passing.txt
+- Changed source files: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs
+- Production assertions: bundle://proof/SB08/manifest.md records the exact source assertions, tests, anti-stub audit, and changed-file hashes for this invariant.
+- Red-team negative case: bundle://proof/SB08/transcripts/failing-first.txt
+- Downstream dependency check: SB09 and SB14 depend on storage-backed artifact validation.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
-- adding more fragile text heuristics without typed state
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative proof |
+| --- | --- | --- | --- | --- |
+| SB08 verified runtime behavior | repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs | bundle://proof/SB08/manifest.md | bundle://proof/SB08/transcripts/passing.txt | bundle://proof/SB08/transcripts/failing-first.txt |

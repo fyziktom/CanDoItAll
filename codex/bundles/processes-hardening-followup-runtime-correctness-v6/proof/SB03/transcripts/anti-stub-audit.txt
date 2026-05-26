@@ -1,3 +1,18 @@
+Command: SB03 proof transcript: anti-stub-audit.txt
+ExitCode: 0
+
 # SB03 anti-stub-audit.txt
 
-Fill during execution.
+Command: `rg -n "TODO|STUB|NotImplementedException|throw new NotImplementedException|PlaceholderOnly|InvalidFormat" src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs -S`
+
+Findings:
+- No TODO/STUB/NotImplementedException placeholders were introduced in the changed production or test files.
+- `PlaceholderOnly` and `InvalidFormat` matches are real validation statuses in the shared validator and assertions in the new tests.
+
+Command: `rg -n "SatisfiesArtifactExpectation|SatisfiesTrustRequirement|ValidateArtifactExpectationForRecordedArtifacts|ProcessStepCompletionExecutorKind\\.Manual|step-completion-invalid-required-artifacts" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration -S`
+
+Findings:
+- `ProcessesService.Runtime.StepTransitions.cs` calls `ValidateArtifactExpectationForRecordedArtifacts`.
+- The removed local manual completion helpers are not present in `ProcessesService.Runtime.StepTransitions.cs`.
+- Remaining `SatisfiesArtifactExpectation` matches are in dispatch/read-query support paths outside SB03's manual completion gate.
+

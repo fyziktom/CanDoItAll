@@ -539,6 +539,7 @@ public partial class ProcessWorkspace
         processEscalations = runDetails.Escalations;
         operatorApprovals = runDetails.OperatorApprovals;
         attemptTimeline = runDetails.AttemptTimeline;
+        invariantDiagnostics = runDetails.InvariantDiagnostics;
         selectedRunHealth = runDetails.Health;
         directMessageThreads = runDetails.DirectMessageThreads;
         var refreshedRuntimeBranchSelections = new Dictionary<Guid, Guid?>();
@@ -589,6 +590,7 @@ public partial class ProcessWorkspace
         processEscalations = [];
         operatorApprovals = [];
         attemptTimeline = [];
+        invariantDiagnostics = [];
         selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
         directMessageThreads = [];
         selectedAssignmentId = null;

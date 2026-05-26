@@ -154,14 +154,14 @@ public sealed partial class MafAgentRuntime
             return commandExecutionService.DotnetNew(template, name, allowedParentDirectory, force, timeoutSeconds);
         }
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
-            return commandExecutionService.PythonRunFile(allowedPath, arguments, allowedWorkingDirectory, timeoutSeconds);
+            return commandExecutionService.PythonRunFile(allowedPath, arguments, allowedWorkingDirectory, timeoutSeconds, sideEffectManifest);
         }
 
-        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
+        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
         {
             var allowedPath = PrepareLocalScriptReadPath(path) ?? path;
             var allowedWorkingDirectory = PrepareLocalScriptReadPath(workingDirectory);
@@ -169,7 +169,7 @@ public sealed partial class MafAgentRuntime
                 .Select(outputPath => PrepareFileWritePath(outputPath) ?? outputPath)
                 .ToArray();
 
-            return commandExecutionService.PowerShellRunScript(allowedPath, arguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds);
+            return commandExecutionService.PowerShellRunScript(allowedPath, arguments, allowedOutputPaths, allowedWorkingDirectory, timeoutSeconds, sideEffectManifest);
         }
 
         public Task<WorkspaceDocumentConversionResult> ConvertDocumentToMarkdown(string path, string? outputPath = null, int previewCharacters = 4000)

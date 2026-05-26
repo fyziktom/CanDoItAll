@@ -232,4 +232,85 @@ public sealed class AgentWorkspaceToolAccessMetadataTests
         Assert.Contains("external-target/C/programovani/outputsfromtests/dotnet/BikeRepairSlotScheduler", readOnlyAliases);
         Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
     }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_does_not_add_same_trusted_writable_alias_as_read_only()
+    {
+        const string writableAlias = "external-target/C/work/apps/Inventory";
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            $$"""
+              {
+                "{{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}}": true,
+                "{{ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey}}": ["{{writableAlias}}"]
+              }
+              """,
+            "Implement the change in external-target/C/work/apps/Inventory.",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var allowedAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains(writableAlias, allowedAliases);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
+    }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_does_not_add_child_alias_covered_by_writable_parent_as_read_only()
+    {
+        const string writableAlias = "external-target/C/work/apps/Inventory";
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            $$"""
+              {
+                "{{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}}": true,
+                "{{ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey}}": ["{{writableAlias}}"]
+              }
+              """,
+            "Implement the change in external-target/C/work/apps/Inventory/src/Program.cs.",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey, out _));
+    }
+
+    [Fact]
+    public void GroundPromptExternalTargetAliases_adds_sibling_alias_outside_writable_parent_as_read_only()
+    {
+        const string writableAlias = "external-target/C/work/apps/Inventory";
+        const string siblingAlias = "external-target/C/work/apps/Billing";
+        var metadataJson = ExecutionInvocationMetadata.GroundPromptExternalTargetAliases(
+            $$"""
+              {
+                "{{ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey}}": true,
+                "{{ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey}}": ["{{writableAlias}}"]
+              }
+              """,
+            $"Compare with {siblingAlias} before implementing.",
+            new AgentWorkspaceToolAccessSettings
+            {
+                CanReadFiles = true,
+                CanWriteFiles = true
+            });
+
+        using var document = JsonDocument.Parse(metadataJson);
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains(siblingAlias, readOnlyAliases);
+    }
 }

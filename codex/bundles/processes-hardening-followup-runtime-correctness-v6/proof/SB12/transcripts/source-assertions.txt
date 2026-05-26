@@ -1,3 +1,195 @@
-# SB12 source-assertions.txt
+Command: SB12 proof transcript: source-assertions.txt
+ExitCode: 0
 
-Fill during execution.
+SB12 source assertions captured from production, template, migration, and test source.
+
+## Persisted process-version contract mode policy
+rg -n ProcessDefinitionContractMode|ContractMode src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEditorModels.cs src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessDefinitionEntities.cs src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessDefinitionEntityConfigurations.cs src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526023209_ProcessDefinitionContractMode.cs
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526023209_ProcessDefinitionContractMode.cs:7:    public partial class ProcessDefinitionContractMode : Migration
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526023209_ProcessDefinitionContractMode.cs:12:                name: "ContractMode",
+src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526023209_ProcessDefinitionContractMode.cs:23:                name: "ContractMode",
+src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessDefinitionEntities.cs:74:    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Strict;
+src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEditorModels.cs:99:    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Strict;
+src/CanDoItAll.Modules.Processes/Persistence/Configurations/ProcessDefinitionEntityConfigurations.cs:57:        builder.Property(version => version.ContractMode).HasConversion<string>().HasMaxLength(40);
+src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs:18:public enum ProcessDefinitionContractMode
+
+## Contract mode flows through save, editor, import/export, templates, and default sync
+rg -n ContractMode|ProcessDefinitionContractMode src/CanDoItAll.Modules.Processes/Persistence/ProcessesService.Persistence.cs src/CanDoItAll.Modules.Processes/Services/ProcessesService.cs src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs src/CanDoItAll.Modules.Processes/Runtime/Dependencies/ProcessDependencyCompatibilityBridge.cs src/CanDoItAll.Modules.Processes/ImportExport/ProcessImportExportModels.cs src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateProjectionService.cs src/CanDoItAll.Modules.Processes/Services/ProcessesService.DefaultCatalogSync.cs
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.DefaultCatalogSync.cs:120:            model.ContractMode,
+src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateProjectionService.cs:81:            ContractMode = EnumValueParser.ParseOrDefault(process.ContractMode, ProcessDefinitionContractMode.Strict)
+src/CanDoItAll.Modules.Processes/ImportExport/ProcessImportExportModels.cs:61:    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Compatibility;
+src/CanDoItAll.Modules.Processes/Runtime/Dependencies/ProcessDependencyCompatibilityBridge.cs:33:            ContractMode = model.ContractMode,
+src/CanDoItAll.Modules.Processes/Runtime/Dependencies/ProcessDependencyCompatibilityBridge.cs:75:            ContractMode = definition.ContractMode,
+src/CanDoItAll.Modules.Processes/Persistence/ProcessesService.Persistence.cs:122:                workingVersion.ContractMode = model.ContractMode;
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:333:        ProcessDefinitionContractMode contractMode)
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:336:            contractMode == ProcessDefinitionContractMode.Strict ||
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:380:            ContractMode = version.ContractMode,
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.cs:77:                ContractMode = ProcessDefinitionContractMode.Strict,
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.cs:138:            ContractMode = workingVersion.ContractMode,
+
+## Publish and run-start gates enforce effective strict mode
+rg -n ResolveEffectiveLintMode|CreateStrictLintGateError|lint-blocked|ContractMode|RequiresStrictLint src/CanDoItAll.Modules.Processes/Services/ProcessesService.Publication.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Publication.cs:55:            var lintMode = ResolveEffectiveLintMode(request.LintMode, definition, draftVersion.ContractMode);
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Publication.cs:66:            var strictLintError = CreateStrictLintGateError(lintResult, "publish");
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Publication.cs:396:            ContractMode = publishedVersion.ContractMode,
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:310:    private static Error? CreateStrictLintGateError(
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:327:            $"processes.{operation}.lint-blocked");
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:330:    private static ProcessDefinitionLintMode ResolveEffectiveLintMode(
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:333:        ProcessDefinitionContractMode contractMode)
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:336:            contractMode == ProcessDefinitionContractMode.Strict ||
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:337:            RequiresStrictLint(definition.Criticality, definition.AutonomyLevel);
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:344:    private static bool RequiresStrictLint(
+src/CanDoItAll.Modules.Processes/Services/ProcessesService.Support.cs:380:            ContractMode = version.ContractMode,
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs:455:        var lintMode = ResolveEffectiveLintMode(request.LintMode, definition, publishedVersion.ContractMode);
+src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs:466:        var strictLintError = CreateStrictLintGateError(lintResult, "run-start");
+
+## Strict lint rejects text-inferred risky operation contracts
+rg -n step-operation-contract-inferred|StrictSeverity|HasExplicitOperationContractText|step-operation-contract-missing src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs
+121:                StrictSeverity(mode),
+131:        if (HasExplicitOperationContractText(text))
+136:                "processes.lint.step-operation-contract-inferred",
+137:                StrictSeverity(mode),
+146:            "processes.lint.step-operation-contract-missing",
+147:            StrictSeverity(mode),
+255:                StrictSeverity(mode),
+309:    private static bool HasExplicitOperationContractText(string text)
+367:    private static ProcessDefinitionLintSeverity StrictSeverity(ProcessDefinitionLintMode mode)
+
+## Templates include typed operation contracts and strict-mode enum loading
+rg -n AllowedOperations|OperationTargetScope|ContractMode|JsonStringEnumConverter|Artifact recovery src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs Templates/Processes/processes/blazor-app-delivery/definition.json Templates/Processes/processes/blazor-app-repair-fix/definition.json Templates/Processes/processes/blazor-backend-feature/definition.json Templates/Processes/processes/blazor-frontend-feature/definition.json Templates/Processes/processes/blazor-fullstack-feature/definition.json
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:148:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:196:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:218:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:288:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:296:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:313:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:394:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:420:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:478:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:486:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:503:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:572:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:580:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:597:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:667:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:673:      "OperationTargetScope": "ExternalActionControlled"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:690:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:760:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:768:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:785:      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:858:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-repair-fix/definition.json:866:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:148:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:196:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:218:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:288:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:296:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:313:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:394:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:420:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:478:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:486:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:503:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:572:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:580:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:597:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:667:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:673:      "OperationTargetScope": "ExternalActionControlled"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:690:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:760:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:768:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:785:      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:858:      "AllowedOperations": [
+Templates/Processes/processes/blazor-fullstack-feature/definition.json:866:      "OperationTargetScope": "ExternalProductTargetMutable"
+src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackLoader.cs:150:        options.Converters.Add(new JsonStringEnumConverter());
+Templates/Processes/processes/blazor-backend-feature/definition.json:148:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:196:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-backend-feature/definition.json:218:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:288:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:296:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-backend-feature/definition.json:313:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:394:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-backend-feature/definition.json:420:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:478:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:486:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-backend-feature/definition.json:503:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:572:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:580:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-backend-feature/definition.json:597:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:667:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:673:      "OperationTargetScope": "ExternalActionControlled"
+Templates/Processes/processes/blazor-backend-feature/definition.json:690:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:760:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:768:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-backend-feature/definition.json:785:      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-backend-feature/definition.json:858:      "AllowedOperations": [
+Templates/Processes/processes/blazor-backend-feature/definition.json:866:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:148:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:196:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:218:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:288:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:296:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:313:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:394:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:420:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:478:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:486:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:503:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:572:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:580:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:597:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:667:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:673:      "OperationTargetScope": "ExternalActionControlled"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:690:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:760:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:768:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-frontend-feature/definition.json:785:      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-frontend-feature/definition.json:858:      "AllowedOperations": [
+Templates/Processes/processes/blazor-frontend-feature/definition.json:866:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-delivery/definition.json:148:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:196:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:201:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-app-delivery/definition.json:218:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:288:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:296:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-delivery/definition.json:313:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:394:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:403:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/blazor-app-delivery/definition.json:420:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:478:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:486:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-delivery/definition.json:503:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:572:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:580:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-delivery/definition.json:597:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:667:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:673:      "OperationTargetScope": "ExternalActionControlled"
+Templates/Processes/processes/blazor-app-delivery/definition.json:690:      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:760:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:768:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/blazor-app-delivery/definition.json:785:      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+Templates/Processes/processes/blazor-app-delivery/definition.json:858:      "AllowedOperations": [
+Templates/Processes/processes/blazor-app-delivery/definition.json:866:      "OperationTargetScope": "ExternalProductTargetMutable"
+
+## Tests cover strict, compatibility, publish, run-start, and template migration behavior
+rg -n SB12_INV|ProcessDefinitionLinterTests|PublishAsync_SB10_INV_001|StartRunAsync_SB10_INV_001|Blazor_process_templates_project_with_required_runtime_browser_and_writeback_contracts tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs:5:public sealed class ProcessDefinitionLinterTests
+tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs:98:    public void Analyze_SB12_INV_001_strict_rejects_text_inferred_operation_contract()
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2264:    public async Task PublishAsync_SB10_INV_001_applies_strict_lint_for_high_criticality_definitions()
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2287:    public async Task PublishAsync_SB12_INV_001_rejects_strict_version_missing_risky_operation_contract()
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2310:    public async Task PublishAsync_SB12_INV_002_allows_compatibility_version_with_visible_contract_warning()
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:2344:    public async Task StartRunAsync_SB10_INV_001_applies_strict_lint_for_delegated_published_definitions()
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3752:    public async Task Blazor_process_templates_project_with_required_runtime_browser_and_writeback_contracts()
+
+## No SB12 SQLite runtime or migration dependency
+rg -n SQLite|Sqlite|UseSqlite src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs src/CanDoItAll.Modules.Processes/Persistence/ProcessesService.Persistence.cs src/CanDoItAll.Modules.Processes/Services/ProcessesService.Publication.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs src/CanDoItAll.Migrations.PostgreSql/Migrations/20260526023209_ProcessDefinitionContractMode.cs tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+<no matches>
+

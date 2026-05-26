@@ -1,3 +1,77 @@
-# SB14 source-assertions.txt
+Command: rg -n "SB14_INV|ProcessRedTeamScenarioHarness|WriteWorkspaceArtifactAsync|BuildManagedArtifactContent|IWorkspacePathResolver|WriteSeedManagedArtifactAsync|ExternalArtifactDestination|artifact recovery|AllowedOperations|OperationTargetScope" tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.cs src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs Templates/Processes/processes/business-plan-development/definition.json Templates/Processes/processes/software-delivery/definition.json Templates/Processes/processes/branching-code-review/definition.json
+ExitCode: 0
 
-Fill during execution.
+SB14-INV-001 source assertions.
+
+Production/test source references:
+src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs:159:        await WriteSeedManagedArtifactAsync(
+src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs:189:    private async Task WriteSeedManagedArtifactAsync(
+Templates/Processes/processes/software-delivery/definition.json:462:      "AllowedOperations": [
+Templates/Processes/processes/software-delivery/definition.json:470:      "OperationTargetScope": "ExternalProductTargetMutable"
+Templates/Processes/processes/software-delivery/definition.json:665:      "AllowedOperations": [
+Templates/Processes/processes/software-delivery/definition.json:674:      "OperationTargetScope": "ExternalProductTargetReadOnly"
+Templates/Processes/processes/software-delivery/definition.json:873:      "AllowedOperations": [
+Templates/Processes/processes/software-delivery/definition.json:882:      "OperationTargetScope": "ExternalProductTargetReadOnly",
+src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.cs:11:    private readonly IWorkspacePathResolver workspacePathResolver;
+src/CanDoItAll.Modules.Processes/Development/ProcessDevelopmentSeedService.cs:17:        IWorkspacePathResolver workspacePathResolver)
+tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs:162:            await WriteWorkspaceArtifactAsync(
+tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs:165:                BuildManagedArtifactContent(step, stepKey, artifactOutput.Title));
+tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs:223:    private static string BuildManagedArtifactContent(
+tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs:239:    private static async Task WriteWorkspaceArtifactAsync(
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:319:        await WriteWorkspaceArtifactAsync(application, deliveryEvidencePath, "Evidence is now present.");
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:523:        await WriteWorkspaceArtifactAsync(application, malformedEvidencePath, "{ not valid json");
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:847:        await WriteWorkspaceArtifactAsync(application, decisionEvidencePath, "Evidence is present.");
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:954:        await WriteWorkspaceArtifactAsync(application, titleMatchedEvidencePath, "Expectation id should be inferred.");
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3054:        deliveryStep.AllowedOperations =
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3056:            ProcessStepOperation.WriteExternalArtifactDestination,
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3059:        deliveryStep.OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination;
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3069:            [ProcessStepOperation.WriteManagedProcessArtifacts, ProcessStepOperation.WriteExternalArtifactDestination],
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3070:            savedDeliveryStep.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3071:        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, savedDeliveryStep.OperationTargetScope);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3076:        Assert.Equal(savedDeliveryStep.AllowedOperations, exportedDeliveryStep.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3077:        Assert.Equal(savedDeliveryStep.OperationTargetScope, exportedDeliveryStep.OperationTargetScope);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3092:        Assert.Equal(savedDeliveryStep.AllowedOperations, importedDeliveryStep.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3093:        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, importedDeliveryStep.OperationTargetScope);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3100:        Assert.Equal(savedDeliveryStep.AllowedOperations, nextDraftDeliveryStep.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:3101:        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, nextDraftDeliveryStep.OperationTargetScope);
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:4266:        await WriteWorkspaceArtifactAsync(
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:5539:    private static async Task WriteWorkspaceArtifactAsync(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4102:            outputContractSummary: "Operation contract: allowed operations WriteExternalArtifactDestination and WriteManagedProcessArtifacts; target scope ExternalArtifactDestination.");
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4118:            "ExternalArtifactDestination",
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4135:            AllowedOperations =
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4138:                ProcessStepOperation.WriteExternalArtifactDestination
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4140:            OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4149:        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, contract.TargetScope);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4150:        Assert.Contains(ProcessStepOperation.ReadProcessContext, contract.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4151:        Assert.Contains(ProcessStepOperation.WriteExternalArtifactDestination, contract.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4152:        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, contract.AllowedOperations);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4444:            outputContractSummary: "Operation contract: allowed operations WriteExternalArtifactDestination and WriteManagedProcessArtifacts; target scope ExternalArtifactDestination.");
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4463:            "ExternalArtifactDestination",
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4467:            .GetProperty(ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey)
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4471:        Assert.Contains("WriteExternalArtifactDestination", operations);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4521:        stepDefinition.AllowedOperations =
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4524:            ProcessStepOperation.WriteExternalArtifactDestination
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4526:        stepDefinition.OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination;
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4545:            ProcessStepTargetScope.ExternalArtifactDestination.ToString(),
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4549:            .GetProperty(ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey)
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:4553:        Assert.Contains(ProcessStepOperation.WriteExternalArtifactDestination.ToString(), operations);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:13240:        Assert.Contains("Targeted completion-artifact recovery is required.", directive, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14438:    public async Task ProcessRedTeamScenarioHarness_SB14_INV_001_blocks_architecture_mutation_and_allows_external_destination()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14451:        architectureCandidate.StepDefinition.AllowedOperations =
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14456:        architectureCandidate.StepDefinition.OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly;
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14468:                .GetProperty(ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey)
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14511:        businessPlanCandidate.StepDefinition.AllowedOperations =
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14514:            ProcessStepOperation.WriteExternalArtifactDestination
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14516:        businessPlanCandidate.StepDefinition.OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination;
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14531:            ProcessStepTargetScope.ExternalArtifactDestination.ToString(),
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14543:    public void ProcessRedTeamScenarioHarness_SB14_INV_001_validates_generic_artifact_producers_and_recovery_actions()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17672:    private sealed class TestWorkspacePathResolver(string workspaceRoot) : IWorkspacePathResolver
+
+Assertions:
+- ProcessRunAutomationDispatchServiceTests contains SB14-INV-001 red-team harness tests for architecture-only software planning, external business-plan artifact destinations, legal approval, manufacturing QA, incident response, workflow-backed role output, subprocess parent output, and manager recovery routing.
+- Architecture-only candidates are constrained to ManagedProcessArtifactsOnly and assert MutateProductTarget is absent.
+- External business-plan artifact destination candidates require WriteExternalArtifactDestination and keep product mutation absent.
+- BusinessPlanProcessPostgresIntegrationTests and ProcessesServiceIntegrationTests write real managed artifact files before manual/API completion, so storage-backed validation cannot pass on a metadata-only record.
+- ProcessDevelopmentSeedService now receives IWorkspacePathResolver, and complex seed artifacts write deterministic managed files before recording ManagedStoragePath.
+- Process templates declare artifact-recovery exception summaries and operation metadata for strict lint coverage.
+

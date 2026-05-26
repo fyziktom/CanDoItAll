@@ -25,6 +25,49 @@
         </CompactStatStrip>
     </SectionCard>
 
+    <div data-testid="processes-invariant-diagnostics">
+        <SectionCard Title="Invariant Diagnostics"
+                     Description=""
+                     HelpText="Runtime invariant diagnostics are derived from persisted process state and journaled audit results so operators can see weak evidence, recovery gaps, and invalid manual transitions without reading raw logs.">
+            @if (Presenter.InvariantDiagnostics.Count == 0)
+            {
+                <EmptyState Eyebrow="No diagnostics"
+                            Title="No runtime invariant diagnostics for this run"
+                            Description="Alias conflicts, weak artifacts, duplicate lineage, recovery gaps, and invalid manual transitions appear here when the process audit detects them." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Medium">
+                    @foreach (var diagnostic in Presenter.InvariantDiagnostics)
+                    {
+                        <SurfaceCard Soft="true">
+                            <Split Gap="LayoutGap.Medium">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <p class="cda-eyebrow">@(string.IsNullOrWhiteSpace(diagnostic.StepTitle) ? diagnostic.Kind : diagnostic.StepTitle)</p>
+                                    <h3 class="text-base font-semibold text-slate-950">@diagnostic.Title</h3>
+                                    @if (!string.IsNullOrWhiteSpace(diagnostic.Detail))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-600">@diagnostic.Detail</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(diagnostic.RecommendedAction))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-500">Recommended action: @diagnostic.RecommendedAction</p>
+                                    }
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@Presenter.ResolveConformanceTone(diagnostic.Severity)"
+                                                 Text="@diagnostic.Severity.ToString()" />
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@diagnostic.Kind.ToString()" />
+                                </Cluster>
+                            </Split>
+                        </SurfaceCard>
+                    }
+                </Stack>
+            }
+        </SectionCard>
+    </div>
+
     <SectionCard Title="Manager Direction"
                  Description=""
                  HelpText="Manager directives are journaled on the selected run so operators can instruct the responsible process manager without splitting coordination state away from the process runtime.">

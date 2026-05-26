@@ -2,19 +2,19 @@
 
 ## Invariant SB11-INV-001
 
-Expected behavior: Refactor recovery, block state, and health diagnostics.
+- Invariant ID: SB11-INV-001
+- Source raw note: Refactoring checkpoint C.
+- Expected behavior: Block classification, recovery health, and workflow/subprocess mapping are extracted into named services.
+- Disallowed shallow implementation: Prompt-only changes, source-assertion-only proof, fixture-only branching, text-only heuristics, or tests that avoid the production runtime path.
+- Failing-first test: bundle://proof/SB11/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB11/transcripts/passing.txt
+- Changed source files: repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessHealthInvariantAuditor.cs
+- Production assertions: bundle://proof/SB11/manifest.md records the exact source assertions, tests, anti-stub audit, and changed-file hashes for this invariant.
+- Red-team negative case: bundle://proof/SB11/transcripts/failing-first.txt
+- Downstream dependency check: SB12 and SB13 consume the extracted services.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
-- adding more fragile text heuristics without typed state
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative proof |
+| --- | --- | --- | --- | --- |
+| SB11 verified runtime behavior | repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessHealthInvariantAuditor.cs | bundle://proof/SB11/manifest.md | bundle://proof/SB11/transcripts/passing.txt | bundle://proof/SB11/transcripts/failing-first.txt |

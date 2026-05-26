@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Tests.Unit;
@@ -350,6 +351,9 @@ public sealed class AgentToolInvocationPolicyTests
             },
             allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
             processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ManagedProcessArtifacts,
+                declaredWritePaths: ["artifacts/process-runs/process-run-001/evidence/product-write-attempt.txt"]),
             inspectedScriptContent:
                 "Set-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs' -Value 'changed'");
 
@@ -376,6 +380,9 @@ public sealed class AgentToolInvocationPolicyTests
             },
             allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
             processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ManagedProcessArtifacts,
+                declaredWritePaths: ["artifacts/process-runs/process-run-001/evidence/product-write-attempt.txt"]),
             inspectedScriptContent:
                 "Path('external-target/C/programovani/todo-summary/product/src/Program.cs').write_text('changed')");
 
@@ -401,6 +408,9 @@ public sealed class AgentToolInvocationPolicyTests
             },
             readOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
             processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.NoMutation,
+                declaredReadPaths: ["external-target/C/programovani/todo-summary/product/src/Program.cs"]),
             inspectedScriptContent:
                 "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
 
@@ -430,6 +440,308 @@ public sealed class AgentToolInvocationPolicyTests
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("could not be inspected", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_001_denies_governed_script_without_side_effect_manifest()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/inspect.ps1"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            inspectedScriptContent:
+                "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains(GovernedScriptSideEffectManifest.ArgumentName, decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_002_allows_declared_no_mutation_script()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/inspect.ps1"
+            },
+            readOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.NoMutation,
+                declaredReadPaths: ["external-target/C/programovani/todo-summary/product/src/Program.cs"]),
+            inspectedScriptContent:
+                "Get-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_003_denies_powershell_static_io_product_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/write.ps1"
+            },
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(GovernedScriptSideEffectMode.NoMutation),
+            inspectedScriptContent:
+                "[IO.File]::WriteAllText('C:\\programovani\\todo-summary\\product\\src\\Program.cs', 'changed')");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("write-capable operations", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_004_denies_powershell_redirection_to_product_target()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/redirect.ps1"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ManagedProcessArtifacts,
+                declaredWritePaths: ["artifacts/process-runs/process-run-001/evidence/redirect-attempt.txt"]),
+            inspectedScriptContent:
+                "'changed' > 'external-target/C/programovani/todo-summary/product/src/Program.cs'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_005_denies_undeclared_cmd_delegation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/delegate.ps1"
+            },
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(GovernedScriptSideEffectMode.NoMutation),
+            inspectedScriptContent:
+                "cmd /c \"echo changed > C:\\programovani\\todo-summary\\product\\src\\Program.cs\"");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("shell delegation", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_006_denies_encoded_powershell_command()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/encoded.ps1"
+            },
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.NoMutation,
+                allowEncodedCommands: true),
+            inspectedScriptContent:
+                "pwsh -NoProfile -EncodedCommand SQBFAFgA");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("encoded", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_007_denies_python_path_open_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/write.py"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ManagedProcessArtifacts,
+                declaredWritePaths: ["artifacts/process-runs/process-run-001/evidence/python-write-attempt.txt"]),
+            inspectedScriptContent:
+                "from pathlib import Path\nPath('external-target/C/programovani/todo-summary/product/src/Program.cs').open('w').write('changed')");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("product target", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_008_allows_declared_current_run_artifact_script_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/write-evidence.ps1"
+            },
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ManagedProcessArtifacts,
+                declaredWritePaths: ["artifacts/process-runs/process-run-001/evidence/report.md"]),
+            inspectedScriptContent:
+                "Set-Content -Path 'artifacts/process-runs/process-run-001/evidence/report.md' -Value 'ok'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_009_allows_declared_external_artifact_destination_write()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/export.ps1"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/process-run/evidence"],
+            processAllowsProductMutation: false,
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ExternalArtifactDestination,
+                declaredWritePaths: ["external-target/C/programovani/process-run/evidence/report.md"]),
+            inspectedScriptContent:
+                "[IO.File]::WriteAllText('external-target/C/programovani/process-run/evidence/report.md', 'ok')");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB06_INV_010_allows_product_mutation_step_script_with_declared_authority()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "artifacts/process-runs/process-run-001/helpers/apply-change.ps1"
+            },
+            allowedExternalTargetAliases: ["external-target/C/programovani/todo-summary/product"],
+            processAllowsProductMutation: true,
+            processStepAllowedOperations: ["MutateProductTarget"],
+            scriptSideEffectManifestJson: CreateSideEffectManifest(
+                GovernedScriptSideEffectMode.ProductMutation,
+                declaredWritePaths: ["external-target/C/programovani/todo-summary/product/src/Program.cs"]),
+            inspectedScriptContent:
+                "Set-Content -Path 'external-target/C/programovani/todo-summary/product/src/Program.cs' -Value 'changed'");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public void ProcessScriptSideEffectAnalyzer_SB07_INV_001_detects_writes_and_child_scripts_without_runtime()
+    {
+        var analysis = ProcessScriptSideEffectAnalyzer.Analyze(
+            AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+            "& './collect-evidence.ps1'\n'value' > 'artifacts/process-runs/process-run-001/evidence/report.txt'");
+
+        Assert.True(analysis.HasWriteSignal);
+        Assert.Contains(analysis.ChildScriptSignals, signal => signal.EndsWith("collect-evidence.ps1", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void ProcessToolOperationAuthorizer_SB07_INV_001_denies_missing_operation_without_full_policy_runtime()
+    {
+        var context = CreateContext(
+            "workspace_dotnet_test",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processStepAllowedOperations: ["CaptureRuntimeProof"],
+            processStepTargetScope: "QA review");
+        var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            context.ToolName,
+            context.RedactedArguments);
+
+        var decision = ProcessToolOperationAuthorizer.Evaluate(
+            context,
+            signature,
+            [OperationRequirement.Any("RunValidation")]);
+
+        Assert.NotNull(decision);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("RunValidation", decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1148,7 +1460,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_denies_product_file_mutation_when_external_target_is_read_only()
+    public async Task EvaluateAsync_allows_product_file_mutation_when_external_target_is_trusted_writable_despite_readonly_overlap()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -1162,6 +1474,49 @@ public sealed class AgentToolInvocationPolicyTests
                 ["path"] = "external-target/C/work/apps/Inventory/Program.cs"
             },
             allowedExternalTargetAliases: ["external-target/C/work/apps/Inventory"],
+            readOnlyExternalTargetAliases: ["external-target/C/work/apps/Inventory"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_does_not_let_readonly_parent_deny_writable_child_alias()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "external-target/C/work/apps/Inventory/Program.cs"
+            },
+            allowedExternalTargetAliases: ["external-target/C/work/apps/Inventory"],
+            readOnlyExternalTargetAliases: ["external-target/C/work/apps"]);
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_denies_product_file_mutation_when_external_target_is_only_read_only()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = "external-target/C/work/apps/Inventory/Program.cs"
+            },
             readOnlyExternalTargetAliases: ["external-target/C/work/apps/Inventory"]);
 
         var decision = await policy.EvaluateAsync(context, CancellationToken.None);
@@ -1537,7 +1892,8 @@ public sealed class AgentToolInvocationPolicyTests
         IReadOnlyList<string>? processStepAllowedOperations = null,
         string processStepTargetScope = "",
         string inspectedScriptContent = "",
-        string scriptInspectionFailure = "")
+        string scriptInspectionFailure = "",
+        string scriptSideEffectManifestJson = "")
     {
         return new ToolInvocationPolicyContext(
             AgentId: Guid.Parse("11111111-1111-1111-1111-111111111111"),
@@ -1561,6 +1917,26 @@ public sealed class AgentToolInvocationPolicyTests
             ProcessStepAllowedOperations: processStepAllowedOperations,
             ProcessStepTargetScope: processStepTargetScope,
             InspectedScriptContent: inspectedScriptContent,
-            ScriptInspectionFailure: scriptInspectionFailure);
+            ScriptInspectionFailure: scriptInspectionFailure,
+            ScriptSideEffectManifestJson: scriptSideEffectManifestJson);
+    }
+
+    private static string CreateSideEffectManifest(
+        GovernedScriptSideEffectMode mode,
+        string[]? declaredReadPaths = null,
+        string[]? declaredWritePaths = null,
+        string[]? declaredChildScripts = null,
+        bool allowShellDelegation = false,
+        bool allowEncodedCommands = false)
+    {
+        return JsonSerializer.Serialize(new GovernedScriptSideEffectManifest
+        {
+            Mode = mode,
+            DeclaredReadPaths = declaredReadPaths ?? [],
+            DeclaredWritePaths = declaredWritePaths ?? [],
+            DeclaredChildScripts = declaredChildScripts ?? [],
+            AllowShellDelegation = allowShellDelegation,
+            AllowEncodedCommands = allowEncodedCommands
+        });
     }
 }

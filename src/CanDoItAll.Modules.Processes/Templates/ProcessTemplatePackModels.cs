@@ -169,6 +169,8 @@ public sealed class ProcessTemplateDefinition
 
     public string AutonomyLevel { get; set; } = string.Empty;
 
+    public string ContractMode { get; set; } = ProcessDefinitionContractMode.Strict.ToString();
+
     public string OperatingMode { get; set; } = string.Empty;
 
     public List<string> SourceFrameworkKeys { get; set; } = [];

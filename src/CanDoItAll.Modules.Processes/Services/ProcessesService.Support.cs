@@ -141,6 +141,14 @@ public sealed partial class ProcessesService
         }
 
         foreach (var step in model.Steps) {
+            foreach (var artifactExpectation in step.ArtifactExpectations) {
+                artifactExpectation.WorkflowOutputId = artifactExpectation.WorkflowOutputId.Trim();
+                artifactExpectation.WorkflowOutputName = artifactExpectation.WorkflowOutputName.Trim();
+                if (artifactExpectation.SubprocessChildArtifactExpectationId == Guid.Empty) {
+                    artifactExpectation.SubprocessChildArtifactExpectationId = null;
+                }
+            }
+
             if (step.StepKind != ProcessStepKind.Subprocess) {
                 step.SubprocessDefinitionId = null;
                 step.SubprocessDefinitionSnapshotName = string.Empty;
@@ -321,9 +329,11 @@ public sealed partial class ProcessesService
 
     private static ProcessDefinitionLintMode ResolveEffectiveLintMode(
         ProcessDefinitionLintMode requestedMode,
-        ProcessDefinition definition)
+        ProcessDefinition definition,
+        ProcessDefinitionContractMode contractMode)
     {
         var requiresStrictLint = requestedMode == ProcessDefinitionLintMode.Strict ||
+            contractMode == ProcessDefinitionContractMode.Strict ||
             RequiresStrictLint(definition.Criticality, definition.AutonomyLevel);
 
         return requiresStrictLint
@@ -367,6 +377,7 @@ public sealed partial class ProcessesService
             SimulationReadinessSummary = version.SimulationReadinessSummary,
             Criticality = definition.Criticality,
             AutonomyLevel = definition.AutonomyLevel,
+            ContractMode = version.ContractMode,
             Status = definition.Status,
             Roles = roles
                 .Select(role => new ProcessRoleEditorModel
@@ -448,7 +459,11 @@ public sealed partial class ProcessesService
                             SensitivityLevel = expectation.SensitivityLevel,
                             RetentionDays = expectation.RetentionDays,
                             AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
-                            ValidationRequirementSummary = expectation.ValidationRequirementSummary
+                            ValidationRequirementSummary = expectation.ValidationRequirementSummary,
+                            WorkflowOutputId = expectation.WorkflowOutputId,
+                            WorkflowOutputName = expectation.WorkflowOutputName,
+                            WorkflowOutputKind = expectation.WorkflowOutputKind,
+                            SubprocessChildArtifactExpectationId = expectation.SubprocessChildArtifactExpectationId
                         })
                         .ToList()
                 })

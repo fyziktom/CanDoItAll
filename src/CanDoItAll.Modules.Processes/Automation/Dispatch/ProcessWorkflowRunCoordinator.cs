@@ -5,7 +5,6 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -18,9 +17,6 @@ internal sealed class ProcessWorkflowRunCoordinator(
     ILogger<ProcessWorkflowRunCoordinator> logger)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly Regex WorkflowOutputMappingRegex = new(
-        @"\b(?:workflow[-_\s]*(?:output|artifact|node)[-_\s]*(?:id|key)|workflowOutputId|workflowNodeId)\s*[:=]\s*[`""']?(?<value>[A-Za-z0-9_.:/-]+)",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public async Task<ProcessWorkflowExecutionOutcome> TryRunOrObserveAsync(
         Guid processRunId,
@@ -350,8 +346,8 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 continue;
             }
 
-            var artifactKind = MapWorkflowArtifactKind(artifact.Kind);
-            var expectation = ResolveWorkflowArtifactExpectation(
+            var artifactKind = WorkflowSubprocessArtifactMapper.MapWorkflowArtifactKind(artifact.Kind);
+            var expectation = WorkflowSubprocessArtifactMapper.ResolveWorkflowArtifactExpectation(
                 expectations,
                 workflowArtifacts,
                 artifactKind,
@@ -359,11 +355,23 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 out var mappingDiagnostic);
             if (!string.IsNullOrWhiteSpace(mappingDiagnostic))
             {
-                logger.LogWarning(
-                    "Workflow artifact {WorkflowArtifactId} from run {WorkflowRunId} was not mapped to a process artifact expectation. Diagnostic: {Diagnostic}",
-                    artifact.Id.Value,
-                    run.RunId.Value,
-                    mappingDiagnostic);
+                if (expectation is null)
+                {
+                    logger.LogWarning(
+                        "Workflow artifact {WorkflowArtifactId} from run {WorkflowRunId} was not mapped to a process artifact expectation. Diagnostic: {Diagnostic}",
+                        artifact.Id.Value,
+                        run.RunId.Value,
+                        mappingDiagnostic);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Workflow artifact {WorkflowArtifactId} from run {WorkflowRunId} used compatibility output mapping for process artifact expectation {ArtifactExpectationId}. Diagnostic: {Diagnostic}",
+                        artifact.Id.Value,
+                        run.RunId.Value,
+                        expectation.Id,
+                        mappingDiagnostic);
+                }
             }
 
             var isUnmappedAmbiguousArtifact = expectation is null && !string.IsNullOrWhiteSpace(mappingDiagnostic);
@@ -409,175 +417,18 @@ internal sealed class ProcessWorkflowRunCoordinator(
         WorkflowArtifactRecord artifact,
         out string diagnostic)
     {
-        diagnostic = string.Empty;
-        if (!TryBuildWorkflowOutputMappingIndex(expectations, out var mappingsByOutputId, out diagnostic))
-        {
-            return null;
-        }
-
-        if (mappingsByOutputId.Count > 0)
-        {
-            var mappedExpectationIds = ResolveWorkflowArtifactOutputIds(artifact)
-                .Where(mappingsByOutputId.ContainsKey)
-                .Select(outputId => mappingsByOutputId[outputId])
-                .Distinct()
-                .ToList();
-            if (mappedExpectationIds.Count == 1)
-            {
-                var expectation = expectations.SingleOrDefault(item => item.Id == mappedExpectationIds[0]);
-                if (expectation is not null)
-                {
-                    return expectation;
-                }
-
-                diagnostic = $"Workflow output mapping references missing process artifact expectation '{mappedExpectationIds[0]:D}'.";
-                return null;
-            }
-
-            diagnostic = mappedExpectationIds.Count > 1
-                ? $"Workflow artifact '{artifact.Id}' matches multiple process artifact expectations through explicit output mappings."
-                : $"Workflow artifact '{artifact.Id}' has no explicit workflow output mapping.";
-            return null;
-        }
-
-        var eligibleExpectations = expectations
-            .Where(expectation => expectation.ArtifactKind == artifactKind)
-            .ToList();
-        var eligibleArtifacts = workflowArtifacts
-            .Where(item => MapWorkflowArtifactKind(item.Kind) == artifactKind)
-            .ToList();
-        if (eligibleExpectations.Count == 1 &&
-            eligibleArtifacts.Count == 1 &&
-            eligibleArtifacts[0].Id == artifact.Id)
-        {
-            return eligibleExpectations[0];
-        }
-
-        if (eligibleExpectations.Count > 1 || eligibleArtifacts.Count > 1)
-        {
-            diagnostic = "Workflow artifact mapping is ambiguous; explicit workflow-output-id metadata is required when multiple required expectations or workflow artifacts share a process artifact kind.";
-        }
-
-        return null;
+        return WorkflowSubprocessArtifactMapper.ResolveWorkflowArtifactExpectation(
+            expectations,
+            workflowArtifacts,
+            artifactKind,
+            artifact,
+            out diagnostic);
     }
 
     internal static IReadOnlyList<ProcessWorkflowOutputArtifactMapping> ResolveWorkflowOutputArtifactMappings(
         IReadOnlyList<ProcessArtifactExpectation> expectations)
     {
-        var mappings = new List<ProcessWorkflowOutputArtifactMapping>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var expectation in expectations)
-        {
-            foreach (var outputId in ResolveWorkflowOutputIds(expectation))
-            {
-                var key = $"{expectation.Id:D}|{outputId}";
-                if (seen.Add(key))
-                {
-                    mappings.Add(new ProcessWorkflowOutputArtifactMapping(expectation.Id, outputId));
-                }
-            }
-        }
-
-        return mappings;
-    }
-
-    private static bool TryBuildWorkflowOutputMappingIndex(
-        IReadOnlyList<ProcessArtifactExpectation> expectations,
-        out Dictionary<string, Guid> mappingsByOutputId,
-        out string diagnostic)
-    {
-        mappingsByOutputId = new(StringComparer.OrdinalIgnoreCase);
-        var outputIdsByExpectation = new Dictionary<Guid, HashSet<string>>();
-        var diagnostics = new List<string>();
-        foreach (var mapping in ResolveWorkflowOutputArtifactMappings(expectations))
-        {
-            if (!outputIdsByExpectation.TryGetValue(mapping.ProcessArtifactExpectationId, out var outputIds))
-            {
-                outputIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                outputIdsByExpectation[mapping.ProcessArtifactExpectationId] = outputIds;
-            }
-
-            outputIds.Add(mapping.WorkflowOutputId);
-            if (mappingsByOutputId.TryGetValue(mapping.WorkflowOutputId, out var existingExpectationId) &&
-                existingExpectationId != mapping.ProcessArtifactExpectationId)
-            {
-                diagnostics.Add($"Workflow output id '{mapping.WorkflowOutputId}' maps to multiple process artifact expectations.");
-                continue;
-            }
-
-            mappingsByOutputId[mapping.WorkflowOutputId] = mapping.ProcessArtifactExpectationId;
-        }
-
-        foreach (var item in outputIdsByExpectation.Where(item => item.Value.Count > 1))
-        {
-            diagnostics.Add($"Process artifact expectation '{item.Key:D}' maps to multiple workflow output ids.");
-        }
-
-        diagnostic = string.Join(" ", diagnostics.Distinct(StringComparer.OrdinalIgnoreCase));
-        if (diagnostics.Count == 0)
-        {
-            return true;
-        }
-
-        mappingsByOutputId.Clear();
-        return false;
-    }
-
-    private static IReadOnlyList<string> ResolveWorkflowOutputIds(ProcessArtifactExpectation expectation)
-    {
-        var text = string.Join(
-            '\n',
-            expectation.ValidationRequirementSummary,
-            expectation.AllowedFutureUsageSummary);
-        return WorkflowOutputMappingRegex
-            .Matches(text)
-            .Select(match => NormalizeWorkflowOutputId(match.Groups["value"].Value))
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static IReadOnlyList<string> ResolveWorkflowArtifactOutputIds(WorkflowArtifactRecord artifact)
-    {
-        var values = new List<string>
-        {
-            artifact.Id.Value.ToString("D"),
-            artifact.Id.Value.ToString("N")
-        };
-        if (artifact.NodeId.HasValue)
-        {
-            values.Add(artifact.NodeId.Value.Value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(artifact.Name))
-        {
-            values.Add(artifact.Name);
-        }
-
-        return values
-            .Select(NormalizeWorkflowOutputId)
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
-    private static string NormalizeWorkflowOutputId(string value)
-    {
-        return value
-            .Trim()
-            .Trim('`', '\'', '"')
-            .TrimEnd('.', ',', ';');
-    }
-
-    private static ProcessArtifactKind MapWorkflowArtifactKind(WorkflowArtifactKind artifactKind)
-    {
-        return artifactKind switch
-        {
-            WorkflowArtifactKind.Text or WorkflowArtifactKind.Json => ProcessArtifactKind.Deliverable,
-            WorkflowArtifactKind.File or WorkflowArtifactKind.Image or WorkflowArtifactKind.Binary => ProcessArtifactKind.Evidence,
-            WorkflowArtifactKind.ToolReceipt => ProcessArtifactKind.Transcript,
-            _ => ProcessArtifactKind.Other
-        };
+        return WorkflowSubprocessArtifactMapper.ResolveWorkflowOutputArtifactMappings(expectations);
     }
 
     private static ProcessArtifactTrustStatus ResolveWorkflowArtifactTrustStatus(WorkflowRunState state)
@@ -600,10 +451,12 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 context.WorkBrief?.WorkBriefText ?? string.Empty,
                 context.WorkBrief?.ExpectedOutcome ?? string.Empty,
                 trigger,
-                ResolveWorkflowOutputArtifactMappings(context.ExpectedArtifacts)
+                WorkflowSubprocessArtifactMapper.ResolveWorkflowOutputArtifactMappings(context.ExpectedArtifacts)
                     .Select(mapping => new ProcessWorkflowOutputMappingInput(
                         mapping.ProcessArtifactExpectationId,
-                        mapping.WorkflowOutputId))
+                        mapping.WorkflowOutputId,
+                        mapping.WorkflowOutputName,
+                        mapping.WorkflowOutputKind))
                     .ToList()),
             JsonOptions);
     }
@@ -694,13 +547,11 @@ internal sealed class ProcessWorkflowRunCoordinator(
         string Trigger,
         IReadOnlyList<ProcessWorkflowOutputMappingInput> ExpectedOutputMappings);
 
-    internal sealed record ProcessWorkflowOutputArtifactMapping(
-        Guid ProcessArtifactExpectationId,
-        string WorkflowOutputId);
-
     private sealed record ProcessWorkflowOutputMappingInput(
         Guid ProcessArtifactExpectationId,
-        string WorkflowOutputId);
+        string WorkflowOutputId,
+        string WorkflowOutputName,
+        WorkflowArtifactKind? WorkflowOutputKind);
 }
 
 internal sealed record ProcessWorkflowExecutionOutcome(

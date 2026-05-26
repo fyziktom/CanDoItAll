@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
@@ -153,6 +154,61 @@ public sealed class WorkspaceCommandExecutionServiceTests
         finally
         {
             TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task PowerShellRunScript_SB06_INV_001_fails_post_execution_audit_when_nonmutating_step_changes_product_root()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var productRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.ProductTarget.{Guid.NewGuid():N}", "product");
+        var scriptDirectory = Path.Combine(workspaceRoot, "scripts");
+        Directory.CreateDirectory(scriptDirectory);
+        Directory.CreateDirectory(productRoot);
+        await File.WriteAllTextAsync(
+            Path.Combine(scriptDirectory, "Inspect.ps1"),
+            "Write-Output 'inspected'");
+        await File.WriteAllTextAsync(
+            Path.Combine(productRoot, "Program.cs"),
+            "Console.WriteLine(\"before\");");
+        var productAlias = ToExternalTargetAlias(productRoot);
+        var processHost = new FakeWorkspaceProcessHost(
+            onExecute: _ => File.WriteAllText(
+                Path.Combine(productRoot, "Program.cs"),
+                "Console.WriteLine(\"after\");"));
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+        var run = CreateProcessStepExecutionRun(
+            JsonSerializer.Serialize(new Dictionary<string, object?>
+            {
+                [ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey] = new[] { productAlias },
+                [ExecutionInvocationMetadata.ProcessStepAllowsProductMutationMetadataKey] = false
+            }));
+
+        try
+        {
+            using (WorkspaceExecutionAuditContext.BeginScope(run))
+            {
+                var result = await service.PowerShellRunScript(
+                    "scripts/Inspect.ps1",
+                    sideEffectManifest: JsonSerializer.Serialize(new GovernedScriptSideEffectManifest
+                    {
+                        Mode = GovernedScriptSideEffectMode.NoMutation
+                    }));
+
+                Assert.False(result.Succeeded);
+                Assert.Contains("Post-execution product target audit", result.Message, StringComparison.Ordinal);
+                Assert.Contains(productAlias, result.Message, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+            TryDeleteDirectory(Path.GetDirectoryName(productRoot) ?? productRoot);
         }
     }
 
@@ -486,6 +542,61 @@ public sealed class WorkspaceCommandExecutionServiceTests
         return root;
     }
 
+    private static string ToExternalTargetAlias(string path)
+    {
+        var fullPath = Path.GetFullPath(path);
+        var rootPath = Path.GetPathRoot(fullPath)
+            ?? throw new InvalidOperationException($"Path '{path}' has no root.");
+        var trimmedRoot = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (trimmedRoot.Length != 2 ||
+            trimmedRoot[1] != ':' ||
+            !char.IsLetter(trimmedRoot[0]))
+        {
+            throw new InvalidOperationException($"Path '{path}' cannot be represented as an external-target alias.");
+        }
+
+        var relativePath = fullPath.Length <= rootPath.Length
+            ? string.Empty
+            : fullPath[rootPath.Length..]
+                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+                .TrimStart(Path.DirectorySeparatorChar);
+        return string.IsNullOrWhiteSpace(relativePath)
+            ? $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}"
+            : $"external-target/{char.ToUpperInvariant(trimmedRoot[0])}/{relativePath.Replace(Path.DirectorySeparatorChar, '/')}";
+    }
+
+    private static ExecutionRunRecord CreateProcessStepExecutionRun(string metadataJson)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: Guid.NewGuid(),
+            ChatSessionId: null,
+            Title: "Process step",
+            SourceKind: "process-step",
+            SourceId: "step-001",
+            CorrelationId: Guid.NewGuid().ToString("N"),
+            CausationId: string.Empty,
+            RequestedBy: "unit-test",
+            RequestedByKind: "system",
+            MetadataJson: metadataJson,
+            InputSummary: string.Empty,
+            ResultSummary: string.Empty,
+            ProviderName: "test",
+            Model: "test",
+            State: ExecutionState.Running,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            ProcessRunId: "process-run-001",
+            ProcessStepId: "step-001");
+    }
+
     private static void TryDeleteDirectory(string path)
     {
         try
@@ -502,15 +613,18 @@ public sealed class WorkspaceCommandExecutionServiceTests
         private readonly int exitCode;
         private readonly string stdout;
         private readonly string stderr;
+        private readonly Action<WorkspaceProcessExecutionRequest>? onExecute;
 
         public FakeWorkspaceProcessHost(
             int exitCode = 0,
             string stdout = "ok",
-            string stderr = "")
+            string stderr = "",
+            Action<WorkspaceProcessExecutionRequest>? onExecute = null)
         {
             this.exitCode = exitCode;
             this.stdout = stdout;
             this.stderr = stderr;
+            this.onExecute = onExecute;
         }
 
         public WorkspaceProcessExecutionRequest? LastRequest { get; private set; }
@@ -530,6 +644,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
         public Task<WorkspaceProcessExecutionResult> ExecuteAsync(WorkspaceProcessExecutionRequest request, CancellationToken cancellationToken = default)
         {
             LastRequest = request;
+            onExecute?.Invoke(request);
             var now = DateTimeOffset.UtcNow;
             return Task.FromResult(new WorkspaceProcessExecutionResult(
                 Started: true,

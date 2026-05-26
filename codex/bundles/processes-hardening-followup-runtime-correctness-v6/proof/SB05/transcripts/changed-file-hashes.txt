@@ -1,3 +1,17 @@
+Command: SB05 proof transcript: changed-file-hashes.txt
+ExitCode: 0
+
 # SB05 changed-file-hashes.txt
 
-Fill during execution.
+Command: `Get-FileHash -Algorithm SHA256 src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs,src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs,src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs,src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs,src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs,src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs,tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs,tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`
+
+Hashes:
+- `665EDD1369199AA58819BC89F26AAC45028ADED0E3E6A8622A26605E80FF9DE1` `repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs`
+- `71C1E3D49B2406DAABF749C983F81A5C9C1F77DBD32476590978C906A891A605` `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs`
+- `AFBA9DC0BE73523FD38B0CF4DE41EA85A431D02648FD8AFF2521E4605CA47A59` `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessStepRunBlockState.cs`
+- `7617BF90730FF5AC22849D02985606C0B5160FF9AF62456E610B5E107344E7A4` `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs`
+- `4F56E75CB0A6BBB6DE0439A3C893AEF530766B87C57828A2818D3C30D3F17A0C` `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs`
+- `586CD10DE06CC37501793D8B26B8E4AC16AF0E067D7D8DBF218B5C2D91079BAD` `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `6160AB4E8AAA20AC00B838AF899B6947DA559BF3E1F026FC2177164D4E55C476` `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `FD71701A6D33F262EB874F7DDC71B3CF99F7705476FAD797DDB3697D09BC52F8` `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`
+

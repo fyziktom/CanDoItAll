@@ -1,3 +1,14 @@
+Command: SB05 proof transcript: source-assertions.txt
+ExitCode: 0
+
 # SB05 source-assertions.txt
 
-Fill during execution.
+Command: `rg -n "ProcessStepBlockCause|BlockCause|ResolveArtifactContractBlockCause|InferBlockCause|ResolveBlockReasonCode|ArtifactContractUnsatisfied|WaitForArtifactMaterialization" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs -S`
+
+Source assertions:
+- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs`: transition requests can carry typed block cause.
+- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs`: blocked and failed transitions apply typed cause when present.
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs`: artifact validation ownership maps to typed cause and is passed into transition request.
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`: upstream materialization blocks use `ProcessStepBlockCause.UpstreamInput`.
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`: service-level persistence tests prove own-output and upstream-input causes differ.
+

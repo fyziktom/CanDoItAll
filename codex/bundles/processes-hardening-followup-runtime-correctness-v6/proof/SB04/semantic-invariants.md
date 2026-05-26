@@ -2,19 +2,19 @@
 
 ## Invariant SB04-INV-001
 
-Expected behavior: Refactor metadata and grounding logic after SB01-SB03.
+- Invariant ID: SB04-INV-001
+- Source raw note: RN01, RN03, and refactoring checkpoint A.
+- Expected behavior: Metadata, contract, and grounding logic are extracted behind named testable boundaries.
+- Disallowed shallow implementation: Prompt-only changes, source-assertion-only proof, fixture-only branching, text-only heuristics, or tests that avoid the production runtime path.
+- Failing-first test: bundle://proof/SB04/transcripts/failing-first.txt
+- Passing test: bundle://proof/SB04/transcripts/passing.txt
+- Changed source files: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.OperationContractResolver.cs
+- Production assertions: bundle://proof/SB04/manifest.md records the exact source assertions, tests, anti-stub audit, and changed-file hashes for this invariant.
+- Red-team negative case: bundle://proof/SB04/transcripts/failing-first.txt
+- Downstream dependency check: SB05 and SB06 consume the extracted metadata and contract boundaries.
 
-Disallowed shallow implementation:
-- prompt-only change
-- source-assertion-only proof
-- tests that do not exercise production code path
-- branch-specific hardcoding
-- software-only behavior in generic process runtime
-- adding more fragile text heuristics without typed state
+## Production Behavior Artifact Matrix
 
-Required proof:
-- failing-first or red-team test
-- passing behavior test
-- source assertions
-- anti-stub audit
-- changed-file hashes
+| Artifact | Producer | Consumer | Lifecycle | Negative proof |
+| --- | --- | --- | --- | --- |
+| SB04 verified runtime behavior | repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.OperationContractResolver.cs | bundle://proof/SB04/manifest.md | bundle://proof/SB04/transcripts/passing.txt | bundle://proof/SB04/transcripts/failing-first.txt |

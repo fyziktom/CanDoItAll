@@ -838,6 +838,22 @@ public partial class ProcessWorkspace
         };
     }
 
+    private static string FormatRecoveryAction(ProcessStepRecoveryOption action)
+    {
+        return action switch
+        {
+            ProcessStepRecoveryOption.WaitForArtifactMaterialization => "Wait for artifact materialization",
+            ProcessStepRecoveryOption.RecoverArtifactsOnly => "Recover artifacts only",
+            ProcessStepRecoveryOption.RetryAgent => "Retry agent",
+            ProcessStepRecoveryOption.FreshAgentSession => "Start fresh agent session",
+            ProcessStepRecoveryOption.ReworkContinuation => "Continue rework",
+            ProcessStepRecoveryOption.HumanEscalation => "Human escalation",
+            ProcessStepRecoveryOption.RepairImplementation => "Repair implementation",
+            ProcessStepRecoveryOption.RerunValidation => "Rerun validation",
+            _ => "None"
+        };
+    }
+
     private static string ResolveEscalationStatusTone(ProcessEscalationViewModel escalation)
     {
         if (escalation.Status == ProcessEscalationStatus.Resolved)

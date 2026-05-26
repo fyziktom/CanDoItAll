@@ -1,3 +1,14 @@
-# SB14 passing.txt
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~SB14_INV"
+ExitCode: 0
 
-Fill during execution.
+SB14-INV-001 passing proof.
+
+Test name: CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessRedTeamScenarioHarness_SB14_INV_001_blocks_architecture_mutation_and_allows_external_destination
+Test name: CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessRedTeamScenarioHarness_SB14_INV_001_validates_generic_artifact_producers_and_recovery_actions
+
+Result excerpt:
+- Failed: 0
+- Passed: 2
+- Skipped: 0
+- Total: 2
+

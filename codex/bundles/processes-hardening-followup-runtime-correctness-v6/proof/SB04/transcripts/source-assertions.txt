@@ -1,3 +1,13 @@
+Command: SB04 proof transcript: source-assertions.txt
+ExitCode: 0
+
 # SB04 source-assertions.txt
 
-Fill during execution.
+Command: `rg -n "ProcessInvocationMetadataBuilder|ProcessStepOperationContractResolver|ProcessTargetGroundingLedgerBuilder|BuildProcessInvocationMetadataJson\\(" src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs codex/bundles/processes-hardening-followup-runtime-correctness-v6/architecture/02-refactoring-checkpoints.md -S`
+
+Source assertions:
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExecutionMetadata.cs`: `BuildProcessInvocationMetadataJson` delegates to `ProcessInvocationMetadataBuilder.Build`.
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.InvocationMetadataBuilder.cs`: metadata assembly invokes `ProcessStepOperationContractResolver` and `ProcessTargetGroundingLedgerBuilder`.
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`: SB04 tests call extracted boundaries directly without private-method reflection.
+- `repo://codex/bundles/processes-hardening-followup-runtime-correctness-v6/architecture/02-refactoring-checkpoints.md`: checkpoint A documents the completed boundaries.
+

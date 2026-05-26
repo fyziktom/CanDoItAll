@@ -5,6 +5,7 @@ internal static class ProcessRuntimeEventTypes
     public const string ManualAgentStepRerun = "agent-step-rerun";
     public const string AgentReworkPacketCreated = "agent-rework-packet-created";
     public const string AgentRecoveryAttemptRecorded = "agent-recovery-attempt-recorded";
+    public const string RecoveryRoutingDecisionRecorded = "recovery-routing-decision-recorded";
     public const string BlockedRunStopped = "blocked-run-stopped";
     public const string SubprocessRunCreated = "subprocess-run-created";
     public const string SubprocessRunObserved = "subprocess-run-observed";

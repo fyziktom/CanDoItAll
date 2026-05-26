@@ -1,3 +1,29 @@
-# SB06 source-assertions.txt
+Command: SB06 proof transcript: source-assertions.txt
+ExitCode: 0
 
-Fill during execution.
+# SB06 Source Assertions
+
+Command:
+
+```powershell
+rg -n "GovernedScriptSideEffectManifest|sideEffectManifest|ProductTargetMutationAudit|Post-execution product target audit|EncodedCommand|Path\('.*'\)\.open|cmd /c|WriteAllText|workspace_pwsh_run_script|workspace_python_run_file" src tests codex/bundles/processes-hardening-followup-runtime-correctness-v6 -S
+```
+
+Relevant hits:
+
+```text
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/GovernedScriptSideEffectManifest.cs:15:public sealed record GovernedScriptSideEffectManifest
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/GovernedScriptSideEffectManifest.cs:19:    public const string ArgumentName = "sideEffectManifest";
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:794:        if (!GovernedScriptSideEffectManifest.TryParse(
+src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs:881:        if (analysis.EncodedCommandSignals.Count > 0)
+src/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs:290:    private sealed class ProductTargetMutationAudit
+src/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandProcessRunner.cs:327:            var failureMessage = $"Post-execution product target audit detected file-system changes under non-mutating governed script roots: {string.Join(", ", changedAliases)}.";
+src/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/MafAgentRuntime.WorkspaceRuntimePlugin.cs:157:        public Task<WorkspaceCommandExecutionResult> RunWorkspacePythonFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
+src/CanDoItAll.AgentFramework.Maf/Runtime/Workspace/MafAgentRuntime.WorkspaceRuntimePlugin.cs:164:        public Task<WorkspaceCommandExecutionResult> RunWorkspacePowerShellScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
+tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs:514:                "[IO.File]::WriteAllText('C:\\programovani\\todo-summary\\product\\src\\Program.cs', 'changed')");
+tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs:567:                "cmd /c \"echo changed > C:\\programovani\\todo-summary\\product\\src\\Program.cs\"");
+tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs:594:                "pwsh -NoProfile -EncodedCommand SQBFAFgA");
+tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs:622:                "from pathlib import Path\nPath('external-target/C/programovani/todo-summary/product/src/Program.cs').open('w').write('changed')");
+tests/CanDoItAll.Tests.Unit/WorkspaceCommandExecutionServiceTests.cs:204:                Assert.Contains("Post-execution product target audit", result.Message, StringComparison.Ordinal);
+```
+
