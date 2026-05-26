@@ -71,6 +71,29 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
+    public async Task Default_process_warmup_includes_blazor_process_templates()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+
+        var pack = packLoader.Load();
+        var defaultProcessKeys = ProcessCatalogDefaultTemplates.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var templateKey in BlazorTemplateKeys)
+        {
+            Assert.Contains(templateKey, defaultProcessKeys);
+        }
+
+        var missingPackTemplates = defaultProcessKeys
+            .Where(key => !pack.Processes.ContainsKey(key))
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.Empty(missingPackTemplates);
+    }
+
+    [Fact]
     public async Task Blazor_wasm_pwa_baseline_SB05_INV_001_keeps_app_topic_generic_in_scenario_data()
     {
         await using var application = await TestApplication.CreateAsync();
