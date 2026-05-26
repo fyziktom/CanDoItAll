@@ -1,0 +1,24 @@
+{
+  "bundle": "processes-hardening-followup-api-docs-governance-v7",
+  "createdUtc": "2026-05-26T00:00:00Z",
+  "reviewedBranch": "processes-hardening",
+  "reviewedCommit": "ca898eccf32664b60e996bf806a035067675c11e",
+  "subbundles": [
+    "01-01-processes-api-surface-inventory-and-schema-parity",
+    "02-02-api-tool-models-operation-contract-fields",
+    "03-03-api-tool-models-artifact-output-mapping-fields",
+    "04-04-refactor-checkpoint-a-api-contracts-and-normalizers",
+    "05-05-process-skill-and-documentation-update",
+    "06-06-template-migration-beyond-blazor",
+    "07-07-authoritative-grounding-ledger-policy",
+    "08-08-projection-identity-hash-dedupe-proof",
+    "09-09-unified-artifact-validation-service",
+    "10-10-refactor-checkpoint-b-artifact-lineage-validation",
+    "11-11-typed-block-cause-and-recovery-router",
+    "12-12-workflow-subprocess-output-mapping-enforcement",
+    "13-13-script-side-effect-manifest-and-post-execution-audit",
+    "14-14-refactor-checkpoint-c-recovery-health-api",
+    "15-15-process-health-dashboard-api-and-observability",
+    "16-16-generic-red-team-harness-and-final-closure"
+  ]
+}
