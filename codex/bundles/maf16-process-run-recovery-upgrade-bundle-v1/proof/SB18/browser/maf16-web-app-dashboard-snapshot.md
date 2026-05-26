@@ -1,0 +1,20 @@
+- generic [active] [ref=e1] [box=0,0,932,919]:
+  - main [ref=e139] [box=12,8,908,903]:
+    - group [ref=e140] [box=12,8,908,46]:
+      - generic "Workspace navigation" [ref=e141] [cursor=pointer] [box=29,21,874,20]
+    - generic [ref=e142] [box=12,62,908,76]:
+      - button "Dashboard" [ref=e148] [box=25,67,85,20]
+      - generic [ref=e153] [box=12,112,908,26]
+    - generic [ref=e162] [box=29,163,874,174]:
+      - paragraph [ref=e163] [box=50,196,832,16]: Database startup
+      - heading "Continue with the active database to load the workspace" [level=3] [ref=e164] [box=50,220,832,28]
+      - paragraph [ref=e165] [box=130,256,672,48]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+  - dialog "Database profiles" [ref=e168] [box=16,86,900,748]:
+    - banner [ref=e169] [box=17,87,898,109]:
+      - generic [ref=e170] [box=37,103,858,76]
+    - generic [ref=e181] [box=37,216,858,522]:
+      - generic [ref=e182] [box=37,216,613,242]
+      - generic [ref=e209] [box=37,474,858,74]: Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+      - generic [ref=e210] [box=37,564,714,174]
+    - contentinfo [ref=e214] [box=17,758,898,75]:
+      - generic [ref=e215] [box=37,775,858,42]

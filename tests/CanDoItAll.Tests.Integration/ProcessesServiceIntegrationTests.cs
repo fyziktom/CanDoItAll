@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CanDoItAll.AgentFramework.Models;
@@ -1407,6 +1408,73 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
         Assert.Contains(persistedArtifact.ProjectionIdentityHash, persistedArtifact.ProjectionLineageJson, StringComparison.Ordinal);
         Assert.Contains('#', persistedArtifact.ExternalReferenceKey);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_SB10_INV_001_computes_missing_workspace_content_hash()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Workspace content hash project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Workspace content hash validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify missing projection content hash is computed from managed storage."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var executionRunId = Guid.NewGuid();
+        var relativePath = $"artifacts/process-runs/{runResult.Value:D}/workspace-content-hash.md";
+        var content = "# Current evidence\n\nHash this managed artifact.";
+        var fullPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, content);
+
+        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workspace content hash deliverable",
+            ManagedStoragePath = relativePath,
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{Guid.NewGuid():D}|{relativePath}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = executionRunId,
+                ProjectedExecutionRunId = executionRunId,
+                SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{Guid.NewGuid():D}|{relativePath}",
+                ContentHash = string.Empty
+            }
+        });
+
+        Assert.True(recordResult.IsSuccess, string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync());
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(persistedArtifact.ProjectionLineageJson);
+
+        Assert.NotNull(lineage);
+        Assert.Equal(ProcessArtifactIdentityService.ComputeContentHash(Encoding.UTF8.GetBytes(content)), lineage.ContentHash);
+        Assert.Equal(persistedArtifact.ProjectionIdentityHash, lineage.ProjectionIdentityHash);
+        Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -3315,7 +3383,11 @@ public sealed class ProcessesServiceIntegrationTests
         var savedDeliveryStep = Assert.Single(savedEditor.Steps, step => step.Key == "delivery-review");
 
         Assert.Equal(
-            [ProcessStepOperation.WriteManagedProcessArtifacts, ProcessStepOperation.WriteExternalArtifactDestination],
+            [
+                ProcessStepOperation.ReadProcessContext,
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.WriteExternalArtifactDestination
+            ],
             savedDeliveryStep.AllowedOperations);
         Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, savedDeliveryStep.OperationTargetScope);
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
@@ -913,14 +914,16 @@ public sealed class ProcessWorkspaceTests
             Assert.Empty(currentMergeStep.RoleAssignments);
         });
 
-        cut.WaitForAssertion(() =>
+        await WaitForAsync(async () =>
         {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
             var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
             Assert.Empty(persistedMergeStep.RoleAssignments);
             Assert.Empty(persistedMergeStep.ArtifactInputs);
             Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(persistedMergeStep));
         });
+
+        await InvokeWorkspaceMethodAsync(cut, "FlushPendingDefinitionCanvasPersistenceAsync");
     }
 
     [Fact]
@@ -974,16 +977,18 @@ public sealed class ProcessWorkspaceTests
             Assert.Equal(260, branchNode.Y);
         });
 
-        cut.WaitForAssertion(() =>
-        {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
-            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
-            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
-            Assert.Equal(320, persistedRole.CanvasX);
-            Assert.Equal(420, persistedRole.CanvasY);
-            Assert.Equal(940, persistedDecisionStep.BranchCanvasX);
-            Assert.Equal(260, persistedDecisionStep.BranchCanvasY);
-        });
+        await WaitForPersistedCanvasPositionAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            process.RoleKey,
+            process.DecisionStepKey,
+            expectedRoleX: 320,
+            expectedRoleY: 420,
+            expectedBranchX: 940,
+            expectedBranchY: 260);
+
+        await InvokeWorkspaceMethodAsync(cut, "FlushPendingDefinitionCanvasPersistenceAsync");
     }
 
     [Fact]
@@ -1026,26 +1031,28 @@ public sealed class ProcessWorkspaceTests
             new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 1000, 300)
         })));
 
-        cut.WaitForAssertion(() =>
-        {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
-            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
-            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
-            Assert.Equal(360, persistedRole.CanvasX);
-            Assert.Equal(460, persistedRole.CanvasY);
-            Assert.Equal(1000, persistedDecisionStep.BranchCanvasX);
-            Assert.Equal(300, persistedDecisionStep.BranchCanvasY);
-        });
+        await WaitForPersistedCanvasPositionAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            process.RoleKey,
+            process.DecisionStepKey,
+            expectedRoleX: 360,
+            expectedRoleY: 460,
+            expectedBranchX: 1000,
+            expectedBranchY: 300);
 
-        cut.WaitForAssertion(() =>
+        await WaitForAsync(async () =>
         {
-            var currentUpdateCount = activityService.ListRecentAsync(200).GetAwaiter().GetResult()
+            var currentUpdateCount = (await activityService.ListRecentAsync(200))
                 .Count(item =>
                     item.Category == "processes" &&
                     item.Action == "update-definition" &&
                     item.Description == process.Editor.Name);
             Assert.Equal(baselineUpdateCount + 1, currentUpdateCount);
         });
+
+        await InvokeWorkspaceMethodAsync(cut, "FlushPendingDefinitionCanvasPersistenceAsync");
     }
 
     [Fact]
@@ -1281,6 +1288,7 @@ public sealed class ProcessWorkspaceTests
         var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
         cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        WaitForEditorDefinition(cut, process.Editor);
         cut.Find("[data-testid='processes-templates-button']").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
 
@@ -1395,6 +1403,7 @@ public sealed class ProcessWorkspaceTests
         var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
         cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        WaitForEditorDefinition(cut, process.Editor);
         cut.Find("[data-testid='processes-templates-button']").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
 
@@ -1971,6 +1980,68 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']")));
+    }
+
+    private static void WaitForEditorDefinition(IRenderedComponent<ProcessWorkspace> cut, ProcessDefinitionEditorModel expected)
+    {
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Equal(expected.Name, editor.Name);
+            Assert.Equal(expected.Roles.Count, editor.Roles.Count);
+            Assert.Equal(expected.Steps.Count, editor.Steps.Count);
+        });
+    }
+
+    private static Task WaitForPersistedCanvasPositionAsync(
+        ProcessesService processesService,
+        Guid definitionId,
+        Guid? projectId,
+        string roleKey,
+        string stepKey,
+        double expectedRoleX,
+        double expectedRoleY,
+        double expectedBranchX,
+        double expectedBranchY)
+    {
+        return WaitForAsync(async () =>
+        {
+            var persistedEditor = await processesService.GetEditorAsync(definitionId, projectId);
+            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == roleKey);
+            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == stepKey);
+
+            Assert.Equal(expectedRoleX, persistedRole.CanvasX);
+            Assert.Equal(expectedRoleY, persistedRole.CanvasY);
+            Assert.Equal(expectedBranchX, persistedDecisionStep.BranchCanvasX);
+            Assert.Equal(expectedBranchY, persistedDecisionStep.BranchCanvasY);
+        });
+    }
+
+    private static async Task WaitForAsync(Func<Task> assertion, TimeSpan? timeout = null)
+    {
+        var deadline = DateTimeOffset.UtcNow + (timeout ?? TimeSpan.FromSeconds(30));
+        Exception? lastException = null;
+
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            try
+            {
+                await assertion();
+                return;
+            }
+            catch (Exception exception)
+            {
+                lastException = exception;
+                await Task.Delay(100);
+            }
+        }
+
+        if (lastException is not null)
+        {
+            ExceptionDispatchInfo.Capture(lastException).Throw();
+        }
+
+        Assert.Fail("The assertion did not pass before the timeout elapsed.");
     }
 
     private static async Task SetTemplateLibraryCategoryAsync(IRenderedComponent<ProcessWorkspace> cut, string key)

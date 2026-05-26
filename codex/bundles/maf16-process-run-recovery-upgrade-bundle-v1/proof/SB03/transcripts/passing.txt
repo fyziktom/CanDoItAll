@@ -1,3 +1,5 @@
-# SB03 passing.txt
-
-Pending.
+Command: dotnet build CanDoItAll.slnx --no-restore; dotnet test unit/integration/component filters; web-app HTTP probe and Playwright MCP dashboard proof
+Exit code: 0
+Invariant ID: SB03-INV-001
+Result: Passed. The validation matrix completed for Upgrade Microsoft Agent Framework package references and pass restore/build gates.
+Key transcripts: build, unit, integration, component, package grep, SQLite audit, and web-app proof are stored under bundle://proof/.

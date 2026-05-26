@@ -1,8 +1,11 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -235,7 +238,17 @@ public sealed partial class ProcessesService
         var externalReferenceKey = BoundProcessArtifactText(
             request.ExternalReferenceKey.Trim(),
             MaxProcessArtifactExternalReferenceKeyLength);
-        var projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(request.ProjectionLineage);
+        var managedStoragePath = request.ManagedStoragePath.Trim();
+        var projectionLineage = CloneProjectionLineage(request.ProjectionLineage);
+        if (ShouldComputeManagedArtifactContentHash(projectionLineage) &&
+            !string.IsNullOrWhiteSpace(managedStoragePath))
+        {
+            projectionLineage!.ContentHash = await TryComputeManagedArtifactContentHashAsync(
+                managedStoragePath,
+                cancellationToken);
+        }
+
+        projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(projectionLineage);
         var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
         if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
         {
@@ -325,7 +338,7 @@ public sealed partial class ProcessesService
             ProvenanceSummary = request.ProvenanceSummary.Trim(),
             AllowedFutureUsageSummary = request.AllowedFutureUsageSummary.Trim(),
             ReviewSummary = request.ReviewSummary.Trim(),
-            ManagedStoragePath = request.ManagedStoragePath.Trim(),
+            ManagedStoragePath = managedStoragePath,
             ExternalReferenceKey = externalReferenceKey,
             ProjectionLineageJson = ProcessArtifactIdentityService.SerializeNormalizedProjectionLineage(projectionLineage),
             ProjectionIdentityHash = projectionIdentityHash,
@@ -527,6 +540,137 @@ public sealed partial class ProcessesService
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)).AsSpan(0, 12)).ToLowerInvariant();
         var prefixLength = Math.Max(0, maxLength - hash.Length - 1);
         return $"{normalized[..prefixLength]}#{hash}";
+    }
+
+    private static ProcessArtifactProjectionLineage? CloneProjectionLineage(ProcessArtifactProjectionLineage? lineage)
+    {
+        return lineage is null
+            ? null
+            : new ProcessArtifactProjectionLineage
+            {
+                SourceKind = lineage.SourceKind,
+                SourceExecutionRunId = lineage.SourceExecutionRunId,
+                RecoveryExecutionRunId = lineage.RecoveryExecutionRunId,
+                RecoveredForExecutionRunId = lineage.RecoveredForExecutionRunId,
+                ProjectedExecutionRunId = lineage.ProjectedExecutionRunId,
+                WorkflowRunId = lineage.WorkflowRunId,
+                WorkflowArtifactId = lineage.WorkflowArtifactId,
+                SubprocessRunId = lineage.SubprocessRunId,
+                SourceArtifactId = lineage.SourceArtifactId,
+                ReworkPacketId = lineage.ReworkPacketId,
+                SourceExternalReferenceKey = lineage.SourceExternalReferenceKey,
+                ContentHash = lineage.ContentHash,
+                ProjectionIdentityHash = lineage.ProjectionIdentityHash
+            };
+    }
+
+    private static bool ShouldComputeManagedArtifactContentHash(ProcessArtifactProjectionLineage? lineage)
+    {
+        return lineage is not null &&
+               string.IsNullOrWhiteSpace(lineage.ContentHash) &&
+               lineage.SourceKind is
+                   ProcessArtifactProjectionSourceKind.AgentExecutionArtifact or
+                   ProcessArtifactProjectionSourceKind.WorkspaceWrite or
+                   ProcessArtifactProjectionSourceKind.ExistingManagedFile or
+                   ProcessArtifactProjectionSourceKind.ProviderNativeBrowser;
+    }
+
+    private async Task<string> TryComputeManagedArtifactContentHashAsync(
+        string managedStoragePath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (StorageJson.TryParseReference(managedStoragePath, out var reference) && reference is not null)
+            {
+                await using var storageStream = await TryOpenManagedStorageReadStreamAsync(reference, cancellationToken);
+                return storageStream is null
+                    ? string.Empty
+                    : await ComputeStreamContentHashAsync(storageStream, cancellationToken);
+            }
+
+            if (!TryResolveWorkspaceManagedArtifactPath(managedStoragePath, out var fullPath) ||
+                !File.Exists(fullPath))
+            {
+                return string.Empty;
+            }
+
+            await using var fileStream = File.OpenRead(fullPath);
+            return await ComputeStreamContentHashAsync(fileStream, cancellationToken);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not compute process artifact content hash for managed path {ManagedStoragePath}. Validation will report content availability separately if this artifact is required.",
+                BoundProcessArtifactText(managedStoragePath, 160));
+            return string.Empty;
+        }
+    }
+
+    private async Task<Stream?> TryOpenManagedStorageReadStreamAsync(
+        StorageObjectReference reference,
+        CancellationToken cancellationToken)
+    {
+        if (!reference.StorageId.HasValue)
+        {
+            if (!TryResolveWorkspaceManagedArtifactPath(reference.Locator, out var fullPath) ||
+                !File.Exists(fullPath))
+            {
+                return null;
+            }
+
+            return File.OpenRead(fullPath);
+        }
+
+        var storage = await storageCatalogService.GetAsync(reference.StorageId.Value, cancellationToken);
+        if (storage is null)
+        {
+            return null;
+        }
+
+        var driver = storageDriverRegistry.Resolve(storage.ProviderKind);
+        return await driver.OpenReadAsync(storage, reference, cancellationToken);
+    }
+
+    private bool TryResolveWorkspaceManagedArtifactPath(string managedStoragePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(managedStoragePath))
+        {
+            return false;
+        }
+
+        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        var candidateFullPath = Path.IsPathRooted(managedStoragePath)
+            ? Path.GetFullPath(managedStoragePath)
+            : Path.GetFullPath(Path.Combine(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.NormalizeRelativePath(managedStoragePath).Replace('/', Path.DirectorySeparatorChar)));
+        if (!IsWithinRoot(workspaceRoot, candidateFullPath))
+        {
+            return false;
+        }
+
+        fullPath = candidateFullPath;
+        return true;
+    }
+
+    private static async Task<string> ComputeStreamContentHashAsync(
+        Stream stream,
+        CancellationToken cancellationToken)
+    {
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, cancellationToken);
+        return ProcessArtifactIdentityService.ComputeContentHash(memory.ToArray());
+    }
+
+    private static bool IsWithinRoot(string root, string fullPath)
+    {
+        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        var normalizedPath = Path.GetFullPath(fullPath);
+        return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     private static ProcessArtifactExpectation? ResolveArtifactExpectation(

@@ -61,8 +61,15 @@ public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
         var switchResult = await switchCoordinator.SwitchAsync(targetProfile.Profile.Id);
         Assert.True(switchResult.IsSuccess);
 
-        var currentWorkspaceService = workspaceFactory.GetOrganizationWorkspaceService();
-        var targetEditor = await currentWorkspaceService.GetAgentEditorAsync();
+        await using var restartedProvider = DatabaseProfileControlPlaneIntegrationHost.BuildServiceProvider(testEnvironment);
+        await using var restartedScope = restartedProvider.CreateAsyncScope();
+        var restartedBootstrapper = restartedScope.ServiceProvider.GetRequiredService<IAppDatabaseBootstrapper>();
+        var restartedWorkspaceService = restartedScope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var restartedAiAgentService = restartedScope.ServiceProvider.GetRequiredService<AiAgentService>();
+
+        await restartedBootstrapper.EnsureCurrentProfileReadyAsync();
+
+        var targetEditor = await restartedWorkspaceService.GetAgentEditorAsync();
         targetEditor.Name = "Target Switch Agent";
         targetEditor.RoleTitle = "Target engineer";
         targetEditor.Summary = "Exists only in the switched profile.";
@@ -71,14 +78,14 @@ public sealed class AgentFrameworkRuntimeSwitchingIntegrationTests
         targetEditor.IsTemplate = false;
         targetEditor.TemplateKey = string.Empty;
 
-        var targetAgentId = await currentWorkspaceService.SaveAgentAsync(targetEditor);
+        var targetAgentId = await restartedWorkspaceService.SaveAgentAsync(targetEditor);
 
-        var resolvedAgents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+        var resolvedAgents = await restartedWorkspaceService.ListAgentsAsync(includeTemplates: false);
 
         Assert.DoesNotContain(resolvedAgents, item => item.Id == primaryAgentId);
         Assert.Contains(resolvedAgents, item => item.Id == targetAgentId && item.Name == "Target Switch Agent");
 
-        var crmRoster = await aiAgentService.ListAgentDirectoryAsync();
+        var crmRoster = await restartedAiAgentService.ListAgentDirectoryAsync();
 
         Assert.DoesNotContain(crmRoster, item => item.TechnicalAgentId == primaryAgentId);
         Assert.Contains(crmRoster, item => item.TechnicalAgentId == targetAgentId && item.DisplayName == "Target Switch Agent");

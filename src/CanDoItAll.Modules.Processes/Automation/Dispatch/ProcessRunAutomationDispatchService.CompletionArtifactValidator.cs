@@ -183,6 +183,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     recoveredForExecutionRunId);
             }
 
+            if (managedArtifactContentReader is not null &&
+                RequiresManagedEvidencePath(mode, producerKind) &&
+                !TryValidateManagedArtifactContent(
+                    artifact,
+                    managedArtifactContentReader,
+                    out var contentDiagnostic,
+                    out var contentValidationStatus))
+            {
+                return CreateArtifactValidationResult(
+                    processRunId,
+                    stepRunId,
+                    expectation,
+                    mode,
+                    contentValidationStatus,
+                    producerKind,
+                    artifact,
+                    artifact.ManagedStoragePath,
+                    contentDiagnostic,
+                    "Recover a durable managed artifact with readable current-run content and matching lineage.",
+                    executorKind,
+                    executionRunId,
+                    workflowRunId,
+                    subprocessRunId,
+                    recoveryExecutionRunId,
+                    recoveredForExecutionRunId);
+            }
+
             if (!MatchesDeclaredFormat(expectation, artifact, mode, producerKind, managedArtifactContentReader, out var formatDiagnostic))
             {
                 return CreateArtifactValidationResult(

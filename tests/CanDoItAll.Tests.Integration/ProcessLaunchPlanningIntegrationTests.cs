@@ -1662,6 +1662,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Selected AI resource owns implementation.",
                     ExceptionPolicySummary = "Fail when a less relevant generalist is selected ahead of a Blazor specialist.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,
@@ -1747,6 +1755,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Product owner owns scope, delivery manager owns sequencing, and lead engineer owns implementation.",
                     ExceptionPolicySummary = "Fail when technology context overrides role accountability.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,

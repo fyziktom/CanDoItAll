@@ -9,6 +9,7 @@ using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 namespace CanDoItAll.Tests.Integration;
@@ -8950,6 +8951,32 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Fact]
+    public void IsWrongRootArtifact_allows_only_current_run_managed_output_paths() {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var isWrongRootArtifact = serviceType.GetMethod("IsWrongRootArtifact", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("IsWrongRootArtifact method was not found.");
+        var processRunId = Guid.NewGuid();
+        var processMockRunKey = processRunId.ToString("N")[..16];
+
+        Assert.False(Invoke($"output/process-runs/{processRunId:D}/SampleApp/ValidationEngine.cs"));
+        Assert.False(Invoke($"output/scopes/organization/demo/process-runs/{processRunId:N}/SampleApp/ValidationEngine.cs"));
+        Assert.False(Invoke($"output/scopes/organization/demo/process-mock/{processMockRunKey}/MockApp/ValidationEngine.cs"));
+        Assert.True(Invoke($"output/process-runs/{Guid.NewGuid():D}/SampleApp/ValidationEngine.cs"));
+        Assert.True(Invoke("output/shared/ValidationEngine.cs"));
+        Assert.True(Invoke("src/SampleApp/ValidationEngine.cs"));
+
+        bool Invoke(string managedStoragePath) {
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                ManagedStoragePath = managedStoragePath
+            };
+
+            return (bool)(isWrongRootArtifact.Invoke(null, [artifact]) ?? false);
+        }
+    }
+
+    [Fact]
     public void ResolveProviderNativeBrowserProjectedRelativePath_places_playwright_mcp_outputs_under_current_run_browser_artifacts()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -14079,7 +14106,7 @@ Ancestor path to the target work node:
                 managedArtifactContentReader: reader);
 
             Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
-            Assert.Equal(1, storageDriver.OpenReadCount);
+            Assert.Equal(2, storageDriver.OpenReadCount);
         }
         finally
         {
@@ -14229,7 +14256,7 @@ Ancestor path to the target work node:
                 executionRunId,
                 managedArtifactContentReader: reader);
 
-            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable, result.Status);
             Assert.Contains("could not be loaded", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("not found", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
         }
@@ -14284,8 +14311,134 @@ Ancestor path to the target work node:
                 executionRunId,
                 managedArtifactContentReader: reader);
 
-            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable, result.Status);
             Assert.Contains("exceeding the validation limit", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB09_INV_001_accepts_current_run_org_scoped_path_with_matching_typed_lineage()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var scopeId = Guid.NewGuid();
+        var relativePath = $"artifacts/scopes/organizations/{scopeId:D}/process-runs/{processRunId:D}/01-blazor-delivery-contract.md";
+        var fullPath = Path.Combine(workspaceRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, "# Delivery contract\n\nCurrent run evidence.");
+        try
+        {
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Deliverable,
+                "Blazor delivery contract",
+                isRequired: true,
+                "Must create the delivery contract as Markdown.");
+            var externalReferencePath = $"artifacts/process-runs/{processRunId:D}/01-blazor-delivery-contract.md";
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = expectation.Title,
+                ManagedStoragePath = relativePath,
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{externalReferencePath}",
+                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                    new ProcessArtifactProjectionLineage
+                    {
+                        SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                        SourceExecutionRunId = executionRunId,
+                        ProjectedExecutionRunId = executionRunId,
+                        SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{externalReferencePath}",
+                        ContentHash = string.Empty
+                    }),
+                ReviewSummary = "Current run delivery contract.",
+                ProvenanceSummary = $"Projected from current execution run {executionRunId:D}."
+            };
+            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkspaceWrite, result.ProducerKind);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB10_INV_001_reports_content_hash_mismatch_without_stale_run_classification()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        var relativePath = "artifacts/process-runs/current/content-hash-mismatch.md";
+        var fullPath = Path.Combine(workspaceRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, "# Current content");
+        try
+        {
+            var processRunId = Guid.NewGuid();
+            var stepRunId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Evidence,
+                "Runtime validation evidence",
+                isRequired: true,
+                "Must include current run proof as Markdown.");
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = expectation.Title,
+                ManagedStoragePath = relativePath,
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{relativePath}",
+                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                    new ProcessArtifactProjectionLineage
+                    {
+                        SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                        SourceExecutionRunId = executionRunId,
+                        ContentHash = ProcessArtifactIdentityService.ComputeContentHash(Encoding.UTF8.GetBytes("stale content"))
+                    }),
+                ReviewSummary = "Runtime proof.",
+                ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+            };
+            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch, result.Status);
+            Assert.Contains("content hash", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

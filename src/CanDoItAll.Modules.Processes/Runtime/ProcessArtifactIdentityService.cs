@@ -66,6 +66,12 @@ internal static class ProcessArtifactIdentityService
         return "sha256:" + Convert.ToHexString(hashBytes).ToLowerInvariant();
     }
 
+    public static string ComputeContentHash(byte[] content)
+    {
+        var hashBytes = SHA256.HashData(content);
+        return "sha256:" + Convert.ToHexString(hashBytes).ToLowerInvariant();
+    }
+
     public static ProcessArtifactProjectionLineage? DeserializeProjectionLineage(string? value)
     {
         return string.IsNullOrWhiteSpace(value)

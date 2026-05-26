@@ -40,7 +40,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         InsufficientEvidence,
         StaleOrWrongRun,
         WrongProducerMode,
-        PlaceholderOnly
+        PlaceholderOnly,
+        ContentUnavailable,
+        ContentHashMismatch
     }
 
     internal enum ProcessArtifactFailureOwnership
@@ -940,7 +942,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return result.Status is ProcessArtifactValidationStatus.Missing or
             ProcessArtifactValidationStatus.InvalidFormat or
             ProcessArtifactValidationStatus.PlaceholderOnly or
-            ProcessArtifactValidationStatus.StaleOrWrongRun;
+            ProcessArtifactValidationStatus.StaleOrWrongRun or
+            ProcessArtifactValidationStatus.ContentUnavailable or
+            ProcessArtifactValidationStatus.ContentHashMismatch;
     }
 
     private static DispatchBranchOutcome? ResolveNegativeDispositionBranchOutcome(
@@ -964,7 +968,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             result.Status is ProcessArtifactValidationStatus.InvalidFormat or
                 ProcessArtifactValidationStatus.InsufficientEvidence or
                 ProcessArtifactValidationStatus.WrongProducerMode or
-                ProcessArtifactValidationStatus.PlaceholderOnly);
+                ProcessArtifactValidationStatus.PlaceholderOnly or
+                ProcessArtifactValidationStatus.ContentUnavailable or
+                ProcessArtifactValidationStatus.ContentHashMismatch);
     }
 
     private static bool IsNegativeDispositionBranchOutcomeCandidate(DispatchBranchOutcome outcome)
@@ -1211,6 +1217,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessArtifactProducerKind.ExistingManagedFile or
                 ProcessArtifactProducerKind.WorkflowArtifact or
                 ProcessArtifactProducerKind.SubprocessArtifact or
+                ProcessArtifactProducerKind.ProcessMock or
                 ProcessArtifactProducerKind.ManagerRecovery or
                 ProcessArtifactProducerKind.Manual,
             ProcessArtifactExpectationMode.RuntimeProof => producerKind is
@@ -1219,6 +1226,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessArtifactProducerKind.ProviderNativeBrowser or
                 ProcessArtifactProducerKind.WorkflowArtifact or
                 ProcessArtifactProducerKind.SubprocessArtifact or
+                ProcessArtifactProducerKind.ProcessMock or
                 ProcessArtifactProducerKind.ManagerRecovery or
                 ProcessArtifactProducerKind.Manual,
             ProcessArtifactExpectationMode.RecoveryDiagnostic => false,
@@ -1660,6 +1668,37 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return true;
     }
 
+    private static bool TryValidateManagedArtifactContent(
+        ProcessArtifactRecord artifact,
+        IProcessArtifactContentReader managedArtifactContentReader,
+        out string diagnostic,
+        out ProcessArtifactValidationStatus status)
+    {
+        status = ProcessArtifactValidationStatus.Satisfied;
+        if (!TryReadManagedArtifactContent(artifact, managedArtifactContentReader, out var content, out diagnostic))
+        {
+            status = ProcessArtifactValidationStatus.ContentUnavailable;
+            return false;
+        }
+
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+        var expectedContentHash = lineage?.ContentHash?.Trim();
+        if (string.IsNullOrWhiteSpace(expectedContentHash))
+        {
+            return true;
+        }
+
+        var actualContentHash = ProcessArtifactIdentityService.ComputeContentHash(content?.ContentBytes ?? []);
+        if (string.Equals(expectedContentHash, actualContentHash, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        diagnostic = "The managed artifact content hash does not match the recorded projection lineage content hash.";
+        status = ProcessArtifactValidationStatus.ContentHashMismatch;
+        return false;
+    }
+
     private static bool IsConcreteProductMutationReceipt(ToolExecutionReceiptRecord receipt)
     {
         if (!ConcreteProductMutationToolNames.Contains(receipt.ToolName))
@@ -1702,10 +1741,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return !IsExternalArtifactDestinationAlias(normalizedAlias);
         }
 
+        if (string.Equals(normalizedPath, "output", StringComparison.OrdinalIgnoreCase) ||
+            normalizedPath.StartsWith("output/", StringComparison.OrdinalIgnoreCase)) {
+            return !IsCurrentRunManagedOutputArtifactPath(artifact.ProcessRunId, normalizedPath);
+        }
+
         return normalizedPath.StartsWith("src/", StringComparison.OrdinalIgnoreCase) ||
-               normalizedPath.StartsWith("tests/", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(normalizedPath, "output", StringComparison.OrdinalIgnoreCase) ||
-               normalizedPath.StartsWith("output/", StringComparison.OrdinalIgnoreCase);
+               normalizedPath.StartsWith("tests/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsCurrentRunManagedOutputArtifactPath(Guid processRunId, string normalizedPath) {
+        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length < 3 ||
+            !string.Equals(segments[0], "output", StringComparison.OrdinalIgnoreCase)) {
+            return false;
+        }
+
+        return ContainsCurrentRunPathSegment(segments, "process-runs", processRunId.ToString("D")) ||
+               ContainsCurrentRunPathSegment(segments, "process-runs", processRunId.ToString("N")) ||
+               ContainsCurrentRunPathSegment(segments, "process-mock", ResolveProcessMockRunKey(processRunId));
+    }
+
+    private static bool ContainsCurrentRunPathSegment(
+        IReadOnlyList<string> segments,
+        string markerSegment,
+        string expectedValue) {
+        if (string.IsNullOrWhiteSpace(expectedValue)) {
+            return false;
+        }
+
+        for (var index = 0; index < segments.Count - 1; index++) {
+            if (string.Equals(segments[index], markerSegment, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(segments[index + 1], expectedValue, StringComparison.OrdinalIgnoreCase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string ResolveProcessMockRunKey(Guid processRunId) {
+        var normalized = processRunId.ToString("N").ToLowerInvariant();
+        return normalized.Length <= 16
+            ? normalized
+            : normalized[..16];
     }
 
     private static bool RequiresProjectionLineage(ProcessArtifactRecord artifact)
@@ -1988,7 +2067,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (status is ProcessArtifactValidationStatus.Missing or
             ProcessArtifactValidationStatus.InvalidFormat or
             ProcessArtifactValidationStatus.PlaceholderOnly or
-            ProcessArtifactValidationStatus.StaleOrWrongRun)
+            ProcessArtifactValidationStatus.StaleOrWrongRun or
+            ProcessArtifactValidationStatus.ContentUnavailable or
+            ProcessArtifactValidationStatus.ContentHashMismatch)
         {
             return ProcessArtifactFailureOwnership.OwnOutput;
         }

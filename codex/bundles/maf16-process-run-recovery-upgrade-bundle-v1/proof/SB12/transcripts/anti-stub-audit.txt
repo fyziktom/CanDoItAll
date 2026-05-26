@@ -1,3 +1,5 @@
-# SB12 anti-stub-audit.txt
-
-Pending.
+Command: rg -n "9bbc0667-9d12-4506-ba81-654ef924cad6|0610f6d6-5d37-4313-b560-09cc9484f5b8|NotImplementedException" src tests -S
+Exit code: 1
+Invariant ID: SB12-INV-001
+Result: No live-run hardcoding and no NotImplementedException stubs were introduced for Route recovery and manager approval decisions with explicit validation statuses.
+The only TODO strings observed in changed tests are fixture artifact text, not implementation bypasses.

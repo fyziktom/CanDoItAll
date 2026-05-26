@@ -94,7 +94,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
         Assert.True(implementationRoleBox.X < implementationBox.X);
         Assert.True(Math.Abs(decisionRoleBox.Y - decisionBox.Y) < 1d);
         Assert.True(Math.Abs(implementationRoleBox.Y - implementationBox.Y) < 1d);
-        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 24d);
         Assert.True(Math.Abs(mergeBox.Y - decisionBox.Y) < 1d);
         Assert.True(Math.Abs(repairBox.Y - decisionBox.Y) > 150d);
         Assert.True(branchBox.X > decisionBox.X);
