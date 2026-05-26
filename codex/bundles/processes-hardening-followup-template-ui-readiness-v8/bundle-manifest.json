@@ -1,0 +1,83 @@
+{
+  "bundleKey": "processes-hardening-followup-template-ui-readiness-v8",
+  "version": "1.0.0",
+  "createdAtUtc": "2026-05-26T10:26:05Z",
+  "targetRepo": "fyziktom/CanDoItAll",
+  "targetBranchObserved": "processes-hardening",
+  "reviewedHead": "phase7 / ca898eccf32664b60e996bf806a035067675c11e",
+  "purpose": "Follow-up hardening after phase7, with process template and UI-readiness focus for an upcoming Blazor WASM PWA Tetris process run.",
+  "criticalFindings": [
+    "Potential build breaker: ProcessRuntimeViewModels references ProcessStepRecoveryOption.None while ProcessDefinitionEnums currently shows ProcessStepRecoveryOption without None.",
+    "Blazor templates still allow product mutation in review/revalidation/escalation-style steps.",
+    "Non-Blazor templates remain largely unmigrated to persisted AllowedOperations and OperationTargetScope.",
+    "Processes API skill is too thin and does not document typed governance fields, block causes, recovery options, projection lineage, workflow/subprocess mappings, or Tetris test workflow.",
+    "Project-structure mutation tools are not visibly classified/enforced as governed external actions in AgentToolInvocationPolicyMetadata.",
+    "Manual/API step transition still risks weaker required-artifact validation than the automation finalizer path."
+  ],
+  "subbundles": [
+    {
+      "id": "SB01",
+      "path": "subbundles/01-build-breaker-and-compile-integrity"
+    },
+    {
+      "id": "SB02",
+      "path": "subbundles/02-process-api-tool-openapi-contract-parity"
+    },
+    {
+      "id": "SB03",
+      "path": "subbundles/03-template-inventory-and-governance-matrix"
+    },
+    {
+      "id": "SB04",
+      "path": "subbundles/04-blazor-template-boundary-corrections"
+    },
+    {
+      "id": "SB05",
+      "path": "subbundles/05-tetris-wasm-pwa-template-readiness"
+    },
+    {
+      "id": "SB06",
+      "path": "subbundles/06-refactor-checkpoint-a-contract-normalization"
+    },
+    {
+      "id": "SB07",
+      "path": "subbundles/07-project-structure-tool-classification-and-policy"
+    },
+    {
+      "id": "SB08",
+      "path": "subbundles/08-nonsoftware-template-migration"
+    },
+    {
+      "id": "SB09",
+      "path": "subbundles/09-workflow-subprocess-output-mapping-hardening"
+    },
+    {
+      "id": "SB10",
+      "path": "subbundles/10-unified-artifact-validation-for-api-transitions"
+    },
+    {
+      "id": "SB11",
+      "path": "subbundles/11-refactor-checkpoint-b-runtime-validation-services"
+    },
+    {
+      "id": "SB12",
+      "path": "subbundles/12-block-recovery-health-and-dashboard-readiness"
+    },
+    {
+      "id": "SB13",
+      "path": "subbundles/13-process-skill-and-documentation-update"
+    },
+    {
+      "id": "SB14",
+      "path": "subbundles/14-template-baseline-scenarios-and-seed-pack"
+    },
+    {
+      "id": "SB15",
+      "path": "subbundles/15-ui-test-preflight-for-tetris-process-run"
+    },
+    {
+      "id": "SB16",
+      "path": "subbundles/16-final-red-team-and-closure"
+    }
+  ]
+}
