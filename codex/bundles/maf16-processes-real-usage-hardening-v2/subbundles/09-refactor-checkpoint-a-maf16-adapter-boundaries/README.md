@@ -1,26 +1,78 @@
-# SB09: 09-refactor-checkpoint-a-maf16-adapter-boundaries
+# SB09: Refactor Checkpoint A - MAF 1.6 Adapter Boundaries
 
-## Goal
+## Status
 
-Refactor MAF adapter seams after adoption work.
+- Completed
 
-## Required work
+## Objective
 
-- Extract compatibility wrappers for MAF 1.6 APIs.
-- Keep CanDoItAll runtime models independent of MAF internals.
-- Document which MAF 1.6 features are adopted vs deferred.
-- Run all MAF-focused tests before continuing.
+Refactor or verify MAF adapter seams after feature adoption decisions.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ04: keep adapter boundaries explicit and keep Processes independent from MAF internals.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB09` are updated and downstream subbundles can rely on the behavior.
+- SB03 through SB08 must be complete or explicitly blocked with no dependency on the blocked behavior.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs
+- repo://src/CanDoItAll.AgentFramework.Maf/README.md
+
+## Deliverables
+
+- Boundary audit for MAF 1.6 compatibility wrappers and adapter-owned types.
+- All MAF-focused tests before process-runtime work continues.
+
+## Dependency Impact
+
+- SB10 through SB18 must trust this adapter boundary before validating process runtime behavior.
+
+## Validation Depth
+
+- Critical semantic proof must reject direct MAF type leakage into process domain/runtime models.
+
+## Implementation Steps
+
+- Audit adapter boundaries and MAF type usage.
+- Extract or tighten compatibility wrappers only where they remove real duplication or leakage.
+- Run MAF-focused tests.
+- Update `proof/SB09`.
+
+## Do Not Do
+
+- Do not introduce abstractions with no boundary or test value.
+- Do not move process governance into MAF-specific code.
+
+## Acceptance Checklist
+
+- MAF feature decisions are documented as adopted/deferred.
+- Processes remain independent from MAF internals.
+- MAF-focused tests pass.
+
+## Proof Required
+
+- Source assertion transcript.
+- Passing MAF test transcript.
+- Anti-stub audit and hashes.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior in this subbundle.
+
+## Progression Gate
+
+- Process-runtime subbundles may start only after the adapter boundary closure gate passes.
+
+## Suggested Agent Prompt
+
+Validate and tighten the MAF adapter boundary after feature adoption decisions, keeping Processes independent from MAF internals.
+
+## Closure Proof
+
+- bundle://proof/SB09/manifest.md
+- bundle://proof/SB09/semantic-invariants.md
+

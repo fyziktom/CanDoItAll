@@ -1329,6 +1329,144 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task RecordArtifactAsync_SB11_INV_001_rejects_projection_identity_for_wrong_step_expectation_scope()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Projection identity scoped artifact project");
+        var managerRoleId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, managerRoleId);
+        var intakeArtifactExpectationId = Guid.NewGuid();
+        definition.Steps[0].ArtifactExpectations =
+        [
+            new ProcessArtifactExpectationEditorModel
+            {
+                Id = intakeArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Intake evidence",
+                ValidationRequirementSummary = "Must stay scoped to the intake step."
+            }
+        ];
+
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Projection identity scope validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify projection identity cannot cross step and expectation scope."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var intakeStep = Assert.Single(stepRuns, item => item.Sequence == 0);
+        var deliveryStep = Assert.Single(stepRuns, item => item.Sequence == 1);
+        var intakeArtifact = Assert.Single(intakeStep.ArtifactOutputs);
+        var deliveryArtifact = Assert.Single(deliveryStep.ArtifactOutputs);
+        var executionRunId = Guid.NewGuid();
+        var lineage = new ProcessArtifactProjectionLineage
+        {
+            SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+            SourceExecutionRunId = executionRunId,
+            ProjectedExecutionRunId = executionRunId,
+            SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{intakeArtifact.ArtifactExpectationId:D}|artifacts/process-runs/{runResult.Value:D}/shared-evidence.md",
+            ContentHash = "sha256:scoped-proof"
+        };
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = intakeStep.Id,
+            ArtifactExpectationId = intakeArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = intakeArtifact.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/intake-evidence.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{intakeArtifact.ArtifactExpectationId:D}|artifacts/process-runs/current/intake-evidence.md",
+            ProjectionLineage = lineage
+        });
+
+        Assert.True(firstRecordResult.IsSuccess, string.Join(" | ", firstRecordResult.Errors.Select(error => error.Message)));
+
+        var wrongScopeResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = deliveryArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = deliveryArtifact.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/delivery-evidence.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{deliveryArtifact.ArtifactExpectationId:D}|artifacts/process-runs/current/delivery-evidence.md",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = lineage.SourceKind,
+                SourceExecutionRunId = lineage.SourceExecutionRunId,
+                ProjectedExecutionRunId = lineage.ProjectedExecutionRunId,
+                SourceExternalReferenceKey = lineage.SourceExternalReferenceKey,
+                ContentHash = lineage.ContentHash
+            }
+        });
+
+        Assert.False(wrongScopeResult.IsSuccess);
+        Assert.Contains(
+            wrongScopeResult.Errors,
+            error => error.Code == "processes.artifact.projection-scope-conflict");
+
+        var externalReferenceKey = $"scoped-external-reference:{Guid.NewGuid():N}";
+        var scopedExternalReferenceResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = intakeStep.Id,
+            ArtifactExpectationId = intakeArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Intake external reference evidence",
+            ManagedStoragePath = "artifacts/process-runs/current/intake-external-reference.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.True(scopedExternalReferenceResult.IsSuccess, string.Join(" | ", scopedExternalReferenceResult.Errors.Select(error => error.Message)));
+
+        var wrongExternalReferenceScopeResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = deliveryArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery external reference evidence",
+            ManagedStoragePath = "artifacts/process-runs/current/delivery-external-reference.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.False(wrongExternalReferenceScopeResult.IsSuccess);
+        Assert.Contains(
+            wrongExternalReferenceScopeResult.Errors,
+            error => error.Code == "processes.artifact.external-reference-scope-conflict");
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+        Assert.Equal(2, persistedArtifacts.Count);
+
+        var persistedArtifact = Assert.Single(persistedArtifacts, item => item.Id == firstRecordResult.Value);
+        Assert.Equal(firstRecordResult.Value, persistedArtifact.Id);
+        Assert.Equal(intakeStep.Id, persistedArtifact.StepRunId);
+        Assert.Equal(intakeArtifact.ArtifactExpectationId, persistedArtifact.ArtifactExpectationId);
+
+        var persistedExternalReferenceArtifact = Assert.Single(persistedArtifacts, item => item.Id == scopedExternalReferenceResult.Value);
+        Assert.Equal(intakeStep.Id, persistedExternalReferenceArtifact.StepRunId);
+        Assert.Equal(intakeArtifact.ArtifactExpectationId, persistedExternalReferenceArtifact.ArtifactExpectationId);
+    }
+
+    [Fact]
     public async Task RecordArtifactAsync_SB02_INV_001_dedupes_long_display_keys_by_projection_identity_hash()
     {
         await using var application = await TestApplication.CreateAsync();

@@ -1,26 +1,78 @@
-# SB07: 07-a2a-v1-and-handoff-regression
+# SB07: A2A v1 And Handoff Regression
 
-## Goal
+## Status
 
-Prove or explicitly guard A2A v1 and handoff behavior.
+- Completed
 
-## Required work
+## Objective
 
-- Compile and test A2A v1 package usage.
-- Verify handoff message role mutation fix does not break existing workarounds.
-- Add smoke tests for local handoff workflow and any remote A2A bridge if configured.
-- If A2A runtime cannot be fully tested locally, gate it behind clear feature readiness diagnostics.
+Prove or explicitly guard A2A v1 and handoff behavior after the MAF 1.6 package upgrade.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ03: prove A2A v1 and handoff behavior.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB07` are updated and downstream subbundles can rely on the behavior.
+- SB02 adoption matrix must classify A2A v1.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/A2ARemoteAgentToolFactory.cs
+- repo://src/CanDoItAll.AgentFramework.Hosting/AgentA2AHostCardFactory.cs
+- repo://tests/CanDoItAll.Tests.Integration/MafAgentRuntimeHandoffTests.cs
+
+## Deliverables
+
+- Compile-level and smoke-level A2A v1 proof or an explicit readiness guard.
+- Handoff regression proof that role mutation fixes do not break existing handoff workflows.
+
+## Dependency Impact
+
+- SB09 adapter boundary and SB18 final red-team depend on A2A/handoff classification.
+
+## Validation Depth
+
+- Critical semantic proof must include a local handoff smoke and A2A source/compile proof.
+
+## Implementation Steps
+
+- Audit A2A v1 package usage and host card mapping.
+- Add smoke tests for local handoff and configured A2A bridge behavior.
+- Guard runtime surfaces that cannot be locally tested.
+- Update `proof/SB07`.
+
+## Do Not Do
+
+- Do not assume remote A2A availability without configuration proof.
+- Do not keep obsolete handoff workarounds if MAF 1.6 changes make them harmful.
+
+## Acceptance Checklist
+
+- A2A v1 compile proof exists.
+- Local handoff smoke proof exists.
+- Unsupported remote behavior is guarded with diagnostics.
+
+## Proof Required
+
+- Failing-first/adversarial transcript.
+- Passing handoff/A2A test transcript.
+- Source assertions, anti-stub audit, and hashes.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior in this subbundle.
+
+## Progression Gate
+
+- SB09 may close only after A2A/handoff proof or guard is recorded.
+
+## Suggested Agent Prompt
+
+Prove MAF 1.6 A2A v1 and handoff behavior with source, compile, smoke, and guard evidence.
+
+## Closure Proof
+
+- bundle://proof/SB07/manifest.md
+- bundle://proof/SB07/semantic-invariants.md
+

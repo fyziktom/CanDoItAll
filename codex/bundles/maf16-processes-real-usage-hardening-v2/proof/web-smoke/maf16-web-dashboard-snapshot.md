@@ -1,0 +1,34 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e209]:
+    - complementary [ref=e210]:
+      - generic [ref=e211]:
+        - generic [ref=e212]
+        - navigation "Primary navigation" [ref=e218]
+        - generic [ref=e273]
+    - main [ref=e284]:
+      - generic [ref=e285]:
+        - button "Dashboard" [ref=e291]
+        - generic [ref=e296]
+      - generic [ref=e305]:
+        - paragraph [ref=e306]: Database startup
+        - heading "Continue with the active database to load the workspace" [level=3] [ref=e307]
+        - paragraph [ref=e308]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+  - dialog "Database profiles" [ref=e311]:
+    - banner [ref=e312]:
+      - generic [ref=e313]:
+        - generic [ref=e314]
+        - button "Close" [ref=e320]
+    - generic [ref=e324]:
+      - generic [ref=e325]:
+        - generic [ref=e326]
+        - generic [ref=e334]
+        - paragraph [ref=e351]: "Selection source: Explicit startup override"
+      - generic [ref=e352]: Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+      - generic [ref=e353]:
+        - paragraph [ref=e354]: No saved profiles
+        - heading "Create the first PostgreSQL profile" [level=3] [ref=e355]
+        - paragraph [ref=e356]: Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab.
+    - contentinfo [ref=e357]:
+      - generic [ref=e358]:
+        - generic [ref=e359]
+        - button "Running now" [disabled] [ref=e365]

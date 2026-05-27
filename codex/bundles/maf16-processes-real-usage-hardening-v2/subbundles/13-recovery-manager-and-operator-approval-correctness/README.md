@@ -1,26 +1,79 @@
-# SB13: 13-recovery-manager-and-operator-approval-correctness
+# SB13: Recovery Manager And Operator Approval Correctness
 
-## Goal
+## Status
 
-Fix manager recovery and operator approval semantics.
+- Completed
 
-## Required work
+## Objective
 
-- Ensure operator decision artifacts cannot satisfy the original required deliverable/brief unless explicitly mapped.
-- Ensure manager recovery creates current-run evidence with lineage and content hash.
-- Ensure pending approvals do not leave process in confusing active/failed mixed state.
-- Add tests for valid recovery artifact and invalid operator-decision substitute.
+Fix and prove manager recovery and operator approval semantics.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ07: ensure recovery and operator approval cannot fake required artifact satisfaction.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB13` are updated and downstream subbundles can rely on the behavior.
+- SB12 satisfaction/read-model/finalizer parity must be complete.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRecoveryRouter.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Recovery/ProcessRunRecoveryWorker.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessStepRecoveryOptionContractTests.cs
+
+## Deliverables
+
+- Tests proving operator decision artifacts cannot satisfy original required deliverables unless explicitly mapped.
+- Recovery artifact lineage/content-hash proof.
+- Clear pending approval process state.
+
+## Dependency Impact
+
+- SB14 live preflight and SB17 observability depend on correct recovery and pending approval state.
+
+## Validation Depth
+
+- Critical semantic proof must include valid recovery artifact and invalid operator-decision substitute.
+
+## Implementation Steps
+
+- Audit recovery and manager approval flows.
+- Add tests for valid recovery and invalid decision substitution.
+- Fix lineage/status handling if needed.
+- Update `proof/SB13`.
+
+## Do Not Do
+
+- Do not treat approval decisions as deliverable evidence by default.
+- Do not leave runs in mixed active/failed states after pending approval.
+
+## Acceptance Checklist
+
+- Operator decision substitute is rejected.
+- Valid recovery evidence satisfies the original expectation only with correct lineage/content.
+- Pending approval state is clear and persisted.
+
+## Proof Required
+
+- Failing-first operator-decision transcript.
+- Passing recovery transcript.
+- Source assertions, anti-stub audit, and hashes.
+
+## Browser Validation Logging
+
+- Record route, viewport, Playwright evidence, screenshots, and result if manager chat or approval UI changes.
+
+## Progression Gate
+
+- SB14 and SB17 may start only after recovery/approval semantics are proven.
+
+## Suggested Agent Prompt
+
+Prove recovery artifacts and operator approvals have separate semantics, with lineage and content hash required for deliverable satisfaction.
+
+## Closure Proof
+
+- bundle://proof/SB13/manifest.md
+- bundle://proof/SB13/semantic-invariants.md
+

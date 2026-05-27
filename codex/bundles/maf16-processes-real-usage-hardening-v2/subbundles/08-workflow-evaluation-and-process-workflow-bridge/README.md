@@ -1,26 +1,78 @@
-# SB08: 08-workflow-evaluation-and-process-workflow-bridge
+# SB08: Workflow Evaluation And Process Workflow Bridge
 
-## Goal
+## Status
 
-Use MAF 1.6 workflow evaluation expected outputs for deterministic process workflow tests.
+- Completed
 
-## Required work
+## Objective
 
-- Add workflow-backed process step tests using expected output / ground truth where available.
-- Verify workflow artifacts map to required process artifacts with explicit mapping fields.
-- Ensure Workflows remain executors under Processes, not parallel process state machines.
-- Add tests for workflow output mismatch causing process-owned artifact validation failure.
+Use MAF 1.6 workflow evaluation expected output concepts for deterministic process workflow tests where available.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ03: workflow evaluation expected output/ground truth adoption.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB08` are updated and downstream subbundles can rely on the behavior.
+- SB02 adoption matrix must classify workflow evaluation support.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/WorkflowSubprocessArtifactMapper.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessWorkflowExecutorIntegrationTests.cs
+
+## Deliverables
+
+- Workflow-backed process step regression tests using expected outputs or explicit compatibility fixtures.
+- Artifact mapping proof from workflow output to process artifact expectation.
+
+## Dependency Impact
+
+- SB15 generic process regression and SB18 workflow mismatch red-team depend on this bridge.
+
+## Validation Depth
+
+- Critical semantic proof must show output mismatch causes process-owned artifact validation failure.
+
+## Implementation Steps
+
+- Audit workflow evaluation APIs in local packages.
+- Add deterministic process workflow tests.
+- Ensure workflows remain executors under Processes, not parallel process state machines.
+- Update `proof/SB08`.
+
+## Do Not Do
+
+- Do not duplicate process lifecycle state inside workflow runtime.
+- Do not accept workflow output without explicit artifact mapping fields.
+
+## Acceptance Checklist
+
+- Expected-output/ground-truth strategy is explicit.
+- Positive mapping and negative mismatch tests exist.
+- Proof artifacts are updated.
+
+## Proof Required
+
+- Failing-first mismatch transcript.
+- Passing workflow bridge transcript.
+- Source assertions, anti-stub audit, and hashes.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior in this subbundle.
+
+## Progression Gate
+
+- SB15 may start only after workflow bridge semantics are proven or explicitly deferred.
+
+## Suggested Agent Prompt
+
+Wire deterministic workflow expected-output proof into process workflow tests without turning Workflows into a separate process state machine.
+
+## Closure Proof
+
+- bundle://proof/SB08/manifest.md
+- bundle://proof/SB08/semantic-invariants.md
+

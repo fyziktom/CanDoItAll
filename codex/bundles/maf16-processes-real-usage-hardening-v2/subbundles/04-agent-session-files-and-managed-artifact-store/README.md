@@ -1,26 +1,79 @@
-# SB04: 04-agent-session-files-and-managed-artifact-store
+# SB04: Agent Session Files And Managed Artifact Store
 
-## Goal
+## Status
 
-Evaluate and adopt session file/file store support for process artifacts.
+- Completed
 
-## Required work
+## Objective
 
-- Map current workspace/session file writes to MAF 1.6 AgentSessionFiles/file store concepts.
-- Decide whether to store process artifacts through MAF session files, CanDoItAll storage placement, or both.
-- Ensure current-run artifact lineage points to durable file/session identifiers.
-- Add tests for file-store artifacts becoming process artifacts with content hash.
+Evaluate and adopt session file/file store support for process artifacts where it improves durable evidence.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ03: evaluate `AgentSessionFiles` and file-store support.
+- RQ05: prove live-use artifact validation paths.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB04` are updated and downstream subbundles can rely on the behavior.
+- SB02 adoption matrix must classify session files/file store.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.Session.cs
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+
+## Deliverables
+
+- Decision record for MAF session files versus CanDoItAll managed storage.
+- Durable lineage and content-hash tests for file-store or managed artifact records.
+
+## Dependency Impact
+
+- SB10 and SB11 depend on reliable artifact storage identifiers and content hashes.
+
+## Validation Depth
+
+- Critical semantic proof must show a current-run durable artifact can satisfy an expectation and wrong lineage cannot.
+
+## Implementation Steps
+
+- Map current file writes to MAF session/file-store concepts.
+- Implement or document the selected storage strategy.
+- Add tests for content hash and lineage.
+- Update `proof/SB04`.
+
+## Do Not Do
+
+- Do not store process artifacts only as transient chat text.
+- Do not accept unreadable or wrong-run content as satisfied.
+
+## Acceptance Checklist
+
+- Storage strategy is explicit.
+- Current-run file/session identifiers are durable.
+- Tests cover positive and negative lineage/content cases.
+
+## Proof Required
+
+- Failing-first/adversarial transcript.
+- Passing integration-path transcript.
+- Source assertions, anti-stub audit, and hashes in `bundle://proof/SB04`.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior in this subbundle.
+
+## Progression Gate
+
+- SB10 and SB11 may start only after storage/reference semantics are proven or explicitly deferred.
+
+## Suggested Agent Prompt
+
+Map MAF session-file capability to CanDoItAll managed process artifacts and prove durable current-run artifact storage with content hashes.
+
+## Closure Proof
+
+- bundle://proof/SB04/manifest.md
+- bundle://proof/SB04/semantic-invariants.md
+

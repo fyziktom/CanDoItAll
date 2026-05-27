@@ -250,33 +250,6 @@ public sealed partial class ProcessesService
 
         projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(projectionLineage);
         var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
-        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
-        {
-            var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
-                .Where(item =>
-                    item.ProcessRunId == request.ProcessRunId &&
-                    item.ProjectionIdentityHash == projectionIdentityHash)
-                .Select(item => (Guid?)item.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (existingArtifactId.HasValue)
-            {
-                return Result<Guid>.Success(existingArtifactId.Value);
-            }
-        }
-
-        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
-        {
-            var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
-                .Where(item =>
-                    item.ProcessRunId == request.ProcessRunId &&
-                    item.ExternalReferenceKey == externalReferenceKey)
-                .Select(item => (Guid?)item.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (existingArtifactId.HasValue)
-            {
-                return Result<Guid>.Success(existingArtifactId.Value);
-            }
-        }
 
         ProcessStepRun? stepRun = null;
         if (request.StepRunId.HasValue)
@@ -326,11 +299,56 @@ public sealed partial class ProcessesService
             artifactExpectation = ResolveArtifactExpectation(stepArtifactExpectations, request.ArtifactKind, request.Title);
         }
 
+        var scopedArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId;
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == request.ProcessRunId &&
+                    item.ProjectionIdentityHash == projectionIdentityHash)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                if (existingArtifact.StepRunId == request.StepRunId &&
+                    existingArtifact.ArtifactExpectationId == scopedArtifactExpectationId)
+                {
+                    return Result<Guid>.Success(existingArtifact.Id);
+                }
+
+                return Result<Guid>.Failure(Error.Validation(
+                    "Artifact projection identity is already bound to another step or expectation in this process run.",
+                    "processes.artifact.projection-scope-conflict"));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == request.ProcessRunId &&
+                    item.ExternalReferenceKey == externalReferenceKey)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                if (existingArtifact.StepRunId == request.StepRunId &&
+                    existingArtifact.ArtifactExpectationId == scopedArtifactExpectationId)
+                {
+                    return Result<Guid>.Success(existingArtifact.Id);
+                }
+
+                return Result<Guid>.Failure(Error.Validation(
+                    "Artifact external reference is already bound to another step or expectation in this process run.",
+                    "processes.artifact.external-reference-scope-conflict"));
+            }
+        }
+
         var artifact = new ProcessArtifactRecord
         {
             ProcessRunId = request.ProcessRunId,
             StepRunId = request.StepRunId,
-            ArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId,
+            ArtifactExpectationId = scopedArtifactExpectationId,
             ArtifactKind = request.ArtifactKind,
             Title = BoundProcessArtifactText(request.Title.Trim(), MaxProcessArtifactTitleLength),
             TrustStatus = request.TrustStatus,

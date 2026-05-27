@@ -1,26 +1,78 @@
-# SB06: 06-opentelemetry-and-execution-trace-adoption
+# SB06: OpenTelemetry And Execution Trace Adoption
 
-## Goal
+## Status
 
-Handle the 1.6 OpenTelemetry wrapper change deliberately.
+- Completed
 
-## Required work
+## Objective
 
-- Audit whether CanDoItAll uses OpenTelemetryAgent or OpenTelemetryChatClient wrappers.
-- Prevent double wrapping and missing spans.
-- Ensure tool receipts, execution logs, context contribution traces, finalizer invocations, and process journal events remain correlated.
-- Add trace correlation tests or source assertions where runtime telemetry tests are impractical.
+Handle MAF 1.6 OpenTelemetry wrapper changes deliberately and preserve CanDoItAll trace correlation.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ03: adopt or guard OpenTelemetry compatibility.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB06` are updated and downstream subbundles can rely on the behavior.
+- SB02 adoption matrix must classify OpenTelemetry wrapper behavior.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Core/Telemetry/AgentFrameworkTelemetry.cs
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs
+- repo://tests/CanDoItAll.Tests.Integration/MafAgentRuntimeTests.cs
+
+## Deliverables
+
+- Source-backed decision on MAF telemetry wrapping.
+- Tests or source assertions proving no double wrapping and no missing correlation across tool receipts, execution logs, context traces, finalizer invocations, and process journal events.
+
+## Dependency Impact
+
+- SB17 observability and runbook proof depend on trace correlation.
+
+## Validation Depth
+
+- Critical semantic proof must reject a wrapper-only change that loses CanDoItAll execution correlation.
+
+## Implementation Steps
+
+- Audit telemetry wrapper usage.
+- Add guards/tests/source assertions for double wrapping and missing spans.
+- Update trace correlation proof.
+- Update `proof/SB06`.
+
+## Do Not Do
+
+- Do not wrap chat clients twice.
+- Do not remove CanDoItAll telemetry tags to satisfy MAF defaults.
+
+## Acceptance Checklist
+
+- Telemetry adoption/defer decision is explicit.
+- Correlation proof covers execution and process paths.
+- Proof artifacts are updated.
+
+## Proof Required
+
+- Failing-first/adversarial transcript.
+- Passing transcript or source assertion where runtime telemetry test is impractical.
+- Anti-stub audit and hashes.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior in this subbundle.
+
+## Progression Gate
+
+- SB17 may use telemetry proof only after SB06 closes.
+
+## Suggested Agent Prompt
+
+Audit MAF 1.6 telemetry wrapper impact and prove CanDoItAll execution/process trace correlation is preserved without double wrapping.
+
+## Closure Proof
+
+- bundle://proof/SB06/manifest.md
+- bundle://proof/SB06/semantic-invariants.md
+

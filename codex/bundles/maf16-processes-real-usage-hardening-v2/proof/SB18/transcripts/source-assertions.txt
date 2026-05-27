@@ -1,3 +1,5 @@
-# SB18 source-assertions.txt
+Invariant ID: SB18-INV-001
+Command: Invoke-WebRequest -Uri http://localhost:5032/agents -UseBasicParsing -TimeoutSec 15
+Result: HTTP 200 OK, content length 89793; Playwright snapshot shows Agents runtime shell after database confirmation.
+Exit code: 0
 
-Pending.

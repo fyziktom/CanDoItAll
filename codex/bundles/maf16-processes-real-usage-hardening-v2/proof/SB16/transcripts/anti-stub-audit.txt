@@ -1,3 +1,5 @@
-# SB16 anti-stub-audit.txt
+Invariant ID: SB16-INV-001
+Command: rg -n 'TODO|NotImplementedException' src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs -S
+Result: No TODO or NotImplementedException markers in the changed production/test files.
+Exit code: 1
 
-Pending.

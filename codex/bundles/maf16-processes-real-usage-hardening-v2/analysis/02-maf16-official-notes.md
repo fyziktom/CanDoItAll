@@ -1,21 +1,19 @@
-# MAF 1.6 Official Notes To Apply
+# MAF 1.6 Official Notes Applied
 
-Use official Microsoft/NuGet sources during execution and update this file with exact references.
+## Package baseline
 
-Known relevant 1.6-line facts:
+- `repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj` references `Microsoft.Agents.AI`, `Microsoft.Agents.AI.OpenAI`, and `Microsoft.Agents.AI.Workflows` at `1.6.2`.
+- `repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj` references `Microsoft.Agents.AI.A2A` at `1.6.2-preview.260521.1`.
+- `repo://src/CanDoItAll.AgentFramework.Hosting/CanDoItAll.AgentFramework.Hosting.csproj` references `Microsoft.Agents.AI.Hosting.A2A` at `1.6.2-preview.260521.1`.
+- Static package audit found no stale `1.3` MAF package references under `src` or `tests`.
 
-- NuGet shows `Microsoft.Agents.AI` version `1.6.2`.
-- NuGet shows `Microsoft.Agents.AI.OpenAI` version `1.6.2`.
-- NuGet shows `Microsoft.Agents.AI.Workflows` version `1.6.2`.
-- Release notes mention `IChatMessageInjector` for message injection during the function loop.
-- Release notes mention hosted files and `AgentSessionFiles`.
-- Release notes mention stream-error input persistence fixes.
-- Release notes mention a handoff message role mutation fix.
-- Release notes mention workflow evaluation expected output / ground truth support.
-- Release notes mention file store improvements.
-- Release notes mention a breaking OpenTelemetry wrapper change.
-- Release notes mention A2A v1.0 migration.
-- Tools documentation says tool approval can gate function tools, hosted tools, and MCP tool calls.
-- Tools documentation distinguishes provider support for function tools, hosted MCP, local MCP, browser automation, shell, and A2A.
+## Local API reality check
 
-Codex must translate these into CanDoItAll design decisions, not just record them.
+- The referenced `Microsoft.Agents.AI` package exposes `MessageAIContextProvider` and context-provider attachment. The local package search did not expose `IChatMessageInjector`, so CanDoItAll keeps finalizer instructions explicit and uses context providers for runtime context injection.
+- `AgentSessionFiles` was not present in the referenced MAF package set. The current durable artifact path remains CanDoItAll managed storage plus bounded MAF session serialization.
+- A2A and workflow-as-agent APIs are present and exercised through the current adapter source and tests.
+- OpenTelemetry is wired through the MAF builder and CanDoItAll telemetry boundary; the adapter keeps process-level tags in CanDoItAll source.
+
+## Execution decision
+
+This bundle does not force unsupported symbols into production code. It records each MAF 1.6 feature as adopted, deferred, or guarded, and validates the resulting adapter and process-runtime behavior with source audits, test buckets, browser smoke, and a deterministic agent handoff smoke.

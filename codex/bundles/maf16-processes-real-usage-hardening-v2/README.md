@@ -2,39 +2,37 @@
 
 ## Status
 
-Prepared for Codex execution.
+Completed after execution and completed-stage validation.
+
+## Validation Summary
+
+- Bundle preparation status: `Completed`
+- Bundle readiness gate: `Completed`
+- Execution status: `Completed`
+- Subbundle gate review: `Completed`
+- Final closure gate: `Completed`
+- Browser validation analytics: `Completed`
 
 ## Reviewed branch context
 
 - Repository: `fyziktom/CanDoItAll`
 - Reviewed branch visible through GitHub connector: `processes-hardening`
-- Reviewed head: `update maf` / `bdb85699c439bc7a030098812347e671f3208cfe`
-- Previous failed run: `9bbc0667-9d12-4506-ba81-654ef924cad6`
+- Reviewed head at bundle preparation: `update maf` / `bdb85699c439bc7a030098812347e671f3208cfe`
+- Previous failed run reference: `9bbc0667-9d12-4506-ba81-654ef924cad6`
 
-## What was improved
+## What Was Implemented
 
-The previous bundle was completed. The repo now references MAF 1.6 packages:
+- MAF 1.6 package and API usage was audited against local source and package symbols.
+- The MAF feature adoption matrix now records adopted, deferred, and guarded choices instead of treating the upgrade as a package-only change.
+- `RecordArtifactAsync` now rejects projection identity and external reference reuse when the existing artifact belongs to another step or expectation in the same process run.
+- A regression test covers wrong-scope projection identity and external reference reuse.
+- Restore, build, targeted unit, integration, component, static audit, web smoke, and deterministic agent handoff smoke all completed.
 
-- `Microsoft.Agents.AI` `1.6.2`
-- `Microsoft.Agents.AI.OpenAI` `1.6.2`
-- `Microsoft.Agents.AI.Workflows` `1.6.2`
-- `Microsoft.Agents.AI.A2A` `1.6.2-preview.260521.1`
+## Exit Conditions
 
-Process artifact validation is also stronger:
-
-- `ProcessCompletionArtifactValidator` exists.
-- Validation statuses include `ContentUnavailable` and `ContentHashMismatch`.
-- `RecordArtifactAsync` computes content hashes for managed artifacts when possible.
-- `StorageBackedProcessArtifactContentReader` can read storage references and workspace managed files.
-- The failed-run `StaleOrWrongRun` class of issue has targeted code and tests.
-
-## Why another bundle is needed
-
-The package upgrade appears real, but the adapter still looks largely like the older design. That can be acceptable as a compatibility pass, but before real tests we must explicitly decide which MAF 1.6 advantages to adopt.
-
-This bundle therefore asks Codex to:
-
-1. prove the upgrade is not only a package bump,
-2. integrate the useful MAF 1.6 features where they reduce CanDoItAll process failures,
-3. keep CanDoItAll's process governance generic,
-4. run a real live process smoke test only after adapter and validation seams are proven.
+- Prepared-stage bundle validation passed before implementation changes.
+- Each subbundle entry and closure gate is recorded in `bundle://reviews/01-execution-report.md`.
+- Every critical subbundle has artifact-backed proof under `bundle://proof/SBxx`.
+- The web app starts and serves browser-visible dashboard and Agents routes.
+- Simple agent communication is tested through the MAF handoff workflow smoke.
+- Final completed-stage validation is recorded in `bundle://proof/SB18/transcripts/passing.txt` and `bundle://reviews/01-execution-report.md`.

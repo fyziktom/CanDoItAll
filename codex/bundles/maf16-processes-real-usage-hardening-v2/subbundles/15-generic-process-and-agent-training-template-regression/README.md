@@ -1,25 +1,78 @@
-# SB15: 15-generic-process-and-agent-training-template-regression
+# SB15: Generic Process And Agent Training Template Regression
 
-## Goal
+## Status
 
-Protect generic process behavior after MAF/process fixes.
+- Completed
 
-## Required work
+## Objective
 
-- Run non-software templates and agent-improvement/training style processes through template/lint tests.
-- Ensure artifact validation remains generic and does not assume Blazor/software artifacts.
-- Ensure workflow/subprocess bridge works for business artifacts and not only code artifacts.
+Protect generic non-software and agent-training process behavior after MAF/process fixes.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ09: protect generic non-software and agent-training process flows.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB15` are updated and downstream subbundles can rely on the behavior.
+- SB13 recovery/approval correctness must be complete.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateLibraryService.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/WorkflowSubprocessArtifactMapper.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+
+## Deliverables
+
+- Regression proof for non-software templates and agent-improvement/training style processes.
+- Proof that artifact validation remains generic and not Blazor/software-specific.
+
+## Dependency Impact
+
+- SB16 stabilization and SB18 release readiness depend on generic process coverage.
+
+## Validation Depth
+
+- Critical semantic proof must include at least one non-software or business/training style process path.
+
+## Implementation Steps
+
+- Run template and lint tests for generic process flows.
+- Add tests if validation assumes software artifacts.
+- Verify workflow/subprocess bridge works for business artifacts.
+- Update `proof/SB15`.
+
+## Do Not Do
+
+- Do not make artifact validation depend on software artifact names or file extensions.
+- Do not narrow generic process behavior to the Blazor/Tetris case.
+
+## Acceptance Checklist
+
+- Generic process tests pass.
+- Artifact validation remains domain-neutral.
+- Proof artifacts are updated.
+
+## Proof Required
+
+- Failing-first/adversarial transcript for software-specific assumptions.
+- Passing generic process transcript.
+- Source assertions, anti-stub audit, and hashes.
+
+## Browser Validation Logging
+
+- N/A unless generic process UI changes are made.
+
+## Progression Gate
+
+- SB16 may start only after generic process regressions pass.
+
+## Suggested Agent Prompt
+
+Run and strengthen generic process and agent-training regressions so process artifact validation remains domain-neutral.
+
+## Closure Proof
+
+- bundle://proof/SB15/manifest.md
+- bundle://proof/SB15/semantic-invariants.md
+

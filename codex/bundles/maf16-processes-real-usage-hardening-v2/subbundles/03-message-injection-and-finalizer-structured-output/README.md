@@ -1,26 +1,79 @@
-# SB03: 03-message-injection-and-finalizer-structured-output
+# SB03: Message Injection And Finalizer Structured Output
 
-## Goal
+## Status
 
-Use MAF 1.6 message injection where it improves finalizer/guardrail reliability.
+- Completed
 
-## Required work
+## Objective
 
-- Evaluate replacing prompt-concatenated finalizer instructions with IChatMessageInjector or equivalent 1.6 mechanism.
-- Keep backward-compatible adapter if injection is not supported for all provider transports.
-- Add tests proving finalizer instructions survive tool loop and streaming/non-streaming execution.
-- Ensure structured output finalizer cannot be skipped or duplicated.
+Use MAF 1.6 message injection or an explicit compatibility seam where it improves finalizer and guardrail reliability.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ03: adopt useful message injection/structured output behavior.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB03` are updated and downstream subbundles can rely on the behavior.
+- SB02 adoption matrix must decide the message-injection strategy.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs
+- repo://src/CanDoItAll.AgentFramework.Core/Finalizers/AgentFinalizerPolicy.cs
+- repo://tests/CanDoItAll.Tests.Unit/AgentFinalizerPolicyTests.cs
+
+## Deliverables
+
+- Production adapter path or documented compatibility seam for finalizer/guardrail instruction injection.
+- Tests proving finalizer instructions survive tool loop and streaming/non-streaming execution where locally testable.
+
+## Dependency Impact
+
+- SB09 adapter boundary and SB10 process-finalizer validation depend on this behavior.
+
+## Validation Depth
+
+- Critical semantic proof must show structured output finalizer cannot be skipped or duplicated.
+- Include adversarial negative proof for missing/duplicated finalizer instruction handling.
+
+## Implementation Steps
+
+- Inspect MAF 1.6 injection APIs available in local packages.
+- Implement the smallest adapter seam that preserves finalizer instructions through the function loop.
+- Add or update tests for finalizer survival and duplication prevention.
+- Update `proof/SB03`.
+
+## Do Not Do
+
+- Do not concatenate hidden prompt fragments in multiple places.
+- Do not silently fall back when provider support is missing; record the compatibility path explicitly.
+
+## Acceptance Checklist
+
+- Message injection/adaptation decision is implemented or explicitly deferred with guard.
+- Finalizer tests cover positive and adversarial cases.
+- Proof files cite production source and test transcripts.
+
+## Proof Required
+
+- Failing-first or adversarial transcript.
+- Passing test transcript.
+- Source assertions, anti-stub audit, and changed-file hashes under `bundle://proof/SB03/transcripts`.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior in this subbundle.
+
+## Progression Gate
+
+- SB09 may depend on SB03 only after finalizer injection/compatibility proof is artifact-backed.
+
+## Suggested Agent Prompt
+
+Evaluate local MAF 1.6 message injection support and harden finalizer instruction delivery with focused tests and adapter-level proof.
+
+## Closure Proof
+
+- bundle://proof/SB03/manifest.md
+- bundle://proof/SB03/semantic-invariants.md
+

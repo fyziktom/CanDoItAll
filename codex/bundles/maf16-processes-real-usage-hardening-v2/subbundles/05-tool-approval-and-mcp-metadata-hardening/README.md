@@ -1,26 +1,78 @@
-# SB05: 05-tool-approval-and-mcp-metadata-hardening
+# SB05: Tool Approval And MCP Metadata Hardening
 
-## Goal
+## Status
 
-Verify 1.6 tool approval/middleware behavior across all tool types.
+- Completed
 
-## Required work
+## Objective
 
-- Ensure function tools, local MCP, hosted MCP, browser tools, shell/script tools, process tools, workspace tools, and project-structure tools all pass through CanDoItAll policy.
-- Use new MCP metadata forwarding if available to improve audit/provenance.
-- Add red-team tests for unknown hosted tool, unknown project_structure_* tool, script side effects, and approval resume.
-- Verify pending approval state is persisted and surfaced correctly.
+Verify MAF 1.6 tool approval and middleware behavior across all tool types used by CanDoItAll.
 
-## Required proof
+## Covered Inputs
 
-- Failing-first or adversarial proof.
-- Passing production-path proof.
-- Source assertions with exact repo paths.
-- Anti-stub audit.
-- Changed-file hashes.
-- Explicit classification: package-only / adapter-level / process-level / UI-level.
-- If MAF related: state whether this actually adopts a MAF 1.6 feature or only preserves compatibility.
+- RQ03: harden tool approval, middleware, and MCP metadata.
 
-## Closure criteria
+## Prerequisites
 
-This subbundle is complete only when proof files under `proof/SB05` are updated and downstream subbundles can rely on the behavior.
+- SB02 adoption matrix must classify tool approval and metadata behavior.
+
+## Exact Source References
+
+- repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.Mcp.cs
+- repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs
+
+## Deliverables
+
+- Policy coverage for function tools, local MCP, hosted MCP, browser, shell/script, process, workspace, and project-structure tools.
+- Red-team tests for unknown hosted tools, unknown `project_structure_*` tools, script side effects, and approval resume.
+
+## Dependency Impact
+
+- SB13 recovery/approval correctness and SB17 observability depend on accurate pending approval state.
+
+## Validation Depth
+
+- Critical semantic proof must show unknown or unsafe tool calls cannot bypass CanDoItAll policy.
+
+## Implementation Steps
+
+- Audit tool registration and policy routing.
+- Add or update policy tests for all required tool classes.
+- Preserve pending approval persistence and surface state.
+- Update `proof/SB05`.
+
+## Do Not Do
+
+- Do not let MAF-hosted or MCP tools bypass CanDoItAll policy.
+- Do not rely on stringly-typed ad hoc exceptions for tool classes.
+
+## Acceptance Checklist
+
+- Every required tool class is covered by policy tests or explicit exception.
+- Approval resume proof is captured.
+- MCP metadata forwarding is adopted or explicitly deferred.
+
+## Proof Required
+
+- Adversarial negative transcript for unsafe/unknown tool calls.
+- Passing policy test transcript.
+- Source assertions, anti-stub audit, and hashes.
+
+## Browser Validation Logging
+
+- N/A - no browser-visible behavior unless approval UI changes are made.
+
+## Progression Gate
+
+- SB09 and SB13 may depend on SB05 only after tool policy bypass tests pass.
+
+## Suggested Agent Prompt
+
+Audit all agent tool classes through CanDoItAll policy and harden approval/MCP metadata handling with adversarial tests.
+
+## Closure Proof
+
+- bundle://proof/SB05/manifest.md
+- bundle://proof/SB05/semantic-invariants.md
+
