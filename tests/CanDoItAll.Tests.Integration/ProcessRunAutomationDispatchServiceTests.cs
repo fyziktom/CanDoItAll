@@ -14270,6 +14270,60 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ArtifactContractValidation_SB11_INV_001_reports_missing_required_brief_content()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(workspaceRoot);
+        try
+        {
+            var processRunId = Guid.NewGuid();
+            var stepRunId = Guid.NewGuid();
+            var executionRunId = Guid.NewGuid();
+            var relativePath = "artifacts/process-runs/current/blazor-delivery-contract.md";
+            var expectation = CreateDispatchArtifactExpectation(
+                ProcessArtifactKind.Brief,
+                "Blazor delivery contract",
+                isRequired: true,
+                "Artifact mode: Narrative. Required strict delivery contract must be content-backed as Markdown.");
+            var artifact = new ProcessArtifactRecord
+            {
+                ProcessRunId = processRunId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.Id,
+                ArtifactKind = ProcessArtifactKind.Brief,
+                Title = expectation.Title,
+                ManagedStoragePath = relativePath,
+                ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|{relativePath}",
+                ReviewSummary = "Delivery contract should be stored in the managed artifact path.",
+                ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+            };
+            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+                new TestWorkspacePathResolver(workspaceRoot));
+
+            var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                processRunId,
+                stepRunId,
+                expectation,
+                [artifact],
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                managedArtifactContentReader: reader);
+
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative, result.Mode);
+            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable, result.Status);
+            Assert.False(result.IsSatisfied);
+            Assert.Contains("could not be loaded", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ArtifactContractValidation_SB05_INV_001_rejects_relative_managed_storage_content_over_validation_limit()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"process-artifact-workspace-{Guid.NewGuid():N}");

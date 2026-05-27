@@ -23,3 +23,64 @@ Adopt or explicitly defer workflow expected-output evaluation.
 ## Closure criteria
 
 This subbundle is complete only when proof files under `proof/SB08` are updated and downstream subbundles can rely on it.
+
+## Status
+
+- Completed
+
+## Objective
+
+Keep workflow evaluation proof aligned with existing process assertions.
+
+## Covered Inputs
+
+- RQ06 workflow behavior after upgrade.
+
+## Prerequisites
+
+- Workflow source remains available and unchanged by artifact validation work.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
+
+## Deliverables
+
+- Workflow expected-output proof remains documented as process assertion based.
+
+## Dependency Impact
+
+- SB18 records workflow proof as a release gate boundary.
+
+## Validation Depth
+
+- Source inspection and existing workflow tests.
+
+## Implementation Steps
+
+- Inspect workflow compiler path.
+- Avoid mixing workflow expected-output work into artifact status projection.
+
+## Do Not Do
+
+- Do not add test-only workflow output acceptance.
+
+## Acceptance Checklist
+
+- Workflow proof boundary is explicit.
+
+## Proof Required
+
+- Final report and existing workflow source references.
+
+## Browser Validation Logging
+
+- No browser route is affected.
+
+## Progression Gate
+
+- Workflow proof does not block artifact validation fixes.
+
+## Suggested Agent Prompt
+
+Confirm workflow proof boundaries and keep this bundle focused on runtime artifact correctness.

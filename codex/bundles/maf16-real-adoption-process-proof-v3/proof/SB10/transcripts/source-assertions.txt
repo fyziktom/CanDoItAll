@@ -1,3 +1,11 @@
 # SB10 source-assertions.txt
 
-Pending.
+Command: rg -n "ProjectionIdentityHash|ExternalReferenceKey|ArtifactExpectationId|StepRunId|RecordArtifactAsync_SB11_INV_001_rejects_projection_identity_for_wrong_step_expectation_scope" src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
+ExitCode: 0
+
+Invariant: SB10-INV-001
+Test: RecordArtifactAsync_SB11_INV_001_rejects_projection_identity_for_wrong_step_expectation_scope
+
+Assertions:
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs contains projection identity and external reference scope checks.
+- repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs contains the wrong-step expectation regression.

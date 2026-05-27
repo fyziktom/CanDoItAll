@@ -23,3 +23,64 @@ Refactor MAF adapter after feature-adoption audit.
 ## Closure criteria
 
 This subbundle is complete only when proof files under `proof/SB09` are updated and downstream subbundles can rely on it.
+
+## Status
+
+- Completed
+
+## Objective
+
+Decide whether the MAF adapter needs cleanup after the capability audit.
+
+## Covered Inputs
+
+- RQ03 adapter-level adoption boundary.
+
+## Prerequisites
+
+- SB02 and SB03 capability checks are complete.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs`
+
+## Deliverables
+
+- No adapter refactor was introduced because the bundle's runtime fix belongs in process validation.
+
+## Dependency Impact
+
+- SB17 depends on avoiding unnecessary adapter churn.
+
+## Validation Depth
+
+- Source inspection and targeted runtime tests.
+
+## Implementation Steps
+
+- Review adapter surface.
+- Keep changes in process runtime where the defect lives.
+
+## Do Not Do
+
+- Do not move process artifact policy into the MAF adapter.
+
+## Acceptance Checklist
+
+- MAF adapter remains behaviorally stable.
+
+## Proof Required
+
+- Final report row and SB02 reflection proof.
+
+## Browser Validation Logging
+
+- No browser route is affected.
+
+## Progression Gate
+
+- Adapter boundary is stable before process runtime fixes.
+
+## Suggested Agent Prompt
+
+Keep adapter changes out unless the source audit proves a real adapter defect.

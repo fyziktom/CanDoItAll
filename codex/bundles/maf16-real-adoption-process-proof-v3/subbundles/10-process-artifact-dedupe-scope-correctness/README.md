@@ -24,3 +24,65 @@ Fix/prove artifact dedupe scope correctness.
 ## Closure criteria
 
 This subbundle is complete only when proof files under `proof/SB10` are updated and downstream subbundles can rely on it.
+
+## Status
+
+- Completed
+
+## Objective
+
+Prove artifact dedupe does not bind projection identity across the wrong step expectation.
+
+## Covered Inputs
+
+- RQ07 artifact dedupe scope.
+
+## Prerequisites
+
+- Source audit confirms the risk boundary.
+
+## Exact Source References
+
+- `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`
+
+## Deliverables
+
+- Existing scope regression rerun and proof manifest updated.
+
+## Dependency Impact
+
+- SB11 and SB13 rely on correct artifact identity binding.
+
+## Validation Depth
+
+- Integration test with wrong-step expectation collision.
+
+## Implementation Steps
+
+- Re-run the scope collision regression.
+- Record source and test proof in `proof/SB10`.
+
+## Do Not Do
+
+- Do not accept process-run-wide dedupe as sufficient.
+
+## Acceptance Checklist
+
+- Wrong-scope projection identity is rejected.
+
+## Proof Required
+
+- `proof/SB10/manifest.md` and `proof/SB10/semantic-invariants.md`.
+
+## Browser Validation Logging
+
+- No browser route is affected.
+
+## Progression Gate
+
+- Dedupe scope proof must pass before content policy proof.
+
+## Suggested Agent Prompt
+
+Verify projection identity and external reference reuse cannot cross step expectation scope.

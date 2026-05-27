@@ -170,6 +170,22 @@ public sealed partial class ProcessRuntimeReadQueryService(
                 .ToListAsync(cancellationToken))
             .GroupBy(item => item.StepRunId!.Value)
             .ToDictionary(group => group.Key, group => group.OrderByDescending(item => item.CreatedAtUtc).ToList());
+        var artifactValidationDiagnosticsByStepRunId = (await dbContext.Set<ProcessJournalEntry>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == runId &&
+                    item.StepRunId.HasValue &&
+                    stepRunIds.Contains(item.StepRunId.Value) &&
+                    item.EventType == ProcessRuntimeEventTypes.ArtifactValidationDiagnostic)
+                .ToListAsync(cancellationToken))
+            .Select(TryReadArtifactValidationDiagnostic)
+            .OfType<ProcessArtifactValidationDiagnosticProjection>()
+            .GroupBy(item => item.StepRunId)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .OrderByDescending(item => item.OccurredAtUtc)
+                    .ToList());
         var manualRecoveryEvents = await dbContext.Set<ProcessJournalEntry>()
             .AsNoTracking()
             .Where(item =>
@@ -285,7 +301,8 @@ public sealed partial class ProcessRuntimeReadQueryService(
                     var artifactLedger = BuildArtifactLedger(
                         item,
                         artifactExpectationsByStepId,
-                        artifactRecordsByStepRunId);
+                        artifactRecordsByStepRunId,
+                        artifactValidationDiagnosticsByStepRunId);
 
                     return new ProcessStepRunViewModel(
                         item.Id,

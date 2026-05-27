@@ -21,6 +21,50 @@
 17. Refactor checkpoint B.
 18. Final release gate and real-test runbook.
 
+## Execution Order
+
+- SB01 through SB09 audit the package, adapter, and previous proof surface before runtime behavior changes.
+- SB10 through SB14 close the process artifact correctness risks.
+- SB15 through SB18 provide deterministic preflight, regression coverage, stabilization, and release-readiness proof.
+
+## Subbundle Dependency Map
+
+```mermaid
+flowchart TD
+    SB01["SB01 source audit"] --> SB02["SB02 MAF reflection"]
+    SB02 --> SB03["SB03 adoption proof"]
+    SB03 --> SB04["SB04 finalizer/context hardening"]
+    SB04 --> SB05["SB05 storage decision"]
+    SB05 --> SB10["SB10 artifact dedupe scope"]
+    SB10 --> SB11["SB11 narrative content policy"]
+    SB11 --> SB13["SB13 read-model parity"]
+    SB13 --> SB15["SB15 step0 preflight"]
+    SB15 --> SB18["SB18 release gate"]
+    SB06["SB06 trace proof"] --> SB18
+    SB07["SB07 A2A proof"] --> SB18
+    SB08["SB08 workflow proof"] --> SB18
+    SB09["SB09 adapter checkpoint"] --> SB17["SB17 runtime stabilization"]
+    SB12["SB12 validation reuse"] --> SB13
+    SB14["SB14 recovery approval"] --> SB18
+    SB16["SB16 generic regression"] --> SB18
+    SB17 --> SB18
+```
+
+## Critical Subbundles
+
+- SB02: runtime reflection proof for real MAF 1.6 symbols.
+- SB10: projection identity and external reference dedupe scope proof.
+- SB11: required narrative artifact content policy.
+- SB13: read-model and health parity for content-unavailable artifacts.
+- SB18: final release gate, bundle validation, and runbook closure.
+
+## Phase Gates
+
+- Gate 1: source audit and reflection proof must complete before any runtime claims are accepted.
+- Gate 2: artifact dedupe and content policy tests must pass before read-model parity is trusted.
+- Gate 3: read-model parity must pass before live-run readiness is reported.
+- Gate 4: bundle prepared and completed validators must pass before final closure.
+
 ## Commands
 
 ```powershell

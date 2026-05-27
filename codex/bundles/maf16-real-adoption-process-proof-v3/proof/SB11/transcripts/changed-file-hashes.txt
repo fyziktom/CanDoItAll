@@ -1,3 +1,12 @@
 # SB11 changed-file-hashes.txt
 
-Pending.
+Command: Get-FileHash -Algorithm SHA256 src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs,src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs,src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs,tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+ExitCode: 0
+
+Invariant: SB11-INV-001
+Test: ArtifactContractValidation_SB11_INV_001_reports_missing_required_brief_content
+
+B5C93B4C73D111202419E786679875E9179D81A84C2ACCF8FA5A084C3B805F05 repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs
+15FDE8B9366DA2026E98C379D02C4ED791338D38CDD748030D60FD9A62E2B9AC repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+1705CC8271AD148E235D93DBD89CA0A8C81FE5A8A1B468D8C6E16645F35253C0 repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs
+6971115B787893E9CE5775B872A7D0B5F91B5E73975AB1299B0BDD6CD7771C0F repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs

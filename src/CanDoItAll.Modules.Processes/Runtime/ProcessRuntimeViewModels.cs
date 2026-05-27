@@ -31,6 +31,7 @@ public enum ProcessArtifactExpectationSatisfactionStatus {
     AutoProjected,
     Missing,
     ProjectionFailed,
+    ContentUnavailable,
     NotApplicable
 }
 

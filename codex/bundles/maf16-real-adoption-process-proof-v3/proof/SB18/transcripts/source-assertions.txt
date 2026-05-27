@@ -1,3 +1,10 @@
 # SB18 source-assertions.txt
 
-Pending.
+Command: rg -n "Final verdict|Subbundle Gate Results|SB02 Semantic Adequacy Evidence|SB10 Semantic Adequacy Evidence|SB11 Semantic Adequacy Evidence|SB13 Semantic Adequacy Evidence|SB18 Semantic Adequacy Evidence|Critical Subbundles" codex\bundles\maf16-real-adoption-process-proof-v3\reviews\01-execution-report.md codex\bundles\maf16-real-adoption-process-proof-v3\plan\01-phase-plan.md
+ExitCode: 0
+
+Invariant: SB18-INV-001
+
+Assertions:
+- repo://codex/bundles/maf16-real-adoption-process-proof-v3/reviews/01-execution-report.md contains final gate results and semantic evidence.
+- repo://codex/bundles/maf16-real-adoption-process-proof-v3/plan/01-phase-plan.md identifies critical subbundles and phase gates.

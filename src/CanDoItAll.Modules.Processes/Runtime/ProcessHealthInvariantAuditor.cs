@@ -14,7 +14,10 @@ internal static class ProcessHealthInvariantAuditor
             ? new List<string>()
             : artifactLedger
                 .Where(item => item.IsRequired)
-                .Where(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed)
+                .Where(item => item.Status is
+                    ProcessArtifactExpectationSatisfactionStatus.Missing or
+                    ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+                    ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable)
                 .Select(item => item.Title)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Distinct(StringComparer.OrdinalIgnoreCase)

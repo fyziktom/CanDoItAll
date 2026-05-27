@@ -1,3 +1,11 @@
 # SB13 anti-stub-audit.txt
 
-Pending.
+Command: rg -n "Runtime_read_model_exposes_content_unavailable|FakeReadModel|StubReadModel|ArtifactValidationDiagnostic|ContentUnavailable" tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs src\CanDoItAll.Modules.Processes\Runtime src\CanDoItAll.Modules.Processes\Components
+ExitCode: 0
+
+Invariant: SB13-INV-001
+Test: Runtime_read_model_exposes_content_unavailable_artifact_obligations_for_recorded_but_unreadable_artifacts
+
+Result:
+- No fake read-model projection path was added.
+- The test writes a real journal diagnostic and calls the real runtime read query.

@@ -1,3 +1,12 @@
 # SB02 passing.txt
 
-Pending.
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~Maf16CapabilityReflectionTests" --logger "console;verbosity=minimal" -p:OutDir=.codex-tmp\maf16-v3-unitbin-c\ /m:1
+ExitCode: 0
+
+Invariant: SB02-INV-001
+Test: Maf16_symbols_are_classified_from_loaded_runtime_assemblies
+
+Result:
+- Passed: 1
+- Failed: 0
+- Skipped: 0

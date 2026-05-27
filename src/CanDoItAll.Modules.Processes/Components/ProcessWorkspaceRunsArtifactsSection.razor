@@ -189,7 +189,8 @@
             ProcessArtifactExpectationSatisfactionStatus.Satisfied => "mint",
             ProcessArtifactExpectationSatisfactionStatus.AutoProjected => "info",
             ProcessArtifactExpectationSatisfactionStatus.Missing => "warning",
-            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed => "danger",
+            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable => "danger",
             _ => "neutral"
         };
     }

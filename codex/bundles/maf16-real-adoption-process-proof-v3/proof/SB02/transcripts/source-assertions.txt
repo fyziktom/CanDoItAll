@@ -1,3 +1,11 @@
 # SB02 source-assertions.txt
 
-Pending.
+Command: rg -n "MessageAIContextProvider|ApprovalRequiredAIFunction|WorkflowBuilder|AgentWorkflowBuilder|AgentCard|A2ACardResolver|IChatMessageInjector|AgentSessionFiles|SkillFrontmatter|OpenTelemetryChatClient" tests\CanDoItAll.Tests.Unit\Maf16CapabilityReflectionTests.cs src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj
+ExitCode: 0
+
+Invariant: SB02-INV-001
+Test: Maf16_symbols_are_classified_from_loaded_runtime_assemblies
+
+Assertions:
+- repo://tests/CanDoItAll.Tests.Unit/Maf16CapabilityReflectionTests.cs reflects loaded runtime assemblies.
+- repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj carries MAF 1.6 package references.

@@ -1248,6 +1248,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactExpectationMode.RuntimeProof;
     }
 
+    private static bool RequiresStoredArtifactContent(
+        DispatchArtifactExpectation expectation,
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectationMode mode,
+        ProcessArtifactProducerKind producerKind)
+    {
+        if (RequiresManagedEvidencePath(mode, producerKind))
+        {
+            return true;
+        }
+
+        if (!expectation.IsRequired ||
+            mode is not (ProcessArtifactExpectationMode.Narrative or ProcessArtifactExpectationMode.Decision))
+        {
+            return false;
+        }
+
+        return producerKind is not ProcessArtifactProducerKind.WorkflowArtifact &&
+               !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath);
+    }
+
     private static bool IsCurrentRunArtifact(
         ProcessArtifactRecord artifact,
         ProcessArtifactProducerKind producerKind,
@@ -1417,13 +1438,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessArtifactRecord artifact,
         ProcessArtifactExpectationMode mode,
         ProcessArtifactProducerKind producerKind,
+        bool requiresStoredContent,
         IProcessArtifactContentReader? managedArtifactContentReader,
         out string diagnostic)
     {
         diagnostic = string.Empty;
         var contractText = CollapsePromptWhitespace(string.Join(' ', expectation.Title, expectation.ValidationRequirementSummary)).ToLowerInvariant();
         var extension = ResolveManagedArtifactExtension(artifact.ManagedStoragePath);
-        var requiresStoredContent = managedArtifactContentReader is not null && RequiresManagedEvidencePath(mode, producerKind);
         ProcessArtifactContentReadResult? content = null;
         var contentRead = false;
 

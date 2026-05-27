@@ -2640,7 +2640,9 @@ Record this operator decision in the process context, continue only when this de
         return status switch
         {
             ProcessArtifactExpectationSatisfactionStatus.Satisfied => "success",
-            ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed => "danger",
+            ProcessArtifactExpectationSatisfactionStatus.Missing or
+                ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable => "danger",
             ProcessArtifactExpectationSatisfactionStatus.Expected => "warning",
             _ => "neutral"
         };

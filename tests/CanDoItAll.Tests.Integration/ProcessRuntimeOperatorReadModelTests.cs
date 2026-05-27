@@ -138,6 +138,85 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
     }
 
     [Fact]
+    public async Task Runtime_read_model_exposes_content_unavailable_artifact_obligations_for_recorded_but_unreadable_artifacts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, "Unreadable artifact read model");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var stepRun = await StartStepAsync(processesService, fixture);
+        var expectation = Assert.Single(stepRun.ArtifactExpectations);
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Required artifact contract validation failed: implementation-report.md ContentUnavailable.",
+                DecidedBy = "integration-tests"
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        var artifactId = Guid.NewGuid();
+        var path = "artifacts/process-runs/current/implementation-report.md";
+        var now = DateTimeOffset.UtcNow;
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            await dbContext.Set<ProcessArtifactRecord>().AddAsync(
+                new ProcessArtifactRecord
+                {
+                    Id = artifactId,
+                    ProcessRunId = fixture.RunId,
+                    StepRunId = stepRun.Id,
+                    ArtifactExpectationId = expectation.ArtifactExpectationId,
+                    ArtifactKind = expectation.ArtifactKind,
+                    Title = expectation.Title,
+                    ManagedStoragePath = path,
+                    ExternalReferenceKey = $"workspace-written-artifact|{Guid.NewGuid():D}|{expectation.ArtifactExpectationId:D}|{path}",
+                    ReviewSummary = "Recorded artifact path is present but the file content was not readable.",
+                    ProvenanceSummary = "Integration test records an unreadable managed artifact path.",
+                    AllowedFutureUsageSummary = "Do not reuse until content validation succeeds.",
+                    CreatedAtUtc = now.AddSeconds(-1)
+                });
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry
+                {
+                    ProcessRunId = fixture.RunId,
+                    StepRunId = stepRun.Id,
+                    EventType = ProcessRuntimeEventTypes.ArtifactValidationDiagnostic,
+                    Title = "Artifact validation failed: implementation-report.md",
+                    Description = "ContentUnavailable: The managed artifact content could not be loaded.",
+                    CorrelationId = $"content-unavailable-{artifactId:D}",
+                    OperatingMode = ProcessOperatingMode.AssistedExecution,
+                    PolicyVersion = $"definition:{fixture.DefinitionId:D}",
+                    EnvironmentMode = ProcessOperatingMode.AssistedExecution.ToString(),
+                    ReplayContextJson = JsonSerializer.Serialize(
+                        new
+                        {
+                            ExpectationId = expectation.ArtifactExpectationId,
+                            Status = nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable),
+                            ArtifactRecordId = artifactId,
+                            AttemptedPath = path,
+                            Diagnostic = "The managed artifact content could not be loaded from the recorded path."
+                        }),
+                    OccurredAtUtc = now
+                });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var details = await processesService.GetRunDetailsAsync(fixture.RunId);
+        var blockedStep = Assert.Single(details.StepRuns);
+        var obligation = Assert.Single(blockedStep.ArtifactExpectations);
+
+        Assert.Equal(ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable, obligation.Status);
+        Assert.Equal(artifactId, obligation.ProcessArtifactRecordId);
+        Assert.Contains("could not be loaded", obligation.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProcessRecoveryClassification.MissingArtifact, blockedStep.Health.RecoveryClassification);
+    }
+
+    [Fact]
     public async Task Runtime_read_model_ignores_missing_artifact_obligations_for_skipped_steps()
     {
         await using var application = await TestApplication.CreateAsync();

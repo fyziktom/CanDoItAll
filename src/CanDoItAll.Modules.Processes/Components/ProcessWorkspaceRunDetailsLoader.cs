@@ -637,7 +637,10 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         var missingArtifactCount = stepRuns
             .Where(item => item.Status != ProcessStepRunStatus.Skipped)
             .SelectMany(item => item.ArtifactExpectations)
-            .Count(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed);
+            .Count(item => item.Status is
+                ProcessArtifactExpectationSatisfactionStatus.Missing or
+                ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable);
         var deadLetteredOutboxCount = outboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);
         var pendingOutboxCount = outboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry);
         var activeExecutionCount = executionRuns.Count(item =>

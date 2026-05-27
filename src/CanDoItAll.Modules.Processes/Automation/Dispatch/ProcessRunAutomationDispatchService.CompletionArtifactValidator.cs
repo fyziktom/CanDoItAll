@@ -183,8 +183,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     recoveredForExecutionRunId);
             }
 
+            var requiresStoredContent = RequiresStoredArtifactContent(expectation, artifact, mode, producerKind);
             if (managedArtifactContentReader is not null &&
-                RequiresManagedEvidencePath(mode, producerKind) &&
+                requiresStoredContent &&
                 !TryValidateManagedArtifactContent(
                     artifact,
                     managedArtifactContentReader,
@@ -210,7 +211,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     recoveredForExecutionRunId);
             }
 
-            if (!MatchesDeclaredFormat(expectation, artifact, mode, producerKind, managedArtifactContentReader, out var formatDiagnostic))
+            if (!MatchesDeclaredFormat(expectation, artifact, mode, producerKind, requiresStoredContent, managedArtifactContentReader, out var formatDiagnostic))
             {
                 return CreateArtifactValidationResult(
                     processRunId,

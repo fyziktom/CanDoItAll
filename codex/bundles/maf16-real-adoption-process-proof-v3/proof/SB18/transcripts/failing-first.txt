@@ -1,3 +1,12 @@
 # SB18 failing-first.txt
 
-Pending.
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\maf16-real-adoption-process-proof-v3 --stage prepared --repo-root .
+ExitCode: 1
+
+Invariant: SB18-INV-001
+
+Observed failing-first result:
+- Missing required paths: inputs and architecture.
+- Missing required bundle files under inputs, architecture, and reviews.
+- Phase plan and subbundle README files lacked the required gate headings.
+- Execution report lacked final closure sections.
