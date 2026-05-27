@@ -211,8 +211,112 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
         var obligation = Assert.Single(blockedStep.ArtifactExpectations);
 
         Assert.Equal(ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable, obligation.Status);
+        Assert.Equal(ProcessArtifactExpectationValidationStatus.ContentUnavailable, obligation.ValidationStatus);
+        Assert.Equal(ProcessArtifactValidationFailureOwnership.Unknown, obligation.FailureOwnership);
         Assert.Equal(artifactId, obligation.ProcessArtifactRecordId);
+        Assert.Equal(path, obligation.ValidationAttemptedPath);
         Assert.Contains("could not be loaded", obligation.Diagnostic, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(ProcessRecoveryClassification.MissingArtifact, blockedStep.Health.RecoveryClassification);
+    }
+
+    [Theory]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing), ProcessArtifactExpectationSatisfactionStatus.Missing, ProcessArtifactExpectationValidationStatus.Missing)]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat), ProcessArtifactExpectationSatisfactionStatus.InvalidFormat, ProcessArtifactExpectationValidationStatus.InvalidFormat)]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InsufficientEvidence), ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence, ProcessArtifactExpectationValidationStatus.InsufficientEvidence)]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.StaleOrWrongRun), ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun, ProcessArtifactExpectationValidationStatus.StaleOrWrongRun)]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.WrongProducerMode), ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode, ProcessArtifactExpectationValidationStatus.WrongProducerMode)]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly), ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly, ProcessArtifactExpectationValidationStatus.PlaceholderOnly)]
+    [InlineData(nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch), ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch, ProcessArtifactExpectationValidationStatus.ContentHashMismatch)]
+    public async Task Runtime_read_model_exposes_all_rejected_recorded_artifact_finalizer_statuses(
+        string finalizerStatusName,
+        ProcessArtifactExpectationSatisfactionStatus expectedStatus,
+        ProcessArtifactExpectationValidationStatus expectedValidationStatus)
+    {
+        var finalizerStatus = Enum.Parse<ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus>(finalizerStatusName);
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var fixture = await CreateAgentRunFixtureAsync(scope.ServiceProvider, $"Rejected artifact {finalizerStatus}");
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        var stepRun = await StartStepAsync(processesService, fixture);
+        var expectation = Assert.Single(stepRun.ArtifactExpectations);
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = $"Required artifact contract validation failed: implementation-report.md {finalizerStatus}.",
+                DecidedBy = "integration-tests"
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+
+        var artifactId = Guid.NewGuid();
+        var path = $"artifacts/process-runs/current/{finalizerStatus.ToString().ToLowerInvariant()}-implementation-report.md";
+        var diagnostic = $"{finalizerStatus} rejected the recorded artifact.";
+        var suggestedAction = $"Regenerate implementation-report.md after correcting {finalizerStatus}.";
+        var now = DateTimeOffset.UtcNow;
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            await dbContext.Set<ProcessArtifactRecord>().AddAsync(
+                new ProcessArtifactRecord
+                {
+                    Id = artifactId,
+                    ProcessRunId = fixture.RunId,
+                    StepRunId = stepRun.Id,
+                    ArtifactExpectationId = expectation.ArtifactExpectationId,
+                    ArtifactKind = expectation.ArtifactKind,
+                    Title = expectation.Title,
+                    ManagedStoragePath = path,
+                    ExternalReferenceKey = $"workspace-written-artifact|{Guid.NewGuid():D}|{expectation.ArtifactExpectationId:D}|{path}",
+                    ReviewSummary = "Recorded artifact exists but finalizer validation rejected it.",
+                    ProvenanceSummary = "Integration test records a finalizer-rejected managed artifact.",
+                    AllowedFutureUsageSummary = "Do not reuse until finalizer validation succeeds.",
+                    CreatedAtUtc = now.AddSeconds(-1)
+                });
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry
+                {
+                    ProcessRunId = fixture.RunId,
+                    StepRunId = stepRun.Id,
+                    EventType = ProcessRuntimeEventTypes.ArtifactValidationDiagnostic,
+                    Title = $"Artifact validation failed: implementation-report.md {finalizerStatus}",
+                    Description = $"{finalizerStatus}: {diagnostic}",
+                    CorrelationId = $"artifact-validation-{finalizerStatus}-{artifactId:D}",
+                    OperatingMode = ProcessOperatingMode.AssistedExecution,
+                    PolicyVersion = $"definition:{fixture.DefinitionId:D}",
+                    EnvironmentMode = ProcessOperatingMode.AssistedExecution.ToString(),
+                    ReplayContextJson = JsonSerializer.Serialize(
+                        new
+                        {
+                            ExpectationId = expectation.ArtifactExpectationId,
+                            Status = finalizerStatus.ToString(),
+                            FailureOwnership = ProcessRunAutomationDispatchService.ProcessArtifactFailureOwnership.RuntimeEvidence.ToString(),
+                            ArtifactRecordId = artifactId,
+                            AttemptedPath = path,
+                            Diagnostic = diagnostic,
+                            SuggestedAction = suggestedAction
+                        }),
+                    OccurredAtUtc = now
+                });
+            await dbContext.SaveChangesAsync();
+        }
+
+        var details = await processesService.GetRunDetailsAsync(fixture.RunId);
+        var blockedStep = Assert.Single(details.StepRuns);
+        var obligation = Assert.Single(blockedStep.ArtifactExpectations);
+
+        Assert.Equal(expectedStatus, obligation.Status);
+        Assert.NotEqual(ProcessArtifactExpectationSatisfactionStatus.Satisfied, obligation.Status);
+        Assert.NotEqual(ProcessArtifactExpectationSatisfactionStatus.AutoProjected, obligation.Status);
+        Assert.Equal(expectedValidationStatus, obligation.ValidationStatus);
+        Assert.Equal(ProcessArtifactValidationFailureOwnership.RuntimeEvidence, obligation.FailureOwnership);
+        Assert.Equal(artifactId, obligation.ProcessArtifactRecordId);
+        Assert.Equal(path, obligation.ValidationAttemptedPath);
+        Assert.Equal(suggestedAction, obligation.ValidationSuggestedAction);
+        Assert.Contains(finalizerStatus.ToString(), obligation.Diagnostic, StringComparison.Ordinal);
+        Assert.Contains(path, obligation.Diagnostic, StringComparison.Ordinal);
         Assert.Equal(ProcessRecoveryClassification.MissingArtifact, blockedStep.Health.RecoveryClassification);
     }
 

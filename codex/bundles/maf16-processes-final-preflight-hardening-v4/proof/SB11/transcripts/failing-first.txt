@@ -1,3 +1,7 @@
-# SB11 failing-first.txt
-
-Pending.
+Command: git show HEAD:src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs; assert all rejected finalizer diagnostics are consumed
+ExitCode: 1
+Output:
+SB11-INV-001
+Failing-first negative proof against repository HEAD before this worktree change.
+Missing required read-model parity tokens in HEAD: ResolveRejectedArtifactValidationDiagnostic, ResolveArtifactValidationStatus, BuildArtifactValidationDiagnostic, SuggestedAction, FailureOwnership
+This shows the previous read model only had the narrower content-unavailable path.

@@ -1,0 +1,5 @@
+Command: dotnet restore CanDoItAll.slnx
+ExitCode: 0
+Output:
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.

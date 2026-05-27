@@ -1,3 +1,16 @@
-# SB18 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash -Algorithm SHA256 <changed source and test files>
+ExitCode: 0
+Output:
+Changed production and test file hashes for SB10/SB11/SB12/SB18.
+SB10-INV-001
+SB11-INV-001
+SB12-INV-001
+SB18-INV-001
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs SHA-256: cb571ed8481f96097023ef8bca8aa2d2c96e7e233a1c6e1eae52176fd10d1320
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.RuntimeReadQuery.Support.cs SHA-256: 202e4d9860f49ebdc924d9c6a5b3e07e0694eea6c69684f996eeaf1e70008b4e
+- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessHealthInvariantAuditor.cs SHA-256: 694a313d3aa8dc0b549d86a545683f5c6d686c756154088de1c64c098d88a3e7
+- repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunDetailsLoader.cs SHA-256: 3035ea09eea1b77aaede54405436e482f6432ad2df420822afefa62cef852d96
+- repo://src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsArtifactsSection.razor SHA-256: d3d4e1075e34bf58a7076d5149aabac37037f4962f592ab6a58b2e10485d3db8
+- repo://src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor SHA-256: eba7d849d0bd865f510876d892a6feca51c09bc7169a153ff856f7d5ab70f88c
+- repo://src/CanDoItAll.Modules.Processes/Components/ProcessCanvasSelectionPanel.razor SHA-256: fb25431b44afd0ef15ed44b3c137d90f9728068aba145abc99a2fa41a75913c8
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRuntimeOperatorReadModelTests.cs SHA-256: 74cf48268df48b61338be929163f11e828b843e2ab9ffab13d7a8ea0487cf0f0

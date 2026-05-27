@@ -32,7 +32,33 @@ public enum ProcessArtifactExpectationSatisfactionStatus {
     Missing,
     ProjectionFailed,
     ContentUnavailable,
-    NotApplicable
+    NotApplicable,
+    InvalidFormat,
+    InsufficientEvidence,
+    StaleOrWrongRun,
+    WrongProducerMode,
+    PlaceholderOnly,
+    ContentHashMismatch
+}
+
+public enum ProcessArtifactExpectationValidationStatus {
+    Satisfied,
+    Missing,
+    InvalidFormat,
+    InsufficientEvidence,
+    StaleOrWrongRun,
+    WrongProducerMode,
+    PlaceholderOnly,
+    ContentUnavailable,
+    ContentHashMismatch
+}
+
+public enum ProcessArtifactValidationFailureOwnership {
+    Unknown = -1,
+    OwnOutput = 0,
+    UpstreamInput = 1,
+    RuntimeEvidence = 2,
+    ReviewDisposition = 3
 }
 
 public enum ProcessArtifactExpectationSourceKind {
@@ -83,7 +109,16 @@ public sealed record ProcessArtifactExpectationSatisfactionViewModel(
     Guid? ProcessArtifactRecordId,
     string SatisfiedByTitle,
     string ManagedStoragePath,
-    string Diagnostic);
+    string Diagnostic)
+{
+    public ProcessArtifactExpectationValidationStatus? ValidationStatus { get; init; }
+
+    public ProcessArtifactValidationFailureOwnership FailureOwnership { get; init; } = ProcessArtifactValidationFailureOwnership.Unknown;
+
+    public string ValidationAttemptedPath { get; init; } = string.Empty;
+
+    public string ValidationSuggestedAction { get; init; } = string.Empty;
+}
 
 public sealed record ProcessStepExecutionAttemptViewModel(
     Guid ExecutionRunId,

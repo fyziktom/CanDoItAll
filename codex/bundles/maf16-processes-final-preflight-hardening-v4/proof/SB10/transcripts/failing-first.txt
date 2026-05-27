@@ -1,3 +1,7 @@
-# SB10 failing-first.txt
-
-Pending.
+Command: git show HEAD:src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs; assert expanded artifact validation statuses exist
+ExitCode: 1
+Output:
+SB10-INV-001
+Failing-first negative proof against repository HEAD before this worktree change.
+Missing required status/model tokens in HEAD: InvalidFormat, InsufficientEvidence, StaleOrWrongRun, WrongProducerMode, PlaceholderOnly, ContentHashMismatch, ProcessArtifactExpectationValidationStatus, ProcessArtifactValidationFailureOwnership
+This shows the previous read model vocabulary could not represent every rejected finalizer status.

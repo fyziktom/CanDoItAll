@@ -637,10 +637,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         var missingArtifactCount = stepRuns
             .Where(item => item.Status != ProcessStepRunStatus.Skipped)
             .SelectMany(item => item.ArtifactExpectations)
-            .Count(item => item.Status is
-                ProcessArtifactExpectationSatisfactionStatus.Missing or
-                ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
-                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable);
+            .Count(item => IsUnsatisfiedRequiredArtifactStatus(item.Status));
         var deadLetteredOutboxCount = outboxRecords.Count(item => item.HealthStatus == ProcessOutboxHealthStatus.DeadLettered);
         var pendingOutboxCount = outboxRecords.Count(item => item.HealthStatus is ProcessOutboxHealthStatus.Pending or ProcessOutboxHealthStatus.Leased or ProcessOutboxHealthStatus.WaitingToRetry);
         var activeExecutionCount = executionRuns.Count(item =>
@@ -666,6 +663,20 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             InvariantDiagnosticCount = invariantDiagnostics.Count,
             RecommendedAction = ResolveRunRecommendedAction(stepRuns, invariantDiagnostics)
         };
+    }
+
+    private static bool IsUnsatisfiedRequiredArtifactStatus(ProcessArtifactExpectationSatisfactionStatus status)
+    {
+        return status is
+            ProcessArtifactExpectationSatisfactionStatus.Missing or
+            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+            ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+            ProcessArtifactExpectationSatisfactionStatus.InvalidFormat or
+            ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence or
+            ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun or
+            ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode or
+            ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+            ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch;
     }
 
     private static ProcessRecoveryClassification ResolveRunRecoveryClassification(

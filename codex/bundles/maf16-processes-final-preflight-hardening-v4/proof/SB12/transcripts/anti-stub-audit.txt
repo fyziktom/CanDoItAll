@@ -1,3 +1,8 @@
-# SB12 anti-stub-audit.txt
-
-Pending.
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|hardcoded|stubbed|placeholder implementation" <changed source and test files> -S
+ExitCode: 0
+Output:
+SB10-INV-001
+SB11-INV-001
+SB12-INV-001
+SB18-INV-001
+No TODO, NotImplementedException, fixture-specific, hardcoded, stubbed, or placeholder implementation markers were found in the changed production/test files.

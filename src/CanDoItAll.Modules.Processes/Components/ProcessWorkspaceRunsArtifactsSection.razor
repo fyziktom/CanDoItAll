@@ -29,6 +29,26 @@
                                                 {
                                                     <p class="mt-1 text-xs text-slate-500">@expectation.Diagnostic</p>
                                                 }
+                                                @if (expectation.ValidationStatus.HasValue)
+                                                {
+                                                    <p class="mt-1 text-xs text-slate-500">Finalizer status: @expectation.ValidationStatus</p>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(expectation.ValidationAttemptedPath))
+                                                {
+                                                    <p class="mt-1 text-xs text-slate-500">Attempted path: @expectation.ValidationAttemptedPath</p>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(expectation.ValidationSuggestedAction))
+                                                {
+                                                    <p class="mt-1 text-xs text-slate-500">Suggested action: @expectation.ValidationSuggestedAction</p>
+                                                }
+                                                @if (expectation.FailureOwnership != ProcessArtifactValidationFailureOwnership.Unknown)
+                                                {
+                                                    <p class="mt-1 text-xs text-slate-500">Failure owner: @expectation.FailureOwnership</p>
+                                                }
+                                                @if (expectation.ProcessArtifactRecordId.HasValue)
+                                                {
+                                                    <p class="mt-1 text-xs text-slate-500">Artifact record: @expectation.ProcessArtifactRecordId</p>
+                                                }
                                             </div>
                                             <Cluster Gap="LayoutGap.Small">
                                                 <StatusBadge Tone="@ResolveArtifactTone(expectation.Status)"
@@ -190,7 +210,13 @@
             ProcessArtifactExpectationSatisfactionStatus.AutoProjected => "info",
             ProcessArtifactExpectationSatisfactionStatus.Missing => "warning",
             ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
-                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable => "danger",
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+                ProcessArtifactExpectationSatisfactionStatus.InvalidFormat or
+                ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence or
+                ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun or
+                ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode or
+                ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+                ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch => "danger",
             _ => "neutral"
         };
     }

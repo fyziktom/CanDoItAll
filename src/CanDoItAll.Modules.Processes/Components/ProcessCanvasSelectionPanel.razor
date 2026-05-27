@@ -415,7 +415,13 @@ else if (RuntimeStep is not null)
             ProcessArtifactExpectationSatisfactionStatus.AutoProjected => "info",
             ProcessArtifactExpectationSatisfactionStatus.Missing => "warning",
             ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
-                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable => "danger",
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+                ProcessArtifactExpectationSatisfactionStatus.InvalidFormat or
+                ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence or
+                ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun or
+                ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode or
+                ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+                ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch => "danger",
             _ => "neutral"
         };
     }

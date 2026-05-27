@@ -1,44 +1,37 @@
 # MAF 1.6 Processes Final Preflight Hardening v4
 
-## Status
+## Validation Summary
 
-Prepared for Codex execution.
+- Bundle preparation status: `Prepared`
+- Bundle readiness gate: `Prepared-stage validator passed`
+- Execution status: `Completed with blockers`
+- Subbundle gate review: `Completed`
+- Final closure gate: `NO-GO`
+- Browser validation analytics: `Partial route smoke captured; invalid-state data unavailable`
 
-## Branch context
+## Branch Context
 
 - Repository: `fyziktom/CanDoItAll`
 - Reviewed branch: `processes-hardening`
 - Reviewed head: `phase10` / `6b7cb12597718d1229cee8e4a6dc1f7c0fd34c16`
 
-## Summary of review
+## Summary Of Review
 
-The previous bundle was completed and the implementation is better:
+This pass implements the artifact validation read-model hardening path and records a NO-GO for the full real UI process test.
 
-- MAF package references are on the 1.6 line.
-- A reflection test exists for loaded MAF/A2A assemblies and key symbols.
-- Context injection uses `MessageAIContextProvider`.
-- MAF session serialization/restoration and response format handling are used.
-- `RecordArtifactAsync` now rejects projection identity / external reference reuse across different step or expectation scopes.
-- Required narrative artifacts can report `ContentUnavailable`.
+Implemented and validated:
 
-However, this is not yet the point where a full real UI process test should be run without another preflight pass.
+- Rejected artifact finalizer outcomes no longer project as satisfied or auto-projected in the runtime read model.
+- Operator/API view models now expose typed finalizer status, failure owner, attempted path, and suggested action metadata.
+- Process operator UI surfaces render invalid artifact diagnostics and danger tones for all rejected artifact statuses.
+- Recovery classification treats rejected required artifacts as unsatisfied obligations.
 
-## Most important remaining issue
+Remaining blockers:
 
-The read model currently handles `ContentUnavailable` diagnostics, but it does not appear to downgrade recorded artifacts for all finalizer validation statuses.
+- The broad integration filter timed out after 30 minutes, so SB04-SB09 and SB13-SB15 cannot be closed as fully proven.
+- Browser route smoke reached the process UI, but the running local profile had no seeded invalid artifact run, so live invalid-state rendering could not be proven from real data.
 
-A recorded artifact with a finalizer diagnostic like:
-
-- `StaleOrWrongRun`
-- `WrongProducerMode`
-- `ContentHashMismatch`
-- `InvalidFormat`
-- `PlaceholderOnly`
-- `InsufficientEvidence`
-
-could still be displayed as `Satisfied` or `AutoProjected` unless the read-model parity logic is expanded. This is dangerous because the UI/operator may see a green artifact even though the finalizer would reject it.
-
-## Goal of this bundle
+## Goal Of This Bundle
 
 Close the final proof gaps before real testing:
 
@@ -47,3 +40,7 @@ Close the final proof gaps before real testing:
 3. Expand artifact validation read-model parity across all statuses.
 4. Add a controlled step0 live smoke harness.
 5. Produce an explicit go/no-go report for the next real UI test.
+
+## Result
+
+The artifact read-model/UI hardening goal is implemented and focused validation passes. The next full real UI process test remains blocked until the broad integration timeout and live seeded invalid-artifact smoke gap are resolved.

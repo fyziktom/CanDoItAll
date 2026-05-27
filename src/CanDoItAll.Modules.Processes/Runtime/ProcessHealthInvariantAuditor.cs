@@ -14,10 +14,7 @@ internal static class ProcessHealthInvariantAuditor
             ? new List<string>()
             : artifactLedger
                 .Where(item => item.IsRequired)
-                .Where(item => item.Status is
-                    ProcessArtifactExpectationSatisfactionStatus.Missing or
-                    ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
-                    ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable)
+                .Where(item => IsUnsatisfiedRequiredArtifactStatus(item.Status))
                 .Select(item => item.Title)
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -87,6 +84,20 @@ internal static class ProcessHealthInvariantAuditor
         }
 
         return string.Empty;
+    }
+
+    private static bool IsUnsatisfiedRequiredArtifactStatus(ProcessArtifactExpectationSatisfactionStatus status)
+    {
+        return status is
+            ProcessArtifactExpectationSatisfactionStatus.Missing or
+            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+            ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+            ProcessArtifactExpectationSatisfactionStatus.InvalidFormat or
+            ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence or
+            ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun or
+            ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode or
+            ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+            ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch;
     }
 
     private static bool CanManualRerun(ProcessStepRun stepRun)
