@@ -1,0 +1,36 @@
+{
+  "bundleKey": "maf16-real-adoption-process-proof-v3",
+  "version": "1.0.0",
+  "createdAtUtc": "2026-05-27T11:23:05+00:00",
+  "targetRepository": "fyziktom/CanDoItAll",
+  "observedBranch": "processes-hardening",
+  "observedHead": "phase10 / 6b7cb12597718d1229cee8e4a6dc1f7c0fd34c16",
+  "purpose": "Final verification/hardening after Codex completed MAF 1.6 real-usage bundle; prove actual feature adoption and close remaining process-runtime risks before real live tests.",
+  "subbundles": [
+    "01-current-state-source-and-proof-audit",
+    "02-maf16-symbol-and-capability-reflection-audit",
+    "03-maf16-feature-adoption-from-matrix-to-runtime",
+    "04-finalizer-message-injection-or-context-provider-hardening",
+    "05-session-files-file-store-and-artifact-storage-decision",
+    "06-opentelemetry-real-trace-proof",
+    "07-a2a-v1-remote-and-local-handoff-proof",
+    "08-workflow-evaluation-expected-output-proof",
+    "09-refactor-checkpoint-a-maf-adapter-clean-boundary",
+    "10-process-artifact-dedupe-scope-correctness",
+    "11-required-narrative-artifact-content-policy",
+    "12-shared-artifact-validation-service-extraction",
+    "13-readmodel-finalizer-parity-and-health-details",
+    "14-recovery-and-operator-approval-proof",
+    "15-live-run-preflight-gate-and-tetris-step0-smoke",
+    "16-generic-process-regression-business-and-agent-training",
+    "17-refactor-checkpoint-b-process-runtime-stabilization",
+    "18-final-release-gate-and-real-test-runbook"
+  ],
+  "criticalFindings": [
+    "MAF package upgrade is real, but some 1.6 features are recorded as deferred or context-provider-based alternatives rather than direct adoption.",
+    "NuGet currently shows Microsoft.Agents.AI 1.7.0 as latest; keep 1.6.2 pinned unless an explicit version-policy decision is made.",
+    "RecordArtifactAsync still appears to dedupe ProjectionIdentityHash and ExternalReferenceKey by ProcessRunId only; this may return an artifact from the wrong step/expectation in the same run.",
+    "Narrative/Decision required artifacts may bypass content-backed validation even when they are critical process contracts.",
+    "Need real trace/tool/session/live-run proof before running the next real UI process test."
+  ]
+}
