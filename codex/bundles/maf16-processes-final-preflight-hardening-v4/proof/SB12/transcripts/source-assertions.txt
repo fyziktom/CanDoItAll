@@ -1,0 +1,3 @@
+# SB12 source-assertions.txt
+
+Pending.
