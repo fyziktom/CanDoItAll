@@ -8,6 +8,7 @@
 @inject IProcessObservationService ObservationService
 @inject IProcessManagerChatService ManagerChatService
 @inject IAgentFrameworkWorkspaceService AgentWorkspaceService
+@inject IProcessEscalationService EscalationService
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -298,19 +299,24 @@
             <Cluster JustifyContent="JustifyContent.End">
                 @if (escalationDetail is not null)
                 {
-                    <Button Text="Approve"
-                            Icon="check"
-                            ButtonStyle="ButtonStyle.Success"
+                    var primaryAction = ProcessLiveEscalationActionPolicy.ResolvePrimaryAction(escalationDetail);
+                    var secondaryAction = ProcessLiveEscalationActionPolicy.ResolveSecondaryAction(escalationDetail);
+                    <Button Text="@primaryAction.Text"
+                            Icon="@primaryAction.Icon"
+                            ButtonStyle="@ResolveEscalationActionButtonStyle(primaryAction)"
                             Size="ButtonSize.Small"
                             Disabled="@IsActivityActionBusy(escalationDetail.Key)"
                             IsBusy="@IsActivityActionBusy(escalationDetail.Key)"
-                            Click="@(() => SendEscalationQuickDecisionAsync(escalationDetail, approved: true))" />
-                    <Button Text="Deny"
-                            Icon="close"
-                            ButtonStyle="ButtonStyle.Danger"
-                            Size="ButtonSize.Small"
-                            Disabled="@IsActivityActionBusy(escalationDetail.Key)"
-                            Click="@(() => SendEscalationQuickDecisionAsync(escalationDetail, approved: false))" />
+                            Click="@(() => ExecuteEscalationActionAsync(escalationDetail, primaryAction))" />
+                    @if (secondaryAction is { } resolvedSecondaryAction)
+                    {
+                        <Button Text="@resolvedSecondaryAction.Text"
+                                Icon="@resolvedSecondaryAction.Icon"
+                                ButtonStyle="@ResolveEscalationActionButtonStyle(resolvedSecondaryAction)"
+                                Size="ButtonSize.Small"
+                                Disabled="@IsActivityActionBusy(escalationDetail.Key)"
+                                Click="@(() => ExecuteEscalationActionAsync(escalationDetail, resolvedSecondaryAction))" />
+                    }
                     <Button Text="Process details"
                             Icon="open_in_new"
                             ButtonStyle="ButtonStyle.Light"
@@ -829,24 +835,31 @@
             </div>
 
             <div class="live-processes-notification-card__actions">
+                @{
+                    var primaryAction = ProcessLiveEscalationActionPolicy.ResolvePrimaryAction(escalation);
+                    var secondaryAction = ProcessLiveEscalationActionPolicy.ResolveSecondaryAction(escalation);
+                }
                 <Button Text="Details"
                         Icon="open_in_new"
                         ButtonStyle="ButtonStyle.Light"
                         Size="ButtonSize.Small"
                         Click="@(() => OpenEscalationDetailDialog(escalation))" />
-                <Button Text="Approve"
-                        Icon="check"
-                        ButtonStyle="ButtonStyle.Success"
+                <Button Text="@primaryAction.Text"
+                        Icon="@primaryAction.Icon"
+                        ButtonStyle="@ResolveEscalationActionButtonStyle(primaryAction)"
                         Size="ButtonSize.Small"
                         Disabled="@IsActivityActionBusy(escalation.Key)"
                         IsBusy="@IsActivityActionBusy(escalation.Key)"
-                        Click="@(() => SendEscalationQuickDecisionAsync(escalation, approved: true))" />
-                <Button Text="Deny"
-                        Icon="close"
-                        ButtonStyle="ButtonStyle.Danger"
-                        Size="ButtonSize.Small"
-                        Disabled="@IsActivityActionBusy(escalation.Key)"
-                        Click="@(() => SendEscalationQuickDecisionAsync(escalation, approved: false))" />
+                        Click="@(() => ExecuteEscalationActionAsync(escalation, primaryAction))" />
+                @if (secondaryAction is { } resolvedSecondaryAction)
+                {
+                    <Button Text="@resolvedSecondaryAction.Text"
+                            Icon="@resolvedSecondaryAction.Icon"
+                            ButtonStyle="@ResolveEscalationActionButtonStyle(resolvedSecondaryAction)"
+                            Size="ButtonSize.Small"
+                            Disabled="@IsActivityActionBusy(escalation.Key)"
+                            Click="@(() => ExecuteEscalationActionAsync(escalation, resolvedSecondaryAction))" />
+                }
             </div>
         </article>;
     }
@@ -1922,9 +1935,9 @@
         return Task.CompletedTask;
     }
 
-    private async Task SendEscalationQuickDecisionAsync(
+    private async Task ExecuteEscalationActionAsync(
         ProcessLiveEscalationCard escalation,
-        bool approved)
+        ProcessLiveEscalationActionDescriptor action)
     {
         if (!busyActivityCardKeys.Add(escalation.Key))
         {
@@ -1935,39 +1948,167 @@
         errorMessage = null;
         try
         {
-            var run = ResolveRunCard(escalation);
-            var projection = await ManagerChatService.SendMessageAsync(
-                new ProcessManagerChatMessageRequest(
-                    BuildManagerChatQuery(run, chatSessionId: null),
-                    ChatSessionId: null,
-                    BuildEscalationQuickDecisionPrompt(escalation, approved)),
-                refreshCancellation?.Token ?? CancellationToken.None);
-            if (!projection.IsAvailable)
+            var actionCompleted = action.Kind switch
             {
-                errorMessage = projection.ErrorMessage;
-                return;
-            }
+                ProcessLiveEscalationActionKind.DecideApproval => await DecideEscalationApprovalAsync(escalation, action),
+                ProcessLiveEscalationActionKind.RequestRework => await RequestEscalationReworkAsync(escalation),
+                ProcessLiveEscalationActionKind.Resolve => await ResolveEscalationAsync(escalation),
+                ProcessLiveEscalationActionKind.MessageManager => await SendEscalationManagerMessageAsync(escalation),
+                _ => false
+            };
 
-            if (managerChatDialogOpen && managerChatRun?.RunId == run.RunId)
+            if (actionCompleted)
             {
-                managerChatProjection = projection;
+                await RefreshAsync(forceRefresh: true);
             }
-
-            activityActionMessage = approved
-                ? $"Approval message sent to {projection.ManagerLabel}."
-                : $"Denied message sent to {projection.ManagerLabel}.";
         }
         catch (OperationCanceledException)
         {
         }
+        catch (InvalidOperationException exception)
+        {
+            errorMessage = exception.Message;
+        }
         catch (Exception exception)
         {
-            errorMessage = $"Escalation decision message failed. {exception.Message}";
+            errorMessage = $"Escalation action failed. {exception.Message}";
         }
         finally
         {
             busyActivityCardKeys.Remove(escalation.Key);
         }
+    }
+
+    private async Task<bool> DecideEscalationApprovalAsync(
+        ProcessLiveEscalationCard escalation,
+        ProcessLiveEscalationActionDescriptor action)
+    {
+        if (action.ApprovalStatus is null ||
+            !ProcessLiveEscalationActionPolicy.TryResolveSourceApproval(escalation, out var executionRunId, out var approvalId))
+        {
+            errorMessage = "This escalation is not bound to a pending execution approval.";
+            return false;
+        }
+
+        var status = action.ApprovalStatus.Value;
+        var cancellationToken = refreshCancellation?.Token ?? CancellationToken.None;
+        await AgentWorkspaceService.ContinueExecutionRunAsync(
+            executionRunId,
+            approved: status == ProcessOperatorApprovalStatus.Approved,
+            autoApprovePendingToolCalls: false,
+            cancellationToken: cancellationToken);
+
+        var recordResult = await EscalationService.RecordApprovalDecisionAsync(
+            new ProcessOperatorApprovalDecisionRequest
+            {
+                ProcessRunId = escalation.RunId,
+                StepRunId = escalation.StepRunId,
+                ExecutionRunId = executionRunId,
+                ExternalApprovalId = approvalId,
+                Status = status,
+                Summary = $"{status} from Live Processes for escalation '{escalation.Title}'.",
+                DecidedBy = "live-processes"
+            },
+            cancellationToken);
+        if (recordResult.IsFailure)
+        {
+            errorMessage = FormatErrors(recordResult.Errors);
+            return false;
+        }
+
+        var resolveResult = await EscalationService.ResolveAsync(
+            new ProcessEscalationResolutionRequest
+            {
+                EscalationId = escalation.EscalationId,
+                Resolution = $"Approval {status} from Live Processes.",
+                ResolvedBy = "live-processes"
+            },
+            cancellationToken);
+        if (resolveResult.IsFailure)
+        {
+            errorMessage = FormatErrors(resolveResult.Errors);
+            return false;
+        }
+
+        activityActionMessage = $"Approval {status}.";
+        return true;
+    }
+
+    private async Task<bool> RequestEscalationReworkAsync(ProcessLiveEscalationCard escalation)
+    {
+        var result = await EscalationService.RequestReworkAsync(
+            new ProcessEscalationReworkRequest
+            {
+                EscalationId = escalation.EscalationId,
+                Directive = BuildEscalationReworkDirective(escalation),
+                RequestedBy = "live-processes"
+            },
+            refreshCancellation?.Token ?? CancellationToken.None);
+        if (result.IsFailure)
+        {
+            errorMessage = FormatErrors(result.Errors);
+            return false;
+        }
+
+        activityActionMessage = result.Value.HasValue
+            ? $"Escalation rework requested. Rework packet {result.Value.Value:D}."
+            : "Escalation rework requested.";
+        return true;
+    }
+
+    private async Task<bool> ResolveEscalationAsync(ProcessLiveEscalationCard escalation)
+    {
+        var result = await EscalationService.ResolveAsync(
+            new ProcessEscalationResolutionRequest
+            {
+                EscalationId = escalation.EscalationId,
+                Resolution = $"Operator resolved this {escalation.Kind} escalation from Live Processes.",
+                ResolvedBy = "live-processes"
+            },
+            refreshCancellation?.Token ?? CancellationToken.None);
+        if (result.IsFailure)
+        {
+            errorMessage = FormatErrors(result.Errors);
+            return false;
+        }
+
+        activityActionMessage = "Escalation resolved.";
+        return true;
+    }
+
+    private async Task<bool> SendEscalationManagerMessageAsync(ProcessLiveEscalationCard escalation)
+    {
+        var run = ResolveRunCard(escalation);
+        var projection = await ManagerChatService.SendMessageAsync(
+            new ProcessManagerChatMessageRequest(
+                BuildManagerChatQuery(run, chatSessionId: null),
+                ChatSessionId: null,
+                BuildEscalationManagerMessagePrompt(escalation)),
+            refreshCancellation?.Token ?? CancellationToken.None);
+        if (!projection.IsAvailable)
+        {
+            errorMessage = projection.ErrorMessage;
+            return false;
+        }
+
+        if (managerChatDialogOpen && managerChatRun?.RunId == run.RunId)
+        {
+            managerChatProjection = projection;
+        }
+
+        activityActionMessage = $"Manager message sent to {projection.ManagerLabel}.";
+        return true;
+    }
+
+    private static string BuildEscalationReworkDirective(ProcessLiveEscalationCard escalation)
+    {
+        return $"""
+Operator requested governed rework from Live Processes.
+Escalation: {escalation.Title}
+Escalation kind: {escalation.Kind}
+Step: {ResolveMissingText(escalation.StepTitle)}
+Reason: {ResolveMissingText(escalation.Reason)}
+""";
     }
 
     private bool IsActivityActionBusy(string key)
@@ -2417,17 +2558,14 @@ User request:
 """;
     }
 
-    private static string BuildEscalationQuickDecisionPrompt(
-        ProcessLiveEscalationCard escalation,
-        bool approved)
+    private static string BuildEscalationManagerMessagePrompt(
+        ProcessLiveEscalationCard escalation)
     {
-        var decision = approved ? "Approved" : "Denied";
         var step = string.IsNullOrWhiteSpace(escalation.StepTitle)
             ? "Run-level escalation"
             : escalation.StepTitle;
         return $"""
-Operator quick decision from Live Processes:
-- Decision: {decision}
+Operator requested manager review from Live Processes:
 - Process run: {escalation.RunName}
 - Definition: {escalation.DefinitionName}
 - Escalation: {escalation.Title}
@@ -2436,7 +2574,7 @@ Operator quick decision from Live Processes:
 - Step: {step}
 - Reason: {ResolveMissingText(escalation.Reason)}
 
-Record this operator decision in the process context, continue only when this decision is sufficient for the process contract, and reply with the next concrete action or remaining blocker.
+Reply with the next concrete action or remaining blocker. Do not treat this message as an approval decision.
 """;
     }
 
@@ -2799,6 +2937,22 @@ Record this operator decision in the process context, continue only when this de
             ProcessEscalationStatus.Reopened => "danger",
             _ => "neutral"
         };
+    }
+
+    private static ButtonStyle ResolveEscalationActionButtonStyle(ProcessLiveEscalationActionDescriptor action)
+    {
+        return action.Kind switch
+        {
+            ProcessLiveEscalationActionKind.DecideApproval when action.ApprovalStatus == ProcessOperatorApprovalStatus.Rejected => ButtonStyle.Danger,
+            ProcessLiveEscalationActionKind.DecideApproval => ButtonStyle.Success,
+            ProcessLiveEscalationActionKind.RequestRework => ButtonStyle.Warning,
+            _ => ButtonStyle.Light
+        };
+    }
+
+    private static string FormatErrors(IReadOnlyList<CanDoItAll.SharedKernel.Error> errors)
+    {
+        return string.Join(" ", errors.Select(error => error.Message));
     }
 
     private static string ResolveEscalationSummary(ProcessLiveEscalationCard escalation)

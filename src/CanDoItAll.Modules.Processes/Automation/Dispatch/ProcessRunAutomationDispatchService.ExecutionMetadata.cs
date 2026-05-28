@@ -130,6 +130,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .ToArray();
         }
 
+        var upstreamArtifactAliases = ResolveReadOnlyUpstreamArtifactAliases(targetGroundings);
+        if (ShouldScopeReadOnlyAccessToUpstreamArtifacts(operationContract) &&
+            upstreamArtifactAliases.Count > 0)
+        {
+            return upstreamArtifactAliases
+                .Where(alias => !IsAliasCoveredByAny(alias, allowedExternalTargetAliases))
+                .ToArray();
+        }
+
         if (!AllowsReadOnlyExternalTargetAccess(candidate, operationContract))
         {
             return [];
@@ -139,6 +148,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return trustedCurrentTargetAliases.Count > 0
             ? trustedCurrentTargetAliases
             : PreferCurrentRunExternalTargetAliases(candidate, resolvedExternalTargetAliases);
+    }
+
+    private static IReadOnlyList<string> ResolveReadOnlyUpstreamArtifactAliases(
+        IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings)
+    {
+        return PruneAllowedExternalTargetAliasesForCurrentRun(
+            targetGroundings
+                .Where(grounding => grounding.SourceKind is
+                    ProcessTargetGroundingSourceKind.UpstreamArtifact or
+                    ProcessTargetGroundingSourceKind.UpstreamArtifactProvenance)
+                .Select(grounding => grounding.Alias));
+    }
+
+    private static bool ShouldScopeReadOnlyAccessToUpstreamArtifacts(ProcessStepOperationContract operationContract)
+    {
+        return !operationContract.AllowsProductMutation &&
+               operationContract.TargetScope == ProcessStepTargetScope.ManagedProcessArtifactsOnly &&
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.ReadUpstreamArtifacts) &&
+               !operationContract.AllowedOperations.Contains(ProcessStepOperation.RunValidation) &&
+               !operationContract.AllowedOperations.Contains(ProcessStepOperation.LaunchRuntime) &&
+               !operationContract.AllowedOperations.Contains(ProcessStepOperation.CaptureRuntimeProof);
     }
 
     private static IReadOnlyList<string> ResolveTrustedCurrentRunProductTargetAliases(

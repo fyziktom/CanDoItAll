@@ -256,6 +256,8 @@ public sealed record ProcessLiveEscalationCard(
     string Title,
     string Reason,
     string Owner,
+    string SourceExecutionRunId,
+    string SourceApprovalId,
     string SourceToolName,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset UpdatedAtUtc,

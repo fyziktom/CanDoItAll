@@ -4581,6 +4581,67 @@ Requirements from project-level planning context:
     }
 
     [Fact]
+    public void BuildProcessInvocationMetadataJson_grants_read_only_upstream_external_artifact_paths_for_managed_review_contract()
+    {
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateReviewDispatchCandidateWithArtifactInputs(
+            "Escalate unresolved Blazor repair findings after reading the inherited product files.",
+            (
+                "Revalidate Blazor repair",
+                "Blazor repair evidence",
+                [
+                    (
+                        "Game.razor",
+                        "Deliverable",
+                        "external-target/C/programovani/dotnet-demo/output/Components/Pages/Game.razor",
+                        "Component file inspected during the upstream repair step.",
+                        "external-target"),
+                    (
+                        "output.csproj",
+                        "Deliverable",
+                        "external-target/C/programovani/dotnet-demo/output/output.csproj",
+                        "Project file inspected during the upstream repair step.",
+                        "external-target")
+                ]));
+        candidate.StepDefinition.AllowedOperations =
+        [
+            ProcessStepOperation.ReadProcessContext,
+            ProcessStepOperation.ReadUpstreamArtifacts,
+            ProcessStepOperation.WriteManagedProcessArtifacts,
+            ProcessStepOperation.EscalateOrDecide
+        ];
+        candidate.StepDefinition.OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly;
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from output note (custom:output-note)
+            """;
+
+        var metadataJson = ProcessRunAutomationDispatchService.ProcessInvocationMetadataBuilder.Build(
+            candidate,
+            new ExecutionInvocationPolicy(),
+            projectStructureGroundingSummary,
+            null);
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/Components/Pages/Game.razor", readOnlyAliases);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output/output.csproj", readOnlyAliases);
+        Assert.DoesNotContain(
+            readOnlyAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/programovani/dotnet-demo/output",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void BuildProcessInvocationMetadataJson_SB04_INV_001_keeps_stale_upstream_product_alias_read_only_for_mutating_step()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
