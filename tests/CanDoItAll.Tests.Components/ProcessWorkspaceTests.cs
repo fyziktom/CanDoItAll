@@ -320,7 +320,19 @@ public sealed class ProcessWorkspaceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
         var projectId = await CreateProjectAsync(projectsService, "Operator console component project");
-        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+        var editor = BuildDefinitionEditor(projectId, Guid.NewGuid());
+        var artifactExpectationId = Guid.NewGuid();
+        var intakeStep = Assert.Single(editor.Steps, step => step.Key == "workspace-intake");
+        intakeStep.ArtifactExpectations.Add(
+            new ProcessArtifactExpectationEditorModel
+            {
+                Id = artifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Operator console evidence packet",
+                IsRequired = true,
+                ValidationRequirementSummary = "The operator console must expose the managed evidence root."
+            });
+        var saveResult = await processesService.SaveAsync(editor);
 
         Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
         var publishResult = await processesService.PublishAsync(saveResult.Value);
@@ -340,6 +352,25 @@ public sealed class ProcessWorkspaceTests
         Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
 
         var stepRun = (await processesService.ListStepRunsAsync(runResult.Value)).First();
+        var artifactExpectation = Assert.Single(
+            stepRun.ArtifactExpectations,
+            expectation => expectation.Title == "Operator console evidence packet");
+        var artifactRecordResult = await processesService.RecordArtifactAsync(
+            new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = runResult.Value,
+                StepRunId = stepRun.Id,
+                ArtifactExpectationId = artifactExpectation.ArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Operator console evidence packet",
+                TrustStatus = ProcessArtifactTrustStatus.Approved,
+                ManagedStoragePath = "artifacts/process-runs/operator-console/evidence-packet.md",
+                ExternalReferenceKey = "operator-console:evidence-packet",
+                ProvenanceSummary = "Component test managed artifact root."
+            });
+
+        Assert.True(artifactRecordResult.IsSuccess, string.Join(" | ", artifactRecordResult.Errors.Select(error => error.Message)));
+
         var startResult = await processesService.TransitionStepAsync(
             new ProcessStepTransitionRequest
             {
@@ -376,10 +407,17 @@ public sealed class ProcessWorkspaceTests
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-readback']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-artifact-matrix']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-dispatch-receipts']"));
             Assert.NotNull(cut.Find("[data-testid='processes-escalation-queue']"));
             Assert.NotNull(cut.Find("[data-testid='processes-approval-console']"));
             Assert.NotNull(cut.Find("[data-testid='processes-rework-console']"));
             Assert.NotNull(cut.Find("[data-testid='processes-attempt-timeline']"));
+            Assert.Contains("Operator console evidence packet", cut.Markup);
+            Assert.Contains("Managed path: artifacts/process-runs/operator-console/evidence-packet.md", cut.Markup);
+            Assert.Contains("Manager Resolution", cut.Markup);
+            Assert.Contains("Dispatch Receipts", cut.Markup);
             Assert.Contains("Blocked step needs operator review", cut.Markup);
             Assert.Contains("Operator console needs an escalation to display.", cut.Markup);
         });

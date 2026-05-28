@@ -1,3 +1,7 @@
-# SB09 passing.txt
+Invariant: SB09-INV-001
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb09-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~ProcessTemplateGovernanceTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb09-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
 
-Pending.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    10, Přeskočeno:     0, Celkem:    10, Doba trvání: 45 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0

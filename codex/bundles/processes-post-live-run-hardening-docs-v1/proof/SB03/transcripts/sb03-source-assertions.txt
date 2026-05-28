@@ -1,0 +1,17 @@
+Invariant: SB03-INV-001 single projection service owns finalizer/read-model/status-health mapping semantics.
+Command: rg -n "ProcessArtifactStatusProjectionService|MapFinalizerStatusToSatisfactionStatus|MapFinalizerStatusToValidationStatus|IsUnsatisfiedRequiredStatus" src\CanDoItAll.Modules.Processes\Runtime src\CanDoItAll.Modules.Processes\Components tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:5:public sealed class ProcessArtifactStatusProjectionServiceTests {
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:51:            ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(finalizerStatus));
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:54:            ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(finalizerStatus));
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:74:        Assert.Equal(expected, ProcessArtifactStatusProjectionService.IsUnsatisfiedRequiredStatus(status));
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:3:internal static class ProcessArtifactStatusProjectionService {
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:4:    public static ProcessArtifactExpectationSatisfactionStatus MapFinalizerStatusToSatisfactionStatus(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:30:    public static ProcessArtifactExpectationValidationStatus MapFinalizerStatusToValidationStatus(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:56:    public static bool IsUnsatisfiedRequiredStatus(ProcessArtifactExpectationSatisfactionStatus status) {
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:17:                .Where(item => ProcessArtifactStatusProjectionService.IsUnsatisfiedRequiredStatus(item.Status))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:375:                    ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(validationDiagnostic.Status),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:382:                    ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(validationDiagnostic.Status),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:416:                ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(missingDiagnostic.Status),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:423:                ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(missingDiagnostic.Status),
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:640:            .Count(item => ProcessArtifactStatusProjectionService.IsUnsatisfiedRequiredStatus(item.Status));
+ExitCode: 0

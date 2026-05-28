@@ -250,6 +250,12 @@ public sealed partial class ProcessesService
 
         projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(projectionLineage);
         var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
+        await using var transaction = await BeginArtifactRecordTransactionAsync(
+            dbContext,
+            request.ProcessRunId,
+            projectionIdentityHash,
+            externalReferenceKey,
+            cancellationToken);
 
         ProcessStepRun? stepRun = null;
         if (request.StepRunId.HasValue)
@@ -310,15 +316,12 @@ public sealed partial class ProcessesService
                 .FirstOrDefaultAsync(cancellationToken);
             if (existingArtifact is not null)
             {
-                if (existingArtifact.StepRunId == request.StepRunId &&
-                    existingArtifact.ArtifactExpectationId == scopedArtifactExpectationId)
-                {
-                    return Result<Guid>.Success(existingArtifact.Id);
-                }
-
-                return Result<Guid>.Failure(Error.Validation(
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    request.StepRunId,
+                    scopedArtifactExpectationId,
                     "Artifact projection identity is already bound to another step or expectation in this process run.",
-                    "processes.artifact.projection-scope-conflict"));
+                    "processes.artifact.projection-scope-conflict");
             }
         }
 
@@ -332,15 +335,12 @@ public sealed partial class ProcessesService
                 .FirstOrDefaultAsync(cancellationToken);
             if (existingArtifact is not null)
             {
-                if (existingArtifact.StepRunId == request.StepRunId &&
-                    existingArtifact.ArtifactExpectationId == scopedArtifactExpectationId)
-                {
-                    return Result<Guid>.Success(existingArtifact.Id);
-                }
-
-                return Result<Guid>.Failure(Error.Validation(
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    request.StepRunId,
+                    scopedArtifactExpectationId,
                     "Artifact external reference is already bound to another step or expectation in this process run.",
-                    "processes.artifact.external-reference-scope-conflict"));
+                    "processes.artifact.external-reference-scope-conflict");
             }
         }
 
@@ -384,9 +384,155 @@ public sealed partial class ProcessesService
                 cancellationToken);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch (DbUpdateException exception) when (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            dbContext.ChangeTracker.Clear();
+            var resolvedConflict = await ResolveArtifactRecordUniqueConflictAsync(
+                dbContext,
+                request.ProcessRunId,
+                request.StepRunId,
+                scopedArtifactExpectationId,
+                projectionIdentityHash,
+                externalReferenceKey,
+                cancellationToken);
+            if (resolvedConflict is not null)
+            {
+                return resolvedConflict;
+            }
+
+            logger.LogWarning(
+                exception,
+                "Process artifact uniqueness conflict could not be resolved for run {RunId}, step {StepRunId}, has projection identity {HasProjectionIdentity}, has external reference {HasExternalReference}.",
+                request.ProcessRunId,
+                request.StepRunId,
+                !string.IsNullOrWhiteSpace(projectionIdentityHash),
+                !string.IsNullOrWhiteSpace(externalReferenceKey));
+            return Result<Guid>.Failure(Error.Validation(
+                "Artifact projection conflicted with a concurrently recorded artifact.",
+                "processes.artifact.unique-conflict"));
+        }
+
         NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
         return Result<Guid>.Success(artifact.Id);
+    }
+
+    private static async Task<IDbContextTransaction?> BeginArtifactRecordTransactionAsync(
+        AppDbContext dbContext,
+        Guid processRunId,
+        string projectionIdentityHash,
+        string externalReferenceKey,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(dbContext.Database.ProviderName, NpgsqlProviderName, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var lockKey = ResolveArtifactRecordLockKey(processRunId, projectionIdentityHash, externalReferenceKey);
+        if (string.IsNullOrWhiteSpace(lockKey))
+        {
+            return null;
+        }
+
+        var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))",
+            cancellationToken);
+        return transaction;
+    }
+
+    private static string ResolveArtifactRecordLockKey(
+        Guid processRunId,
+        string projectionIdentityHash,
+        string externalReferenceKey)
+    {
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            return $"{processRunId:D}:projection:{projectionIdentityHash.Trim()}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            return $"{processRunId:D}:external:{externalReferenceKey.Trim()}";
+        }
+
+        return string.Empty;
+    }
+
+    private static async Task<Result<Guid>?> ResolveArtifactRecordUniqueConflictAsync(
+        AppDbContext dbContext,
+        Guid processRunId,
+        Guid? stepRunId,
+        Guid? artifactExpectationId,
+        string projectionIdentityHash,
+        string externalReferenceKey,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == processRunId &&
+                    item.ProjectionIdentityHash == projectionIdentityHash)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    stepRunId,
+                    artifactExpectationId,
+                    "Artifact projection identity is already bound to another step or expectation in this process run.",
+                    "processes.artifact.projection-scope-conflict");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == processRunId &&
+                    item.ExternalReferenceKey == externalReferenceKey)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    stepRunId,
+                    artifactExpectationId,
+                    "Artifact external reference is already bound to another step or expectation in this process run.",
+                    "processes.artifact.external-reference-scope-conflict");
+            }
+        }
+
+        return null;
+    }
+
+    private static Result<Guid> ResolveExistingArtifactRecordConflict(
+        ProcessArtifactRecord existingArtifact,
+        Guid? stepRunId,
+        Guid? artifactExpectationId,
+        string scopeConflictMessage,
+        string scopeConflictCode)
+    {
+        return existingArtifact.StepRunId == stepRunId &&
+            existingArtifact.ArtifactExpectationId == artifactExpectationId
+                ? Result<Guid>.Success(existingArtifact.Id)
+                : Result<Guid>.Failure(Error.Validation(scopeConflictMessage, scopeConflictCode));
     }
 
     private async Task ReactivateBlockedDownstreamStepsAfterArtifactMaterializationAsync(

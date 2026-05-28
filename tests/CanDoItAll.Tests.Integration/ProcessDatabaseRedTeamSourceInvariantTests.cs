@@ -36,6 +36,29 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
         Assert.Contains("dispatchClaim", transitionWindow, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Artifact_recording_serializes_projection_identity_and_recovers_unique_conflicts() {
+        var source = await ReadRuntimeOperationsSourceAsync();
+
+        var identityHashIndex = FindRequired(source, "var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;");
+        var lockIndex = FindRequired(source, "BeginArtifactRecordTransactionAsync", identityHashIndex);
+        var existingProjectionIndex = FindRequired(source, "item.ProjectionIdentityHash == projectionIdentityHash", lockIndex);
+        var saveIndex = FindRequired(source, "await dbContext.SaveChangesAsync(cancellationToken);", existingProjectionIndex);
+        var uniqueCatchIndex = FindRequired(source, "DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception)", saveIndex);
+        var resolveConflictIndex = FindRequired(source, "ResolveArtifactRecordUniqueConflictAsync", uniqueCatchIndex);
+
+        Assert.True(
+            identityHashIndex < lockIndex &&
+            lockIndex < existingProjectionIndex &&
+            existingProjectionIndex < saveIndex &&
+            saveIndex < uniqueCatchIndex &&
+            uniqueCatchIndex < resolveConflictIndex,
+            "Artifact recording must lock on projection identity before lookup/insert and resolve concurrent unique conflicts into an idempotent result.");
+
+        Assert.Contains("pg_advisory_xact_lock", source, StringComparison.Ordinal);
+        Assert.Contains("processes.artifact.unique-conflict", source, StringComparison.Ordinal);
+    }
+
     private static async Task<string> ReadDispatchSourceAsync() {
         var repositoryRoot = FindRepositoryRoot();
         var sourcePath = Path.Combine(
@@ -45,6 +68,18 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
             "Automation",
             "Dispatch",
             "ProcessRunAutomationDispatchService.Dispatch.cs");
+
+        return await File.ReadAllTextAsync(sourcePath);
+    }
+
+    private static async Task<string> ReadRuntimeOperationsSourceAsync() {
+        var repositoryRoot = FindRepositoryRoot();
+        var sourcePath = Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Runtime",
+            "ProcessesService.Runtime.Operations.cs");
 
         return await File.ReadAllTextAsync(sourcePath);
     }

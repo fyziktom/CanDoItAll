@@ -1664,6 +1664,7 @@ public sealed class MafAgentRuntimeTests
             "processes_definitions_list",
             "processes_definition_editor_get",
             "processes_definition_save",
+            "processes_definition_role_add",
             "processes_definition_publish",
             "processes_definition_delete",
             "processes_definition_export",
@@ -1681,7 +1682,8 @@ public sealed class MafAgentRuntimeTests
             "processes_template_get",
             "processes_template_mermaid_get",
             "processes_template_import",
-            "processes_template_baseline_scenarios_list"
+            "processes_template_baseline_scenarios_list",
+            "processes_template_live_run_profiles_list"
         };
 
         foreach (var toolName in expectedToolNames)
@@ -1902,6 +1904,7 @@ public sealed class MafAgentRuntimeTests
         return
         [
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
             AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
@@ -1928,7 +1931,8 @@ public sealed class MafAgentRuntimeTests
             AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
             AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
             AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
         ];
     }
 

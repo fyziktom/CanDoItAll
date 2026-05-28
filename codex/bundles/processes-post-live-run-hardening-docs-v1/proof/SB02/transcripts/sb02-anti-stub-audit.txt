@@ -1,0 +1,4 @@
+Command: rg TODO/NotImplemented in Processes README and runtime docs for SB02-INV-001
+ExitCode: 1
+
+SB02-INV-001 anti-stub audit completed; rg exit code 1 means no matches

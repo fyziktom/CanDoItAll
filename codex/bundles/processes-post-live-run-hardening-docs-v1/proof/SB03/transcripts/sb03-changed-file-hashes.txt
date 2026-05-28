@@ -1,0 +1,8 @@
+Invariant: SB03-INV-006 changed source and test files are pinned by SHA-256 for replayable proof.
+Command: Get-FileHash -Algorithm SHA256 <SB03 changed files>
+EAD979DACA4805835C5A3425E14F40B6F33E12199105AA9BEF381773373D8DB0  src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs
+8DDF3E46061F37F6B7BC12E89DC82D176550419E9C9F2BD3CF5B1785F065409A  src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs
+E0CDB0BA033B1D98F7096A4B890AF6723E3622ABF6627610343312EC434FCB9F  src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs
+7D1F1F2C2A2221E10D7ABC050FBA874DF975D81E2F06DAEB3BEDFFD32AD7348A  src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs
+7C7EA33BE52E0DD2F2CBF37C24B0CB8CA3A5933A0B09CB9D422BC811FF38CCFE  tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs
+ExitCode: 0

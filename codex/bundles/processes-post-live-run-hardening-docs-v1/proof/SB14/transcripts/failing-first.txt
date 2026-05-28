@@ -1,3 +1,21 @@
 # SB14 failing-first.txt
 
-Pending.
+Command:
+`rg -n "baseline-agent-training-and-improvement|agent training improvement|delegation policy improvement" Templates\Processes\seed-catalog\baseline-scenarios.json tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs`
+
+ExitCode: 1
+
+Output:
+No matches.
+
+Interpretation:
+Before SB14, the existing `ai-assisted-change-delivery` template skeleton was present in the manifest, but no baseline scenario or governance matrix entry exercised it as an agent training/improvement process.
+
+Control command:
+`rg -n "ai-assisted-change-delivery|baseline-agent|agent-training" Templates\Processes\manifest.json Templates\Processes\seed-catalog\baseline-scenarios.json tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs`
+
+ExitCode: 0
+
+Output:
+`Templates\Processes\manifest.json:106:      "Key": "ai-assisted-change-delivery",`
+`Templates\Processes\manifest.json:107:      "RelativePath": "processes/ai-assisted-change-delivery"`

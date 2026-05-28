@@ -1,3 +1,9 @@
-# SB10 changed-file-hashes.txt
-
-Pending.
+Command: Get-FileHash -Algorithm SHA256 src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs, src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs, src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs, src\CanDoItAll.AgentFramework.Core\README.md, tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs, codex\skills\candoitall-api-processes\SKILL.md, C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md | ForEach-Object { "$($_.Hash) $($_.Path)" }
+1DD8783544F13517FEC7A8E14C641AEA536C516206FEB87664FA6B3E298AC953 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs
+287273CFF11D2BF50D510484D4F651617FEB65539A785A43696955B69CE90619 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs
+7539720EDFFD0FA1191A38393213327D3B1185CE158BEEEBB6C211E7FF7D1A68 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs
+CFF1632B22D57E203EA6E0C428800AE94757B8EF2828E0FAE3A1ADF87ACC0C1A C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\README.md
+0D524926F1065FD391ED1A9CD308ED980208E7CC599682DC8F3DB4E42199B3F3 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs
+BA1E9979B91B78CA3B365C619C12B8F8953579BEB49D2DB8F7BF635F18DD74E9 C:\repositories\CanDoItAll\codex\skills\candoitall-api-processes\SKILL.md
+BA1E9979B91B78CA3B365C619C12B8F8953579BEB49D2DB8F7BF635F18DD74E9 C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md
+ExitCode: 0

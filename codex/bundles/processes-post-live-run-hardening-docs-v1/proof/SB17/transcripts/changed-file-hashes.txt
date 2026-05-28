@@ -1,3 +1,21 @@
-# SB17 changed-file-hashes.txt
+# SB17 Changed-File Hashes
 
-Pending.
+Command:
+
+```powershell
+$root = (Get-Location).Path; Get-FileHash Templates\Processes\README.md,codex\skills\candoitall-api-processes\SKILL.md,C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md,src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs,src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs,tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs,tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj -Algorithm SHA256 | ForEach-Object { $path = if ($_.Path.StartsWith($root)) { [System.IO.Path]::GetRelativePath($root, $_.Path) } else { $_.Path }; "$($_.Hash)  $path" }
+```
+
+Exit code: 0
+
+Output:
+
+```text
+41B0B533A5697986D71C68504545C417FEB7F40C911A4072CEA5C81612BF5893  Templates\Processes\README.md
+F72CE56AC7274F1109B2E96A5D1FE9F44CDE047097181DC68BD1BA2F0E5C4842  codex\skills\candoitall-api-processes\SKILL.md
+F72CE56AC7274F1109B2E96A5D1FE9F44CDE047097181DC68BD1BA2F0E5C4842  C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md
+1DE16A743D7884C5076FB986FCD045E3EA4199B3188A9A32AEB975AD8D8CEE0E  src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs
+3A21EC7A087AB90EC5880820521C1328EFD1D9BDBEC586E67289D262E8116428  src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs
+924FA9301C222F1B9D108831AB8F1CC5328E04E16DF8CE8EC1F6C017EE1DB963  tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs
+ECC931592EAB8735528F1C025198673B2EE1E4D7A7744421DC238AEFF6970238  tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
+```

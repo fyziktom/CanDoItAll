@@ -68,6 +68,229 @@
         </SectionCard>
     </div>
 
+    @{
+        var managerResolution = BuildManagerConsoleResolution();
+    }
+
+    <Grid Gap="LayoutGap.Large"
+          ColumnsLg="2"
+          data-testid="processes-operator-readback">
+        <SectionCard Title="Recovery Advice"
+                     Description=""
+                     HelpText="Run health combines blocked steps, failed steps, missing artifacts, pending approvals, dead-lettered dispatch records, and invariant diagnostics into the next operator action.">
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="@ResolveRecoveryTone(Presenter.SelectedRunHealth.RecoveryClassification)"
+                                 Text="@Presenter.SelectedRunHealth.RecoveryClassification.ToString()" />
+                    <StatusBadge Tone="info"
+                                 Text="@($"{Presenter.SelectedRunHealth.LatestAttemptCount} attempts")" />
+                    @if (Presenter.SelectedRunHealth.RecommendedAction != ProcessStepRecoveryOption.None)
+                    {
+                        <StatusBadge Tone="warning"
+                                     Text="@($"recommended: {Presenter.FormatRecoveryAction(Presenter.SelectedRunHealth.RecommendedAction)}")" />
+                    }
+                    @if (Presenter.SelectedRunHealth.InvariantDiagnosticCount > 0)
+                    {
+                        <StatusBadge Tone="warning"
+                                     Text="@($"{Presenter.SelectedRunHealth.InvariantDiagnosticCount} diagnostics")" />
+                    }
+                </Cluster>
+
+                <p class="text-sm leading-6 text-slate-600">@ResolveRunRecoverySummary()</p>
+
+                @if (Presenter.StepRuns.Any(stepRun => stepRun.Health.CanManualRerun))
+                {
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Eligible reruns</p>
+                        @foreach (var stepRun in Presenter.StepRuns.Where(item => item.Health.CanManualRerun).Take(5))
+                        {
+                            <Split Gap="LayoutGap.Small">
+                                <span class="text-sm font-medium text-slate-700">@stepRun.Title</span>
+                                <StatusBadge Tone="@Presenter.ResolveStepTone(stepRun.Status)"
+                                             Text="@Presenter.FormatRecoveryAction(stepRun.Health.NextRecoveryAction)" />
+                            </Split>
+                        }
+                    </Stack>
+                }
+
+                @if (Presenter.InvariantDiagnostics.Any(item => !string.IsNullOrWhiteSpace(item.RecommendedAction)))
+                {
+                    var diagnostic = Presenter.InvariantDiagnostics.First(item => !string.IsNullOrWhiteSpace(item.RecommendedAction));
+                    <p class="text-sm leading-6 text-slate-500">Diagnostic action: @diagnostic.RecommendedAction</p>
+                }
+            </Stack>
+        </SectionCard>
+
+        <SectionCard Title="Manager Resolution"
+                     Description=""
+                     HelpText="Manager resolution explains which manager receives operator directives and whether the binding came from a configured run manager, inherited subprocess state, or the default manager label.">
+            <Stack GapScale="LayoutGap.Medium">
+                <Cluster Gap="LayoutGap.Small"
+                         Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="info"
+                                 Text="@BuildManagerLabel()" />
+                    <StatusBadge Tone="@ResolveConfidenceTone(managerResolution.Confidence)"
+                                 Text="@($"confidence {managerResolution.Confidence}")" />
+                    <StatusBadge Tone="neutral"
+                                 Text="@managerResolution.ReasonCode" />
+                    @if (Presenter.SelectedRun is { HierarchyDepth: > 0 } selectedRun)
+                    {
+                        <StatusBadge Tone="neutral"
+                                     Text="@($"subprocess depth {selectedRun.HierarchyDepth}")" />
+                    }
+                </Cluster>
+                <p class="text-sm leading-6 text-slate-600">@managerResolution.Summary</p>
+                @if (managerResolution.CandidateSummaries.Count > 0)
+                {
+                    <Stack GapScale="LayoutGap.Tiny">
+                        <p class="cda-eyebrow">Candidates</p>
+                        @foreach (var candidate in managerResolution.CandidateSummaries)
+                        {
+                            <p class="text-sm leading-6 text-slate-500">@candidate</p>
+                        }
+                    </Stack>
+                }
+            </Stack>
+        </SectionCard>
+    </Grid>
+
+    <div data-testid="processes-operator-artifact-matrix">
+        <SectionCard Title="Artifact Matrix"
+                     Description=""
+                     HelpText="The operator artifact matrix joins required outputs, finalizer status, managed roots, external references, and recorded artifact lineage for the selected run.">
+            @if (!Presenter.StepRuns.SelectMany(stepRun => stepRun.ArtifactExpectations).Any() && Presenter.Artifacts.Count == 0)
+            {
+                <EmptyState Eyebrow="No artifacts"
+                            Title="No artifact obligations or records for this run"
+                            Description="Required outputs, finalizer diagnostics, managed storage paths, and external references appear here when the process definition or runtime records them." />
+            }
+            else
+            {
+                <Grid Gap="LayoutGap.Large"
+                      ColumnTemplateLg="minmax(0,1.1fr) minmax(0,0.9fr)">
+                    <Stack GapScale="LayoutGap.Medium">
+                        <p class="cda-eyebrow">Obligations</p>
+                        @if (!Presenter.StepRuns.SelectMany(stepRun => stepRun.ArtifactExpectations).Any())
+                        {
+                            <p class="text-sm leading-6 text-slate-500">No required artifact expectations are attached to the selected run steps.</p>
+                        }
+                        else
+                        {
+                            @foreach (var stepRun in Presenter.StepRuns.Where(item => item.ArtifactExpectations.Count > 0))
+                            {
+                                <SurfaceCard Soft="true">
+                                    <Stack GapScale="LayoutGap.Small">
+                                        <p class="text-sm font-semibold text-slate-950">@stepRun.Title</p>
+                                        @foreach (var expectation in stepRun.ArtifactExpectations)
+                                        {
+                                            <Split Gap="LayoutGap.Small">
+                                                <Stack GapScale="LayoutGap.Tiny">
+                                                    <p class="text-sm font-medium text-slate-700">@expectation.Title</p>
+                                                    <p class="text-xs leading-5 text-slate-500">@ResolveArtifactExpectationRoot(expectation)</p>
+                                                    @if (!string.IsNullOrWhiteSpace(expectation.Diagnostic))
+                                                    {
+                                                        <p class="text-xs leading-5 text-slate-500">@expectation.Diagnostic</p>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(expectation.ValidationSuggestedAction))
+                                                    {
+                                                        <p class="text-xs leading-5 text-slate-500">Suggested action: @expectation.ValidationSuggestedAction</p>
+                                                    }
+                                                </Stack>
+                                                <Cluster Gap="LayoutGap.Small">
+                                                    <StatusBadge Tone="@ResolveArtifactTone(expectation.Status)"
+                                                                 Text="@expectation.Status.ToString()" />
+                                                    <StatusBadge Tone="neutral"
+                                                                 Text="@(expectation.IsRequired ? "required" : "optional")" />
+                                                    <StatusBadge Tone="neutral"
+                                                                 Text="@expectation.ArtifactKind.ToString()" />
+                                                </Cluster>
+                                            </Split>
+                                        }
+                                    </Stack>
+                                </SurfaceCard>
+                            }
+                        }
+                    </Stack>
+
+                    <Stack GapScale="LayoutGap.Medium">
+                        <p class="cda-eyebrow">Recorded roots</p>
+                        @if (Presenter.Artifacts.Count == 0)
+                        {
+                            <p class="text-sm leading-6 text-slate-500">No process artifact records have been captured for this run.</p>
+                        }
+                        else
+                        {
+                            @foreach (var artifact in Presenter.Artifacts.Take(8))
+                            {
+                                <SurfaceCard Soft="true">
+                                    <Stack GapScale="LayoutGap.Tiny">
+                                        <Split Gap="LayoutGap.Small">
+                                            <p class="text-sm font-semibold text-slate-950">@artifact.Title</p>
+                                            <StatusBadge Tone="@ResolveArtifactTrustTone(artifact.TrustStatus)"
+                                                         Text="@artifact.TrustStatus.ToString()" />
+                                        </Split>
+                                        <p class="text-xs leading-5 text-slate-500">@ResolveArtifactRecordRoot(artifact)</p>
+                                        @if (!string.IsNullOrWhiteSpace(artifact.ProjectionIdentityHash))
+                                        {
+                                            <p class="text-xs leading-5 text-slate-500">Lineage hash: @artifact.ProjectionIdentityHash</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(artifact.ProvenanceSummary))
+                                        {
+                                            <p class="text-xs leading-5 text-slate-500">@artifact.ProvenanceSummary</p>
+                                        }
+                                    </Stack>
+                                </SurfaceCard>
+                            }
+                        }
+                    </Stack>
+                </Grid>
+            }
+        </SectionCard>
+    </div>
+
+    <div data-testid="processes-operator-dispatch-receipts">
+        <SectionCard Title="Dispatch Receipts"
+                     Description=""
+                     HelpText="Automation outbox records show dispatch commands, retry state, failures, lease windows, and the step each receipt belongs to.">
+            @if (Presenter.OutboxRecords.Count == 0)
+            {
+                <EmptyState Eyebrow="No dispatch"
+                            Title="No automation dispatch receipts for this run"
+                            Description="Outbox command receipts appear here after agent, workflow, approval, or subprocess dispatch is queued." />
+            }
+            else
+            {
+                <Stack GapScale="LayoutGap.Small">
+                    @foreach (var outbox in Presenter.OutboxRecords.Take(10))
+                    {
+                        <SurfaceCard Soft="true">
+                            <Split Gap="LayoutGap.Medium">
+                                <Stack GapScale="LayoutGap.Tiny">
+                                    <p class="cda-eyebrow">@(string.IsNullOrWhiteSpace(ResolveStepTitle(outbox.StepRunId)) ? outbox.Trigger : ResolveStepTitle(outbox.StepRunId))</p>
+                                    <h3 class="text-base font-semibold text-slate-950">@outbox.CommandKey</h3>
+                                    <p class="text-sm leading-6 text-slate-600">@ResolveOutboxTiming(outbox)</p>
+                                    @if (!string.IsNullOrWhiteSpace(outbox.LastError))
+                                    {
+                                        <p class="text-sm leading-6 text-slate-500">Last error: @outbox.LastError</p>
+                                    }
+                                </Stack>
+                                <Cluster Gap="LayoutGap.Small">
+                                    <StatusBadge Tone="@ResolveOutboxHealthTone(outbox.HealthStatus)"
+                                                 Text="@outbox.HealthStatus.ToString()" />
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@outbox.Status.ToString()" />
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@($"{outbox.AttemptCount} attempts")" />
+                                </Cluster>
+                            </Split>
+                        </SurfaceCard>
+                    }
+                </Stack>
+            }
+        </SectionCard>
+    </div>
+
     <SectionCard Title="Manager Direction"
                  Description=""
                  HelpText="Manager directives are journaled on the selected run so operators can instruct the responsible process manager without splitting coordination state away from the process runtime.">
@@ -328,6 +551,8 @@
 </Stack>
 
 @code {
+    private const string DefaultProcessManagerLabel = "Default process manager";
+
     [Parameter, EditorRequired]
     public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
 
@@ -346,4 +571,206 @@
             ? "manager: default"
             : $"manager: {managerName}";
     }
+
+    private string ResolveRunRecoverySummary()
+    {
+        if (!string.IsNullOrWhiteSpace(Presenter.SelectedRunHealth.ActionableReason))
+        {
+            return Presenter.SelectedRunHealth.ActionableReason;
+        }
+
+        if (Presenter.SelectedRunHealth.RecommendedAction != ProcessStepRecoveryOption.None)
+        {
+            return $"Recommended action: {Presenter.FormatRecoveryAction(Presenter.SelectedRunHealth.RecommendedAction)}.";
+        }
+
+        return "No recovery action is currently required for the selected run.";
+    }
+
+    private ProcessManagerConsoleResolution BuildManagerConsoleResolution()
+    {
+        if (Presenter.HasEvaluatedManagerResolution)
+        {
+            return new ProcessManagerConsoleResolution(
+                Presenter.ManagerResolutionReasonCode,
+                Presenter.ManagerResolutionConfidence,
+                Presenter.ManagerResolutionSummary,
+                Presenter.ManagerResolutionCandidateSummaries);
+        }
+
+        var selectedRun = Presenter.SelectedRun;
+        if (selectedRun is null)
+        {
+            return new ProcessManagerConsoleResolution(
+                "NoRunSelected",
+                0,
+                "No run is selected, so manager routing has not been evaluated.",
+                []);
+        }
+
+        if (selectedRun.ManagerAgentId.HasValue)
+        {
+            return new ProcessManagerConsoleResolution(
+                "SelectedRunManagerId",
+                100,
+                "The selected run snapshot carries an explicit manager agent id. Operator directives are journaled against that run manager.",
+                [$"{ResolveManagerName(selectedRun.ManagerAgentName)} / {selectedRun.ManagerAgentId.Value:D}"]);
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedRun.ManagerAgentName) &&
+            !string.Equals(selectedRun.ManagerAgentName, DefaultProcessManagerLabel, StringComparison.OrdinalIgnoreCase))
+        {
+            return new ProcessManagerConsoleResolution(
+                "SelectedRunManagerName",
+                70,
+                "The selected run snapshot carries a manager name without a technical agent id. Manager chat can resolve the technical agent before live conversation starts.",
+                [selectedRun.ManagerAgentName]);
+        }
+
+        if (selectedRun.HierarchyDepth > 0)
+        {
+            return new ProcessManagerConsoleResolution(
+                "InheritedOrDefaultManager",
+                60,
+                "This subprocess has no explicit manager id on its run snapshot, so directives use the inherited or default manager label until a technical manager is resolved.",
+                [ResolveManagerName(selectedRun.ManagerAgentName)]);
+        }
+
+        return new ProcessManagerConsoleResolution(
+            "DefaultManager",
+            50,
+            "No configured manager override was captured on this run. Operator directives use the default process manager label unless manager chat resolves a technical manager.",
+            [DefaultProcessManagerLabel]);
+    }
+
+    private static string ResolveManagerName(string managerName)
+    {
+        return string.IsNullOrWhiteSpace(managerName)
+            ? DefaultProcessManagerLabel
+            : managerName;
+    }
+
+    private static string ResolveArtifactExpectationRoot(ProcessArtifactExpectationSatisfactionViewModel expectation)
+    {
+        if (!string.IsNullOrWhiteSpace(expectation.ManagedStoragePath))
+        {
+            return $"Managed path: {expectation.ManagedStoragePath}";
+        }
+
+        return expectation.ProcessArtifactRecordId.HasValue
+            ? $"Artifact record: {expectation.ProcessArtifactRecordId.Value:D}"
+            : "No managed artifact root recorded.";
+    }
+
+    private static string ResolveArtifactRecordRoot(ProcessArtifactViewModel artifact)
+    {
+        if (!string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
+        {
+            return $"Managed path: {artifact.ManagedStoragePath}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(artifact.ExternalReferenceKey))
+        {
+            return $"External reference: {artifact.ExternalReferenceKey}";
+        }
+
+        return "No managed or external root recorded.";
+    }
+
+    private string ResolveStepTitle(Guid? stepRunId)
+    {
+        if (!stepRunId.HasValue)
+        {
+            return string.Empty;
+        }
+
+        return Presenter.StepRuns.FirstOrDefault(item => item.Id == stepRunId.Value)?.Title ?? string.Empty;
+    }
+
+    private static string ResolveOutboxTiming(ProcessOutboxRecordViewModel outbox)
+    {
+        var lastAttempt = outbox.LastAttemptAtUtc.HasValue
+            ? $"last {outbox.LastAttemptAtUtc.Value.ToLocalTime():g}"
+            : "no attempts yet";
+        var nextAttempt = outbox.NextAttemptAtUtc.HasValue
+            ? $"next {outbox.NextAttemptAtUtc.Value.ToLocalTime():g}"
+            : "no retry scheduled";
+        var completed = outbox.CompletedAtUtc.HasValue
+            ? $"completed {outbox.CompletedAtUtc.Value.ToLocalTime():g}"
+            : "not completed";
+
+        return $"{lastAttempt} / {nextAttempt} / {completed}";
+    }
+
+    private static string ResolveRecoveryTone(ProcessRecoveryClassification classification)
+    {
+        return classification switch
+        {
+            ProcessRecoveryClassification.None => "success",
+            ProcessRecoveryClassification.ManualRerun or
+                ProcessRecoveryClassification.MissingArtifact or
+                ProcessRecoveryClassification.OutboxDeadLetter => "warning",
+            _ => "info"
+        };
+    }
+
+    private static string ResolveConfidenceTone(int confidence)
+    {
+        return confidence switch
+        {
+            >= 80 => "success",
+            >= 50 => "warning",
+            > 0 => "info",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveArtifactTone(ProcessArtifactExpectationSatisfactionStatus status)
+    {
+        return status switch
+        {
+            ProcessArtifactExpectationSatisfactionStatus.Satisfied => "mint",
+            ProcessArtifactExpectationSatisfactionStatus.AutoProjected => "info",
+            ProcessArtifactExpectationSatisfactionStatus.Missing => "warning",
+            ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+                ProcessArtifactExpectationSatisfactionStatus.InvalidFormat or
+                ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence or
+                ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun or
+                ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode or
+                ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+                ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch => "danger",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveArtifactTrustTone(ProcessArtifactTrustStatus status)
+    {
+        return status switch
+        {
+            ProcessArtifactTrustStatus.Approved or
+                ProcessArtifactTrustStatus.TrustedSource => "success",
+            ProcessArtifactTrustStatus.Rejected => "danger",
+            ProcessArtifactTrustStatus.ReviewRequired => "warning",
+            _ => "neutral"
+        };
+    }
+
+    private static string ResolveOutboxHealthTone(ProcessOutboxHealthStatus status)
+    {
+        return status switch
+        {
+            ProcessOutboxHealthStatus.Completed => "success",
+            ProcessOutboxHealthStatus.DeadLettered => "danger",
+            ProcessOutboxHealthStatus.WaitingToRetry => "warning",
+            ProcessOutboxHealthStatus.Leased => "info",
+            _ => "neutral"
+        };
+    }
+
+    private sealed record ProcessManagerConsoleResolution(
+        string ReasonCode,
+        int Confidence,
+        string Summary,
+        IReadOnlyList<string> CandidateSummaries);
 }

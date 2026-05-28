@@ -1,3 +1,6 @@
-# SB04 changed-file-hashes.txt
-
-Pending.
+Invariant: SB04-INV-005 changed source, test, and guidance files are pinned by SHA-256.
+Command: Get-FileHash -Algorithm SHA256 <SB04 changed files>
+A7BBC03F4B0799D748AE5AE318D0F98E00790BD3CEF15FAD75AAF7007AC25049  src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs
+9D5DB5B4FF54568CC2CC59A90F597E391BB4D33AD783820CBEAE135EA196EB7D  tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs
+CECE3445E09DDBBCECA88CF2B44D93E4FDED7C2E4A44C9A527FE4C2C57CB9C58  src\CanDoItAll.Modules.Processes\README.md
+ExitCode: 0

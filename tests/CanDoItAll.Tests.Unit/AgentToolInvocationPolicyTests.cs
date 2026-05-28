@@ -1628,6 +1628,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData(AgentToolInvocationPolicyMetadata.RunSkillScript, ToolInvocationClassification.Mutation)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateImport, ToolInvocationClassification.Mutation)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList, ToolInvocationClassification.Read)]
+    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList, ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureRead, ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate, ToolInvocationClassification.Mutation)]
     [InlineData("project_structure_unregistered_mutation", ToolInvocationClassification.Unknown)]
@@ -2101,7 +2102,8 @@ public sealed class AgentToolInvocationPolicyTests
             AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
             AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
             AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
-            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
         };
     }
 

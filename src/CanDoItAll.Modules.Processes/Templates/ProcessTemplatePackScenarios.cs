@@ -110,11 +110,28 @@ public sealed class ProcessTemplateLiveRunProfile
 
     public string TriggerReasonTemplate { get; set; } = string.Empty;
 
+    public ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy { get; set; } = new();
+
     public List<ProcessTemplateLiveRunProfileAssignment> Assignments { get; set; } = [];
 
     public List<ProcessTemplateLiveRunProfileAcceptanceCriterion> AcceptanceCriteria { get; set; } = [];
 
     public List<string> RequiredProofKinds { get; set; } = [];
+}
+
+public sealed class ProcessTemplateLiveRunFreshRunPolicy
+{
+    public bool RequiresFreshRun { get; set; }
+
+    public bool AllowsSeededTransitions { get; set; }
+
+    public bool AllowsSeededArtifacts { get; set; }
+
+    public List<string> RequiredPreDispatchChecks { get; set; } = [];
+
+    public List<string> RequiredEvidenceChecks { get; set; } = [];
+
+    public string ProjectStructureWritebackGuidance { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateLiveRunProfileAssignment
@@ -182,6 +199,7 @@ public sealed record ProcessTemplateLiveRunProfileSummary(
     string Summary,
     string OperatingMode,
     string TriggerReasonTemplate,
+    ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy,
     int AssignmentCount,
     int AcceptanceCriterionCount,
     int RequiredProofKindCount);

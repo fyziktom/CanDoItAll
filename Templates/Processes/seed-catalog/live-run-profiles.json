@@ -6,6 +6,23 @@
     "Summary": "Live-run profile for a fresh Blazor WebAssembly PWA delivery run. The app topic and acceptance criteria come from the run request; this profile does not seed transitions or artifacts.",
     "OperatingMode": "GovernedLive",
     "TriggerReasonTemplate": "Deliver a Blazor WebAssembly PWA for {AppTopic} from the approved project-structure node. Acceptance criteria must be supplied by the run request and should cover the app's primary user workflow, responsive UI, state behavior, PWA manifest/service-worker readiness where feasible, build/test proof, browser screenshot, console proof with no active JavaScript/runtime errors, and project-structure writeback. The first step resolves architecture and contract only; implementation owns code; validation and QA cannot mutate code.",
+    "FreshRunPolicy": {
+      "RequiresFreshRun": true,
+      "AllowsSeededTransitions": false,
+      "AllowsSeededArtifacts": false,
+      "RequiredPreDispatchChecks": [
+        "Confirm the run request supplies the concrete app topic and acceptance criteria.",
+        "Confirm no baseline scenario transitions are imported into the live run.",
+        "Confirm no baseline scenario artifacts are imported into the live run.",
+        "Confirm the first executable work is architecture and contract resolution before implementation."
+      ],
+      "RequiredEvidenceChecks": [
+        "Before validation, read run detail and confirm required artifact expectations are satisfied by current-run evidence.",
+        "Confirm projection lineage points to the current run and not to a seeded baseline scenario.",
+        "Confirm runtime invariant diagnostics are clear before project-structure writeback."
+      ],
+      "ProjectStructureWritebackGuidance": "Write back only current-run managed output and evidence roots with project-structure lineage; do not write seeded baseline artifacts or transition receipts as live delivery evidence."
+    },
     "Assignments": [
       {
         "StepKey": "",

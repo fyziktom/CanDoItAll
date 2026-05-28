@@ -1,3 +1,53 @@
-# SB09 source-assertions.txt
-
-Pending.
+Invariant: SB09-INV-001
+Command: rg -n "FreshRunPolicy|RequiresFreshRun|AllowsSeededTransitions|AllowsSeededArtifacts|RequiredPreDispatchChecks|RequiredEvidenceChecks|ProjectStructureWritebackGuidance" src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs
+113:    public ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy { get; set; } = new();
+122:public sealed class ProcessTemplateLiveRunFreshRunPolicy
+124:    public bool RequiresFreshRun { get; set; }
+126:    public bool AllowsSeededTransitions { get; set; }
+128:    public bool AllowsSeededArtifacts { get; set; }
+130:    public List<string> RequiredPreDispatchChecks { get; set; } = [];
+132:    public List<string> RequiredEvidenceChecks { get; set; } = [];
+134:    public string ProjectStructureWritebackGuidance { get; set; } = string.Empty;
+ExitCode: 0
+Command: rg -n "FreshRunPolicy|RequiresFreshRun|AllowsSeededTransitions|AllowsSeededArtifacts|current-run evidence|current-run managed output" Templates\Processes\seed-catalog\live-run-profiles.json
+9:    "FreshRunPolicy": {
+10:      "RequiresFreshRun": true,
+11:      "AllowsSeededTransitions": false,
+12:      "AllowsSeededArtifacts": false,
+20:        "Before validation, read run detail and confirm required artifact expectations are satisfied by current-run evidence.",
+24:      "ProjectStructureWritebackGuidance": "Write back only current-run managed output and evidence roots with project-structure lineage; do not write seeded baseline artifacts or transition receipts as live delivery evidence."
+75:        "Description": "Architecture is read-only, implementation is the only normal product mutation step, validation is non-mutating, and final writeback records current-run evidence with project-structure lineage."
+ExitCode: 0
+Command: rg -n "2\.1\.0-live-run-governance|LiveRunProfilesPath" Templates\Processes\manifest.json
+4:  "Version": "2.1.0-live-run-governance",
+22:    "LiveRunProfilesPath": "seed-catalog/live-run-profiles.json"
+ExitCode: 0
+Command: rg -n "FreshRunPolicy|AllowsSeededTransitions|AllowsSeededArtifacts|Seeded artifacts|ProcessTemplateGovernanceTests" Templates\Processes\README.md
+29:- Baseline scenarios are fixture data for governance and regression proof. Live-run profiles must declare `FreshRunPolicy`, require a fresh run, and keep `AllowsSeededTransitions` and `AllowsSeededArtifacts` false unless a future migration profile explicitly documents why replaying seeded state is safe.
+30:- Live-run profile guidance must require current-run evidence checks before validation and project-structure writeback. Seeded artifacts, seeded transition receipts, and baseline scenario outputs are not live delivery evidence.
+47:Use `ProcessTemplateGovernanceTests` to validate JSON references, dependency graphs, artifact inputs, live-run profiles, and current baseline expectations:
+50:dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessTemplateGovernanceTests"
+ExitCode: 0
+Command: rg -n "FreshRunPolicy|AllowsSeededTransitions|AllowsSeededArtifacts|current-run evidence|current-run managed output" tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs
+159:        Assert.True(profile.FreshRunPolicy.RequiresFreshRun);
+160:        Assert.False(profile.FreshRunPolicy.AllowsSeededTransitions);
+161:        Assert.False(profile.FreshRunPolicy.AllowsSeededArtifacts);
+162:        Assert.NotEmpty(profile.FreshRunPolicy.RequiredPreDispatchChecks);
+163:        Assert.NotEmpty(profile.FreshRunPolicy.RequiredEvidenceChecks);
+165:            profile.FreshRunPolicy.RequiredPreDispatchChecks,
+168:            profile.FreshRunPolicy.RequiredPreDispatchChecks,
+171:            profile.FreshRunPolicy.RequiredEvidenceChecks,
+172:            check => check.Contains("current-run evidence", StringComparison.OrdinalIgnoreCase));
+174:            "current-run managed output",
+175:            profile.FreshRunPolicy.ProjectStructureWritebackGuidance,
+182:        AssertNoDemoTopicTerms(profile.FreshRunPolicy.ProjectStructureWritebackGuidance);
+ExitCode: 0
+Command: rg -n "LaunchRuntime" Templates\Processes\seed-catalog\baseline-scenarios.json
+1577:          "LaunchRuntime",
+1590:          "LaunchRuntime",
+ExitCode: 0
+Command: rg -n "LiveRunProfiles|ReadJson<List<ProcessTemplateLiveRunProfile>>|manifest.SeedCatalog.LiveRunProfilesPath" src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackLoader.cs
+39:        var liveRunProfiles = string.IsNullOrWhiteSpace(manifest.SeedCatalog.LiveRunProfilesPath)
+41:            : ReadJson<List<ProcessTemplateLiveRunProfile>>(Path.Combine(root, manifest.SeedCatalog.LiveRunProfilesPath));
+106:            LiveRunProfiles = liveRunProfiles,
+ExitCode: 0

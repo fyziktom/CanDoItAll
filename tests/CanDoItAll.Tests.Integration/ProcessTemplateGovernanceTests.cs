@@ -38,7 +38,8 @@ public sealed class ProcessTemplateGovernanceTests
         ("baseline-business-plan-development", "business-plan-development"),
         ("baseline-incident-response", "incident-response"),
         ("baseline-release-readiness-and-deployment", "release-readiness-and-deployment"),
-        ("baseline-architecture-decision-governance", "architecture-decision-governance")
+        ("baseline-architecture-decision-governance", "architecture-decision-governance"),
+        ("baseline-agent-training-and-improvement", "ai-assisted-change-delivery")
     ];
 
     [Fact]
@@ -156,11 +157,30 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.NotEmpty(profile.Assignments);
         Assert.NotEmpty(profile.AcceptanceCriteria);
         Assert.NotEmpty(profile.RequiredProofKinds);
+        Assert.True(profile.FreshRunPolicy.RequiresFreshRun);
+        Assert.False(profile.FreshRunPolicy.AllowsSeededTransitions);
+        Assert.False(profile.FreshRunPolicy.AllowsSeededArtifacts);
+        Assert.NotEmpty(profile.FreshRunPolicy.RequiredPreDispatchChecks);
+        Assert.NotEmpty(profile.FreshRunPolicy.RequiredEvidenceChecks);
+        Assert.Contains(
+            profile.FreshRunPolicy.RequiredPreDispatchChecks,
+            check => check.Contains("no baseline scenario transitions", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            profile.FreshRunPolicy.RequiredPreDispatchChecks,
+            check => check.Contains("no baseline scenario artifacts", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            profile.FreshRunPolicy.RequiredEvidenceChecks,
+            check => check.Contains("current-run evidence", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            "current-run managed output",
+            profile.FreshRunPolicy.ProjectStructureWritebackGuidance,
+            StringComparison.OrdinalIgnoreCase);
         Assert.Null(typeof(ProcessTemplateLiveRunProfile).GetProperty("Transitions"));
         Assert.Null(typeof(ProcessTemplateLiveRunProfile).GetProperty("Artifacts"));
         AssertNoDemoTopicTerms(profile.RunNameTemplate);
         AssertNoDemoTopicTerms(profile.Summary);
         AssertNoDemoTopicTerms(profile.TriggerReasonTemplate);
+        AssertNoDemoTopicTerms(profile.FreshRunPolicy.ProjectStructureWritebackGuidance);
     }
 
     [Fact]

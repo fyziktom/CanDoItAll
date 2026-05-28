@@ -1,3 +1,22 @@
-# SB05 passing.txt
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb05-integration-bin\ --filter "FullyQualifiedName~ProcessExternalTargetGroundingServiceTests|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.BuildExecutionPromptCore_requires_external_target_final_delivery_proof_when_grounded|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ResolveOutOfScopeExternalTargetReferenceSummary" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb05-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
 
-Pending.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    14, Přeskočeno:     0, Celkem:    14, Doba trvání: 189 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb05-integration-bin\ --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.BuildProcessInvocationMetadataJson_allows_external_target_from_project_structure_grounding|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.BuildProcessInvocationMetadataJson_keeps_backup_and_evidence_roots_read_only_for_mutating_step|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.BuildRecoveryDirective_warns_about_stale_external_target_evidence_and_restates_current_grounding" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb05-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 446 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb05-integration-bin\ --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.TryResolveExternalTargetHintFromProjectStructureGrounding|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.TrySplitExternalTargetAliasForScaffold|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.PruneAllowedExternalTargetAliasesForCurrentRun|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.TryMapAbsoluteExternalPathToAlias" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb05-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    26, Přeskočeno:     0, Celkem:    26, Doba trvání: 151 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+CombinedExitCode: 0

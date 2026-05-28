@@ -1,8 +1,17 @@
 # Processes Post-Live-Run Hardening + Docs v1
 
+## Validation Summary
+
+- Bundle preparation status: `Prepared`
+- Bundle readiness gate: `Passed 2026-05-28 via validate_bundle.py --stage prepared`
+- Execution status: `Completed; SB01-SB18 completed`
+- Subbundle gate review: `SB01-SB18 passed`
+- Final closure gate: `Passed 2026-05-28 via validate_bundle.py --stage completed`
+- Browser validation analytics: `SB01-SB12 N/A; SB13 passed on 2026-05-28; SB18 final red-team passed on 2026-05-28 against local browser route 127.0.0.1:51313/processes?processId=840687f5-249b-4b79-9752-0bd17d4d6d7e&runId=dabb14ef-8053-48db-a83d-ca709858565a with screenshot bundle://proof/SB18/browser/operator-console-final-red-team.png`
+
 ## Status
 
-Prepared for Codex execution.
+Execution completed after structural repair. SB01-SB18 are closed with artifact-backed proof and the final readiness verdict is GO for broader real process testing.
 
 ## Branch context
 

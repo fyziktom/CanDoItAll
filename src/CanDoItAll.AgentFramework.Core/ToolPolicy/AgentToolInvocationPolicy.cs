@@ -1801,6 +1801,7 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateMermaidGet = "processes_template_mermaid_get";
     public const string ProcessesTemplateImport = "processes_template_import";
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
+    public const string ProcessesTemplateLiveRunProfilesList = "processes_template_live_run_profiles_list";
     public const string ImageGenerationCreate = "image_generation_create";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
     public const string ProjectStructureProjectsList = "project_structure_projects_list";
@@ -1922,7 +1923,8 @@ public static class AgentToolInvocationPolicyMetadata
             Read(ProcessesTemplatesList),
             Read(ProcessesTemplateGet),
             Read(ProcessesTemplateMermaidGet),
-            Read(ProcessesTemplateBaselineScenariosList)
+            Read(ProcessesTemplateBaselineScenariosList),
+            Read(ProcessesTemplateLiveRunProfilesList)
         }
         .Concat(ProjectStructureReadToolNames.Select(Read))
         .Concat(ProjectStructureMutationToolNames.Select(Mutation))

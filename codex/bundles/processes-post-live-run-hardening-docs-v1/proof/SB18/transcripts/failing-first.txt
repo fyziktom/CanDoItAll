@@ -1,3 +1,24 @@
-# SB18 failing-first.txt
+# SB18 Failing-first And Adversarial Proof
 
-Pending.
+Invariant IDs: SB18-INV-001, SB18-INV-002, SB18-INV-003
+
+## Broad Component Command Rejected
+
+Command:
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~ProcessWorkspaceTests" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-components\ --logger "console;verbosity=normal"
+
+Result:
+The broad component command timed out with exit code 124 during SB15 proof-harness work, so SB18 does not use it as final release-readiness proof.
+
+ExpectedExitCode: 124
+
+## Stale Pending Closure Markers Rejected
+
+Command:
+$pattern = 'Execution status: `In progress`|Final readiness verdict: `Pending`|\| SB18 \| Pending|\| RN03 \| Partially solved|\| RN15 \| Partially solved|Status: Ready'; $output = rg -n $pattern codex\bundles\processes-post-live-run-hardening-docs-v1\README.md codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md codex\bundles\processes-post-live-run-hardening-docs-v1\subbundles\18-final-governance-red-team-and-release-readiness\README.md 2>&1; if ($LASTEXITCODE -eq 1) { 'No stale pending closure markers found.'; exit 0 } if ($LASTEXITCODE -eq 0) { $output; exit 1 } $output; exit $LASTEXITCODE
+
+Output:
+No stale pending closure markers found.
+
+ExitCode: 0
+ExpectedRgExitCode: 1

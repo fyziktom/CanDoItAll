@@ -105,7 +105,7 @@
         "TargetStatus": "Blocked",
         "SelectedBranchOutcomeKey": "",
         "BlockCause": "PolicyDenied",
-        "Reason": "Blocked pending explicit security exception owner and residual-risk containment.",
+        "Reason": "Blocked until an explicit security exception owner and residual-risk containment are recorded.",
         "DecidedBy": "Ivana Security"
       }
     ],
@@ -1382,6 +1382,292 @@
     ]
   },
   {
+    "Key": "baseline-agent-training-and-improvement",
+    "ProcessTemplateKey": "ai-assisted-change-delivery",
+    "RunName": "Agent training and improvement / delegation policy refinement",
+    "Summary": "Baseline agent-improvement run that exercises bounded delegation, trace capture, evaluation, safety review, and rework routing without assuming a software-only delivery path.",
+    "OperatingMode": "AssistedExecution",
+    "TriggerReason": "Seeded baseline scenario for improving an agent delegation policy and training prompt pack from evaluation evidence and safety review.",
+    "Assignments": [
+      {
+        "StepKey": "",
+        "RoleKey": "product-owner",
+        "DisplayName": "Pat Outcome Owner",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns the improvement goal and acceptance boundary for agent behavior.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "delegation-design",
+        "RoleKey": "solution-architect",
+        "DisplayName": "Rina Delegation Architect",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns delegation boundaries, permitted tools, and refusal conditions.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "agent-execution",
+        "RoleKey": "software-engineer",
+        "DisplayName": "Atlas Agent Runner",
+        "ExecutorKind": "agent",
+        "BindingReason": "Executes the bounded training-pack improvement and captures trace evidence.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "RoleKey": "ai-evaluation-lead",
+        "DisplayName": "Evan Evaluation",
+        "ExecutorKind": "person-or-agent",
+        "BindingReason": "Owns benchmark selection and evidence adequacy for the improved agent behavior.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "RoleKey": "ai-safety-reviewer",
+        "DisplayName": "Sam Safety",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns safety, refusal-boundary, and residual-risk review.",
+        "IsFallback": false
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "RoleKey": "model-risk-approver",
+        "DisplayName": "Morgan Risk",
+        "ExecutorKind": "person",
+        "BindingReason": "Owns the rework decision when evaluation exposes unsafe agent behavior.",
+        "IsFallback": false
+      }
+    ],
+    "Transitions": [
+      {
+        "StepKey": "task-intake",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Improvement goal and human acceptance boundary captured for the agent training pack.",
+        "DecidedBy": "Pat Outcome Owner"
+      },
+      {
+        "StepKey": "delegation-design",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "delegate",
+        "Reason": "Delegation boundary approved for a bounded training-pack update with explicit refusal criteria.",
+        "DecidedBy": "Rina Delegation Architect"
+      },
+      {
+        "StepKey": "agent-execution",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Agent runner produced the training-pack update and captured full execution trace.",
+        "DecidedBy": "Atlas Agent Runner"
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Evaluation compared before and after agent behavior against the approved benchmark cases.",
+        "DecidedBy": "Evan Evaluation"
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "rework",
+        "Reason": "Safety review routed the improvement to rework because refusal-boundary evidence remained incomplete.",
+        "DecidedBy": "Morgan Risk"
+      },
+      {
+        "StepKey": "capture-rework-decision",
+        "TargetStatus": "Completed",
+        "SelectedBranchOutcomeKey": "",
+        "Reason": "Rework decision recorded with the missing safety evidence and next benchmark owner.",
+        "DecidedBy": "Sam Safety"
+      }
+    ],
+    "Artifacts": [
+      {
+        "StepKey": "task-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Intake brief",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from agent evaluation findings and operator feedback.",
+        "AllowedFutureUsageSummary": "Reusable for delegation design, evaluation, and safety review.",
+        "ReviewSummary": "Improvement goal, current behavior gap, and acceptance boundary are explicit."
+      },
+      {
+        "StepKey": "task-intake",
+        "ArtifactKind": "Brief",
+        "Title": "Acceptance criteria pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from desired agent behavior, refusal requirements, and benchmark examples.",
+        "AllowedFutureUsageSummary": "Reusable by delegation, execution, evaluation, and rework steps.",
+        "ReviewSummary": "Desired behaviors, prohibited behaviors, and benchmark pass criteria are separated."
+      },
+      {
+        "StepKey": "delegation-design",
+        "ArtifactKind": "Prompt",
+        "Title": "Delegation contract and prompt package",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Prepared from intake criteria, permitted tools, and training-pack boundaries.",
+        "AllowedFutureUsageSummary": "Reusable by agent execution and evaluation.",
+        "ReviewSummary": "Tool limits, refusal criteria, and allowed training-pack changes are explicit."
+      },
+      {
+        "StepKey": "delegation-design",
+        "ArtifactKind": "Brief",
+        "Title": "Delegation configuration snapshot",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from approved execution settings and tool permissions.",
+        "AllowedFutureUsageSummary": "Reusable for trace replay, evaluation, and safety review.",
+        "ReviewSummary": "Allowed operations and prohibited escalation paths are explicit."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ArtifactKind": "Evidence",
+        "Title": "Execution trace pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured from the bounded agent training-pack update run.",
+        "AllowedFutureUsageSummary": "Reusable for evaluation, safety review, and rework planning.",
+        "ReviewSummary": "Inputs, tool use, outputs, and boundary decisions are traceable."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ArtifactKind": "Deliverable",
+        "Title": "Delegated change set",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Produced by the agent runner within the approved training-pack scope.",
+        "AllowedFutureUsageSummary": "Reusable for benchmark evaluation and follow-up rework.",
+        "ReviewSummary": "Changed training prompts, expected behavior deltas, and known limits are explicit."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ArtifactKind": "Evidence",
+        "Title": "Agent execution provenance summary",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Summarized from execution trace, prompt package, and generated update.",
+        "AllowedFutureUsageSummary": "Reusable for audit and safety review.",
+        "ReviewSummary": "Agent identity, prompt version, tool boundaries, and generated artifacts are explicit."
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "ArtifactKind": "Evidence",
+        "Title": "Evaluation benchmark report",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from benchmark cases comparing original and improved agent behavior.",
+        "AllowedFutureUsageSummary": "Reusable for safety review and future training regressions.",
+        "ReviewSummary": "Pass/fail cases, regression findings, and confidence limits are explicit."
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "ArtifactKind": "Evidence",
+        "Title": "Test evidence pack",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Internal",
+        "ProvenanceSummary": "Captured from repeatable agent behavior checks and refusal-boundary probes.",
+        "AllowedFutureUsageSummary": "Reusable for safety review and rework validation.",
+        "ReviewSummary": "Benchmark prompts, expected outcomes, observed outcomes, and failures are explicit."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "ArtifactKind": "Evidence",
+        "Title": "Security review note",
+        "TrustStatus": "ReviewRequired",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Captured during safety and security review of the improved agent behavior.",
+        "AllowedFutureUsageSummary": "Reusable for rework planning and future model-risk review.",
+        "ReviewSummary": "Residual safety gaps, data boundaries, and refusal-risk concerns are explicit."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "ArtifactKind": "Decision",
+        "Title": "AI-assisted merge approval note",
+        "TrustStatus": "HumanApproved",
+        "SensitivityLevel": "Confidential",
+        "ProvenanceSummary": "Recorded by model-risk approver after reviewing evaluation and safety evidence.",
+        "AllowedFutureUsageSummary": "Reusable for rework routing and audit.",
+        "ReviewSummary": "Merge withheld; rework owner, missing evidence, and next benchmark scope are explicit."
+      }
+    ],
+    "ContractExercises": [
+      {
+        "StepKey": "delegation-design",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Delegation design can read context and decide whether bounded agent execution is allowed without mutating the target."
+      },
+      {
+        "StepKey": "agent-execution",
+        "ExpectedTargetScope": "ExternalProductTargetMutable",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "MutateProductTarget",
+          "RunValidation",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Agent execution is the only delegated mutation lane for the training-pack improvement."
+      },
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "RunValidation",
+          "CaptureRuntimeProof",
+          "WriteManagedProcessArtifacts"
+        ],
+        "Purpose": "Evaluation can run validation and capture proof without changing the improved training pack."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "ExpectedTargetScope": "ExternalProductTargetReadOnly",
+        "ExpectedAllowedOperations": [
+          "ReadProcessContext",
+          "ReadProjectStructure",
+          "ReadUpstreamArtifacts",
+          "WriteManagedProcessArtifacts",
+          "EscalateOrDecide"
+        ],
+        "Purpose": "Safety review can approve, reject, or route rework from evidence without mutating the target."
+      }
+    ],
+    "RecoveryExercises": [
+      {
+        "StepKey": "evaluation-and-benchmarking",
+        "BlockCause": "RuntimeEvidence",
+        "ExpectedRecoveryOptions": [
+          "RerunValidation",
+          "RepairImplementation"
+        ],
+        "Diagnostic": "Validation failed: refusal-boundary benchmark did not prove the improved agent behavior."
+      },
+      {
+        "StepKey": "safety-and-security-review",
+        "BlockCause": "PolicyDenied",
+        "ExpectedRecoveryOptions": [
+          "HumanEscalation",
+          "ReworkContinuation"
+        ],
+        "Diagnostic": "Policy denied: agent training update lacks a documented safety owner for the new behavior."
+      }
+    ]
+  },
+  {
     "Key": "baseline-blazor-wasm-pwa-app",
     "ProcessTemplateKey": "blazor-app-delivery",
     "RunName": "Blazor WASM PWA delivery / generic application",
@@ -1574,6 +1860,7 @@
           "ReadUpstreamArtifacts",
           "MutateProductTarget",
           "RunValidation",
+          "LaunchRuntime",
           "WriteManagedProcessArtifacts"
         ],
         "Purpose": "Implementation is the owned mutation step for the requested Blazor WASM PWA product target."

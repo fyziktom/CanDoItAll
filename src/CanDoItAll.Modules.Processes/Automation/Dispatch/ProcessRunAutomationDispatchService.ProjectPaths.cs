@@ -91,33 +91,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         out string absolutePath,
         out string mappedAlias)
     {
-        absolutePath = string.Empty;
-        mappedAlias = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(groundingSummary))
-        {
-            return false;
-        }
-
-        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(groundingSummary)
-                     .Select(candidatePath => TryNormalizeAbsoluteExternalPathCandidate(candidatePath, out var normalized)
-                         ? normalized
-                         : string.Empty)
-                     .Where(candidatePath => !string.IsNullOrWhiteSpace(candidatePath))
-                     .OrderByDescending(GetExternalTargetHintPriority)
-                     .ThenByDescending(candidatePath => candidatePath.Length))
-        {
-            if (!TryMapAbsoluteExternalPathToAlias(candidatePath, out var alias))
-            {
-                continue;
-            }
-
-            absolutePath = candidatePath;
-            mappedAlias = alias;
-            return true;
-        }
-
-        return false;
+        var result = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(groundingSummary);
+        absolutePath = result.AbsolutePath;
+        mappedAlias = result.MappedAlias;
+        return result.HasTarget;
     }
 
     private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveProjectStructureExternalTargetHintsForFocus(
@@ -559,60 +536,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static int GetExternalTargetHintPriority(string path)
-    {
-        var alias = TryMapAbsoluteExternalPathToAlias(path, out var mappedAlias)
-            ? mappedAlias
-            : path.Replace('\\', '/');
-        if (IsNonProductExternalTargetAlias(alias))
-        {
-            return -100;
-        }
-
-        var leaf = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .LastOrDefault() ?? string.Empty;
-        return leaf switch
-        {
-            "product" => 100,
-            "app" => 90,
-            "output" => 85,
-            "dist" => 85,
-            "publish" => 85,
-            "src" => 80,
-            "source" => 80,
-            _ => 10
-        };
-    }
+        => ProcessExternalTargetGroundingService.GetExternalTargetHintPriority(path);
 
     private static bool TrySplitExternalTargetAliasForScaffold(
         string? mappedAlias,
         out string parentAlias,
         out string leafName)
-    {
-        parentAlias = string.Empty;
-        leafName = string.Empty;
-        if (string.IsNullOrWhiteSpace(mappedAlias))
-        {
-            return false;
-        }
-
-        var normalized = NormalizeExternalTargetAlias(mappedAlias);
-        if (!normalized.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var lastSlashIndex = normalized.LastIndexOf('/');
-        if (lastSlashIndex < ExternalTargetAliasRoot.Length + 2 ||
-            lastSlashIndex >= normalized.Length - 1)
-        {
-            return false;
-        }
-
-        parentAlias = normalized[..lastSlashIndex];
-        leafName = normalized[(lastSlashIndex + 1)..];
-        return !string.IsNullOrWhiteSpace(parentAlias) &&
-               !string.IsNullOrWhiteSpace(leafName);
-    }
+        => ProcessExternalTargetGroundingService.TrySplitExternalTargetAliasForScaffold(
+            mappedAlias,
+            out parentAlias,
+            out leafName);
 
     private static void AppendProjectStructureGroundingNodes(
         StringBuilder builder,

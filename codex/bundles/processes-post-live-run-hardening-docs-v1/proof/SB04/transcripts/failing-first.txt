@@ -1,3 +1,3 @@
-# SB04 failing-first.txt
-
-Pending.
+Invariant: SB04-INV-002 artifact recording must not save and notify without unique-conflict handling.
+Command: rg -n -U "await dbContext\.SaveChangesAsync\(cancellationToken\);\r?\n\s*NotifyRunObservationChanged\(run\.ProjectId, run\.ProcessDefinitionId, run\.Id\);\r?\n\s*return Result<Guid>\.Success\(artifact\.Id\);" src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs
+ExitCode: 1

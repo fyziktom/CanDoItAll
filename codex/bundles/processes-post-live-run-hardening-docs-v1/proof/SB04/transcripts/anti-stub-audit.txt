@@ -1,3 +1,5 @@
-# SB04 anti-stub-audit.txt
-
-Pending.
+Invariant: SB04-INV-003 SB04 runtime hardening must not rely on TODO, NotImplemented, or pending placeholders.
+Command: rg -n "TODO|NotImplementedException|Pending" <SB04 changed files>
+No TODO, NotImplementedException, or Pending markers found in SB04 changed files.
+SearchExitCode: 1
+ExitCode: 0

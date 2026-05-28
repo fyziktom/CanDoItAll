@@ -375,44 +375,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static string RedactUnallowedExternalTargetReferencesForPrompt(
         string text,
         IReadOnlyList<string> allowedAliases)
-    {
-        if (string.IsNullOrWhiteSpace(text) || allowedAliases.Count == 0)
-        {
-            return text;
-        }
-
-        var normalizedAllowedAliases = PruneAllowedExternalTargetAliasesForCurrentRun(allowedAliases);
-        if (normalizedAllowedAliases.Count == 0)
-        {
-            return text;
-        }
-
-        return WorkspacePathInToolRequestRegex.Replace(
-            text,
-            match =>
-            {
-                var rawPath = match.Groups["path"].Value;
-                if (string.IsNullOrWhiteSpace(rawPath))
-                {
-                    return rawPath;
-                }
-
-                var referencedAlias = rawPath.StartsWith(ExternalTargetAliasRoot + "/", StringComparison.OrdinalIgnoreCase) ||
-                                      rawPath.StartsWith(ExternalTargetAliasRoot + "\\", StringComparison.OrdinalIgnoreCase)
-                    ? NormalizeExternalTargetAlias(rawPath)
-                    : TryMapAbsoluteExternalPathToAlias(rawPath, out var mappedAlias)
-                        ? mappedAlias
-                        : string.Empty;
-                if (string.IsNullOrWhiteSpace(referencedAlias) ||
-                    IsAllowedExternalTargetReference(referencedAlias, normalizedAllowedAliases) ||
-                    IsDocumentedScaffoldParentReference(text, match.Index, referencedAlias, normalizedAllowedAliases))
-                {
-                    return rawPath;
-                }
-
-                return "[stale external-target path omitted]";
-            });
-    }
+        => ProcessExternalTargetGroundingService.RedactUnallowedReferencesForPrompt(text, allowedAliases);
 
     private static bool HasScaffoldOverwriteConflict(
         ExecutionRunDetail detail,

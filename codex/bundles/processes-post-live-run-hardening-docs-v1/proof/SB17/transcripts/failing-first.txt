@@ -1,3 +1,19 @@
-# SB17 failing-first.txt
+# SB17 Failing-First Proof
 
-Pending.
+Invariant: `SB17-INV-001`
+
+Command:
+
+```powershell
+$preChangeDocs = ((git show HEAD:Templates/Processes/README.md) -join "`n") + "`n" + ((git show HEAD:codex/skills/candoitall-api-processes/SKILL.md) -join "`n"); $matches = $preChangeDocs | Select-String -Pattern 'ProcessStepTargetScope|ProcessStepRecoveryOption|ProcessArtifactExpectationSatisfactionStatus'; if ($matches) { $matches; exit 0 } else { 'No pre-change exact enum parity markers found for ProcessStepTargetScope, ProcessStepRecoveryOption, or ProcessArtifactExpectationSatisfactionStatus.'; exit 1 }
+```
+
+Exit code: 1
+
+Output:
+
+```text
+No pre-change exact enum parity markers found for ProcessStepTargetScope, ProcessStepRecoveryOption, or ProcessArtifactExpectationSatisfactionStatus.
+```
+
+Result: the docs and skill had concept-level guidance, but did not include the exact source enum names needed for durable parity proof.

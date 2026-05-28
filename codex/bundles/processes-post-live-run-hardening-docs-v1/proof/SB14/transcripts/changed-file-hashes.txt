@@ -1,3 +1,11 @@
 # SB14 changed-file-hashes.txt
 
-Pending.
+Command:
+`Get-FileHash -Algorithm SHA256 Templates\Processes\manifest.json,Templates\Processes\seed-catalog\baseline-scenarios.json,tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs`
+
+ExitCode: 0
+
+Output:
+`FB4DFA08C6DC1E6C10A6449D5EC82D678C8B5BA1192EAFD529ED463F16E3B8F9  Templates\Processes\manifest.json`
+`C437A640BDBAF1CDDAFAEE59C5BA83EC460A1D8AB5ABD0C03C18D1D7407A3B99  Templates\Processes\seed-catalog\baseline-scenarios.json`
+`924FA9301C222F1B9D108831AB8F1CC5328E04E16DF8CE8EC1F6C017EE1DB963  tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs`

@@ -1,3 +1,27 @@
-# SB04 source-assertions.txt
-
-Pending.
+Invariant: SB04-INV-001 artifact recording serializes projection identity writes and resolves concurrent unique conflicts.
+Command: rg -n "BeginArtifactRecordTransactionAsync|ResolveArtifactRecordUniqueConflictAsync|pg_advisory_xact_lock|processes.artifact.unique-conflict|ProjectionIdentityHash|RetentionDays" src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs src\CanDoItAll.Modules.Processes\README.md tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs
+src\CanDoItAll.Modules.Processes\README.md:54:- **Artifacts and lineage**: `ProcessArtifactIdentityService`, `ProcessArtifactProjectionLineage`, artifact projection/finalizer code, and runtime read queries own identity hash, content hash, lineage, projection source, trust status, and expectation satisfaction. Retention remains definition-driven through artifact expectation `RetentionDays`; cleanup must be explicit, dry-run first, and must preserve lineage metadata needed to explain stale, duplicate, or hash-mismatched evidence.
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:43:        var identityHashIndex = FindRequired(source, "var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;");
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:44:        var lockIndex = FindRequired(source, "BeginArtifactRecordTransactionAsync", identityHashIndex);
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:45:        var existingProjectionIndex = FindRequired(source, "item.ProjectionIdentityHash == projectionIdentityHash", lockIndex);
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:48:        var resolveConflictIndex = FindRequired(source, "ResolveArtifactRecordUniqueConflictAsync", uniqueCatchIndex);
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:58:        Assert.Contains("pg_advisory_xact_lock", source, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:59:        Assert.Contains("processes.artifact.unique-conflict", source, StringComparison.Ordinal);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:37:        lineage.ProjectionIdentityHash = ComputeProjectionIdentityHash(lineage);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:41:    public static string ComputeProjectionIdentityHash(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:210:        builder.Property(record => record.ProjectionIdentityHash).HasMaxLength(95);
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:214:        builder.HasIndex(record => new { record.ProcessRunId, record.ProjectionIdentityHash })
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:216:            .HasFilter("\"ProjectionIdentityHash\" <> ''");
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:149:            $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))",
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:252:        var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:253:        await using var transaction = await BeginArtifactRecordTransactionAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:315:                    item.ProjectionIdentityHash == projectionIdentityHash)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:362:            ProjectionIdentityHash = projectionIdentityHash,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:403:            var resolvedConflict = await ResolveArtifactRecordUniqueConflictAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:425:                "processes.artifact.unique-conflict"));
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:432:    private static async Task<IDbContextTransaction?> BeginArtifactRecordTransactionAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:452:            $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))",
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:475:    private static async Task<Result<Guid>?> ResolveArtifactRecordUniqueConflictAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:490:                    item.ProjectionIdentityHash == projectionIdentityHash)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:727:                ProjectionIdentityHash = lineage.ProjectionIdentityHash
+ExitCode: 0

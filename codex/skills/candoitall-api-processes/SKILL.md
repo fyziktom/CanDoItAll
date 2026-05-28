@@ -19,12 +19,15 @@ Use this skill when a task needs process authoring or runtime control through th
 
 - Definition `contractMode`: `0` Compatibility, `1` Strict. Strict definitions reject text-inferred or missing risky operation contracts.
 - Step `allowedOperations`: include typed operations such as `ReadProcessContext`, `ReadProjectStructure`, `ReadUpstreamArtifacts`, `WriteManagedProcessArtifacts`, `WriteExternalArtifactDestination`, `MutateProductTarget`, `RunValidation`, `LaunchRuntime`, `CaptureRuntimeProof`, `ExecuteExternalAction`, `RecoverArtifactsOnly`, and `EscalateOrDecide`.
-- Step `operationTargetScope`: use the narrowest accurate target scope: managed artifacts, managed output product, external artifact destination, external product target read-only, external product target mutable, or external action controlled.
+- Step `operationTargetScope`: use the narrowest accurate `ProcessStepTargetScope` value: `ManagedProcessArtifactsOnly`, `ManagedOutputProduct`, `ExternalArtifactDestination`, `ExternalProductTargetReadOnly`, `ExternalProductTargetMutable`, or `ExternalActionControlled`.
 - Artifact expectation workflow mapping: preserve `workflowOutputId`, `workflowOutputName`, and `workflowOutputKind` when a required process artifact is produced by a workflow executor.
 - Artifact expectation subprocess mapping: preserve `subprocessChildArtifactExpectationId` when a parent process required artifact maps to a child process artifact.
 - Runtime block/recovery state: preserve `blockCause` on transitions. Use `OwnOutput` for the blocked step's missing/invalid required output, `UpstreamInput` for missing upstream materialization, `RuntimeEvidence` for validation/runtime failures, and `PolicyDenied` for governed policy blocks.
-- Runtime readbacks expose `blockReasonCode`, `recoveryOptions`, `nextRecoveryAction`, `health.recommendedAction`, `health.missingArtifactCount`, and invariant diagnostics. Read them after blocking or completing critical steps.
+- Runtime readbacks expose `blockReasonCode`, `recoveryOptions`, `nextRecoveryAction`, `health.recommendedAction`, `health.missingArtifactCount`, and invariant diagnostics. Recovery options are source-aligned with `ProcessStepRecoveryOption`: `None`, `WaitForArtifactMaterialization`, `RecoverArtifactsOnly`, `RetryAgent`, `FreshAgentSession`, `ReworkContinuation`, `HumanEscalation`, `RepairImplementation`, and `RerunValidation`.
+- Artifact expectation satisfaction statuses are source-aligned with `ProcessArtifactExpectationSatisfactionStatus`: `Expected`, `Satisfied`, `AutoProjected`, `Missing`, `ProjectionFailed`, `ContentUnavailable`, `NotApplicable`, `InvalidFormat`, `InsufficientEvidence`, `StaleOrWrongRun`, `WrongProducerMode`, `PlaceholderOnly`, and `ContentHashMismatch`.
+- Required artifact expectations remain unsatisfied when status is `Missing`, `ProjectionFailed`, `ContentUnavailable`, `InvalidFormat`, `InsufficientEvidence`, `StaleOrWrongRun`, `WrongProducerMode`, `PlaceholderOnly`, or `ContentHashMismatch`.
 - Artifact records that come from automation, workflow, subprocess, or manual recovery must keep projection lineage fields such as `projectionLineage`, `projectionLineageJson`, `projectionIdentityHash`, `externalReferenceKey`, and managed storage path. Do not replace lineage with prose.
+- Live-run profile summaries expose typed `freshRunPolicy`. Preserve `requiresFreshRun`, seeded transition/artifact rejection, pre-dispatch checks, evidence checks, and project-structure writeback guidance when selecting or documenting a live run.
 
 ## Definition And Template Work
 
@@ -45,6 +48,32 @@ Use this skill when a task needs process authoring or runtime control through th
 - Launch and HR matching: `/api/processes/launch-plans`, `/hr-match`, `/submit-approval`, `/approval-decisions`, `/provision`, `/execute`, and `/candidate-selections`.
 - Governed multi-agent process runs are expected to use the active PostgreSQL AppDbContext profile when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled.
 - After transitions, fetch either `/runs/{runId}/steps/{stepRunId}` for focused state or `/runs/{runId}` for health, invariant diagnostics, artifacts, workflow runs, assignments, and timeline.
+
+## Current-Run Troubleshooting Workflow
+
+Use this order before mutating a run:
+
+1. Read `/api/processes/runs/{runId}` with only the include flags needed for the question.
+2. Check run `health`, `invariantDiagnostics`, step `blockReasonCode`, `recoveryOptions`, `nextRecoveryAction`, and attempt timeline.
+3. For evidence issues, query the step-scoped artifact route and inspect artifact status, `projectionLineage`, `projectionIdentityHash`, `externalReferenceKey`, and managed storage path.
+4. For final delivery issues, verify the output is grounded by current-run project-structure context or managed output root. Do not accept stale external-target aliases or dated tool receipts as final delivery proof.
+5. For manager questions, inspect selected-run assignment and configured manager before using fallback manager chat or direct messages.
+6. For live UI-driven runs, read the live-run profile `freshRunPolicy` and reject seeded baseline transitions or artifacts as current-run evidence.
+7. Record the repair as a transition, assignment, artifact, manager directive, direct message, approval decision, or rerun request through the API. Do not patch database rows or JSON by hand.
+
+## Agent Skill And Tool Matrix
+
+Before dispatching or staffing an agent, evaluate required role capabilities with `AgentCapabilityRequirementEvaluator`. Treat `AgentCapabilityDiagnostic` values as blocking diagnostics; do not ask an agent to improvise process operations with missing tools, stale catalog assignments, or retired skills.
+
+| Role | Required skill/tool capabilities | Process access | Required behavior |
+| --- | --- | --- | --- |
+| Process author | `candoitall-api-processes`, `processes_definition_editor_get`, `processes_definition_save`, `processes_definition_publish`, template read tools, and `processes_template_import` only when importing | Read/write for allowed definitions | Use typed definition and template routes; do not mutate process JSON or database rows directly. |
+| Process manager | `candoitall-api-processes`, `processes_runs_list`, `processes_run_detail_get`, `processes_analytics_get`, `processes_step_transition`, `processes_assignment_resolve`, `processes_artifact_record` | Read/write for managed definitions | Inspect current run state before transitions and record assignment or artifact evidence through governed tools. |
+| Step executor | Workspace tools named by the work brief and `processes_artifact_record` only when the step records its own process artifact | Usually read-only process access | Complete the step with current-run evidence; do not synthesize process transitions when transition tools are absent. |
+| Reviewer or QA | Workspace read/validation/browser tools named by the step, `processes_run_detail_get`, `processes_artifact_record` when review evidence is required | Read access; write access only for assigned review artifacts or transitions | Review against current-run evidence and required receipts. |
+| Template curator | `processes_templates_list`, `processes_template_get`, `processes_template_mermaid_get`, `processes_template_baseline_scenarios_list`, `processes_template_live_run_profiles_list`, `processes_template_import` | Write access only for import/publish work | Inspect templates read-only unless import or publish is explicitly requested. |
+
+Runtime policy backs this matrix. `DefaultAgentToolInvocationPolicy` denies unknown tools and known tools without a registered policy classification, while process tools enforce `AgentProcessAccessMetadata` read/write scope.
 
 ## Filtering Rules
 
@@ -129,6 +158,35 @@ Content-Type: application/json
   "operatingMode": 2,
   "triggerReason": "Create and validate the requested Blazor WASM PWA."
 }
+```
+
+List fresh live-run profiles before starting a UI-driven run:
+
+```http
+GET /api/processes/templates/live-run-profiles
+```
+
+```json
+[
+  {
+    "key": "generic-blazor-wasm-pwa-app",
+    "processTemplateKey": "blazor-app-delivery",
+    "runNameTemplate": "Blazor WASM PWA delivery / {AppTopic}",
+    "operatingMode": "GovernedLive",
+    "freshRunPolicy": {
+      "requiresFreshRun": true,
+      "allowsSeededTransitions": false,
+      "allowsSeededArtifacts": false,
+      "requiredPreDispatchChecks": [
+        "Confirm the run request supplies the concrete app topic and acceptance criteria."
+      ],
+      "requiredEvidenceChecks": [
+        "Before validation, read run detail and confirm required artifact expectations are satisfied by current-run evidence."
+      ],
+      "projectStructureWritebackGuidance": "Write back only current-run managed output and evidence roots with project-structure lineage."
+    }
+  }
+]
 ```
 
 Block a step with typed recovery ownership:

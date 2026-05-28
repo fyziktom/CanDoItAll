@@ -525,6 +525,9 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/nodes/{nodeId}/workflow/status", out _));
         Assert.True(paths.TryGetProperty("/api/project-structure/projects/{projectId}/assets/{nodeId}/content", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/detail", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/envelope", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/mermaid", out _));
+        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/import", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/baseline-scenarios", out _));
         Assert.True(paths.TryGetProperty("/api/processes/templates/live-run-profiles", out _));
         Assert.True(paths.TryGetProperty("/api/processes/runs/{runId}/steps/{stepRunId}/artifacts", out _));
@@ -567,6 +570,35 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/claim", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/{jobId}/results", out _));
+    }
+
+    [Fact]
+    public async Task Api_live_run_profiles_expose_fresh_run_policy_contract()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        var profiles = await host.Client.GetFromJsonAsync<List<ProcessTemplateLiveRunProfileSummary>>("/api/processes/templates/live-run-profiles");
+        Assert.NotNull(profiles);
+        var profile = Assert.Single(
+            profiles,
+            item => string.Equals(item.Key, "generic-blazor-wasm-pwa-app", StringComparison.Ordinal));
+
+        Assert.Equal("blazor-app-delivery", profile.ProcessTemplateKey);
+        Assert.True(profile.FreshRunPolicy.RequiresFreshRun);
+        Assert.False(profile.FreshRunPolicy.AllowsSeededTransitions);
+        Assert.False(profile.FreshRunPolicy.AllowsSeededArtifacts);
+        Assert.NotEmpty(profile.FreshRunPolicy.RequiredPreDispatchChecks);
+        Assert.NotEmpty(profile.FreshRunPolicy.RequiredEvidenceChecks);
+        Assert.Contains(
+            profile.FreshRunPolicy.RequiredPreDispatchChecks,
+            check => check.Contains("no baseline scenario transitions", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            profile.FreshRunPolicy.RequiredEvidenceChecks,
+            check => check.Contains("current-run evidence", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            "current-run managed output",
+            profile.FreshRunPolicy.ProjectStructureWritebackGuidance,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -1,3 +1,9 @@
-# SB07 changed-file-hashes.txt
-
-Pending.
+Invariant: SB07-INV-001
+Command: Get-FileHash -Algorithm SHA256 <SB07 changed files>
+4C801448B3509682879E02B9AF772F8AB1F9F050A5E2C2165CE364481AACF8F4  src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerAgentResolver.cs
+423A06BD0478DBB1F9EFEA120E79BBD99BC39E11D8C2B9982AA95BDD3131CC59  src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatModels.cs
+82BAEB518258CEB012072FE9E1D8AA6252AA9D3F5FE4F78B9F2469861FAD8480  src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs
+48412B446C2DE2B1F865870422C5244DDA6D29E717CD728A7D44B884C59B463D  src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.ManagerChat.cs
+877918764E0302CB91A315CAAF9E33519B05D7D5F67D16EBEE63DB8DD0C99F72  src\CanDoItAll.Modules.Processes\README.md
+3A8E17D87B1A4F55639E212877320CC23F0DABF746DCBB294B896F5D5CC0CAFB  tests\CanDoItAll.Tests.Integration\ProcessObservationIntentResolverTests.cs
+ExitCode: 0

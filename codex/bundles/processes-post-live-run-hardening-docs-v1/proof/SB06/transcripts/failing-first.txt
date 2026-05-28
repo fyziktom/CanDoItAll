@@ -1,3 +1,11 @@
-# SB06 failing-first.txt
+Invariant: SB06-INV-001 adversarial proof rejects the former implicit helper path and noisy wrong-run/tool-receipt folders.
+Command: rg -n "ResolveManagedOutputDirectoryPath" src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAssemblyService.cs
+ExitCode: 1
+Expected non-zero exit: old private projection helper is removed from the projection contributor.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb06-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter FullyQualifiedName~ProjectWorkbenchServiceIntegrationTests.ProcessRunFolderProjectionPolicy_resolves_current_run_roots_and_ignores_noisy_paths -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb06-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
 
-Pending.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 37 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+CombinedExitCode: 1

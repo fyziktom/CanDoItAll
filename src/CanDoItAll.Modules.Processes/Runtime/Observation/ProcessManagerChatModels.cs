@@ -72,6 +72,9 @@ public sealed record ProcessManagerChatProjection(
     string RunLabel,
     string RunStateText,
     string RunStateTone,
+    string ManagerResolutionReasonCode,
+    int ManagerResolutionConfidence,
+    string ManagerResolutionSummary,
     string ErrorMessage)
 {
     public bool IsAvailable => ManagerAgent is not null && string.IsNullOrWhiteSpace(ErrorMessage);

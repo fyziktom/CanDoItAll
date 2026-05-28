@@ -707,6 +707,7 @@ internal static class ProcessesApi
                     item.Summary,
                     item.OperatingMode,
                     item.TriggerReasonTemplate,
+                    item.FreshRunPolicy,
                     item.Assignments.Count,
                     item.AcceptanceCriteria.Count,
                     item.RequiredProofKinds.Count))

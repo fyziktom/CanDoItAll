@@ -1,3 +1,25 @@
-# SB16 changed-file-hashes.txt
+# SB16 Audited-File Hashes
 
-Pending.
+Command:
+
+```powershell
+$root = (Get-Location).Path; Get-FileHash src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs,src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs,src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExternalTargetGroundingService.cs,src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs,src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerAgentResolver.cs,src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs,tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs,tests\CanDoItAll.Tests.Integration\ProcessExternalTargetGroundingServiceTests.cs,tests\CanDoItAll.Tests.Integration\ProcessObservationIntentResolverTests.cs,tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs,tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj -Algorithm SHA256 | ForEach-Object { "$($_.Hash)  $([System.IO.Path]::GetRelativePath($root, $_.Path))" }
+```
+
+Exit code: 0
+
+Output:
+
+```text
+FC9214C011F2E2A2363118D857415169451CB0EE2731D52884D33441CFEDAE5C  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs
+0DEAA25F444AC9891267C85E1E75AB08B21D05C91939ACED2025DD7B261B6F99  src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs
+FBCE1742CE3826CDC2715AD715C265A040E280F5523B3647A7B5D8BE2DE55A4B  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExternalTargetGroundingService.cs
+EAD979DACA4805835C5A3425E14F40B6F33E12199105AA9BEF381773373D8DB0  src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs
+4C801448B3509682879E02B9AF772F8AB1F9F050A5E2C2165CE364481AACF8F4  src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerAgentResolver.cs
+E0CDB0BA033B1D98F7096A4B890AF6723E3622ABF6627610343312EC434FCB9F  src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs
+7C7EA33BE52E0DD2F2CBF37C24B0CB8CA3A5933A0B09CB9D422BC811FF38CCFE  tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs
+E26756BE9EEB86539D2CA38AEA3FA116D3BD523298234CE74EC10E520FEDC74C  tests\CanDoItAll.Tests.Integration\ProcessExternalTargetGroundingServiceTests.cs
+3A8E17D87B1A4F55639E212877320CC23F0DABF746DCBB294B896F5D5CC0CAFB  tests\CanDoItAll.Tests.Integration\ProcessObservationIntentResolverTests.cs
+DB9730D0160920ECA6AFB08E2E5BEB1B6CDE4DF3FE2DF44ED7438D4D9FCE820E  tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+ECC931592EAB8735528F1C025198673B2EE1E4D7A7744421DC238AEFF6970238  tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj
+```

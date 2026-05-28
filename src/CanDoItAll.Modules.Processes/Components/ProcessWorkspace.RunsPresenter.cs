@@ -118,6 +118,21 @@ public partial class ProcessWorkspace
 
         public IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> InvariantDiagnostics => workspace.invariantDiagnostics;
 
+        public bool HasEvaluatedManagerResolution
+            => workspace.managerChatAgentResolution.ReasonCode != ProcessManagerAgentResolutionReasonCode.NotEvaluated;
+
+        public string ManagerResolutionReasonCode
+            => workspace.managerChatAgentResolution.ReasonCode.ToString();
+
+        public int ManagerResolutionConfidence
+            => workspace.managerChatAgentResolution.Confidence;
+
+        public string ManagerResolutionSummary
+            => workspace.managerChatAgentResolution.Summary;
+
+        public IReadOnlyList<string> ManagerResolutionCandidateSummaries
+            => workspace.managerChatAgentResolution.CandidateSummaries;
+
         public IReadOnlyList<ProcessActiveRunSummaryViewModel> ActiveRunSummaries => workspace.activeRunSummaries;
 
         public IReadOnlyList<ProjectPartyOption> PartyOptions => workspace.partyOptions;

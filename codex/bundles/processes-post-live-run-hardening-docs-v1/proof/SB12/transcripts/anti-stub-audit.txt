@@ -1,3 +1,8 @@
-# SB12 anti-stub-audit.txt
+# SB12 Anti-stub Audit
 
-Pending.
+Invariant IDs: SB12-INV-001, SB12-INV-002, SB12-INV-003
+Note: `placeholder-only` is a real artifact validation status, so this audit excludes the generic placeholder token.
+
+Command: rg -n "TODO|NotImplementedException|\bstub\b|\bfake\b|Tetris" [SB12 docs]
+ExitCode: 1
+ExpectedExitCode: 1

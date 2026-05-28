@@ -47,14 +47,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
         var projectStructureProjectId = projectStructureContext?.ProjectId ?? candidate.Run.ProjectId;
         var hasProjectStructureExecutionContext = projectStructureContext is not null || !string.IsNullOrWhiteSpace(projectStructureGroundingSummary);
-        var hasGroundedExternalTarget = TryResolveExternalTargetHintFromProjectStructureGrounding(
-            projectStructureGroundingSummary,
-            out var groundedExternalAbsolutePath,
-            out var groundedExternalMappedAlias);
-        var hasGroundedExternalScaffoldTarget = TrySplitExternalTargetAliasForScaffold(
-            groundedExternalMappedAlias,
-            out var groundedExternalParentAlias,
-            out var groundedExternalLeafName);
+        var groundedExternalTarget = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(projectStructureGroundingSummary);
+        var hasGroundedExternalTarget = groundedExternalTarget.HasTarget;
+        var groundedExternalAbsolutePath = groundedExternalTarget.AbsolutePath;
+        var groundedExternalMappedAlias = groundedExternalTarget.MappedAlias;
+        var hasGroundedExternalScaffoldTarget = groundedExternalTarget.ScaffoldTarget is not null;
+        var groundedExternalParentAlias = groundedExternalTarget.ScaffoldTarget?.ParentAlias ?? string.Empty;
+        var groundedExternalLeafName = groundedExternalTarget.ScaffoldTarget?.LeafName ?? string.Empty;
         var usesScaffoldContractDrivenSetup = UsesScaffoldContractDrivenSetup(candidate);
         var isDotNetSolutionSetupScaffoldMutationStep = IsDotNetSolutionSetupScaffoldMutationStep(candidate);
         var operationContract = ResolveProcessStepOperationContract(candidate);
@@ -67,7 +66,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             !requiresConcreteProductProof &&
             LooksLikeExternalArtifactDestination(candidate, projectStructureGroundingSummary);
         var requiredArtifactDefaultRoot = usesGroundedExternalArtifactDestination
-            ? groundedExternalMappedAlias ?? currentRunManagedArtifactRoot
+            ? groundedExternalMappedAlias
             : currentRunManagedArtifactRoot;
         var summarizedTriggerReason = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
         var builder = new StringBuilder();

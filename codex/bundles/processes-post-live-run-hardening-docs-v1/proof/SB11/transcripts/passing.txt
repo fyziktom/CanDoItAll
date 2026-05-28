@@ -1,3 +1,17 @@
-# SB11 passing.txt
+# SB11 Passing Proof
 
-Pending.
+Invariant IDs: SB11-INV-001, SB11-INV-002, SB11-INV-003
+
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb11-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~ApiIntegrationTests.Api_openapi_exposes_focused_control_plane_routes|FullyQualifiedName~ApiIntegrationTests.Api_live_run_profiles_expose_fresh_run_policy_contract|FullyQualifiedName~MafAgentRuntimeTests.CreateCapabilityState_attaches_internal_process_tools_by_default_when_workspace_services_are_available" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb11-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 24 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb11-unit-bin\ --filter "FullyQualifiedName~AgentToolInvocationPolicyTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb11-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   119, Přeskočeno:     0, Celkem:   119, Doba trvání: 181 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0

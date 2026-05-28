@@ -372,14 +372,14 @@ public sealed partial class ProcessRuntimeReadQueryService
                     expectation.ArtifactKind,
                     expectation.Title,
                     expectation.IsRequired,
-                    ResolveRejectedArtifactSatisfactionStatus(validationDiagnostic.Status),
+                    ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(validationDiagnostic.Status),
                     sourceKind,
                     artifact.Id,
                     artifact.Title,
                     artifact.ManagedStoragePath,
                     BuildArtifactValidationDiagnostic(validationDiagnostic))
                 {
-                    ValidationStatus = ResolveArtifactValidationStatus(validationDiagnostic.Status),
+                    ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(validationDiagnostic.Status),
                     FailureOwnership = validationDiagnostic.FailureOwnership,
                     ValidationAttemptedPath = validationDiagnostic.AttemptedPath,
                     ValidationSuggestedAction = validationDiagnostic.SuggestedAction
@@ -413,14 +413,14 @@ public sealed partial class ProcessRuntimeReadQueryService
                 expectation.ArtifactKind,
                 expectation.Title,
                 expectation.IsRequired,
-                ResolveRejectedArtifactSatisfactionStatus(missingDiagnostic.Status),
+                ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(missingDiagnostic.Status),
                 ProcessArtifactExpectationSourceKind.None,
                 missingDiagnostic.ArtifactRecordId,
                 string.Empty,
                 missingDiagnostic.AttemptedPath,
                 BuildArtifactValidationDiagnostic(missingDiagnostic))
             {
-                ValidationStatus = ResolveArtifactValidationStatus(missingDiagnostic.Status),
+                ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(missingDiagnostic.Status),
                 FailureOwnership = missingDiagnostic.FailureOwnership,
                 ValidationAttemptedPath = missingDiagnostic.AttemptedPath,
                 ValidationSuggestedAction = missingDiagnostic.SuggestedAction
@@ -488,58 +488,6 @@ public sealed partial class ProcessRuntimeReadQueryService
         }
 
         return diagnostic.ArtifactRecordId is null;
-    }
-
-    private static ProcessArtifactExpectationSatisfactionStatus ResolveRejectedArtifactSatisfactionStatus(
-        ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus status)
-    {
-        return status switch
-        {
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing =>
-                ProcessArtifactExpectationSatisfactionStatus.Missing,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat =>
-                ProcessArtifactExpectationSatisfactionStatus.InvalidFormat,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InsufficientEvidence =>
-                ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.StaleOrWrongRun =>
-                ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.WrongProducerMode =>
-                ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly =>
-                ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable =>
-                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch =>
-                ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch,
-            _ => throw new InvalidOperationException($"Unsupported rejected artifact validation status '{status}'.")
-        };
-    }
-
-    private static ProcessArtifactExpectationValidationStatus ResolveArtifactValidationStatus(
-        ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus status)
-    {
-        return status switch
-        {
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied =>
-                ProcessArtifactExpectationValidationStatus.Satisfied,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing =>
-                ProcessArtifactExpectationValidationStatus.Missing,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat =>
-                ProcessArtifactExpectationValidationStatus.InvalidFormat,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InsufficientEvidence =>
-                ProcessArtifactExpectationValidationStatus.InsufficientEvidence,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.StaleOrWrongRun =>
-                ProcessArtifactExpectationValidationStatus.StaleOrWrongRun,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.WrongProducerMode =>
-                ProcessArtifactExpectationValidationStatus.WrongProducerMode,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly =>
-                ProcessArtifactExpectationValidationStatus.PlaceholderOnly,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable =>
-                ProcessArtifactExpectationValidationStatus.ContentUnavailable,
-            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch =>
-                ProcessArtifactExpectationValidationStatus.ContentHashMismatch,
-            _ => throw new InvalidOperationException($"Unsupported artifact validation status '{status}'.")
-        };
     }
 
     private static string BuildArtifactValidationDiagnostic(ProcessArtifactValidationDiagnosticProjection diagnostic)

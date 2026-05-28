@@ -1,3 +1,24 @@
-# SB18 changed-file-hashes.txt
+# SB18 Changed-file Hashes
 
-Pending.
+Command:
+Get-FileHash -Algorithm SHA256 [SB18 source, docs, proof, active skill, and browser screenshot files]
+
+C42BBF608EF12530CACA1A75173A76E4641ACB451B6E8047BF8B717120D05E56 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\README.md
+FC2F3084CC7FA68C3483B4F7F38A9354C950A653C4CB7714BCEF3383CE9FECBD C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md
+125CAB1E08FAB068D4685A34CBABC3EB6868E1F556B315AB7EB2192A57899B57 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\manifest.md
+0B48E65A8943042B2239CF865033186ED7051E85C2F9335BE7A397FD8AC073A3 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\semantic-invariants.md
+E7371C6770D9F8AD8DFA7B4A006E80D33808D657EEF3B68E43549758CBEDE513 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\transcripts\closure-validator.txt
+011BD21B518EB5D559FF4D3A7C10D9CAA88DA1A10857D3D80F0E444688985744 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\scripts\validation-commands.md
+9F5A9A7D6028256F5534764B71288F2818176DF17C73689E993F7D9FEAAD55D3 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\subbundles\18-final-governance-red-team-and-release-readiness\README.md
+41B0B533A5697986D71C68504545C417FEB7F40C911A4072CEA5C81612BF5893 C:\repositories\CanDoItAll\Templates\Processes\README.md
+F72CE56AC7274F1109B2E96A5D1FE9F44CDE047097181DC68BD1BA2F0E5C4842 C:\repositories\CanDoItAll\codex\skills\candoitall-api-processes\SKILL.md
+F72CE56AC7274F1109B2E96A5D1FE9F44CDE047097181DC68BD1BA2F0E5C4842 active-skill-root://candoitall-api-processes/SKILL.md
+E0CDB0BA033B1D98F7096A4B890AF6723E3622ABF6627610343312EC434FCB9F C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs
+B42862DB3D7F37F692455BD426E2DB53FF2BA3E02A524BBB5DB60B75EC033EFE C:\repositories\CanDoItAll\src\CanDoItAll.Web\Api\ProcessesApi.cs
+36B71AD7FEE94D4A58865EF874A56C8E846EE560FA21185024959E2FC5D11428 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs
+DB9730D0160920ECA6AFB08E2E5BEB1B6CDE4DF3FE2DF44ED7438D4D9FCE820E C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+DE70499461691FFA2E30598D06896FD73FBBB9FDF58E1D9DCDD30C7A49BC654C C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs
+5BBF48C2EE5CD3C14F5FBF8217F17F2EFD572109FC4AF30D510BDC39B3FE9903 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs
+4534D9375A97EEE6D76F95EED3057147E2C2EFF50694B718CD0F28441C87FA68 C:\repositories\CanDoItAll\codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\browser\operator-console-final-red-team.png
+
+ExitCode: 0

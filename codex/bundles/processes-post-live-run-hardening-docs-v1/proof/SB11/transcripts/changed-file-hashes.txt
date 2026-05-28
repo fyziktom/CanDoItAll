@@ -1,3 +1,14 @@
-# SB11 changed-file-hashes.txt
+# SB11 Changed-file Hashes
 
-Pending.
+Command: Get-FileHash -Algorithm SHA256 -LiteralPath [SB11 changed files]
+ExitCode: 0
+
+7F84DB3D5892823058BD31A8CD6F35ACBA115AA46ED832811EBE069B50A08986 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs
+B42862DB3D7F37F692455BD426E2DB53FF2BA3E02A524BBB5DB60B75EC033EFE C:\repositories\CanDoItAll\src\CanDoItAll.Web\Api\ProcessesApi.cs
+BA943B12323AE91D4926501D4C050758F2E89D72DF60F097FBB0EB42D5AB6D61 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs
+36B71AD7FEE94D4A58865EF874A56C8E846EE560FA21185024959E2FC5D11428 C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs
+B041D15F9455718DB8F7C126004BA1C9E4A7ADEEA25918FD3C5DD236CD59BA36 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs
+F23A0708F690C90BECF97576B1BCE8847E7F4A1BE2A5C3B283B2A6D8E433AE6B C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs
+9CE8FF3C7157E668817CDC7DC73768E29AA4B344B3004C97063631A3FDB402A1 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs
+CD4E2CFF782BD4AFF42F6E6ACD9F026006710374C273168B8B2633C18F0E71BE C:\repositories\CanDoItAll\codex\skills\candoitall-api-processes\SKILL.md
+CD4E2CFF782BD4AFF42F6E6ACD9F026006710374C273168B8B2633C18F0E71BE C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md

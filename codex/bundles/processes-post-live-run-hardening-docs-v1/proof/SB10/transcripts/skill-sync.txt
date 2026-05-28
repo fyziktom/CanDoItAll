@@ -1,0 +1,5 @@
+Command: Get-FileHash -Algorithm SHA256 codex\skills\candoitall-api-processes\SKILL.md, C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md | ForEach-Object { "$($_.Hash) $($_.Path)" }
+BA1E9979B91B78CA3B365C619C12B8F8953579BEB49D2DB8F7BF635F18DD74E9 C:\repositories\CanDoItAll\codex\skills\candoitall-api-processes\SKILL.md
+BA1E9979B91B78CA3B365C619C12B8F8953579BEB49D2DB8F7BF635F18DD74E9 C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md
+ExitCode: 0
+

@@ -1,0 +1,15 @@
+Invariant: SB08-INV-001
+Slice: approvals.txt
+Approval proof: approval-required tools, unusable approval filtering, and suppressed approval mode.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~MafAgentRuntimeTests.Approval_filter_omits_unusable_mutation_tools_for_manual_ollama_run|FullyQualifiedName~MafAgentRuntimeTests.Maf_approval_required_function_wraps_plain_function_tool|FullyQualifiedName~MafAgentRuntimeTests.Workspace_plugin_mutation_tools_remain_available_when_approval_requirements_are_suppressed|FullyQualifiedName~MafAgentRuntimeTests.Internal_process_mutation_tools_remain_available_when_approval_requirements_are_suppressed" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 11 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\ --filter "FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests.Maf_middleware_blocks_required_approval_when_no_effective_approval_path_exists|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests.Maf_middleware_uses_dedicated_policy_block_exception" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 27 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0

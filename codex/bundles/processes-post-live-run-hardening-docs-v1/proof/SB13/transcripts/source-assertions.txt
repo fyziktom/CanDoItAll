@@ -1,3 +1,20 @@
 # SB13 source-assertions.txt
 
-Pending.
+Command:
+`rg -n "Operator Readback|Recovery Advice|Manager Resolution|Artifact Matrix|Dispatch Receipts|processes-operator-artifact-matrix|processes-operator-dispatch-receipts|HasEvaluatedManagerResolution|ManagerResolutionConfidence|processes-operator-readback" src\CanDoItAll.Modules.Processes\Components tests\CanDoItAll.Tests.Components -g "*.razor" -g "*.cs"`
+
+ExitCode: 0
+
+Output:
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:121` exposes `HasEvaluatedManagerResolution`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:127` exposes `ManagerResolutionConfidence`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:77` defines `processes-operator-readback`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:78` renders `Recovery Advice`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:125` renders `Manager Resolution`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:158` defines `processes-operator-artifact-matrix`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:159` renders `Artifact Matrix`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:252` defines `processes-operator-dispatch-receipts`.
+`src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:253` renders `Dispatch Receipts`.
+`tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs:410` asserts `processes-operator-readback`.
+`tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs:411` asserts `processes-operator-artifact-matrix`.
+`tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs:412` asserts `processes-operator-dispatch-receipts`.

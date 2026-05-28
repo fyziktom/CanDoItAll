@@ -1,3 +1,15 @@
-# SB16 failing-first.txt
+# SB16 Failing-First And Adversarial Proof
 
-Pending.
+## Duplicate-helper rejection
+
+Invariant: `SB16-INV-001`
+
+Command:
+
+```powershell
+rg -n "private static ProcessArtifactExpectationSatisfactionStatus MapFinalizerStatus|private static ProcessArtifactExpectationValidationStatus MapFinalizerStatus|private static ProcessManagerAgentResolution ResolveAssignedManager|private static ProcessExternalTargetGroundingResult ResolveProjectStructureGroundingTarget|private static ProcessStepRunHealthViewModel BuildStepHealth" src\CanDoItAll.Modules.Processes\Automation\Dispatch src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.ManagerChat.cs
+```
+
+Exit code: 1
+
+Result: no matches. The old risky shape for SB16 would be private one-off helper logic inside dispatch/read-model/UI code. The search confirms those checked responsibilities are routed through the typed services instead.

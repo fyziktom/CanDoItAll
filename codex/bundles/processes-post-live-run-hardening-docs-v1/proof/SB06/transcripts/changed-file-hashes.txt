@@ -1,3 +1,8 @@
-# SB06 changed-file-hashes.txt
-
-Pending.
+Invariant: SB06-INV-001 changed-file SHA-256 hashes for run folder projection hardening.
+Command: Get-FileHash -Algorithm SHA256 src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureProcessRunFolderProjectionPolicy.cs, src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAssemblyService.cs, src\CanDoItAll.Modules.Workbench\README.md, src\CanDoItAll.Modules.Processes\README.md, tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs
+SHA-256 878DA61A61B78273951B4FF69ECAEAF77200D7153F2CB60B8EB3228534D5F3E5 src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureProcessRunFolderProjectionPolicy.cs
+SHA-256 D4F9678590A4B27DA6661A1F295665D2160BCF73DC498F1CC5D987474CBA72E9 src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAssemblyService.cs
+SHA-256 7CB30B9721211EE9FEDA371B55F95969673E4BB79BFFFCEEEFA7CF01814D9A91 src\CanDoItAll.Modules.Workbench\README.md
+SHA-256 96F0EB3890CA110969CE6BC7029947CE1BBEAB28013ACBA845575D928E934AAA src\CanDoItAll.Modules.Processes\README.md
+SHA-256 75A76EC19FA66F9FBBEC06FF97BFCB083A3E5FC650A856A959DE4186C9FD2AFA tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs
+ExitCode: 0

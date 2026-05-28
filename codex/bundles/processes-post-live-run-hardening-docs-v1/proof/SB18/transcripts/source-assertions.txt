@@ -1,3 +1,27 @@
-# SB18 source-assertions.txt
+# SB18 Source Assertions
 
-Pending.
+Invariant IDs: SB18-INV-001, SB18-INV-002, SB18-INV-003
+
+Command:
+rg -n "GO for broader real process testing|SB18 Semantic Adequacy Evidence|Raw Note Closure|RN03 \| Solved|RN15 \| Solved|Final closure gate: `Passed|SB18 final red-team passed|Production Behavior Artifact Matrix|processes_template_live_run_profiles_list|BusinessPlanProcessPostgresIntegrationTests|Run_steps_dialog_SB15_INV_001|ProcessStepTargetScope|ProcessArtifactExpectationSatisfactionStatus|FreshRunPolicy|ProcessHealthInvariantAuditor" codex\bundles\processes-post-live-run-hardening-docs-v1\README.md codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\manifest.md codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\semantic-invariants.md codex\bundles\processes-post-live-run-hardening-docs-v1\scripts\validation-commands.md Templates\Processes\README.md codex\skills\candoitall-api-processes\SKILL.md tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs src\CanDoItAll.Web\Api\ProcessesApi.cs src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs -S
+
+Selected output:
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:3:internal static class ProcessHealthInvariantAuditor
+src\CanDoItAll.Web\Api\ProcessesApi.cs:710:                    item.FreshRunPolicy,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:606:                        item.FreshRunPolicy,
+Templates\Processes\README.md:24:- `OperationTargetScope` values must stay source-aligned with `ProcessStepTargetScope`: `ManagedProcessArtifactsOnly`, `ManagedOutputProduct`, `ExternalArtifactDestination`, `ExternalProductTargetReadOnly`, `ExternalProductTargetMutable`, and `ExternalActionControlled`.
+Templates\Processes\README.md:33:- Artifact expectation satisfaction status values must stay source-aligned with `ProcessArtifactExpectationSatisfactionStatus`: `Expected`, `Satisfied`, `AutoProjected`, `Missing`, `ProjectionFailed`, `ContentUnavailable`, `NotApplicable`, `InvalidFormat`, `InsufficientEvidence`, `StaleOrWrongRun`, `WrongProducerMode`, `PlaceholderOnly`, and `ContentHashMismatch`.
+codex\skills\candoitall-api-processes\SKILL.md:74:| Template curator | `processes_templates_list`, `processes_template_get`, `processes_template_mermaid_get`, `processes_template_baseline_scenarios_list`, `processes_template_live_run_profiles_list`, `processes_template_import` | Write access only for import/publish work | Inspect templates read-only unless import or publish is explicitly requested. |
+codex\bundles\processes-post-live-run-hardening-docs-v1\README.md:10:- Browser validation analytics: `SB01-SB12 N/A; SB13 passed on 2026-05-28; SB18 final red-team passed on 2026-05-28 against local browser route 127.0.0.1:51313/processes?processId=840687f5-249b-4b79-9752-0bd17d4d6d7e&runId=dabb14ef-8053-48db-a83d-ca709858565a with screenshot bundle://proof/SB18/browser/operator-console-final-red-team.png`
+codex\bundles\processes-post-live-run-hardening-docs-v1\README.md:14:Execution completed after structural repair. SB01-SB18 are closed with artifact-backed proof and the final readiness verdict is GO for broader real process testing.
+codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\manifest.md:55:## Production Behavior Artifact Matrix
+codex\bundles\processes-post-live-run-hardening-docs-v1\proof\SB18\semantic-invariants.md:24:## Production Behavior Artifact Matrix
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:10:public sealed class BusinessPlanProcessPostgresIntegrationTests
+tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs:177:    public async Task Run_steps_dialog_SB15_INV_001_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight()
+codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md:291:## SB18 Semantic Adequacy Evidence
+codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md:304:## Raw Note Closure
+codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md:310:| RN03 | Solved | SB03 artifact status consolidation, SB04 storage/lineage hardening, and SB13 observability surfaces completed via bundle://proof/SB03/manifest.md, bundle://proof/SB04/manifest.md, and bundle://proof/SB13/manifest.md. |
+codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md:322:| RN15 | Solved | SB15 proof-harness split completed via bundle://proof/SB15/manifest.md; SB18 final governance red-team, browser proof, changed-file hashes, and completed-stage validation completed via bundle://proof/SB18/manifest.md. |
+codex\bundles\processes-post-live-run-hardening-docs-v1\reviews\01-execution-report.md:326:GO for broader real process testing. The release is supported by split proof suites, opt-in PostgreSQL generic process proof, browser validation of the hardened operator console, source assertions, anti-stub audit, changed-file hashes, and `validate_bundle.py --stage completed`. Residual warnings are the known EF Core Relational warnings already present in these projects; no unresolved bundle blockers remain.
+
+ExitCode: 0

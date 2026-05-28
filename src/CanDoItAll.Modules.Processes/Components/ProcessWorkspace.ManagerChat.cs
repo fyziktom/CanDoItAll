@@ -17,6 +17,8 @@ public partial class ProcessWorkspace
     private IReadOnlyList<ExecutionLogEntry> managerChatExecutionLog = [];
     private IReadOnlyList<AgentRunMetric> managerChatMetrics = [];
     private IReadOnlyList<string> managerChatDraftAttachmentPaths = [];
+    private ProcessManagerAgentResolution managerChatAgentResolution =
+        ProcessManagerAgentResolution.NotEvaluated("Manager chat has not resolved a manager agent yet.");
     private Guid? managerChatProcessId;
     private Guid? managerChatAgentId;
     private Guid? managerChatSessionId;
@@ -77,18 +79,21 @@ public partial class ProcessWorkspace
         {
             await LoadManagerChatRunSummariesAsync(cancellationToken);
             managerChatAgents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
-            var managerTechnicalAgentId = await ResolveManagerChatTechnicalAgentIdAsync(cancellationToken);
-            if (!managerTechnicalAgentId.HasValue)
+            var managerResolution = await ResolveManagerChatAgentResolutionAsync(cancellationToken);
+            managerChatAgentResolution = managerResolution;
+            if (!managerResolution.IsResolved)
             {
                 ResetManagerChatAgentState();
-                managerChatLoadError = "No bound technical manager agent could be resolved for this process. Configure a manager override or bind a default manager AI resource.";
+                managerChatAgentResolution = managerResolution;
+                managerChatLoadError = BuildManagerResolutionError(managerResolution);
                 return;
             }
 
-            var nextAgent = managerChatAgents.FirstOrDefault(agent => agent.Id == managerTechnicalAgentId.Value);
+            var nextAgent = managerChatAgents.FirstOrDefault(agent => agent.Id == managerResolution.ResolvedTechnicalAgentId!.Value);
             if (nextAgent is null)
             {
                 ResetManagerChatAgentState();
+                managerChatAgentResolution = managerResolution;
                 managerChatLoadError = "The resolved manager AI resource is not available in the Agent Framework catalog.";
                 return;
             }
@@ -144,25 +149,25 @@ public partial class ProcessWorkspace
         }
     }
 
-    private async Task<Guid?> ResolveManagerChatTechnicalAgentIdAsync(CancellationToken cancellationToken)
+    private async Task<ProcessManagerAgentResolution> ResolveManagerChatAgentResolutionAsync(CancellationToken cancellationToken)
     {
         var selectedRun = ManagerChatSelectedRun;
-        var configuredRunManager = ProcessManagerAgentResolver.ResolveConfiguredTechnicalAgentId(
+        var configuredRunManager = ProcessManagerAgentResolver.ResolveConfiguredManager(
             selectedRun?.ManagerAgentId,
             selectedRun?.ManagerAgentName,
             managerAgentOptions,
             managerChatAgents);
-        if (configuredRunManager.HasValue)
+        if (configuredRunManager.IsResolved || configuredRunManager.IsAmbiguous)
         {
             return configuredRunManager;
         }
 
-        var configuredOverrideManager = ProcessManagerAgentResolver.ResolveConfiguredTechnicalAgentId(
+        var configuredOverrideManager = ProcessManagerAgentResolver.ResolveConfiguredManager(
             editor.ManagerAgentOverrideId,
             editor.ManagerAgentOverrideName,
             managerAgentOptions,
             managerChatAgents);
-        if (configuredOverrideManager.HasValue)
+        if (configuredOverrideManager.IsResolved || configuredOverrideManager.IsAmbiguous)
         {
             return configuredOverrideManager;
         }
@@ -170,18 +175,23 @@ public partial class ProcessWorkspace
         if (managerChatSelectedRunId.HasValue)
         {
             var details = await RunDetailsLoader.LoadAsync(managerChatSelectedRunId.Value, cancellationToken);
-            var assignedManager = ProcessManagerAgentResolver.ResolveAssignedTechnicalAgentId(
+            var assignedManager = ProcessManagerAgentResolver.ResolveAssignedManager(
                 details.Assignments,
                 managerAgentOptions,
                 managerChatAgents);
-            if (assignedManager.HasValue)
+            if (assignedManager.IsResolved || assignedManager.IsAmbiguous)
             {
                 return assignedManager;
             }
         }
 
-        return ProcessManagerAgentResolver.ResolveFallbackTechnicalAgentId(managerAgentOptions, managerChatAgents);
+        return ProcessManagerAgentResolver.ResolveFallbackManager(managerAgentOptions, managerChatAgents);
     }
+
+    private static string BuildManagerResolutionError(ProcessManagerAgentResolution resolution)
+        => resolution.IsAmbiguous
+            ? resolution.Summary
+            : $"No bound technical manager agent could be resolved for this process. {resolution.Summary}";
 
     private string ResolveConfiguredManagerName()
     {
@@ -407,6 +417,7 @@ Context:
 - Selected process definition name: {EditorTitle}.
 {projectContext}
 {runContext}
+- Manager resolution: {managerChatAgentResolution.Summary} Reason={managerChatAgentResolution.ReasonCode}; confidence={managerChatAgentResolution.Confidence}.
 - Treat "this process" as the selected process definition above.
 - Treat "this run" as the selected process run only when a run id is listed.
 - Report like a human delivery manager: current status, main blockers, concrete unblock actions, and whether action is needed from user or agents.
@@ -425,7 +436,10 @@ User request:
             ["processDefinitionName"] = EditorTitle,
             ["selectedProcessRunId"] = managerChatSelectedRunId?.ToString("D") ?? string.Empty,
             ["selectedProcessRunName"] = ManagerChatSelectedRun?.Name ?? string.Empty,
-            ["managerDisplayName"] = ManagerChatManagerLabel
+            ["managerDisplayName"] = ManagerChatManagerLabel,
+            ["managerResolutionReasonCode"] = managerChatAgentResolution.ReasonCode.ToString(),
+            ["managerResolutionConfidence"] = managerChatAgentResolution.Confidence.ToString(),
+            ["managerResolutionSummary"] = managerChatAgentResolution.Summary
         };
 
         if (ProjectId.HasValue)
@@ -590,6 +604,7 @@ User request:
         managerChatMetrics = [];
         managerChatAgentId = null;
         managerChatSessionId = null;
+        managerChatAgentResolution = ProcessManagerAgentResolution.NotEvaluated("Manager chat has not resolved a manager agent yet.");
         managerChatRunStateText = string.Empty;
         managerChatRunStateTone = ManagerChatDefaultRunStateTone;
     }

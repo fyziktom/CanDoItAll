@@ -1,3 +1,13 @@
-# SB10 passing.txt
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb10-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~AgentFrameworkExecutionCapabilityFilteringIntegrationTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb10-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
 
-Pending.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     6, Přeskočeno:     0, Celkem:     6, Doba trvání: 35 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb10-unit-bin\ --filter "FullyQualifiedName~AgentToolInvocationPolicyTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb10-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   117, Přeskočeno:     0, Celkem:   117, Doba trvání: 185 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0

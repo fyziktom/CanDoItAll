@@ -1205,37 +1205,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     internal static IReadOnlyList<string> PruneAllowedExternalTargetAliasesForCurrentRun(IEnumerable<string> aliases)
-    {
-        ArgumentNullException.ThrowIfNull(aliases);
-
-        var normalizedAliases = aliases
-            .Select(NormalizeExternalTargetAlias)
-            .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .Where(alias => alias.StartsWith(ExternalTargetAliasRoot + "/", StringComparison.OrdinalIgnoreCase))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        return normalizedAliases
-            .Where(alias => !IsLikelyExternalTargetFileAlias(alias) ||
-                            !normalizedAliases.Any(other =>
-                                !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
-                                IsExternalTargetAliasAncestor(other, alias)))
-            .Where(alias => IsPreferredProductExternalTargetAlias(alias) ||
-                            !normalizedAliases.Any(other =>
-                !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
-                IsExternalTargetAliasAncestor(alias, other) &&
-                !IsLikelyExternalTargetFileAlias(other)))
-            .Where(alias => !normalizedAliases.Any(other =>
-                !string.Equals(alias, other, StringComparison.OrdinalIgnoreCase) &&
-                IsAmbiguousExternalTargetPrefixAlias(alias, other)))
-            .OrderByDescending(alias => alias.Length)
-            .ToArray();
-    }
+        => ProcessExternalTargetGroundingService.PruneAllowedExternalTargetAliasesForCurrentRun(aliases);
 
     private static bool IsAliasCoveredByAny(string alias, IReadOnlyCollection<string> roots)
-        => roots.Any(root =>
-            string.Equals(alias, root, StringComparison.OrdinalIgnoreCase) ||
-            alias.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
+        => ProcessExternalTargetGroundingService.IsAliasCoveredByAny(alias, roots);
 
     private static bool IsPreferredProductExternalTargetAlias(string alias)
     {
@@ -1248,138 +1221,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool IsNonProductExternalTargetAlias(string alias)
-    {
-        if (string.IsNullOrWhiteSpace(alias))
-        {
-            return false;
-        }
-
-        var segments = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return segments.Any(segment =>
-            string.Equals(segment, "project-structure-backup", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "agent-evidence", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "api-snapshots", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "launch-plan", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "observation", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "process-definition", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "process-definition-corrected", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "project-structure-mutations", StringComparison.OrdinalIgnoreCase));
-    }
+        => ProcessExternalTargetGroundingService.IsNonProductExternalTargetAlias(alias);
 
     private static bool IsExternalTargetAliasAncestor(string alias, string other)
-        => other.StartsWith(alias + "/", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsAmbiguousExternalTargetPrefixAlias(string alias, string other)
-    {
-        if (!other.StartsWith(alias, StringComparison.OrdinalIgnoreCase) ||
-            other.Length <= alias.Length)
-        {
-            return false;
-        }
-
-        var suffix = other[alias.Length..];
-        return suffix[0] != '/' && suffix.Contains('/', StringComparison.Ordinal);
-    }
+        => ProcessExternalTargetGroundingService.IsExternalTargetAliasAncestor(alias, other);
 
     private static bool IsLikelyExternalTargetFileAlias(string alias)
-    {
-        var lastSlashIndex = alias.LastIndexOf('/');
-        if (lastSlashIndex < 0 || lastSlashIndex >= alias.Length - 1)
-        {
-            return false;
-        }
-
-        var leaf = alias[(lastSlashIndex + 1)..];
-        return leaf.StartsWith(".", StringComparison.Ordinal) ||
-               leaf.Contains('.');
-    }
+        => ProcessExternalTargetGroundingService.IsLikelyExternalTargetFileAlias(alias);
 
     private static IReadOnlyList<string> ExtractExternalTargetAliasesFromText(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (Match match in WorkspacePathInToolRequestRegex.Matches(text))
-        {
-            var path = match.Groups["path"].Value;
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                continue;
-            }
-
-            if (path.StartsWith(ExternalTargetAliasRoot + "/", StringComparison.OrdinalIgnoreCase))
-            {
-                var alias = NormalizeExternalTargetAlias(path);
-                if (!string.IsNullOrWhiteSpace(alias))
-                {
-                    aliases.Add(alias);
-                }
-
-                continue;
-            }
-        }
-
-        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(text))
-        {
-            if (TryMapAbsoluteExternalPathToAlias(candidatePath, out var mappedAlias))
-            {
-                aliases.Add(mappedAlias);
-            }
-        }
-
-        return aliases
-            .Where(alias => !string.IsNullOrWhiteSpace(alias))
-            .ToArray();
-    }
+        => ProcessExternalTargetGroundingService.ExtractExternalTargetAliasesFromText(text);
 
     private static bool TryMapAbsoluteExternalPathToAlias(
         string path,
         out string mappedAlias)
-    {
-        mappedAlias = string.Empty;
-        if (!TryNormalizeAbsoluteExternalPathCandidate(path, out var normalizedPath))
-        {
-            return false;
-        }
-
-        var driveLetter = char.ToUpperInvariant(normalizedPath[0]);
-        var remainder = normalizedPath.Length == 3
-            ? string.Empty
-            : CollapseExternalTargetAliasSeparators(normalizedPath[3..]).Trim('/');
-        mappedAlias = string.IsNullOrWhiteSpace(remainder)
-            ? $"{ExternalTargetAliasRoot}/{driveLetter}"
-            : $"{ExternalTargetAliasRoot}/{driveLetter}/{remainder}";
-        return true;
-    }
+        => ProcessExternalTargetGroundingService.TryMapAbsoluteExternalPathToAlias(path, out mappedAlias);
 
     private static string NormalizeExternalTargetAlias(string? alias)
-    {
-        if (string.IsNullOrWhiteSpace(alias))
-        {
-            return string.Empty;
-        }
-
-        var normalizedAlias = alias
-            .Replace('\\', '/')
-            .Trim()
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-        normalizedAlias = StripEscapedLineBreakPathAnnotations(normalizedAlias)
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-        normalizedAlias = StripInlinePathAnnotations(normalizedAlias)
-            .TrimEnd('/', '.', ',', ';', ':', ')', ']', '}');
-
-        return CollapseExternalTargetAliasSeparators(normalizedAlias);
-    }
-
-    private static string CollapseExternalTargetAliasSeparators(string value)
-    {
-        return Regex.Replace(
-            value.Replace('\\', '/'),
-            "/{2,}",
-            "/",
-            RegexOptions.CultureInvariant);
-    }
+        => ProcessExternalTargetGroundingService.NormalizeExternalTargetAlias(alias);
 }
