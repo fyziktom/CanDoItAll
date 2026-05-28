@@ -190,9 +190,13 @@ internal sealed class ProcessManagerChatService(
         var managerLabel = ResolveManagerLabel(query);
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var managerOptions = await processesService.ListManagerAgentOptionsAsync(cancellationToken);
-        var technicalAgentId = ResolveConfiguredManagerTechnicalAgentId(query, managerOptions, agents)
+        var technicalAgentId = ProcessManagerAgentResolver.ResolveConfiguredTechnicalAgentId(
+                query.ManagerAgentId,
+                query.ManagerAgentName,
+                managerOptions,
+                agents)
             ?? await ResolveAssignedManagerTechnicalAgentIdAsync(query.ProcessRunId, managerOptions, agents, cancellationToken)
-            ?? ResolveFallbackManagerTechnicalAgentId(managerOptions, agents);
+            ?? ProcessManagerAgentResolver.ResolveFallbackTechnicalAgentId(managerOptions, agents);
         if (!technicalAgentId.HasValue)
         {
             return new ManagerResolution(
@@ -245,21 +249,7 @@ internal sealed class ProcessManagerChatService(
         CancellationToken cancellationToken)
     {
         var details = await processesService.GetRunDetailsAsync(processRunId, cancellationToken);
-        return details.Assignments
-            .Where(item => !item.IsCapabilityGap)
-            .Select(item => new
-            {
-                Assignment = item,
-                Option = ResolveManagerOptionByIdentifier(item.PartyId, managerOptions),
-                Agent = item.PartyId.HasValue
-                    ? agents.FirstOrDefault(agent => agent.Id == item.PartyId.Value)
-                    : null,
-                Score = ResolveManagerAssignmentScore(item)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .Select(item => item.Option?.TechnicalAgentId ?? item.Agent?.Id)
-            .FirstOrDefault(item => item.HasValue);
+        return ProcessManagerAgentResolver.ResolveAssignedTechnicalAgentId(details.Assignments, managerOptions, agents);
     }
 
     private static Guid? ResolveFallbackManagerTechnicalAgentId(

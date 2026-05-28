@@ -77,7 +77,7 @@ public partial class ProcessWorkspace
         {
             await LoadManagerChatRunSummariesAsync(cancellationToken);
             managerChatAgents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
-            var managerTechnicalAgentId = ResolveManagerChatTechnicalAgentId();
+            var managerTechnicalAgentId = await ResolveManagerChatTechnicalAgentIdAsync(cancellationToken);
             if (!managerTechnicalAgentId.HasValue)
             {
                 ResetManagerChatAgentState();
@@ -144,86 +144,43 @@ public partial class ProcessWorkspace
         }
     }
 
-    private Guid? ResolveManagerChatTechnicalAgentId()
+    private async Task<Guid?> ResolveManagerChatTechnicalAgentIdAsync(CancellationToken cancellationToken)
     {
         var selectedRun = ManagerChatSelectedRun;
-        var runManagerOption = ResolveManagerOptionByIdentifier(selectedRun?.ManagerAgentId);
-        if (runManagerOption?.TechnicalAgentId is Guid runManagerTechnicalAgentId)
+        var configuredRunManager = ProcessManagerAgentResolver.ResolveConfiguredTechnicalAgentId(
+            selectedRun?.ManagerAgentId,
+            selectedRun?.ManagerAgentName,
+            managerAgentOptions,
+            managerChatAgents);
+        if (configuredRunManager.HasValue)
         {
-            return runManagerTechnicalAgentId;
+            return configuredRunManager;
         }
 
-        var overrideOption = ResolveManagerOptionByIdentifier(editor.ManagerAgentOverrideId);
-        if (overrideOption?.TechnicalAgentId is Guid overrideTechnicalAgentId)
+        var configuredOverrideManager = ProcessManagerAgentResolver.ResolveConfiguredTechnicalAgentId(
+            editor.ManagerAgentOverrideId,
+            editor.ManagerAgentOverrideName,
+            managerAgentOptions,
+            managerChatAgents);
+        if (configuredOverrideManager.HasValue)
         {
-            return overrideTechnicalAgentId;
+            return configuredOverrideManager;
         }
 
-        var namedRunManagerOption = ResolveManagerOptionByName(selectedRun?.ManagerAgentName);
-        if (namedRunManagerOption?.TechnicalAgentId is Guid namedRunManagerTechnicalAgentId)
+        if (managerChatSelectedRunId.HasValue)
         {
-            return namedRunManagerTechnicalAgentId;
+            var details = await RunDetailsLoader.LoadAsync(managerChatSelectedRunId.Value, cancellationToken);
+            var assignedManager = ProcessManagerAgentResolver.ResolveAssignedTechnicalAgentId(
+                details.Assignments,
+                managerAgentOptions,
+                managerChatAgents);
+            if (assignedManager.HasValue)
+            {
+                return assignedManager;
+            }
         }
 
-        var namedOverrideOption = ResolveManagerOptionByName(editor.ManagerAgentOverrideName);
-        if (namedOverrideOption?.TechnicalAgentId is Guid namedOverrideTechnicalAgentId)
-        {
-            return namedOverrideTechnicalAgentId;
-        }
-
-        var fallbackManagerOptions = managerAgentOptions
-            .Where(option => option.TechnicalAgentId.HasValue)
-            .Where(IsManagerLikeOption)
-            .ToList();
-        return fallbackManagerOptions.Count == 1
-            ? fallbackManagerOptions[0].TechnicalAgentId
-            : null;
-    }
-
-    private ProcessManagerAgentOption? ResolveManagerOptionByIdentifier(Guid? managerId)
-    {
-        if (!managerId.HasValue)
-        {
-            return null;
-        }
-
-        return managerAgentOptions.FirstOrDefault(option =>
-            option.PartyId == managerId.Value ||
-            option.TechnicalAgentId == managerId.Value);
-    }
-
-    private ProcessManagerAgentOption? ResolveManagerOptionByName(string? managerName)
-    {
-        if (string.IsNullOrWhiteSpace(managerName))
-        {
-            return null;
-        }
-
-        var normalizedName = managerName.Trim();
-        return managerAgentOptions.FirstOrDefault(option =>
-            string.Equals(option.DisplayName, normalizedName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool IsManagerLikeOption(ProcessManagerAgentOption option)
-    {
-        return ContainsManagerToken(option.DisplayName) ||
-               ContainsManagerToken(option.BindingSummary);
-    }
-
-    private static bool ContainsManagerToken(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        var tokens = value.Split(
-            [' ', '-', '_', '/', '\\', '.', ':', ';', ',', '(', ')', '[', ']'],
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return tokens.Any(token =>
-            string.Equals(token, "manager", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "lead", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "orchestrator", StringComparison.OrdinalIgnoreCase));
+        return ProcessManagerAgentResolver.ResolveFallbackTechnicalAgentId(managerAgentOptions, managerChatAgents);
     }
 
     private string ResolveConfiguredManagerName()

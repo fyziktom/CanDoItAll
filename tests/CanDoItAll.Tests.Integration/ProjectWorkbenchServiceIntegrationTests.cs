@@ -243,20 +243,80 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             ReviewSummary = "Managed output folder should surface in the structure graph.",
             ManagedStoragePath = $"managed-files/processes/{runResult.Value:N}/execution-report.md"
         })).IsSuccess);
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "App.razor",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected managed output folder proof.",
+            AllowedFutureUsageSummary = "Workbench projection validation.",
+            ReviewSummary = "Generated app file should collapse to the product folder.",
+            ManagedStoragePath = $"output/scopes/organization/demo/process-runs/{runResult.Value:D}/TetrisGame/Components/App.razor"
+        })).IsSuccess);
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "app.css",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected managed output folder proof.",
+            AllowedFutureUsageSummary = "Workbench projection validation.",
+            ReviewSummary = "Generated app file should collapse to the product folder.",
+            ManagedStoragePath = $"output/scopes/organization/demo/process-runs/{runResult.Value:D}/TetrisGame/wwwroot/app.css"
+        })).IsSuccess);
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "browser-console.log",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected managed artifact folder proof.",
+            AllowedFutureUsageSummary = "Workbench projection validation.",
+            ReviewSummary = "Run artifact should collapse to the run artifact folder.",
+            ManagedStoragePath = $"artifacts/scopes/organization/demo/process-runs/{runResult.Value:D}/browser-console.log"
+        })).IsSuccess);
+        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "dotnet-build stdout",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Projected managed receipt folder proof.",
+            AllowedFutureUsageSummary = "Workbench projection validation.",
+            ReviewSummary = "Date-based tool receipt folders should not project as run folders.",
+            ManagedStoragePath = "artifacts/scopes/organization/demo/process-runs/20260528/20260528-101425689-dotnet-build/stdout.txt"
+        })).IsSuccess);
 
         var surface = await workbench.GetStructureAsync(projectId);
-        var outputNode = Assert.Single(surface.Nodes, node =>
-            string.Equals(node.ParentId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
-            string.Equals(node.ObjectType.ToString(), ProjectObjectType.File.ToString(), StringComparison.Ordinal) &&
-            node.StorageObjectReferenceJson.Contains($"managed-files/processes/{runResult.Value:N}", StringComparison.OrdinalIgnoreCase));
+        var outputNodes = surface.Nodes
+            .Where(node =>
+                string.Equals(node.ParentId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
+                string.Equals(node.ObjectType.ToString(), ProjectObjectType.File.ToString(), StringComparison.Ordinal))
+            .ToList();
 
-        Assert.Equal("Stored", outputNode.Status);
-        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", outputNode.Route);
-        Assert.Contains($"managed-files/processes/{runResult.Value:N}", outputNode.StorageObjectReferenceJson, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(surface.Links, link =>
-            string.Equals(link.SourceId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
-            string.Equals(link.TargetId, outputNode.Id, StringComparison.Ordinal) &&
-            link.Kind == ProjectObjectLinkKind.Contains);
+        Assert.Equal(3, outputNodes.Count);
+        Assert.Contains(outputNodes, node =>
+            node.StorageObjectReferenceJson.Contains($"managed-files/processes/{runResult.Value:N}", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(outputNodes, node =>
+            node.StorageObjectReferenceJson.Contains($"output/scopes/organization/demo/process-runs/{runResult.Value:D}/TetrisGame", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(outputNodes, node =>
+            node.StorageObjectReferenceJson.Contains($"artifacts/scopes/organization/demo/process-runs/{runResult.Value:D}", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(outputNodes, node =>
+            node.StorageObjectReferenceJson.Contains("20260528-101425689-dotnet-build", StringComparison.OrdinalIgnoreCase));
+        Assert.All(outputNodes, outputNode =>
+        {
+            Assert.Equal("Stored", outputNode.Status);
+            Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", outputNode.Route);
+            Assert.Contains(surface.Links, link =>
+                string.Equals(link.SourceId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
+                string.Equals(link.TargetId, outputNode.Id, StringComparison.Ordinal) &&
+                link.Kind == ProjectObjectLinkKind.Contains);
+        });
     }
 
     [Fact]

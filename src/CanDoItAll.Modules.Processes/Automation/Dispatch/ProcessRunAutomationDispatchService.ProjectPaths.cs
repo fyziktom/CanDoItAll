@@ -212,17 +212,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
             focusNodeIds.Add(descendant.Id);
         }
 
-        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTarget(
-                     nodesById,
-                     nodesByParentId,
-                     targetNodeId,
-                     selectedProcessNodeId))
+        void AddPlanningNodeWithDescendants(ProjectStructureGroundingNodeData planningNode)
         {
             focusNodeIds.Add(planningNode.Id);
             foreach (var descendant in ResolveProjectStructureDescendants(planningNode.Id, nodesByParentId, maxDepth: 3))
             {
                 focusNodeIds.Add(descendant.Id);
             }
+        }
+
+        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTarget(
+                     nodesById,
+                     nodesByParentId,
+                     targetNodeId,
+                     selectedProcessNodeId))
+        {
+            AddPlanningNodeWithDescendants(planningNode);
+        }
+
+        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTargetAncestors(
+                     nodesById,
+                     nodesByParentId,
+                     targetNodeId,
+                     selectedProcessNodeId))
+        {
+            AddPlanningNodeWithDescendants(planningNode);
         }
 
         return focusNodeIds
@@ -262,6 +276,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ThenBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .Select(item => item.Node)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProjectStructureGroundingNodeData> ResolveProjectLevelPlanningNodesForTargetAncestors(
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById,
+        IReadOnlyDictionary<string, IReadOnlyList<ProjectStructureGroundingNodeData>> nodesByParentId,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
+        var ancestorPath = ResolveProjectStructureAncestorPath(targetNodeId, nodesById);
+        if (ancestorPath.Count == 0)
+        {
+            return [];
+        }
+
+        var excludedNodeIds = ancestorPath
+            .Select(node => node.Id)
+            .Append(selectedProcessNodeId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return ancestorPath
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
+            .SelectMany(node => nodesByParentId.TryGetValue(NormalizeProjectStructureNodeId(node.ParentId), out var siblings)
+                ? siblings
+                : [])
+            .Where(node =>
+                !excludedNodeIds.Contains(node.Id) &&
+                IsProjectLevelPlanningContextNode(node))
+            .Select(node => new
+            {
+                Node = node,
+                SignalScore = GetProjectStructureGroundingSignalScore(node),
+                ExternalTargetHintCount = ResolveExternalTargetHintsFromProjectStructureNode(node).Count
+            })
+            .Where(item => item.SignalScore > 0 ||
+                           item.ExternalTargetHintCount > 0 ||
+                           !string.IsNullOrWhiteSpace(item.Node.Title))
+            .OrderByDescending(item => item.ExternalTargetHintCount > 0)
+            .ThenByDescending(item => item.SignalScore)
+            .ThenBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(item => item.Node.Id, StringComparer.Ordinal)
+            .Select(group => group.First().Node)
+            .Take(8)
             .ToList();
     }
 
@@ -516,6 +574,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             "product" => 100,
             "app" => 90,
+            "output" => 85,
+            "dist" => 85,
+            "publish" => 85,
             "src" => 80,
             "source" => 80,
             _ => 10

@@ -143,6 +143,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (hasGroundedExternalTarget)
             {
                 builder.AppendLine($"- The grounded project structure already identifies the external output root `{groundedExternalAbsolutePath}` mapped to `{groundedExternalMappedAlias}`. Treat that mapped alias as the product root for this run, not as an optional example.");
+                builder.AppendLine("- If a temporary managed workspace is used for greenfield scaffolding or validation, the final runnable product must be delivered into the grounded external target before the step can be considered complete.");
+                builder.AppendLine("- Completion evidence must cite build, run, or browser proof against the grounded external target after final delivery. Workspace-only proof is not sufficient when an external target is grounded.");
                 builder.AppendLine($"- With a grounded external product root, treat the managed workspace as evidence and artifact scratch space only, preferably under `{currentRunManagedArtifactRoot}`. Do not inspect managed workspace source, test, tool, or script roots such as `src/`, `tests/`, `tools/`, or `scripts/` unless the current run's project structure, work brief, upstream artifacts, or current-run tool outputs explicitly name those paths.");
                 if (usesGroundedExternalArtifactDestination)
                 {

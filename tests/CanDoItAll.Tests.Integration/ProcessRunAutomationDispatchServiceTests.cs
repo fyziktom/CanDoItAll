@@ -4196,6 +4196,164 @@ Requirements from project-level planning context:
     }
 
     [Fact]
+    public void BuildProjectStructureGroundingSummary_includes_output_folder_from_top_level_architecture_branch_for_nested_delivery_target()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var groundingNodeType = serviceType.GetNestedType("ProjectStructureGroundingNodeData", BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("ProjectStructureGroundingNodeData type was not found.");
+        var nodes = Array.CreateInstance(groundingNodeType, 6);
+        var projectId = Guid.NewGuid();
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                $"project:{projectId:D}",
+                string.Empty,
+                "ProjectRoot",
+                string.Empty,
+                "TetrisGame",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            0);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:delivery",
+                $"project:{projectId:D}",
+                "ProjectBlock",
+                "delivery",
+                "Main app",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            1);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:nested-target",
+                "custom:delivery",
+                "WorkItem",
+                "task",
+                "Main app",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            2);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:architecture",
+                $"project:{projectId:D}",
+                "ProjectBlock",
+                "architecture",
+                "Main architecture",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            3);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:output-folder",
+                "custom:architecture",
+                "ProjectBlock",
+                "delivery",
+                "Output folder",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                "{}"),
+            4);
+        nodes.SetValue(
+            CreateProjectStructureGroundingNode(
+                groundingNodeType,
+                "custom:output-path",
+                "custom:output-folder",
+                "File",
+                string.Empty,
+                @"C:\programovani\dotnet-demo\output",
+                string.Empty,
+                string.Empty,
+                @"C:\programovani\dotnet-demo\output",
+                "{}"),
+            5);
+        var method = serviceType
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate =>
+            {
+                if (candidate.Name != "BuildProjectStructureGroundingSummary")
+                {
+                    return false;
+                }
+
+                var parameters = candidate.GetParameters();
+                return parameters.Length == 3 &&
+                       parameters[0].ParameterType == typeof(string) &&
+                       parameters[2].ParameterType == typeof(ProcessProjectStructureContext);
+            });
+
+        var summary = method.Invoke(
+            null,
+            [
+                "TetrisGame",
+                nodes,
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = projectId,
+                    NodeId = "process-definition:672935c3-f687-4255-b8bf-90528248c642",
+                    NodeTitle = "Blazor app delivery",
+                    ParentNodeId = "custom:nested-target",
+                    ParentNodeTitle = "Main app"
+                }
+            ]) as string;
+
+        Assert.NotNull(summary);
+        Assert.Contains("Grounded external target paths from the selected project structure:", summary, StringComparison.Ordinal);
+        Assert.Contains(@"C:\programovani\dotnet-demo\output", summary, StringComparison.Ordinal);
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output", summary, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildExecutionPromptCore_requires_external_target_final_delivery_proof_when_grounded()
+    {
+        var buildExecutionPromptCore = typeof(ProcessRunAutomationDispatchService)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(method => method.Name == "BuildExecutionPromptCore" && method.GetParameters().Length == 4);
+        var candidate = CreateDispatchCandidateCore(
+            "Build the Blazor app and prove it runs.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Deliverable, "Implementation change set", true, "Must name changed files and validation proof.")],
+            [],
+            triggerReason: "Started from project structure API.",
+            stepTitle: "Build Blazor application",
+            processName: "Blazor app delivery");
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from Output folder (custom:output-path)
+            """;
+
+        var prompt = buildExecutionPromptCore.Invoke(
+            null,
+            [
+                candidate,
+                null,
+                projectStructureGroundingSummary,
+                null
+            ]) as string;
+
+        Assert.NotNull(prompt);
+        Assert.Contains("the final runnable product must be delivered into the grounded external target", prompt, StringComparison.Ordinal);
+        Assert.Contains("Workspace-only proof is not sufficient when an external target is grounded", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BuildProcessInvocationMetadataJson_allows_external_target_from_project_structure_grounding()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -14277,6 +14435,72 @@ Ancestor path to the target work node:
         Assert.NotNull(result);
         Assert.Equal(technicalAgentId, result.TechnicalAgentId);
         Assert.Equal("single-explicit-recovery-option", result.ResolutionSource);
+    }
+
+    [Fact]
+    public void ProcessManagerAgentResolver_uses_assigned_manager_before_ambiguous_manager_options()
+    {
+        var assignedManagerPartyId = Guid.NewGuid();
+        var assignedManagerTechnicalAgentId = Guid.NewGuid();
+        var otherManagerPartyId = Guid.NewGuid();
+        var otherManagerTechnicalAgentId = Guid.NewGuid();
+
+        var result = ProcessManagerAgentResolver.ResolveAssignedTechnicalAgentId(
+            [
+                CreateAssignment(assignedManagerPartyId, "Blazor delivery manager AI agent", "Blazor delivery manager"),
+                CreateAssignment(Guid.NewGuid(), "Blazor Application Developer", "Blazor implementation engineer")
+            ],
+            [
+                new ProcessManagerAgentOption(
+                    assignedManagerPartyId,
+                    assignedManagerTechnicalAgentId,
+                    "Blazor delivery manager AI agent",
+                    "OpenAI",
+                    "gpt-5-mini",
+                    "Projected from AgentFramework organization catalog."),
+                new ProcessManagerAgentOption(
+                    otherManagerPartyId,
+                    otherManagerTechnicalAgentId,
+                    "Delivery manager AI agent",
+                    "OpenAI",
+                    "gpt-5.4-mini",
+                    "Projected from AgentFramework organization catalog.")
+            ],
+            []);
+
+        Assert.Equal(assignedManagerTechnicalAgentId, result);
+    }
+
+    [Fact]
+    public void ProcessManagerAgentResolver_rejects_ambiguous_assigned_managers()
+    {
+        var firstManagerPartyId = Guid.NewGuid();
+        var secondManagerPartyId = Guid.NewGuid();
+
+        var result = ProcessManagerAgentResolver.ResolveAssignedTechnicalAgentId(
+            [
+                CreateAssignment(firstManagerPartyId, "Run Process Manager", "Process manager"),
+                CreateAssignment(secondManagerPartyId, "Process Manager", "Process manager")
+            ],
+            [
+                new ProcessManagerAgentOption(
+                    firstManagerPartyId,
+                    Guid.NewGuid(),
+                    "Run Process Manager",
+                    "OpenAI",
+                    "gpt-5-mini",
+                    "Projected from AgentFramework organization catalog."),
+                new ProcessManagerAgentOption(
+                    secondManagerPartyId,
+                    Guid.NewGuid(),
+                    "Process Manager",
+                    "OpenAI",
+                    "gpt-5.4-mini",
+                    "Projected from AgentFramework organization catalog.")
+            ],
+            []);
+
+        Assert.Null(result);
     }
 
     [Fact]
