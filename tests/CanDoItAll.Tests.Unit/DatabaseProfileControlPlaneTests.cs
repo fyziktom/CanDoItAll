@@ -335,6 +335,31 @@ public sealed class LegacyDatabaseProfileCatalogQuarantineTests
     }
 
     [Fact]
+    public async Task ResolveCurrentProfile_retains_postgresql_entry_with_null_legacy_sqlite_metadata()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-postgres-null-sqlite");
+        var postgresProfileId = Guid.NewGuid();
+        await LegacyCatalogTestData.WriteCatalogAsync(
+            testEnvironment,
+            [LegacyCatalogTestData.CreatePostgreSqlProfileJson(postgresProfileId, "Retained PostgreSQL", includeNullSqliteMetadata: true)],
+            postgresProfileId);
+
+        await using var provider = DatabaseProfileControlPlaneTestHost.BuildServiceProvider(
+            testEnvironment,
+            includeDatabaseOverride: false);
+
+        var resolved = provider.GetRequiredService<IActiveDatabaseProfileResolver>().ResolveCurrentProfile();
+        var service = provider.GetRequiredService<IDatabaseProfileService>();
+        var summaries = await service.ListAsync();
+
+        Assert.Equal(DatabaseProfileResolutionSource.PersistedActiveProfile, resolved.ResolutionSource);
+        Assert.Equal(postgresProfileId, resolved.Profile.Id);
+        var summary = Assert.Single(summaries);
+        Assert.Equal(postgresProfileId, summary.Id);
+        Assert.False(Directory.Exists(LegacyCatalogTestData.QuarantinePath(testEnvironment)));
+    }
+
+    [Fact]
     public async Task ListAsync_leaves_valid_postgresql_catalog_without_quarantine()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("control-plane-valid-catalog");
@@ -427,13 +452,24 @@ internal static class LegacyCatalogTestData
             """;
     }
 
-    public static string CreatePostgreSqlProfileJson(Guid profileId, string displayName)
-        => $$"""
+    public static string CreatePostgreSqlProfileJson(
+        Guid profileId,
+        string displayName,
+        bool includeNullSqliteMetadata = false)
+    {
+        var nullSqliteMetadata = includeNullSqliteMetadata
+            ? """
+              "sqlite": null,
+            """
+            : string.Empty;
+
+        return $$"""
             {
               "id": "{{profileId}}",
               "displayName": {{JsonSerializer.Serialize(displayName)}},
               "providerKind": "PostgreSql",
               "sourceKind": "PostgresConnection",
+              {{nullSqliteMetadata}}
               "postgreSql": {
                 "host": "localhost",
                 "port": 5432,
@@ -458,6 +494,7 @@ internal static class LegacyCatalogTestData
               }
             }
             """;
+    }
 
     public static async Task<Guid?> ReadActiveProfileIdAsync(CanDoItAllTestEnvironment testEnvironment)
     {

@@ -156,7 +156,7 @@ internal static class LegacyDatabaseProfileCatalogQuarantine
         {
             if (string.Equals(property.Name, RetiredConnectionPropertyName, StringComparison.OrdinalIgnoreCase))
             {
-                return true;
+                return property.Value.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined;
             }
         }
 
