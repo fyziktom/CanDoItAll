@@ -59,6 +59,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var isDotNetSolutionSetupScaffoldMutationStep = IsDotNetSolutionSetupScaffoldMutationStep(candidate);
         var operationContract = ResolveProcessStepOperationContract(candidate);
         var executionBoundary = ResolveProcessStepExecutionBoundary(candidate, operationContract);
+        var effectiveCooperationMetadata = ResolveBoundaryAwareCooperationMetadata(candidate.CooperationMetadata, executionBoundary);
         var allowsExternalTargetMutation = AllowsExternalTargetMutation(candidate, executionBoundary, operationContract, projectStructureGroundingSummary);
         var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
         var currentRunManagedOutputRoot = BuildCurrentRunManagedOutputRoot(candidate);
@@ -78,9 +79,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine($"Executor: {candidate.StepRun.CurrentExecutorName}");
         builder.AppendLine();
         builder.AppendLine("Process cooperation plan:");
-        builder.AppendLine($"- Mode: {candidate.CooperationMetadata.CooperationMode}");
-        builder.AppendLine($"- Workspace tool profile: {AgentWorkspaceToolAccessProfiles.GetProfileKey(candidate.CooperationMetadata.WorkspaceToolProfile)}");
-        builder.AppendLine($"- Basis: {candidate.CooperationMetadata.Summary}");
+        builder.AppendLine($"- Mode: {effectiveCooperationMetadata.CooperationMode}");
+        builder.AppendLine($"- Workspace tool profile: {AgentWorkspaceToolAccessProfiles.GetProfileKey(effectiveCooperationMetadata.WorkspaceToolProfile)}");
+        builder.AppendLine($"- Basis: {effectiveCooperationMetadata.Summary}");
         builder.AppendLine("- Use upstream artifacts, MAF handoff participants, or A2A tools only when they are explicitly provided by this run or attached to the selected agent. Do not invent hidden background collaboration.");
         builder.AppendLine();
         builder.AppendLine("Current-run managed artifact root:");
@@ -461,7 +462,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (implementationMentionsDotNet)
             {
                 builder.AppendLine("- For Blazor forms, bind inputs only to settable properties or explicit get/set wrappers. Positional records and init-only properties are not valid `@bind` targets and must be replaced with mutable form-state classes or properties before rerunning the build.");
-                builder.AppendLine("- For .NET HTTP startup proof that does not need same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and avoids locking later builds. If this same step must run browser tools, set `keepAlive: true`, capture browser evidence, and stop the app with the recorded `startup.json` `stopCommand` before finalizing.");
+                builder.AppendLine("- For .NET HTTP startup proof that does not need same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and avoids locking later builds. If this same step must run browser tools, set `keepAlive: true`, capture browser evidence, and cite the startup receipt; the dispatcher stops the kept-alive process tree after the finalizer, so do not run a cleanup script.");
             }
         }
 
@@ -482,7 +483,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- If no reviewed browser surface is already running, start it using the launch path and toolchain appropriate for the assigned agent and current step contract, then capture the URL and diagnostics.");
             if (implementationMentionsDotNet)
             {
-                builder.AppendLine("- For .NET browser proof, call `workspace_dotnet_run` with `keepAlive: true` so Playwright can reach the app. After browser evidence is captured, stop the process tree with the recorded `startup.json` `stopCommand` before finalizing.");
+                builder.AppendLine("- For .NET browser proof, call `workspace_dotnet_run` with `keepAlive: true` so Playwright can reach the app. After browser evidence is captured, cite the startup receipt and final evidence; the dispatcher stops the kept-alive process tree after the finalizer, so do not run `workspace_pwsh_run_script` just for cleanup.");
             }
             else if (implementationMentionsJavaScript)
             {
@@ -686,7 +687,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("- Do not submit the final step outcome from file inspection alone. Current-run browser evidence must come from provider-native browser tools after the reviewed app is reachable.");
         if (implementationMentionsDotNet)
         {
-            builder.AppendLine("- Start or verify the reviewed .NET host first. Prefer `workspace_dotnet_run` with `keepAlive: true`, capture the reported URL, and stop the process with the recorded stop command after browser proof.");
+            builder.AppendLine("- Start or verify the reviewed .NET host first. Prefer `workspace_dotnet_run` with `keepAlive: true`, capture the reported URL, and let the dispatcher stop the kept-alive process tree after the finalizer.");
         }
         else if (implementationMentionsJavaScript)
         {

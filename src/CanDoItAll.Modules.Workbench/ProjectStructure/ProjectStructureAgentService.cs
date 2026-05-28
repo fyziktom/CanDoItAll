@@ -16,6 +16,7 @@ public sealed class ProjectStructureAgentService(
     IProjectStructureLocalFileOpener localFileOpener,
     IWorkspacePathAccessGuard pathAccessGuard,
     IHttpClientFactory httpClientFactory,
+    ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver,
     ProjectStructureProcessNodeService processNodeService,
     ProjectStructureWorkflowNodeService workflowNodeService)
 {
@@ -1192,23 +1193,7 @@ public sealed class ProjectStructureAgentService(
         ProjectStructureAssetCreateInput request,
         CancellationToken cancellationToken)
     {
-        var resolution = pathAccessGuard.ResolveWorkspacePath(request.SourceWorkspacePath!);
-        if (!resolution.IsSuccess)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "SourceWorkspacePathInvalid",
-                resolution.Message);
-        }
-
-        if (!File.Exists(resolution.FullPath))
-        {
-            throw new ProjectStructureAgentException(
-                404,
-                "SourceWorkspaceFileNotFound",
-                $"Source workspace file '{request.SourceWorkspacePath}' was not found.");
-        }
-
+        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(request.SourceWorkspacePath!);
         var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
         var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
         var contentType = ResolveSourceAssetContentType(request.SourceContentType, fileName);

@@ -1,0 +1,8 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter "FullyQualifiedName~ArtifactContractValidation|FullyQualifiedName~TransitionStepAsync_SB01_INV_001|FullyQualifiedName~TransitionStepAsync_SB10_INV_001" -p:BaseOutputPath=.artifacts\codex-test-bin\sb01-passing\
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 broader artifact validation regression
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\.artifacts\codex-test-bin\sb01-passing\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    21, Přeskočeno:     0, Celkem:    21, Doba trvání: 1 m 4 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0

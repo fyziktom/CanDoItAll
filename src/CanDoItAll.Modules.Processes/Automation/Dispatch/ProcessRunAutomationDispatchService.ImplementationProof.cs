@@ -772,7 +772,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return segments.Any(segment =>
             string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase));
+            string.Equals(segment, ".git", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, ".oldruns", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "oldruns", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "old-runs", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "previous-runs", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "backup", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "backups", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "archive", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "archives", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsRunnableDotNetHostProjectFile(string fullPath)

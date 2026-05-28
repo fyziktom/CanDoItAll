@@ -1,0 +1,6 @@
+Command: Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5032/api/access/status
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB02 existing host liveness
+StatusCode: 200
+{"apiEnabled":true,"openApiEnabled":true,"authorizationEnabled":false,"signingKeyConfigured":false,"issuer":"CanDoItAll.Api","audience":"CanDoItAll.Api","defaultTokenLifetimeMinutes":480,"maxTokenLifetimeMinutes":1440}
+ExitCode: 0

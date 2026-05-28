@@ -420,6 +420,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (!contextValidation.IsValid)
             {
+                if (TryRecoverExplicitDispositionBranchSelection(
+                        candidate,
+                        declaredOutcome,
+                        contextValidation,
+                        responseText,
+                        out _))
+                {
+                    return ProcessStepRunStatus.Completed;
+                }
+
                 if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
                     HasUnrecoverableMissingRequiredTool(missingRequiredTools))
                 {
@@ -480,6 +490,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 carriedImplementationProof);
             if (!contextValidation.IsValid)
             {
+                if (TryRecoverExplicitDispositionBranchSelection(
+                        candidate,
+                        declaredOutcome,
+                        contextValidation,
+                        responseText,
+                        out _))
+                {
+                    return ProcessStepRunStatus.Completed;
+                }
+
                 if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
                     HasUnrecoverableMissingRequiredTool(missingRequiredTools))
                 {

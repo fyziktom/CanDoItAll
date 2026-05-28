@@ -112,7 +112,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings,
         IReadOnlyList<string> allowedExternalTargetAliases,
-        bool allowExternalTargetMutation)
+        bool allowExternalTargetMutation,
+        ProcessStepOperationContract operationContract)
     {
         var resolvedExternalTargetAliases = PruneAllowedExternalTargetAliasesForCurrentRun(
             targetGroundings.Select(grounding => grounding.Alias));
@@ -121,17 +122,64 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return [];
         }
 
-        var scopedExternalTargetAliases = PreferCurrentRunExternalTargetAliases(candidate, resolvedExternalTargetAliases);
         if (allowExternalTargetMutation)
         {
+            var scopedExternalTargetAliases = PreferCurrentRunExternalTargetAliases(candidate, resolvedExternalTargetAliases);
             return scopedExternalTargetAliases
                 .Where(alias => !IsAliasCoveredByAny(alias, allowedExternalTargetAliases))
                 .ToArray();
         }
 
-        return IsProductReadOnlyValidationStep(candidate)
-            ? scopedExternalTargetAliases
-            : [];
+        if (!AllowsReadOnlyExternalTargetAccess(candidate, operationContract))
+        {
+            return [];
+        }
+
+        var trustedCurrentTargetAliases = ResolveTrustedCurrentRunProductTargetAliases(candidate, targetGroundings);
+        return trustedCurrentTargetAliases.Count > 0
+            ? trustedCurrentTargetAliases
+            : PreferCurrentRunExternalTargetAliases(candidate, resolvedExternalTargetAliases);
+    }
+
+    private static IReadOnlyList<string> ResolveTrustedCurrentRunProductTargetAliases(
+        DispatchCandidate candidate,
+        IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings)
+    {
+        var trustedAliases = PruneAllowedExternalTargetAliasesForCurrentRun(
+            targetGroundings
+                .Where(grounding => grounding.Authority == ProcessTargetGroundingAuthority.Writable)
+                .Where(grounding => grounding.SourceKind is
+                    ProcessTargetGroundingSourceKind.LaunchPlan or
+                    ProcessTargetGroundingSourceKind.ProjectStructureCurrentRun or
+                    ProcessTargetGroundingSourceKind.ExplicitStepContract)
+                .Select(grounding => grounding.Alias));
+
+        var productAliases = trustedAliases
+            .Where(alias => !IsNonProductExternalTargetAlias(alias))
+            .Where(alias => !IsLikelyExternalTargetFileAlias(alias))
+            .ToArray();
+
+        return PreferCurrentRunExternalTargetAliases(candidate, productAliases);
+    }
+
+    private static bool AllowsReadOnlyExternalTargetAccess(
+        DispatchCandidate candidate,
+        ProcessStepOperationContract operationContract)
+    {
+        if (operationContract.AllowsProductMutation)
+        {
+            return false;
+        }
+
+        if (operationContract.TargetScope == ProcessStepTargetScope.ExternalProductTargetReadOnly)
+        {
+            return true;
+        }
+
+        return operationContract.AllowedOperations.Contains(ProcessStepOperation.RunValidation) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.LaunchRuntime) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.CaptureRuntimeProof) ||
+               IsProductReadOnlyValidationStep(candidate);
     }
 
     private static bool AllowsExternalTargetMutation(
@@ -490,6 +538,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         if (operationContract.AllowedOperations.Contains(ProcessStepOperation.ExecuteExternalAction))
         {
+            if (operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteManagedProcessArtifacts) ||
+                operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteExternalArtifactDestination))
+            {
+                return new ProcessStepExecutionBoundaryDescriptor(
+                    ProcessStepExecutionBoundary.ExternalAction,
+                    AgentWorkspaceToolProfileKind.BusinessAnalysis,
+                    AllowsProductMutation: false,
+                    "Explicit operation contract allows controlled external action and managed artifact writeback without product mutation.");
+            }
+
             return new ProcessStepExecutionBoundaryDescriptor(
                 ProcessStepExecutionBoundary.ExternalAction,
                 AgentWorkspaceToolProfileKind.ReadOnly,

@@ -62,6 +62,8 @@ public sealed class ProcessTemplateGovernanceTests
                 mutableStepKeys);
 
             AssertReadOnlyContractStep(definition, "resolve-blazor-contract");
+            AssertImplementationOrRepairStep(definition, "implement-blazor-change");
+            AssertImplementationOrRepairStep(definition, "repair-blazor-findings");
             AssertValidationStep(definition, "validate-blazor-runtime");
             AssertValidationStep(definition, "revalidate-blazor-repair");
             AssertWritebackStep(definition, "record-blazor-results");
@@ -404,6 +406,18 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.Contains(ProcessStepOperation.CaptureRuntimeProof, step.AllowedOperations);
         Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
         Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+    }
+
+    private static void AssertImplementationOrRepairStep(ProcessDefinitionImportExportModel definition, string stepKey)
+    {
+        var step = GetStep(definition, stepKey);
+
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetMutable, step.OperationTargetScope);
+        Assert.Contains(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.RunValidation, step.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.LaunchRuntime, step.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.CaptureRuntimeProof, step.AllowedOperations);
     }
 
     private static void AssertRuntimeProofStep(ProcessDefinitionImportExportModel definition, string stepKey)

@@ -286,6 +286,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                      "UI Review Lead",
                      "Security Reviewer",
                      "Release Readiness Manager",
+                     "Delivery Manager",
                      "Research Deep Dive Analyst"
                  })
         {
@@ -318,6 +319,18 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(architectEditor.ProcessAccess.CanRead);
         Assert.False(architectEditor.ProcessAccess.CanWrite);
         Assert.True(architectEditor.ProcessAccess.AllowAllDefinitions);
+
+        var deliveryManager = Assert.Single(
+            await workspaceService.ListAgentsAsync(includeTemplates: false),
+            item => string.Equals(item.Name, "Delivery Manager", StringComparison.Ordinal));
+        var deliveryManagerEditor = await workspaceService.GetAgentEditorAsync(deliveryManager.Id);
+        Assert.True(deliveryManagerEditor.ProjectStructureAccess.CanRead);
+        Assert.True(deliveryManagerEditor.ProjectStructureAccess.CanWrite);
+        Assert.True(deliveryManagerEditor.ProjectStructureAccess.AllowAllProjects);
+        Assert.True(deliveryManagerEditor.ProcessAccess.CanRead);
+        Assert.False(deliveryManagerEditor.ProcessAccess.CanWrite);
+        Assert.True(deliveryManagerEditor.ProcessAccess.AllowAllDefinitions);
+        Assert.Equal(AgentWorkspaceToolProfileKind.BusinessAnalysis, deliveryManagerEditor.WorkspaceToolAccess.Profile);
 
         foreach (var agentName in new[]
                  {
@@ -624,6 +637,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             Assert.Single(agents, item => string.Equals(item.Name, "Security Reviewer", StringComparison.Ordinal)).Id);
         var business = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Business Strategist", StringComparison.Ordinal)).Id);
+        var deliveryManager = await workspaceService.GetAgentEditorAsync(
+            Assert.Single(agents, item => string.Equals(item.Name, "Delivery Manager", StringComparison.Ordinal)).Id);
         var research = await workspaceService.GetAgentEditorAsync(
             Assert.Single(agents, item => string.Equals(item.Name, "Research Deep Dive Analyst", StringComparison.Ordinal)).Id);
 
@@ -648,6 +663,12 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.True(business.WorkspaceToolAccess.CanTransformArtifacts);
         Assert.False(business.WorkspaceToolAccess.CanRunValidationCommands);
         Assert.False(business.WorkspaceToolAccess.CanScaffoldProjects);
+
+        Assert.Equal(AgentWorkspaceToolProfileKind.BusinessAnalysis, deliveryManager.WorkspaceToolAccess.Profile);
+        Assert.True(deliveryManager.WorkspaceToolAccess.CanWriteFiles);
+        Assert.True(deliveryManager.WorkspaceToolAccess.CanTransformArtifacts);
+        Assert.False(deliveryManager.WorkspaceToolAccess.CanRunValidationCommands);
+        Assert.False(deliveryManager.WorkspaceToolAccess.CanScaffoldProjects);
 
         Assert.Equal(AgentWorkspaceToolProfileKind.ReadOnly, research.WorkspaceToolAccess.Profile);
         Assert.True(research.WorkspaceToolAccess.CanReadFiles);

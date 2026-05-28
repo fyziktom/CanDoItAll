@@ -699,7 +699,9 @@ public sealed partial class ProcessesService
         var workMentionsDotNet = MentionsDotNetStack(workText);
         var workMentionsJavaScript = MentionsJavaScriptStack(workText);
         var selectedWorkIsNonBlazorDotNet = MentionsNonBlazorDotNetWork(workText);
-        var selectedWorkIsStaticClientWeb = MentionsStaticClientWebWork(workText);
+        var selectedWorkIsStaticClientWeb = !workMentionsBlazor &&
+                                            !workMentionsDotNet &&
+                                            MentionsStaticClientWebWork(workText);
         var selectedWorkIsJavaScript = ContextHasExclusiveStackSignal(
                                            additionalRoleContext,
                                            MentionsJavaScriptStack,
@@ -933,6 +935,13 @@ public sealed partial class ProcessesService
                 {
                     score += 8m;
                 }
+
+                if (agentHasDirectJavaScriptIdentity &&
+                    !agentHasDirectBlazorIdentity &&
+                    !agentHasDirectDotNetIdentity)
+                {
+                    score -= 220m;
+                }
             }
 
             if (workMentionsDotNet)
@@ -1136,6 +1145,30 @@ public sealed partial class ProcessesService
 
         if (isDeliveryManagerRole)
         {
+            var agentHasDeliveryManagerIdentity =
+                RoleMentions(aiFact.DisplayName, "delivery") &&
+                RoleMentions(aiFact.DisplayName, "manager") ||
+                RoleMentions(aiFact.RoleTitle, "delivery") &&
+                RoleMentions(aiFact.RoleTitle, "manager") ||
+                RoleMentions(aiFact.TemplateKey, "delivery-manager");
+            var agentLooksLikeDeliveryCoordinator =
+                agentHasDeliveryManagerIdentity ||
+                RoleMentions(agentText, "delivery-manager") ||
+                RoleMentions(agentText, "delivery manager") ||
+                RoleMentions(agentText, "governed delivery") ||
+                RoleMentions(agentText, "evidence handoff") ||
+                RoleMentions(agentText, "result recording") ||
+                RoleMentions(agentText, "writeback");
+
+            if (agentHasDeliveryManagerIdentity)
+            {
+                score += 520m;
+            }
+            else if (agentLooksLikeDeliveryCoordinator)
+            {
+                score += 220m;
+            }
+
             if (RoleMentions(agentText, "portfolio") ||
                 RoleMentions(agentText, "governance") ||
                 RoleMentions(agentText, "delivery") ||

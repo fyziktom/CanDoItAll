@@ -1419,6 +1419,257 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveRequiredToolNames_for_blazor_revalidation_does_not_require_project_structure_writeback_without_external_action()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "revalidate-blazor-repair",
+                Title = "Revalidate Blazor repair",
+                StepKind = ProcessStepKind.Review,
+                EvidenceContractSummary = "Record commands, files, URLs, screenshots, console messages, errors, and assumptions. Project-structure writeback belongs to result-recording steps, not validation.",
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.RunValidation,
+                    ProcessStepOperation.LaunchRuntime,
+                    ProcessStepOperation.CaptureRuntimeProof,
+                    ProcessStepOperation.WriteManagedProcessArtifacts
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly
+            },
+            new ProcessStepRun
+            {
+                Title = "Revalidate Blazor repair",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = ".NET QA Review Lead"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Revalidate Blazor repair",
+                WorkBriefText = "Run validation against the delivered Blazor WebAssembly PWA app. Do not call project_structure_node_create or project_structure_asset_create from this validation step; result writeback belongs to result-recording steps.",
+                ExpectedOutcome = "Fresh Blazor runtime and browser proof is recorded.",
+                EvidenceExpectationSummary = "Runtime evidence pack"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references."),
+                (ProcessArtifactKind.Brief, "Validation self-review summary", "Must state validated routes, screenshots captured, console status, failed assertions if any, and whether acceptance criteria are satisfied.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver a Blazor WebAssembly PWA from project structure.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:main-app",
+                    NodeTitle = "Main app"
+                }));
+
+        Assert.Contains("project_structure_read", tools);
+        Assert.Contains("browser_snapshot", tools);
+        Assert.Contains("browser_take_screenshot", tools);
+        Assert.Contains("browser_console_messages", tools);
+        Assert.DoesNotContain("project_structure_node_create", tools);
+        Assert.DoesNotContain("project_structure_asset_create", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_result_recording_requires_project_structure_writeback_when_external_action_allowed()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "record-repaired-blazor-results",
+                Title = "Record repaired Blazor results and evidence index",
+                StepKind = ProcessStepKind.Delivery,
+                EvidenceContractSummary = "Record project-structure writeback references.",
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.ExecuteExternalAction
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalActionControlled
+            },
+            new ProcessStepRun
+            {
+                Title = "Record repaired Blazor results and evidence index",
+                StepKind = ProcessStepKind.Delivery,
+                CurrentExecutorName = "Blazor delivery manager"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Record repaired Blazor results and evidence index",
+                WorkBriefText = "Write the final verdict back into project structure. Must call project_structure_node_create before completing.",
+                ExpectedOutcome = "Run evidence index and project-structure writeback summary were prepared.",
+                EvidenceExpectationSummary = "Repaired run evidence index"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Repaired run evidence index", "Must confirm result/evidence was written back to project structure through actual project_structure_* tool calls, including project_structure_node_create receipt and screenshot/evidence project_structure_asset_create ids where applicable.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver a Blazor WebAssembly PWA from project structure.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:main-app",
+                    NodeTitle = "Main app"
+                }));
+
+        Assert.Contains("project_structure_read", tools);
+        Assert.Contains("project_structure_node_create", tools);
+        Assert.Contains("project_structure_asset_create", tools);
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_uses_business_analysis_profile_for_external_result_writeback_contract()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidate(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "record-repaired-blazor-results",
+                Title = "Record repaired Blazor results and evidence index",
+                StepKind = ProcessStepKind.End,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.ExecuteExternalAction
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalActionControlled
+            },
+            new ProcessStepRun
+            {
+                Title = "Record repaired Blazor results and evidence index",
+                StepKind = ProcessStepKind.End,
+                CurrentExecutorName = "Blazor delivery manager"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Record repaired Blazor results and evidence index",
+                WorkBriefText = "Write the final verdict back into project structure through project_structure_node_create and project_structure_asset_create.",
+                ExpectedOutcome = "Run evidence index and project-structure writeback summary were prepared.",
+                EvidenceExpectationSummary = "Repaired run evidence index"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Repaired run evidence index", "Must confirm project-structure writeback ids and managed evidence paths.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver a Blazor WebAssembly PWA from project structure.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:main-app",
+                    NodeTitle = "Main app"
+                }));
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                null,
+                null
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.Equal(
+            "ExternalAction",
+            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessStepExecutionBoundaryMetadataKey).GetString());
+        Assert.Equal(
+            AgentWorkspaceToolAccessProfiles.BusinessAnalysisProfileKey,
+            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessWorkspaceToolProfileMetadataKey).GetString());
+        Assert.Contains(
+            "managed artifact writeback",
+            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessCooperationSummaryMetadataKey).GetString(),
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BuildExecutionPrompt_uses_boundary_aware_profile_for_external_result_writeback_contract()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildExecutionPrompt = serviceType.GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildExecutionPrompt method was not found.");
+        var candidate = CreateDispatchCandidate(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "record-repaired-blazor-results",
+                Title = "Record repaired Blazor results and evidence index",
+                StepKind = ProcessStepKind.End,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.ExecuteExternalAction
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalActionControlled
+            },
+            new ProcessStepRun
+            {
+                Title = "Record repaired Blazor results and evidence index",
+                StepKind = ProcessStepKind.End,
+                CurrentExecutorName = "Blazor delivery manager"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Record repaired Blazor results and evidence index",
+                WorkBriefText = "Write the final verdict back into project structure through project_structure_node_create and project_structure_asset_create.",
+                ExpectedOutcome = "Run evidence index and project-structure writeback summary were prepared.",
+                EvidenceExpectationSummary = "Repaired run evidence index"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Repaired run evidence index", "Must confirm project-structure writeback ids and managed evidence paths.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver a Blazor WebAssembly PWA from project structure.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:main-app",
+                    NodeTitle = "Main app"
+                }));
+
+        var prompt = (string)buildExecutionPrompt.Invoke(null, [candidate])!;
+
+        Assert.Contains("- Workspace tool profile: business-analysis", prompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("- Workspace tool profile: software-development", prompt, StringComparison.Ordinal);
+        Assert.Contains("project_structure_node_create", prompt, StringComparison.Ordinal);
+        Assert.Contains("project_structure_asset_create", prompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RequiresConcreteImplementationProof_exempts_dotnet_solution_setup_scaffold_step()
     {
         var requiresProof = InvokeRequiresConcreteImplementationProof(
@@ -1655,6 +1906,62 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.DoesNotContain("workspace_dotnet_run", tools);
         Assert.DoesNotContain("workspace_dotnet_build", tools);
         Assert.DoesNotContain("browser_take_screenshot", tools);
+    }
+
+    [Fact]
+    public void ResolveRequiredToolNames_for_blazor_browser_validation_does_not_require_powershell_runner_for_js_interop()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "Blazor app delivery",
+                Slug = "blazor-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "validate-blazor-runtime",
+                Title = "Validate Blazor runtime and browser evidence",
+                StepKind = ProcessStepKind.Review,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.RunValidation,
+                    ProcessStepOperation.LaunchRuntime,
+                    ProcessStepOperation.CaptureRuntimeProof
+                ]
+            },
+            new ProcessStepRun
+            {
+                Title = "Validate Blazor runtime and browser evidence",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = "JavaScript QA and browser proof lead",
+                RoleSnapshotSummary = "QA role for Blazor WebAssembly PWA browser validation with JavaScript interop evidence."
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Validate Blazor runtime and browser evidence",
+                WorkBriefText = """
+                Validate the Blazor WebAssembly PWA from external-target/C/programovani/dotnet-demo/output/output.csproj.
+                The app includes wwwroot/tetris-storage.js for localStorage interop, but the runnable host is Blazor/.NET.
+                Start the app with workspace_dotnet_run, capture browser_snapshot, browser_take_screenshot, and browser_console_messages, then write the runtime evidence pack.
+                Do not run a cleanup script; the kept-alive dotnet process is managed by the dispatcher.
+                """,
+                ExpectedOutcome = "Blazor runtime evidence pack with browser proof.",
+                EvidenceExpectationSummary = "Browser screenshot, bounded snapshot, console messages, and runtime validation notes."
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", "Must include browser screenshot, browser snapshot, console status, startup receipt, and validation disposition.")
+            ],
+            "Build a generic Blazor WASM PWA with JavaScript interop from project structure.");
+
+        Assert.Contains("workspace_dotnet_run", tools);
+        Assert.Contains("browser_console_messages", tools);
+        Assert.Contains("browser_snapshot", tools);
+        Assert.Contains("browser_take_screenshot", tools);
+        Assert.DoesNotContain("workspace_pwsh_run_script", tools);
     }
 
     [Fact]
@@ -3046,6 +3353,27 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResetRecordedArtifactExpectationsForExecutionProjection_clears_stale_attempt_satisfaction_without_losing_external_refs()
+    {
+        var expectedArtifactId = Guid.NewGuid();
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
+            "Record final evidence.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [(ProcessArtifactKind.Evidence, "Final evidence", true, "Must include current execution artifact.")],
+            [],
+            stepTitle: "Record evidence");
+        candidate.RecordedArtifactExpectationIds.Add(expectedArtifactId);
+        candidate.ExternalReferenceKeys.Add($"workspace-written-artifact|{Guid.NewGuid():D}|{expectedArtifactId:D}|artifacts/process-runs/current/final-evidence.md");
+
+        ProcessRunAutomationDispatchService.ResetRecordedArtifactExpectationsForExecutionProjection(candidate);
+
+        Assert.Empty(candidate.RecordedArtifactExpectationIds);
+        Assert.Single(candidate.ExternalReferenceKeys);
+    }
+
+    [Fact]
     public void ExistingManagedArtifactFileMatches_expected_fallback_run_artifact()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -4022,6 +4350,75 @@ Requirements from project-level planning context:
             alias => string.Equals(
                 alias,
                 "external-target/C/programovani/dotnet-demo/output/codex-live-blazor-20260522-181000/product",
+                StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void BuildProcessInvocationMetadataJson_grants_read_only_external_target_alias_for_explicit_repair_revalidation_contract()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("BuildProcessInvocationMetadataJson", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildProcessInvocationMetadataJson method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Revalidate the repaired app by building it, launching it, and capturing browser proof.",
+            ProcessStepKind.Review,
+            [],
+            false,
+            [],
+            [],
+            triggerReason: "Deliver the generated application showcase.",
+            stepTitle: "Revalidate Blazor repair",
+            processName: "Blazor app delivery",
+            outputContractSummary: "Fresh runtime and browser validation evidence");
+        var stepDefinition = (ProcessStepDefinition)(candidate.GetType().GetProperty("StepDefinition")?.GetValue(candidate)
+            ?? throw new InvalidOperationException("DispatchCandidate.StepDefinition was not available."));
+        stepDefinition.AllowedOperations =
+        [
+            ProcessStepOperation.ReadProcessContext,
+            ProcessStepOperation.ReadProjectStructure,
+            ProcessStepOperation.ReadUpstreamArtifacts,
+            ProcessStepOperation.WriteManagedProcessArtifacts,
+            ProcessStepOperation.RunValidation,
+            ProcessStepOperation.LaunchRuntime,
+            ProcessStepOperation.CaptureRuntimeProof
+        ];
+        stepDefinition.OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly;
+        const string projectStructureGroundingSummary = """
+            Dispatcher fetched the live project structure for `TetrisGame` and focused this prompt on the selected work branch.
+            Grounded external target paths from the selected project structure:
+            - `C:\programovani\dotnet-demo\output` mapped to `external-target/C/programovani/dotnet-demo/output` from output note (custom:output-note)
+            """;
+        const string artifactInspectionGroundingSummary = """
+            Upstream repair evidence references:
+            - Host project: `external-target/C/programovani/dotnet-demo/output/output.csproj`
+            - Test project: `external-target/C/programovani/dotnet-demo/output/tests/output.Tests/output.Tests.csproj`
+            - Diagnostic artifact: `external-target/C/Users/lucys/AppData/Local/CanDoItAll/workspace/artifacts/scopes/organization/1170ea92148839066da5cdc49c98874e/pr`
+            """;
+
+        var metadataJson = method.Invoke(
+            null,
+            [
+                candidate,
+                new ExecutionInvocationPolicy(),
+                projectStructureGroundingSummary,
+                artifactInspectionGroundingSummary
+            ]) as string;
+
+        Assert.False(string.IsNullOrWhiteSpace(metadataJson));
+        using var document = JsonDocument.Parse(metadataJson);
+        Assert.False(document.RootElement.TryGetProperty(ExecutionInvocationMetadata.AllowedExternalTargetAliasesMetadataKey, out _));
+        var readOnlyAliases = document.RootElement
+            .GetProperty(ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey)
+            .EnumerateArray()
+            .Select(item => item.GetString())
+            .ToArray();
+
+        Assert.Contains("external-target/C/programovani/dotnet-demo/output", readOnlyAliases);
+        Assert.DoesNotContain(
+            readOnlyAliases,
+            alias => string.Equals(
+                alias,
+                "external-target/C/Users/lucys/AppData/Local/CanDoItAll/workspace/artifacts/scopes/organization/1170ea92148839066da5cdc49c98874e/pr",
                 StringComparison.OrdinalIgnoreCase));
     }
 
@@ -13355,6 +13752,122 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveArtifactRecoveryExecutionRunId_returns_stale_waiting_tool_attempt_for_missing_artifact_step()
+    {
+        var missingArtifact = CreateDispatchArtifactExpectation(
+            "Blazor runtime evidence pack",
+            isRequired: true);
+        var startedAtUtc = DateTimeOffset.Parse("2026-05-27T18:52:44+00:00");
+        var staleWaitingRun = CreateExecutionRun(
+            "process-automation-dispatch",
+            ExecutionState.WaitingOnTool,
+            null) with
+        {
+            CreatedAtUtc = startedAtUtc,
+            StartedAtUtc = startedAtUtc,
+            UpdatedAtUtc = startedAtUtc
+        };
+        var freshWaitingRun = CreateExecutionRun(
+            "process-automation-dispatch",
+            ExecutionState.WaitingOnTool,
+            null) with
+        {
+            CreatedAtUtc = startedAtUtc.AddMinutes(20),
+            StartedAtUtc = startedAtUtc.AddMinutes(20),
+            UpdatedAtUtc = startedAtUtc.AddMinutes(20)
+        };
+
+        var staleResult = ProcessRunAutomationDispatchService.ResolveArtifactRecoveryExecutionRunId(
+            new ProcessStepRun
+            {
+                Status = ProcessStepRunStatus.InProgress,
+                StartedAtUtc = startedAtUtc
+            },
+            [staleWaitingRun],
+            [missingArtifact],
+            new HashSet<Guid>(),
+            startedAtUtc.AddMinutes(11));
+        var freshResult = ProcessRunAutomationDispatchService.ResolveArtifactRecoveryExecutionRunId(
+            new ProcessStepRun
+            {
+                Status = ProcessStepRunStatus.InProgress,
+                StartedAtUtc = startedAtUtc
+            },
+            [freshWaitingRun],
+            [missingArtifact],
+            new HashSet<Guid>(),
+            startedAtUtc.AddMinutes(21));
+
+        Assert.Equal(staleWaitingRun.Id, staleResult);
+        Assert.Null(freshResult);
+    }
+
+    [Theory]
+    [InlineData(ProcessRuntimeEventTypes.ManualAgentStepRerun, false)]
+    [InlineData(" runtime-recovery-scan ", true)]
+    [InlineData("step-transition:Completed", true)]
+    [InlineData("", true)]
+    public void ShouldReusePriorArtifactRecoveryExecutionRun_starts_fresh_attempt_for_manual_rerun(
+        string trigger,
+        bool expected)
+    {
+        var shouldReuse = ProcessRunAutomationDispatchService.ShouldReusePriorArtifactRecoveryExecutionRun(trigger);
+
+        Assert.Equal(expected, shouldReuse);
+    }
+
+    [Fact]
+    public void ShouldAttemptStrandedDispositionArtifactFinalization_requires_stale_or_terminal_disposition_run()
+    {
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
+            "Validate the Blazor runtime and route to repair when validation fails.",
+            ProcessStepKind.Review,
+            [
+                ("repair-required", "Repair required", "Validation found repairable runtime findings."),
+                ("passed", "Passed", "Validation passed.")
+            ],
+            requiresExplicitBranchOutcomeSelection: true,
+            [(ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", true, "Create artifacts/process-runs/{processRunId}/03-blazor-runtime-evidence-pack.md.")],
+            [],
+            stepTitle: "Validate Blazor runtime and browser evidence");
+        var startedAtUtc = DateTimeOffset.Parse("2026-05-27T18:52:44+00:00");
+        var staleWaitingRun = CreateExecutionRun(
+            "process-automation-dispatch",
+            ExecutionState.WaitingOnTool,
+            null) with
+        {
+            CreatedAtUtc = startedAtUtc,
+            StartedAtUtc = startedAtUtc,
+            UpdatedAtUtc = startedAtUtc
+        };
+        var completedRun = CreateExecutionRun(
+            "process-automation-dispatch",
+            ExecutionState.Failed,
+            RunOutcome.Failed);
+
+        Assert.True(ProcessRunAutomationDispatchService.ShouldAttemptStrandedDispositionArtifactFinalization(
+            candidate,
+            staleWaitingRun,
+            "Acceptance decision status: repair-required.",
+            startedAtUtc.AddMinutes(11)));
+        Assert.True(ProcessRunAutomationDispatchService.ShouldAttemptStrandedDispositionArtifactFinalization(
+            candidate,
+            completedRun,
+            "Status: repair-required.",
+            startedAtUtc.AddMinutes(1)));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptStrandedDispositionArtifactFinalization(
+            candidate,
+            staleWaitingRun,
+            "Validation failed but no branch outcome was selected.",
+            startedAtUtc.AddMinutes(11)));
+        Assert.False(ProcessRunAutomationDispatchService.ShouldAttemptStrandedDispositionArtifactFinalization(
+            candidate,
+            staleWaitingRun,
+            "Status: repair-required.",
+            startedAtUtc.AddMinutes(2)));
+    }
+
+    [Fact]
     public void ApplyArtifactProjectionLineage_SB02_INV_001_uses_compact_key_for_long_recovery_lineage()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -14043,6 +14556,112 @@ Ancestor path to the target work node:
             executionRunId);
 
         Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB02_INV_008_accepts_markdown_evidence_pack_that_references_screenshot_paths()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            "Blazor runtime evidence pack",
+            isRequired: true,
+            "Must include dotnet build results, Playwright screenshot paths, browser_console_messages output, and visible behavior assertions.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/03-blazor-runtime-evidence-pack.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|artifacts/process-runs/current/03-blazor-runtime-evidence-pack.md",
+            ReviewSummary = "Markdown evidence pack with screenshot paths and browser console status.",
+            ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_accepts_markdown_evidence_index_that_lists_screenshot_files()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            "Repaired run evidence index",
+            isRequired: true,
+            "Must include fresh screenshot files, console output, runtime proof, and validation evidence as a Markdown evidence index.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/07-repaired-run-evidence-index.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|artifacts/process-runs/current/07-repaired-run-evidence-index.md",
+            ReviewSummary = "Markdown evidence index that cites screenshot file paths and browser console status.",
+            ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_SB02_INV_009_rejects_markdown_when_expectation_is_screenshot_artifact()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            "Browser screenshot",
+            isRequired: true,
+            "Must be captured as a screenshot artifact.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/browser-screenshot.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|artifacts/process-runs/current/browser-screenshot.md",
+            ReviewSummary = "Markdown file where an image screenshot artifact was required.",
+            ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
+        Assert.Contains("not an image file", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -15622,6 +16241,150 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveCompletionStatus_infers_explicit_repair_branch_from_disposition_summary()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var resolveSelectedBranchOutcomeId = ResolveSelectedBranchOutcomeIdMethod(serviceType);
+        var candidate = CreateDispatchCandidateWithBranchOutcomes(
+            "Review the implementation and route the next step honestly.",
+            true,
+            ("quality-accepted", "Quality accepted", "Continue to result writeback."),
+            ("repair-required", "Repair required", "Route back to implementation repair."));
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Validation artifacts were written and the review disposition is in the evidence summary.",
+            summaryMarkdown: """
+            ## Validation self-review summary
+
+            Acceptance decision:
+            - Status: repair-required
+            - Reason: Browser interaction proof found a broken hard-drop keyboard binding.
+            """);
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Review run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_write_file", CreateProviderNativeTextResult("Validation artifacts written.")),
+                    ("browser_take_screenshot", CreateProviderNativeTextResult("Screenshot saved.")),
+                    ("browser_console_messages", CreateProviderNativeTextResult("Console inspected."))),
+                []),
+            null,
+            [],
+            []);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var selectedBranchOutcomeId = (Guid?)resolveSelectedBranchOutcomeId.Invoke(null, [candidate, ProcessStepRunStatus.Completed, responseText]);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, status);
+        Assert.Equal(ResolveBranchOutcomeId(candidate, "repair-required"), selectedBranchOutcomeId);
+    }
+
+    [Fact]
+    public void SatisfiedArtifactDispositionCompletion_recovers_failed_writeback_with_explicit_repair_branch()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var method = serviceType.GetMethod("TryResolveSatisfiedArtifactDispositionCompletion", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryResolveSatisfiedArtifactDispositionCompletion method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the implemented Blazor app.",
+            ProcessStepKind.Review,
+            [
+                ("quality-accepted", "Quality accepted", "Continue to result writeback."),
+                ("repair-required", "Repair required", "Route back to implementation repair.")
+            ],
+            true,
+            [
+                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", true, "Must include screenshots, browser console, and visible behavior assertions."),
+                (ProcessArtifactKind.Transcript, "Validation self-review summary", true, "Must state accepted or repair-required disposition.")
+            ],
+            [],
+            stepTitle: "Validate Blazor runtime and browser evidence",
+            recordedArtifactTitles: ["Blazor runtime evidence pack", "Validation self-review summary"]);
+        var evidenceExpectation = ResolveDispatchArtifactExpectation(candidate, "Blazor runtime evidence pack");
+        var summaryExpectation = ResolveDispatchArtifactExpectation(candidate, "Validation self-review summary");
+        var validationResults = new[]
+        {
+            new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+                evidenceExpectation.Id,
+                evidenceExpectation.Title,
+                ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+                ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied,
+                ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AgentExecutionArtifact,
+                Guid.NewGuid(),
+                "artifacts/process-runs/run-1/03-blazor-runtime-evidence-pack.md",
+                "Satisfied by a process artifact record.",
+                string.Empty,
+                "runtime-proof"),
+            new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+                summaryExpectation.Id,
+                summaryExpectation.Title,
+                ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative,
+                ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied,
+                ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AgentExecutionArtifact,
+                Guid.NewGuid(),
+                "artifacts/process-runs/run-1/03-validation-self-review-summary.md",
+                "Satisfied by a process artifact record.",
+                string.Empty,
+                "self-review")
+        };
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Failed,
+            "project_structure_node_create failed after the managed evidence files were written.",
+            summaryMarkdown: """
+            ## Validation self-review summary
+
+            Acceptance decision:
+            - Status: repair-required
+            - Reason: Space-key browser proof failed and requires implementation repair.
+            """);
+        var arguments = new object?[]
+        {
+            candidate,
+            ProcessStepRunStatus.Failed,
+            validationResults,
+            responseText,
+            null,
+            null
+        };
+
+        var recovered = (bool)(method.Invoke(null, arguments)
+            ?? throw new InvalidOperationException("Disposition recovery result was not returned."));
+        var branchOutcome = arguments[4]
+            ?? throw new InvalidOperationException("Recovered branch outcome was not returned.");
+        var branchOutcomeId = (Guid)(branchOutcome.GetType().GetProperty("Id")?.GetValue(branchOutcome)
+            ?? throw new InvalidOperationException("DispatchBranchOutcome.Id was not available."));
+        var reason = arguments[5] as string;
+
+        Assert.True(recovered);
+        Assert.Equal(ResolveBranchOutcomeId(candidate, "repair-required"), branchOutcomeId);
+        Assert.Contains("required current-run artifacts are satisfied", reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveCompletionStatus_uses_synthetic_default_branch_when_it_is_only_success_path()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -15674,6 +16437,64 @@ Ancestor path to the target work node:
 
         Assert.Equal(ProcessStepRunStatus.Completed, status);
         Assert.Equal(ResolveBranchOutcomeId(candidate, "__default__"), selectedBranchOutcomeId);
+    }
+
+    [Fact]
+    public void ResolveCompletionStatus_rejects_synthetic_default_branch_when_domain_disposition_is_required()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethod("ResolveCompletionStatus", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletionStatus method was not found.");
+        var resolveSelectedBranchOutcomeId = ResolveSelectedBranchOutcomeIdMethod(serviceType);
+        var candidate = CreateDispatchCandidateWithBranchOutcomes(
+            "Run QA validation and choose the real validation disposition.",
+            true,
+            ("quality-accepted", "Quality accepted", "Continue to result writeback."),
+            ("repair-required", "Repair required", "Route back to implementation repair."),
+            ("__default__", "Default", "Continue when no explicit branch outcome is selected."),
+            ("__error__", "Error", "Handle exceptions, failed validations, or explicit error escalation."));
+        var now = DateTimeOffset.UtcNow;
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Validation did not select a real governed disposition.",
+            branchOutcomeKey: "__default__");
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "QA review run",
+                "process-step",
+                "step-1",
+                "corr-1",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "OpenAI chat completions",
+                "gpt-4.1",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                BuildSerializedSessionState(
+                    ("workspace_stat_path", CreateProviderNativeTextResult("Path exists.")),
+                    ("workspace_read_file", CreateProviderNativeTextResult("Read complete."))),
+                []),
+            null,
+            [],
+            []);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
+        var selectedBranchOutcomeId = (Guid?)resolveSelectedBranchOutcomeId.Invoke(null, [candidate, ProcessStepRunStatus.Completed, responseText]);
+
+        Assert.Equal(ProcessStepRunStatus.Failed, status);
+        Assert.Null(selectedBranchOutcomeId);
     }
 
     [Fact]

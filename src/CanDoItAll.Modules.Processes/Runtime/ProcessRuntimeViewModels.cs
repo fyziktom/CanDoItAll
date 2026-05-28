@@ -805,6 +805,18 @@ public sealed class ProcessStepTransitionRequest
     public bool SuppressAutomationDispatch { get; set; }
 
     public bool AllowCompletedAgentRerun { get; internal set; }
+
+    internal ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind? ArtifactValidationExecutorKind { get; set; }
+
+    internal Guid? ArtifactValidationExecutionRunId { get; set; }
+
+    internal Guid? ArtifactValidationWorkflowRunId { get; set; }
+
+    internal Guid? ArtifactValidationSubprocessRunId { get; set; }
+
+    internal Guid? ArtifactValidationRecoveryExecutionRunId { get; set; }
+
+    internal Guid? ArtifactValidationRecoveredForExecutionRunId { get; set; }
 }
 
 public sealed class ProcessAgentStepRerunRequest

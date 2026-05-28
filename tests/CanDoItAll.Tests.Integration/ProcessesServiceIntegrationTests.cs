@@ -796,6 +796,230 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task TransitionStepAsync_SB01_INV_001_allows_automation_completion_with_matching_execution_lineage_required_artifact()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Automation artifact lineage gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Automation Lineage Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Automation artifact lineage gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var executionRunId = Guid.NewGuid();
+        const string evidencePath = "artifacts/test/current-lineage-delivery-readiness-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, evidencePath, "Evidence content is present and belongs to the current automation execution lineage.");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded from automation execution run {executionRunId:D}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence content is current.",
+            ManagedStoragePath = evidencePath,
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{requiredArtifactExpectationId:D}|{evidencePath}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = executionRunId,
+                SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{requiredArtifactExpectationId:D}|{evidencePath}"
+            }
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completing with current automation lineage evidence.",
+            DecidedBy = ProcessRunAutomationDispatchService.AutomationActor,
+            ArtifactValidationExecutorKind = ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            ArtifactValidationExecutionRunId = executionRunId
+        });
+
+        Assert.True(completionResult.IsSuccess, FormatErrors(completionResult.Errors));
+
+        var completedStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Id == deliveryStep.Id);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, completedStep.Status);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB01_INV_002_allows_automation_completion_when_transition_context_is_inferred_from_step_artifacts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Automation inferred artifact lineage gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Automation Inferred Lineage Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Automation inferred artifact lineage gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var executionRunId = Guid.NewGuid();
+        const string evidencePath = "artifacts/test/inferred-lineage-delivery-readiness-evidence.md";
+        var externalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{requiredArtifactExpectationId:D}|{evidencePath}";
+
+        await WriteWorkspaceArtifactAsync(
+            application,
+            evidencePath,
+            "Evidence content is present and belongs to the automation execution lineage inferred from the recorded artifact.");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded from automation execution run {executionRunId:D}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence content is current.",
+            ManagedStoragePath = evidencePath,
+            ExternalReferenceKey = externalReferenceKey,
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = executionRunId,
+                ProjectedExecutionRunId = executionRunId,
+                SourceExternalReferenceKey = externalReferenceKey
+            }
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completing with current automation lineage evidence inferred from artifacts.",
+            DecidedBy = ProcessRunAutomationDispatchService.AutomationActor
+        });
+
+        Assert.True(completionResult.IsSuccess, FormatErrors(completionResult.Errors));
+
+        var completedStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Id == deliveryStep.Id);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, completedStep.Status);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_allows_repair_branch_without_positive_required_artifact()
     {
         await using var application = await TestApplication.CreateAsync();

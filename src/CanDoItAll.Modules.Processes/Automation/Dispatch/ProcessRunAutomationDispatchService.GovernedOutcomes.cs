@@ -56,6 +56,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return repairBranchOutcome.Id;
         }
 
+        if (string.IsNullOrWhiteSpace(declaredOutcome.BranchOutcomeKey) &&
+            string.IsNullOrWhiteSpace(declaredOutcome.BranchOutcomeTitle) &&
+            TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out var explicitDisposition))
+        {
+            return explicitDisposition.Id;
+        }
+
         return null;
     }
 
@@ -77,7 +84,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 item => NormalizeBranchOutcomeToken(item.Key).Equals(normalizedBranchOutcomeKey, StringComparison.Ordinal));
             if (matchByKey is not null)
             {
-                return matchByKey.Id;
+                return IsInvalidExplicitSystemBranchSelection(candidate, matchByKey)
+                    ? null
+                    : matchByKey.Id;
             }
         }
 
@@ -89,7 +98,112 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var matchByTitle = candidate.BranchOutcomes.FirstOrDefault(
             item => NormalizeBranchOutcomeToken(item.Title).Equals(normalizedBranchOutcomeTitle, StringComparison.Ordinal));
-        return matchByTitle?.Id;
+        if (matchByTitle is null)
+        {
+            return null;
+        }
+
+        return IsInvalidExplicitSystemBranchSelection(candidate, matchByTitle)
+            ? null
+            : matchByTitle.Id;
+    }
+
+    private static bool TryResolveExplicitDispositionBranchOutcome(
+        DispatchCandidate candidate,
+        string? responseText,
+        out DispatchBranchOutcome branchOutcome)
+    {
+        branchOutcome = null!;
+        if (candidate.BranchOutcomes.Count == 0 || string.IsNullOrWhiteSpace(responseText))
+        {
+            return false;
+        }
+
+        if (TryResolveDeclaredStepOutcome(responseText, out var declaredOutcome) &&
+            (!string.IsNullOrWhiteSpace(declaredOutcome.BranchOutcomeKey) ||
+             !string.IsNullOrWhiteSpace(declaredOutcome.BranchOutcomeTitle)))
+        {
+            var declaredBranchOutcomeId = ResolveSelectedBranchOutcomeId(
+                candidate,
+                ProcessStepRunStatus.Completed,
+                declaredOutcome.BranchOutcomeKey,
+                declaredOutcome.BranchOutcomeTitle);
+            if (declaredBranchOutcomeId.HasValue)
+            {
+                branchOutcome = candidate.BranchOutcomes.Single(item => item.Id == declaredBranchOutcomeId.Value);
+                return true;
+            }
+        }
+
+        var normalizedText = NormalizeBranchDispositionText($"{responseText} {ResolveOutputInspectionText(responseText)}");
+        if (string.IsNullOrWhiteSpace(normalizedText))
+        {
+            return false;
+        }
+
+        var matches = candidate.BranchOutcomes
+            .Where(outcome => !IsInvalidExplicitSystemBranchSelection(candidate, outcome))
+            .Where(outcome => ContainsExplicitBranchDispositionSignal(normalizedText, outcome))
+            .Take(2)
+            .ToList();
+        if (matches.Count != 1)
+        {
+            return false;
+        }
+
+        branchOutcome = matches[0];
+        return true;
+    }
+
+    private static bool TryRecoverExplicitDispositionBranchSelection(
+        DispatchCandidate candidate,
+        DeclaredStepOutcome declaredOutcome,
+        AgentOutputValidationResult contextValidation,
+        string? responseText,
+        out DispatchBranchOutcome branchOutcome)
+    {
+        branchOutcome = null!;
+        return declaredOutcome.Status == ProcessStepRunStatus.Completed &&
+               contextValidation.Errors.Count > 0 &&
+               contextValidation.Errors.All(error =>
+                   error.Code is "process.step_outcome.context.branch_required" or
+                       "process.step_outcome.context.branch_invalid") &&
+               TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out branchOutcome);
+    }
+
+    private static bool ContainsExplicitBranchDispositionSignal(string normalizedText, DispatchBranchOutcome outcome)
+    {
+        var tokens = new[]
+            {
+                NormalizeBranchOutcomeToken(outcome.Key),
+                NormalizeBranchOutcomeToken(outcome.Title)
+            }
+            .Where(token => !string.IsNullOrWhiteSpace(token))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (tokens.Length == 0)
+        {
+            return false;
+        }
+
+        var prefixes = new[]
+        {
+            "branchoutcomekey",
+            "branchoutcometitle",
+            "branchoutcome",
+            "selectedbranch",
+            "branch",
+            "disposition",
+            "acceptancedecisionstatus",
+            "acceptancedecision",
+            "acceptancestatus",
+            "status",
+            "decision",
+            "outcome"
+        };
+
+        return tokens.Any(token => prefixes.Any(prefix => normalizedText.Contains(prefix + token, StringComparison.Ordinal)));
     }
 
     private static Guid? ResolveImplicitCompletedDefaultBranchOutcomeId(DispatchCandidate candidate)
@@ -123,6 +237,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return string.Equals(NormalizeBranchOutcomeToken(outcome.Key), "error", StringComparison.Ordinal) ||
                string.Equals(NormalizeBranchOutcomeToken(outcome.Title), "error", StringComparison.Ordinal);
+    }
+
+    private static bool IsInvalidExplicitSystemBranchSelection(
+        DispatchCandidate candidate,
+        DispatchBranchOutcome outcome)
+    {
+        return candidate.RequiresExplicitBranchOutcomeSelection &&
+               (IsDefaultBranchOutcome(outcome) || IsErrorBranchOutcome(outcome)) &&
+               candidate.BranchOutcomes.Any(item => !IsDefaultBranchOutcome(item) && !IsErrorBranchOutcome(item));
     }
 
     private static string? ResolveBranchOutcomeSelectionFailure(

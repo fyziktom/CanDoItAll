@@ -56,6 +56,7 @@ public sealed partial class ProcessesService
                     transitionContext.Run,
                     transitionContext.RequiredArtifactExpectations,
                     transitionContext.StepArtifacts,
+                    request,
                     CreateProcessArtifactContentReader());
                 if (artifactValidationResult.IsFailure)
                 {
@@ -428,6 +429,7 @@ public sealed partial class ProcessesService
         ProcessRun run,
         IReadOnlyList<ProcessArtifactExpectation> requiredArtifactExpectations,
         IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+        ProcessStepTransitionRequest request,
         ProcessRunAutomationDispatchService.IProcessArtifactContentReader managedArtifactContentReader)
     {
         if (requiredArtifactExpectations.Count == 0)
@@ -435,13 +437,19 @@ public sealed partial class ProcessesService
             return Result.Success();
         }
 
+        var artifactValidationContext = ResolveArtifactValidationContext(request, stepArtifacts);
         var validationResults = requiredArtifactExpectations
             .Select(expectation => ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
                 run.Id,
                 stepRun.Id,
                 ToDispatchArtifactExpectation(expectation),
                 stepArtifacts,
-                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.Manual,
+                artifactValidationContext.ExecutorKind,
+                artifactValidationContext.ExecutionRunId,
+                artifactValidationContext.WorkflowRunId,
+                artifactValidationContext.SubprocessRunId,
+                artifactValidationContext.RecoveryExecutionRunId,
+                artifactValidationContext.RecoveredForExecutionRunId,
                 managedArtifactContentReader: managedArtifactContentReader))
             .ToArray();
         var failures = validationResults
@@ -471,6 +479,142 @@ public sealed partial class ProcessesService
                 "processes.step-completion-invalid-required-artifacts"));
     }
 
+    private static ProcessStepTransitionArtifactValidationContext ResolveArtifactValidationContext(
+        ProcessStepTransitionRequest request,
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+    {
+        if (request.ArtifactValidationExecutorKind.HasValue)
+        {
+            return new ProcessStepTransitionArtifactValidationContext(
+                request.ArtifactValidationExecutorKind.Value,
+                request.ArtifactValidationExecutionRunId,
+                request.ArtifactValidationWorkflowRunId,
+                request.ArtifactValidationSubprocessRunId,
+                request.ArtifactValidationRecoveryExecutionRunId,
+                request.ArtifactValidationRecoveredForExecutionRunId);
+        }
+
+        if (IsAutomationDispatchTransition(request) &&
+            TryResolveSingleDirectExecutionRunId(stepArtifacts, out var executionRunId))
+        {
+            return new ProcessStepTransitionArtifactValidationContext(
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                WorkflowRunId: null,
+                SubprocessRunId: null,
+                RecoveryExecutionRunId: null,
+                RecoveredForExecutionRunId: null);
+        }
+
+        return new ProcessStepTransitionArtifactValidationContext(
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.Manual,
+            ExecutionRunId: null,
+            WorkflowRunId: null,
+            SubprocessRunId: null,
+            RecoveryExecutionRunId: null,
+            RecoveredForExecutionRunId: null);
+    }
+
+    private static bool IsAutomationDispatchTransition(ProcessStepTransitionRequest request)
+        => string.Equals(
+            request.DecidedBy,
+            ProcessRunAutomationDispatchService.AutomationActor,
+            StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryResolveSingleDirectExecutionRunId(
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+        out Guid executionRunId)
+    {
+        var executionRunIds = new HashSet<Guid>();
+        foreach (var artifact in stepArtifacts)
+        {
+            AddDirectExecutionRunIds(artifact, executionRunIds);
+            if (executionRunIds.Count > 1)
+            {
+                executionRunId = Guid.Empty;
+                return false;
+            }
+        }
+
+        executionRunId = executionRunIds.SingleOrDefault();
+        return executionRunId != Guid.Empty;
+    }
+
+    private static void AddDirectExecutionRunIds(
+        ProcessArtifactRecord artifact,
+        ISet<Guid> executionRunIds)
+    {
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+        if (lineage is not null &&
+            IsDirectExecutionLineage(lineage.SourceKind))
+        {
+            AddGuid(executionRunIds, lineage.SourceExecutionRunId);
+            AddGuid(executionRunIds, lineage.ProjectedExecutionRunId);
+        }
+
+        if (TryReadPipeDelimitedExecutionRunId(artifact.ExternalReferenceKey, "workspace-written-artifact|", out var externalReferenceExecutionRunId) ||
+            TryReadPipeDelimitedExecutionRunId(artifact.ExternalReferenceKey, "existing-managed-artifact|", out externalReferenceExecutionRunId) ||
+            TryReadPipeDelimitedExecutionRunId(artifact.ExternalReferenceKey, "assistant-response|", out externalReferenceExecutionRunId) ||
+            TryReadColonDelimitedExecutionRunId(artifact.ExternalReferenceKey, "agentframework-browser-artifact:", out externalReferenceExecutionRunId))
+        {
+            executionRunIds.Add(externalReferenceExecutionRunId);
+        }
+    }
+
+    private static bool IsDirectExecutionLineage(ProcessArtifactProjectionSourceKind sourceKind)
+    {
+        return sourceKind is
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact or
+            ProcessArtifactProjectionSourceKind.WorkspaceWrite or
+            ProcessArtifactProjectionSourceKind.ExistingManagedFile or
+            ProcessArtifactProjectionSourceKind.AssistantResponse or
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser;
+    }
+
+    private static void AddGuid(ISet<Guid> values, Guid? value)
+    {
+        if (value.HasValue && value.Value != Guid.Empty)
+        {
+            values.Add(value.Value);
+        }
+    }
+
+    private static bool TryReadPipeDelimitedExecutionRunId(
+        string value,
+        string prefix,
+        out Guid executionRunId)
+    {
+        executionRunId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remainder = value[prefix.Length..];
+        var separatorIndex = remainder.IndexOf('|', StringComparison.Ordinal);
+        var token = separatorIndex < 0 ? remainder : remainder[..separatorIndex];
+        return Guid.TryParse(token, out executionRunId);
+    }
+
+    private static bool TryReadColonDelimitedExecutionRunId(
+        string value,
+        string prefix,
+        out Guid executionRunId)
+    {
+        executionRunId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remainder = value[prefix.Length..];
+        var separatorIndex = remainder.IndexOf(':', StringComparison.Ordinal);
+        var token = separatorIndex < 0 ? remainder : remainder[..separatorIndex];
+        return Guid.TryParse(token, out executionRunId);
+    }
+
     private ProcessRunAutomationDispatchService.IProcessArtifactContentReader CreateProcessArtifactContentReader()
     {
         return new ProcessRunAutomationDispatchService.StorageBackedProcessArtifactContentReader(
@@ -492,6 +636,14 @@ public sealed partial class ProcessesService
             expectation.ValidationRequirementSummary,
             expectation.AllowedFutureUsageSummary);
     }
+
+    private sealed record ProcessStepTransitionArtifactValidationContext(
+        ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind ExecutorKind,
+        Guid? ExecutionRunId,
+        Guid? WorkflowRunId,
+        Guid? SubprocessRunId,
+        Guid? RecoveryExecutionRunId,
+        Guid? RecoveredForExecutionRunId);
 
     private static bool ShouldNotifyParentSubprocessStep(ProcessRunStatus status)
     {

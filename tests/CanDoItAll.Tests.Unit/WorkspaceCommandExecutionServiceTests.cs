@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -234,12 +233,15 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.NotNull(processHost.LastRequest);
             Assert.Equal("workspace_dotnet_run", processHost.LastRequest!.ToolName);
             Assert.Equal(projectDirectory, processHost.LastRequest.WorkingDirectory);
-            Assert.Contains("-EncodedCommand", processHost.LastRequest.Arguments);
+            Assert.DoesNotContain("-EncodedCommand", processHost.LastRequest.Arguments);
+            Assert.Contains("-File", processHost.LastRequest.Arguments);
             Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("startup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("run.ps1", StringComparison.OrdinalIgnoreCase));
             Assert.Contains(result.Receipt.TargetPaths, item => string.Equals(item, "apps/SampleWeb/SampleWeb.csproj", StringComparison.OrdinalIgnoreCase));
 
-            var encodedIndex = processHost.LastRequest.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
-            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            var argumentLength = string.Join(" ", processHost.LastRequest.Arguments).Length;
+            Assert.True(argumentLength < 8191);
+            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
             Assert.Contains("http://127.0.0.1:5123", script, StringComparison.Ordinal);
             Assert.Contains("'--urls'", script, StringComparison.Ordinal);
             Assert.Contains("$keepAlive = $false", script, StringComparison.Ordinal);
@@ -278,8 +280,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
-            var encodedIndex = processHost.LastRequest!.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
-            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
             Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
             Assert.Contains("The process tree is still running for follow-up browser proof", script, StringComparison.Ordinal);
             Assert.Contains("stopCommand", script, StringComparison.Ordinal);
@@ -312,8 +313,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
 
             Assert.True(result.Succeeded);
             Assert.NotNull(processHost.LastRequest);
-            var encodedIndex = processHost.LastRequest!.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
-            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
             Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
             Assert.Contains("$lifetimeScope = 'ProcessRun'", script, StringComparison.Ordinal);
             Assert.Contains("lifetimeScope = $lifetimeScope", script, StringComparison.Ordinal);
@@ -413,8 +413,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal(projectDirectory, processHost.LastRequest!.WorkingDirectory);
             Assert.Contains(result.Receipt.TargetPaths, item => string.Equals(item, "apps/SampleWeb/SampleWeb.csproj", StringComparison.OrdinalIgnoreCase));
 
-            var encodedIndex = processHost.LastRequest.Arguments.ToList().IndexOf("-EncodedCommand") + 1;
-            var script = Encoding.Unicode.GetString(Convert.FromBase64String(processHost.LastRequest.Arguments[encodedIndex]));
+            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
             Assert.Contains(Path.Combine(projectDirectory, "SampleWeb.csproj"), script, StringComparison.Ordinal);
         }
         finally
@@ -479,6 +478,44 @@ public sealed class WorkspaceCommandExecutionServiceTests
     }
 
     [Fact]
+    public async Task DotnetRun_foreground_request_uses_http_smoke_for_blazor_webassembly_project()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        var projectDirectory = Path.Combine(workspaceRoot, "apps", "TetrisGame");
+        Directory.CreateDirectory(projectDirectory);
+        await File.WriteAllTextAsync(
+            Path.Combine(projectDirectory, "TetrisGame.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk.BlazorWebAssembly\" />");
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetRun(
+                "apps/TetrisGame/TetrisGame.csproj",
+                waitForHttp: false,
+                noBuild: false);
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_run", processHost.LastRequest!.ToolName);
+            Assert.DoesNotContain("-EncodedCommand", processHost.LastRequest.Arguments);
+            Assert.Contains("-File", processHost.LastRequest.Arguments);
+            Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("startup.json", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Receipt.TargetPaths, item => item.EndsWith("run.ps1", StringComparison.OrdinalIgnoreCase));
+
+            var script = await ReadGeneratedDotnetRunScriptAsync(processHost);
+            Assert.Contains("'--urls'", script, StringComparison.Ordinal);
+            Assert.Contains("$noBuild = $false", script, StringComparison.Ordinal);
+            Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
     public async Task DotnetNew_accepts_razor_pages_webapp_template()
     {
         var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
@@ -496,6 +533,56 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal(["new", "webapp", "-n", "TrailheadSnackBox.Web"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TrailheadSnackBox.Web", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_accepts_blazor_webassembly_template()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm", "TetrisGame", "apps");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
+            Assert.Equal(["new", "blazorwasm", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
+            Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_accepts_empty_blazor_webassembly_template()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm-empty", "TetrisGame", "apps");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
+            Assert.Equal(["new", "blazorwasm-empty", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
+            Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
         }
         finally
         {
@@ -595,6 +682,17 @@ public sealed class WorkspaceCommandExecutionServiceTests
             PendingApprovals: [],
             ProcessRunId: "process-run-001",
             ProcessStepId: "step-001");
+    }
+
+    private static async Task<string> ReadGeneratedDotnetRunScriptAsync(FakeWorkspaceProcessHost processHost)
+    {
+        Assert.NotNull(processHost.LastRequest);
+        var fileIndex = processHost.LastRequest!.Arguments.ToList().IndexOf("-File");
+        Assert.True(fileIndex >= 0);
+        Assert.True(fileIndex + 1 < processHost.LastRequest.Arguments.Count);
+        var scriptPath = processHost.LastRequest.Arguments[fileIndex + 1];
+        Assert.True(File.Exists(scriptPath));
+        return await File.ReadAllTextAsync(scriptPath);
     }
 
     private static void TryDeleteDirectory(string path)

@@ -57,7 +57,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate,
                 targetGroundings,
                 allowedExternalTargetAliases,
-                allowExternalTargetMutation);
+                allowExternalTargetMutation,
+                operationContract);
             if (readOnlyExternalTargetAliases.Count > 0)
             {
                 metadata[ExecutionInvocationMetadata.ReadOnlyExternalTargetAliasesMetadataKey] = readOnlyExternalTargetAliases;

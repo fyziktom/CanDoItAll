@@ -27,12 +27,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             DispatchCandidate candidate,
             IReadOnlyList<ProcessTargetGroundingRecord> targetGroundings,
             IReadOnlyList<string> allowedExternalTargetAliases,
-            bool allowExternalTargetMutation)
+            bool allowExternalTargetMutation,
+            ProcessStepOperationContract operationContract)
             => ProcessRunAutomationDispatchService.ResolveReadOnlyExternalTargetAliases(
                 candidate,
                 targetGroundings,
                 allowedExternalTargetAliases,
-                allowExternalTargetMutation);
+                allowExternalTargetMutation,
+                operationContract);
 
         internal static IReadOnlyList<string> PruneAllowedExternalTargetAliasesForCurrentRun(IEnumerable<string> aliases)
             => ProcessRunAutomationDispatchService.PruneAllowedExternalTargetAliasesForCurrentRun(aliases);

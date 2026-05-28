@@ -233,6 +233,24 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "tests",
         "tools"
     ];
+    private static readonly HashSet<string> ExternalProductArchiveSourceSegments = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".oldruns",
+        "oldruns",
+        "old-runs",
+        "previous-runs",
+        "backup",
+        "backups",
+        "archive",
+        "archives",
+        "agent-evidence",
+        "observation",
+        "process-definition",
+        "process-definitions",
+        "launch-plan",
+        "launch-plans",
+        "evidence-only"
+    };
     private static readonly string[] ManagedEvidenceRoots =
     [
         "artifacts",
@@ -320,6 +338,18 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (externalTargetDecision is not null)
         {
             return ValueTask.FromResult(externalTargetDecision);
+        }
+
+        var staleProductCopyDecision = EvaluateGovernedStaleExternalProductCopySource(context, signature);
+        if (staleProductCopyDecision is not null)
+        {
+            return ValueTask.FromResult(staleProductCopyDecision);
+        }
+
+        var archivedExternalProductPathDecision = EvaluateGovernedArchivedExternalProductPathAccess(context, signature);
+        if (archivedExternalProductPathDecision is not null)
+        {
+            return ValueTask.FromResult(archivedExternalProductPathDecision);
         }
 
         var processBoundaryDecision = EvaluateGovernedProcessProductMutationBoundary(context, signature);
@@ -458,13 +488,20 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static OperationRequirement ResolveWorkspaceFileMutationRequirement(ToolInvocationPolicyContext context)
     {
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
-        if (referencedAliases.Any(IsExternalArtifactDestinationPath))
-        {
-            return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
-        }
-
         if (referencedAliases.Count > 0)
         {
+            var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+            if (IsProductMutationStep(context) &&
+                referencedAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
+            {
+                return OperationRequirement.Any(OperationMutateProductTarget);
+            }
+
+            if (referencedAliases.Any(IsExternalArtifactDestinationPath))
+            {
+                return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
+            }
+
             return OperationRequirement.Any(OperationMutateProductTarget);
         }
 
@@ -1165,6 +1202,76 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return null;
     }
 
+    private static ToolInvocationPolicyDecision? EvaluateGovernedArchivedExternalProductPathAccess(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !ExternalTargetManagedWorkspaceIsolationTools.Contains(context.ToolName))
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        if (allowedAliases.Count == 0)
+        {
+            return null;
+        }
+
+        var archivedAlias = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+            .FirstOrDefault(alias =>
+                IsAllowedExternalTargetAlias(alias, allowedAliases) &&
+                IsExternalProductArchiveSourceAlias(alias));
+        if (string.IsNullOrWhiteSpace(archivedAlias))
+        {
+            return null;
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed process run cannot use archived, backup, or previous-run product material at '{archivedAlias}' as current product input. Use the grounded product root excluding archive folders and current-run managed artifacts only.");
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedStaleExternalProductCopySource(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !string.Equals(context.ToolName, "workspace_copy_path", StringComparison.OrdinalIgnoreCase) ||
+            !IsProductMutationStep(context))
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        if (allowedAliases.Count == 0)
+        {
+            return null;
+        }
+
+        var sourceAliases = ResolveExternalTargetAliasesFromArguments(
+            context.RedactedArguments,
+            IsCopySourceArgumentName);
+        if (sourceAliases.Count == 0 ||
+            !sourceAliases.Any(IsExternalProductArchiveSourceAlias))
+        {
+            return null;
+        }
+
+        var destinationAliases = ResolveExternalTargetAliasesFromArguments(
+            context.RedactedArguments,
+            IsCopyDestinationArgumentName);
+        if (!destinationAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
+        {
+            return null;
+        }
+
+        var sourceAlias = sourceAliases.First(IsExternalProductArchiveSourceAlias);
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed product mutation step cannot copy archived, backup, or previous-run product material from '{sourceAlias}' into the current product target. Use the current-run project structure and mutate the grounded product root directly.");
+    }
+
     private static string BuildCurrentRunExternalTargetGuidance(
         IReadOnlyList<string> writableAliases,
         IReadOnlyList<string> readOnlyAliases)
@@ -1365,8 +1472,15 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static IReadOnlyList<string> ResolveReferencedExternalTargetAliases(
         IReadOnlyDictionary<string, string> arguments)
     {
+        return ResolveExternalTargetAliasesFromArguments(arguments, IsPathLikeArgumentName);
+    }
+
+    private static IReadOnlyList<string> ResolveExternalTargetAliasesFromArguments(
+        IReadOnlyDictionary<string, string> arguments,
+        Func<string, bool> argumentNamePredicate)
+    {
         return arguments
-            .Where(argument => IsPathLikeArgumentName(argument.Key))
+            .Where(argument => argumentNamePredicate(argument.Key))
             .SelectMany(argument => ExternalTargetAliasRegex
                 .Matches(argument.Value ?? string.Empty)
                 .Select(match => NormalizeExternalTargetAlias(match.Value)))
@@ -1509,6 +1623,37 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return !string.IsNullOrWhiteSpace(argumentName) &&
                ManagedWorkspacePathArgumentFragments.Any(fragment =>
                    argumentName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCopySourceArgumentName(string argumentName)
+    {
+        return !string.IsNullOrWhiteSpace(argumentName) &&
+               (argumentName.Contains("source", StringComparison.OrdinalIgnoreCase) ||
+                argumentName.StartsWith("from", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCopyDestinationArgumentName(string argumentName)
+    {
+        return !string.IsNullOrWhiteSpace(argumentName) &&
+               (argumentName.Contains("destination", StringComparison.OrdinalIgnoreCase) ||
+                argumentName.Contains("target", StringComparison.OrdinalIgnoreCase) ||
+                argumentName.StartsWith("to", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsProductMutationStep(ToolInvocationPolicyContext context)
+    {
+        return string.Equals(context.ProcessStepTargetScope, "ExternalProductTargetMutable", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ProcessStepTargetScope, "ManagedOutputProduct", StringComparison.OrdinalIgnoreCase) ||
+               (context.ProcessStepAllowedOperations?.Any(operation =>
+                   string.Equals(operation, OperationMutateProductTarget, StringComparison.OrdinalIgnoreCase)) ?? false);
+    }
+
+    private static bool IsExternalProductArchiveSourceAlias(string normalizedAlias)
+    {
+        return normalizedAlias
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(2)
+            .Any(segment => ExternalProductArchiveSourceSegments.Contains(segment));
     }
 
     private static bool IsExternalTargetAliasPath(string normalizedPath)

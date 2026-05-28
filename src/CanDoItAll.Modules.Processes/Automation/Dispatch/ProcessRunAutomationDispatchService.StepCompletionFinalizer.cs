@@ -335,7 +335,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepBlockCause? BlockCause,
         Guid? SelectedBranchOutcomeId,
         Guid StepRunConcurrencyToken,
-        IReadOnlyList<ProcessArtifactExpectationValidationResult> ArtifactValidationResults);
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> ArtifactValidationResults,
+        ProcessStepTransitionArtifactValidationContext ArtifactValidationContext);
+
+    private sealed record ProcessStepTransitionArtifactValidationContext(
+        ProcessStepCompletionExecutorKind ExecutorKind,
+        Guid? ExecutionRunId,
+        Guid? WorkflowRunId,
+        Guid? SubprocessRunId,
+        Guid? RecoveryExecutionRunId,
+        Guid? RecoveredForExecutionRunId);
 
     private sealed record RuntimeInvariantViolation(
         ProcessConformanceSeverity Severity,
@@ -403,6 +412,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (context.ExecutionDetail is not null && context.ProjectExecutionArtifacts)
         {
+            ResetRecordedArtifactExpectationsForExecutionProjection(candidate);
             await ProjectExecutionArtifactsAsync(
                 candidate,
                 context.ExecutionDetail,
@@ -412,10 +422,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 cancellationToken);
         }
 
-        var validationResults = await ValidateRequiredCompletionArtifactsAsync(context, cancellationToken);
+        var validationContext = context;
+        var validationResults = await ValidateRequiredCompletionArtifactsAsync(validationContext, cancellationToken);
         if (completionStatus == ProcessStepRunStatus.Completed)
         {
-            await PersistArtifactValidationDiagnosticsAsync(context, validationResults, cancellationToken);
+            await PersistArtifactValidationDiagnosticsAsync(validationContext, validationResults, cancellationToken);
             var unsatisfiedResults = validationResults.Where(result => !result.IsSatisfied).ToList();
             if (unsatisfiedResults.Count > 0 &&
                 context.ExecutionDetail is not null &&
@@ -441,8 +452,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 completionReason = recoveryOutcome.CompletionReason;
                 selectedBranchOutcomeId = recoveryOutcome.SelectedBranchOutcomeId;
 
-                validationResults = await ValidateRequiredCompletionArtifactsAsync(
-                    context with
+                validationContext = context with
                     {
                         CompletionStatus = completionStatus,
                         CompletionReason = completionReason,
@@ -451,9 +461,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         AllowManagerArtifactRecovery = false,
                         RecoveryExecutionRunId = recoveryOutcome.Detail.Run.Id,
                         RecoveredForExecutionRunId = context.ExecutionDetail.Run.Id
-                    },
-                    cancellationToken);
-                await PersistArtifactValidationDiagnosticsAsync(context, validationResults, cancellationToken);
+                    };
+                validationResults = await ValidateRequiredCompletionArtifactsAsync(validationContext, cancellationToken);
+                await PersistArtifactValidationDiagnosticsAsync(validationContext, validationResults, cancellationToken);
                 unsatisfiedResults = validationResults.Where(result => !result.IsSatisfied).ToList();
             }
 
@@ -477,6 +487,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
         else
         {
             RefreshCandidateArtifactSatisfaction(candidate, validationResults);
+        }
+
+        if (completionStatus == ProcessStepRunStatus.Completed &&
+            selectedBranchOutcomeId is null &&
+            TryResolveExplicitDispositionBranchOutcome(candidate, context.ResponseText, out var explicitDisposition))
+        {
+            selectedBranchOutcomeId = explicitDisposition.Id;
+            completionReason = BuildExplicitDispositionCompletionReason(
+                explicitDisposition,
+                completionReason,
+                "selected from explicit current-run disposition text");
+        }
+
+        if (selectedBranchOutcomeId is null &&
+            TryResolveSatisfiedArtifactDispositionCompletion(
+                candidate,
+                completionStatus,
+                validationResults,
+                context.ResponseText,
+                out var recoveredDisposition,
+                out var recoveredDispositionReason))
+        {
+            completionStatus = ProcessStepRunStatus.Completed;
+            completionReason = recoveredDispositionReason;
+            selectedBranchOutcomeId = recoveredDisposition.Id;
+            blockCause = null;
         }
 
         var invariantViolations = await PersistRuntimeInvariantAuditAsync(
@@ -506,7 +542,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             blockCause,
             selectedBranchOutcomeId,
             stepRunSnapshot.ConcurrencyToken,
-            validationResults);
+            validationResults,
+            BuildStepTransitionArtifactValidationContext(validationContext));
+    }
+
+    internal static void ResetRecordedArtifactExpectationsForExecutionProjection(DispatchCandidate candidate)
+    {
+        candidate.RecordedArtifactExpectationIds.Clear();
     }
 
     private async Task ApplyFinalizedStepTransitionAsync(
@@ -515,18 +557,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
+        var transitionRequest = new ProcessStepTransitionRequest
+        {
+            StepRunId = candidate.StepRun.Id,
+            StepRunConcurrencyToken = finalizerResult.StepRunConcurrencyToken,
+            TargetStatus = finalizerResult.CompletionStatus,
+            Reason = finalizerResult.CompletionReason,
+            BlockCause = finalizerResult.BlockCause,
+            SelectedBranchOutcomeId = finalizerResult.SelectedBranchOutcomeId,
+            DecidedBy = AutomationActor,
+            SuppressAutomationDispatch = finalizerResult.CompletionStatus != ProcessStepRunStatus.Completed
+        };
+        ApplyArtifactValidationContext(transitionRequest, finalizerResult.ArtifactValidationContext);
+
         var completionResult = await TransitionStepWithClaimAsync(
-            new ProcessStepTransitionRequest
-            {
-                StepRunId = candidate.StepRun.Id,
-                StepRunConcurrencyToken = finalizerResult.StepRunConcurrencyToken,
-                TargetStatus = finalizerResult.CompletionStatus,
-                Reason = finalizerResult.CompletionReason,
-                BlockCause = finalizerResult.BlockCause,
-                SelectedBranchOutcomeId = finalizerResult.SelectedBranchOutcomeId,
-                DecidedBy = AutomationActor,
-                SuppressAutomationDispatch = finalizerResult.CompletionStatus != ProcessStepRunStatus.Completed
-            },
+            transitionRequest,
             dispatchClaim,
             cancellationToken);
 
@@ -549,6 +594,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         throw new InvalidOperationException(string.Join(" | ", completionResult.Errors.Select(error => error.Message)));
+    }
+
+    private static ProcessStepTransitionArtifactValidationContext BuildStepTransitionArtifactValidationContext(
+        ProcessStepCompletionFinalizerContext context)
+    {
+        return new ProcessStepTransitionArtifactValidationContext(
+            context.ExecutorKind,
+            context.ExecutionDetail?.Run.Id,
+            context.WorkflowRunId,
+            context.SubprocessRunId,
+            context.RecoveryExecutionRunId,
+            context.RecoveredForExecutionRunId);
+    }
+
+    private static void ApplyArtifactValidationContext(
+        ProcessStepTransitionRequest request,
+        ProcessStepTransitionArtifactValidationContext context)
+    {
+        request.ArtifactValidationExecutorKind = context.ExecutorKind;
+        request.ArtifactValidationExecutionRunId = context.ExecutionRunId;
+        request.ArtifactValidationWorkflowRunId = context.WorkflowRunId;
+        request.ArtifactValidationSubprocessRunId = context.SubprocessRunId;
+        request.ArtifactValidationRecoveryExecutionRunId = context.RecoveryExecutionRunId;
+        request.ArtifactValidationRecoveredForExecutionRunId = context.RecoveredForExecutionRunId;
     }
 
     private async Task<IReadOnlyList<ProcessArtifactExpectationValidationResult>> ValidateRequiredCompletionArtifactsAsync(
@@ -971,6 +1040,73 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessArtifactValidationStatus.PlaceholderOnly or
                 ProcessArtifactValidationStatus.ContentUnavailable or
                 ProcessArtifactValidationStatus.ContentHashMismatch);
+    }
+
+    private static bool TryResolveSatisfiedArtifactDispositionCompletion(
+        DispatchCandidate candidate,
+        ProcessStepRunStatus completionStatus,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> validationResults,
+        string? responseText,
+        out DispatchBranchOutcome branchOutcome,
+        out string completionReason)
+    {
+        branchOutcome = null!;
+        completionReason = string.Empty;
+        if (completionStatus is not (ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed) ||
+            !candidate.RequiresExplicitBranchOutcomeSelection ||
+            candidate.BranchOutcomes.Count == 0 ||
+            ResolveMissingUpstreamArtifactInputs(candidate).Count > 0 ||
+            !IsDispositionRoutingStep(candidate) ||
+            !HasSatisfiedRequiredCompletionArtifacts(candidate, validationResults) ||
+            !TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out branchOutcome))
+        {
+            return false;
+        }
+
+        completionReason = BuildExplicitDispositionCompletionReason(
+            branchOutcome,
+            ResolveDeclaredOutcomeReason(responseText),
+            $"recovered from {completionStatus} status because required current-run artifacts are satisfied");
+        return true;
+    }
+
+    private static bool HasSatisfiedRequiredCompletionArtifacts(
+        DispatchCandidate candidate,
+        IReadOnlyList<ProcessArtifactExpectationValidationResult> validationResults)
+    {
+        var requiredExpectationIds = candidate.ExpectedArtifacts
+            .Where(expectation => expectation.IsRequired)
+            .Select(expectation => expectation.Id)
+            .ToHashSet();
+        if (requiredExpectationIds.Count == 0)
+        {
+            return false;
+        }
+
+        var resultsByExpectationId = validationResults.ToDictionary(result => result.ExpectationId);
+        return requiredExpectationIds.All(expectationId =>
+            resultsByExpectationId.TryGetValue(expectationId, out var result) && result.IsSatisfied);
+    }
+
+    private static string BuildExplicitDispositionCompletionReason(
+        DispatchBranchOutcome branchOutcome,
+        string originalReason,
+        string recoveryContext)
+    {
+        var reason = CollapsePromptWhitespace(originalReason);
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return $"Governed disposition '{branchOutcome.Title}' {recoveryContext}.";
+        }
+
+        return $"Governed disposition '{branchOutcome.Title}' {recoveryContext}. Original reason: {reason}";
+    }
+
+    private static string ResolveDeclaredOutcomeReason(string? responseText)
+    {
+        return TryResolveDeclaredStepOutcome(responseText, out var declaredOutcome)
+            ? declaredOutcome.Reason
+            : responseText ?? string.Empty;
     }
 
     private static bool IsNegativeDispositionBranchOutcomeCandidate(DispatchBranchOutcome outcome)
@@ -1516,7 +1652,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        var requiresImage = contractText.Contains("screenshot", StringComparison.Ordinal) || contractText.Contains("image", StringComparison.Ordinal);
+        var requiresImage = RequiresImageArtifactFile(expectation, artifact, contractText, extension);
         if (requiresImage &&
             extension is not ".png" and not ".jpg" and not ".jpeg" and not ".webp" and not ".svg")
         {
@@ -1540,6 +1676,76 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return true;
+    }
+
+    private static bool RequiresImageArtifactFile(
+        DispatchArtifactExpectation expectation,
+        ProcessArtifactRecord artifact,
+        string contractText,
+        string extension)
+    {
+        var titleText = CollapsePromptWhitespace(expectation.Title).ToLowerInvariant();
+        if (IsImageArtifactExtension(extension))
+        {
+            return true;
+        }
+
+        if (TryExtractExpectedArtifactRelativePath(expectation.ValidationRequirementSummary, out var declaredRelativePath) &&
+            IsImageArtifactExtension(Path.GetExtension(declaredRelativePath).ToLowerInvariant()))
+        {
+            return true;
+        }
+
+        if (ContainsExplicitImageFileSignal(contractText) &&
+            !IsNarrativeArtifactContainerTitle(titleText))
+        {
+            return true;
+        }
+
+        if (ContainsImageEvidenceToken(titleText) &&
+            !IsNarrativeArtifactContainerTitle(titleText))
+        {
+            return true;
+        }
+
+        return ContainsExplicitImageFileSignal(artifact.ManagedStoragePath.ToLowerInvariant());
+    }
+
+    private static bool IsImageArtifactExtension(string extension)
+    {
+        return extension is ".png" or ".jpg" or ".jpeg" or ".webp" or ".svg";
+    }
+
+    private static bool ContainsExplicitImageFileSignal(string text)
+    {
+        return text.Contains(".png", StringComparison.Ordinal) ||
+               text.Contains(".jpg", StringComparison.Ordinal) ||
+               text.Contains(".jpeg", StringComparison.Ordinal) ||
+               text.Contains(".webp", StringComparison.Ordinal) ||
+               text.Contains(".svg", StringComparison.Ordinal) ||
+               text.Contains("image file", StringComparison.Ordinal) ||
+               text.Contains("screenshot file", StringComparison.Ordinal) ||
+               text.Contains("image artifact", StringComparison.Ordinal) ||
+               text.Contains("screenshot artifact", StringComparison.Ordinal) ||
+               text.Contains("as an image", StringComparison.Ordinal) ||
+               text.Contains("as a screenshot", StringComparison.Ordinal);
+    }
+
+    private static bool ContainsImageEvidenceToken(string text)
+    {
+        return text.Contains("screenshot", StringComparison.Ordinal) ||
+               text.Contains("image", StringComparison.Ordinal);
+    }
+
+    private static bool IsNarrativeArtifactContainerTitle(string titleText)
+    {
+        return titleText.Contains("pack", StringComparison.Ordinal) ||
+               titleText.Contains("summary", StringComparison.Ordinal) ||
+               titleText.Contains("report", StringComparison.Ordinal) ||
+               titleText.Contains("index", StringComparison.Ordinal) ||
+               titleText.Contains("log", StringComparison.Ordinal) ||
+               titleText.Contains("manifest", StringComparison.Ordinal) ||
+               titleText.Contains("list", StringComparison.Ordinal);
     }
 
     private static string ResolveManagedArtifactExtension(string managedStoragePath)

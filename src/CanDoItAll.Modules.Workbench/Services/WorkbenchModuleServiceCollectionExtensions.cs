@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
@@ -37,6 +40,14 @@ public static class WorkbenchModuleServiceCollectionExtensions
         services.AddScoped<ProjectStructureImportService>();
         services.AddScoped<ProjectStructureProcessNodeService>();
         services.AddScoped<ProjectStructureWorkflowNodeService>();
+        services.TryAddScoped<IWorkspacePathResolutionService>(serviceProvider =>
+        {
+            var workspaceRoot = serviceProvider.GetRequiredService<IWorkspacePathResolver>().ResolveWorkspaceRoot();
+            var profile = serviceProvider.GetRequiredService<IDatabaseProfileRuntimeAccessor>().ResolveCurrentProfile();
+            var scope = WorkspaceScopeDescriptor.Organization(profile.Profile.Id.ToString("N"));
+            return new WorkspacePathResolutionService(workspaceRoot, scope);
+        });
+        services.AddScoped<ProjectStructureSourceWorkspacePathResolver>();
         services.AddScoped<ProjectStructureAgentService>();
         services.AddScoped<IProjectStructureRuntimeGateway, WorkbenchProjectStructureRuntimeGateway>();
         services.AddScoped<IProjectStructureSourceSnapshotProvider, WorkbenchProjectStructureSourceSnapshotProvider>();

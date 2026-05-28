@@ -38,6 +38,10 @@
       "relativePath": "members/release-readiness-manager"
     },
     {
+      "key": "delivery-manager",
+      "relativePath": "members/delivery-manager"
+    },
+    {
       "key": "hr-staffing-manager",
       "relativePath": "members/hr-staffing-manager"
     }

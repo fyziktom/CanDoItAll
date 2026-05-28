@@ -73,3 +73,257 @@ info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
       Completed AgentFramework catalog repair and projection warmup in 17735 ms.
 warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
       Failed to determine the https port for redirect.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:7be68b4f6e6b45c4a268367c54b0bb11:version:a4133e846a0a44b5a6ac1b508bf0ed4a:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:7be68b4f6e6b45c4a268367c54b0bb11:version:a4133e846a0a44b5a6ac1b508bf0ed4a:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:634e8ac9c39d4aa6bdac586aa7a79651:version:15d3e73fca14477b8f720f73945eff69:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:634e8ac9c39d4aa6bdac586aa7a79651:version:15d3e73fca14477b8f720f73945eff69:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:8dd1a3e7ee8b43a389954956ed49c4f3:version:bbd1990233374312a7857495ab154f0a:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:8dd1a3e7ee8b43a389954956ed49c4f3:version:bbd1990233374312a7857495ab154f0a:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:672935c3f6874255b8bf90528248c642:version:75e6da49cde7465fb27016a0dec0b3d3:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:672935c3f6874255b8bf90528248c642:version:75e6da49cde7465fb27016a0dec0b3d3:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:bdf134e345b4456fbd0b1d5722b0672f:version:55d36c1c1cfc4c59ad56e9f9f9126390:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:bdf134e345b4456fbd0b1d5722b0672f:version:55d36c1c1cfc4c59ad56e9f9f9126390:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:cc8cdaa5b11c4c38827ae08b364d0740:version:94ff3e62a36d42de86b0477042307fab:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:cc8cdaa5b11c4c38827ae08b364d0740:version:94ff3e62a36d42de86b0477042307fab:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:8f88333ac1284106a5d2e6fa38e7e55d:version:fc7b6a49a0e04eafa261e58b61151543:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:8f88333ac1284106a5d2e6fa38e7e55d:version:fc7b6a49a0e04eafa261e58b61151543:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:563f7cba4bd54f6dbf1fe8cc369803bf:version:b288701cddd24c29904f98e28750ca2e:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:563f7cba4bd54f6dbf1fe8cc369803bf:version:b288701cddd24c29904f98e28750ca2e:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:18ac97fd1f474fffb71eaaacad7e3a1e:version:98a9656d1b2b4719b96f798db3f8d167:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:18ac97fd1f474fffb71eaaacad7e3a1e:version:98a9656d1b2b4719b96f798db3f8d167:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:68f023af3d8d4ffe92203a241926b966:version:3c82725bb48f479a89e27cdf81ec6df9:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:68f023af3d8d4ffe92203a241926b966:version:3c82725bb48f479a89e27cdf81ec6df9:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:acd450ff35a4456b85325b02fd5b619a:version:a6584a6007ba4d3ca9c4a69375fd7db1:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:acd450ff35a4456b85325b02fd5b619a:version:a6584a6007ba4d3ca9c4a69375fd7db1:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:6022accfaad242c1bdb8713c0c6cc18f:version:40b3e6cd728a4a50859b5c0a099b0e26:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:6022accfaad242c1bdb8713c0c6cc18f:version:40b3e6cd728a4a50859b5c0a099b0e26:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=create-definition Title=Created process definition IdempotencyKey=process-outbox:definition:840687f5249b4b7997520bd17d4d6d7e:version:11acb37b3e264194aa747967044d020b:create:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=create-definition Title=Created process definition.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=publish-definition Title=Published process definition IdempotencyKey=process-outbox:definition:840687f5249b4b7997520bd17d4d6d7e:version:11acb37b3e264194aa747967044d020b:publish:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=publish-definition Title=Published process definition.
+info: CanDoItAll.Modules.Processes.ProcessesService[0]
+      Submitting launch plan 73399580-b6f6-4a8d-abca-8831807beb8c for approval. RequestedBy=project-structure.
+info: CanDoItAll.Modules.Processes.ProcessesService[0]
+      Launch plan 73399580-b6f6-4a8d-abca-8831807beb8c resolved approval authority Main Manager fallback (System fallback). ExistingApprovalThread=False.
+info: CanDoItAll.Modules.Processes.ProcessesService[0]
+      Launch plan 73399580-b6f6-4a8d-abca-8831807beb8c is creating a new collaboration approval thread.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Creating collaboration thread for context ProcessLaunch/73399580-b6f6-4a8d-abca-8831807beb8c. Subject=Launch approval / Main app / Blazor app delivery.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Created collaboration thread 39cb90d5-c823-4248-b792-ea243bdcdf40. Recording activity mirror next.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Skipped collaboration activity mirror for thread 39cb90d5-c823-4248-b792-ea243bdcdf40 because an ambient transaction is active.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Finished collaboration thread creation for 39cb90d5-c823-4248-b792-ea243bdcdf40.
+info: CanDoItAll.Modules.Processes.ProcessesService[0]
+      Launch plan 73399580-b6f6-4a8d-abca-8831807beb8c created collaboration approval thread 39cb90d5-c823-4248-b792-ea243bdcdf40.
+info: CanDoItAll.Modules.Processes.ProcessesService[0]
+      Launch plan 73399580-b6f6-4a8d-abca-8831807beb8c moved to PendingApproval with approval record 47af8fd7-97b7-498a-9f8f-1147cf2b9e51.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Appending collaboration message to thread 39cb90d5-c823-4248-b792-ea243bdcdf40. Kind=Standard. Author=project-structure.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Appended collaboration message to thread 39cb90d5-c823-4248-b792-ea243bdcdf40. Recording activity mirror next.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Skipped collaboration activity mirror for thread 39cb90d5-c823-4248-b792-ea243bdcdf40 message Standard because an ambient transaction is active.
+info: CanDoItAll.Modules.Collaboration.CollaborationService[0]
+      Finished collaboration message append for thread 39cb90d5-c823-4248-b792-ea243bdcdf40.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=CRM / HR Action=PartyCreated Title=Created party 'Blazor delivery manager AI agent'. IdempotencyKey=<none>.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=CRM / HR Action=PartyCreated Title=Created party 'Blazor delivery manager AI agent'..
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=CRM / HR Action=AiAgentProfileSaved Title=Saved AI agent profile for Blazor delivery manager AI agent IdempotencyKey=<none>.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=CRM / HR Action=AiAgentProfileSaved Title=Saved AI agent profile for Blazor delivery manager AI agent.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=start-run Title=Started process run IdempotencyKey=process-outbox:run:0a96e6f94a894422b931e782f1b26c94:start:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=start-run Title=Started process run.
+info: CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService[0]
+      Claimed process automation dispatch for run 0a96e6f9-4a89-4422-b931-e782f1b26c94, step 86d5894d-4811-4555-9433-7cd803d521f4. Trigger=run-start. LeaseExpiresAtUtc=05/27/2026 17:16:05 +00:00.
+info: CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService[0]
+      Granted project-structure read access for project 7330105d-8450-4c80-923b-5c27d8e63d6c to technical agent 0151335e-f149-4a81-930c-5e1434b83bd8 before dispatching process run 0a96e6f9-4a89-4422-b931-e782f1b26c94, step 86d5894d-4811-4555-9433-7cd803d521f4.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=5dce0d06-14b4-412c-a586-e262f0b7d9d1 SourceKind=process-step ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId=86d5894d-4811-4555-9433-7cd803d521f4 Signature=project_structure_read|projectId=7330105d-8450-4c80-923b-5c27d8e63d6c
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=5dce0d06-14b4-412c-a586-e262f0b7d9d1 SourceKind=process-step ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId=86d5894d-4811-4555-9433-7cd803d521f4 Signature=workspace_write_file|content=## Blazor delivery contract  Blazor mode: WebAssembly PWA (WASM PWA)  Project id: 7330105d-8450-4c80-923b-5c27d8e63d6c  Source / project-structure node ids (gro...#c3cefa38966a,overwrite=True,path=artifacts/process-runs/0a96e6f9-4a89-4422-b931-e782f1b26c94/01-blazor-delivery-contract.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool submit_process_step_outcome on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=5dce0d06-14b4-412c-a586-e262f0b7d9d1 SourceKind=process-step ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId=86d5894d-4811-4555-9433-7cd803d521f4 Signature=submit_process_step_outcome|result={"status":"Completed","reason":"Blazor delivery contract created and written to the required artifact path; project structure was read to ground authoritative n...#f3681f6d6211
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Required finalizer tool submit_process_step_outcome was captured for agent 0151335e-f149-4a81-930c-5e1434b83bd8. Ending the Microsoft Agent Framework turn without waiting for post-finalizer prose.
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      submit_process_step_outcome invocation failed.
+      CanDoItAll.AgentFramework.Maf.MafAgentRuntime+RequiredFinalizerCapturedException: Required finalizer tool 'submit_process_step_outcome' was captured.
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass73_0.<<CreateInstrumentedAgent>b__6>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+fail: CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService[0]
+      Process automation dispatch failed for run 0a96e6f9-4a89-4422-b931-e782f1b26c94, step 86d5894d-4811-4555-9433-7cd803d521f4.
+      System.InvalidOperationException: Step 'Resolve Blazor delivery contract' cannot be completed because required artifact contract validation failed: Blazor delivery contract: StaleOrWrongRun (The candidate artifact is not bound to the current process run, step, execution run, or workflow run.).
+         at CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ApplyFinalizedStepTransitionAsync(DispatchCandidate candidate, ProcessStepCompletionFinalizerResult finalizerResult, ProcessStepDispatchClaim dispatchClaim, CancellationToken cancellationToken)
+         at CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchAsync(Guid processRunId, Nullable`1 triggerStepRunId, String trigger, Func`2 renewLeaseAsync, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool processes_run_detail_get on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=9994d8f9-9f57-4376-a7db-58fbee78f40d SourceKind=process-manager-chat ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId= Signature=processes_run_detail_get|runId=0a96e6f9-4a89-4422-b931-e782f1b26c94
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      processes_run_detail_get invocation failed.
+      CanDoItAll.AgentFramework.Maf.MafAgentRuntime+ProcessToolException: This agent is not allowed to read process modules. Enable read access in the agent settings.
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.EnsureReadAllowed(ProcessAccessState accessState)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.ProcessesRunDetailGetAsync(ProcessAccessState accessState, Guid runId, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass73_0.<<CreateInstrumentedAgent>b__6>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool processes_runs_list on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=9994d8f9-9f57-4376-a7db-58fbee78f40d SourceKind=process-manager-chat ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId= Signature=processes_runs_list|definitionId=672935c3-f687-4255-b8bf-90528248c642
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      processes_runs_list invocation failed.
+      CanDoItAll.AgentFramework.Maf.MafAgentRuntime+ProcessToolException: This agent is not allowed to read process modules. Enable read access in the agent settings.
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.EnsureReadAllowed(ProcessAccessState accessState)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.ProcessesRunsListAsync(ProcessAccessState accessState, Nullable`1 definitionId, Nullable`1 projectId, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass73_0.<<CreateInstrumentedAgent>b__6>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool processes_run_detail_get on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=355f5c02-30cf-4353-b9f4-133a3c9fbd99 SourceKind=process-manager-chat ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId= Signature=processes_run_detail_get|runId=0a96e6f9-4a89-4422-b931-e782f1b26c94
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      processes_run_detail_get invocation failed.
+      CanDoItAll.AgentFramework.Maf.MafAgentRuntime+ProcessToolException: This agent is not allowed to read process modules. Enable read access in the agent settings.
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.EnsureReadAllowed(ProcessAccessState accessState)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.ProcessesRunDetailGetAsync(ProcessAccessState accessState, Guid runId, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass73_0.<<CreateInstrumentedAgent>b__6>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool processes_run_detail_get on agent 0151335e-f149-4a81-930c-5e1434b83bd8. ExecutionRunId=355f5c02-30cf-4353-b9f4-133a3c9fbd99 SourceKind=process-manager-chat ProcessRunId=0a96e6f9-4a89-4422-b931-e782f1b26c94 ProcessStepId= Signature=processes_run_detail_get|runId=0a96e6f9-4a89-4422-b931-e782f1b26c94
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      processes_run_detail_get invocation failed.
+      CanDoItAll.AgentFramework.Maf.MafAgentRuntime+ProcessToolException: This agent is not allowed to read process modules. Enable read access in the agent settings.
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.EnsureReadAllowed(ProcessAccessState accessState)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.ProcessToolBuilder.ProcessesRunDetailGetAsync(ProcessAccessState accessState, Guid runId, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunctionDescriptor.<>c__DisplayClass41_1.<<GetReturnParameterMarshaller>b__12>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.AIFunctionFactory.ReflectionAIFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass73_0.<<CreateInstrumentedAgent>b__6>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recording activity entry Category=processes Action=start-run Title=Started process run IdempotencyKey=process-outbox:run:e39b765a14c34da0abb72550d9cd38c5:start:activity.
+info: CanDoItAll.Modules.Activity.ActivityService[0]
+      Recorded activity entry Category=processes Action=start-run Title=Started process run.
+info: CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService[0]
+      Claimed process automation dispatch for run e39b765a-14c3-4da0-abb7-2550d9cd38c5, step 0372717f-a9a0-4951-aaf4-49da79df9fa7. Trigger=run-start. LeaseExpiresAtUtc=05/27/2026 18:30:07 +00:00.
+info: CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService[0]
+      Granted project-structure read access for project 7330105d-8450-4c80-923b-5c27d8e63d6c to technical agent 04555de7-25f6-4258-8583-7e056bcabe7d before dispatching process run e39b765a-14c3-4da0-abb7-2550d9cd38c5, step 0372717f-a9a0-4951-aaf4-49da79df9fa7.
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool project_structure_read on agent 04555de7-25f6-4258-8583-7e056bcabe7d. ExecutionRunId=7af9656d-5a58-44e7-ad19-28fa0351ca6e SourceKind=process-step ProcessRunId=e39b765a-14c3-4da0-abb7-2550d9cd38c5 ProcessStepId=0372717f-a9a0-4951-aaf4-49da79df9fa7 Signature=project_structure_read|projectId=7330105d-8450-4c80-923b-5c27d8e63d6c
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool workspace_write_file on agent 04555de7-25f6-4258-8583-7e056bcabe7d. ExecutionRunId=7af9656d-5a58-44e7-ad19-28fa0351ca6e SourceKind=process-step ProcessRunId=e39b765a-14c3-4da0-abb7-2550d9cd38c5 ProcessStepId=0372717f-a9a0-4951-aaf4-49da79df9fa7 Signature=workspace_write_file|content=## Blazor delivery contract  Blazor mode: Blazor WebAssembly (WASM) PWA shell  Project id: 7330105d-8450-4c80-923b-5c27d8e63d6c  Source / project-structure node...#55e49bd0f302,path=artifacts/process-runs/e39b765a-14c3-4da0-abb7-2550d9cd38c5/01-blazor-delivery-contract.md
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Agent tool policy decision Allow for tool submit_process_step_outcome on agent 04555de7-25f6-4258-8583-7e056bcabe7d. ExecutionRunId=7af9656d-5a58-44e7-ad19-28fa0351ca6e SourceKind=process-step ProcessRunId=e39b765a-14c3-4da0-abb7-2550d9cd38c5 ProcessStepId=0372717f-a9a0-4951-aaf4-49da79df9fa7 Signature=submit_process_step_outcome|result={"status":"Completed","reason":"Blazor delivery contract produced and written to required artifact path. Project structure inspected.","evidenceRefs":["artifact...#4665fcc60656
+info: CanDoItAll.AgentFramework.Maf.MafAgentRuntime[0]
+      Required finalizer tool submit_process_step_outcome was captured for agent 04555de7-25f6-4258-8583-7e056bcabe7d. Ending the Microsoft Agent Framework turn without waiting for post-finalizer prose.
+fail: Microsoft.Extensions.AI.FunctionInvokingChatClient[1784604714]
+      submit_process_step_outcome invocation failed.
+      CanDoItAll.AgentFramework.Maf.MafAgentRuntime+RequiredFinalizerCapturedException: Required finalizer tool 'submit_process_step_outcome' was captured.
+         at CanDoItAll.AgentFramework.Maf.MafAgentRuntime.<>c__DisplayClass73_0.<<CreateInstrumentedAgent>b__6>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.Agents.AI.FunctionInvocationDelegatingAgent.MiddlewareEnabledFunction.InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+         at Microsoft.Extensions.AI.FunctionInvocationProcessor.InstrumentedInvokeFunctionAsync(FunctionInvocationContext context, CancellationToken cancellationToken)
+fail: CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService[0]
+      Process automation dispatch failed for run e39b765a-14c3-4da0-abb7-2550d9cd38c5, step 0372717f-a9a0-4951-aaf4-49da79df9fa7.
+      System.InvalidOperationException: Step 'Resolve Blazor delivery contract' cannot be completed because required artifact contract validation failed: Blazor delivery contract: StaleOrWrongRun (The candidate artifact is not bound to the current process run, step, execution run, or workflow run.).
+         at CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ApplyFinalizedStepTransitionAsync(DispatchCandidate candidate, ProcessStepCompletionFinalizerResult finalizerResult, ProcessStepDispatchClaim dispatchClaim, CancellationToken cancellationToken)
+         at CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchAsync(Guid processRunId, Nullable`1 triggerStepRunId, String trigger, Func`2 renewLeaseAsync, CancellationToken cancellationToken)

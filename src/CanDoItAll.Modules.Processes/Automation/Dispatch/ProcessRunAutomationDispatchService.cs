@@ -45,7 +45,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     IClock clock,
     ILogger<ProcessRunAutomationDispatchService> logger) : IProcessRunAutomationDispatchService
 {
-    private const string AutomationActor = "process-automation-dispatch";
+    internal const string AutomationActor = "process-automation-dispatch";
     private const string ExternalTargetAliasRoot = "external-target";
     private const string ProcessStepOutcomeFinalizerMissingErrorCode = "agent.finalizer.missing";
     private const string ProcessStepOutcomeFinalizerMultipleCallsErrorCode = "agent.finalizer.multiple_calls";

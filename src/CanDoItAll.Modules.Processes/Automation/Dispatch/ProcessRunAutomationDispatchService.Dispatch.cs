@@ -83,7 +83,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             cancellationToken);
                         dispatchCancellationToken = dispatchHeartbeat.DispatchCancellationToken;
                         var candidateHydrationStarted = Stopwatch.GetTimestamp();
-                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, dispatchCancellationToken);
+                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
                         logger.LogDebug(
                             "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
                             processRunId,
@@ -189,7 +189,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     candidate.StepRun.Id,
                                     processRunId,
                                     string.Join(" | ", startResult.Errors.Select(error => error.Message)));
-                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, dispatchCancellationToken);
+                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
                                 if (refreshedCandidate is null ||
                                     refreshedCandidate.StepRun.Id != candidate.StepRun.Id ||
                                     refreshedCandidate.StepRun.Status != ProcessStepRunStatus.InProgress)
@@ -1566,6 +1566,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
         Guid processRunId,
         Guid claimedStepRunId,
+        string trigger,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -1868,11 +1869,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var currentRole = currentAssignment is null
                 ? null
                 : roleRequirementsById.GetValueOrDefault(currentAssignment.RoleRequirementId);
-            recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
-                stepRun,
-                executionRuns,
-                expectedArtifacts,
-                recordedArtifactExpectationIds);
+            if (ShouldReusePriorArtifactRecoveryExecutionRun(trigger))
+            {
+                recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
+                    stepRun,
+                    executionRuns,
+                    expectedArtifacts,
+                    recordedArtifactExpectationIds);
+            }
+
             return new DispatchCandidate(
                 run,
                 definition,

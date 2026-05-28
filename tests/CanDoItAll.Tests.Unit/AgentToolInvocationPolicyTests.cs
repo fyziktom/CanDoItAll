@@ -1877,6 +1877,104 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_SB02_INV_005_allows_product_write_when_external_product_root_is_named_output()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productRoot = "external-target/C/programovani/dotnet-demo/output";
+        var context = CreateContext(
+            "workspace_write_file",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: true,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["path"] = $"{productRoot}/TetrisGame.Core/TetrisGame.Core.csproj",
+                ["content"] = "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>"
+            },
+            allowedExternalTargetAliases: [productRoot],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "MutateProductTarget",
+                "WriteManagedProcessArtifacts"
+            ],
+            processStepTargetScope: "ExternalProductTargetMutable");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_006_denies_copying_previous_run_product_into_current_product_target()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productRoot = "external-target/C/programovani/dotnet-demo/output";
+        var context = CreateContext(
+            "workspace_copy_path",
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: true,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["sourcePath"] = $"{productRoot}/oldruns/codex-before-process-rerun/product",
+                ["destinationPath"] = $"{productRoot}/product",
+                ["overwrite"] = "True"
+            },
+            allowedExternalTargetAliases: [productRoot],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "MutateProductTarget",
+                "WriteManagedProcessArtifacts"
+            ],
+            processStepTargetScope: "ExternalProductTargetMutable");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("previous-run", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("project structure", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_007_denies_validation_against_previous_run_product_archive()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        const string productRoot = "external-target/C/programovani/dotnet-demo/output";
+        var context = CreateContext(
+            "workspace_dotnet_build",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: true,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["targetPath"] = $"{productRoot}/oldruns/codex-before-process-rerun/src/TetrisGame/TetrisGame.csproj",
+                ["configuration"] = "Release"
+            },
+            allowedExternalTargetAliases: [productRoot],
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "MutateProductTarget",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetMutable");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("previous-run", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("current product", decision.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task EvaluateAsync_SB07_INV_001_denies_project_structure_mutation_without_execute_external_action()
     {
         var policy = new DefaultAgentToolInvocationPolicy();

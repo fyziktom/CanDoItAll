@@ -205,7 +205,7 @@
       "Key": "implement-blazor-change",
       "Title": "Repair Blazor defect",
       "Subtitle": "Build-capable implementation",
-      "Notes": "Diagnose failing build, runtime, UI, console, or acceptance behavior and make the smallest correct repair. Use workspace file and command tools only inside the approved product root. Run dotnet restore before build-sensitive changes when dependencies changed. Run dotnet build after implementation. Do not mark complete if explicit acceptance criteria are omitted, if output is written outside the approved run folder, or if project-structure constraints are narrowed without a decision record.",
+      "Notes": "Diagnose failing build, runtime, UI, console, or acceptance behavior and make the smallest correct repair. Use workspace file and command tools only inside the approved product root. Run dotnet restore before build-sensitive changes when dependencies changed. Run dotnet build after implementation. When the current-run tool requirements include runtime startup proof, start the app once with workspace_dotnet_run and record the startup receipt; leave browser screenshots and console proof to the validation step. Do not mark complete if explicit acceptance criteria are omitted, if output is written outside the approved run folder, or if project-structure constraints are narrowed without a decision record.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -291,6 +291,7 @@
         "ReadUpstreamArtifacts",
         "MutateProductTarget",
         "RunValidation",
+        "LaunchRuntime",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable"
@@ -352,7 +353,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must include dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references."
+          "ValidationRequirementSummary": "Must include dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, and cleanup receipt."
         },
         {
           "Key": "validation-self-review",
@@ -407,7 +408,7 @@
       "Key": "repair-blazor-findings",
       "Title": "Repair Blazor validation findings",
       "Subtitle": "Focused repair",
-      "Notes": "Repair only findings produced by the validation step. Do not expand scope beyond project-structure acceptance criteria. Rerun the smallest relevant dotnet build/test checks needed to prove the repair before handoff.",
+      "Notes": "Repair only findings produced by the validation step. Do not expand scope beyond project-structure acceptance criteria. Rerun the smallest relevant dotnet build/test checks needed to prove the repair before handoff. When runtime startup proof is invalidated by the repair, start the app once with workspace_dotnet_run and record the startup receipt; leave browser screenshots and console proof to the validation step.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -481,6 +482,7 @@
         "ReadUpstreamArtifacts",
         "MutateProductTarget",
         "RunValidation",
+        "LaunchRuntime",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetMutable"
@@ -542,7 +544,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot or browser_evaluate state output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references."
+          "ValidationRequirementSummary": "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot or browser_evaluate state output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, and cleanup receipt."
         }
       ],
       "ArtifactInputs": [
@@ -667,6 +669,7 @@
       ],
       "AllowedOperations": [
         "ReadProcessContext",
+        "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"
@@ -760,6 +763,7 @@
       ],
       "AllowedOperations": [
         "ReadProcessContext",
+        "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
         "ExecuteExternalAction"

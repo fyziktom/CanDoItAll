@@ -1139,6 +1139,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 carriedImplementationProof);
             if (!contextValidation.IsValid)
             {
+                if (TryRecoverExplicitDispositionBranchSelection(
+                        candidate,
+                        declaredOutcome,
+                        contextValidation,
+                        responseText,
+                        out var explicitDisposition))
+                {
+                    return BuildExplicitDispositionCompletionReason(
+                        explicitDisposition,
+                        declaredOutcome.Reason,
+                        "selected from explicit current-run disposition text");
+                }
+
                 var branchOutcomeSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
                 if (!string.IsNullOrWhiteSpace(branchOutcomeSelectionFailure))
                 {
@@ -1231,6 +1244,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var branchOutcomeSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
             if (!string.IsNullOrWhiteSpace(branchOutcomeSelectionFailure))
             {
+                if (TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out var explicitDisposition))
+                {
+                    return BuildExplicitDispositionCompletionReason(
+                        explicitDisposition,
+                        declaredOutcome.Reason,
+                        "selected from explicit current-run disposition text");
+                }
+
                 return branchOutcomeSelectionFailure;
             }
 
