@@ -1,0 +1,9 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\Space3D\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj (v 356 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj (v 913 ms).
+  CanDoItAll.Space3D.Mouse.Driver -> C:\repositories\CanDoItAll\src\Space3D\CanDoItAll.Space3D.Mouse.Driver\bin\Release\net10.0\CanDoItAll.Space3D.Mouse.Driver.dll
+  CanDoItAll.Space3D.Tests -> C:\repositories\CanDoItAll\tests\CanDoItAll.Space3D.Tests\bin\Release\net10.0\CanDoItAll.Space3D.Tests.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Space3D.Tests\bin\Release\net10.0\CanDoItAll.Space3D.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    18, Přeskočeno:     0, Celkem:    18, Doba trvání: 460 ms - CanDoItAll.Space3D.Tests.dll (net10.0)

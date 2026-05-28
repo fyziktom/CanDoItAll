@@ -1,0 +1,13 @@
+
+Name                                          Length LastWriteTimeUtc
+----                                          ------ ----------------
+CanDoItAll.Components.BaseLib.0.1.0.nupkg     894556 28.05.2026 19:19:05
+CanDoItAll.Components.CanvasLib.0.1.0.nupkg   381415 28.05.2026 19:19:09
+CanDoItAll.Components.Common.0.1.0.nupkg        5381 28.05.2026 19:19:02
+CanDoItAll.Components.Charts.0.1.0.nupkg       19967 28.05.2026 19:19:02
+CanDoItAll.Components.Mermaid.0.1.0.nupkg     958925 28.05.2026 19:19:03
+CanDoItAll.Components.OverlayLib.0.1.0.nupkg   32339 28.05.2026 19:19:06
+CanDoItAll.Components.Sandbox.0.1.0.nupkg     236252 28.05.2026 19:19:12
+CanDoItAll.Components.WebGlLib.0.1.0.nupkg   2362161 28.05.2026 19:19:08
+
+

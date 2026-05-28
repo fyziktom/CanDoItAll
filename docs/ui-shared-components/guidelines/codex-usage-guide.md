@@ -1,6 +1,6 @@
 # Codex Usage Guide
 
-This guide is the operational checklist Codex should use before picking a shared UI component from the current `CanDoItAll.Components` layer.
+This guide is the operational checklist Codex should use before picking a shared UI component from the component packages.
 
 ## 1. First decide whether the shared library is appropriate
 
@@ -15,8 +15,6 @@ Use the shared library when the screen needs:
 
 Do not use the shared library as-is when the screen needs:
 
-- modal dialogs
-- true tooltips
 - advanced context menus
 - searchable selects or autocomplete
 - complex validation UX
@@ -28,13 +26,13 @@ Do not use the shared library as-is when the screen needs:
 ### Services
 
 ```csharp
-services.AddCanDoItAllComponents();
+services.AddCanDoItAllBaseLib();
 ```
 
 ### Imports
 
 ```razor
-@using CanDoItAll.Components
+@using CanDoItAll.Components.BaseLib
 ```
 
 ### CSS
@@ -42,6 +40,7 @@ services.AddCanDoItAllComponents();
 Load:
 
 - `_content/CanDoItAll.Components.BaseLib/css/output.css`
+- `css/output.css` in the main web app
 
 Without that CSS, component markup still renders, but the intended visual system is incomplete.
 
@@ -79,13 +78,7 @@ Safer assumption:
 
 ### Check for hidden placeholders
 
-If the component name is:
-
-- `Dialog`
-- `Tooltip`
-- `ContextMenu`
-
-Treat it as unimplemented.
+If the component name is `ContextMenu`, treat it as partial until you verify the implementation. `Dialog`, `Tooltip`, and `Notification` are service-backed BaseLib components and should be used through `DialogService`, `TooltipService`, and `NotificationService` where appropriate.
 
 ### Check input event timing
 

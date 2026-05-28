@@ -52,6 +52,8 @@ ScaffoldingReadMe.txt
 
 # NuGet Packages
 *.nupkg
+!ExternalPackages/
+!ExternalPackages/*.nupkg
 # NuGet Symbol Packages
 *.snupkg
 

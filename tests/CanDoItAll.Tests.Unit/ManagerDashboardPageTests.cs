@@ -33,7 +33,7 @@ public sealed class ManagerDashboardPageTests
                     DateTimeOffset.UtcNow,
                     @"C:\repos\CanDoItAll\Tailwind",
                     @"C:\repos\CanDoItAll\Tailwind\input.css",
-                    @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css",
+                    @"C:\repos\CanDoItAll\src\CanDoItAll.Web\wwwroot\css\output.css",
                     true,
                     DateTimeOffset.UtcNow),
                 [
@@ -69,7 +69,7 @@ public sealed class ManagerDashboardPageTests
                         "Inputs",
                         [@"C:\repos\CanDoItAll\Tailwind\input.css"],
                         "Outputs",
-                        [@"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css"])
+                        [@"C:\repos\CanDoItAll\src\CanDoItAll.Web\wwwroot\css\output.css"])
                 ],
                 DateTimeOffset.UtcNow),
             new CapsuleCoverageSummary(161, 15, 1, 79, 0, [], [], DateTimeOffset.UtcNow),
