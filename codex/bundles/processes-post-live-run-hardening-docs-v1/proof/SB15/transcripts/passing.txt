@@ -1,0 +1,97 @@
+# SB15 Passing Proof
+
+## Unit suite build
+
+Command:
+
+```powershell
+dotnet build tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-unit\
+```
+
+Exit code: 0
+
+Result: build succeeded. The only warnings were pre-existing EF Core relational assembly conflict warnings.
+
+## SB15-UNIT-POLICY
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~Maf16CapabilityReflectionTests|FullyQualifiedName~WorkspaceCommandExecutionServiceTests" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-unit\ --logger "console;verbosity=normal"
+```
+
+Exit code: 0
+
+Result: 138 passed, 0 failed, 0 skipped. Duration: 12.5662 seconds.
+
+## Integration suite build
+
+Command:
+
+```powershell
+dotnet build tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-integration\ -p:CopyRepositoryTemplatesToOutput=false
+```
+
+Exit code: 0
+
+Result: build succeeded. The only warnings were pre-existing EF Core relational assembly conflict warnings.
+
+## SB15-INTEGRATION-RUNTIME-ARTIFACTS
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.Runtime_read_model|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessManagerAgentResolver|FullyQualifiedName~ProcessRuntimeOperatorReadModelTests|FullyQualifiedName~ProcessesServiceIntegrationTests.Blocked_transition" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-integration\ -p:CopyRepositoryTemplatesToOutput=false --logger "console;verbosity=normal"
+```
+
+Exit code: 0
+
+Result: 22 passed, 0 failed, 0 skipped. Duration: 4.4890 minutes.
+
+## SB15-INTEGRATION-TEMPLATES-API
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessTemplateGovernanceTests" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-integration\ -p:CopyRepositoryTemplatesToOutput=false --logger "console;verbosity=normal"
+```
+
+Exit code: 0
+
+Result: `ProcessTemplateGovernanceTests` passed 10/10 in the first template/API proof run. The SB15 catalog was then tightened to separate process API/MAF proof into its own suite because the extra API/MAF filter terms did not select additional tests in that run.
+
+## SB15-INTEGRATION-PROCESS-API-MAF
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ApiIntegrationTests.Api_live_run_profiles_expose_fresh_run_policy_contract|FullyQualifiedName~ApiIntegrationTests.Api_openapi_exposes_focused_control_plane_routes|FullyQualifiedName~MafAgentRuntimeTests.CreateCapabilityState_attaches_internal_process_tools_by_default_when_workspace_services_are_available|FullyQualifiedName~MafAgentRuntimeTests.Internal_process_mutation_tools_remain_available_when_approval_requirements_are_suppressed" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-integration\ -p:CopyRepositoryTemplatesToOutput=false --logger "console;verbosity=normal"
+```
+
+Exit code: 0
+
+Result: 4 passed, 0 failed, 0 skipped. Duration: 1.2571 minutes.
+
+## Component suite build
+
+Command:
+
+```powershell
+dotnet build tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-components\
+```
+
+Exit code: 0
+
+Result: build succeeded. Warnings were the known EF Core relational assembly conflict warnings plus one transient template-copy retry warning that did not fail the build.
+
+## SB15-COMPONENT-PROCESS
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~ProcessWorkspaceTests.Run_steps_dialog_SB15_INV_001_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight|FullyQualifiedName~ProcessWorkspaceTests.Runs_operator_console_surfaces_escalation_rework_and_timeline_controls|FullyQualifiedName~ProcessWorkspaceTests.Runs_operator_console_SB13_INV_001_surfaces_invariant_diagnostics_and_recommended_action" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-components\ --logger "console;verbosity=normal"
+```
+
+Exit code: 0
+
+Result: 3 passed, 0 failed, 0 skipped. Duration: 1.1832 minutes.

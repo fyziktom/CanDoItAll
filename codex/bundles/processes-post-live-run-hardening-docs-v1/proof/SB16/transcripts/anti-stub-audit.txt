@@ -1,0 +1,17 @@
+# SB16 Anti-Stub Audit
+
+## Production runtime files
+
+Command:
+
+```powershell
+$qualityPattern = 'TO' + 'DO|' + 'Not' + 'Implemented|' + 'st' + 'ub|' + 'fa' + 'ke|' + 'hard' + '-code|' + 'hard' + 'coded'; rg -n $qualityPattern src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExternalTargetGroundingService.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerAgentResolver.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs
+```
+
+Exit code: 1
+
+Result: no TODO, NotImplemented, stub, fake, hard-code, or hardcoded markers were found in the SB16 production runtime files.
+
+## Test fixture note
+
+A broader scan including `ProcessRunAutomationDispatchServiceTests.cs` finds intentional domain fixture text for an "Operations TODO register" scenario. That is test data exercising artifact/output semantics, not a pending implementation marker, so it is excluded from the production anti-stub result.

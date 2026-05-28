@@ -37,16 +37,17 @@
                            data-testid="processes-role-display-name-input" />
             </FormField>
             <FormField Text="Preferred executor kind">
-                <select value="@ProcessExecutorKindNames.Normalize(Model.PreferredExecutorKind)"
+                <select value="@ProcessRoleExecutorKindOptions.NormalizeForSelection(Model.PreferredExecutorKind)"
                         @onchange="HandleExecutorKindChanged"
                         class="cda-input"
                         data-testid="processes-role-executor-kind-input">
-                    <option value="@ProcessExecutorKindNames.Human">Human</option>
-                    <option value="@ProcessExecutorKindNames.AiAgent">AI agent</option>
-                    <option value="@ProcessExecutorKindNames.Workflow">Workflow</option>
+                    @foreach (var executorKind in ProcessRoleExecutorKindOptions.Options)
+                    {
+                        <option value="@executorKind.Value">@executorKind.Label</option>
+                    }
                 </select>
             </FormField>
-            @if (ProcessExecutorKindNames.IsWorkflow(Model.PreferredExecutorKind))
+            @if (ProcessRoleExecutorKindOptions.IsWorkflow(Model.PreferredExecutorKind))
             {
                 <FormField Text="Preferred workflow">
                     <select value="@SelectedWorkflowOptionKey"
@@ -165,8 +166,8 @@
 
     private void HandleExecutorKindChanged(ChangeEventArgs args)
     {
-        Model.PreferredExecutorKind = ProcessExecutorKindNames.Normalize(args.Value?.ToString());
-        if (!ProcessExecutorKindNames.IsWorkflow(Model.PreferredExecutorKind))
+        Model.PreferredExecutorKind = ProcessRoleExecutorKindOptions.NormalizeForSelection(args.Value?.ToString());
+        if (!ProcessRoleExecutorKindOptions.IsWorkflow(Model.PreferredExecutorKind))
         {
             Model.PreferredWorkflowDefinitionId = null;
             Model.PreferredWorkflowVersionId = null;

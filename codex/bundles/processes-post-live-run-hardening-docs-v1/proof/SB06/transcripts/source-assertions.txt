@@ -1,0 +1,51 @@
+Invariant: SB06-INV-001 explicit Workbench projection policy owns current-run folder roots and noisy-child rejection.
+Command: rg -n "ProjectStructureProcessRunFolderProjectionPolicy|ProjectStructureProcessRunFolderProjectionKind|ResolveProcessRunsProjection|ResolveOutputRootSegmentCount" src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureProcessRunFolderProjectionPolicy.cs
+3:internal static class ProjectStructureProcessRunFolderProjectionPolicy
+27:            return ResolveProcessRunsProjection(segments, runId, processRunsIndex);
+34:                ProjectStructureProcessRunFolderProjectionKind.ManagedRunRoot);
+40:    private static ProjectStructureProcessRunFolderProjection ResolveProcessRunsProjection(
+52:            var outputRootSegmentCount = ResolveOutputRootSegmentCount(segments, runIdSegmentIndex);
+54:                ? ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot
+55:                : ProjectStructureProcessRunFolderProjectionKind.ManagedRunRoot;
+62:            ? ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot
+63:            : ProjectStructureProcessRunFolderProjectionKind.ManagedRunRoot;
+69:    private static int ResolveOutputRootSegmentCount(IReadOnlyList<string> segments, int runIdSegmentIndex)
+157:    ProjectStructureProcessRunFolderProjectionKind Kind,
+160:    public bool ShouldProject => Kind != ProjectStructureProcessRunFolderProjectionKind.Ignored &&
+165:        ProjectStructureProcessRunFolderProjectionKind kind)
+172:        => new(string.Empty, ProjectStructureProcessRunFolderProjectionKind.Ignored, reason);
+175:internal enum ProjectStructureProcessRunFolderProjectionKind
+ExitCode: 0
+Command: rg -n "ProjectStructureProcessRunFolderProjectionPolicy.Resolve|BuildProcessRunOutputFolderSourceHint|ProjectionKind" src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAssemblyService.cs
+1014:                    Projection = ProjectStructureProcessRunFolderProjectionPolicy.Resolve(item.ManagedStoragePath, item.ProcessRunId)
+1147:                            SourceHint = BuildProcessRunOutputFolderSourceHint(outputFolder.Folder.ProjectionKind),
+1297:    private static string BuildProcessRunOutputFolderSourceHint(ProjectStructureProcessRunFolderProjectionKind projectionKind)
+1301:            ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot => "Process run product output folder",
+1302:            ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot => "Process run artifact folder",
+1361:        ProjectStructureProcessRunFolderProjectionKind ProjectionKind,
+ExitCode: 0
+Command: rg -n "ProcessRunFolderProjectionPolicy_resolves|20260528-101425689-dotnet-build|OtherProduct|ProjectStructureProcessRunFolderProjectionKind" tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs
+293:            ManagedStoragePath = $"artifacts/scopes/organization/demo/process-runs/{runResult.Value:D}/20260528/20260528-101425689-dotnet-build/stdout.txt"
+305:            ManagedStoragePath = "artifacts/scopes/organization/demo/process-runs/20260528/20260528-101425689-dotnet-build/stdout.txt"
+311:            Title = "OtherProduct App.razor",
+317:            ManagedStoragePath = $"output/scopes/organization/demo/process-runs/{unrelatedRunId:D}/OtherProduct/App.razor"
+335:            node.StorageObjectReferenceJson.Contains("20260528-101425689-dotnet-build", StringComparison.OrdinalIgnoreCase));
+337:            node.StorageObjectReferenceJson.Contains("OtherProduct", StringComparison.OrdinalIgnoreCase));
+350:    public void ProcessRunFolderProjectionPolicy_resolves_current_run_roots_and_ignores_noisy_paths()
+360:                ProjectStructureProcessRunFolderProjectionKind.ManagedRunRoot),
+365:                ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot),
+367:                $"artifacts/scopes/organization/demo/process-runs/{runId:D}/20260528/20260528-101425689-dotnet-build/stdout.txt",
+370:                ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot),
+375:                ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot),
+380:                ProjectStructureProcessRunFolderProjectionKind.ManagedRunRoot),
+382:                "artifacts/scopes/organization/demo/process-runs/20260528/20260528-101425689-dotnet-build/stdout.txt",
+385:                ProjectStructureProcessRunFolderProjectionKind.Ignored),
+387:                $"output/scopes/organization/demo/process-runs/{unrelatedRunId:D}/OtherProduct/App.razor",
+390:                ProjectStructureProcessRunFolderProjectionKind.Ignored),
+395:                ProjectStructureProcessRunFolderProjectionKind.Ignored)
+2795:        ProjectStructureProcessRunFolderProjectionKind ExpectedKind);
+ExitCode: 0
+Command: rg -n "ProjectStructureProcessRunFolderProjectionPolicy|external-delivery output roots|Raw `external-target" src\CanDoItAll.Modules.Workbench\README.md src\CanDoItAll.Modules.Processes\README.md
+src\CanDoItAll.Modules.Processes\README.md:69:- **Run folder projection** stays behind Workbench `ProjectStructureProcessRunFolderProjectionPolicy`, which projects current-run managed roots and generated or external-delivery output roots while collapsing or ignoring tool receipt internals and noisy child folders.
+src\CanDoItAll.Modules.Workbench\README.md:44:`ProjectStructureProcessRunFolderProjectionPolicy` owns process-run folder projection. It projects current-run managed roots, collapses artifact evidence under `artifacts/.../process-runs/{runId}` to the run artifact folder, collapses generated or external-delivery output persisted under `output/.../process-runs/{runId}/{productRoot}` to the product folder, and ignores wrong-run, dated receipt, absolute, traversal, or otherwise unanchored paths instead of mirroring noisy artifact subtrees. Raw `external-target/...` aliases remain Processes grounding metadata; Workbench projects the managed output root that records the run-owned delivery evidence.
+ExitCode: 0

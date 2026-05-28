@@ -17,3 +17,40 @@ public sealed record CapabilityVerificationResult(
     CapabilityProofStatus Status,
     string Notes,
     DateTimeOffset CheckedAtUtc);
+
+public sealed record AgentCapabilityRequirement(
+    string RoleKey,
+    CapabilityKind Kind,
+    string CapabilityKey,
+    string Reason);
+
+public enum AgentCapabilityDiagnosticSeverity
+{
+    Warning,
+    Error
+}
+
+public enum AgentCapabilityDiagnosticCode
+{
+    MissingRequiredCapability,
+    MissingCatalogCapability,
+    StaleCapabilityAssignment,
+    RetiredCapability
+}
+
+public sealed record AgentCapabilityDiagnostic(
+    AgentCapabilityDiagnosticCode Code,
+    AgentCapabilityDiagnosticSeverity Severity,
+    Guid AgentId,
+    string AgentName,
+    string RoleKey,
+    string RoleTitle,
+    CapabilityKind Kind,
+    string CapabilityKey,
+    string Message);
+
+public sealed record AgentCapabilityRequirementEvaluation(
+    IReadOnlyList<AgentCapabilityDiagnostic> Diagnostics)
+{
+    public bool IsSatisfied => Diagnostics.All(item => item.Severity != AgentCapabilityDiagnosticSeverity.Error);
+}

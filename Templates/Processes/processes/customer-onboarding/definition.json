@@ -164,7 +164,12 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/customer-onboarding/steps/intake.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 1,
@@ -181,11 +186,11 @@
       "OutputContractSummary": "Recommended staffing path with explicit fallback and coverage gaps.",
       "EvidenceContractSummary": "Candidate list, allocation picture, and fallback recommendation.",
       "DecisionRightsSummary": "Staffing manager recommends; governance owner approves kickoff readiness.",
-      "ExceptionPolicySummary": "Do not treat partial staffing assumptions as committed staffing.",
+      "ExceptionPolicySummary": "Do not treat partial staffing assumptions as committed staffing; block when artifact recovery is required for missing or invalid staffing readiness evidence.",
       "TargetLeadHours": 8,
       "DependsOnStepKey": "intake",
       "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DecisionRoleKey": "staffing-manager",
       "CanvasX": 1340,
       "CanvasY": 0,
       "BranchCanvasX": 0,
@@ -232,7 +237,13 @@
           "SourceStepKey": "intake"
         }
       ],
-      "BranchOutcomes": [],
+      "BranchOutcomes": [
+        {
+          "Key": "staffing-ready",
+          "Title": "Staffing ready",
+          "Description": "Staffing evidence is sufficient for kickoff approval."
+        }
+      ],
       "ChecklistRefs": [
         "staffing-feasibility-checklist"
       ],
@@ -244,7 +255,14 @@
       ],
       "DocRefs": [
         "processes/customer-onboarding/steps/staffing-review.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 2,
@@ -261,11 +279,11 @@
       "OutputContractSummary": "Approved or rejected kickoff readiness.",
       "EvidenceContractSummary": "Approval record and managed kickoff artifacts.",
       "DecisionRightsSummary": "Kickoff lead can approve, block, or refuse unsafe launch.",
-      "ExceptionPolicySummary": "Reject kickoff when ownership, milestones, or dependencies remain vague.",
+      "ExceptionPolicySummary": "Reject kickoff when ownership, milestones, or dependencies remain vague; block when artifact recovery is required for missing or invalid kickoff approval evidence.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "staffing-review",
-      "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
+      "DependsOnBranchOutcomeKey": "staffing-ready",
+      "DecisionRoleKey": "kickoff-lead",
       "CanvasX": 2420,
       "CanvasY": 0,
       "BranchCanvasX": 0,
@@ -273,7 +291,7 @@
       "Dependencies": [
         {
           "DependsOnStepKey": "staffing-review",
-          "DependsOnBranchOutcomeKey": ""
+          "DependsOnBranchOutcomeKey": "staffing-ready"
         }
       ],
       "RoleAssignments": [
@@ -317,7 +335,14 @@
       ],
       "DocRefs": [
         "processes/customer-onboarding/steps/kickoff-approval.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
   "DocPath": "processes/customer-onboarding/definition.md",
@@ -410,7 +435,7 @@
       "ProcessKey": "customer-onboarding",
       "Summary": "Configuration and fit-gap specialist for mapping customer needs to the delivered product capability.",
       "Purpose": "Translate customer operating reality into a safe, supportable configuration and adoption path.",
-      "StaffingIntent": "A solution specialist who understands both the product’s capabilities and the customer’s working model.",
+      "StaffingIntent": "A solution specialist who understands both the product\u2019s capabilities and the customer\u2019s working model.",
       "PreferredExecutorKind": "person",
       "PreferredProjectAssignmentRole": "TechnicalContact",
       "IsRequired": true,
@@ -429,7 +454,7 @@
         "customer-solutioning"
       ],
       "KnowledgeRequirements": [
-        "Knowledge of the product’s configuration model, constraints, extension points, and known limits.",
+        "Knowledge of the product\u2019s configuration model, constraints, extension points, and known limits.",
         "Ability to identify fit-gap issues before they become late-stage surprises.",
         "Understanding of customer process variation and what can or cannot be supported without custom delivery.",
         "Ability to explain solution trade-offs in operational rather than purely technical language.",
@@ -742,7 +767,7 @@
       "Phase": "go-live",
       "Summary": "Checks whether the customer-side and internal-side prerequisites for onboarding go-live are truly complete.",
       "EntryCriteria": "Configuration and handoff planning are largely complete and go-live is approaching.",
-      "ExitCriteria": "No go-live-critical task is ownerless or hidden behind vague 'customer to confirm' language.",
+      "ExitCriteria": "No go-live-critical task is ownerless or hidden behind vague \u0027customer to confirm\u0027 language.",
       "Checks": [
         "Customer-side access and ownership are explicit.",
         "Configuration baseline is signed off or acknowledged.",

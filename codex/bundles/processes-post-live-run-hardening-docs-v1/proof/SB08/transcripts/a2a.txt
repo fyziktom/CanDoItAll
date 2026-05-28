@@ -1,0 +1,32 @@
+Invariant: SB08-INV-001
+Slice: a2a.txt
+A2A proof: MAF A2A symbols and remote endpoint validation.
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\ --filter "FullyQualifiedName~A2ARemoteAgentToolFactoryTests|FullyQualifiedName~Maf16CapabilityReflectionTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 84 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0
+Command: rg -n "Microsoft.Agents.AI.A2A|A2ARemoteAgentToolFactory|A2ACardResolver|AgentA2ARemoteEndpointSettings" src\CanDoItAll.AgentFramework.Maf tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs tests\CanDoItAll.Tests.Unit\Maf16CapabilityReflectionTests.cs
+tests\CanDoItAll.Tests.Unit\Maf16CapabilityReflectionTests.cs:20:            typeof(A2ACardResolver).Assembly,
+tests\CanDoItAll.Tests.Unit\Maf16CapabilityReflectionTests.cs:48:        Assert.Contains("A2ACardResolver", availableTypeNames);
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:6:public sealed class A2ARemoteAgentToolFactoryTests
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:11:        var factory = new A2ARemoteAgentToolFactory(configuration: null, loggerFactory: null);
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:14:                new AgentA2ARemoteEndpointSettings
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:30:        var factory = new A2ARemoteAgentToolFactory(configuration: null, loggerFactory: null);
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:35:                    new AgentA2ARemoteEndpointSettings
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:51:        var factory = new A2ARemoteAgentToolFactory(configuration: null, loggerFactory: null);
+tests\CanDoItAll.Tests.Unit\A2ARemoteAgentToolFactoryTests.cs:56:                    new AgentA2ARemoteEndpointSettings
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:18:    <PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.6.2-preview.260521.1" />
+src\CanDoItAll.AgentFramework.Maf\README.md:39:- `Microsoft.Agents.AI.A2A (1.6.2-preview.260521.1)`
+src\CanDoItAll.AgentFramework.Maf\README.md:60:| A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Disabled endpoint, missing bearer secret, and invalid endpoint tests. |
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:14:internal sealed class A2ARemoteAgentToolFactory(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:21:        IReadOnlyList<AgentA2ARemoteEndpointSettings> endpoints,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:65:        AgentA2ARemoteEndpointSettings endpoint,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:70:        var resolver = new A2ACardResolver(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:108:    private HttpClient CreateHttpClient(AgentA2ARemoteEndpointSettings endpoint)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:130:    private static A2AClientOptions? CreateClientOptions(AgentA2ARemoteEndpointSettings endpoint)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:148:        AgentA2ARemoteEndpointSettings endpoint,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\A2ARemoteAgentToolFactory.cs:196:        AgentA2ARemoteEndpointSettings endpoint,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:422:        var factory = new A2ARemoteAgentToolFactory(
+ExitCode: 0

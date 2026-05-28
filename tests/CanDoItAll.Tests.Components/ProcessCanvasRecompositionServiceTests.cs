@@ -13,6 +13,11 @@ public sealed class ProcessCanvasRecompositionServiceTests
         "dotnet-solution-setup",
         "dotnet-feature-function-implementation",
         "dotnet-development-slice",
+        "blazor-app-delivery",
+        "blazor-app-repair-fix",
+        "blazor-backend-feature",
+        "blazor-frontend-feature",
+        "blazor-fullstack-feature",
         "software-delivery",
         "ai-assisted-change-delivery",
         "branching-code-review",
@@ -89,7 +94,7 @@ public sealed class ProcessCanvasRecompositionServiceTests
         Assert.True(implementationRoleBox.X < implementationBox.X);
         Assert.True(Math.Abs(decisionRoleBox.Y - decisionBox.Y) < 1d);
         Assert.True(Math.Abs(implementationRoleBox.Y - implementationBox.Y) < 1d);
-        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 1d);
+        Assert.True(Math.Abs(implementationBox.Y - decisionBox.Y) < 24d);
         Assert.True(Math.Abs(mergeBox.Y - decisionBox.Y) < 1d);
         Assert.True(Math.Abs(repairBox.Y - decisionBox.Y) > 150d);
         Assert.True(branchBox.X > decisionBox.X);

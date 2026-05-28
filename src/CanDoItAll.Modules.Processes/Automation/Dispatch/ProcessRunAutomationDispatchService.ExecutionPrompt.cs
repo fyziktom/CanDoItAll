@@ -47,24 +47,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessProjectStructureContextFormatter.TryParse(candidate.Run.TriggerReason, out var projectStructureContext);
         var projectStructureProjectId = projectStructureContext?.ProjectId ?? candidate.Run.ProjectId;
         var hasProjectStructureExecutionContext = projectStructureContext is not null || !string.IsNullOrWhiteSpace(projectStructureGroundingSummary);
-        var hasGroundedExternalTarget = TryResolveExternalTargetHintFromProjectStructureGrounding(
-            projectStructureGroundingSummary,
-            out var groundedExternalAbsolutePath,
-            out var groundedExternalMappedAlias);
-        var hasGroundedExternalScaffoldTarget = TrySplitExternalTargetAliasForScaffold(
-            groundedExternalMappedAlias,
-            out var groundedExternalParentAlias,
-            out var groundedExternalLeafName);
+        var groundedExternalTarget = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(projectStructureGroundingSummary);
+        var hasGroundedExternalTarget = groundedExternalTarget.HasTarget;
+        var groundedExternalAbsolutePath = groundedExternalTarget.AbsolutePath;
+        var groundedExternalMappedAlias = groundedExternalTarget.MappedAlias;
+        var hasGroundedExternalScaffoldTarget = groundedExternalTarget.ScaffoldTarget is not null;
+        var groundedExternalParentAlias = groundedExternalTarget.ScaffoldTarget?.ParentAlias ?? string.Empty;
+        var groundedExternalLeafName = groundedExternalTarget.ScaffoldTarget?.LeafName ?? string.Empty;
         var usesScaffoldContractDrivenSetup = UsesScaffoldContractDrivenSetup(candidate);
         var isDotNetSolutionSetupScaffoldMutationStep = IsDotNetSolutionSetupScaffoldMutationStep(candidate);
-        var allowsExternalTargetMutation = AllowsExternalTargetMutation(candidate, projectStructureGroundingSummary);
+        var operationContract = ResolveProcessStepOperationContract(candidate);
+        var executionBoundary = ResolveProcessStepExecutionBoundary(candidate, operationContract);
+        var effectiveCooperationMetadata = ResolveBoundaryAwareCooperationMetadata(candidate.CooperationMetadata, executionBoundary);
+        var allowsExternalTargetMutation = AllowsExternalTargetMutation(candidate, executionBoundary, operationContract, projectStructureGroundingSummary);
         var currentRunManagedArtifactRoot = BuildCurrentRunManagedArtifactRoot(candidate);
         var currentRunManagedOutputRoot = BuildCurrentRunManagedOutputRoot(candidate);
         var usesGroundedExternalArtifactDestination = hasGroundedExternalTarget &&
             !requiresConcreteProductProof &&
             LooksLikeExternalArtifactDestination(candidate, projectStructureGroundingSummary);
         var requiredArtifactDefaultRoot = usesGroundedExternalArtifactDestination
-            ? groundedExternalMappedAlias ?? currentRunManagedArtifactRoot
+            ? groundedExternalMappedAlias
             : currentRunManagedArtifactRoot;
         var summarizedTriggerReason = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
         var builder = new StringBuilder();
@@ -76,9 +78,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine($"Executor: {candidate.StepRun.CurrentExecutorName}");
         builder.AppendLine();
         builder.AppendLine("Process cooperation plan:");
-        builder.AppendLine($"- Mode: {candidate.CooperationMetadata.CooperationMode}");
-        builder.AppendLine($"- Workspace tool profile: {AgentWorkspaceToolAccessProfiles.GetProfileKey(candidate.CooperationMetadata.WorkspaceToolProfile)}");
-        builder.AppendLine($"- Basis: {candidate.CooperationMetadata.Summary}");
+        builder.AppendLine($"- Mode: {effectiveCooperationMetadata.CooperationMode}");
+        builder.AppendLine($"- Workspace tool profile: {AgentWorkspaceToolAccessProfiles.GetProfileKey(effectiveCooperationMetadata.WorkspaceToolProfile)}");
+        builder.AppendLine($"- Basis: {effectiveCooperationMetadata.Summary}");
         builder.AppendLine("- Use upstream artifacts, MAF handoff participants, or A2A tools only when they are explicitly provided by this run or attached to the selected agent. Do not invent hidden background collaboration.");
         builder.AppendLine();
         builder.AppendLine("Current-run managed artifact root:");
@@ -132,6 +134,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- Do not include a `provided context`, `source-document context`, `ignored context`, or similar note that lists out-of-scope paths. If a path is unrelated to the current grounded product root, omit it from final artifacts entirely.");
             builder.AppendLine("- If tool policy denies an `external-target/...` path, treat that denied path as invalid for this run. Abandon it immediately and switch to the current grounded product root or current-run artifacts; do not retry or reason from the denied sample path.");
             builder.AppendLine("- `workspace_pwsh_run_script` executes a script file from the managed workspace. If that script invokes native tools against an external target, convert `external-target/<drive>/...` back to a native path such as `C:\\target\\app` inside the script before passing it to native commands like `Start-Process`, `Test-Path`, or `Resolve-Path`.");
+            builder.AppendLine($"- In governed process steps, every `workspace_pwsh_run_script` or `workspace_python_run_file` call must include a `{GovernedScriptSideEffectManifest.ArgumentName}` JSON value. Use `NoMutation` for read-only scripts, `ManagedProcessArtifacts` with declared current-run artifact write paths for evidence writers, `ExternalArtifactDestination` for governed external artifact destinations, and `ProductMutation` only when this step explicitly permits product mutation.");
             builder.AppendLine("- The mapped `external-target/<drive>/...` alias resolves to the real external target. Do not create a shadow copy in a different workspace folder.");
             builder.AppendLine("- Treat missing project-structure inspection as incomplete work for this step.");
             builder.AppendLine("- If project_structure_read reveals an exact external output directory for the selected work node, keep that directory as the authoritative product boundary for this run. Create, bootstrap, or implement there only when the current step contract explicitly requires concrete delivery work.");
@@ -139,6 +142,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (hasGroundedExternalTarget)
             {
                 builder.AppendLine($"- The grounded project structure already identifies the external output root `{groundedExternalAbsolutePath}` mapped to `{groundedExternalMappedAlias}`. Treat that mapped alias as the product root for this run, not as an optional example.");
+                builder.AppendLine("- If a temporary managed workspace is used for greenfield scaffolding or validation, the final runnable product must be delivered into the grounded external target before the step can be considered complete.");
+                builder.AppendLine("- Completion evidence must cite build, run, or browser proof against the grounded external target after final delivery. Workspace-only proof is not sufficient when an external target is grounded.");
                 builder.AppendLine($"- With a grounded external product root, treat the managed workspace as evidence and artifact scratch space only, preferably under `{currentRunManagedArtifactRoot}`. Do not inspect managed workspace source, test, tool, or script roots such as `src/`, `tests/`, `tools/`, or `scripts/` unless the current run's project structure, work brief, upstream artifacts, or current-run tool outputs explicitly name those paths.");
                 if (usesGroundedExternalArtifactDestination)
                 {
@@ -458,7 +463,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (implementationMentionsDotNet)
             {
                 builder.AppendLine("- For Blazor forms, bind inputs only to settable properties or explicit get/set wrappers. Positional records and init-only properties are not valid `@bind` targets and must be replaced with mutable form-state classes or properties before rerunning the build.");
-                builder.AppendLine("- For .NET HTTP startup proof that does not need same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and avoids locking later builds. If this same step must run browser tools, set `keepAlive: true`, capture browser evidence, and stop the app with the recorded `startup.json` `stopCommand` before finalizing.");
+                builder.AppendLine("- For .NET HTTP startup proof that does not need same-step browser follow-up, leave `workspace_dotnet_run` `keepAlive` false so the smoke test stops the launched process tree and avoids locking later builds. If this same step must run browser tools, set `keepAlive: true`, capture browser evidence, and cite the startup receipt; the dispatcher stops the kept-alive process tree after the finalizer, so do not run a cleanup script.");
             }
         }
 
@@ -479,7 +484,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             builder.AppendLine("- If no reviewed browser surface is already running, start it using the launch path and toolchain appropriate for the assigned agent and current step contract, then capture the URL and diagnostics.");
             if (implementationMentionsDotNet)
             {
-                builder.AppendLine("- For .NET browser proof, call `workspace_dotnet_run` with `keepAlive: true` so Playwright can reach the app. After browser evidence is captured, stop the process tree with the recorded `startup.json` `stopCommand` before finalizing.");
+                builder.AppendLine("- For .NET browser proof, call `workspace_dotnet_run` with `keepAlive: true` so Playwright can reach the app. After browser evidence is captured, cite the startup receipt and final evidence; the dispatcher stops the kept-alive process tree after the finalizer, so do not run `workspace_pwsh_run_script` just for cleanup.");
             }
             else if (implementationMentionsJavaScript)
             {
@@ -683,7 +688,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         builder.AppendLine("- Do not submit the final step outcome from file inspection alone. Current-run browser evidence must come from provider-native browser tools after the reviewed app is reachable.");
         if (implementationMentionsDotNet)
         {
-            builder.AppendLine("- Start or verify the reviewed .NET host first. Prefer `workspace_dotnet_run` with `keepAlive: true`, capture the reported URL, and stop the process with the recorded stop command after browser proof.");
+            builder.AppendLine("- Start or verify the reviewed .NET host first. Prefer `workspace_dotnet_run` with `keepAlive: true`, capture the reported URL, and let the dispatcher stop the kept-alive process tree after the finalizer.");
         }
         else if (implementationMentionsJavaScript)
         {

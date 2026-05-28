@@ -1,5 +1,6 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.Projects;
@@ -20,6 +21,9 @@ public sealed partial class ProcessesService(
     IProcessProjectStructureBridge projectStructureBridge,
     IWorkflowCatalogService workflowCatalogService,
     IAgentFrameworkWorkspaceService agentWorkspaceService,
+    IWorkspacePathResolver workspacePathResolver,
+    IStorageCatalogService storageCatalogService,
+    IStorageDriverRegistry storageDriverRegistry,
     HrService hrService,
     AiAgentService aiAgentService,
     CollaborationService collaborationService,
@@ -70,6 +74,7 @@ public sealed partial class ProcessesService(
                 GovernanceNotes = definition.GovernanceNotes,
                 Criticality = definition.Criticality,
                 AutonomyLevel = definition.AutonomyLevel,
+                ContractMode = ProcessDefinitionContractMode.Strict,
                 Status = definition.Status
             };
         }
@@ -107,7 +112,7 @@ public sealed partial class ProcessesService(
             .OrderBy(item => item.DisplayOrder)
             .ToListAsync(cancellationToken);
 
-        return new ProcessDefinitionEditorModel {
+        var editor = new ProcessDefinitionEditorModel {
             Id = definition.Id,
             ProjectId = definition.ProjectId,
             WorkingVersionId = workingVersion.Id,
@@ -130,6 +135,7 @@ public sealed partial class ProcessesService(
             ManagerAgentOverrideName = workingVersion.ManagerAgentOverrideName,
             Criticality = definition.Criticality,
             AutonomyLevel = definition.AutonomyLevel,
+            ContractMode = workingVersion.ContractMode,
             Status = definition.Status,
             Roles = roles.Select(role => new ProcessRoleEditorModel {
                 Id = role.Id,
@@ -168,6 +174,11 @@ public sealed partial class ProcessesService(
                     Subtitle = step.Subtitle,
                     Notes = step.Notes,
                     StepKind = step.StepKind,
+                    AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                        step.StepKind,
+                        step.AllowedOperations,
+                        step.OperationTargetScope),
+                    OperationTargetScope = step.OperationTargetScope,
                     SubprocessDefinitionId = step.SubprocessDefinitionId,
                     SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
                     AllowsManualSkip = step.AllowsManualSkip,
@@ -219,7 +230,11 @@ public sealed partial class ProcessesService(
                             SensitivityLevel = item.SensitivityLevel,
                             RetentionDays = item.RetentionDays,
                             AllowedFutureUsageSummary = item.AllowedFutureUsageSummary,
-                            ValidationRequirementSummary = item.ValidationRequirementSummary
+                            ValidationRequirementSummary = item.ValidationRequirementSummary,
+                            WorkflowOutputId = item.WorkflowOutputId,
+                            WorkflowOutputName = item.WorkflowOutputName,
+                            WorkflowOutputKind = item.WorkflowOutputKind,
+                            SubprocessChildArtifactExpectationId = item.SubprocessChildArtifactExpectationId
                         })
                         .ToList(),
                     ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)
@@ -228,5 +243,7 @@ public sealed partial class ProcessesService(
                 return editorStep;
             }).ToList()
         };
+        editor.LintResult = ProcessDefinitionLinter.Analyze(editor);
+        return editor;
     }
 }

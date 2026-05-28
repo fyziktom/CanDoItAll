@@ -1011,17 +1011,19 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                     item.ProcessRunId,
                     item.Title,
                     item.CreatedAtUtc,
-                    DirectoryPath = ResolveManagedOutputDirectoryPath(item.ManagedStoragePath)
+                    Projection = ProjectStructureProcessRunFolderProjectionPolicy.Resolve(item.ManagedStoragePath, item.ProcessRunId)
                 })
-                .Where(item => !string.IsNullOrWhiteSpace(item.DirectoryPath))
+                .Where(item => item.Projection.ShouldProject)
                 .GroupBy(item => new
                 {
                     item.ProcessRunId,
-                    DirectoryPath = item.DirectoryPath!
+                    item.Projection.DirectoryPath,
+                    item.Projection.Kind
                 })
                 .Select(group => new ProcessRunOutputFolderProjection(
                     group.Key.ProcessRunId,
                     group.Key.DirectoryPath,
+                    group.Key.Kind,
                     group.Count(),
                     group.Select(item => item.Title.Trim())
                         .Where(item => !string.IsNullOrWhiteSpace(item))
@@ -1142,7 +1144,7 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                     {
                         File = new ProjectFileMetadata
                         {
-                            SourceHint = "Process run output folder",
+                            SourceHint = BuildProcessRunOutputFolderSourceHint(outputFolder.Folder.ProjectionKind),
                             ExternalPath = outputFolder.Folder.DirectoryPath
                         }
                     };
@@ -1292,6 +1294,16 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
             : $"{artifactCount} stored artifacts";
     }
 
+    private static string BuildProcessRunOutputFolderSourceHint(ProjectStructureProcessRunFolderProjectionKind projectionKind)
+    {
+        return projectionKind switch
+        {
+            ProjectStructureProcessRunFolderProjectionKind.ManagedProductOutputRoot => "Process run product output folder",
+            ProjectStructureProcessRunFolderProjectionKind.ManagedArtifactRunRoot => "Process run artifact folder",
+            _ => "Process run output folder"
+        };
+    }
+
     private static string BuildProcessRunOutputFolderNotes(ProcessRunOutputFolderProjection folder)
     {
         var noteLines = new List<string>
@@ -1312,27 +1324,6 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
         }
 
         return string.Join(Environment.NewLine, noteLines);
-    }
-
-    private static string ResolveManagedOutputDirectoryPath(string managedStoragePath)
-    {
-        var normalizedPath = managedStoragePath
-            .Trim()
-            .Replace('\\', '/')
-            .Trim('/');
-        if (string.IsNullOrWhiteSpace(normalizedPath))
-        {
-            return string.Empty;
-        }
-
-        var platformPath = normalizedPath.Replace('/', Path.DirectorySeparatorChar);
-        var directoryPath = Path.GetDirectoryName(platformPath);
-        if (string.IsNullOrWhiteSpace(directoryPath))
-        {
-            return normalizedPath;
-        }
-
-        return directoryPath.Replace(Path.DirectorySeparatorChar, '/');
     }
 
     private static StorageObjectReference CreateManagedStorageReference(string relativePath)
@@ -1367,6 +1358,7 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
     private sealed record ProcessRunOutputFolderProjection(
         Guid RunId,
         string DirectoryPath,
+        ProjectStructureProcessRunFolderProjectionKind ProjectionKind,
         int ArtifactCount,
         IReadOnlyList<string> ArtifactTitles,
         DateTimeOffset LastRecordedAtUtc);

@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 
@@ -112,7 +113,13 @@ internal static class ProcessTemplateEditorModelFactory
                 resource?.AllowedFutureUsageSummary),
             ValidationRequirementSummary = FirstNonEmpty(
                 template.ValidationRequirementSummary,
-                resource?.ValidationRequirementSummary)
+                resource?.ValidationRequirementSummary),
+            WorkflowOutputId = template.WorkflowOutputId.Trim(),
+            WorkflowOutputName = template.WorkflowOutputName.Trim(),
+            WorkflowOutputKind = EnumValueParser.ParseNullable<WorkflowArtifactKind>(template.WorkflowOutputKind),
+            SubprocessChildArtifactExpectationId = NormalizeGuid(template.SubprocessChildArtifactExpectationId),
+            SubprocessChildStepKey = template.SubprocessChildStepKey.Trim(),
+            SubprocessChildArtifactTitle = template.SubprocessChildArtifactTitle.Trim()
         };
     }
 
@@ -141,6 +148,13 @@ internal static class ProcessTemplateEditorModelFactory
             AllowedFutureUsageSummary = resource.AllowedFutureUsageSummary,
             ValidationRequirementSummary = resource.ValidationRequirementSummary
         };
+    }
+
+    private static Guid? NormalizeGuid(Guid? value)
+    {
+        return value.HasValue && value.Value != Guid.Empty
+            ? value.Value
+            : null;
     }
 
     private static string FirstNonEmpty(params string?[] values)

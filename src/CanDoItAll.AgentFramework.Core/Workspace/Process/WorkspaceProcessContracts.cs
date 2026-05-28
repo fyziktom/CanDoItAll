@@ -29,9 +29,9 @@ public interface IWorkspaceCommandExecutionService
 
     Task<WorkspaceCommandExecutionResult> DotnetNew(string template, string name, string? parentDirectory = null, bool force = false, int timeoutSeconds = 300);
 
-    Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300);
+    Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null);
 
-    Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300);
+    Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null);
 
     Task<WorkspaceCommandExecutionResult> ConvertDocumentWithMarkItDown(string sourcePath, string outputPath, int timeoutSeconds = 300);
 

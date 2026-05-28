@@ -91,33 +91,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         out string absolutePath,
         out string mappedAlias)
     {
-        absolutePath = string.Empty;
-        mappedAlias = string.Empty;
-
-        if (string.IsNullOrWhiteSpace(groundingSummary))
-        {
-            return false;
-        }
-
-        foreach (var candidatePath in EnumerateAbsoluteExternalPathCandidates(groundingSummary)
-                     .Select(candidatePath => TryNormalizeAbsoluteExternalPathCandidate(candidatePath, out var normalized)
-                         ? normalized
-                         : string.Empty)
-                     .Where(candidatePath => !string.IsNullOrWhiteSpace(candidatePath))
-                     .OrderByDescending(GetExternalTargetHintPriority)
-                     .ThenByDescending(candidatePath => candidatePath.Length))
-        {
-            if (!TryMapAbsoluteExternalPathToAlias(candidatePath, out var alias))
-            {
-                continue;
-            }
-
-            absolutePath = candidatePath;
-            mappedAlias = alias;
-            return true;
-        }
-
-        return false;
+        var result = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(groundingSummary);
+        absolutePath = result.AbsolutePath;
+        mappedAlias = result.MappedAlias;
+        return result.HasTarget;
     }
 
     private static IReadOnlyList<ProjectStructureExternalTargetHint> ResolveProjectStructureExternalTargetHintsForFocus(
@@ -212,17 +189,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
             focusNodeIds.Add(descendant.Id);
         }
 
-        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTarget(
-                     nodesById,
-                     nodesByParentId,
-                     targetNodeId,
-                     selectedProcessNodeId))
+        void AddPlanningNodeWithDescendants(ProjectStructureGroundingNodeData planningNode)
         {
             focusNodeIds.Add(planningNode.Id);
             foreach (var descendant in ResolveProjectStructureDescendants(planningNode.Id, nodesByParentId, maxDepth: 3))
             {
                 focusNodeIds.Add(descendant.Id);
             }
+        }
+
+        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTarget(
+                     nodesById,
+                     nodesByParentId,
+                     targetNodeId,
+                     selectedProcessNodeId))
+        {
+            AddPlanningNodeWithDescendants(planningNode);
+        }
+
+        foreach (var planningNode in ResolveProjectLevelPlanningNodesForTargetAncestors(
+                     nodesById,
+                     nodesByParentId,
+                     targetNodeId,
+                     selectedProcessNodeId))
+        {
+            AddPlanningNodeWithDescendants(planningNode);
         }
 
         return focusNodeIds
@@ -262,6 +253,50 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ThenBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .Select(item => item.Node)
+            .ToList();
+    }
+
+    private static IReadOnlyList<ProjectStructureGroundingNodeData> ResolveProjectLevelPlanningNodesForTargetAncestors(
+        IReadOnlyDictionary<string, ProjectStructureGroundingNodeData> nodesById,
+        IReadOnlyDictionary<string, IReadOnlyList<ProjectStructureGroundingNodeData>> nodesByParentId,
+        string targetNodeId,
+        string selectedProcessNodeId)
+    {
+        var ancestorPath = ResolveProjectStructureAncestorPath(targetNodeId, nodesById);
+        if (ancestorPath.Count == 0)
+        {
+            return [];
+        }
+
+        var excludedNodeIds = ancestorPath
+            .Select(node => node.Id)
+            .Append(selectedProcessNodeId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return ancestorPath
+            .Where(node => !string.IsNullOrWhiteSpace(node.ParentId))
+            .SelectMany(node => nodesByParentId.TryGetValue(NormalizeProjectStructureNodeId(node.ParentId), out var siblings)
+                ? siblings
+                : [])
+            .Where(node =>
+                !excludedNodeIds.Contains(node.Id) &&
+                IsProjectLevelPlanningContextNode(node))
+            .Select(node => new
+            {
+                Node = node,
+                SignalScore = GetProjectStructureGroundingSignalScore(node),
+                ExternalTargetHintCount = ResolveExternalTargetHintsFromProjectStructureNode(node).Count
+            })
+            .Where(item => item.SignalScore > 0 ||
+                           item.ExternalTargetHintCount > 0 ||
+                           !string.IsNullOrWhiteSpace(item.Node.Title))
+            .OrderByDescending(item => item.ExternalTargetHintCount > 0)
+            .ThenByDescending(item => item.SignalScore)
+            .ThenBy(item => item.Node.Title, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(item => item.Node.Id, StringComparer.Ordinal)
+            .Select(group => group.First().Node)
+            .Take(8)
             .ToList();
     }
 
@@ -501,57 +536,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static int GetExternalTargetHintPriority(string path)
-    {
-        var alias = TryMapAbsoluteExternalPathToAlias(path, out var mappedAlias)
-            ? mappedAlias
-            : path.Replace('\\', '/');
-        if (IsNonProductExternalTargetAlias(alias))
-        {
-            return -100;
-        }
-
-        var leaf = alias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .LastOrDefault() ?? string.Empty;
-        return leaf switch
-        {
-            "product" => 100,
-            "app" => 90,
-            "src" => 80,
-            "source" => 80,
-            _ => 10
-        };
-    }
+        => ProcessExternalTargetGroundingService.GetExternalTargetHintPriority(path);
 
     private static bool TrySplitExternalTargetAliasForScaffold(
         string? mappedAlias,
         out string parentAlias,
         out string leafName)
-    {
-        parentAlias = string.Empty;
-        leafName = string.Empty;
-        if (string.IsNullOrWhiteSpace(mappedAlias))
-        {
-            return false;
-        }
-
-        var normalized = NormalizeExternalTargetAlias(mappedAlias);
-        if (!normalized.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var lastSlashIndex = normalized.LastIndexOf('/');
-        if (lastSlashIndex < ExternalTargetAliasRoot.Length + 2 ||
-            lastSlashIndex >= normalized.Length - 1)
-        {
-            return false;
-        }
-
-        parentAlias = normalized[..lastSlashIndex];
-        leafName = normalized[(lastSlashIndex + 1)..];
-        return !string.IsNullOrWhiteSpace(parentAlias) &&
-               !string.IsNullOrWhiteSpace(leafName);
-    }
+        => ProcessExternalTargetGroundingService.TrySplitExternalTargetAliasForScaffold(
+            mappedAlias,
+            out parentAlias,
+            out leafName);
 
     private static void AppendProjectStructureGroundingNodes(
         StringBuilder builder,

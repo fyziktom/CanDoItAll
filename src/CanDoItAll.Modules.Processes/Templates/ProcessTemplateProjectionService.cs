@@ -77,7 +77,8 @@ public sealed class ProcessTemplateProjectionService
             OperatingModeSummary = process.OperatingModeSummary,
             SimulationReadinessSummary = process.SimulationReadinessSummary,
             Criticality = EnumValueParser.ParseOrDefault(process.Criticality, ProcessCriticality.Standard),
-            AutonomyLevel = EnumValueParser.ParseOrDefault(process.AutonomyLevel, ProcessAutonomyLevel.Assisted)
+            AutonomyLevel = EnumValueParser.ParseOrDefault(process.AutonomyLevel, ProcessAutonomyLevel.Assisted),
+            ContractMode = EnumValueParser.ParseOrDefault(process.ContractMode, ProcessDefinitionContractMode.Strict)
         };
 
         var roleIdsByKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
@@ -110,6 +111,11 @@ public sealed class ProcessTemplateProjectionService
                 Subtitle = template.Subtitle,
                 Notes = template.Notes,
                 StepKind = EnumValueParser.ParseOrDefault(template.StepKind, ProcessStepKind.Work),
+                AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                    EnumValueParser.ParseOrDefault(template.StepKind, ProcessStepKind.Work),
+                    template.AllowedOperations,
+                    template.OperationTargetScope),
+                OperationTargetScope = template.OperationTargetScope,
                 SubprocessDefinitionSnapshotName = string.IsNullOrWhiteSpace(template.SubprocessDefinitionSnapshotName)
                     ? template.SubprocessProcessKey
                     : template.SubprocessDefinitionSnapshotName,

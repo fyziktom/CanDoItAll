@@ -61,12 +61,14 @@ Acquire a lease before mutating shared project structure. Prefer focused reads a
 Use `/api/processes` for process definitions, templates, runtime control, and operator workflows:
 
 - definitions: list, editor read, save, publish, delete, export, and import
-- templates: list, detail, envelope, Mermaid, baseline scenarios, and import
+- templates: list, detail, envelope, Mermaid, baseline scenarios, live-run profiles, and import
 - runs: list, detail, start, stop, steps, artifacts, assignments, analytics
 - operator actions: transitions, rerun-agent, assignment resolution, escalations, approvals, rework, manager directives, and direct messages
 - launch planning: launch plans, HR matching, approval submission and decisions, provisioning, execution, and candidate selections
 
 For governed agent-run processes, use PostgreSQL when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled.
+
+Before starting live UI-driven runs, read `/api/processes/templates/live-run-profiles` and preserve the `freshRunPolicy` response fields. Baseline scenarios are fixture data; they are not current-run delivery evidence.
 
 ### Agents
 

@@ -258,6 +258,7 @@ internal static class ProcessesApi
                         StepRunConcurrencyToken = request.StepRunConcurrencyToken,
                         TargetStatus = request.TargetStatus,
                         Reason = request.Reason,
+                        BlockCause = request.BlockCause,
                         SelectedBranchOutcomeId = request.SelectedBranchOutcomeId,
                         DecidedBy = NormalizeActor(request.DecidedBy),
                         SuppressAutomationDispatch = request.SuppressAutomationDispatch
@@ -528,7 +529,8 @@ internal static class ProcessesApi
                         AllowedFutureUsageSummary = request.AllowedFutureUsageSummary,
                         ReviewSummary = request.ReviewSummary,
                         ManagedStoragePath = request.ManagedStoragePath,
-                        ExternalReferenceKey = request.ExternalReferenceKey
+                        ExternalReferenceKey = request.ExternalReferenceKey,
+                        ProjectionLineage = request.ProjectionLineage
                     },
                     cancellationToken));
             })
@@ -684,10 +686,34 @@ internal static class ProcessesApi
                     item.OperatingMode,
                     item.Assignments.Count,
                     item.Transitions.Count,
-                    item.Artifacts.Count))
+                    item.Artifacts.Count,
+                    item.Transitions.Count(transition => !string.IsNullOrWhiteSpace(transition.SelectedBranchOutcomeKey)),
+                    item.Transitions.Count(transition => string.Equals(transition.TargetStatus, ProcessStepRunStatus.Blocked.ToString(), StringComparison.OrdinalIgnoreCase)),
+                    item.ContractExercises.Count,
+                    item.RecoveryExercises.Count))
                 .ToList());
         })
         .WithName("ListProcessTemplateBaselineScenarios");
+
+        processes.MapGet("/templates/live-run-profiles", (
+                ProcessTemplatePackLoader packLoader) =>
+        {
+            var pack = packLoader.Load();
+            return Results.Ok(pack.LiveRunProfiles
+                .Select(item => new ProcessTemplateLiveRunProfileSummary(
+                    item.Key,
+                    item.ProcessTemplateKey,
+                    item.RunNameTemplate,
+                    item.Summary,
+                    item.OperatingMode,
+                    item.TriggerReasonTemplate,
+                    item.FreshRunPolicy,
+                    item.Assignments.Count,
+                    item.AcceptanceCriteria.Count,
+                    item.RequiredProofKinds.Count))
+                .ToList());
+        })
+        .WithName("ListProcessTemplateLiveRunProfiles");
 
         processes.MapGet("/templates/{processKey}", (
                 string processKey,
@@ -1300,6 +1326,8 @@ internal sealed class ProcessStepTransitionApiRequest
 
     public string Reason { get; set; } = string.Empty;
 
+    public ProcessStepBlockCause? BlockCause { get; set; }
+
     public Guid? SelectedBranchOutcomeId { get; set; }
 
     public string? DecidedBy { get; set; }
@@ -1432,4 +1460,6 @@ internal sealed class ProcessArtifactRecordApiRequest
     public string ManagedStoragePath { get; set; } = string.Empty;
 
     public string ExternalReferenceKey { get; set; } = string.Empty;
+
+    public ProcessArtifactProjectionLineage? ProjectionLineage { get; set; }
 }

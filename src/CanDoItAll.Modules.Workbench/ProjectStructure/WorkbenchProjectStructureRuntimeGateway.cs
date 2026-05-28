@@ -11,7 +11,7 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
     ProjectStructureLeaseService leaseService,
     IProjectStructureRuntimeLauncher runtimeLauncher,
     IProjectStructureLocalFileOpener localFileOpener,
-    IWorkspacePathAccessGuard pathAccessGuard) : IProjectStructureRuntimeGateway
+    ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver) : IProjectStructureRuntimeGateway
 {
     private static readonly ProjectStructureRuntimeReadRequest FullNodeReadRequest = new(
         IncludeLayout: true,
@@ -254,23 +254,7 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
                 "Asset creation requires either a media payload or a source workspace path.");
         }
 
-        var resolution = pathAccessGuard.ResolveWorkspacePath(request.SourceWorkspacePath);
-        if (!resolution.IsSuccess)
-        {
-            throw new ProjectStructureAgentException(
-                400,
-                "SourceWorkspacePathInvalid",
-                resolution.Message);
-        }
-
-        if (!File.Exists(resolution.FullPath))
-        {
-            throw new ProjectStructureAgentException(
-                404,
-                "SourceWorkspaceFileNotFound",
-                $"Source workspace file '{request.SourceWorkspacePath}' was not found.");
-        }
-
+        var resolution = sourceWorkspacePathResolver.ResolveExistingFile(request.SourceWorkspacePath);
         var bytes = await File.ReadAllBytesAsync(resolution.FullPath, cancellationToken);
         var fileName = ResolveSourceAssetFileName(request.SourceFileName, resolution.FullPath);
         var contentType = ResolveSourceAssetContentType(request.SourceContentType, fileName);

@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -546,13 +547,13 @@ public sealed class ProjectStructureAgentIntegrationTests
         var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
         var agentService = scope.ServiceProvider.GetRequiredService<ProjectStructureAgentService>();
-        var workspacePathResolver = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolver>();
+        var workspacePaths = scope.ServiceProvider.GetRequiredService<IWorkspacePathResolutionService>();
 
         var projectId = await CreateProjectAsync(projects, "Source path image asset");
-        var sourceRelativePath = Path.Combine("artifacts", "process-runs", Guid.NewGuid().ToString("N"), "inventory.png");
-        var sourceFullPath = Path.Combine(workspacePathResolver.ResolveWorkspaceRoot(), sourceRelativePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(sourceFullPath)!);
-        await File.WriteAllBytesAsync(sourceFullPath, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
+        var sourceRelativePath = $"artifacts/process-runs/{Guid.NewGuid():N}/inventory.png";
+        var sourceResolution = workspacePaths.ResolveFilePath(sourceRelativePath, allowMissing: true);
+        Directory.CreateDirectory(Path.GetDirectoryName(sourceResolution.FullPath)!);
+        await File.WriteAllBytesAsync(sourceResolution.FullPath, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]);
 
         var created = await agentService.CreateAssetAsync(
             projectId,
@@ -566,7 +567,7 @@ public sealed class ProjectStructureAgentIntegrationTests
                 "screenshot",
                 null,
                 null,
-                sourceRelativePath.Replace('\\', '/'),
+                sourceRelativePath,
                 "inventory.png",
                 "image/png"),
             DefaultAgent);
@@ -579,6 +580,7 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("inventory.png", node.MediaOriginalFileName);
         Assert.Equal("image/png", node.MediaContentType);
         Assert.False(string.IsNullOrWhiteSpace(node.MediaRelativePath));
+        Assert.StartsWith("artifacts/scopes/organization/", sourceResolution.RelativePath, StringComparison.Ordinal);
     }
 
     [Fact]

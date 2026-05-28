@@ -1,6 +1,10 @@
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Collaboration;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
@@ -14,6 +18,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessesServiceIntegrationTests
 {
+    private static readonly JsonSerializerOptions StringEnumJsonOptions = CreateStringEnumJsonOptions();
+
     [Fact]
     public async Task StartRunAsync_prefills_project_role_binding_and_persists_runtime_signals()
     {
@@ -140,6 +146,34 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(assignments.Select(item => item.Id), runDetails.Assignments.Select(item => item.Id));
         Assert.Equal(workBriefs.Select(item => item.Id), runDetails.WorkBriefs.Select(item => item.Id));
         Assert.Equal(conformance.Select(item => item.Id), runDetails.ConformanceObservations.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task SaveAsync_SB09_INV_001_persists_explicit_artifact_output_mappings()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Explicit output mapping project");
+        var childExpectationId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, Guid.NewGuid());
+        var artifact = Assert.Single(definition.Steps.SelectMany(step => step.ArtifactExpectations));
+        artifact.WorkflowOutputId = "board-decision-output";
+        artifact.WorkflowOutputName = "Board decision memo";
+        artifact.WorkflowOutputKind = WorkflowArtifactKind.Json;
+        artifact.SubprocessChildArtifactExpectationId = childExpectationId;
+
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var saved = await processesService.GetEditorAsync(saveResult.Value);
+        var savedArtifact = Assert.Single(saved.Steps.SelectMany(step => step.ArtifactExpectations));
+        Assert.Equal("board-decision-output", savedArtifact.WorkflowOutputId);
+        Assert.Equal("Board decision memo", savedArtifact.WorkflowOutputName);
+        Assert.Equal(WorkflowArtifactKind.Json, savedArtifact.WorkflowOutputKind);
+        Assert.Equal(childExpectationId, savedArtifact.SubprocessChildArtifactExpectationId);
     }
 
     [Fact]
@@ -282,6 +316,9 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(failedCompletionResult.IsFailure);
         Assert.Contains(failedCompletionResult.Errors, error => error.Code == "processes.step-completion-missing-required-artifacts");
 
+        const string deliveryEvidencePath = "artifacts/test/delivery-readiness-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, deliveryEvidencePath, "Evidence is now present.");
+
         var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
         {
             ProcessRunId = runResult.Value,
@@ -293,7 +330,8 @@ public sealed class ProcessesServiceIntegrationTests
             SensitivityLevel = ProcessSensitivityLevel.Internal,
             ProvenanceSummary = "Recorded after the failed completion attempt.",
             AllowedFutureUsageSummary = "Integration verification only.",
-            ReviewSummary = "Evidence is now present."
+            ReviewSummary = "Evidence is now present.",
+            ManagedStoragePath = deliveryEvidencePath
         });
 
         Assert.True(recordedArtifactResult.IsSuccess);
@@ -312,6 +350,673 @@ public sealed class ProcessesServiceIntegrationTests
         var persistedArtifact = await dbContext.Set<ProcessArtifactRecord>()
             .SingleAsync(item => item.Id == recordedArtifactResult.Value);
         Assert.Equal(requiredArtifactExpectationId, persistedArtifact.ArtifactExpectationId);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB03_INV_001_rejects_placeholder_required_artifact_on_manual_completion()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process placeholder artifact gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Placeholder Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Process placeholder artifact gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded as a placeholder for manual transition validation.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Placeholder evidence only.",
+            ManagedStoragePath = "artifacts/test/placeholder-delivery-readiness-evidence.md"
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Attempting to complete with placeholder evidence.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(completionResult.IsFailure);
+        Assert.Contains(completionResult.Errors, error => error.Code == "processes.step-completion-invalid-required-artifacts");
+        Assert.Contains(completionResult.Errors, error => error.Message.Contains("PlaceholderOnly", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB03_INV_002_rejects_malformed_json_required_artifact_on_manual_completion()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Process malformed JSON artifact gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan JSON Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var managerRoleId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, managerRoleId);
+        var deliveryExpectation = definition.Steps
+            .Single(step => string.Equals(step.Key, "delivery-review", StringComparison.Ordinal))
+            .ArtifactExpectations
+            .Single();
+        deliveryExpectation.ValidationRequirementSummary = "Must be a JSON evidence artifact with machine-readable readiness facts.";
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Process malformed JSON artifact gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        const string malformedEvidencePath = "artifacts/test/delivery-readiness-evidence.json";
+        await WriteWorkspaceArtifactAsync(application, malformedEvidencePath, "{ not valid json");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded for manual transition malformed JSON validation.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "json content: { \"ready\": true,",
+            ManagedStoragePath = malformedEvidencePath
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Attempting to complete with malformed JSON evidence.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(completionResult.IsFailure);
+        Assert.Contains(completionResult.Errors, error => error.Code == "processes.step-completion-invalid-required-artifacts");
+        Assert.Contains(completionResult.Errors, error => error.Message.Contains("malformed", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB08_INV_001_rejects_malformed_storage_backed_json_required_artifact_on_manual_completion()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var storageCatalogService = scope.ServiceProvider.GetRequiredService<IStorageCatalogService>();
+        var storageRoot = Path.Combine(Path.GetTempPath(), $"process-manual-storage-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(storageRoot);
+        try
+        {
+            var projectId = await CreateProjectAsync(projectsService, "Manual storage-backed artifact gate project");
+            var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Storage Gate");
+            var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+            {
+                ProjectId = projectId,
+                PartyId = managerPartyId,
+                Role = ProjectPartyAssignmentRole.Manager,
+                IsPrimary = true,
+                Source = "integration-tests"
+            });
+
+            Assert.True(assignmentResult.IsSuccess);
+
+            var managerRoleId = Guid.NewGuid();
+            var definition = BuildDefinitionEditor(projectId, managerRoleId);
+            var deliveryExpectation = definition.Steps
+                .Single(step => string.Equals(step.Key, "delivery-review", StringComparison.Ordinal))
+                .ArtifactExpectations
+                .Single();
+            deliveryExpectation.ValidationRequirementSummary = "Must be a JSON evidence artifact with machine-readable readiness facts.";
+            var saveResult = await processesService.SaveAsync(definition);
+
+            Assert.True(saveResult.IsSuccess);
+            Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Manual storage-backed artifact gate run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Integration verification"
+            });
+
+            Assert.True(runResult.IsSuccess);
+
+            var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+            Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = intakeStep.Id,
+                TargetStatus = ProcessStepRunStatus.InProgress,
+                Reason = "Started intake.",
+                DecidedBy = "integration-tests"
+            })).IsSuccess);
+            Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = intakeStep.Id,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                Reason = "Completed intake.",
+                DecidedBy = "integration-tests"
+            })).IsSuccess);
+
+            var storage = await storageCatalogService.SaveAsync(new StorageCatalogRecord
+            {
+                Name = "Manual process artifact storage",
+                ProviderKind = StorageProviderKind.FileSystem,
+                EndpointOrRoot = storageRoot,
+                IsEnabled = true,
+                CapabilityMask = StorageCapability.Read | StorageCapability.Write
+            });
+            var locator = "manual/delivery-readiness-evidence.json";
+            var fullStoragePath = Path.Combine(storageRoot, locator.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullStoragePath)!);
+            await File.WriteAllTextAsync(fullStoragePath, "{ not valid json");
+            var reference = new StorageObjectReference(
+                storage.Id,
+                StorageProviderKind.FileSystem,
+                StorageLocatorKind.RelativePath,
+                locator,
+                "delivery-readiness-evidence.json",
+                "application/json",
+                new FileInfo(fullStoragePath).Length);
+
+            var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+            var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+            Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = deliveryStep.Id,
+                TargetStatus = ProcessStepRunStatus.InProgress,
+                Reason = "Started delivery review.",
+                DecidedBy = "integration-tests"
+            })).IsSuccess);
+
+            var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = runResult.Value,
+                StepRunId = deliveryStep.Id,
+                ArtifactExpectationId = requiredArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Delivery readiness evidence",
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = ProcessSensitivityLevel.Internal,
+                ProvenanceSummary = "Recorded for manual transition storage-backed JSON validation.",
+                AllowedFutureUsageSummary = "Integration verification only.",
+                ReviewSummary = "Storage-backed JSON evidence.",
+                ManagedStoragePath = StorageJson.SerializeReference(reference)
+            });
+
+            Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+            var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = deliveryStep.Id,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                Reason = "Attempting to complete with malformed storage-backed JSON evidence.",
+                DecidedBy = "integration-tests"
+            });
+
+            Assert.True(completionResult.IsFailure);
+            Assert.Contains(completionResult.Errors, error => error.Code == "processes.step-completion-invalid-required-artifacts");
+            Assert.Contains(completionResult.Errors, error => error.Message.Contains("malformed JSON", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            if (Directory.Exists(storageRoot))
+            {
+                Directory.Delete(storageRoot, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB10_INV_001_rejects_stale_execution_lineage_required_artifact_on_manual_completion()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Manual stale artifact lineage gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Stale Lineage Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Manual stale artifact lineage gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var staleExecutionRunId = Guid.NewGuid();
+        const string staleEvidencePath = "artifacts/test/stale-lineage-delivery-readiness-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, staleEvidencePath, "Evidence content is present but belongs to a stale execution lineage.");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded from stale execution run {staleExecutionRunId:D}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence content is present but stale.",
+            ManagedStoragePath = staleEvidencePath,
+            ExternalReferenceKey = $"workspace-written-artifact|{staleExecutionRunId:D}|{requiredArtifactExpectationId:D}|{staleEvidencePath}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = staleExecutionRunId,
+                SourceExternalReferenceKey = $"workspace-written-artifact|{staleExecutionRunId:D}|{requiredArtifactExpectationId:D}|{staleEvidencePath}"
+            }
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Attempting to complete with stale lineage evidence.",
+            DecidedBy = "integration-tests"
+        });
+
+        Assert.True(completionResult.IsFailure);
+        Assert.Contains(completionResult.Errors, error => error.Code == "processes.step-completion-invalid-required-artifacts");
+        Assert.Contains(completionResult.Errors, error => error.Message.Contains("StaleOrWrongRun", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB01_INV_001_allows_automation_completion_with_matching_execution_lineage_required_artifact()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Automation artifact lineage gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Automation Lineage Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Automation artifact lineage gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var executionRunId = Guid.NewGuid();
+        const string evidencePath = "artifacts/test/current-lineage-delivery-readiness-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, evidencePath, "Evidence content is present and belongs to the current automation execution lineage.");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded from automation execution run {executionRunId:D}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence content is current.",
+            ManagedStoragePath = evidencePath,
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{requiredArtifactExpectationId:D}|{evidencePath}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = executionRunId,
+                SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{requiredArtifactExpectationId:D}|{evidencePath}"
+            }
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completing with current automation lineage evidence.",
+            DecidedBy = ProcessRunAutomationDispatchService.AutomationActor,
+            ArtifactValidationExecutorKind = ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            ArtifactValidationExecutionRunId = executionRunId
+        });
+
+        Assert.True(completionResult.IsSuccess, FormatErrors(completionResult.Errors));
+
+        var completedStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Id == deliveryStep.Id);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, completedStep.Status);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB01_INV_002_allows_automation_completion_when_transition_context_is_inferred_from_step_artifacts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Automation inferred artifact lineage gate project");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Morgan Automation Inferred Lineage Gate");
+        var assignmentResult = await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest
+        {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "integration-tests"
+        });
+
+        Assert.True(assignmentResult.IsSuccess);
+
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Automation inferred artifact lineage gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Integration verification"
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var intakeStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 0);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = intakeStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completed intake.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var deliveryStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Sequence == 1);
+        var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        Assert.True((await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.InProgress,
+            Reason = "Started delivery review.",
+            DecidedBy = "integration-tests"
+        })).IsSuccess);
+
+        var executionRunId = Guid.NewGuid();
+        const string evidencePath = "artifacts/test/inferred-lineage-delivery-readiness-evidence.md";
+        var externalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{requiredArtifactExpectationId:D}|{evidencePath}";
+
+        await WriteWorkspaceArtifactAsync(
+            application,
+            evidencePath,
+            "Evidence content is present and belongs to the automation execution lineage inferred from the recorded artifact.");
+
+        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = requiredArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery readiness evidence",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = $"Recorded from automation execution run {executionRunId:D}.",
+            AllowedFutureUsageSummary = "Integration verification only.",
+            ReviewSummary = "Evidence content is current.",
+            ManagedStoragePath = evidencePath,
+            ExternalReferenceKey = externalReferenceKey,
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = executionRunId,
+                ProjectedExecutionRunId = executionRunId,
+                SourceExternalReferenceKey = externalReferenceKey
+            }
+        });
+
+        Assert.True(recordedArtifactResult.IsSuccess, FormatErrors(recordedArtifactResult.Errors));
+
+        var completionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = deliveryStep.Id,
+            TargetStatus = ProcessStepRunStatus.Completed,
+            Reason = "Completing with current automation lineage evidence inferred from artifacts.",
+            DecidedBy = ProcessRunAutomationDispatchService.AutomationActor
+        });
+
+        Assert.True(completionResult.IsSuccess, FormatErrors(completionResult.Errors));
+
+        var completedStep = (await processesService.ListStepRunsAsync(runResult.Value)).Single(item => item.Id == deliveryStep.Id);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, completedStep.Status);
     }
 
     [Fact]
@@ -470,6 +1175,9 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal("Decision record required.", deliveryStep.DecisionSummary);
 
         var requiredArtifactExpectationId = Assert.Single(deliveryStep.ArtifactOutputs).ArtifactExpectationId;
+        const string decisionEvidencePath = "artifacts/test/decision-summary-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, decisionEvidencePath, "Evidence is present.");
+
         var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
         {
             ProcessRunId = runResult.Value,
@@ -481,7 +1189,8 @@ public sealed class ProcessesServiceIntegrationTests
             SensitivityLevel = ProcessSensitivityLevel.Internal,
             ProvenanceSummary = "Recorded for decision summary completion.",
             AllowedFutureUsageSummary = "Integration verification only.",
-            ReviewSummary = "Evidence is present."
+            ReviewSummary = "Evidence is present.",
+            ManagedStoragePath = decisionEvidencePath
         });
 
         Assert.True(recordedArtifactResult.IsSuccess);
@@ -573,6 +1282,9 @@ public sealed class ProcessesServiceIntegrationTests
             DecidedBy = "integration-tests"
         })).IsSuccess);
 
+        const string titleMatchedEvidencePath = "artifacts/test/title-matched-delivery-readiness-evidence.md";
+        await WriteWorkspaceArtifactAsync(application, titleMatchedEvidencePath, "Expectation id should be inferred.");
+
         var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
         {
             ProcessRunId = runResult.Value,
@@ -583,7 +1295,8 @@ public sealed class ProcessesServiceIntegrationTests
             SensitivityLevel = ProcessSensitivityLevel.Internal,
             ProvenanceSummary = "Recorded with title-only matching.",
             AllowedFutureUsageSummary = "Integration verification only.",
-            ReviewSummary = "Expectation id should be inferred."
+            ReviewSummary = "Expectation id should be inferred.",
+            ManagedStoragePath = titleMatchedEvidencePath
         });
 
         Assert.True(recordedArtifactResult.IsSuccess);
@@ -761,6 +1474,457 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task RecordArtifactAsync_SB05_INV_001_dedupes_by_projection_identity_hash_before_display_key()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Projection identity artifact project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Projection identity validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify typed artifact lineage identity."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var workflowRunId = Guid.NewGuid();
+        var workflowArtifactId = Guid.NewGuid();
+        var lineage = new ProcessArtifactProjectionLineage
+        {
+            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+            WorkflowRunId = workflowRunId,
+            WorkflowArtifactId = workflowArtifactId,
+            ContentHash = "sha256:abcdef"
+        };
+
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workflow mapped deliverable",
+            ManagedStoragePath = "artifacts/workflow/mapped-deliverable.md",
+            ExternalReferenceKey = $"display-key:{Guid.NewGuid():N}",
+            ProjectionLineage = lineage
+        });
+
+        Assert.True(firstRecordResult.IsSuccess, string.Join(" | ", firstRecordResult.Errors.Select(error => error.Message)));
+
+        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workflow mapped deliverable duplicate",
+            ManagedStoragePath = "artifacts/workflow/mapped-deliverable-copy.md",
+            ExternalReferenceKey = $"different-display-key:{Guid.NewGuid():N}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+                WorkflowRunId = workflowRunId,
+                WorkflowArtifactId = workflowArtifactId,
+                ContentHash = "sha256:abcdef"
+            }
+        });
+
+        Assert.True(duplicateRecordResult.IsSuccess, string.Join(" | ", duplicateRecordResult.Errors.Select(error => error.Message)));
+        Assert.Equal(firstRecordResult.Value, duplicateRecordResult.Value);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync());
+        Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
+        Assert.Contains(persistedArtifact.ProjectionIdentityHash, persistedArtifact.ProjectionLineageJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_SB11_INV_001_rejects_projection_identity_for_wrong_step_expectation_scope()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Projection identity scoped artifact project");
+        var managerRoleId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, managerRoleId);
+        var intakeArtifactExpectationId = Guid.NewGuid();
+        definition.Steps[0].ArtifactExpectations =
+        [
+            new ProcessArtifactExpectationEditorModel
+            {
+                Id = intakeArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Intake evidence",
+                ValidationRequirementSummary = "Must stay scoped to the intake step."
+            }
+        ];
+
+        var saveResult = await processesService.SaveAsync(definition);
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Projection identity scope validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify projection identity cannot cross step and expectation scope."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var stepRuns = await processesService.ListStepRunsAsync(runResult.Value);
+        var intakeStep = Assert.Single(stepRuns, item => item.Sequence == 0);
+        var deliveryStep = Assert.Single(stepRuns, item => item.Sequence == 1);
+        var intakeArtifact = Assert.Single(intakeStep.ArtifactOutputs);
+        var deliveryArtifact = Assert.Single(deliveryStep.ArtifactOutputs);
+        var executionRunId = Guid.NewGuid();
+        var lineage = new ProcessArtifactProjectionLineage
+        {
+            SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+            SourceExecutionRunId = executionRunId,
+            ProjectedExecutionRunId = executionRunId,
+            SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{intakeArtifact.ArtifactExpectationId:D}|artifacts/process-runs/{runResult.Value:D}/shared-evidence.md",
+            ContentHash = "sha256:scoped-proof"
+        };
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = intakeStep.Id,
+            ArtifactExpectationId = intakeArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = intakeArtifact.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/intake-evidence.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{intakeArtifact.ArtifactExpectationId:D}|artifacts/process-runs/current/intake-evidence.md",
+            ProjectionLineage = lineage
+        });
+
+        Assert.True(firstRecordResult.IsSuccess, string.Join(" | ", firstRecordResult.Errors.Select(error => error.Message)));
+
+        var wrongScopeResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = deliveryArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = deliveryArtifact.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/delivery-evidence.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{deliveryArtifact.ArtifactExpectationId:D}|artifacts/process-runs/current/delivery-evidence.md",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = lineage.SourceKind,
+                SourceExecutionRunId = lineage.SourceExecutionRunId,
+                ProjectedExecutionRunId = lineage.ProjectedExecutionRunId,
+                SourceExternalReferenceKey = lineage.SourceExternalReferenceKey,
+                ContentHash = lineage.ContentHash
+            }
+        });
+
+        Assert.False(wrongScopeResult.IsSuccess);
+        Assert.Contains(
+            wrongScopeResult.Errors,
+            error => error.Code == "processes.artifact.projection-scope-conflict");
+
+        var externalReferenceKey = $"scoped-external-reference:{Guid.NewGuid():N}";
+        var scopedExternalReferenceResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = intakeStep.Id,
+            ArtifactExpectationId = intakeArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Intake external reference evidence",
+            ManagedStoragePath = "artifacts/process-runs/current/intake-external-reference.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.True(scopedExternalReferenceResult.IsSuccess, string.Join(" | ", scopedExternalReferenceResult.Errors.Select(error => error.Message)));
+
+        var wrongExternalReferenceScopeResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = deliveryStep.Id,
+            ArtifactExpectationId = deliveryArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Delivery external reference evidence",
+            ManagedStoragePath = "artifacts/process-runs/current/delivery-external-reference.md",
+            ExternalReferenceKey = externalReferenceKey
+        });
+
+        Assert.False(wrongExternalReferenceScopeResult.IsSuccess);
+        Assert.Contains(
+            wrongExternalReferenceScopeResult.Errors,
+            error => error.Code == "processes.artifact.external-reference-scope-conflict");
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+        Assert.Equal(2, persistedArtifacts.Count);
+
+        var persistedArtifact = Assert.Single(persistedArtifacts, item => item.Id == firstRecordResult.Value);
+        Assert.Equal(firstRecordResult.Value, persistedArtifact.Id);
+        Assert.Equal(intakeStep.Id, persistedArtifact.StepRunId);
+        Assert.Equal(intakeArtifact.ArtifactExpectationId, persistedArtifact.ArtifactExpectationId);
+
+        var persistedExternalReferenceArtifact = Assert.Single(persistedArtifacts, item => item.Id == scopedExternalReferenceResult.Value);
+        Assert.Equal(intakeStep.Id, persistedExternalReferenceArtifact.StepRunId);
+        Assert.Equal(intakeArtifact.ArtifactExpectationId, persistedExternalReferenceArtifact.ArtifactExpectationId);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_SB02_INV_001_dedupes_long_display_keys_by_projection_identity_hash()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Projection identity long key project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Projection identity long key validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify normalized projection identity beats bounded display keys."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var workflowRunId = Guid.NewGuid();
+        var workflowArtifactId = Guid.NewGuid();
+        var commonPrefix = $"workflow-output|{workflowRunId:D}|{workflowArtifactId:D}|";
+        var firstExternalReferenceKey = commonPrefix + new string('a', 300);
+        var secondExternalReferenceKey = commonPrefix + new string('b', 300);
+
+        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workflow mapped deliverable",
+            ManagedStoragePath = "artifacts/workflow/long-key-deliverable.md",
+            ExternalReferenceKey = firstExternalReferenceKey,
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+                WorkflowRunId = workflowRunId,
+                WorkflowArtifactId = workflowArtifactId,
+                ContentHash = "sha256:long-key-proof"
+            }
+        });
+
+        Assert.True(firstRecordResult.IsSuccess, string.Join(" | ", firstRecordResult.Errors.Select(error => error.Message)));
+
+        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workflow mapped deliverable duplicate",
+            ManagedStoragePath = "artifacts/workflow/long-key-deliverable-copy.md",
+            ExternalReferenceKey = secondExternalReferenceKey,
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+                WorkflowRunId = workflowRunId,
+                WorkflowArtifactId = workflowArtifactId,
+                ContentHash = "sha256:long-key-proof"
+            }
+        });
+
+        Assert.True(duplicateRecordResult.IsSuccess, string.Join(" | ", duplicateRecordResult.Errors.Select(error => error.Message)));
+        Assert.Equal(firstRecordResult.Value, duplicateRecordResult.Value);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync());
+        Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
+        Assert.Contains(persistedArtifact.ProjectionIdentityHash, persistedArtifact.ProjectionLineageJson, StringComparison.Ordinal);
+        Assert.Contains('#', persistedArtifact.ExternalReferenceKey);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_SB10_INV_001_computes_missing_workspace_content_hash()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Workspace content hash project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Workspace content hash validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify missing projection content hash is computed from managed storage."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var executionRunId = Guid.NewGuid();
+        var relativePath = $"artifacts/process-runs/{runResult.Value:D}/workspace-content-hash.md";
+        var content = "# Current evidence\n\nHash this managed artifact.";
+        var fullPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, content);
+
+        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Workspace content hash deliverable",
+            ManagedStoragePath = relativePath,
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{Guid.NewGuid():D}|{relativePath}",
+            ProjectionLineage = new ProcessArtifactProjectionLineage
+            {
+                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+                SourceExecutionRunId = executionRunId,
+                ProjectedExecutionRunId = executionRunId,
+                SourceExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{Guid.NewGuid():D}|{relativePath}",
+                ContentHash = string.Empty
+            }
+        });
+
+        Assert.True(recordResult.IsSuccess, string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync());
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(persistedArtifact.ProjectionLineageJson);
+
+        Assert.NotNull(lineage);
+        Assert.Equal(ProcessArtifactIdentityService.ComputeContentHash(Encoding.UTF8.GetBytes(content)), lineage.ContentHash);
+        Assert.Equal(persistedArtifact.ProjectionIdentityHash, lineage.ProjectionIdentityHash);
+        Assert.StartsWith("sha256:", persistedArtifact.ProjectionIdentityHash, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RecordArtifactAsync_SB01_INV_001_reactivates_blocked_downstream_with_tracked_materialized_artifact()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Materialization reactivation project");
+        var saveResult = await processesService.SaveAsync(BuildArtifactMaterializationReactivationDefinitionEditor(projectId, Guid.NewGuid()));
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var runId = await StartTestRunAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            "Materialization reactivation run");
+        var initialStepRuns = await processesService.ListStepRunsAsync(runId);
+        var upstreamStep = Assert.Single(initialStepRuns, item => item.Sequence == 0);
+        var downstreamStep = Assert.Single(initialStepRuns, item => item.Sequence == 1);
+        var upstreamArtifact = Assert.Single(upstreamStep.ArtifactOutputs);
+        var now = DateTimeOffset.UtcNow;
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var upstream = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == upstreamStep.Id);
+            upstream.Status = ProcessStepRunStatus.Completed;
+            upstream.CompletedAtUtc = now;
+            upstream.DecisionSummary = "Upstream work completed before materialized artifact was recorded.";
+
+            var downstream = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == downstreamStep.Id);
+            downstream.Status = ProcessStepRunStatus.Blocked;
+            downstream.BlockedReason = "Cannot dispatch 'Review materialized artifact' because required upstream artifacts are missing: upstream step 'Produce materialized artifact' must provide required artifact 'Materialized evidence'. Automation requested upstream artifact materialization from 'Produce materialized artifact' before retrying this step.";
+            downstream.BlockReasonCode = ProcessStepBlockReasonCode.MissingUpstreamArtifact;
+            downstream.RecoveryOptionsJson = "[\"WaitForArtifactMaterialization\"]";
+            downstream.DecisionSummary = "Waiting for upstream materialized artifact.";
+
+            var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runId);
+            run.Status = ProcessRunStatus.Blocked;
+            run.UpdatedAtUtc = now;
+
+            await dbContext.SaveChangesAsync();
+        }
+
+        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runId,
+            StepRunId = upstreamStep.Id,
+            ArtifactExpectationId = upstreamArtifact.ArtifactExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = upstreamArtifact.Title,
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded by the same materialization call that must reopen the downstream step.",
+            AllowedFutureUsageSummary = "SB01-INV-001 regression proof.",
+            ReviewSummary = "Materialized evidence is present.",
+            ManagedStoragePath = "artifacts/materialization/materialized-evidence.md",
+            ExternalReferenceKey = $"sb01-inv-001:{Guid.NewGuid():N}"
+        });
+
+        AssertSuccess(recordResult);
+
+        await using var assertionContext = await dbContextFactory.CreateDbContextAsync();
+        var reactivatedStep = await assertionContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == downstreamStep.Id);
+        Assert.Equal(ProcessStepRunStatus.Ready, reactivatedStep.Status);
+        Assert.Equal(string.Empty, reactivatedStep.BlockedReason);
+        Assert.Equal(ProcessStepBlockReasonCode.None, reactivatedStep.BlockReasonCode);
+        Assert.Equal("[]", reactivatedStep.RecoveryOptionsJson);
+        Assert.Equal("Reopened after upstream artifact materialization completed.", reactivatedStep.DecisionSummary);
+
+        var recordedArtifact = await assertionContext.Set<ProcessArtifactRecord>().SingleAsync(item => item.Id == recordResult.Value);
+        Assert.Equal(upstreamStep.Id, recordedArtifact.StepRunId);
+        Assert.Equal(upstreamArtifact.ArtifactExpectationId, recordedArtifact.ArtifactExpectationId);
+
+        var journalEntry = await assertionContext.Set<ProcessJournalEntry>()
+            .SingleAsync(item =>
+                item.ProcessRunId == runId &&
+                item.StepRunId == downstreamStep.Id &&
+                item.EventType == ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationResolved);
+        Assert.Contains("Materialized evidence", journalEntry.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task TransitionStepAsync_allows_restarting_failed_step_and_reactivates_run()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -849,6 +2013,293 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.True(persistedStep.TouchMinutes >= 5);
         Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
         Assert.Null(persistedRun.CompletedAtUtc);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB09_INV_001_persists_typed_policy_denial_block_state()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Typed policy denial block project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Typed policy denial validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify blocked state is typed."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "Tool policy denied external-target/C/legacy/source because the governed step is not authorized to mutate that external path.",
+            BlockCause = ProcessStepBlockCause.PolicyDenied,
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        });
+
+        Assert.True(transitionResult.IsSuccess, string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        Assert.Equal(ProcessStepBlockReasonCode.PolicyDeniedExternalPath, persistedStep.BlockReasonCode);
+        var recoveryOptions = JsonSerializer.Deserialize<List<ProcessStepRecoveryOption>>(
+            persistedStep.RecoveryOptionsJson,
+            StringEnumJsonOptions) ?? [];
+        Assert.Contains(ProcessStepRecoveryOption.HumanEscalation, recoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.ReworkContinuation, recoveryOptions);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB05_INV_001_persists_own_output_artifact_contract_block_cause()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Own output block cause project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Own output block cause validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify own missing artifact block cause."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "missing required artifact: Delivery readiness evidence",
+            BlockCause = ProcessStepBlockCause.OwnOutput,
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        });
+
+        Assert.True(transitionResult.IsSuccess, FormatErrors(transitionResult.Errors));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        var recoveryOptions = JsonSerializer.Deserialize<List<ProcessStepRecoveryOption>>(
+            persistedStep.RecoveryOptionsJson,
+            StringEnumJsonOptions) ?? [];
+
+        Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, persistedStep.BlockReasonCode);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB05_INV_002_persists_upstream_input_materialization_block_cause()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Upstream input block cause project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Upstream input block cause validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify upstream missing artifact block cause."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "Required upstream artifacts are missing and the source step must provide required artifact input.",
+            BlockCause = ProcessStepBlockCause.UpstreamInput,
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        });
+
+        Assert.True(transitionResult.IsSuccess, FormatErrors(transitionResult.Errors));
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        var recoveryOptions = JsonSerializer.Deserialize<List<ProcessStepRecoveryOption>>(
+            persistedStep.RecoveryOptionsJson,
+            StringEnumJsonOptions) ?? [];
+
+        Assert.Equal(ProcessStepBlockReasonCode.MissingUpstreamArtifact, persistedStep.BlockReasonCode);
+        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB12_INV_001_exposes_distinct_recovery_health_for_own_and_upstream_missing_artifacts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var ownOutput = await CreateBlockedRunAsync(
+            "SB12 own missing artifact recovery",
+            "missing required artifact: Delivery readiness evidence",
+            ProcessStepBlockCause.OwnOutput);
+        var ownOutputStep = Assert.Single(
+            (await processesService.GetRunDetailsAsync(ownOutput.RunId)).StepRuns,
+            item => item.Id == ownOutput.StepRunId);
+
+        Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, ownOutputStep.BlockReasonCode);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.NextRecoveryAction);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.Health.NextRecoveryAction);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.RecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.Health.RecoveryOptions);
+        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, ownOutputStep.RecoveryOptions);
+
+        var upstream = await CreateBlockedRunAsync(
+            "SB12 upstream missing artifact recovery",
+            "Required upstream artifacts are missing and the source step must provide required artifact input.",
+            ProcessStepBlockCause.UpstreamInput);
+        var upstreamStep = Assert.Single(
+            (await processesService.GetRunDetailsAsync(upstream.RunId)).StepRuns,
+            item => item.Id == upstream.StepRunId);
+
+        Assert.Equal(ProcessStepBlockReasonCode.MissingUpstreamArtifact, upstreamStep.BlockReasonCode);
+        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.NextRecoveryAction);
+        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.Health.NextRecoveryAction);
+        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.RecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.Health.RecoveryOptions);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, upstreamStep.RecoveryOptions);
+
+        async Task<(Guid RunId, Guid StepRunId)> CreateBlockedRunAsync(
+            string projectName,
+            string reason,
+            ProcessStepBlockCause blockCause)
+        {
+            var projectId = await CreateProjectAsync(projectsService, projectName);
+            var managerRoleId = Guid.NewGuid();
+            var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+            AssertSuccess(saveResult);
+            AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = projectName,
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Verify SB12 block recovery health."
+            });
+
+            AssertSuccess(runResult);
+
+            var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+            var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+            {
+                StepRunId = firstStep.Id,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = reason,
+                BlockCause = blockCause,
+                DecidedBy = "integration-tests",
+                SuppressAutomationDispatch = true
+            });
+
+            AssertSuccess(transitionResult);
+
+            return (runResult.Value, firstStep.Id);
+        }
+    }
+
+    [Fact]
+    public async Task TransitionStepAsync_SB10_INV_001_persists_recovery_router_next_action_and_lifecycle_event()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Vendor invoice recovery router project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Vendor invoice recovery router validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify generic recovery routing state."
+        });
+
+        AssertSuccess(runResult);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var transitionResult = await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
+        {
+            StepRunId = firstStep.Id,
+            TargetStatus = ProcessStepRunStatus.Blocked,
+            Reason = "Vendor invoice approval packet is missing the required compliance evidence artifact.",
+            BlockCause = ProcessStepBlockCause.OwnOutput,
+            DecidedBy = "integration-tests",
+            SuppressAutomationDispatch = true
+        });
+
+        AssertSuccess(transitionResult);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedStep = await dbContext.Set<ProcessStepRun>().SingleAsync(item => item.Id == firstStep.Id);
+        var routingEvent = await dbContext.Set<ProcessJournalEntry>()
+            .SingleAsync(item =>
+                item.ProcessRunId == runResult.Value &&
+                item.StepRunId == firstStep.Id &&
+                item.EventType == ProcessRuntimeEventTypes.RecoveryRoutingDecisionRecorded);
+        var runDetails = await processesService.GetRunDetailsAsync(runResult.Value);
+        var routedStep = Assert.Single(runDetails.StepRuns, item => item.Id == firstStep.Id);
+
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, persistedStep.NextRecoveryAction);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, routedStep.Health.NextRecoveryAction);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, routedStep.Health.RecoveryOptions);
+        Assert.Contains("RecoverArtifactsOnly", routingEvent.ReplayContextJson, StringComparison.Ordinal);
+        Assert.Contains("Vendor invoice", routingEvent.Description, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1046,8 +2497,11 @@ public sealed class ProcessesServiceIntegrationTests
         var softwareDeliveryDefinition = Assert.Single(projectDefinitions, item => item.Name == "Multi-team software delivery and release governance");
         var branchingDefinition = Assert.Single(projectDefinitions, item => item.Name == "Branching code review and merge governance");
         var hotfixDefinition = Assert.Single(projectDefinitions, item => item.Name == "Emergency hotfix rollout with shard-risk governance");
-        Assert.Single(projectDefinitions, item => item.Name == "Customer onboarding orchestration");
-        Assert.Single(projectDefinitions, item => item.Name == "Incident response and escalation");
+        var customerOnboardingDefinition = Assert.Single(projectDefinitions, item => item.Name == "Customer onboarding orchestration");
+        var incidentResponseDefinition = Assert.Single(projectDefinitions, item => item.Name == "Incident response and escalation");
+        var releaseReadinessDefinition = Assert.Single(projectDefinitions, item => item.Name == "Release readiness and deployment control");
+        var architectureDecisionDefinition = Assert.Single(projectDefinitions, item => item.Name == "Architecture decision governance and ADR stewardship");
+        var blazorAppDeliveryDefinition = Assert.Single(projectDefinitions, item => item.Name == "Blazor app delivery");
 
         var softwareDeliveryRun = Assert.Single(
             await processesService.ListRunsAsync(softwareDeliveryDefinition.Id, projectId),
@@ -1126,6 +2580,67 @@ public sealed class ProcessesServiceIntegrationTests
         var branchingQaMergeDefinitionStep = Assert.Single(branchingEditor.Steps, item => item.Key == "approve-merge-after-qa");
         Assert.Equal(2, branchingQaMergeDefinitionStep.Dependencies.Count);
         Assert.Equal(2, branchingQaMergeDefinitionStep.ArtifactInputs.Count);
+
+        var customerOnboardingRun = Assert.Single(
+            await processesService.ListRunsAsync(customerOnboardingDefinition.Id, projectId),
+            item => item.Name == "Customer onboarding orchestration / enterprise rollout");
+        var customerOnboardingStepRuns = await processesService.ListStepRunsAsync(customerOnboardingRun.Id);
+        var customerOnboardingArtifacts = await processesService.ListArtifactsAsync(customerOnboardingRun.Id);
+
+        Assert.Contains(
+            customerOnboardingStepRuns,
+            item => item.Title == "Review staffing intent" &&
+                    item.SelectedBranchOutcomeTitle == "Staffing ready");
+        Assert.Contains(customerOnboardingArtifacts, item => item.Title == "Enterprise customer kickoff approval record");
+
+        var incidentResponseRun = Assert.Single(
+            await processesService.ListRunsAsync(incidentResponseDefinition.Id, projectId),
+            item => item.Name == "Incident response and escalation / user access disruption");
+        var incidentResponseStepRuns = await processesService.ListStepRunsAsync(incidentResponseRun.Id);
+        var incidentResponseArtifacts = await processesService.ListArtifactsAsync(incidentResponseRun.Id);
+
+        Assert.Contains(
+            incidentResponseStepRuns,
+            item => item.Title == "Diagnose probable cause" &&
+                    item.SelectedBranchOutcomeTitle == "Mitigation ready for approval");
+        Assert.Contains(incidentResponseArtifacts, item => item.Title == "User access escalation approval record");
+
+        var releaseReadinessRun = Assert.Single(
+            await processesService.ListRunsAsync(releaseReadinessDefinition.Id, projectId),
+            item => item.Name == "Release readiness and deployment control / customer-visible maintenance window");
+        var releaseReadinessStepRuns = await processesService.ListStepRunsAsync(releaseReadinessRun.Id);
+        var releaseReadinessArtifacts = await processesService.ListArtifactsAsync(releaseReadinessRun.Id);
+
+        Assert.Contains(
+            releaseReadinessStepRuns,
+            item => item.Title == "Run final security review and go/no-go approval" &&
+                    item.SelectedBranchOutcomeTitle == "Go");
+        Assert.Contains(releaseReadinessArtifacts, item => item.Title == "Final go/no-go decision");
+        Assert.Contains(releaseReadinessArtifacts, item => item.Title == "Release execution provenance note");
+
+        var architectureDecisionRun = Assert.Single(
+            await processesService.ListRunsAsync(architectureDecisionDefinition.Id, projectId),
+            item => item.Name == "Architecture decision governance / integration boundary decision");
+        var architectureDecisionStepRuns = await processesService.ListStepRunsAsync(architectureDecisionRun.Id);
+        var architectureDecisionArtifacts = await processesService.ListArtifactsAsync(architectureDecisionRun.Id);
+
+        Assert.Contains(
+            architectureDecisionStepRuns,
+            item => item.Title == "Make the board decision and record rationale" &&
+                    item.SelectedBranchOutcomeTitle == "Approved");
+        Assert.Contains(architectureDecisionArtifacts, item => item.Title == "Approved architecture decision record");
+
+        var blazorAppDeliveryRun = Assert.Single(
+            await processesService.ListRunsAsync(blazorAppDeliveryDefinition.Id, projectId),
+            item => item.Name == "Blazor WASM PWA delivery / generic application");
+        var blazorAppDeliveryStepRuns = await processesService.ListStepRunsAsync(blazorAppDeliveryRun.Id);
+        var blazorAppDeliveryArtifacts = await processesService.ListArtifactsAsync(blazorAppDeliveryRun.Id);
+
+        Assert.Contains(
+            blazorAppDeliveryStepRuns,
+            item => item.Title == "Validate Blazor runtime and browser evidence" &&
+                    item.SelectedBranchOutcomeTitle == "Quality accepted");
+        Assert.Contains(blazorAppDeliveryArtifacts, item => item.Title == "Blazor project-structure writeback receipt");
 
         var exportEnvelope = await processesService.ExportAsync(seedResult.Value.PrimaryDefinitionId);
         exportEnvelope.Definition.Id = null;
@@ -1422,6 +2937,126 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(publishResult.IsFailure);
         Assert.Contains(publishResult.Errors, error => error.Code == "processes.publish-branch-outcome-unused");
+    }
+
+    [Fact]
+    public async Task PublishAsync_SB10_INV_001_applies_strict_lint_for_high_criticality_definitions()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB10 high criticality lint project");
+        var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
+        definition.Criticality = ProcessCriticality.High;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsFailure);
+        Assert.Contains(publishResult.Errors, error =>
+            error.Code == "processes.publish.lint-blocked" &&
+            error.Message.Contains("processes.lint.step-operation-contract-missing", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task PublishAsync_SB12_INV_001_rejects_strict_version_missing_risky_operation_contract()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB12 strict contract mode project");
+        var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
+        definition.ContractMode = ProcessDefinitionContractMode.Strict;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsFailure);
+        Assert.Contains(publishResult.Errors, error =>
+            error.Code == "processes.publish.lint-blocked" &&
+            error.Message.Contains("processes.lint.step-operation-contract-missing", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task PublishAsync_SB12_INV_002_allows_compatibility_version_with_visible_contract_warning()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB12 compatibility contract mode project");
+        var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
+        definition.ContractMode = ProcessDefinitionContractMode.Compatibility;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+
+        var editor = await processesService.GetEditorAsync(saveResult.Value);
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+        Assert.Equal(ProcessDefinitionContractMode.Compatibility, editor.ContractMode);
+        Assert.Contains(editor.LintResult.Issues, issue =>
+            issue.Code == "processes.lint.step-operation-contract-missing" &&
+            issue.Severity == ProcessDefinitionLintSeverity.Warning);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var publishedVersion = await dbContext.Set<ProcessDefinitionVersion>()
+            .SingleAsync(item =>
+                item.ProcessDefinitionId == saveResult.Value &&
+                item.Status == ProcessVersionStatus.Published);
+
+        Assert.Equal(ProcessDefinitionContractMode.Compatibility, publishedVersion.ContractMode);
+    }
+
+    [Fact]
+    public async Task StartRunAsync_SB10_INV_001_applies_strict_lint_for_delegated_published_definitions()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB10 delegated lint project");
+        var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
+        definition.ContractMode = ProcessDefinitionContractMode.Compatibility;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        await using (var dbContext = await dbContextFactory.CreateDbContextAsync())
+        {
+            var persistedDefinition = await dbContext.Set<ProcessDefinition>()
+                .SingleAsync(item => item.Id == saveResult.Value);
+            persistedDefinition.AutonomyLevel = ProcessAutonomyLevel.Delegated;
+            await dbContext.SaveChangesAsync();
+        }
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "SB10 lint gate run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "SB10 strict lint gate verification."
+        });
+
+        Assert.True(runResult.IsFailure);
+        Assert.Contains(runResult.Errors, error =>
+            error.Code == "processes.run-start.lint-blocked" &&
+            error.Message.Contains("processes.lint.step-operation-contract-missing", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -1772,6 +3407,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.All(stepRuns, stepRun => AssertExpectedArtifactOutput(fixture, stepRun));
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             GetStepRunByKey(stepRuns, fixture, StepKeys.Scope),
@@ -1781,6 +3417,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(ProcessStepRunStatus.Ready, GetStepRunByKey(stepRuns, fixture, StepKeys.Architecture).Status);
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             GetStepRunByKey(stepRuns, fixture, StepKeys.Architecture),
@@ -1791,6 +3428,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(ProcessStepRunStatus.Ready, firstImplementationStep.Status);
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             firstImplementationStep,
@@ -1808,6 +3446,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.NotEqual(Guid.Empty, firstPassApprovedOutcome.Id);
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             qaFirstReviewStep,
@@ -1826,6 +3465,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(ProcessStepRunStatus.Pending, GetStepRunByKey(stepRuns, fixture, StepKeys.QaRecheck).Status);
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             repairImplementationStep,
@@ -1839,6 +3479,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.NotEqual(Guid.Empty, qaRecheckApprovedOutcomeId);
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             qaRecheckStep,
@@ -1851,6 +3492,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(ProcessStepRunStatus.Ready, releaseNotesStep.Status);
 
         await CompleteRequiredArtifactStepAsync(
+            application,
             processesService,
             runResult.Value,
             releaseNotesStep,
@@ -2074,6 +3716,72 @@ public sealed class ProcessesServiceIntegrationTests
         var nextDraftArtifactInput = Assert.Single(nextDraftConsumerStep.ArtifactInputs);
 
         Assert.Equal(nextDraftSourceArtifact.Id, nextDraftArtifactInput.ArtifactExpectationId);
+    }
+
+    [Fact]
+    public async Task Save_export_import_and_publish_SB08_INV_001_preserve_step_operation_contract()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Step operation contract project");
+        var managerRoleId = Guid.NewGuid();
+        var model = BuildDefinitionEditor(projectId, managerRoleId);
+        var deliveryStep = Assert.Single(model.Steps, step => step.Key == "delivery-review");
+        deliveryStep.AllowedOperations =
+        [
+            ProcessStepOperation.WriteExternalArtifactDestination,
+            ProcessStepOperation.WriteManagedProcessArtifacts
+        ];
+        deliveryStep.OperationTargetScope = ProcessStepTargetScope.ExternalArtifactDestination;
+
+        var saveResult = await processesService.SaveAsync(model);
+
+        AssertSuccess(saveResult);
+
+        var savedEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
+        var savedDeliveryStep = Assert.Single(savedEditor.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(
+            [
+                ProcessStepOperation.ReadProcessContext,
+                ProcessStepOperation.WriteManagedProcessArtifacts,
+                ProcessStepOperation.WriteExternalArtifactDestination
+            ],
+            savedDeliveryStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, savedDeliveryStep.OperationTargetScope);
+
+        var exportEnvelope = await processesService.ExportAsync(saveResult.Value);
+        var exportedDeliveryStep = Assert.Single(exportEnvelope.Definition.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(savedDeliveryStep.AllowedOperations, exportedDeliveryStep.AllowedOperations);
+        Assert.Equal(savedDeliveryStep.OperationTargetScope, exportedDeliveryStep.OperationTargetScope);
+
+        exportEnvelope.Definition.Id = null;
+        exportEnvelope.Definition.WorkingVersionId = null;
+        exportEnvelope.Definition.DefinitionConcurrencyToken = null;
+        exportEnvelope.Definition.WorkingVersionConcurrencyToken = null;
+        exportEnvelope.Definition.Name = "Imported step operation contract process";
+        exportEnvelope.Definition.ChangeSummary = "Imported for SB08 operation contract persistence validation.";
+        var importResult = await processesService.ImportAsync(exportEnvelope);
+
+        AssertSuccess(importResult);
+
+        var importedEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
+        var importedDeliveryStep = Assert.Single(importedEditor.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(savedDeliveryStep.AllowedOperations, importedDeliveryStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, importedDeliveryStep.OperationTargetScope);
+
+        AssertSuccess(await processesService.PublishAsync(importResult.Value));
+
+        var nextDraftEditor = await processesService.GetEditorAsync(importResult.Value, projectId);
+        var nextDraftDeliveryStep = Assert.Single(nextDraftEditor.Steps, step => step.Key == "delivery-review");
+
+        Assert.Equal(savedDeliveryStep.AllowedOperations, nextDraftDeliveryStep.AllowedOperations);
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, nextDraftDeliveryStep.OperationTargetScope);
     }
 
     [Fact]
@@ -3203,6 +4911,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     private static async Task CompleteRequiredArtifactStepAsync(
+        TestApplication application,
         ProcessesService processesService,
         Guid processRunId,
         ProcessStepRunViewModel stepRun,
@@ -3236,6 +4945,12 @@ public sealed class ProcessesServiceIntegrationTests
         }
 
         var artifactOutput = Assert.Single(stepRun.ArtifactOutputs);
+        var managedStoragePath = $"artifacts/workflow-repair/{stepRun.Id:N}.md";
+        await WriteWorkspaceArtifactAsync(
+            application,
+            managedStoragePath,
+            BuildWorkflowRepairManagedArtifactContent(stepRun, artifactOutput.Title));
+
         AssertSuccess(await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
         {
             ProcessRunId = processRunId,
@@ -3247,7 +4962,8 @@ public sealed class ProcessesServiceIntegrationTests
             SensitivityLevel = ProcessSensitivityLevel.Internal,
             ProvenanceSummary = $"Recorded by integration test for {stepRun.Title}.",
             AllowedFutureUsageSummary = "Integration verification only.",
-            ReviewSummary = "Required artifact is present."
+            ReviewSummary = "Required artifact is present.",
+            ManagedStoragePath = managedStoragePath
         }));
         AssertSuccess(await processesService.TransitionStepAsync(new ProcessStepTransitionRequest
         {
@@ -3294,6 +5010,21 @@ public sealed class ProcessesServiceIntegrationTests
             StepKeys.ReleaseNotes => ArtifactTitles.ReleaseNotes,
             _ => throw new InvalidOperationException($"Unknown workflow process step key '{stepKey}'.")
         };
+    }
+
+    private static string BuildWorkflowRepairManagedArtifactContent(
+        ProcessStepRunViewModel stepRun,
+        string artifactTitle)
+    {
+        return $"""
+            # {artifactTitle}
+
+            Step title: {stepRun.Title}
+            Sequence: {stepRun.Sequence}
+            Validation source: workflow repair integration test.
+            Evidence summary: This current-run artifact records the concrete scope, implementation, QA disposition, repair evidence, or release handoff required by the step contract.
+            Outcome: The required artifact has durable managed content for manual transition validation.
+            """;
     }
 
     private static void AssertSuccess(Result result)
@@ -3407,6 +5138,130 @@ public sealed class ProcessesServiceIntegrationTests
         };
     }
 
+    private static ProcessDefinitionEditorModel BuildProductMutationLintGateDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var model = BuildDefinitionEditor(projectId, managerRoleId);
+        var deliveryStep = model.Steps.Single(step => string.Equals(step.Key, "delivery-review", StringComparison.Ordinal));
+        deliveryStep.Title = "Implement Blazor product component";
+        deliveryStep.OutputContractSummary = "Implement the Blazor component in the product root.";
+        deliveryStep.EvidenceContractSummary = "Implementation evidence retained for review.";
+        deliveryStep.ArtifactExpectations =
+        [
+            new ProcessArtifactExpectationEditorModel
+            {
+                Id = Guid.NewGuid(),
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = "Implementation change set",
+                ValidationRequirementSummary = "Must list product files changed."
+            }
+        ];
+
+        return model;
+    }
+
+    private static ProcessDefinitionEditorModel BuildArtifactMaterializationReactivationDefinitionEditor(Guid projectId, Guid managerRoleId)
+    {
+        var upstreamStepId = Guid.NewGuid();
+        var downstreamStepId = Guid.NewGuid();
+        var materializedArtifactId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Materialization reactivation process",
+            Summary = "Validates that materialized upstream artifacts reactivate blocked downstream steps.",
+            ValueStatement = "Keep artifact materialization and downstream dispatch in one consistent lifecycle.",
+            CustomerName = "Acme Customer",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Downstream work must wait for typed upstream artifacts.",
+            ChangeSummary = "SB01-INV-001 integration definition.",
+            ConstitutionRuleSummary = "Artifact materialization is runtime state, not prompt text.",
+            OperatingModeSummary = "Assisted execution with explicit materialization.",
+            SimulationReadinessSummary = "Safe for local integration validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own materialization validation.",
+                    StaffingIntent = "Primary process owner for the project.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Delivery owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = upstreamStepId,
+                    Key = "produce-materialized-artifact",
+                    Title = "Produce materialized artifact",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Current process scope.",
+                    OutputContractSummary = "Materialized evidence for downstream review.",
+                    EvidenceContractSummary = "A concrete evidence artifact must be recorded.",
+                    DecisionRightsSummary = "Delivery owner confirms materialization.",
+                    ExceptionPolicySummary = "Block downstream work when the artifact is absent.",
+                    TargetLeadHours = 1,
+                    CanvasX = 120,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = materializedArtifactId,
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Materialized evidence",
+                            ValidationRequirementSummary = "Must be present before downstream review dispatches."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = downstreamStepId,
+                    Key = "review-materialized-artifact",
+                    Title = "Review materialized artifact",
+                    StepKind = ProcessStepKind.Review,
+                    InputContractSummary = "Materialized evidence from the upstream step.",
+                    OutputContractSummary = "Review readiness decision.",
+                    EvidenceContractSummary = "Review uses the upstream materialized evidence.",
+                    DecisionRightsSummary = "Delivery owner decides whether to continue.",
+                    ExceptionPolicySummary = "Remain blocked when upstream materialized evidence is absent.",
+                    TargetLeadHours = 1,
+                    Dependencies = CreateDependencies((upstreamStepId, null)),
+                    CanvasX = 420,
+                    CanvasY = 120,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ],
+                    ArtifactInputs =
+                    [
+                        new ProcessStepArtifactInputEditorModel
+                        {
+                            ArtifactExpectationId = materializedArtifactId
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
     private static ProcessDefinitionEditorModel BuildRepairBranchArtifactGateDefinitionEditor(Guid projectId, Guid managerRoleId)
     {
         var intakeStepId = Guid.NewGuid();
@@ -3469,6 +5324,7 @@ public sealed class ProcessesServiceIntegrationTests
                     StepKind = ProcessStepKind.Review,
                     Dependencies = CreateDependencies((intakeStepId, null)),
                     DecisionRoleRequirementId = managerRoleId,
+                    ExceptionPolicySummary = "Artifact recovery: selecting repair-required is allowed when validation evidence is missing or invalid; quality-accepted requires recorded validation evidence.",
                     TargetLeadHours = 2,
                     CanvasX = 420,
                     CanvasY = 160,
@@ -4361,6 +6217,25 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task WriteWorkspaceArtifactAsync(
+        TestApplication application,
+        string relativePath,
+        string content)
+    {
+        var fullPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, content);
+    }
+
+    private static JsonSerializerOptions CreateStringEnumJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private sealed record DirectMessagingRunFixture(

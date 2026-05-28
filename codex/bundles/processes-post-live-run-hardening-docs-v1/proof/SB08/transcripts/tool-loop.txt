@@ -1,0 +1,15 @@
+Invariant: SB08-INV-001
+Slice: tool-loop.txt
+Tool loop proof: snapshots, repeated-tool guard, signature hashing, and result parsing.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~MafAgentRuntimeTests.SnapshotUpdate_copies_tool_call_argument_graph|FullyQualifiedName~MafAgentRuntimeTests.SnapshotUpdate_converts_opaque_tool_calls_into_detached_function_calls|FullyQualifiedName~MafAgentRuntimeTests.Repeated_tool_guard_does_not_embed_workflow_process_guidance|FullyQualifiedName~MafAgentRuntimeTests.ResolveToolInvocationSignature_distinguishes_long_write_content_with_same_visible_prefix" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 67 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\ --filter "FullyQualifiedName~MafAgentRuntimeToolInvocationResultTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 35 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0

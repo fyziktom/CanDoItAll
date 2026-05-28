@@ -93,7 +93,12 @@
                     var selectedBranchOutcomeId = Presenter.ResolveSelectedBranchOutcomeId(stepRun.Id);
 
                     <SurfaceCard @key="stepRun.Id"
-                                 data-testid="processes-step-run-card">
+                                 data-testid="processes-step-run-card"
+                                 data-step-run-id="@(stepRun.Id.ToString("D"))"
+                                 data-step-definition-id="@(stepRun.StepDefinitionId.ToString("D"))"
+                                 data-step-status="@(stepRun.Status.ToString())"
+                                 data-operation-target-scope="@(FormatTargetScope(stepRun))"
+                                 data-allowed-operations="@(FormatAllowedOperations(stepRun))">
                         <Split Gap="LayoutGap.Medium">
                             <Stack GapScale="LayoutGap.Tiny"
                                    Class="min-w-0">
@@ -131,6 +136,20 @@
                             </Cluster>
                         </Split>
 
+                        <Cluster Gap="LayoutGap.Small"
+                                 Class="mt-4"
+                                 data-testid="processes-step-operation-contract"
+                                 data-step-run-id="@(stepRun.Id.ToString("D"))"
+                                 data-step-definition-id="@(stepRun.StepDefinitionId.ToString("D"))">
+                            <StatusBadge Tone="neutral"
+                                         Text="@($"target: {FormatTargetScope(stepRun)}")" />
+                            @foreach (var operation in stepRun.AllowedOperations)
+                            {
+                                <StatusBadge Tone="@ResolveOperationTone(operation)"
+                                             Text="@operation.ToString()" />
+                            }
+                        </Cluster>
+
                         @if (!string.IsNullOrWhiteSpace(stepRun.Health.ActionableReason))
                         {
                             <p class="mt-3 text-sm leading-6 text-slate-600"
@@ -139,11 +158,35 @@
                             </p>
                         }
 
-                        @if (stepRun.Health.RecoveryClassification != ProcessRecoveryClassification.None)
+                        @if (HasRecoveryDiagnostics(stepRun))
                         {
-                            <p class="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">
-                                Recovery: @stepRun.Health.RecoveryClassification
-                            </p>
+                            <Cluster Gap="LayoutGap.Small"
+                                     Class="mt-3"
+                                     data-testid="processes-step-recovery-diagnostics"
+                                     data-step-run-id="@(stepRun.Id.ToString("D"))"
+                                     data-block-reason-code="@(stepRun.BlockReasonCode.ToString())"
+                                     data-recovery-options="@(FormatRecoveryOptions(stepRun))">
+                                @if (stepRun.BlockReasonCode != ProcessStepBlockReasonCode.None)
+                                {
+                                    <StatusBadge Tone="warning"
+                                                 Text="@($"block: {stepRun.BlockReasonCode}")" />
+                                }
+                                @if (stepRun.Health.RecoveryClassification != ProcessRecoveryClassification.None)
+                                {
+                                    <StatusBadge Tone="warning"
+                                                 Text="@($"recovery: {stepRun.Health.RecoveryClassification}")" />
+                                }
+                                @if (stepRun.Health.NextRecoveryAction != ProcessStepRecoveryOption.None)
+                                {
+                                    <StatusBadge Tone="info"
+                                                 Text="@($"recommended: {Presenter.FormatRecoveryAction(stepRun.Health.NextRecoveryAction)}")" />
+                                }
+                                @foreach (var option in stepRun.Health.RecoveryOptions)
+                                {
+                                    <StatusBadge Tone="neutral"
+                                                 Text="@Presenter.FormatRecoveryAction(option)" />
+                                }
+                            </Cluster>
                         }
 
                         <CompactStatStrip Class="mt-5">
@@ -173,7 +216,9 @@
                                              ValueChanged="@(value => Presenter.UpdateRuntimeBranchOutcomeSelectionAsync(stepRun.Id, value))"
                                              ValueExpression="@(() => selectedBranchOutcomeId)"
                                              class="cda-input"
-                                             data-testid="processes-branch-outcome-select">
+                                             data-testid="processes-branch-outcome-select"
+                                             data-step-run-id="@(stepRun.Id.ToString("D"))"
+                                             data-step-definition-id="@(stepRun.StepDefinitionId.ToString("D"))">
                                     <option value="">Select outcome</option>
                                     @foreach (var outcome in stepRun.AvailableBranchOutcomes)
                                     {
@@ -240,4 +285,42 @@
 @code {
     [Parameter, EditorRequired]
     public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
+
+    private static bool HasRecoveryDiagnostics(ProcessStepRunViewModel stepRun)
+    {
+        return stepRun.BlockReasonCode != ProcessStepBlockReasonCode.None ||
+            stepRun.Health.RecoveryClassification != ProcessRecoveryClassification.None ||
+            stepRun.Health.NextRecoveryAction != ProcessStepRecoveryOption.None ||
+            stepRun.Health.RecoveryOptions.Count > 0;
+    }
+
+    private static string FormatAllowedOperations(ProcessStepRunViewModel stepRun)
+    {
+        return stepRun.AllowedOperations.Count == 0
+            ? string.Empty
+            : string.Join(",", stepRun.AllowedOperations.Select(operation => operation.ToString()));
+    }
+
+    private static string FormatRecoveryOptions(ProcessStepRunViewModel stepRun)
+    {
+        return stepRun.Health.RecoveryOptions.Count == 0
+            ? string.Empty
+            : string.Join(",", stepRun.Health.RecoveryOptions.Select(option => option.ToString()));
+    }
+
+    private static string FormatTargetScope(ProcessStepRunViewModel stepRun)
+    {
+        return stepRun.OperationTargetScope?.ToString() ?? "unspecified";
+    }
+
+    private static string ResolveOperationTone(ProcessStepOperation operation)
+    {
+        return operation switch
+        {
+            ProcessStepOperation.MutateProductTarget => "danger",
+            ProcessStepOperation.ExecuteExternalAction => "warning",
+            ProcessStepOperation.RunValidation or ProcessStepOperation.CaptureRuntimeProof => "info",
+            _ => "neutral"
+        };
+    }
 }

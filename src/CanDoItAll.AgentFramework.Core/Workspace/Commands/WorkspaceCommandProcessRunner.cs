@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using System.Security.Cryptography;
 
 namespace CanDoItAll.AgentFramework.Core;
 
@@ -109,6 +110,9 @@ internal sealed class WorkspaceCommandProcessRunner
     public async Task<WorkspaceCommandExecutionResult> ExecuteAsync(WorkspaceCommandPlan plan, CancellationToken cancellationToken = default)
     {
         var executablePath = executableLocator.ResolveExecutablePath(plan.ExecutableCandidates);
+        var productTargetAudit = ProductTargetMutationAudit.CaptureBefore(
+            plan,
+            WorkspaceExecutionAuditContext.Current);
         using var pathAliasSession = WorkspacePathAliasSession.TryCreate(
             plan.WorkspaceRootPath,
             plan.WorkingDirectoryPath,
@@ -129,6 +133,7 @@ internal sealed class WorkspaceCommandProcessRunner
             cancellationToken).ConfigureAwait(false);
 
         var effectiveProcessResult = NormalizeProcessResult(plan.Decision.ToolName, processResult);
+        effectiveProcessResult = productTargetAudit.Apply(effectiveProcessResult);
         var succeeded = effectiveProcessResult.Started && !effectiveProcessResult.TimedOut && effectiveProcessResult.ExitCode == 0;
         if (effectiveProcessResult.TimedOut)
         {
@@ -141,7 +146,9 @@ internal sealed class WorkspaceCommandProcessRunner
                 ? $"Recipe '{plan.Decision.RecipeId}' timed out after {plan.TimeoutSeconds} second(s)."
                 : succeeded
                     ? $"Recipe '{plan.Decision.RecipeId}' completed successfully."
-                    : $"Recipe '{plan.Decision.RecipeId}' failed with exit code {effectiveProcessResult.ExitCode}.";
+                    : string.IsNullOrWhiteSpace(effectiveProcessResult.FailureMessage)
+                        ? $"Recipe '{plan.Decision.RecipeId}' failed with exit code {effectiveProcessResult.ExitCode}."
+                        : $"Recipe '{plan.Decision.RecipeId}' failed with exit code {effectiveProcessResult.ExitCode}. {effectiveProcessResult.FailureMessage}";
         var receipt = receiptWriter.PersistProcessReceipt(
             plan.Decision.ToolName,
             plan.Decision.RecipeId,
@@ -269,5 +276,206 @@ internal sealed class WorkspaceCommandProcessRunner
                stderr.Contains("ParameterBindingException:", StringComparison.OrdinalIgnoreCase) ||
                stderr.Contains("FullyQualifiedErrorId", StringComparison.OrdinalIgnoreCase) ||
                stderr.Contains("Cannot overwrite variable PID", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private sealed class ProductTargetMutationAudit
+    {
+        private readonly IReadOnlyList<ProductTargetSnapshot> beforeSnapshots;
+
+        private ProductTargetMutationAudit(IReadOnlyList<ProductTargetSnapshot> beforeSnapshots)
+        {
+            this.beforeSnapshots = beforeSnapshots;
+        }
+
+        public static ProductTargetMutationAudit CaptureBefore(
+            WorkspaceCommandPlan plan,
+            WorkspaceExecutionAuditContext.WorkspaceExecutionAuditScopeState? auditScope)
+        {
+            if (auditScope is null ||
+                auditScope.ProcessAllowsProductMutation ||
+                !IsScriptExecutionTool(plan.Decision.ToolName))
+            {
+                return new ProductTargetMutationAudit([]);
+            }
+
+            var pathPolicy = new WorkspacePathPolicy(plan.WorkspaceRootPath);
+            var snapshots = auditScope.AllowedExternalTargetAliases
+                .Concat(auditScope.ReadOnlyExternalTargetAliases)
+                .Where(alias => IsProductExternalTargetAlias(alias))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Select(alias => CaptureSnapshot(pathPolicy, alias))
+                .ToArray();
+            return new ProductTargetMutationAudit(snapshots);
+        }
+
+        public WorkspaceProcessExecutionResult Apply(WorkspaceProcessExecutionResult processResult)
+        {
+            if (beforeSnapshots.Count == 0)
+            {
+                return processResult;
+            }
+
+            var changedAliases = beforeSnapshots
+                .Where(snapshot => snapshot.HasChanged())
+                .Select(snapshot => snapshot.Alias)
+                .ToArray();
+            if (changedAliases.Length == 0)
+            {
+                return processResult;
+            }
+
+            var failureMessage = $"Post-execution product target audit detected file-system changes under non-mutating governed script roots: {string.Join(", ", changedAliases)}.";
+            return processResult with
+            {
+                ExitCode = processResult.ExitCode == 0 ? 1 : processResult.ExitCode,
+                FailureMessage = string.IsNullOrWhiteSpace(processResult.FailureMessage)
+                    ? failureMessage
+                    : $"{processResult.FailureMessage} {failureMessage}"
+            };
+        }
+
+        private static ProductTargetSnapshot CaptureSnapshot(WorkspacePathPolicy pathPolicy, string alias)
+        {
+            if (!pathPolicy.TryResolveWorkspacePath(alias, allowWorkspaceRoot: false, out var resolution, out _))
+            {
+                return new ProductTargetSnapshot(
+                    alias,
+                    string.Empty,
+                    new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase));
+            }
+
+            return new ProductTargetSnapshot(
+                alias,
+                resolution.FullPath,
+                CaptureFileFingerprints(resolution.FullPath));
+        }
+
+        private static IReadOnlyDictionary<string, ProductTargetFileFingerprint> CaptureFileFingerprints(
+            string rootPath)
+        {
+            if (string.IsNullOrWhiteSpace(rootPath))
+            {
+                return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            if (File.Exists(rootPath))
+            {
+                return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["."] = CreateFingerprint(rootPath)
+                };
+            }
+
+            if (!Directory.Exists(rootPath))
+            {
+                return new Dictionary<string, ProductTargetFileFingerprint>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return Directory
+                .EnumerateFiles(
+                    rootPath,
+                    "*",
+                    new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = false,
+                        AttributesToSkip = FileAttributes.ReparsePoint
+                    })
+                .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    path => WorkspacePathPolicy.NormalizeRelativePath(Path.GetRelativePath(rootPath, path)),
+                    CreateFingerprint,
+                    StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static ProductTargetFileFingerprint CreateFingerprint(string path)
+        {
+            var fileInfo = new FileInfo(path);
+            return new ProductTargetFileFingerprint(
+                fileInfo.Length,
+                fileInfo.LastWriteTimeUtc,
+                ComputeFileHash(path));
+        }
+
+        private static string ComputeFileHash(string path)
+        {
+            using var stream = File.OpenRead(path);
+            using var sha256 = SHA256.Create();
+            return Convert.ToHexString(sha256.ComputeHash(stream));
+        }
+
+        private static bool IsScriptExecutionTool(string toolName)
+        {
+            return string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript, StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(toolName, AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsProductExternalTargetAlias(string alias)
+        {
+            var normalizedAlias = AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(alias);
+            if (string.IsNullOrWhiteSpace(normalizedAlias) ||
+                !normalizedAlias.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            var segments = normalizedAlias
+                .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Skip(2)
+                .ToArray();
+            if (segments.Length == 0)
+            {
+                return false;
+            }
+
+            if (segments.Any(segment =>
+                    string.Equals(segment, "product", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "source", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "src", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "app", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return !segments.Any(segment =>
+                string.Equals(segment, "artifact", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "evidence", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "report", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "reports", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "decision", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "decisions", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private sealed record ProductTargetSnapshot(
+            string Alias,
+            string RootPath,
+            IReadOnlyDictionary<string, ProductTargetFileFingerprint> Files)
+        {
+            public bool HasChanged()
+            {
+                var afterFiles = CaptureFileFingerprints(RootPath);
+                if (Files.Count != afterFiles.Count)
+                {
+                    return true;
+                }
+
+                foreach (var beforeFile in Files)
+                {
+                    if (!afterFiles.TryGetValue(beforeFile.Key, out var afterFile) ||
+                        beforeFile.Value != afterFile)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        private sealed record ProductTargetFileFingerprint(
+            long Length,
+            DateTime LastWriteTimeUtc,
+            string Sha256);
     }
 }

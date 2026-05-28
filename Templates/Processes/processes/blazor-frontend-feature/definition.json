@@ -145,7 +145,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
@@ -192,14 +192,20 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/resolve-blazor-contract.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
       "Key": "implement-blazor-change",
       "Title": "Implement Blazor frontend feature",
       "Subtitle": "Build-capable implementation",
-      "Notes": "Implement UI components, pages, state handling, styling, and visible behavior using the app mode and design system declared by project structure. Use workspace file and command tools only inside the approved product root. Run dotnet restore before build-sensitive changes when dependencies changed. Run dotnet build after implementation. Do not mark complete if explicit acceptance criteria are omitted, if output is written outside the approved run folder, or if project-structure constraints are narrowed without a decision record.",
+      "Notes": "Implement UI components, pages, state handling, styling, and visible behavior using the app mode and design system declared by project structure. Use workspace file and command tools only inside the approved product root. Run dotnet restore before build-sensitive changes when dependencies changed. Run dotnet build after implementation. When the current-run tool requirements include runtime startup proof, start the app once with workspace_dotnet_run and record the startup receipt; leave browser screenshots and console proof to the validation step. Do not mark complete if explicit acceptance criteria are omitted, if output is written outside the approved run folder, or if project-structure constraints are narrowed without a decision record.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -209,7 +215,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "resolve-blazor-contract",
       "DependsOnBranchOutcomeKey": "",
@@ -278,7 +284,17 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/implement-blazor-change.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 2,
@@ -295,7 +311,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "implement-blazor-change",
       "DependsOnBranchOutcomeKey": "",
@@ -337,7 +353,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must include dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references."
+          "ValidationRequirementSummary": "Must include dotnet restore/build/test results as applicable, app startup receipt, URL or entrypoint, Playwright screenshot paths, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, and cleanup receipt."
         },
         {
           "Key": "validation-self-review",
@@ -375,14 +391,24 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/validate-blazor-runtime.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 3,
       "Key": "repair-blazor-findings",
       "Title": "Repair Blazor validation findings",
       "Subtitle": "Focused repair",
-      "Notes": "Repair only findings produced by the validation step. Do not expand scope beyond project-structure acceptance criteria. Rerun the smallest relevant dotnet build/test checks needed to prove the repair before handoff.",
+      "Notes": "Repair only findings produced by the validation step. Do not expand scope beyond project-structure acceptance criteria. Rerun the smallest relevant dotnet build/test checks needed to prove the repair before handoff. When runtime startup proof is invalidated by the repair, start the app once with workspace_dotnet_run and record the startup receipt; leave browser screenshots and console proof to the validation step.",
       "StepKind": "Work",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -392,7 +418,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "validate-blazor-runtime",
       "DependsOnBranchOutcomeKey": "repair-required",
@@ -449,7 +475,17 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/repair-blazor-findings.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "LaunchRuntime",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 4,
@@ -466,7 +502,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "repair-blazor-findings",
       "DependsOnBranchOutcomeKey": "",
@@ -508,7 +544,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for downstream QA, release governance, reruns, and process learning.",
-          "ValidationRequirementSummary": "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot or browser_evaluate state output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references."
+          "ValidationRequirementSummary": "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot or browser_evaluate state output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, and cleanup receipt."
         }
       ],
       "ArtifactInputs": [
@@ -534,7 +570,17 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/revalidate-blazor-repair.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -551,7 +597,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "validate-blazor-runtime",
       "DependsOnBranchOutcomeKey": "quality-accepted",
@@ -620,7 +666,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/record-blazor-results.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 6,
@@ -637,7 +691,7 @@
       "OutputContractSummary": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
       "EvidenceContractSummary": "Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.",
       "DecisionRightsSummary": "The assigned role owns the step outcome and must block or escalate instead of silently narrowing scope.",
-      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing.",
+      "ExceptionPolicySummary": "Block when required project-structure input, tool access, build/test proof, runtime proof, screenshot proof, or writeback evidence is missing. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "revalidate-blazor-repair",
       "DependsOnBranchOutcomeKey": "quality-accepted",
@@ -706,7 +760,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/record-blazor-results-after-repair.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 7,
@@ -723,7 +785,7 @@
       "OutputContractSummary": "Explicit no-go, scope reset, or replan decision with accountable owner and required next repair scope.",
       "EvidenceContractSummary": "Escalation decision, unresolved defect/proof-gap list, failed URLs or APIs, screenshot/console references when available, and owner.",
       "DecisionRightsSummary": "Blazor delivery manager owns escalation and cannot treat unresolved repair evidence as delivery-ready.",
-      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved.",
+      "ExceptionPolicySummary": "Do not record successful delivery while post-repair validation remains unresolved. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "revalidate-blazor-repair",
       "DependsOnBranchOutcomeKey": "repair-escalation",
@@ -795,9 +857,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/blazor-frontend-feature/steps/escalate-blazor-unresolved-repair.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
   "DocPath": "processes/blazor-frontend-feature/definition.md"
 }
-

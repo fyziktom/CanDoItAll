@@ -58,6 +58,8 @@ public sealed class ProcessDefinitionImportExportModel
 
     public ProcessAutonomyLevel AutonomyLevel { get; set; } = ProcessAutonomyLevel.Assisted;
 
+    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Compatibility;
+
     public ProcessDefinitionStatus Status { get; set; } = ProcessDefinitionStatus.Draft;
 
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];
@@ -80,6 +82,10 @@ public sealed class ProcessStepImportExportModel
     public string Notes { get; set; } = string.Empty;
 
     public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
+
+    public List<ProcessStepOperation> AllowedOperations { get; set; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; set; }
 
     public Guid? SubprocessDefinitionId { get; set; }
 

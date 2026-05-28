@@ -1,0 +1,63 @@
+# SB14 passing.txt
+
+Focused governance proof:
+
+Command:
+`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~Baseline_scenarios_SB14_INV_001_cover_typed_contracts_branching_and_recovery_metadata" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb14-integration\ -p:CopyRepositoryTemplatesToOutput=false --logger "console;verbosity=normal"`
+
+ExitCode: 0
+
+Result:
+- 1 test passed.
+- `ProcessTemplateGovernanceTests.Baseline_scenarios_SB14_INV_001_cover_typed_contracts_branching_and_recovery_metadata` passed.
+- Pre-existing EF Core Relational version warnings were emitted during build.
+
+Referenced generic-process proof:
+
+Command:
+`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessTemplateGovernanceTests|FullyQualifiedName~BusinessPlanProcessPostgresIntegrationTests" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb14-integration\ -p:CopyRepositoryTemplatesToOutput=false --logger "console;verbosity=normal"`
+
+ExitCode: 0
+
+Result:
+- 12 tests passed.
+- Passed business-plan tests:
+  - `Business_plan_template_includes_atomic_product_evidence_review`
+  - `Business_plan_process_projects_and_runs_on_postgresql`
+- Passed governance tests:
+  - `Baseline_scenarios_SB14_INV_001_cover_typed_contracts_branching_and_recovery_metadata`
+  - `Manifest_process_templates_SB08_INV_001_all_steps_declare_typed_operation_contracts`
+  - `Process_template_vocabulary_SB01_INV_001_maps_to_supported_ui_and_domain_options`
+  - `Project_structure_templates_SB07_INV_001_require_execute_external_action_for_project_structure_writeback`
+  - `Blazor_process_templates_SB04_INV_001_constrain_product_mutation_to_implementation_and_repair_steps`
+  - `Blazor_wasm_pwa_baseline_SB05_INV_001_keeps_app_topic_generic_in_scenario_data`
+  - `Blazor_wasm_pwa_live_run_profile_SB02_INV_001_starts_fresh_and_takes_topic_from_run_request`
+  - `Default_process_warmup_includes_blazor_process_templates`
+  - `Dotnet_feature_template_SB01_INV_002_preserves_accountable_decision_record_and_approval_required`
+  - `Process_template_artifact_projection_SB09_INV_001_preserves_explicit_output_mappings`
+
+JSON parse smoke:
+
+Command:
+`$scenario = (Get-Content -Raw -Path Templates\Processes\seed-catalog\baseline-scenarios.json | ConvertFrom-Json) | Where-Object { $_.Key -eq 'baseline-agent-training-and-improvement' }; if ($null -eq $scenario) { throw 'Scenario missing.' }; $scenario | Select-Object Key,ProcessTemplateKey,RunName,@{Name='Transitions';Expression={$_.Transitions.Count}},@{Name='Artifacts';Expression={$_.Artifacts.Count}},@{Name='Contracts';Expression={$_.ContractExercises.Count}},@{Name='Recovery';Expression={$_.RecoveryExercises.Count}} | Format-List`
+
+ExitCode: 0
+
+Output:
+`Key                : baseline-agent-training-and-improvement`
+`ProcessTemplateKey : ai-assisted-change-delivery`
+`RunName            : Agent training and improvement / delegation policy refinement`
+`Transitions        : 6`
+`Artifacts          : 11`
+`Contracts          : 4`
+`Recovery           : 2`
+
+Diff hygiene:
+
+Command:
+`git diff --check -- Templates\Processes\seed-catalog\baseline-scenarios.json tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs`
+
+ExitCode: 0
+
+Output:
+Only LF-to-CRLF working-copy warnings were emitted.

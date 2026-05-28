@@ -95,7 +95,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (RequiresConcreteBrowserProof(candidate, additionalGroundingText))
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
-            if (ImplementationContractMentionsJavaScript(candidate, additionalGroundingText))
+            if (!ImplementationContractMentionsDotNet(candidate, additionalGroundingText) &&
+                ImplementationContractMentionsJavaScript(candidate, additionalGroundingText))
             {
                 requiredToolNames.Add("workspace_pwsh_run_script");
             }
@@ -109,6 +110,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (RequiresProjectStructureWriteback(candidate))
         {
             requiredToolNames.Add("project_structure_node_create");
+            if (RequiresProjectStructureAssetWriteback(candidate))
+            {
+                requiredToolNames.Add("project_structure_asset_create");
+            }
         }
 
         if (RequiresRuntimeCleanupCommand(candidate))
@@ -289,6 +294,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool RequiresProjectStructureWriteback(DispatchCandidate candidate)
     {
+        if (!AllowsProjectStructureWriteback(candidate.StepDefinition))
+        {
+            return false;
+        }
+
         var contractText = CollapsePromptWhitespace(string.Join(
             ' ',
             candidate.StepRun.Title,
@@ -326,6 +336,39 @@ internal sealed partial class ProcessRunAutomationDispatchService
                normalized.Contains("project-structure", StringComparison.Ordinal) &&
                (normalized.Contains("writeback", StringComparison.Ordinal) ||
                 normalized.Contains("write back", StringComparison.Ordinal));
+    }
+
+    private static bool AllowsProjectStructureWriteback(ProcessStepDefinition stepDefinition)
+    {
+        var allowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            stepDefinition.StepKind,
+            stepDefinition.AllowedOperations,
+            stepDefinition.OperationTargetScope);
+
+        return allowedOperations.Contains(ProcessStepOperation.ExecuteExternalAction) ||
+               stepDefinition.OperationTargetScope == ProcessStepTargetScope.ExternalActionControlled;
+    }
+
+    private static bool RequiresProjectStructureAssetWriteback(DispatchCandidate candidate)
+    {
+        var normalized = CollapsePromptWhitespace(string.Join(
+                ' ',
+                candidate.StepRun.Title,
+                candidate.StepDefinition.Title,
+                candidate.StepDefinition.Notes,
+                candidate.StepDefinition.EvidenceContractSummary,
+                candidate.WorkBrief?.Title,
+                candidate.WorkBrief?.WorkBriefText,
+                candidate.WorkBrief?.EvidenceExpectationSummary,
+                string.Join(" ", candidate.ExpectedArtifacts.Select(item => item.Title)),
+                string.Join(" ", candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))))
+            .ToLowerInvariant();
+
+        return normalized.Contains("project_structure_asset_create", StringComparison.Ordinal) ||
+               (normalized.Contains("project-structure", StringComparison.Ordinal) &&
+                normalized.Contains("asset", StringComparison.Ordinal) &&
+                (normalized.Contains("writeback", StringComparison.Ordinal) ||
+                 normalized.Contains("write back", StringComparison.Ordinal)));
     }
 
     private static bool ContainsProjectStructureResultWritebackSignal(string? value)
@@ -475,6 +518,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             IsJavaScriptOnlyRunContext(candidate))
         {
             return false;
+        }
+
+        if (toolName is "project_structure_node_create" or "project_structure_node_update" or "project_structure_asset_create")
+        {
+            return AllowsProjectStructureWriteback(candidate.StepDefinition);
         }
 
         if (!toolName.StartsWith("browser_", StringComparison.Ordinal))

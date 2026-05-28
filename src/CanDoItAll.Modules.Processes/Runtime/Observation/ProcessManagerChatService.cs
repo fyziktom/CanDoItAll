@@ -27,7 +27,7 @@ internal sealed class ProcessManagerChatService(
         var resolution = await ResolveManagerAsync(query, cancellationToken);
         if (resolution.ErrorMessage.Length > 0 || resolution.Agent is null)
         {
-            return CreateUnavailableProjection(query, resolution.ManagerLabel, resolution.ErrorMessage);
+            return CreateUnavailableProjection(query, resolution.ManagerLabel, resolution.ErrorMessage, resolution.AgentResolution);
         }
 
         try
@@ -58,6 +58,9 @@ internal sealed class ProcessManagerChatService(
                 BuildRunLabel(query),
                 runState.Text,
                 runState.Tone,
+                resolution.AgentResolution.ReasonCode.ToString(),
+                resolution.AgentResolution.Confidence,
+                resolution.AgentResolution.Summary,
                 ErrorMessage: string.Empty);
         }
         catch (Exception exception)
@@ -67,7 +70,7 @@ internal sealed class ProcessManagerChatService(
                 "Failed to load live process manager chat. ProcessRunId={ProcessRunId} ManagerAgentId={ManagerAgentId}.",
                 query.ProcessRunId,
                 resolution.Agent.Id);
-            return CreateUnavailableProjection(query, resolution.ManagerLabel, exception.Message);
+            return CreateUnavailableProjection(query, resolution.ManagerLabel, exception.Message, resolution.AgentResolution);
         }
     }
 
@@ -80,7 +83,7 @@ internal sealed class ProcessManagerChatService(
         var resolution = await ResolveManagerAsync(query, cancellationToken);
         if (resolution.ErrorMessage.Length > 0 || resolution.Agent is null)
         {
-            return CreateUnavailableProjection(query, resolution.ManagerLabel, resolution.ErrorMessage);
+            return CreateUnavailableProjection(query, resolution.ManagerLabel, resolution.ErrorMessage, resolution.AgentResolution);
         }
 
         var session = await workspaceService.GetOrCreateChatSessionAsync(
@@ -112,7 +115,7 @@ internal sealed class ProcessManagerChatService(
         var resolution = await ResolveManagerAsync(request.Query, cancellationToken);
         if (resolution.ErrorMessage.Length > 0 || resolution.Agent is null)
         {
-            return CreateUnavailableProjection(request.Query, resolution.ManagerLabel, resolution.ErrorMessage);
+            return CreateUnavailableProjection(request.Query, resolution.ManagerLabel, resolution.ErrorMessage, resolution.AgentResolution);
         }
 
         var effectiveQuery = request.Query with
@@ -122,9 +125,9 @@ internal sealed class ProcessManagerChatService(
         var result = await workspaceService.ExecuteRunAsync(
             new ExecutionRunRequest(
                 AgentId: resolution.Agent.Id,
-                Prompt: BuildManagerChatPrompt(effectiveQuery, prompt),
+                Prompt: BuildManagerChatPrompt(effectiveQuery, prompt, resolution.AgentResolution),
                 ChatSessionId: effectiveQuery.ChatSessionId,
-                Context: BuildManagerChatInvocationContext(effectiveQuery),
+                Context: BuildManagerChatInvocationContext(effectiveQuery, resolution.AgentResolution),
                 AutoApprovePendingToolCalls: false),
             cancellationToken);
 
@@ -144,7 +147,7 @@ internal sealed class ProcessManagerChatService(
         var resolution = await ResolveManagerAsync(request.Query, cancellationToken);
         if (resolution.ErrorMessage.Length > 0 || resolution.Agent is null)
         {
-            return CreateUnavailableProjection(request.Query, resolution.ManagerLabel, resolution.ErrorMessage);
+            return CreateUnavailableProjection(request.Query, resolution.ManagerLabel, resolution.ErrorMessage, resolution.AgentResolution);
         }
 
         var session = await workspaceService.RenameChatSessionAsync(
@@ -168,7 +171,7 @@ internal sealed class ProcessManagerChatService(
         var resolution = await ResolveManagerAsync(request.Query, cancellationToken);
         if (resolution.ErrorMessage.Length > 0 || resolution.Agent is null)
         {
-            return CreateUnavailableProjection(request.Query, resolution.ManagerLabel, resolution.ErrorMessage);
+            return CreateUnavailableProjection(request.Query, resolution.ManagerLabel, resolution.ErrorMessage, resolution.AgentResolution);
         }
 
         await workspaceService.RespondToPendingApprovalsAsync(
@@ -190,213 +193,60 @@ internal sealed class ProcessManagerChatService(
         var managerLabel = ResolveManagerLabel(query);
         var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var managerOptions = await processesService.ListManagerAgentOptionsAsync(cancellationToken);
-        var technicalAgentId = ResolveConfiguredManagerTechnicalAgentId(query, managerOptions, agents)
-            ?? await ResolveAssignedManagerTechnicalAgentIdAsync(query.ProcessRunId, managerOptions, agents, cancellationToken)
-            ?? ResolveFallbackManagerTechnicalAgentId(managerOptions, agents);
-        if (!technicalAgentId.HasValue)
+
+        var agentResolution = ProcessManagerAgentResolver.ResolveConfiguredManager(
+            query.ManagerAgentId,
+            query.ManagerAgentName,
+            managerOptions,
+            agents);
+        if (!agentResolution.IsResolved && !agentResolution.IsAmbiguous)
+        {
+            var assignedResolution = await ResolveAssignedManagerResolutionAsync(
+                query.ProcessRunId,
+                managerOptions,
+                agents,
+                cancellationToken);
+            agentResolution = assignedResolution.IsResolved || assignedResolution.IsAmbiguous
+                ? assignedResolution
+                : ProcessManagerAgentResolver.ResolveFallbackManager(managerOptions, agents);
+        }
+
+        if (!agentResolution.IsResolved)
         {
             return new ManagerResolution(
                 null,
                 managerLabel,
-                "No bound technical manager agent could be resolved for this process run.");
+                BuildManagerResolutionError(agentResolution),
+                agentResolution);
         }
 
-        var agent = agents.FirstOrDefault(item => item.Id == technicalAgentId.Value);
+        var agent = agents.FirstOrDefault(item => item.Id == agentResolution.ResolvedTechnicalAgentId!.Value);
         if (agent is null)
         {
             return new ManagerResolution(
                 null,
                 managerLabel,
-                "The resolved manager AI resource is not available in the Agent Framework catalog.");
+                "The resolved manager AI resource is not available in the Agent Framework catalog.",
+                agentResolution);
         }
 
-        return new ManagerResolution(agent, agent.Name, ErrorMessage: string.Empty);
+        return new ManagerResolution(agent, agent.Name, ErrorMessage: string.Empty, agentResolution);
     }
 
-    private static Guid? ResolveConfiguredManagerTechnicalAgentId(
-        ProcessManagerChatProjectionQuery query,
-        IReadOnlyList<ProcessManagerAgentOption> managerOptions,
-        IReadOnlyList<AgentDefinition> agents)
-    {
-        var runManagerOption = ResolveManagerOptionByIdentifier(query.ManagerAgentId, managerOptions);
-        if (runManagerOption?.TechnicalAgentId is Guid runManagerTechnicalAgentId)
-        {
-            return runManagerTechnicalAgentId;
-        }
-
-        if (query.ManagerAgentId.HasValue && agents.Any(item => item.Id == query.ManagerAgentId.Value))
-        {
-            return query.ManagerAgentId.Value;
-        }
-
-        var namedRunManagerOption = ResolveManagerOptionByName(query.ManagerAgentName, managerOptions);
-        if (namedRunManagerOption?.TechnicalAgentId is Guid namedRunManagerTechnicalAgentId)
-        {
-            return namedRunManagerTechnicalAgentId;
-        }
-
-        return null;
-    }
-
-    private async Task<Guid?> ResolveAssignedManagerTechnicalAgentIdAsync(
+    private async Task<ProcessManagerAgentResolution> ResolveAssignedManagerResolutionAsync(
         Guid processRunId,
         IReadOnlyList<ProcessManagerAgentOption> managerOptions,
         IReadOnlyList<AgentDefinition> agents,
         CancellationToken cancellationToken)
     {
         var details = await processesService.GetRunDetailsAsync(processRunId, cancellationToken);
-        return details.Assignments
-            .Where(item => !item.IsCapabilityGap)
-            .Select(item => new
-            {
-                Assignment = item,
-                Option = ResolveManagerOptionByIdentifier(item.PartyId, managerOptions),
-                Agent = item.PartyId.HasValue
-                    ? agents.FirstOrDefault(agent => agent.Id == item.PartyId.Value)
-                    : null,
-                Score = ResolveManagerAssignmentScore(item)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .Select(item => item.Option?.TechnicalAgentId ?? item.Agent?.Id)
-            .FirstOrDefault(item => item.HasValue);
+        return ProcessManagerAgentResolver.ResolveAssignedManager(details.Assignments, managerOptions, agents);
     }
 
-    private static Guid? ResolveFallbackManagerTechnicalAgentId(
-        IReadOnlyList<ProcessManagerAgentOption> managerOptions,
-        IReadOnlyList<AgentDefinition> agents)
-    {
-        var fallbackManagerOptions = managerOptions
-            .Where(option => option.TechnicalAgentId.HasValue)
-            .Where(IsManagerLikeOption)
-            .ToList();
-        if (fallbackManagerOptions.Count == 1)
-        {
-            return fallbackManagerOptions[0].TechnicalAgentId;
-        }
-
-        var fallbackAgents = agents
-            .Select(agent => new
-            {
-                Agent = agent,
-                Score = ResolveAgentManagerScore(agent)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .ThenByDescending(item => item.Agent.UpdatedAtUtc)
-            .ToList();
-        if (fallbackAgents.Count == 0)
-        {
-            return null;
-        }
-
-        var topScore = fallbackAgents[0].Score;
-        return fallbackAgents.Count(item => item.Score == topScore) == 1
-            ? fallbackAgents[0].Agent.Id
-            : null;
-    }
-
-    private static ProcessManagerAgentOption? ResolveManagerOptionByIdentifier(
-        Guid? managerId,
-        IReadOnlyList<ProcessManagerAgentOption> managerOptions)
-    {
-        if (!managerId.HasValue)
-        {
-            return null;
-        }
-
-        return managerOptions.FirstOrDefault(option =>
-            option.PartyId == managerId.Value ||
-            option.TechnicalAgentId == managerId.Value);
-    }
-
-    private static ProcessManagerAgentOption? ResolveManagerOptionByName(
-        string managerName,
-        IReadOnlyList<ProcessManagerAgentOption> managerOptions)
-    {
-        if (string.IsNullOrWhiteSpace(managerName))
-        {
-            return null;
-        }
-
-        var normalizedName = managerName.Trim();
-        return managerOptions.FirstOrDefault(option =>
-            string.Equals(option.DisplayName, normalizedName, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static bool IsManagerLikeOption(ProcessManagerAgentOption option)
-    {
-        return ContainsManagerToken(option.DisplayName) ||
-               ContainsManagerToken(option.BindingSummary);
-    }
-
-    private static int ResolveManagerAssignmentScore(ProcessRunAssignmentViewModel assignment)
-    {
-        var score = 0;
-        score = Math.Max(score, ResolveManagerTextScore(assignment.RoleDisplayName));
-        score = Math.Max(score, ResolveManagerTextScore(assignment.DisplayName));
-        score = Math.Max(score, ResolveManagerTextScore(assignment.BindingReason));
-        return assignment.AllowsDirectMessaging
-            ? score + 5
-            : score;
-    }
-
-    private static int ResolveAgentManagerScore(AgentDefinition agent)
-    {
-        var score = 0;
-        score = Math.Max(score, ResolveManagerTextScore(agent.Name));
-        score = Math.Max(score, ResolveManagerTextScore(agent.RoleTitle));
-        score = Math.Max(score, agent.Tags.Any(tag => ContainsManagerToken(tag)) ? 20 : 0);
-        return score;
-    }
-
-    private static int ResolveManagerTextScore(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return 0;
-        }
-
-        if (value.Contains("process manager", StringComparison.OrdinalIgnoreCase))
-        {
-            return 100;
-        }
-
-        if (value.Contains("delivery manager", StringComparison.OrdinalIgnoreCase))
-        {
-            return 90;
-        }
-
-        if (value.Contains("manager", StringComparison.OrdinalIgnoreCase))
-        {
-            return 70;
-        }
-
-        if (value.Contains("orchestrator", StringComparison.OrdinalIgnoreCase))
-        {
-            return 60;
-        }
-
-        return value.Contains("lead", StringComparison.OrdinalIgnoreCase)
-            ? 50
-            : 0;
-    }
-
-    private static bool ContainsManagerToken(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        var tokens = value.Split(
-            [' ', '-', '_', '/', '\\', '.', ':', ';', ',', '(', ')', '[', ']'],
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return tokens.Any(token =>
-            string.Equals(token, "manager", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "lead", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "orchestrator", StringComparison.OrdinalIgnoreCase));
-    }
+    private static string BuildManagerResolutionError(ProcessManagerAgentResolution resolution)
+        => resolution.IsAmbiguous
+            ? resolution.Summary
+            : $"No bound technical manager agent could be resolved for this process run. {resolution.Summary}";
 
     private static string ResolveManagerLabel(ProcessManagerChatProjectionQuery query)
     {
@@ -412,7 +262,8 @@ internal sealed class ProcessManagerChatService(
 
     private static string BuildManagerChatPrompt(
         ProcessManagerChatProjectionQuery query,
-        string prompt)
+        string prompt,
+        ProcessManagerAgentResolution resolution)
     {
         return $"""
 Context:
@@ -429,6 +280,7 @@ Context:
 - Actual cost: {query.ActualCost}.
 - Last run activity UTC: {query.UpdatedAtUtc:O}.
 - Selected process run manager: {ResolveManagerLabel(query)}.
+- Manager resolution: {resolution.Summary} Reason={resolution.ReasonCode}; confidence={resolution.Confidence}.
 - Treat "this process" as the process definition above.
 - Treat "this run" as the selected process run above.
 - Report like a human delivery manager: current status, main blockers, concrete unblock actions, and whether action is needed from user or agents.
@@ -440,7 +292,8 @@ User request:
     }
 
     private static ExecutionInvocationContext BuildManagerChatInvocationContext(
-        ProcessManagerChatProjectionQuery query)
+        ProcessManagerChatProjectionQuery query,
+        ProcessManagerAgentResolution resolution)
     {
         var metadata = new Dictionary<string, string>
         {
@@ -448,7 +301,10 @@ User request:
             ["processDefinitionName"] = query.ProcessDefinitionName,
             ["selectedProcessRunId"] = query.ProcessRunId.ToString("D"),
             ["selectedProcessRunName"] = query.ProcessRunName,
-            ["managerDisplayName"] = ResolveManagerLabel(query)
+            ["managerDisplayName"] = ResolveManagerLabel(query),
+            ["managerResolutionReasonCode"] = resolution.ReasonCode.ToString(),
+            ["managerResolutionConfidence"] = resolution.Confidence.ToString(),
+            ["managerResolutionSummary"] = resolution.Summary
         };
 
         if (query.ProjectId.HasValue)
@@ -489,8 +345,11 @@ User request:
     private static ProcessManagerChatProjection CreateUnavailableProjection(
         ProcessManagerChatProjectionQuery query,
         string managerLabel,
-        string errorMessage)
+        string errorMessage,
+        ProcessManagerAgentResolution? resolution = null)
     {
+        var effectiveResolution = resolution ??
+                                  ProcessManagerAgentResolution.NotEvaluated("Manager resolution was not evaluated for this projection.");
         return new ProcessManagerChatProjection(
             query,
             ManagerAgent: null,
@@ -502,6 +361,9 @@ User request:
             BuildRunLabel(query),
             RunStateText: string.Empty,
             RunStateTone: DefaultRunStateTone,
+            effectiveResolution.ReasonCode.ToString(),
+            effectiveResolution.Confidence,
+            effectiveResolution.Summary,
             errorMessage);
     }
 
@@ -521,5 +383,6 @@ User request:
     private sealed record ManagerResolution(
         AgentDefinition? Agent,
         string ManagerLabel,
-        string ErrorMessage);
+        string ErrorMessage,
+        ProcessManagerAgentResolution AgentResolution);
 }

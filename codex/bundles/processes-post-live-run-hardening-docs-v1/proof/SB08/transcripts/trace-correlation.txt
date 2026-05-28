@@ -1,0 +1,64 @@
+Invariant: SB08-INV-001
+Slice: trace-correlation.txt
+Trace correlation proof: tool/finalizer traces, workflow audit scope, and OpenTelemetry package presence.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~MafAgentRuntimeTests.TryBuildRequiredFinalizerRuntimeResponse_returns_authoritative_finalizer_json" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 70 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+Command: rg -n "AgentToolInvocationTrace|FinalizerInvocations|ToolInvocationTraces|WorkflowExecutorExecutionAuditScope.CurrentRunId|OpenTelemetry.Api" src\CanDoItAll.AgentFramework.Maf tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:24:    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:259:                    new AgentToolInvocationTrace(
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:277:        Assert.Single(response.FinalizerInvocations);
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:278:        Assert.Single(response.ToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:24:    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+src\CanDoItAll.AgentFramework.Maf\README.md:45:- `OpenTelemetry.Api (1.15.3)`
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:245:                snapshotFinalizerInvocations: () => participantBuilds
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:246:                    .SelectMany(item => item.SnapshotFinalizerInvocations())
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:249:                snapshotToolInvocationTraces: () => participantBuilds
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:250:                    .SelectMany(item => item.SnapshotToolInvocationTraces())
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1570:        Func<IReadOnlyList<AgentFinalizerInvocation>>? snapshotFinalizerInvocations = null,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1571:        Func<IReadOnlyList<AgentToolInvocationTrace>>? snapshotToolInvocationTraces = null,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1584:        public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1585:            => snapshotFinalizerInvocations?.Invoke() ?? finalizerCapture?.Snapshot() ?? [];
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1587:        public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1588:            => snapshotToolInvocationTraces?.Invoke() ?? toolInvocationTraceRecorder?.Snapshot() ?? [];
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1654:        private readonly List<AgentToolInvocationTrace> traces = [];
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1664:                traces.Add(new AgentToolInvocationTrace(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.AgentFactory.cs:1698:        public IReadOnlyList<AgentToolInvocationTrace> Snapshot()
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:158:            runtimeBuild.SnapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:159:            runtimeBuild.SnapshotToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:286:            runtimeBuild.SnapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:287:            runtimeBuild.SnapshotToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:306:        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:307:        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:372:                            snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:373:                            snapshotToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:388:                        snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:389:                        snapshotToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:406:                        snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:407:                        snapshotToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:428:                        snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:429:                        snapshotToolInvocationTraces);
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:475:                    FinalizerInvocations = snapshotFinalizerInvocations(),
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:476:                    ToolInvocationTraces = snapshotToolInvocationTraces()
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:502:        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:503:        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:505:        var finalizerInvocations = snapshotFinalizerInvocations();
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:506:        var toolInvocationTraces = snapshotToolInvocationTraces();
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:543:        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:544:        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:552:        var finalizerInvocations = snapshotFinalizerInvocations();
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:559:        var toolInvocationTraces = snapshotToolInvocationTraces();
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:588:            FinalizerInvocations = finalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:589:            ToolInvocationTraces = toolInvocationTraces
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:601:        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:602:        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotToolInvocationTraces)
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:604:        var finalizerInvocations = snapshotFinalizerInvocations();
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:605:        var toolInvocationTraces = snapshotToolInvocationTraces();
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:639:        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces)
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:672:            FinalizerInvocations = finalizerInvocations,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:673:            ToolInvocationTraces = toolInvocationTraces
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:310:                    WorkflowExecutorExecutionAuditScope.CurrentRunId,
+ExitCode: 0

@@ -1,8 +1,11 @@
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -235,19 +238,24 @@ public sealed partial class ProcessesService
         var externalReferenceKey = BoundProcessArtifactText(
             request.ExternalReferenceKey.Trim(),
             MaxProcessArtifactExternalReferenceKeyLength);
-        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        var managedStoragePath = request.ManagedStoragePath.Trim();
+        var projectionLineage = CloneProjectionLineage(request.ProjectionLineage);
+        if (ShouldComputeManagedArtifactContentHash(projectionLineage) &&
+            !string.IsNullOrWhiteSpace(managedStoragePath))
         {
-            var existingArtifactId = await dbContext.Set<ProcessArtifactRecord>()
-                .Where(item =>
-                    item.ProcessRunId == request.ProcessRunId &&
-                    item.ExternalReferenceKey == externalReferenceKey)
-                .Select(item => (Guid?)item.Id)
-                .FirstOrDefaultAsync(cancellationToken);
-            if (existingArtifactId.HasValue)
-            {
-                return Result<Guid>.Success(existingArtifactId.Value);
-            }
+            projectionLineage!.ContentHash = await TryComputeManagedArtifactContentHashAsync(
+                managedStoragePath,
+                cancellationToken);
         }
+
+        projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(projectionLineage);
+        var projectionIdentityHash = projectionLineage?.ProjectionIdentityHash ?? string.Empty;
+        await using var transaction = await BeginArtifactRecordTransactionAsync(
+            dbContext,
+            request.ProcessRunId,
+            projectionIdentityHash,
+            externalReferenceKey,
+            cancellationToken);
 
         ProcessStepRun? stepRun = null;
         if (request.StepRunId.HasValue)
@@ -297,11 +305,50 @@ public sealed partial class ProcessesService
             artifactExpectation = ResolveArtifactExpectation(stepArtifactExpectations, request.ArtifactKind, request.Title);
         }
 
+        var scopedArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId;
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == request.ProcessRunId &&
+                    item.ProjectionIdentityHash == projectionIdentityHash)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    request.StepRunId,
+                    scopedArtifactExpectationId,
+                    "Artifact projection identity is already bound to another step or expectation in this process run.",
+                    "processes.artifact.projection-scope-conflict");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == request.ProcessRunId &&
+                    item.ExternalReferenceKey == externalReferenceKey)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    request.StepRunId,
+                    scopedArtifactExpectationId,
+                    "Artifact external reference is already bound to another step or expectation in this process run.",
+                    "processes.artifact.external-reference-scope-conflict");
+            }
+        }
+
         var artifact = new ProcessArtifactRecord
         {
             ProcessRunId = request.ProcessRunId,
             StepRunId = request.StepRunId,
-            ArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId,
+            ArtifactExpectationId = scopedArtifactExpectationId,
             ArtifactKind = request.ArtifactKind,
             Title = BoundProcessArtifactText(request.Title.Trim(), MaxProcessArtifactTitleLength),
             TrustStatus = request.TrustStatus,
@@ -309,8 +356,10 @@ public sealed partial class ProcessesService
             ProvenanceSummary = request.ProvenanceSummary.Trim(),
             AllowedFutureUsageSummary = request.AllowedFutureUsageSummary.Trim(),
             ReviewSummary = request.ReviewSummary.Trim(),
-            ManagedStoragePath = request.ManagedStoragePath.Trim(),
+            ManagedStoragePath = managedStoragePath,
             ExternalReferenceKey = externalReferenceKey,
+            ProjectionLineageJson = ProcessArtifactIdentityService.SerializeNormalizedProjectionLineage(projectionLineage),
+            ProjectionIdentityHash = projectionIdentityHash,
             CreatedAtUtc = clock.GetUtcNow()
         };
         await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
@@ -325,9 +374,323 @@ public sealed partial class ProcessesService
                 $"definition-version:{run.ProcessDefinitionVersionId:D}",
                 artifact.ManagedStoragePath),
             cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        if (artifactExpectation is not null)
+        {
+            await ReactivateBlockedDownstreamStepsAfterArtifactMaterializationAsync(
+                dbContext,
+                run,
+                artifactExpectation,
+                artifact,
+                cancellationToken);
+        }
+
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            if (transaction is not null)
+            {
+                await transaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch (DbUpdateException exception) when (DbUpdateExceptionClassifier.IsUniqueConstraintViolation(exception))
+        {
+            if (transaction is not null)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+            }
+
+            dbContext.ChangeTracker.Clear();
+            var resolvedConflict = await ResolveArtifactRecordUniqueConflictAsync(
+                dbContext,
+                request.ProcessRunId,
+                request.StepRunId,
+                scopedArtifactExpectationId,
+                projectionIdentityHash,
+                externalReferenceKey,
+                cancellationToken);
+            if (resolvedConflict is not null)
+            {
+                return resolvedConflict;
+            }
+
+            logger.LogWarning(
+                exception,
+                "Process artifact uniqueness conflict could not be resolved for run {RunId}, step {StepRunId}, has projection identity {HasProjectionIdentity}, has external reference {HasExternalReference}.",
+                request.ProcessRunId,
+                request.StepRunId,
+                !string.IsNullOrWhiteSpace(projectionIdentityHash),
+                !string.IsNullOrWhiteSpace(externalReferenceKey));
+            return Result<Guid>.Failure(Error.Validation(
+                "Artifact projection conflicted with a concurrently recorded artifact.",
+                "processes.artifact.unique-conflict"));
+        }
+
         NotifyRunObservationChanged(run.ProjectId, run.ProcessDefinitionId, run.Id);
         return Result<Guid>.Success(artifact.Id);
+    }
+
+    private static async Task<IDbContextTransaction?> BeginArtifactRecordTransactionAsync(
+        AppDbContext dbContext,
+        Guid processRunId,
+        string projectionIdentityHash,
+        string externalReferenceKey,
+        CancellationToken cancellationToken)
+    {
+        if (!string.Equals(dbContext.Database.ProviderName, NpgsqlProviderName, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var lockKey = ResolveArtifactRecordLockKey(processRunId, projectionIdentityHash, externalReferenceKey);
+        if (string.IsNullOrWhiteSpace(lockKey))
+        {
+            return null;
+        }
+
+        var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+        await dbContext.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))",
+            cancellationToken);
+        return transaction;
+    }
+
+    private static string ResolveArtifactRecordLockKey(
+        Guid processRunId,
+        string projectionIdentityHash,
+        string externalReferenceKey)
+    {
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            return $"{processRunId:D}:projection:{projectionIdentityHash.Trim()}";
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            return $"{processRunId:D}:external:{externalReferenceKey.Trim()}";
+        }
+
+        return string.Empty;
+    }
+
+    private static async Task<Result<Guid>?> ResolveArtifactRecordUniqueConflictAsync(
+        AppDbContext dbContext,
+        Guid processRunId,
+        Guid? stepRunId,
+        Guid? artifactExpectationId,
+        string projectionIdentityHash,
+        string externalReferenceKey,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(projectionIdentityHash))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == processRunId &&
+                    item.ProjectionIdentityHash == projectionIdentityHash)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    stepRunId,
+                    artifactExpectationId,
+                    "Artifact projection identity is already bound to another step or expectation in this process run.",
+                    "processes.artifact.projection-scope-conflict");
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(externalReferenceKey))
+        {
+            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+                .AsNoTracking()
+                .Where(item =>
+                    item.ProcessRunId == processRunId &&
+                    item.ExternalReferenceKey == externalReferenceKey)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (existingArtifact is not null)
+            {
+                return ResolveExistingArtifactRecordConflict(
+                    existingArtifact,
+                    stepRunId,
+                    artifactExpectationId,
+                    "Artifact external reference is already bound to another step or expectation in this process run.",
+                    "processes.artifact.external-reference-scope-conflict");
+            }
+        }
+
+        return null;
+    }
+
+    private static Result<Guid> ResolveExistingArtifactRecordConflict(
+        ProcessArtifactRecord existingArtifact,
+        Guid? stepRunId,
+        Guid? artifactExpectationId,
+        string scopeConflictMessage,
+        string scopeConflictCode)
+    {
+        return existingArtifact.StepRunId == stepRunId &&
+            existingArtifact.ArtifactExpectationId == artifactExpectationId
+                ? Result<Guid>.Success(existingArtifact.Id)
+                : Result<Guid>.Failure(Error.Validation(scopeConflictMessage, scopeConflictCode));
+    }
+
+    private async Task ReactivateBlockedDownstreamStepsAfterArtifactMaterializationAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        ProcessArtifactExpectation artifactExpectation,
+        ProcessArtifactRecord materializedArtifact,
+        CancellationToken cancellationToken)
+    {
+        var consumingInputs = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(input => input.ArtifactExpectationId == artifactExpectation.Id)
+            .ToListAsync(cancellationToken);
+        if (consumingInputs.Count == 0)
+        {
+            return;
+        }
+
+        var consumingStepDefinitionIds = consumingInputs
+            .Select(input => input.StepDefinitionId)
+            .Distinct()
+            .ToList();
+        var blockedStepRuns = await dbContext.Set<ProcessStepRun>()
+            .Where(stepRun =>
+                stepRun.ProcessRunId == run.Id &&
+                consumingStepDefinitionIds.Contains(stepRun.StepDefinitionId) &&
+                stepRun.Status == ProcessStepRunStatus.Blocked)
+            .ToListAsync(cancellationToken);
+        blockedStepRuns = blockedStepRuns
+            .Where(ProcessStepRunBlockState.IsMissingUpstreamArtifactBlock)
+            .ToList();
+        if (blockedStepRuns.Count == 0)
+        {
+            return;
+        }
+
+        var stepDefinitionIds = await dbContext.Set<ProcessStepDefinition>()
+            .Where(step => step.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
+            .Select(step => step.Id)
+            .ToListAsync(cancellationToken);
+        var stepDefinitionsById = await dbContext.Set<ProcessStepDefinition>()
+            .Where(step => step.ProcessDefinitionVersionId == run.ProcessDefinitionVersionId)
+            .ToDictionaryAsync(step => step.Id, cancellationToken);
+        var stepRunsByDefinitionId = await dbContext.Set<ProcessStepRun>()
+            .Where(stepRun => stepRun.ProcessRunId == run.Id)
+            .ToDictionaryAsync(stepRun => stepRun.StepDefinitionId, cancellationToken);
+        var dependencies = await dbContext.Set<ProcessStepDependencyDefinition>()
+            .Where(dependency => stepDefinitionIds.Contains(dependency.StepDefinitionId))
+            .OrderBy(dependency => dependency.DisplayOrder)
+            .ToListAsync(cancellationToken);
+        var dependenciesByStepId = dependencies
+            .GroupBy(dependency => dependency.StepDefinitionId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var artifactInputsByStepId = await dbContext.Set<ProcessStepArtifactInputDefinition>()
+            .Where(input => consumingStepDefinitionIds.Contains(input.StepDefinitionId))
+            .ToListAsync(cancellationToken);
+        var artifactExpectationIds = artifactInputsByStepId
+            .Select(input => input.ArtifactExpectationId)
+            .Distinct()
+            .ToList();
+        var sourceExpectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .Where(expectation => artifactExpectationIds.Contains(expectation.Id))
+            .ToDictionaryAsync(expectation => expectation.Id, cancellationToken);
+        var artifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .Where(artifact => artifact.ProcessRunId == run.Id && artifact.ArtifactExpectationId.HasValue)
+            .ToListAsync(cancellationToken);
+        if (materializedArtifact.ProcessRunId == run.Id &&
+            materializedArtifact.ArtifactExpectationId.HasValue &&
+            artifacts.All(artifact => artifact.Id != materializedArtifact.Id))
+        {
+            artifacts.Add(materializedArtifact);
+        }
+
+        var now = clock.GetUtcNow();
+
+        foreach (var blockedStepRun in blockedStepRuns)
+        {
+            if (!stepDefinitionsById.TryGetValue(blockedStepRun.StepDefinitionId, out var stepDefinition) ||
+                !AreDependenciesSatisfiedForMaterializationResume(stepDefinition, stepRunsByDefinitionId, dependenciesByStepId) ||
+                !AreArtifactInputsSatisfiedForMaterializationResume(
+                    blockedStepRun.StepDefinitionId,
+                    artifactInputsByStepId,
+                    sourceExpectations,
+                    stepRunsByDefinitionId,
+                    artifacts))
+            {
+                continue;
+            }
+
+            ProcessRuntimeProgressionPlanner.ReactivateBlockedStepRunAfterUpstreamArtifactMaterialization(
+                blockedStepRun,
+                stepDefinition,
+                now);
+            await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                new ProcessJournalEntry
+                {
+                    ProcessRunId = run.Id,
+                    StepRunId = blockedStepRun.Id,
+                    EventType = ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationResolved,
+                    Title = "Missing upstream artifact materialization resolved",
+                    Description = $"Required upstream artifact '{artifactExpectation.Title}' is now recorded; step '{blockedStepRun.Title}' was reopened for dispatch.",
+                    CorrelationId = $"{artifactExpectation.Id:D}:{blockedStepRun.Id:D}",
+                    OperatingMode = run.OperatingMode,
+                    PolicyVersion = $"definition-version:{run.ProcessDefinitionVersionId:D}",
+                    EnvironmentMode = run.OperatingMode.ToString(),
+                    ReplayContextJson = "{}",
+                    OccurredAtUtc = now
+                },
+                cancellationToken);
+        }
+    }
+
+    private static bool AreDependenciesSatisfiedForMaterializationResume(
+        ProcessStepDefinition stepDefinition,
+        IReadOnlyDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyDictionary<Guid, List<ProcessStepDependencyDefinition>> stepDependenciesByStepId)
+    {
+        foreach (var dependency in ProcessStepDependencyCollection.GetPersistedDependencies(stepDefinition.Id, stepDependenciesByStepId))
+        {
+            if (!stepRunsByDefinitionId.TryGetValue(dependency.DependsOnStepId, out var sourceStepRun) ||
+                sourceStepRun.Status != ProcessStepRunStatus.Completed)
+            {
+                return false;
+            }
+
+            if (dependency.DependsOnBranchOutcomeId.HasValue &&
+                sourceStepRun.SelectedBranchOutcomeId != dependency.DependsOnBranchOutcomeId)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreArtifactInputsSatisfiedForMaterializationResume(
+        Guid stepDefinitionId,
+        IReadOnlyList<ProcessStepArtifactInputDefinition> artifactInputs,
+        IReadOnlyDictionary<Guid, ProcessArtifactExpectation> sourceExpectations,
+        IReadOnlyDictionary<Guid, ProcessStepRun> stepRunsByDefinitionId,
+        IReadOnlyList<ProcessArtifactRecord> artifacts)
+    {
+        foreach (var input in artifactInputs.Where(input => input.StepDefinitionId == stepDefinitionId))
+        {
+            if (!sourceExpectations.TryGetValue(input.ArtifactExpectationId, out var sourceExpectation) ||
+                !stepRunsByDefinitionId.TryGetValue(sourceExpectation.StepDefinitionId, out var sourceStepRun))
+            {
+                return false;
+            }
+
+            if (!artifacts.Any(artifact =>
+                    artifact.StepRunId == sourceStepRun.Id &&
+                    artifact.ArtifactExpectationId == input.ArtifactExpectationId))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static string BoundProcessArtifactText(string value, int maxLength)
@@ -341,6 +704,137 @@ public sealed partial class ProcessesService
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized)).AsSpan(0, 12)).ToLowerInvariant();
         var prefixLength = Math.Max(0, maxLength - hash.Length - 1);
         return $"{normalized[..prefixLength]}#{hash}";
+    }
+
+    private static ProcessArtifactProjectionLineage? CloneProjectionLineage(ProcessArtifactProjectionLineage? lineage)
+    {
+        return lineage is null
+            ? null
+            : new ProcessArtifactProjectionLineage
+            {
+                SourceKind = lineage.SourceKind,
+                SourceExecutionRunId = lineage.SourceExecutionRunId,
+                RecoveryExecutionRunId = lineage.RecoveryExecutionRunId,
+                RecoveredForExecutionRunId = lineage.RecoveredForExecutionRunId,
+                ProjectedExecutionRunId = lineage.ProjectedExecutionRunId,
+                WorkflowRunId = lineage.WorkflowRunId,
+                WorkflowArtifactId = lineage.WorkflowArtifactId,
+                SubprocessRunId = lineage.SubprocessRunId,
+                SourceArtifactId = lineage.SourceArtifactId,
+                ReworkPacketId = lineage.ReworkPacketId,
+                SourceExternalReferenceKey = lineage.SourceExternalReferenceKey,
+                ContentHash = lineage.ContentHash,
+                ProjectionIdentityHash = lineage.ProjectionIdentityHash
+            };
+    }
+
+    private static bool ShouldComputeManagedArtifactContentHash(ProcessArtifactProjectionLineage? lineage)
+    {
+        return lineage is not null &&
+               string.IsNullOrWhiteSpace(lineage.ContentHash) &&
+               lineage.SourceKind is
+                   ProcessArtifactProjectionSourceKind.AgentExecutionArtifact or
+                   ProcessArtifactProjectionSourceKind.WorkspaceWrite or
+                   ProcessArtifactProjectionSourceKind.ExistingManagedFile or
+                   ProcessArtifactProjectionSourceKind.ProviderNativeBrowser;
+    }
+
+    private async Task<string> TryComputeManagedArtifactContentHashAsync(
+        string managedStoragePath,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (StorageJson.TryParseReference(managedStoragePath, out var reference) && reference is not null)
+            {
+                await using var storageStream = await TryOpenManagedStorageReadStreamAsync(reference, cancellationToken);
+                return storageStream is null
+                    ? string.Empty
+                    : await ComputeStreamContentHashAsync(storageStream, cancellationToken);
+            }
+
+            if (!TryResolveWorkspaceManagedArtifactPath(managedStoragePath, out var fullPath) ||
+                !File.Exists(fullPath))
+            {
+                return string.Empty;
+            }
+
+            await using var fileStream = File.OpenRead(fullPath);
+            return await ComputeStreamContentHashAsync(fileStream, cancellationToken);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            logger.LogWarning(
+                exception,
+                "Could not compute process artifact content hash for managed path {ManagedStoragePath}. Validation will report content availability separately if this artifact is required.",
+                BoundProcessArtifactText(managedStoragePath, 160));
+            return string.Empty;
+        }
+    }
+
+    private async Task<Stream?> TryOpenManagedStorageReadStreamAsync(
+        StorageObjectReference reference,
+        CancellationToken cancellationToken)
+    {
+        if (!reference.StorageId.HasValue)
+        {
+            if (!TryResolveWorkspaceManagedArtifactPath(reference.Locator, out var fullPath) ||
+                !File.Exists(fullPath))
+            {
+                return null;
+            }
+
+            return File.OpenRead(fullPath);
+        }
+
+        var storage = await storageCatalogService.GetAsync(reference.StorageId.Value, cancellationToken);
+        if (storage is null)
+        {
+            return null;
+        }
+
+        var driver = storageDriverRegistry.Resolve(storage.ProviderKind);
+        return await driver.OpenReadAsync(storage, reference, cancellationToken);
+    }
+
+    private bool TryResolveWorkspaceManagedArtifactPath(string managedStoragePath, out string fullPath)
+    {
+        fullPath = string.Empty;
+        if (string.IsNullOrWhiteSpace(managedStoragePath))
+        {
+            return false;
+        }
+
+        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        var candidateFullPath = Path.IsPathRooted(managedStoragePath)
+            ? Path.GetFullPath(managedStoragePath)
+            : Path.GetFullPath(Path.Combine(
+                workspaceRoot,
+                WorkspaceScopeDescriptor.NormalizeRelativePath(managedStoragePath).Replace('/', Path.DirectorySeparatorChar)));
+        if (!IsWithinRoot(workspaceRoot, candidateFullPath))
+        {
+            return false;
+        }
+
+        fullPath = candidateFullPath;
+        return true;
+    }
+
+    private static async Task<string> ComputeStreamContentHashAsync(
+        Stream stream,
+        CancellationToken cancellationToken)
+    {
+        using var memory = new MemoryStream();
+        await stream.CopyToAsync(memory, cancellationToken);
+        return ProcessArtifactIdentityService.ComputeContentHash(memory.ToArray());
+    }
+
+    private static bool IsWithinRoot(string root, string fullPath)
+    {
+        var normalizedRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        var normalizedPath = Path.GetFullPath(fullPath);
+        return normalizedPath.StartsWith(normalizedRoot, StringComparison.OrdinalIgnoreCase);
     }
 
     private static ProcessArtifactExpectation? ResolveArtifactExpectation(

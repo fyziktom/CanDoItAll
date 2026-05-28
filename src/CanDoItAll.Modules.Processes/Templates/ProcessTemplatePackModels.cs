@@ -21,6 +21,8 @@ public sealed class ProcessTemplatePack
 
     public IReadOnlyList<ProcessTemplateBaselineScenario> BaselineScenarios { get; init; } = [];
 
+    public IReadOnlyList<ProcessTemplateLiveRunProfile> LiveRunProfiles { get; init; } = [];
+
     public IReadOnlyDictionary<string, ProcessTemplateRoleResource> SharedRoles { get; init; } =
         new ReadOnlyDictionary<string, ProcessTemplateRoleResource>(new Dictionary<string, ProcessTemplateRoleResource>(StringComparer.OrdinalIgnoreCase));
 
@@ -77,6 +79,8 @@ public sealed class ProcessTemplateToolboxManifest
 public sealed class ProcessTemplateSeedCatalogManifest
 {
     public string BaselineScenariosPath { get; set; } = string.Empty;
+
+    public string LiveRunProfilesPath { get; set; } = string.Empty;
 }
 
 public sealed class ProcessFrameworkSource
@@ -168,6 +172,8 @@ public sealed class ProcessTemplateDefinition
     public string Criticality { get; set; } = string.Empty;
 
     public string AutonomyLevel { get; set; } = string.Empty;
+
+    public string ContractMode { get; set; } = ProcessDefinitionContractMode.Strict.ToString();
 
     public string OperatingMode { get; set; } = string.Empty;
 
@@ -277,6 +283,10 @@ public sealed class ProcessTemplateStepDefinition
 
     public string StepKind { get; set; } = string.Empty;
 
+    public List<ProcessStepOperation> AllowedOperations { get; set; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; set; }
+
     public string SubprocessProcessKey { get; set; } = string.Empty;
 
     public string SubprocessDefinitionSnapshotName { get; set; } = string.Empty;
@@ -384,6 +394,18 @@ public sealed class ProcessTemplateArtifactExpectation
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ValidationRequirementSummary { get; set; } = string.Empty;
+
+    public string WorkflowOutputId { get; set; } = string.Empty;
+
+    public string WorkflowOutputName { get; set; } = string.Empty;
+
+    public string WorkflowOutputKind { get; set; } = string.Empty;
+
+    public Guid? SubprocessChildArtifactExpectationId { get; set; }
+
+    public string SubprocessChildStepKey { get; set; } = string.Empty;
+
+    public string SubprocessChildArtifactTitle { get; set; } = string.Empty;
 }
 
 public sealed class ProcessTemplateStepArtifactInput

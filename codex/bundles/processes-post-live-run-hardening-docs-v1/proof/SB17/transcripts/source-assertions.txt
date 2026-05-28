@@ -1,0 +1,34 @@
+# SB17 Source Assertions
+
+Invariant: `SB17-INV-001`
+
+Command:
+
+```powershell
+rg -n "ProcessStepOperation|ProcessStepTargetScope|ProcessStepBlockCause|ProcessStepRecoveryOption|ProcessArtifactExpectationSatisfactionStatus|ManagedProcessArtifactsOnly|ExternalProductTargetMutable|WaitForArtifactMaterialization|ContentHashMismatch|freshRunPolicy|projectionIdentityHash" Templates\Processes\README.md codex\skills\candoitall-api-processes\SKILL.md src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs -S
+```
+
+Exit code: 0
+
+Key output:
+
+```text
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:52:public enum ProcessStepOperation
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:68:public enum ProcessStepTargetScope
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:70:    ManagedProcessArtifactsOnly,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:74:    ExternalProductTargetMutable,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:95:public enum ProcessStepBlockCause
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:103:public enum ProcessStepRecoveryOption
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:106:    WaitForArtifactMaterialization,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:28:public enum ProcessArtifactExpectationSatisfactionStatus {
+Templates\Processes\README.md:22:- `AllowedOperations` values must stay source-aligned with `ProcessStepOperation`: `ReadProcessContext`, `ReadProjectStructure`, `ReadUpstreamArtifacts`, `WriteManagedProcessArtifacts`, `WriteExternalArtifactDestination`, `MutateProductTarget`, `RunValidation`, `LaunchRuntime`, `CaptureRuntimeProof`, `ExecuteExternalAction`, `RecoverArtifactsOnly`, and `EscalateOrDecide`.
+Templates\Processes\README.md:24:- `OperationTargetScope` values must stay source-aligned with `ProcessStepTargetScope`: `ManagedProcessArtifactsOnly`, `ManagedOutputProduct`, `ExternalArtifactDestination`, `ExternalProductTargetReadOnly`, `ExternalProductTargetMutable`, and `ExternalActionControlled`.
+Templates\Processes\README.md:31:- `BlockCause` values must stay source-aligned with `ProcessStepBlockCause`: `OwnOutput`, `UpstreamInput`, `RuntimeEvidence`, and `PolicyDenied`.
+Templates\Processes\README.md:32:- `RecoveryOptions` values must stay source-aligned with `ProcessStepRecoveryOption`: `None`, `WaitForArtifactMaterialization`, `RecoverArtifactsOnly`, `RetryAgent`, `FreshAgentSession`, `ReworkContinuation`, `HumanEscalation`, `RepairImplementation`, and `RerunValidation`.
+Templates\Processes\README.md:33:- Artifact expectation satisfaction status values must stay source-aligned with `ProcessArtifactExpectationSatisfactionStatus`: `Expected`, `Satisfied`, `AutoProjected`, `Missing`, `ProjectionFailed`, `ContentUnavailable`, `NotApplicable`, `InvalidFormat`, `InsufficientEvidence`, `StaleOrWrongRun`, `WrongProducerMode`, `PlaceholderOnly`, and `ContentHashMismatch`.
+codex\skills\candoitall-api-processes\SKILL.md:22:- Step `operationTargetScope`: use the narrowest accurate `ProcessStepTargetScope` value: `ManagedProcessArtifactsOnly`, `ManagedOutputProduct`, `ExternalArtifactDestination`, `ExternalProductTargetReadOnly`, `ExternalProductTargetMutable`, or `ExternalActionControlled`.
+codex\skills\candoitall-api-processes\SKILL.md:26:- Runtime readbacks expose `blockReasonCode`, `recoveryOptions`, `nextRecoveryAction`, `health.recommendedAction`, `health.missingArtifactCount`, and invariant diagnostics. Recovery options are source-aligned with `ProcessStepRecoveryOption`: `None`, `WaitForArtifactMaterialization`, `RecoverArtifactsOnly`, `RetryAgent`, `FreshAgentSession`, `ReworkContinuation`, `HumanEscalation`, `RepairImplementation`, and `RerunValidation`.
+codex\skills\candoitall-api-processes\SKILL.md:27:- Artifact expectation satisfaction statuses are source-aligned with `ProcessArtifactExpectationSatisfactionStatus`: `Expected`, `Satisfied`, `AutoProjected`, `Missing`, `ProjectionFailed`, `ContentUnavailable`, `NotApplicable`, `InvalidFormat`, `InsufficientEvidence`, `StaleOrWrongRun`, `WrongProducerMode`, `PlaceholderOnly`, and `ContentHashMismatch`.
+codex\skills\candoitall-api-processes\SKILL.md:29:- Artifact records that come from automation, workflow, subprocess, or manual recovery must keep projection lineage fields such as `projectionLineage`, `projectionLineageJson`, `projectionIdentityHash`, `externalReferenceKey`, and managed storage path. Do not replace lineage with prose.
+codex\skills\candoitall-api-processes\SKILL.md:30:- Live-run profile summaries expose typed `freshRunPolicy`. Preserve `requiresFreshRun`, seeded transition/artifact rejection, pre-dispatch checks, evidence checks, and project-structure writeback guidance when selecting or documenting a live run.
+```

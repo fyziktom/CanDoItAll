@@ -1,4 +1,5 @@
 @namespace CanDoItAll.Modules.Processes
+@using CanDoItAll.AgentFramework.Models
 
 <PanelCard Soft="true"
            data-testid="processes-step-artifact-card">
@@ -62,6 +63,44 @@
             Artifact is required
         </label>
 
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="3">
+            <FormField Text="Workflow output id">
+                <InputText @bind-Value="Model.WorkflowOutputId"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Workflow output name">
+                <InputText @bind-Value="Model.WorkflowOutputName"
+                           class="cda-input" />
+            </FormField>
+            <FormField Text="Workflow output kind">
+                <InputSelect @bind-Value="Model.WorkflowOutputKind"
+                             class="cda-input">
+                    <option value="">Any kind</option>
+                    @foreach (var workflowOutputKind in Enum.GetValues<WorkflowArtifactKind>())
+                    {
+                        <option value="@workflowOutputKind">@workflowOutputKind</option>
+                    }
+                </InputSelect>
+            </FormField>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="2">
+            <FormField Text="Subprocess child artifact expectation id">
+                <InputText @bind-Value="SubprocessChildArtifactExpectationIdText"
+                           class="cda-input" />
+            </FormField>
+            @if (!string.IsNullOrWhiteSpace(SubprocessChildArtifactExpectationIdError))
+            {
+                <Stack GapScale="LayoutGap.Tiny">
+                    <StatusBadge Tone="danger"
+                                 Text="Invalid child id" />
+                    <p class="text-sm text-red-700">@SubprocessChildArtifactExpectationIdError</p>
+                </Stack>
+            }
+        </Grid>
+
         <FormField Text="Allowed future usage summary">
             <InputTextArea @bind-Value="Model.AllowedFutureUsageSummary"
                            class="cda-input cda-input--textarea min-h-24" />
@@ -80,4 +119,43 @@
 
     [Parameter]
     public EventCallback Remove { get; set; }
+
+    private string subprocessChildArtifactExpectationIdText = string.Empty;
+
+    private string SubprocessChildArtifactExpectationIdError { get; set; } = string.Empty;
+
+    private string SubprocessChildArtifactExpectationIdText
+    {
+        get => subprocessChildArtifactExpectationIdText;
+        set => UpdateSubprocessChildArtifactExpectationId(value);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(SubprocessChildArtifactExpectationIdError))
+        {
+            subprocessChildArtifactExpectationIdText = Model.SubprocessChildArtifactExpectationId?.ToString("D") ?? string.Empty;
+        }
+    }
+
+    private void UpdateSubprocessChildArtifactExpectationId(string? value)
+    {
+        var trimmed = value?.Trim() ?? string.Empty;
+        subprocessChildArtifactExpectationIdText = trimmed;
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            Model.SubprocessChildArtifactExpectationId = null;
+            SubprocessChildArtifactExpectationIdError = string.Empty;
+            return;
+        }
+
+        if (Guid.TryParse(trimmed, out var parsed) && parsed != Guid.Empty)
+        {
+            Model.SubprocessChildArtifactExpectationId = parsed;
+            SubprocessChildArtifactExpectationIdError = string.Empty;
+            return;
+        }
+
+        SubprocessChildArtifactExpectationIdError = "Enter a non-empty GUID from the child process artifact expectation.";
+    }
 }

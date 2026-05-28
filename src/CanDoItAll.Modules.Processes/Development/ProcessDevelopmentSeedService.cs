@@ -1,4 +1,5 @@
 using CanDoItAll.SharedKernel;
+using CanDoItAll.Infrastructure.Storage;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -7,15 +8,18 @@ public sealed partial class ProcessDevelopmentSeedService
     private readonly ProcessesService processesService;
     private readonly ProcessTemplateProjectionService projectionService;
     private readonly ProcessTemplatePackLoader packLoader;
+    private readonly IWorkspacePathResolver workspacePathResolver;
 
     public ProcessDevelopmentSeedService(
         ProcessesService processesService,
         ProcessTemplateProjectionService projectionService,
-        ProcessTemplatePackLoader packLoader)
+        ProcessTemplatePackLoader packLoader,
+        IWorkspacePathResolver workspacePathResolver)
     {
         this.processesService = processesService;
         this.projectionService = projectionService;
         this.packLoader = packLoader;
+        this.workspacePathResolver = workspacePathResolver;
     }
 
     public async Task<Result<ProcessSeedReport>> SeedBaselineAsync(

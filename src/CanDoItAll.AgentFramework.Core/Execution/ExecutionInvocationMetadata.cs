@@ -15,6 +15,11 @@ public static class ExecutionInvocationMetadata
     public const string ProcessCooperationSummaryMetadataKey = "agentProcessCooperationSummary";
     public const string ProcessBrowserToolsAllowedMetadataKey = "agentProcessBrowserToolsAllowed";
     public const string ProcessScaffoldToolOnlyMetadataKey = "agentProcessScaffoldToolOnly";
+    public const string ProcessStepExecutionBoundaryMetadataKey = "agentProcessStepExecutionBoundary";
+    public const string ProcessStepAllowedOperationsMetadataKey = "agentProcessStepAllowedOperations";
+    public const string ProcessStepTargetScopeMetadataKey = "agentProcessStepTargetScope";
+    public const string ProcessStepAllowsProductMutationMetadataKey = "agentProcessStepAllowsProductMutation";
+    public const string ProcessGroundedTargetAliasLedgerMetadataKey = "agentProcessGroundedTargetAliasLedger";
     public const string ContextWorkspaceScopeMetadataKey = "agentContextWorkspaceScope";
     public const int DefaultGovernedRepairAttempts = 1;
     public const int MaxRepairAttempts = 2;
@@ -95,12 +100,15 @@ public static class ExecutionInvocationMetadata
             return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
         }
 
+        var targetMetadataKey = accessSettings.CanWriteFiles &&
+                                !HasProcessBoundaryMetadata(metadata)
+            ? AllowedExternalTargetAliasesMetadataKey
+            : ReadOnlyExternalTargetAliasesMetadataKey;
         MergeExternalTargetAliases(
             metadata,
-            accessSettings.CanWriteFiles
-                ? AllowedExternalTargetAliasesMetadataKey
-                : ReadOnlyExternalTargetAliasesMetadataKey,
+            targetMetadataKey,
             aliases);
+        RemoveWritableCoveredReadOnlyExternalTargetAliases(metadata);
 
         return metadata.ToJsonString(AgentOutputJson.SerializerOptions);
     }
@@ -231,6 +239,44 @@ public static class ExecutionInvocationMetadata
                TryReadBoolean(run.MetadataJson, ProcessScaffoldToolOnlyMetadataKey) == true;
     }
 
+    public static bool ResolveProcessAllowsProductMutation(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return true;
+        }
+
+        return ResolveProcessAllowsProductMutation(ParseObject(run.MetadataJson));
+    }
+
+    public static IReadOnlyList<string> ResolveProcessStepAllowedOperations(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        if (!IsTrustedGovernedProcessRun(run))
+        {
+            return [];
+        }
+
+        return ResolveStringArray(run.MetadataJson, ProcessStepAllowedOperationsMetadataKey)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    public static string ResolveProcessStepTargetScope(ExecutionRunRecord run)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+
+        return IsTrustedGovernedProcessRun(run)
+            ? TryReadString(run.MetadataJson, ProcessStepTargetScopeMetadataKey)
+            : string.Empty;
+    }
+
     public static WorkspaceScopeDescriptor? ResolveContextWorkspaceScope(ExecutionRunRecord run)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -341,6 +387,46 @@ public static class ExecutionInvocationMetadata
         }
     }
 
+    private static bool ResolveProcessAllowsProductMutation(JsonObject metadata)
+    {
+        if (metadata[ProcessStepAllowsProductMutationMetadataKey] is JsonValue value &&
+            value.TryGetValue<bool>(out var allowsProductMutation))
+        {
+            return allowsProductMutation;
+        }
+
+        if (metadata[ProcessStepAllowedOperationsMetadataKey] is JsonArray operations &&
+            operations
+                .Select(item => item?.GetValue<string>())
+                .Any(item => string.Equals(item, "MutateProductTarget", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        if (metadata[ProcessStepTargetScopeMetadataKey] is JsonValue scopeValue &&
+            scopeValue.TryGetValue<string>(out var scope))
+        {
+            return scope.Contains("Mutable", StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (metadata[ProcessStepExecutionBoundaryMetadataKey] is JsonValue boundaryValue &&
+            boundaryValue.TryGetValue<string>(out var boundary))
+        {
+            return string.Equals(boundary, "ProductMutation", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(boundary, "Recovery", StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
+    }
+
+    private static bool HasProcessBoundaryMetadata(JsonObject metadata)
+    {
+        return metadata.ContainsKey(ProcessStepAllowsProductMutationMetadataKey) ||
+               metadata.ContainsKey(ProcessStepAllowedOperationsMetadataKey) ||
+               metadata.ContainsKey(ProcessStepTargetScopeMetadataKey) ||
+               metadata.ContainsKey(ProcessStepExecutionBoundaryMetadataKey);
+    }
+
     private static IReadOnlyList<string> ResolveExternalTargetAliases(
         ExecutionRunRecord run,
         string metadataKey)
@@ -369,6 +455,40 @@ public static class ExecutionInvocationMetadata
                 .Where(item => !string.IsNullOrWhiteSpace(item))
                 .Cast<string>()
                 .Where(item => item.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
+    private static IReadOnlyList<string> ResolveStringArray(
+        string? metadataJson,
+        string metadataKey)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty(metadataKey, out var value) ||
+                value.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return value
+                .EnumerateArray()
+                .Where(item => item.ValueKind == JsonValueKind.String)
+                .Select(item => item.GetString()?.Trim())
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Cast<string>()
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }
@@ -441,6 +561,62 @@ public static class ExecutionInvocationMetadata
                 .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
                 .Select(alias => JsonValue.Create(alias))
                 .ToArray());
+    }
+
+    private static void RemoveWritableCoveredReadOnlyExternalTargetAliases(JsonObject metadata)
+    {
+        var writableAliases = ReadExternalTargetAliases(metadata, AllowedExternalTargetAliasesMetadataKey);
+        if (writableAliases.Count == 0 ||
+            metadata[ReadOnlyExternalTargetAliasesMetadataKey] is not JsonArray)
+        {
+            return;
+        }
+
+        var readOnlyAliases = ReadExternalTargetAliases(metadata, ReadOnlyExternalTargetAliasesMetadataKey);
+        var filteredAliases = readOnlyAliases
+            .Where(readOnlyAlias => !IsExternalTargetAliasCoveredByAny(readOnlyAlias, writableAliases))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (filteredAliases.Length == 0)
+        {
+            metadata.Remove(ReadOnlyExternalTargetAliasesMetadataKey);
+            return;
+        }
+
+        metadata[ReadOnlyExternalTargetAliasesMetadataKey] = new JsonArray(
+            filteredAliases
+                .Select(alias => JsonValue.Create(alias))
+                .ToArray());
+    }
+
+    private static IReadOnlyList<string> ReadExternalTargetAliases(
+        JsonObject metadata,
+        string metadataKey)
+    {
+        if (metadata[metadataKey] is not JsonArray aliases)
+        {
+            return [];
+        }
+
+        return aliases
+            .Select(item => item?.GetValue<string>())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => AgentWorkspaceToolAccessMetadata.NormalizeExternalTargetAlias(item))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Cast<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool IsExternalTargetAliasCoveredByAny(
+        string alias,
+        IReadOnlyList<string> roots)
+    {
+        return roots.Any(root =>
+            string.Equals(alias, root, StringComparison.OrdinalIgnoreCase) ||
+            alias.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsPathCandidateStart(string value, int index)

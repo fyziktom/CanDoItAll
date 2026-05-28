@@ -16,7 +16,7 @@ internal sealed class FileSandboxWorkspaceCrossProcessLock(string lockPath)
                     lockPath,
                     FileMode.OpenOrCreate,
                     FileAccess.ReadWrite,
-                    FileShare.None,
+                    FileShare.Delete,
                     bufferSize: 1,
                     options: FileOptions.Asynchronous);
                 return new Releaser(stream);

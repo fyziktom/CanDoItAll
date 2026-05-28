@@ -110,6 +110,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProcessEscalationViewModel> processEscalations = [];
     private IReadOnlyList<ProcessOperatorApprovalViewModel> operatorApprovals = [];
     private IReadOnlyList<ProcessAttemptTimelineEntryViewModel> attemptTimeline = [];
+    private IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel> invariantDiagnostics = [];
     private IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries = [];
     private IReadOnlyList<ProcessImprovementViewModel> improvements = [];
     private IReadOnlyList<ProcessExecutorRegistryOption> executorOptions = [];

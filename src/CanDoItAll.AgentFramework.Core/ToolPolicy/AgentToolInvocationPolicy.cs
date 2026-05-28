@@ -78,7 +78,13 @@ public sealed record ToolInvocationPolicyContext(
     IReadOnlyList<string>? ReadOnlyExternalTargetAliases = null,
     bool ApprovalWrapperEffectiveForProvider = false,
     bool ApplicationApprovalAvailable = false,
-    bool ProcessScaffoldToolOnly = false)
+    bool ProcessScaffoldToolOnly = false,
+    bool ProcessAllowsProductMutation = true,
+    IReadOnlyList<string>? ProcessStepAllowedOperations = null,
+    string ProcessStepTargetScope = "",
+    string InspectedScriptContent = "",
+    string ScriptInspectionFailure = "",
+    string ScriptSideEffectManifestJson = "")
 {
     public bool HasEffectiveApprovalPath =>
         (ApprovalWrapperAvailable && ApprovalWrapperEffectiveForProvider) ||
@@ -98,6 +104,17 @@ public sealed record ToolInvocationPolicyDecision(
 
     public static ToolInvocationPolicyDecision Deny(string signature, string reason)
         => new(ToolInvocationDecisionKind.Deny, reason, signature);
+}
+
+internal sealed record OperationRequirement(IReadOnlyList<string> AnyOf)
+{
+    public static OperationRequirement Any(params string[] operations)
+    {
+        return new OperationRequirement(operations
+            .Where(operation => !string.IsNullOrWhiteSpace(operation))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray());
+    }
 }
 
 public interface IAgentToolInvocationPolicy
@@ -173,6 +190,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "workspace_delete_path",
         "workspace_dotnet_new"
     };
+    private static readonly HashSet<string> WorkspaceScriptExecutionTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        AgentToolInvocationPolicyMetadata.WorkspacePowerShellRunScript,
+        AgentToolInvocationPolicyMetadata.WorkspacePythonRunFile
+    };
     private static readonly HashSet<string> DirectProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
         "workspace_write_file",
@@ -211,6 +233,24 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "tests",
         "tools"
     ];
+    private static readonly HashSet<string> ExternalProductArchiveSourceSegments = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".oldruns",
+        "oldruns",
+        "old-runs",
+        "previous-runs",
+        "backup",
+        "backups",
+        "archive",
+        "archives",
+        "agent-evidence",
+        "observation",
+        "process-definition",
+        "process-definitions",
+        "launch-plan",
+        "launch-plans",
+        "evidence-only"
+    };
     private static readonly string[] ManagedEvidenceRoots =
     [
         "artifacts",
@@ -218,6 +258,40 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "integration-map",
         "output"
     ];
+    private static readonly HashSet<string> BrowserProofTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "browser_console_messages",
+        "browser_evaluate",
+        "browser_network_requests",
+        "browser_snapshot",
+        "browser_take_screenshot"
+    };
+    private static readonly HashSet<string> DotNetValidationTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "workspace_dotnet_restore",
+        "workspace_dotnet_build",
+        "workspace_dotnet_test"
+    };
+    private static readonly HashSet<string> ProcessDefinitionMutationTools = new(StringComparer.OrdinalIgnoreCase)
+    {
+        AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+        AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
+        AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
+        AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
+        AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
+        AgentToolInvocationPolicyMetadata.ProcessesRunStart,
+        AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
+        AgentToolInvocationPolicyMetadata.ProcessesTemplateImport
+    };
+    private const string OperationWriteManagedProcessArtifacts = "WriteManagedProcessArtifacts";
+    private const string OperationWriteExternalArtifactDestination = "WriteExternalArtifactDestination";
+    private const string OperationMutateProductTarget = "MutateProductTarget";
+    private const string OperationRunValidation = "RunValidation";
+    private const string OperationLaunchRuntime = "LaunchRuntime";
+    private const string OperationCaptureRuntimeProof = "CaptureRuntimeProof";
+    private const string OperationExecuteExternalAction = "ExecuteExternalAction";
+    private const string OperationRecoverArtifactsOnly = "RecoverArtifactsOnly";
+    private const string OperationEscalateOrDecide = "EscalateOrDecide";
 
     private readonly Dictionary<string, int> invocationCounts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> dotnetNewTemplatesByScaffoldRoot = new(StringComparer.OrdinalIgnoreCase);
@@ -248,6 +322,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                 $"Tool '{context.ToolName}' has no registered invocation policy classification."));
         }
 
+        var operationDecision = EvaluateGovernedProcessOperationAuthorization(context, signature);
+        if (operationDecision is not null)
+        {
+            return ValueTask.FromResult(operationDecision);
+        }
+
         var governedBrowserDecision = EvaluateGovernedBrowserToolBounds(context, signature);
         if (governedBrowserDecision is not null)
         {
@@ -258,6 +338,30 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         if (externalTargetDecision is not null)
         {
             return ValueTask.FromResult(externalTargetDecision);
+        }
+
+        var staleProductCopyDecision = EvaluateGovernedStaleExternalProductCopySource(context, signature);
+        if (staleProductCopyDecision is not null)
+        {
+            return ValueTask.FromResult(staleProductCopyDecision);
+        }
+
+        var archivedExternalProductPathDecision = EvaluateGovernedArchivedExternalProductPathAccess(context, signature);
+        if (archivedExternalProductPathDecision is not null)
+        {
+            return ValueTask.FromResult(archivedExternalProductPathDecision);
+        }
+
+        var processBoundaryDecision = EvaluateGovernedProcessProductMutationBoundary(context, signature);
+        if (processBoundaryDecision is not null)
+        {
+            return ValueTask.FromResult(processBoundaryDecision);
+        }
+
+        var scriptSideEffectDecision = EvaluateGovernedScriptSideEffectBoundary(context, signature);
+        if (scriptSideEffectDecision is not null)
+        {
+            return ValueTask.FromResult(scriptSideEffectDecision);
         }
 
         var managedWorkspaceIsolationDecision = EvaluateExternalTargetManagedWorkspaceIsolation(context, signature);
@@ -321,6 +425,180 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return ValueTask.FromResult(ToolInvocationPolicyDecision.Allow(signature));
     }
 
+    private static ToolInvocationPolicyDecision? EvaluateGovernedProcessOperationAuthorization(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        return ProcessToolOperationAuthorizer.Evaluate(context, signature, ResolveOperationRequirements(context));
+    }
+
+    private static IReadOnlyList<OperationRequirement> ResolveOperationRequirements(ToolInvocationPolicyContext context)
+    {
+        if (DotNetValidationTools.Contains(context.ToolName))
+        {
+            return [OperationRequirement.Any(OperationRunValidation)];
+        }
+
+        if (string.Equals(context.ToolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase))
+        {
+            return [OperationRequirement.Any(OperationLaunchRuntime)];
+        }
+
+        if (BrowserProofTools.Contains(context.ToolName) ||
+            string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.WorkspaceInspectImage, StringComparison.OrdinalIgnoreCase))
+        {
+            return [OperationRequirement.Any(OperationCaptureRuntimeProof)];
+        }
+
+        if (ProductFileMutationTools.Contains(context.ToolName))
+        {
+            return [ResolveWorkspaceFileMutationRequirement(context)];
+        }
+
+        if (WorkspaceScriptExecutionTools.Contains(context.ToolName))
+        {
+            return [ResolveWorkspaceScriptRequirement(context)];
+        }
+
+        if (string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord, StringComparison.OrdinalIgnoreCase))
+        {
+            return [ResolveProcessArtifactRecordRequirement(context)];
+        }
+
+        if (string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ProcessesStepTransition, StringComparison.OrdinalIgnoreCase))
+        {
+            return [OperationRequirement.Any(OperationEscalateOrDecide, OperationRecoverArtifactsOnly, OperationExecuteExternalAction)];
+        }
+
+        if (AgentToolInvocationPolicyMetadata.IsProjectStructureMutationTool(context.ToolName))
+        {
+            return [OperationRequirement.Any(OperationExecuteExternalAction)];
+        }
+
+        if (ProcessDefinitionMutationTools.Contains(context.ToolName) ||
+            string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ImageGenerationCreate, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.RunSkillScript, StringComparison.OrdinalIgnoreCase))
+        {
+            return [OperationRequirement.Any(OperationExecuteExternalAction)];
+        }
+
+        return [];
+    }
+
+    private static OperationRequirement ResolveWorkspaceFileMutationRequirement(ToolInvocationPolicyContext context)
+    {
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        if (referencedAliases.Count > 0)
+        {
+            var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+            if (IsProductMutationStep(context) &&
+                referencedAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
+            {
+                return OperationRequirement.Any(OperationMutateProductTarget);
+            }
+
+            if (referencedAliases.Any(IsExternalArtifactDestinationPath))
+            {
+                return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
+            }
+
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
+        var normalizedPaths = ResolveManagedWorkspacePathArguments(context.RedactedArguments)
+            .Select(argument => NormalizeManagedWorkspacePath(argument.Value))
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToArray();
+        if (normalizedPaths.Length == 0)
+        {
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
+        return normalizedPaths.Any(path => IsAllowedExternalRunManagedPath(path) && !IsManagedOutputPath(path))
+            ? OperationRequirement.Any(OperationWriteManagedProcessArtifacts)
+            : OperationRequirement.Any(OperationMutateProductTarget);
+    }
+
+    private static OperationRequirement ResolveWorkspaceScriptRequirement(ToolInvocationPolicyContext context)
+    {
+        var manifest = TryParseScriptSideEffectManifestForRequirement(context);
+        if (manifest?.Mode == GovernedScriptSideEffectMode.ProductMutation)
+        {
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
+        if (manifest?.Mode == GovernedScriptSideEffectMode.ExternalArtifactDestination)
+        {
+            return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
+        }
+
+        if (manifest?.Mode == GovernedScriptSideEffectMode.ManagedProcessArtifacts)
+        {
+            return OperationRequirement.Any(OperationWriteManagedProcessArtifacts);
+        }
+
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+            .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
+            .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (referencedAliases.Any(alias => !IsExternalArtifactDestinationPath(alias)))
+        {
+            return OperationRequirement.Any(OperationMutateProductTarget);
+        }
+
+        if (referencedAliases.Any(IsExternalArtifactDestinationPath) ||
+            ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+                .Select(NormalizeManagedWorkspacePath)
+                .Any(path => IsExternalTargetAliasPath(path) && IsExternalArtifactDestinationPath(NormalizeExternalTargetAlias(path))))
+        {
+            return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
+        }
+
+        var analysis = ProcessScriptSideEffectAnalyzer.Analyze(context.ToolName, context.InspectedScriptContent);
+        if (analysis.HasWriteSignal ||
+            ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+                .Select(NormalizeManagedWorkspacePath)
+                .Any(path => IsAllowedExternalRunManagedPath(path) && !IsManagedOutputPath(path)))
+        {
+            return OperationRequirement.Any(OperationWriteManagedProcessArtifacts);
+        }
+
+        return OperationRequirement.Any(
+            OperationRunValidation,
+            OperationLaunchRuntime,
+            OperationCaptureRuntimeProof,
+            OperationExecuteExternalAction,
+            OperationRecoverArtifactsOnly);
+    }
+
+    private static GovernedScriptSideEffectManifest? TryParseScriptSideEffectManifestForRequirement(
+        ToolInvocationPolicyContext context)
+    {
+        if (string.IsNullOrWhiteSpace(context.ScriptSideEffectManifestJson))
+        {
+            return null;
+        }
+
+        return GovernedScriptSideEffectManifest.TryParse(
+            context.ScriptSideEffectManifestJson,
+            out var manifest,
+            out _)
+                ? manifest
+                : null;
+    }
+
+    private static OperationRequirement ResolveProcessArtifactRecordRequirement(ToolInvocationPolicyContext context)
+    {
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        if (referencedAliases.Any(IsExternalArtifactDestinationPath))
+        {
+            return OperationRequirement.Any(OperationWriteExternalArtifactDestination);
+        }
+
+        return OperationRequirement.Any(OperationWriteManagedProcessArtifacts, OperationRecoverArtifactsOnly);
+    }
+
     private static ToolInvocationPolicyDecision? EvaluateGovernedBrowserToolBounds(
         ToolInvocationPolicyContext context,
         string signature)
@@ -365,6 +643,461 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedProcessProductMutationBoundary(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            context.ProcessAllowsProductMutation ||
+            !ProductFileMutationTools.Contains(context.ToolName))
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        foreach (var pathArgument in ResolveManagedWorkspacePathArguments(context.RedactedArguments))
+        {
+            var normalizedPath = NormalizeManagedWorkspacePath(pathArgument.Value);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                continue;
+            }
+
+            if (IsExternalTargetAliasPath(normalizedPath))
+            {
+                var normalizedAlias = NormalizeExternalTargetAlias(normalizedPath);
+                if (IsAllowedExternalTargetAlias(normalizedAlias, allowedAliases) &&
+                    IsExternalArtifactDestinationPath(normalizedAlias))
+                {
+                    continue;
+                }
+
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to mutate product targets. External product path '{normalizedPath}' is read-only for this step; write managed process artifacts under the current-run artifact root instead.");
+            }
+
+            if (IsManagedOutputPath(normalizedPath))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to mutate managed output product files. Managed output path '{normalizedPath}' is outside the current-run process artifact boundary for this step.");
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsExternalArtifactDestinationPath(string normalizedAlias)
+    {
+        var segments = normalizedAlias
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(2)
+            .ToArray();
+        if (segments.Length == 0)
+        {
+            return false;
+        }
+
+        if (segments.Any(segment =>
+                string.Equals(segment, "product", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "source", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "src", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(segment, "app", StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return segments.Any(segment =>
+            string.Equals(segment, "artifact", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "evidence", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "report", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "reports", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "decision", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "decisions", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedScriptSideEffectBoundary(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            context.ProcessAllowsProductMutation ||
+            !WorkspaceScriptExecutionTools.Contains(context.ToolName))
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(context.ScriptInspectionFailure))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' could not be inspected before execution: {context.ScriptInspectionFailure}");
+        }
+
+        if (string.IsNullOrWhiteSpace(context.InspectedScriptContent))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' must be inspected before execution; use current-run artifact writes or a read-only validation command instead.");
+        }
+
+        if (!GovernedScriptSideEffectManifest.TryParse(
+                context.ScriptSideEffectManifestJson,
+                out var manifest,
+                out var manifestFailureMessage))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run scripts without declared side effects. Script '{ResolveScriptPathDisplay(context)}' was denied because {manifestFailureMessage}");
+        }
+
+        if (manifest.Mode == GovernedScriptSideEffectMode.ProductMutation)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' declared product mutation in its side-effect manifest.");
+        }
+
+        var analysis = ProcessScriptSideEffectAnalyzer.Analyze(context.ToolName, context.InspectedScriptContent);
+        var manifestDecision = EvaluateScriptSideEffectManifestBoundary(context, signature, manifest, analysis);
+        if (manifestDecision is not null)
+        {
+            return manifestDecision;
+        }
+
+        var declaredOutputDecision = EvaluateScriptDeclaredOutputBoundary(context, signature, manifest);
+        if (declaredOutputDecision is not null)
+        {
+            return declaredOutputDecision;
+        }
+
+        var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+            .Concat(ResolveExternalTargetAliasesFromText(context.InspectedScriptContent))
+            .Concat(ResolveExternalTargetAliasesFromManifest(manifest))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        var readOnlyAliases = NormalizeAllowedExternalTargetAliases(context.ReadOnlyExternalTargetAliases);
+        var readableAliases = allowedAliases
+            .Concat(readOnlyAliases)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        foreach (var referencedAlias in referencedAliases)
+        {
+            if (!IsAllowedExternalTargetAlias(referencedAlias, readableAliases))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                $"Governed scripts may only reference external-target paths grounded by the current run. Script '{ResolveScriptPathDisplay(context)}' references '{referencedAlias}', which is outside the current run boundary.");
+            }
+        }
+
+        if (!analysis.HasWriteSignal)
+        {
+            return null;
+        }
+
+        var productAlias = referencedAliases.FirstOrDefault(alias => !IsExternalArtifactDestinationPath(alias));
+        if (!string.IsNullOrWhiteSpace(productAlias))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' contains write operations against product target '{productAlias}'.");
+        }
+
+        var productWorkingContext = ResolveScriptProductWorkingContext(context);
+        if (!string.IsNullOrWhiteSpace(productWorkingContext))
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to mutate product targets. Script '{ResolveScriptPathDisplay(context)}' contains write operations while executing from product target '{productWorkingContext}'.");
+        }
+
+        return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateScriptSideEffectManifestBoundary(
+        ToolInvocationPolicyContext context,
+        string signature,
+        GovernedScriptSideEffectManifest manifest,
+        ProcessScriptSideEffectAnalysis analysis)
+    {
+        var declaredWritePaths = ResolveScriptDeclaredOutputPaths(context.RedactedArguments)
+            .Concat(manifest.DeclaredWritePaths)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (analysis.EncodedCommandSignals.Count > 0)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run encoded script content. Script '{ResolveScriptPathDisplay(context)}' contains encoded command usage that cannot be inspected: {string.Join(", ", analysis.EncodedCommandSignals)}.");
+        }
+
+        if (analysis.ShellDelegationSignals.Count > 0 && !manifest.AllowShellDelegation)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run undeclared shell delegation. Script '{ResolveScriptPathDisplay(context)}' contains: {string.Join(", ", analysis.ShellDelegationSignals)}.");
+        }
+
+        var undeclaredChildScripts = analysis.ChildScriptSignals
+            .Where(childScript => !ProcessScriptSideEffectAnalyzer.IsDeclaredChildScript(childScript, manifest.DeclaredChildScripts))
+            .ToArray();
+        if (undeclaredChildScripts.Length > 0)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is not authorized to run undeclared child scripts. Script '{ResolveScriptPathDisplay(context)}' invokes: {string.Join(", ", undeclaredChildScripts)}.");
+        }
+
+        if (analysis.ChildScriptSignals.Count > 0)
+        {
+            var uninspectedChildScripts = manifest.DeclaredChildScripts
+                .Where(childScript => !ProcessScriptSideEffectAnalyzer.HasInspectedChildScriptMarker(context.InspectedScriptContent, childScript))
+                .ToArray();
+            if (uninspectedChildScripts.Length > 0)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to run child scripts that were not inspected. Script '{ResolveScriptPathDisplay(context)}' declared but did not inspect: {string.Join(", ", uninspectedChildScripts)}.");
+            }
+        }
+
+        if (manifest.Mode == GovernedScriptSideEffectMode.NoMutation)
+        {
+            if (declaredWritePaths.Length > 0)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"Script '{ResolveScriptPathDisplay(context)}' declared no mutation but also declared write paths: {string.Join(", ", declaredWritePaths)}.");
+            }
+
+            if (analysis.HasWriteSignal)
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"Script '{ResolveScriptPathDisplay(context)}' declared no mutation but contains write-capable operations.");
+            }
+        }
+
+        if (analysis.HasWriteSignal &&
+            manifest.Mode is not GovernedScriptSideEffectMode.ManagedProcessArtifacts and not GovernedScriptSideEffectMode.ExternalArtifactDestination)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Script '{ResolveScriptPathDisplay(context)}' contains write-capable operations but did not declare an allowed non-product write mode.");
+        }
+
+        if (analysis.HasWriteSignal && declaredWritePaths.Length == 0)
+        {
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"Script '{ResolveScriptPathDisplay(context)}' contains write-capable operations but did not declare the write target paths in `{GovernedScriptSideEffectManifest.ArgumentName}`.");
+        }
+
+        return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateScriptDeclaredOutputBoundary(
+        ToolInvocationPolicyContext context,
+        string signature,
+        GovernedScriptSideEffectManifest manifest)
+    {
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        foreach (var outputPath in ResolveScriptDeclaredOutputPaths(context.RedactedArguments).Concat(manifest.DeclaredWritePaths))
+        {
+            var normalizedPath = NormalizeManagedWorkspacePath(outputPath);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                continue;
+            }
+
+            if (IsExternalTargetAliasPath(normalizedPath))
+            {
+                var normalizedAlias = NormalizeExternalTargetAlias(normalizedPath);
+                if (IsAllowedExternalTargetAlias(normalizedAlias, allowedAliases) &&
+                    IsExternalArtifactDestinationPath(normalizedAlias))
+                {
+                    continue;
+                }
+
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to mutate product targets. Script output path '{normalizedPath}' is outside an allowed external artifact destination.");
+            }
+
+            if (IsManagedOutputPath(normalizedPath) ||
+                !IsCurrentRunManagedArtifactPath(normalizedPath, context))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"This governed step is not authorized to mutate managed output product files. Script output path '{normalizedPath}' is outside the current-run process artifact boundary for this step.");
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> ResolveScriptDeclaredOutputPaths(
+        IReadOnlyDictionary<string, string> arguments)
+    {
+        return arguments
+            .Where(argument => argument.Key.Contains("output", StringComparison.OrdinalIgnoreCase) &&
+                               IsPathLikeArgumentName(argument.Key))
+            .SelectMany(argument => EnumerateArgumentTextValues(argument.Value))
+            .ToArray();
+    }
+
+    private static string ResolveScriptProductWorkingContext(ToolInvocationPolicyContext context)
+    {
+        foreach (var key in new[] { "workingDirectory", "path", "scriptPath" })
+        {
+            if (!context.RedactedArguments.TryGetValue(key, out var value))
+            {
+                continue;
+            }
+
+            foreach (var argumentValue in EnumerateArgumentTextValues(value))
+            {
+                var productAlias = ResolveExternalTargetAliasesFromText(argumentValue)
+                    .FirstOrDefault(alias => !IsExternalArtifactDestinationPath(alias));
+                if (!string.IsNullOrWhiteSpace(productAlias))
+                {
+                    return productAlias;
+                }
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static IReadOnlyList<string> ResolveExternalTargetAliasesFromText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return ExternalTargetAliasRegex
+            .Matches(text)
+            .Select(match => NormalizeExternalTargetAlias(match.Value))
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ResolveExternalTargetAliasesFromManifest(
+        GovernedScriptSideEffectManifest? manifest)
+    {
+        if (manifest is null)
+        {
+            return [];
+        }
+
+        return manifest.DeclaredReadPaths
+            .Concat(manifest.DeclaredWritePaths)
+            .Concat(manifest.DeclaredChildScripts)
+            .SelectMany(ResolveExternalTargetAliasesFromText)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static bool HasScriptProductWriteSignal(string toolName, string scriptContent)
+        => ProcessScriptSideEffectAnalyzer.Analyze(toolName, scriptContent).HasWriteSignal;
+
+    public static string BuildInspectedChildScriptMarker(string childScript)
+    {
+        return ProcessScriptSideEffectAnalyzer.BuildInspectedChildScriptMarker(childScript);
+    }
+
+    private static IEnumerable<string> EnumerateArgumentTextValues(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            yield break;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("[", StringComparison.Ordinal) ||
+            trimmed.StartsWith("{", StringComparison.Ordinal))
+        {
+            var document = TryParseJsonDocument(trimmed);
+            if (document is not null)
+            {
+                using (document)
+                {
+                    foreach (var text in EnumerateJsonStringValues(document.RootElement))
+                    {
+                        yield return text;
+                    }
+                }
+
+                yield break;
+            }
+        }
+
+        yield return trimmed;
+    }
+
+    private static JsonDocument? TryParseJsonDocument(string value)
+    {
+        try
+        {
+            return JsonDocument.Parse(value);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateJsonStringValues(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                var value = element.GetString();
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    yield return value;
+                }
+
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    foreach (var itemValue in EnumerateJsonStringValues(item))
+                    {
+                        yield return itemValue;
+                    }
+                }
+
+                break;
+            case JsonValueKind.Object:
+                foreach (var property in element.EnumerateObject())
+                {
+                    foreach (var propertyValue in EnumerateJsonStringValues(property.Value))
+                    {
+                        yield return propertyValue;
+                    }
+                }
+
+                break;
+        }
+    }
+
+    private static string ResolveScriptPathDisplay(ToolInvocationPolicyContext context)
+    {
+        return context.RedactedArguments.TryGetValue("path", out var path) && !string.IsNullOrWhiteSpace(path)
+            ? path
+            : context.ToolName;
     }
 
     public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)
@@ -467,6 +1200,76 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         return null;
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedArchivedExternalProductPathAccess(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !ExternalTargetManagedWorkspaceIsolationTools.Contains(context.ToolName))
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        if (allowedAliases.Count == 0)
+        {
+            return null;
+        }
+
+        var archivedAlias = ResolveReferencedExternalTargetAliases(context.RedactedArguments)
+            .FirstOrDefault(alias =>
+                IsAllowedExternalTargetAlias(alias, allowedAliases) &&
+                IsExternalProductArchiveSourceAlias(alias));
+        if (string.IsNullOrWhiteSpace(archivedAlias))
+        {
+            return null;
+        }
+
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed process run cannot use archived, backup, or previous-run product material at '{archivedAlias}' as current product input. Use the grounded product root excluding archive folders and current-run managed artifacts only.");
+    }
+
+    private static ToolInvocationPolicyDecision? EvaluateGovernedStaleExternalProductCopySource(
+        ToolInvocationPolicyContext context,
+        string signature)
+    {
+        if (!IsGovernedProcessRun(context) ||
+            !string.Equals(context.ToolName, "workspace_copy_path", StringComparison.OrdinalIgnoreCase) ||
+            !IsProductMutationStep(context))
+        {
+            return null;
+        }
+
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
+        if (allowedAliases.Count == 0)
+        {
+            return null;
+        }
+
+        var sourceAliases = ResolveExternalTargetAliasesFromArguments(
+            context.RedactedArguments,
+            IsCopySourceArgumentName);
+        if (sourceAliases.Count == 0 ||
+            !sourceAliases.Any(IsExternalProductArchiveSourceAlias))
+        {
+            return null;
+        }
+
+        var destinationAliases = ResolveExternalTargetAliasesFromArguments(
+            context.RedactedArguments,
+            IsCopyDestinationArgumentName);
+        if (!destinationAliases.Any(alias => IsAllowedExternalTargetAlias(alias, allowedAliases)))
+        {
+            return null;
+        }
+
+        var sourceAlias = sourceAliases.First(IsExternalProductArchiveSourceAlias);
+        return ToolInvocationPolicyDecision.Deny(
+            signature,
+            $"This governed product mutation step cannot copy archived, backup, or previous-run product material from '{sourceAlias}' into the current product target. Use the current-run project structure and mutate the grounded product root directly.");
     }
 
     private static string BuildCurrentRunExternalTargetGuidance(
@@ -612,7 +1415,9 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         }
 
         var referencedAliases = ResolveReferencedExternalTargetAliases(context.RedactedArguments);
+        var allowedAliases = NormalizeAllowedExternalTargetAliases(context.AllowedExternalTargetAliases);
         var matchedAlias = referencedAliases.FirstOrDefault(referencedAlias =>
+            !IsAllowedExternalTargetAlias(referencedAlias, allowedAliases) &&
             readOnlyAliases.Any(readOnlyAlias =>
                 string.Equals(referencedAlias, readOnlyAlias, StringComparison.OrdinalIgnoreCase) ||
                 referencedAlias.StartsWith(readOnlyAlias + "/", StringComparison.OrdinalIgnoreCase)));
@@ -667,8 +1472,15 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private static IReadOnlyList<string> ResolveReferencedExternalTargetAliases(
         IReadOnlyDictionary<string, string> arguments)
     {
+        return ResolveExternalTargetAliasesFromArguments(arguments, IsPathLikeArgumentName);
+    }
+
+    private static IReadOnlyList<string> ResolveExternalTargetAliasesFromArguments(
+        IReadOnlyDictionary<string, string> arguments,
+        Func<string, bool> argumentNamePredicate)
+    {
         return arguments
-            .Where(argument => IsPathLikeArgumentName(argument.Key))
+            .Where(argument => argumentNamePredicate(argument.Key))
             .SelectMany(argument => ExternalTargetAliasRegex
                 .Matches(argument.Value ?? string.Empty)
                 .Select(match => NormalizeExternalTargetAlias(match.Value)))
@@ -813,6 +1625,37 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
                    argumentName.Contains(fragment, StringComparison.OrdinalIgnoreCase));
     }
 
+    private static bool IsCopySourceArgumentName(string argumentName)
+    {
+        return !string.IsNullOrWhiteSpace(argumentName) &&
+               (argumentName.Contains("source", StringComparison.OrdinalIgnoreCase) ||
+                argumentName.StartsWith("from", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsCopyDestinationArgumentName(string argumentName)
+    {
+        return !string.IsNullOrWhiteSpace(argumentName) &&
+               (argumentName.Contains("destination", StringComparison.OrdinalIgnoreCase) ||
+                argumentName.Contains("target", StringComparison.OrdinalIgnoreCase) ||
+                argumentName.StartsWith("to", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool IsProductMutationStep(ToolInvocationPolicyContext context)
+    {
+        return string.Equals(context.ProcessStepTargetScope, "ExternalProductTargetMutable", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(context.ProcessStepTargetScope, "ManagedOutputProduct", StringComparison.OrdinalIgnoreCase) ||
+               (context.ProcessStepAllowedOperations?.Any(operation =>
+                   string.Equals(operation, OperationMutateProductTarget, StringComparison.OrdinalIgnoreCase)) ?? false);
+    }
+
+    private static bool IsExternalProductArchiveSourceAlias(string normalizedAlias)
+    {
+        return normalizedAlias
+            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Skip(2)
+            .Any(segment => ExternalProductArchiveSourceSegments.Contains(segment));
+    }
+
     private static bool IsExternalTargetAliasPath(string normalizedPath)
     {
         return normalizedPath.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase);
@@ -898,6 +1741,14 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             : $"artifacts/process-runs/{context.ProcessRunId.Trim()}";
     }
 
+    private static bool IsCurrentRunManagedArtifactPath(string normalizedPath, ToolInvocationPolicyContext context)
+    {
+        var currentRunRoot = BuildCurrentRunManagedArtifactRoot(context);
+        return !string.IsNullOrWhiteSpace(normalizedPath) &&
+               (string.Equals(normalizedPath, currentRunRoot, StringComparison.OrdinalIgnoreCase) ||
+                normalizedPath.StartsWith(currentRunRoot + "/", StringComparison.OrdinalIgnoreCase));
+    }
+
     private static string NormalizeManagedWorkspacePath(string? path)
     {
         if (string.IsNullOrWhiteSpace(path))
@@ -926,6 +1777,8 @@ public static class AgentToolInvocationPolicyMetadata
     public const string LoadSkill = "load_skill";
     public const string ReadSkillResource = "read_skill_resource";
     public const string RunSkillScript = "run_skill_script";
+    public const string WorkspacePowerShellRunScript = "workspace_pwsh_run_script";
+    public const string WorkspacePythonRunFile = "workspace_python_run_file";
     public const string ProcessesDefinitionSave = "processes_definition_save";
     public const string ProcessesDefinitionRoleAdd = "processes_definition_role_add";
     public const string ProcessesDefinitionPublish = "processes_definition_publish";
@@ -948,8 +1801,73 @@ public static class AgentToolInvocationPolicyMetadata
     public const string ProcessesTemplateMermaidGet = "processes_template_mermaid_get";
     public const string ProcessesTemplateImport = "processes_template_import";
     public const string ProcessesTemplateBaselineScenariosList = "processes_template_baseline_scenarios_list";
+    public const string ProcessesTemplateLiveRunProfilesList = "processes_template_live_run_profiles_list";
     public const string ImageGenerationCreate = "image_generation_create";
     public const string WorkspaceInspectImage = "workspace_inspect_image";
+    public const string ProjectStructureProjectsList = "project_structure_projects_list";
+    public const string ProjectStructureProjectCreate = "project_structure_project_create";
+    public const string ProjectStructureProjectUpdate = "project_structure_project_update";
+    public const string ProjectStructureHierarchyGet = "project_structure_hierarchy_get";
+    public const string ProjectStructureSubprojectLink = "project_structure_subproject_link";
+    public const string ProjectStructureNodesToNewSubproject = "project_structure_nodes_to_new_subproject";
+    public const string ProjectStructureRead = "project_structure_read";
+    public const string ProjectStructureNodeCatalog = "project_structure_node_catalog";
+    public const string ProjectStructureChecklist = "project_structure_checklist";
+    public const string ProjectStructureDependenciesQuery = "project_structure_dependencies_query";
+    public const string ProjectStructureDependencyLink = "project_structure_dependency_link";
+    public const string ProjectStructureDependencyUnlink = "project_structure_dependency_unlink";
+    public const string ProjectStructureNodeCreate = "project_structure_node_create";
+    public const string ProjectStructureNodeUpdate = "project_structure_node_update";
+    public const string ProjectStructureNodeMove = "project_structure_node_move";
+    public const string ProjectStructureNodeRecompose = "project_structure_node_recompose";
+    public const string ProjectStructureNodeReparent = "project_structure_node_reparent";
+    public const string ProjectStructureApprovalRequest = "project_structure_approval_request";
+    public const string ProjectStructureAssetCreate = "project_structure_asset_create";
+    public const string ProjectStructureAssetGet = "project_structure_asset_get";
+    public const string ProjectStructureAssetCreateRevision = "project_structure_asset_create_revision";
+    public const string ProjectStructureImport = "project_structure_import";
+    public const string ProjectStructureKnowledgeQuery = "project_structure_knowledge_query";
+    public const string ProjectStructureAnalyticsQuery = "project_structure_analytics_query";
+    public const string ProjectStructureProjectLeaseAcquire = "project_structure_project_lease_acquire";
+    public const string ProjectStructureRepoBranchLeaseAcquire = "project_structure_repo_branch_lease_acquire";
+    public const string ProjectStructureLeaseGet = "project_structure_lease_get";
+    public const string ProjectStructureLeaseRelease = "project_structure_lease_release";
+
+    private static readonly string[] ProjectStructureReadToolNames =
+    [
+        ProjectStructureProjectsList,
+        ProjectStructureHierarchyGet,
+        ProjectStructureRead,
+        ProjectStructureNodeCatalog,
+        ProjectStructureChecklist,
+        ProjectStructureDependenciesQuery,
+        ProjectStructureAssetGet,
+        ProjectStructureKnowledgeQuery,
+        ProjectStructureAnalyticsQuery,
+        ProjectStructureLeaseGet
+    ];
+
+    private static readonly string[] ProjectStructureMutationToolNames =
+    [
+        ProjectStructureProjectCreate,
+        ProjectStructureProjectUpdate,
+        ProjectStructureSubprojectLink,
+        ProjectStructureNodesToNewSubproject,
+        ProjectStructureDependencyLink,
+        ProjectStructureDependencyUnlink,
+        ProjectStructureNodeCreate,
+        ProjectStructureNodeUpdate,
+        ProjectStructureNodeMove,
+        ProjectStructureNodeRecompose,
+        ProjectStructureNodeReparent,
+        ProjectStructureApprovalRequest,
+        ProjectStructureAssetCreate,
+        ProjectStructureAssetCreateRevision,
+        ProjectStructureImport,
+        ProjectStructureProjectLeaseAcquire,
+        ProjectStructureRepoBranchLeaseAcquire,
+        ProjectStructureLeaseRelease
+    ];
 
     private static readonly string[] SensitiveArgumentNameFragments =
     [
@@ -967,8 +1885,8 @@ public static class AgentToolInvocationPolicyMetadata
         new[]
         {
             Mutation("workspace_dotnet_new"),
-            Mutation("workspace_pwsh_run_script"),
-            Mutation("workspace_python_run_file"),
+            Mutation(WorkspacePowerShellRunScript),
+            Mutation(WorkspacePythonRunFile),
             Mutation("workspace_create_directory"),
             Mutation("workspace_write_file"),
             Mutation("workspace_append_file"),
@@ -1005,10 +1923,18 @@ public static class AgentToolInvocationPolicyMetadata
             Read(ProcessesTemplatesList),
             Read(ProcessesTemplateGet),
             Read(ProcessesTemplateMermaidGet),
-            Read(ProcessesTemplateBaselineScenariosList)
-        }.ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
+            Read(ProcessesTemplateBaselineScenariosList),
+            Read(ProcessesTemplateLiveRunProfilesList)
+        }
+        .Concat(ProjectStructureReadToolNames.Select(Read))
+        .Concat(ProjectStructureMutationToolNames.Select(Mutation))
+        .ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
 
     public static IReadOnlyCollection<AgentToolPolicyMetadata> Tools => RegisteredTools.Values.ToList();
+
+    public static IReadOnlyList<string> ProjectStructureReadTools => ProjectStructureReadToolNames.ToArray();
+
+    public static IReadOnlyList<string> ProjectStructureMutationTools => ProjectStructureMutationToolNames.ToArray();
 
     public static ToolInvocationClassification Classify(string? toolName)
     {
@@ -1021,6 +1947,11 @@ public static class AgentToolInvocationPolicyMetadata
         if (RegisteredTools.TryGetValue(normalized, out var metadata))
         {
             return metadata.Classification;
+        }
+
+        if (normalized.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase))
+        {
+            return ToolInvocationClassification.Unknown;
         }
 
         if (normalized.StartsWith("processes_", StringComparison.OrdinalIgnoreCase))
@@ -1052,6 +1983,11 @@ public static class AgentToolInvocationPolicyMetadata
     {
         return RegisteredTools.TryGetValue(toolName, out var metadata) &&
                metadata.Classification == ToolInvocationClassification.Validation;
+    }
+
+    public static bool IsProjectStructureMutationTool(string toolName)
+    {
+        return ProjectStructureMutationToolNames.Contains(toolName, StringComparer.OrdinalIgnoreCase);
     }
 
     public static bool RequiresApprovalByDefault(string toolName)

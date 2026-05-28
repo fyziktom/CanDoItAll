@@ -62,7 +62,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var previousExecutionDetail = await workspaceService.GetExecutionRunDetailAsync(
             previousExecutionRunId,
             cancellationToken);
-        var responseText = ResolveRecoveredExecutionResponseText(previousExecutionDetail);
+        var responseText = await ResolveRecoveredExecutionResponseTextWithCurrentRunArtifactsAsync(
+            candidate,
+            previousExecutionDetail,
+            cancellationToken);
+        var dispositionRecoveryOutcome = await TryRecoverStrandedDispositionArtifactsAsync(
+            candidate,
+            previousExecutionDetail,
+            responseText,
+            dispatchClaim,
+            cancellationToken);
+        if (dispositionRecoveryOutcome is not null)
+        {
+            return dispositionRecoveryOutcome;
+        }
+
         var syntheticOutcome = new DispatchExecutionOutcome(
             previousExecutionDetail,
             responseText,
@@ -90,6 +104,142 @@ internal sealed partial class ProcessRunAutomationDispatchService
             cancellationToken);
     }
 
+    private async Task<DispatchExecutionOutcome?> TryRecoverStrandedDispositionArtifactsAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail previousExecutionDetail,
+        string responseText,
+        ProcessStepDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        if (!ShouldAttemptStrandedDispositionArtifactFinalization(
+                candidate,
+                previousExecutionDetail.Run,
+                responseText,
+                clock.GetUtcNow()))
+        {
+            return null;
+        }
+
+        logger.LogWarning(
+            "Stranded process run {RunId}, step {StepRunId} has execution run {ExecutionRunId} with durable current-run artifacts and explicit disposition text. Projecting artifacts and finalizing from the governed disposition instead of starting manager recovery.",
+            candidate.Run.Id,
+            candidate.StepRun.Id,
+            previousExecutionDetail.Run.Id);
+
+        await ProjectExecutionArtifactsAsync(
+            candidate,
+            previousExecutionDetail,
+            responseText,
+            ProcessStepRunStatus.Failed,
+            dispatchClaim,
+            cancellationToken);
+
+        if (HasMissingRequiredCompletionArtifacts(candidate.ExpectedArtifacts, candidate.RecordedArtifactExpectationIds))
+        {
+            logger.LogWarning(
+                "Stranded disposition artifact recovery for run {RunId}, step {StepRunId}, execution run {ExecutionRunId} could not satisfy all required artifact records after projection. Manager recovery remains eligible.",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                previousExecutionDetail.Run.Id);
+            return null;
+        }
+
+        return new DispatchExecutionOutcome(
+            previousExecutionDetail,
+            responseText,
+            ProcessStepRunStatus.Failed,
+            $"Prior automation execution run {previousExecutionDetail.Run.Id:D} produced the required current-run artifacts and explicit branch disposition, but failed before the structured finalizer completed; process-owned recovery will finalize from the durable artifacts.",
+            [],
+            AttemptNumber: 1,
+            SelectedBranchOutcomeId: null);
+    }
+
+    internal static bool ShouldAttemptStrandedDispositionArtifactFinalization(
+        DispatchCandidate candidate,
+        ExecutionRunRecord executionRun,
+        string? responseText,
+        DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(executionRun);
+
+        return executionRun.PendingApprovals.Count == 0 &&
+               (IsTerminalAutomationExecutionRun(executionRun) || IsStaleAutomationExecutionRun(executionRun, now)) &&
+               candidate.RequiresExplicitBranchOutcomeSelection &&
+               candidate.BranchOutcomes.Count > 0 &&
+               ResolveMissingUpstreamArtifactInputs(candidate).Count == 0 &&
+               IsDispositionRoutingStep(candidate) &&
+               TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out _);
+    }
+
+    private async Task<string> ResolveRecoveredExecutionResponseTextWithCurrentRunArtifactsAsync(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        CancellationToken cancellationToken)
+    {
+        var recoveredText = ResolveRecoveredExecutionResponseText(detail);
+        if (!candidate.RequiresExplicitBranchOutcomeSelection ||
+            TryResolveExplicitDispositionBranchOutcome(candidate, recoveredText, out _))
+        {
+            return recoveredText;
+        }
+
+        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        var workspaceScope = WorkspaceScopeDescriptor.Organization(
+            databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N"));
+        var builder = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(recoveredText))
+        {
+            builder.AppendLine(recoveredText.Trim());
+        }
+
+        foreach (var expectedArtifact in candidate.ExpectedArtifacts.Where(artifact => artifact.IsRequired))
+        {
+            foreach (var relativePath in ResolveExpectedManagedArtifactRelativePaths(candidate, workspaceScope, expectedArtifact))
+            {
+                if (!IsTextReadableManagedArtifactPath(relativePath) ||
+                    !TryResolveArtifactFullPath(workspaceRoot, relativePath, out var fullPath, out _) ||
+                    !File.Exists(fullPath))
+                {
+                    continue;
+                }
+
+                string content;
+                try
+                {
+                    content = await File.ReadAllTextAsync(fullPath, cancellationToken);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    logger.LogWarning(
+                        exception,
+                        "Could not read current-run artifact file {RelativePath} while recovering response text for process run {RunId}, step {StepRunId}.",
+                        relativePath,
+                        candidate.Run.Id,
+                        candidate.StepRun.Id);
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    continue;
+                }
+
+                if (builder.Length > 0)
+                {
+                    builder.AppendLine();
+                }
+
+                builder.AppendLine($"Current-run artifact '{expectedArtifact.Title}' ({relativePath}):");
+                builder.AppendLine(content.Length > 128_000 ? content[..128_000] : content);
+            }
+        }
+
+        return builder.Length == 0
+            ? recoveredText
+            : builder.ToString();
+    }
+
     internal static bool ShouldAttemptManagerArtifactRecoveryForStrandedStep(
         ProcessStepRunStatus stepStatus,
         Guid? recoveryExecutionRunId,
@@ -108,7 +258,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepRun stepRun,
         IReadOnlyList<ExecutionRunRecord> executionRuns,
         IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
-        IReadOnlySet<Guid> recordedArtifactExpectationIds)
+        IReadOnlySet<Guid> recordedArtifactExpectationIds,
+        DateTimeOffset? now = null)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
         ArgumentNullException.ThrowIfNull(executionRuns);
@@ -121,16 +272,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return null;
         }
 
+        var resolvedNow = now ?? DateTimeOffset.UtcNow;
         return executionRuns
             .Where(executionRun =>
                 string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase) &&
-                executionRun.State is ExecutionState.Completed or ExecutionState.Failed)
+                (executionRun.State is ExecutionState.Completed or ExecutionState.Failed ||
+                 IsStaleAutomationExecutionRun(executionRun, resolvedNow)))
             .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
             .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
             .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
             .Select(executionRun => (Guid?)executionRun.Id)
             .FirstOrDefault();
     }
+
+    internal static bool ShouldReusePriorArtifactRecoveryExecutionRun(string trigger)
+        => !string.Equals(
+            trigger?.Trim(),
+            ProcessRuntimeEventTypes.ManualAgentStepRerun,
+            StringComparison.OrdinalIgnoreCase);
 
     private static bool HasMissingRequiredCompletionArtifacts(
         IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
@@ -260,7 +419,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             recoveryOutcome.ResponseText,
             recoveryOutcome.CompletionStatus,
             dispatchClaim,
-            cancellationToken);
+            cancellationToken,
+            new ArtifactProjectionLineage(
+                recoveryOutcome.Detail.Run.Id,
+                executionOutcome.Detail.Run.Id,
+                recoveryDecision.ReworkPacketId));
 
         var remainingArtifacts = ResolveMissingRequiredCompletionArtifacts(candidate);
         if (remainingArtifacts.Count == 0)
@@ -305,6 +468,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             CurrentExecutorPartyId = source.CurrentExecutorPartyId,
             DecisionSummary = source.DecisionSummary,
             BlockedReason = source.BlockedReason,
+            BlockReasonCode = source.BlockReasonCode,
+            RecoveryOptionsJson = source.RecoveryOptionsJson,
+            NextRecoveryAction = source.NextRecoveryAction,
             RefusalReason = source.RefusalReason,
             ExceptionSummary = source.ExceptionSummary,
             InputQualitySummary = source.InputQualitySummary,
@@ -514,41 +680,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return byAssignedManager;
         }
 
-        var fallbackOptions = managerOptions
+        var explicitlyCapableOption = managerOptions
             .Where(option => option.TechnicalAgentId.HasValue)
-            .Where(option => ContainsManagerRecoveryToken(option.DisplayName) ||
-                             ContainsManagerRecoveryToken(option.BindingSummary))
+            .Where(option => ContainsExplicitArtifactRecoveryCapability(option.DisplayName) ||
+                             ContainsExplicitArtifactRecoveryCapability(option.BindingSummary))
             .ToList();
-        if (fallbackOptions.Count == 1)
+        if (explicitlyCapableOption.Count == 1)
         {
-            var option = fallbackOptions[0];
+            var option = explicitlyCapableOption[0];
             return new ManagerArtifactRecoveryAgent(
                 option.TechnicalAgentId!.Value,
                 ResolveManagerRecoveryDisplayName(option.DisplayName, option.TechnicalAgentId.Value),
-                "single-manager-like-option");
+                "single-explicit-recovery-option");
         }
 
-        var fallbackAgents = agents
-            .Select(agent => new
-            {
-                Agent = agent,
-                Score = ResolveManagerRecoveryScore(agent)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .ThenByDescending(item => item.Agent.UpdatedAtUtc)
+        var explicitlyCapableAgents = agents
+            .Where(agent =>
+                ContainsExplicitArtifactRecoveryCapability(agent.Name) ||
+                ContainsExplicitArtifactRecoveryCapability(agent.RoleTitle) ||
+                agent.Tags.Any(ContainsExplicitArtifactRecoveryCapability))
+            .OrderByDescending(agent => agent.UpdatedAtUtc)
             .ToList();
-        if (fallbackAgents.Count == 0)
-        {
-            return null;
-        }
-
-        var topScore = fallbackAgents[0].Score;
-        return fallbackAgents.Count(item => item.Score == topScore) == 1
+        return explicitlyCapableAgents.Count == 1
             ? new ManagerArtifactRecoveryAgent(
-                fallbackAgents[0].Agent.Id,
-                ResolveManagerRecoveryDisplayName(fallbackAgents[0].Agent.Name, fallbackAgents[0].Agent.Id),
-                "single-manager-like-agent")
+                explicitlyCapableAgents[0].Id,
+                ResolveManagerRecoveryDisplayName(explicitlyCapableAgents[0].Name, explicitlyCapableAgents[0].Id),
+                "single-explicit-recovery-agent")
             : null;
     }
 
@@ -673,6 +830,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return 0;
         }
 
+        if (ContainsExplicitArtifactRecoveryCapability(value))
+        {
+            return 120;
+        }
+
         if (value.Contains("process manager", StringComparison.OrdinalIgnoreCase))
         {
             return 100;
@@ -693,9 +855,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return 60;
         }
 
-        return value.Contains("lead", StringComparison.OrdinalIgnoreCase)
-            ? 50
-            : 0;
+        return 0;
     }
 
     private static bool ContainsManagerRecoveryToken(string value)
@@ -710,8 +870,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return tokens.Any(token =>
             string.Equals(token, "manager", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "lead", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(token, "orchestrator", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool ContainsExplicitArtifactRecoveryCapability(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Contains("process-artifact-recovery-manager", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("artifact-recovery-manager", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("artifact recovery manager", StringComparison.OrdinalIgnoreCase) ||
+               value.Contains("process artifact recovery", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string ResolveManagerRecoveryDisplayName(string displayName, Guid technicalAgentId)

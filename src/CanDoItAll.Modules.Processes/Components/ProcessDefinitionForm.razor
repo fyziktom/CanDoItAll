@@ -158,6 +158,45 @@
             </TabItems>
         </Tabs>
 
+        @if (Model.LintResult.HasWarningsOrErrors)
+        {
+            <Stack GapScale="LayoutGap.Small"
+                   AlignItems="AlignItems.Stretch"
+                   data-testid="processes-definition-lint-panel">
+                <Cluster Gap="LayoutGap.Small"
+                         AlignItems="AlignItems.Center"
+                         Wrap="FlexWrap.Wrap">
+                    <StatusBadge Tone="warning"
+                                 Text="@($"{Model.LintResult.Issues.Count} lint issues")" />
+                    @if (Model.LintResult.HasErrors)
+                    {
+                        <StatusBadge Tone="danger"
+                                     Text="@($"{Model.LintResult.Issues.Count(issue => issue.Severity == ProcessDefinitionLintSeverity.Error)} blocking")" />
+                    }
+                </Cluster>
+                @foreach (var issue in Model.LintResult.Issues)
+                {
+                    <Stack GapScale="LayoutGap.Tiny"
+                           AlignItems="AlignItems.Stretch"
+                           Class="rounded-md border border-slate-200 bg-slate-50 p-3">
+                        <Cluster Gap="LayoutGap.Small"
+                                 AlignItems="AlignItems.Center"
+                                 Wrap="FlexWrap.Wrap">
+                            <StatusBadge Tone="@ResolveLintTone(issue.Severity)"
+                                         Text="@issue.Severity.ToString()" />
+                            <span class="text-sm font-medium text-slate-900">@issue.StepTitle</span>
+                            <span class="text-xs text-slate-500">@issue.Code</span>
+                        </Cluster>
+                        <p class="text-sm leading-6 text-slate-700">@issue.Message</p>
+                        @if (!string.IsNullOrWhiteSpace(issue.Suggestion))
+                        {
+                            <p class="text-xs leading-5 text-slate-600">@issue.Suggestion</p>
+                        }
+                    </Stack>
+                }
+            </Stack>
+        }
+
         @if (ShowActions)
         {
             <Cluster Gap="LayoutGap.Small"
@@ -227,5 +266,15 @@
         }
 
         return $"{agent.DisplayName} / {agent.ProviderName} {agent.DefaultModel}".Trim();
+    }
+
+    private static string ResolveLintTone(ProcessDefinitionLintSeverity severity)
+    {
+        return severity switch
+        {
+            ProcessDefinitionLintSeverity.Error => "danger",
+            ProcessDefinitionLintSeverity.Warning => "warning",
+            _ => "info"
+        };
     }
 }

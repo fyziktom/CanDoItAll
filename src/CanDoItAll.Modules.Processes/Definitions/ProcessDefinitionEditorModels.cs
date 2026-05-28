@@ -96,7 +96,11 @@ public sealed class ProcessDefinitionEditorModel
 
     public ProcessAutonomyLevel AutonomyLevel { get; set; } = ProcessAutonomyLevel.Assisted;
 
+    public ProcessDefinitionContractMode ContractMode { get; set; } = ProcessDefinitionContractMode.Strict;
+
     public ProcessDefinitionStatus Status { get; set; } = ProcessDefinitionStatus.Draft;
+
+    public ProcessDefinitionLintResult LintResult { get; set; } = ProcessDefinitionLintResult.Empty;
 
     public List<ProcessRoleEditorModel> Roles { get; set; } = [];
 
@@ -112,6 +116,8 @@ public sealed class ProcessDefinitionPublishRequest
     public Guid? DefinitionConcurrencyToken { get; set; }
 
     public Guid? DraftVersionConcurrencyToken { get; set; }
+
+    public ProcessDefinitionLintMode LintMode { get; set; } = ProcessDefinitionLintMode.Advisory;
 }
 
 public sealed class ProcessRoleEditorModel
@@ -177,6 +183,10 @@ public sealed class ProcessStepEditorModel
     public string Notes { get; set; } = string.Empty;
 
     public ProcessStepKind StepKind { get; set; } = ProcessStepKind.Work;
+
+    public List<ProcessStepOperation> AllowedOperations { get; set; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; set; }
 
     public Guid? SubprocessDefinitionId { get; set; }
 
@@ -277,6 +287,18 @@ public sealed class ProcessArtifactExpectationEditorModel
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ValidationRequirementSummary { get; set; } = string.Empty;
+
+    public string WorkflowOutputId { get; set; } = string.Empty;
+
+    public string WorkflowOutputName { get; set; } = string.Empty;
+
+    public WorkflowArtifactKind? WorkflowOutputKind { get; set; }
+
+    public Guid? SubprocessChildArtifactExpectationId { get; set; }
+
+    public string SubprocessChildStepKey { get; set; } = string.Empty;
+
+    public string SubprocessChildArtifactTitle { get; set; } = string.Empty;
 }
 
 public sealed class ProcessStepArtifactInputEditorModel

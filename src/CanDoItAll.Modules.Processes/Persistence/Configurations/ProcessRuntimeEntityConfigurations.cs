@@ -62,6 +62,9 @@ internal sealed class ProcessStepRunConfiguration : IEntityTypeConfiguration<Pro
         builder.Property(step => step.CurrentExecutorName).HasMaxLength(200);
         builder.Property(step => step.DecisionSummary).HasColumnType("TEXT");
         builder.Property(step => step.BlockedReason).HasColumnType("TEXT");
+        builder.Property(step => step.BlockReasonCode).HasConversion<string>().HasMaxLength(80);
+        builder.Property(step => step.RecoveryOptionsJson).HasColumnType("TEXT");
+        builder.Property(step => step.NextRecoveryAction).HasConversion<string>().HasMaxLength(80);
         builder.Property(step => step.RefusalReason).HasColumnType("TEXT");
         builder.Property(step => step.ExceptionSummary).HasColumnType("TEXT");
         builder.Property(step => step.InputQualitySummary).HasColumnType("TEXT");
@@ -203,9 +206,14 @@ internal sealed class ProcessArtifactRecordConfiguration : IEntityTypeConfigurat
         builder.Property(record => record.ReviewSummary).HasColumnType("TEXT");
         builder.Property(record => record.ManagedStoragePath).HasMaxLength(500);
         builder.Property(record => record.ExternalReferenceKey).HasMaxLength(200);
+        builder.Property(record => record.ProjectionLineageJson).HasColumnType("TEXT");
+        builder.Property(record => record.ProjectionIdentityHash).HasMaxLength(95);
         builder.HasIndex(record => record.ProcessRunId);
         builder.HasIndex(record => record.StepRunId);
         builder.HasIndex(record => record.ArtifactExpectationId);
+        builder.HasIndex(record => new { record.ProcessRunId, record.ProjectionIdentityHash })
+            .IsUnique()
+            .HasFilter("\"ProjectionIdentityHash\" <> ''");
         builder.HasOne<ProcessRun>()
             .WithMany()
             .HasForeignKey(record => record.ProcessRunId)

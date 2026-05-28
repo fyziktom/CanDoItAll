@@ -156,7 +156,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/scaffold-contract.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -223,7 +230,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/create-dotnet-project.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 2,
@@ -290,7 +306,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/add-test-project.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 3,
@@ -307,7 +332,7 @@
       "OutputContractSummary": "Build and test command output that proves the new solution can be iterated safely.",
       "EvidenceContractSummary": "Command, exit code, warnings, and any accepted follow-up risks.",
       "DecisionRightsSummary": "Validation reviewer can reject the scaffold when build proof is missing or non-deterministic.",
-      "ExceptionPolicySummary": "Block on restore/build failure, missing test project, or unexplained command output.",
+      "ExceptionPolicySummary": "Block on restore/build failure, missing test project, unexplained command output, or artifact recovery when required build or test discovery evidence is missing or invalid before branch routing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "add-test-project",
       "DependsOnBranchOutcomeKey": "",
@@ -365,7 +390,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/validate-first-build.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 4,
@@ -432,7 +466,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-solution-setup/steps/setup-handoff.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ]
 }

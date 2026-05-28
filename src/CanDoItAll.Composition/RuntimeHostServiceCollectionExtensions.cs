@@ -212,9 +212,7 @@ public sealed class AppDatabaseBootstrapper(
     private const int RuntimeBootstrapOpenAiTimeoutSeconds = 600;
     private static readonly Guid DefaultOpenAiApiKeySecretId = Guid.Parse("86F781F1-1E76-4B45-9F1A-42B8CF13D8C7");
     private const string DefaultOpenAiApiKeySecretName = "OpenAI API key";
-    private const string InitialPostgreSqlBaselineMigrationId = "20260523211921_InitialPostgreSqlBaseline";
-    private const string ProcessStepAutomationDispatchClaimsMigrationId = "20260524144716_ProcessStepAutomationDispatchClaims";
-    private const string ProcessClaimHotPathIndexesMigrationId = "20260524183000_ProcessClaimHotPathIndexes";
+    private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
     private const string StepDispatchClaimIndexName = "IX_Processes_StepRuns_ProcessRunId_AutomationDispatchLeaseExpi~";
     private static readonly string[] BaselineSentinelTables =
     [
@@ -231,12 +229,41 @@ public sealed class AppDatabaseBootstrapper(
         "AutomationDispatchClaimedBy",
         "AutomationDispatchLeaseExpiresAtUtc"
     ];
-    private static readonly string[] ProcessClaimHotPathIndexNames =
+    private static readonly PostgreSqlColumnRequirement[] MergedBaselineColumnRequirements =
     [
-        "IX_Processes_Outbox_PendingClaimOrder",
-        "IX_Automation_EnvelopeDeliveries_DueClaimOrder",
-        "IX_Workspace_ConnectorCommands_PendingClaimOrder"
+        new("Processes_StepRuns", ProcessStepDispatchClaimColumns),
+        new("Processes_StepRuns",
+        [
+            "BlockReasonCode",
+            "RecoveryOptionsJson",
+            "NextRecoveryAction"
+        ]),
+        new("Processes_ArtifactRecords",
+        [
+            "ProjectionLineageJson",
+            "ProjectionIdentityHash"
+        ]),
+        new("Processes_StepDefinitions",
+        [
+            "AllowedOperations",
+            "OperationTargetScope"
+        ]),
+        new("Processes_DefinitionVersions", ["ContractMode"]),
+        new("Processes_ArtifactExpectations",
+        [
+            "SubprocessChildArtifactExpectationId",
+            "WorkflowOutputId",
+            "WorkflowOutputKind",
+            "WorkflowOutputName"
+        ])
     ];
+    private static readonly string[] MergedBaselineIndexRequirements =
+    [
+        "IX_Processes_ArtifactExpectations_SubprocessChildArtifactExpec~",
+        "IX_Processes_ArtifactRecords_ProcessRunId_ProjectionIdentityHa~"
+    ];
+
+    private readonly record struct PostgreSqlColumnRequirement(string TableName, string[] ColumnNames);
 
     public Task EnsureCurrentProfileReadyAsync(CancellationToken cancellationToken = default)
     {
@@ -306,60 +333,41 @@ public sealed class AppDatabaseBootstrapper(
         var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync(cancellationToken))
             .ToHashSet(StringComparer.Ordinal);
 
-        if (!appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
-            var existingSentinelTables = new List<string>();
-            foreach (var tableName in BaselineSentinelTables) {
-                if (await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
-                    existingSentinelTables.Add(tableName);
-                }
-            }
-
-            if (existingSentinelTables.Count > 0) {
-                if (existingSentinelTables.Count != BaselineSentinelTables.Length) {
-                    throw new InvalidOperationException(
-                        $"PostgreSQL profile '{profile.Profile.DisplayName}' has a partial CanDoItAll schema without EF migration history. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to adopt the merged baseline automatically.");
-                }
-
-                logger.LogWarning(
-                    "PostgreSQL profile {ProfileId} has existing CanDoItAll tables but no recorded initial EF migration. Recording merged baseline migration {MigrationId} before applying pending migrations.",
-                    profile.Profile.Id,
-                    InitialPostgreSqlBaselineMigrationId);
-
-                await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
-                await MarkPostgreSqlMigrationAppliedAsync(dbContext, InitialPostgreSqlBaselineMigrationId, cancellationToken);
-                appliedMigrations.Add(InitialPostgreSqlBaselineMigrationId);
-            }
-        }
-
-        if (!appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
+        if (appliedMigrations.Contains(InitialPostgreSqlBaselineMigrationId)) {
             return;
         }
 
-        if (!appliedMigrations.Contains(ProcessStepAutomationDispatchClaimsMigrationId) &&
-            await PostgreSqlTableExistsAsync(dbContext, "Processes_StepRuns", cancellationToken) &&
-            await PostgreSqlColumnsExistAsync(dbContext, "Processes_StepRuns", ProcessStepDispatchClaimColumns, cancellationToken)) {
-            logger.LogWarning(
-                "PostgreSQL profile {ProfileId} already contains process dispatch claim columns without migration {MigrationId}. Recording the migration and ensuring its index exists.",
-                profile.Profile.Id,
-                ProcessStepAutomationDispatchClaimsMigrationId);
-
-            await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
-            await EnsureProcessStepDispatchClaimIndexAsync(dbContext, cancellationToken);
-            await MarkPostgreSqlMigrationAppliedAsync(dbContext, ProcessStepAutomationDispatchClaimsMigrationId, cancellationToken);
-            appliedMigrations.Add(ProcessStepAutomationDispatchClaimsMigrationId);
+        var existingSentinelTables = new List<string>();
+        foreach (var tableName in BaselineSentinelTables) {
+            if (await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
+                existingSentinelTables.Add(tableName);
+            }
         }
 
-        if (!appliedMigrations.Contains(ProcessClaimHotPathIndexesMigrationId) &&
-            await AnyPostgreSqlIndexExistsAsync(dbContext, ProcessClaimHotPathIndexNames, cancellationToken)) {
-            logger.LogWarning(
-                "PostgreSQL profile {ProfileId} already contains one or more process claim hot-path indexes without migration {MigrationId}. Ensuring all indexes exist and recording the migration.",
-                profile.Profile.Id,
-                ProcessClaimHotPathIndexesMigrationId);
-
-            await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
-            await EnsureProcessClaimHotPathIndexesAsync(dbContext, cancellationToken);
-            await MarkPostgreSqlMigrationAppliedAsync(dbContext, ProcessClaimHotPathIndexesMigrationId, cancellationToken);
+        if (existingSentinelTables.Count == 0) {
+            return;
         }
+
+        if (existingSentinelTables.Count != BaselineSentinelTables.Length) {
+            throw new InvalidOperationException(
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' has a partial CanDoItAll schema without the current EF baseline history. Existing sentinel tables: {string.Join(", ", existingSentinelTables)}. Refusing to adopt the merged baseline automatically.");
+        }
+
+        var missingRequirements = await FindMissingPostgreSqlMergedBaselineRequirementsAsync(dbContext, cancellationToken);
+        if (missingRequirements.Count > 0) {
+            throw new InvalidOperationException(
+                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the merged PostgreSQL baseline. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migration {InitialPostgreSqlBaselineMigrationId} automatically.");
+        }
+
+        logger.LogWarning(
+            "PostgreSQL profile {ProfileId} has an existing current CanDoItAll schema but no recorded merged EF migration. Recording baseline migration {MigrationId} before applying pending migrations.",
+            profile.Profile.Id,
+            InitialPostgreSqlBaselineMigrationId);
+
+        await EnsurePostgreSqlMigrationHistoryTableAsync(dbContext, cancellationToken);
+        await EnsureProcessStepDispatchClaimIndexAsync(dbContext, cancellationToken);
+        await EnsureProcessClaimHotPathIndexesAsync(dbContext, cancellationToken);
+        await MarkPostgreSqlMigrationAppliedAsync(dbContext, InitialPostgreSqlBaselineMigrationId, cancellationToken);
     }
 
     private static async Task<bool> PostgreSqlTableExistsAsync(
@@ -382,59 +390,81 @@ public sealed class AppDatabaseBootstrapper(
         return result is true;
     }
 
-    private static async Task<bool> PostgreSqlColumnsExistAsync(
+    private static async Task<List<string>> FindMissingPostgreSqlMergedBaselineRequirementsAsync(
         AppDbContext dbContext,
-        string tableName,
-        IReadOnlyCollection<string> columnNames,
         CancellationToken cancellationToken) {
-        foreach (var columnName in columnNames) {
-            var result = await ExecutePostgreSqlScalarAsync(
-                dbContext,
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM information_schema.columns
-                    WHERE table_schema = current_schema()
-                      AND table_name = @tableName
-                      AND column_name = @columnName
-                );
-                """,
-                cancellationToken,
-                ("@tableName", tableName),
-                ("@columnName", columnName));
+        var missingRequirements = new List<string>();
 
-            if (result is not true) {
-                return false;
+        var modelTableNames = dbContext.Model.GetEntityTypes()
+            .Select(entityType => entityType.GetTableName())
+            .OfType<string>()
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(tableName => tableName, StringComparer.Ordinal);
+
+        foreach (var tableName in modelTableNames) {
+            if (!await PostgreSqlTableExistsAsync(dbContext, tableName, cancellationToken)) {
+                missingRequirements.Add($"table {tableName}");
             }
         }
 
-        return true;
+        foreach (var requirement in MergedBaselineColumnRequirements) {
+            foreach (var columnName in requirement.ColumnNames) {
+                if (!await PostgreSqlColumnExistsAsync(dbContext, requirement.TableName, columnName, cancellationToken)) {
+                    missingRequirements.Add($"column {requirement.TableName}.{columnName}");
+                }
+            }
+        }
+
+        foreach (var indexName in MergedBaselineIndexRequirements) {
+            if (!await PostgreSqlIndexExistsAsync(dbContext, indexName, cancellationToken)) {
+                missingRequirements.Add($"index {indexName}");
+            }
+        }
+
+        return missingRequirements;
     }
 
-    private static async Task<bool> AnyPostgreSqlIndexExistsAsync(
+    private static async Task<bool> PostgreSqlColumnExistsAsync(
         AppDbContext dbContext,
-        IReadOnlyCollection<string> indexNames,
+        string tableName,
+        string columnName,
         CancellationToken cancellationToken) {
-        foreach (var indexName in indexNames) {
-            var result = await ExecutePostgreSqlScalarAsync(
-                dbContext,
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                    FROM pg_indexes
-                    WHERE schemaname = current_schema()
-                      AND indexname = @indexName
-                );
-                """,
-                cancellationToken,
-                ("@indexName", indexName));
+        var result = await ExecutePostgreSqlScalarAsync(
+            dbContext,
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_schema = current_schema()
+                  AND table_name = @tableName
+                  AND column_name = @columnName
+            );
+            """,
+            cancellationToken,
+            ("@tableName", tableName),
+            ("@columnName", columnName));
 
-            if (result is true) {
-                return true;
-            }
-        }
+        return result is true;
+    }
 
-        return false;
+    private static async Task<bool> PostgreSqlIndexExistsAsync(
+        AppDbContext dbContext,
+        string indexName,
+        CancellationToken cancellationToken) {
+        var result = await ExecutePostgreSqlScalarAsync(
+            dbContext,
+            """
+            SELECT EXISTS (
+                SELECT 1
+                FROM pg_indexes
+                WHERE schemaname = current_schema()
+                  AND indexname = @indexName
+            );
+            """,
+            cancellationToken,
+            ("@indexName", indexName));
+
+        return result is true;
     }
 
     private static Task EnsurePostgreSqlMigrationHistoryTableAsync(

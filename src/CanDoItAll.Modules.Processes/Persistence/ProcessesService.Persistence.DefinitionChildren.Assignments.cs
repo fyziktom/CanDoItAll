@@ -121,6 +121,14 @@ public sealed partial class ProcessesService
                 artifactExpectation.RetentionDays = Math.Max(0, artifactModel.RetentionDays);
                 artifactExpectation.AllowedFutureUsageSummary = artifactModel.AllowedFutureUsageSummary.Trim();
                 artifactExpectation.ValidationRequirementSummary = artifactModel.ValidationRequirementSummary.Trim();
+                artifactExpectation.WorkflowOutputId = artifactModel.WorkflowOutputId.Trim();
+                artifactExpectation.WorkflowOutputName = artifactModel.WorkflowOutputName.Trim();
+                artifactExpectation.WorkflowOutputKind = artifactModel.WorkflowOutputKind;
+                artifactExpectation.SubprocessChildArtifactExpectationId =
+                    artifactModel.SubprocessChildArtifactExpectationId is { } subprocessChildArtifactExpectationId &&
+                    subprocessChildArtifactExpectationId != Guid.Empty
+                        ? subprocessChildArtifactExpectationId
+                        : null;
 
                 context.ArtifactExpectationIdMap[artifactExpectation.Id] = artifactExpectation.Id;
                 context.RetainedArtifactExpectationIds.Add(artifactExpectation.Id);

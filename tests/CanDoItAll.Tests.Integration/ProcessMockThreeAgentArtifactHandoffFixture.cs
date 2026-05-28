@@ -112,6 +112,13 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
                     EvidenceContractSummary = "Both required implementation artifacts are persisted before review.",
                     DecisionRightsSummary = "Developer owns implementation artifact completion.",
                     ExceptionPolicySummary = "Block when required implementation artifacts are missing.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.ReadUpstreamArtifacts,
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ManagedOutputProduct,
                     TargetLeadHours = 2,
                     CanvasX = 440,
                     CanvasY = 160,
@@ -152,6 +159,15 @@ internal static class ProcessMockThreeAgentArtifactHandoffFixture
                     EvidenceContractSummary = "QA approval artifact persisted after reading implementation artifacts.",
                     DecisionRightsSummary = "QA owns approval.",
                     ExceptionPolicySummary = "Block when implementation artifacts are missing.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.ReadUpstreamArtifacts,
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof,
+                        ProcessStepOperation.EscalateOrDecide
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly,
                     TargetLeadHours = 1,
                     CanvasX = 740,
                     CanvasY = 160,

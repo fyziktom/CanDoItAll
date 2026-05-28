@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
@@ -173,6 +174,93 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Run_steps_dialog_SB15_INV_001_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Blazor PWA UI preflight component project");
+        var saveResult = await processesService.SaveAsync(BuildBlazorPwaPreflightDefinition(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Blazor PWA UI preflight run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test Blazor PWA UI preflight."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+        var intakeStep = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Title == "Confirm Blazor PWA request intake");
+        var startResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = intakeStep.Id,
+                StepRunConcurrencyToken = intakeStep.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.InProgress,
+                Reason = "Start intake before recording a recoverable preflight blockage.",
+                DecidedBy = "component-tests"
+            });
+
+        Assert.True(startResult.IsSuccess, string.Join(" | ", startResult.Errors.Select(error => error.Message)));
+        var inProgressStep = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Id == intakeStep.Id);
+        var blockResult = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = inProgressStep.Id,
+                StepRunConcurrencyToken = inProgressStep.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Missing managed intake evidence for the Blazor PWA request.",
+                DecidedBy = "component-tests",
+                BlockCause = ProcessStepBlockCause.OwnOutput
+            });
+
+        Assert.True(blockResult.IsSuccess, string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
+        var blockedStep = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Id == intakeStep.Id);
+
+        var host = harness.Context.RenderComponent<DialogHost>();
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Blazor PWA UI preflight process", cut.Markup));
+        await ActivateRunsTabAsync(cut);
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find($"[data-testid='processes-run-history-item-{runResult.Value}']")));
+
+        cut.Find($"[data-testid='processes-run-history-item-{runResult.Value}']").Click();
+
+        host.WaitForAssertion(() =>
+        {
+            var intakeCard = host.Find($"[data-testid='processes-step-run-card'][data-step-run-id='{blockedStep.Id:D}']");
+            Assert.Equal(ProcessStepTargetScope.ManagedProcessArtifactsOnly.ToString(), intakeCard.GetAttribute("data-operation-target-scope"));
+            Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts.ToString(), intakeCard.GetAttribute("data-allowed-operations"), StringComparison.Ordinal);
+            Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget.ToString(), intakeCard.GetAttribute("data-allowed-operations"), StringComparison.Ordinal);
+            Assert.Contains("Confirm Blazor PWA request intake", intakeCard.TextContent, StringComparison.Ordinal);
+            Assert.Contains("target: ManagedProcessArtifactsOnly", intakeCard.TextContent, StringComparison.Ordinal);
+            Assert.Contains(ProcessStepOperation.EscalateOrDecide.ToString(), intakeCard.TextContent, StringComparison.Ordinal);
+
+            var branchSelect = host.Find($"[data-testid='processes-branch-outcome-select'][data-step-run-id='{blockedStep.Id:D}']");
+            Assert.Contains("Blazor PWA request ready", branchSelect.TextContent, StringComparison.Ordinal);
+
+            var recoveryDiagnostics = host.Find($"[data-testid='processes-step-recovery-diagnostics'][data-step-run-id='{blockedStep.Id:D}']");
+            Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied.ToString(), recoveryDiagnostics.GetAttribute("data-block-reason-code"));
+            Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly.ToString(), recoveryDiagnostics.GetAttribute("data-recovery-options"), StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public async Task Run_history_filters_by_state_name_and_tags()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -232,7 +320,19 @@ public sealed class ProcessWorkspaceTests
         var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
         var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
         var projectId = await CreateProjectAsync(projectsService, "Operator console component project");
-        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+        var editor = BuildDefinitionEditor(projectId, Guid.NewGuid());
+        var artifactExpectationId = Guid.NewGuid();
+        var intakeStep = Assert.Single(editor.Steps, step => step.Key == "workspace-intake");
+        intakeStep.ArtifactExpectations.Add(
+            new ProcessArtifactExpectationEditorModel
+            {
+                Id = artifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Operator console evidence packet",
+                IsRequired = true,
+                ValidationRequirementSummary = "The operator console must expose the managed evidence root."
+            });
+        var saveResult = await processesService.SaveAsync(editor);
 
         Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
         var publishResult = await processesService.PublishAsync(saveResult.Value);
@@ -252,6 +352,25 @@ public sealed class ProcessWorkspaceTests
         Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
 
         var stepRun = (await processesService.ListStepRunsAsync(runResult.Value)).First();
+        var artifactExpectation = Assert.Single(
+            stepRun.ArtifactExpectations,
+            expectation => expectation.Title == "Operator console evidence packet");
+        var artifactRecordResult = await processesService.RecordArtifactAsync(
+            new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = runResult.Value,
+                StepRunId = stepRun.Id,
+                ArtifactExpectationId = artifactExpectation.ArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "Operator console evidence packet",
+                TrustStatus = ProcessArtifactTrustStatus.Approved,
+                ManagedStoragePath = "artifacts/process-runs/operator-console/evidence-packet.md",
+                ExternalReferenceKey = "operator-console:evidence-packet",
+                ProvenanceSummary = "Component test managed artifact root."
+            });
+
+        Assert.True(artifactRecordResult.IsSuccess, string.Join(" | ", artifactRecordResult.Errors.Select(error => error.Message)));
+
         var startResult = await processesService.TransitionStepAsync(
             new ProcessStepTransitionRequest
             {
@@ -288,12 +407,76 @@ public sealed class ProcessWorkspaceTests
         cut.WaitForAssertion(() =>
         {
             Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-readback']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-artifact-matrix']"));
+            Assert.NotNull(cut.Find("[data-testid='processes-operator-dispatch-receipts']"));
             Assert.NotNull(cut.Find("[data-testid='processes-escalation-queue']"));
             Assert.NotNull(cut.Find("[data-testid='processes-approval-console']"));
             Assert.NotNull(cut.Find("[data-testid='processes-rework-console']"));
             Assert.NotNull(cut.Find("[data-testid='processes-attempt-timeline']"));
+            Assert.Contains("Operator console evidence packet", cut.Markup);
+            Assert.Contains("Managed path: artifacts/process-runs/operator-console/evidence-packet.md", cut.Markup);
+            Assert.Contains("Manager Resolution", cut.Markup);
+            Assert.Contains("Dispatch Receipts", cut.Markup);
             Assert.Contains("Blocked step needs operator review", cut.Markup);
             Assert.Contains("Operator console needs an escalation to display.", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public async Task Runs_operator_console_SB13_INV_001_surfaces_invariant_diagnostics_and_recommended_action()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Invariant diagnostics component project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Invariant diagnostics component run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test invariant diagnostics."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+        var stepRun = Assert.Single(
+            await processesService.ListStepRunsAsync(runResult.Value),
+            step => step.Title == "Review rendered workspace" && step.Status == ProcessStepRunStatus.Pending);
+        var invalidTransition = await processesService.TransitionStepAsync(
+            new ProcessStepTransitionRequest
+            {
+                StepRunId = stepRun.Id,
+                StepRunConcurrencyToken = stepRun.StepRunConcurrencyToken,
+                TargetStatus = ProcessStepRunStatus.Completed,
+                Reason = "Component test attempted a manual transition before the step could complete.",
+                DecidedBy = "component-tests"
+            });
+
+        Assert.False(invalidTransition.IsSuccess);
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+        await ActivateRunsTabAsync(cut);
+        cut.WaitForAssertion(() => Assert.Contains("Invariant diagnostics component run", cut.Markup));
+        await ActivateRunControlTabAsync(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.NotNull(cut.Find("[data-testid='processes-invariant-diagnostics']"));
+            Assert.Contains("Manual transition validation failure", cut.Markup);
+            Assert.Contains("Recommended action", cut.Markup);
+            Assert.Contains("Refresh the run state", cut.Markup);
         });
     }
 
@@ -769,14 +952,16 @@ public sealed class ProcessWorkspaceTests
             Assert.Empty(currentMergeStep.RoleAssignments);
         });
 
-        cut.WaitForAssertion(() =>
+        await WaitForAsync(async () =>
         {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
+            var persistedEditor = await processesService.GetEditorAsync(saveResult.Value, projectId);
             var persistedMergeStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.MergeStepKey);
             Assert.Empty(persistedMergeStep.RoleAssignments);
             Assert.Empty(persistedMergeStep.ArtifactInputs);
             Assert.Empty(ProcessCanvasBranching.GetOrderedDependencies(persistedMergeStep));
         });
+
+        await InvokeWorkspaceMethodAsync(cut, "FlushPendingDefinitionCanvasPersistenceAsync");
     }
 
     [Fact]
@@ -830,16 +1015,18 @@ public sealed class ProcessWorkspaceTests
             Assert.Equal(260, branchNode.Y);
         });
 
-        cut.WaitForAssertion(() =>
-        {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
-            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
-            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
-            Assert.Equal(320, persistedRole.CanvasX);
-            Assert.Equal(420, persistedRole.CanvasY);
-            Assert.Equal(940, persistedDecisionStep.BranchCanvasX);
-            Assert.Equal(260, persistedDecisionStep.BranchCanvasY);
-        });
+        await WaitForPersistedCanvasPositionAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            process.RoleKey,
+            process.DecisionStepKey,
+            expectedRoleX: 320,
+            expectedRoleY: 420,
+            expectedBranchX: 940,
+            expectedBranchY: 260);
+
+        await InvokeWorkspaceMethodAsync(cut, "FlushPendingDefinitionCanvasPersistenceAsync");
     }
 
     [Fact]
@@ -882,26 +1069,28 @@ public sealed class ProcessWorkspaceTests
             new CanvasWorkbenchNodePositionChange(ProcessCanvasBranching.BuildDefinitionBranchNodeId(decisionStep), 1000, 300)
         })));
 
-        cut.WaitForAssertion(() =>
-        {
-            var persistedEditor = processesService.GetEditorAsync(saveResult.Value, projectId).GetAwaiter().GetResult();
-            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == process.RoleKey);
-            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == process.DecisionStepKey);
-            Assert.Equal(360, persistedRole.CanvasX);
-            Assert.Equal(460, persistedRole.CanvasY);
-            Assert.Equal(1000, persistedDecisionStep.BranchCanvasX);
-            Assert.Equal(300, persistedDecisionStep.BranchCanvasY);
-        });
+        await WaitForPersistedCanvasPositionAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            process.RoleKey,
+            process.DecisionStepKey,
+            expectedRoleX: 360,
+            expectedRoleY: 460,
+            expectedBranchX: 1000,
+            expectedBranchY: 300);
 
-        cut.WaitForAssertion(() =>
+        await WaitForAsync(async () =>
         {
-            var currentUpdateCount = activityService.ListRecentAsync(200).GetAwaiter().GetResult()
+            var currentUpdateCount = (await activityService.ListRecentAsync(200))
                 .Count(item =>
                     item.Category == "processes" &&
                     item.Action == "update-definition" &&
                     item.Description == process.Editor.Name);
             Assert.Equal(baselineUpdateCount + 1, currentUpdateCount);
         });
+
+        await InvokeWorkspaceMethodAsync(cut, "FlushPendingDefinitionCanvasPersistenceAsync");
     }
 
     [Fact]
@@ -1137,6 +1326,7 @@ public sealed class ProcessWorkspaceTests
         var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
         cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        WaitForEditorDefinition(cut, process.Editor);
         cut.Find("[data-testid='processes-templates-button']").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
 
@@ -1251,6 +1441,7 @@ public sealed class ProcessWorkspaceTests
         var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
             .Add(component => component.ProjectId, projectId));
         cut.WaitForAssertion(() => Assert.Contains(process.Editor.Name, cut.Markup));
+        WaitForEditorDefinition(cut, process.Editor);
         cut.Find("[data-testid='processes-templates-button']").Click();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-template-library-dialog']")));
 
@@ -1344,6 +1535,140 @@ public sealed class ProcessWorkspaceTests
                             RoleRequirementId = managerRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible,
                             RebindPolicySummary = "Keep the workspace owner assigned."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildBlazorPwaPreflightDefinition(Guid projectId, Guid managerRoleId)
+    {
+        var intakeStepId = Guid.NewGuid();
+        var implementationStepId = Guid.NewGuid();
+        var blazorReadyOutcomeId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            ContractMode = ProcessDefinitionContractMode.Strict,
+            Name = "Blazor PWA UI preflight process",
+            Summary = "Component-test process for proving runtime UI diagnostics before the browser Blazor PWA run.",
+            ValueStatement = "Expose enough runtime state to inspect Blazor PWA process execution.",
+            CustomerName = "Internal validation",
+            OwnerName = "Morgan Process Lead",
+            GovernancePolicySummary = "Keep app-topic specifics in process data, not runtime code.",
+            ChangeSummary = "Blazor PWA UI preflight definition.",
+            ConstitutionRuleSummary = "The first step cannot mutate product files.",
+            OperatingModeSummary = "Assisted execution with visible recovery diagnostics.",
+            SimulationReadinessSummary = "Safe for component validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = managerRoleId,
+                    Key = "blazor-pwa-process-owner",
+                    DisplayName = "Blazor PWA process owner",
+                    Purpose = "Own branch selection and intake recovery decisions.",
+                    StaffingIntent = "Single validation owner.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.Manager,
+                    PreferredExecutorKind = "person",
+                    SnapshotSummary = "Blazor PWA process owner snapshot."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = intakeStepId,
+                    Key = "confirm-blazor-pwa-intake",
+                    Title = "Confirm Blazor PWA request intake",
+                    StepKind = ProcessStepKind.Decision,
+                    DecisionRoleRequirementId = managerRoleId,
+                    InputContractSummary = "Blazor WASM PWA request and constraints.",
+                    OutputContractSummary = "Managed intake record and branch decision.",
+                    EvidenceContractSummary = "Blazor PWA request readiness decision stays in managed process artifacts.",
+                    DecisionRightsSummary = "The process owner decides whether the request is ready for implementation.",
+                    ExceptionPolicySummary = "Block for artifact recovery when intake evidence is missing.",
+                    TargetLeadHours = 1,
+                    OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.EscalateOrDecide
+                    ],
+                    CanvasX = 140,
+                    CanvasY = 160,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Keep the Blazor PWA process owner assigned."
+                        }
+                    ],
+                    BranchOutcomes =
+                    [
+                        new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = blazorReadyOutcomeId,
+                            Key = "blazor-pwa-ready",
+                            Title = "Blazor PWA request ready",
+                            Description = "Move to implementation without granting intake product mutation."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "Blazor PWA intake decision record",
+                            IsRequired = true,
+                            ValidationRequirementSummary = "Record the managed intake decision before implementation."
+                        }
+                    ]
+                },
+                new ProcessStepEditorModel
+                {
+                    Id = implementationStepId,
+                    Key = "implement-blazor-pwa",
+                    Title = "Implement Blazor WASM PWA",
+                    StepKind = ProcessStepKind.Work,
+                    InputContractSummary = "Approved Blazor PWA request intake.",
+                    OutputContractSummary = "Blazor WASM PWA implementation package.",
+                    EvidenceContractSummary = "Build, browser, screenshot, and project-structure proof.",
+                    DecisionRightsSummary = "Implementation agent owns product changes only after intake approval.",
+                    ExceptionPolicySummary = "Block when implementation proof is missing.",
+                    TargetLeadHours = 4,
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.WriteManagedProcessArtifacts
+                    ],
+                    Dependencies = CreateDependencies((intakeStepId, blazorReadyOutcomeId)),
+                    CanvasX = 420,
+                    CanvasY = 160,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = managerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            RebindPolicySummary = "Keep implementation owned by the selected process owner in this fixture."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Deliverable,
+                            Title = "Blazor PWA implementation package",
+                            IsRequired = true,
+                            ValidationRequirementSummary = "Implementation package must be linked to browser and screenshot proof."
                         }
                     ]
                 }
@@ -1693,6 +2018,68 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']")));
+    }
+
+    private static void WaitForEditorDefinition(IRenderedComponent<ProcessWorkspace> cut, ProcessDefinitionEditorModel expected)
+    {
+        cut.WaitForAssertion(() =>
+        {
+            var editor = GetEditor(cut.Instance);
+            Assert.Equal(expected.Name, editor.Name);
+            Assert.Equal(expected.Roles.Count, editor.Roles.Count);
+            Assert.Equal(expected.Steps.Count, editor.Steps.Count);
+        });
+    }
+
+    private static Task WaitForPersistedCanvasPositionAsync(
+        ProcessesService processesService,
+        Guid definitionId,
+        Guid? projectId,
+        string roleKey,
+        string stepKey,
+        double expectedRoleX,
+        double expectedRoleY,
+        double expectedBranchX,
+        double expectedBranchY)
+    {
+        return WaitForAsync(async () =>
+        {
+            var persistedEditor = await processesService.GetEditorAsync(definitionId, projectId);
+            var persistedRole = Assert.Single(persistedEditor.Roles, item => item.Key == roleKey);
+            var persistedDecisionStep = Assert.Single(persistedEditor.Steps, step => step.Key == stepKey);
+
+            Assert.Equal(expectedRoleX, persistedRole.CanvasX);
+            Assert.Equal(expectedRoleY, persistedRole.CanvasY);
+            Assert.Equal(expectedBranchX, persistedDecisionStep.BranchCanvasX);
+            Assert.Equal(expectedBranchY, persistedDecisionStep.BranchCanvasY);
+        });
+    }
+
+    private static async Task WaitForAsync(Func<Task> assertion, TimeSpan? timeout = null)
+    {
+        var deadline = DateTimeOffset.UtcNow + (timeout ?? TimeSpan.FromSeconds(30));
+        Exception? lastException = null;
+
+        while (DateTimeOffset.UtcNow < deadline)
+        {
+            try
+            {
+                await assertion();
+                return;
+            }
+            catch (Exception exception)
+            {
+                lastException = exception;
+                await Task.Delay(100);
+            }
+        }
+
+        if (lastException is not null)
+        {
+            ExceptionDispatchInfo.Capture(lastException).Throw();
+        }
+
+        Assert.Fail("The assertion did not pass before the timeout elapsed.");
     }
 
     private static async Task SetTemplateLibraryCategoryAsync(IRenderedComponent<ProcessWorkspace> cut, string key)

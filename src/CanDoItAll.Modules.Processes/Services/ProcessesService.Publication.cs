@@ -52,6 +52,22 @@ public sealed partial class ProcessesService
                 return Result.Failure(publishError);
             }
 
+            var lintMode = ResolveEffectiveLintMode(request.LintMode, definition, draftVersion.ContractMode);
+            var lintResult = ProcessDefinitionLinter.Analyze(
+                BuildLintEditorModel(
+                    definition,
+                    draftVersion,
+                    publicationContext.CloneSource.Roles,
+                    publicationContext.CloneSource.Steps,
+                    publicationContext.CloneSource.StepRoleRequirements,
+                    publicationContext.CloneSource.BranchOutcomes,
+                    publicationContext.CloneSource.ArtifactExpectations),
+                lintMode);
+            var strictLintError = CreateStrictLintGateError(lintResult, "publish");
+            if (strictLintError is not null) {
+                return Result.Failure(strictLintError);
+            }
+
             var publishedVersions = await dbContext.Set<ProcessDefinitionVersion>()
                 .Where(item => item.ProcessDefinitionId == request.DefinitionId && item.Status == ProcessVersionStatus.Published)
                 .ToListAsync(cancellationToken);
@@ -377,6 +393,7 @@ public sealed partial class ProcessesService
             ManagerAgentOverrideName = publishedVersion.ManagerAgentOverrideName,
             ImportedFrom = publishedVersion.ImportedFrom,
             ImportWarnings = publishedVersion.ImportWarnings,
+            ContractMode = publishedVersion.ContractMode,
             CreatedAtUtc = now,
             UpdatedAtUtc = now
         };

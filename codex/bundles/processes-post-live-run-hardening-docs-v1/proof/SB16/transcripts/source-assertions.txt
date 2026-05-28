@@ -1,0 +1,40 @@
+# SB16 Source Assertions
+
+Invariant: `SB16-INV-001`
+
+Command:
+
+```powershell
+rg -n "internal static class ProcessArtifactIdentityService|internal static class ProcessArtifactStatusProjectionService|internal static class ProcessHealthInvariantAuditor|internal static class ProcessManagerAgentResolver|internal static class ProcessExternalTargetGroundingService|ProcessArtifactStatusProjectionService\.|ProcessExternalTargetGroundingService\.|ProcessManagerAgentResolver\.|ProcessHealthInvariantAuditor\.BuildStepHealth|ProcessArtifactIdentityService\." src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Integration -S
+```
+
+Exit code: 0
+
+Key output:
+
+```text
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExternalTargetGroundingService.cs:5:internal static class ProcessExternalTargetGroundingService
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:8:internal static class ProcessArtifactIdentityService
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:3:internal static class ProcessArtifactStatusProjectionService {
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerAgentResolver.cs:5:internal static class ProcessManagerAgentResolver
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:3:internal static class ProcessHealthInvariantAuditor
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:17:                .Where(item => ProcessArtifactStatusProjectionService.IsUnsatisfiedRequiredStatus(item.Status))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:375:                    ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(validationDiagnostic.Status),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:382:                    ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(validationDiagnostic.Status),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:727:        return ProcessHealthInvariantAuditor.BuildStepHealth(stepRun, artifactLedger, manualRecoveryDirective);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:50:        var groundedExternalTarget = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(projectStructureGroundingSummary);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:752:        => ProcessExternalTargetGroundingService.InspectReferences(text, allowedAliases).Summary;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:1233:        => ProcessExternalTargetGroundingService.ExtractExternalTargetAliasesFromText(text);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProjectPaths.cs:94:        var result = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(groundingSummary);
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs:197:        var agentResolution = ProcessManagerAgentResolver.ResolveConfiguredManager(
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs:243:        return ProcessManagerAgentResolver.ResolveAssignedManager(details.Assignments, managerOptions, agents);
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.ManagerChat.cs:155:        var configuredRunManager = ProcessManagerAgentResolver.ResolveConfiguredManager(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:251:        projectionLineage = ProcessArtifactIdentityService.NormalizeProjectionLineage(projectionLineage);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:829:        return ProcessArtifactIdentityService.ComputeContentHash(memory.ToArray());
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:281:            return ProcessArtifactIdentityService.ComputeProjectionIdentityHash(lineage);
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:51:            ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(finalizerStatus));
+tests\CanDoItAll.Tests.Integration\ProcessExternalTargetGroundingServiceTests.cs:43:        var inspection = ProcessExternalTargetGroundingService.InspectReferences(
+tests\CanDoItAll.Tests.Integration\ProcessObservationIntentResolverTests.cs:33:        var result = ProcessManagerAgentResolver.ResolveAssignedManager(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:161:        var health = ProcessHealthInvariantAuditor.BuildStepHealth(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14615:        var normalized = ProcessArtifactIdentityService.NormalizeProjectionLineage(lineage);
+```

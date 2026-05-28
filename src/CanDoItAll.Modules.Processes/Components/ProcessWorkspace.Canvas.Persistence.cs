@@ -414,6 +414,11 @@ public partial class ProcessWorkspace
             Subtitle = source.Subtitle,
             Notes = source.Notes,
             StepKind = source.StepKind,
+            AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                source.StepKind,
+                source.AllowedOperations,
+                source.OperationTargetScope),
+            OperationTargetScope = source.OperationTargetScope,
             AllowsManualSkip = source.AllowsManualSkip,
             AllowsSafeRefusal = source.AllowsSafeRefusal,
             RequiresApproval = source.RequiresApproval,
@@ -460,7 +465,11 @@ public partial class ProcessWorkspace
                     SensitivityLevel = artifact.SensitivityLevel,
                     RetentionDays = artifact.RetentionDays,
                     AllowedFutureUsageSummary = artifact.AllowedFutureUsageSummary,
-                    ValidationRequirementSummary = artifact.ValidationRequirementSummary
+                    ValidationRequirementSummary = artifact.ValidationRequirementSummary,
+                    WorkflowOutputId = artifact.WorkflowOutputId,
+                    WorkflowOutputName = artifact.WorkflowOutputName,
+                    WorkflowOutputKind = artifact.WorkflowOutputKind,
+                    SubprocessChildArtifactExpectationId = artifact.SubprocessChildArtifactExpectationId
                 })
                 .ToList(),
             ArtifactInputs = source.ArtifactInputs
@@ -495,6 +504,11 @@ public partial class ProcessWorkspace
         target.Subtitle = clone.Subtitle;
         target.Notes = clone.Notes;
         target.StepKind = clone.StepKind;
+        target.AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+            clone.StepKind,
+            clone.AllowedOperations,
+            clone.OperationTargetScope);
+        target.OperationTargetScope = clone.OperationTargetScope;
         target.AllowsManualSkip = clone.AllowsManualSkip;
         target.AllowsSafeRefusal = clone.AllowsSafeRefusal;
         target.RequiresApproval = clone.RequiresApproval;

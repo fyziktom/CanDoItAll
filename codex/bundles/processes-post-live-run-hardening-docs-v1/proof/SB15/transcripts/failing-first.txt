@@ -1,0 +1,58 @@
+# SB15 Failing-First And Adversarial Proof
+
+## Pre-change source absence
+
+Command:
+
+```powershell
+rg -n "SB15 suite catalog|Timeout-risk class|Transcript file|quarantine policy|live/browser separation|Proof transcript" codex\bundles\processes-post-live-run-hardening-docs-v1\scripts\validation-commands.md
+```
+
+Exit code: 1
+
+Result: no matches. The validation catalog did not yet define named suites, timeout-risk classes, transcript destinations, live/browser separation, or quarantine policy.
+
+## Broad component command timeout
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~ProcessWorkspaceTests" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-components\ --logger "console;verbosity=normal"
+```
+
+Exit code: 124
+
+Result: the broad `ProcessWorkspaceTests` component command exceeded the tool timeout after roughly 304 seconds. This is the rejected release-closure shape that SB15 replaces with a focused split component suite.
+
+## Component split inventory
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --list-tests --filter "FullyQualifiedName~ProcessWorkspaceTests" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb15-components\
+```
+
+Exit code: 0
+
+Result: 23 `ProcessWorkspaceTests` cases were listed. The SB15 split suite selected the three process-run proof cases required for current hardening closure:
+
+- `Run_steps_dialog_SB15_INV_001_exposes_contract_branch_and_recovery_diagnostics_for_ui_preflight`
+- `Runs_operator_console_surfaces_escalation_rework_and_timeline_controls`
+- `Runs_operator_console_SB13_INV_001_surfaces_invariant_diagnostics_and_recommended_action`
+
+## Timeout cleanup
+
+Command:
+
+```powershell
+$ids = @(58876, 10136); foreach ($id in $ids) { $process = Get-Process -Id $id -ErrorAction SilentlyContinue; if ($process) { Stop-Process -Id $id -Force; "Stopped dotnet test process $id" } else { "Process $id was already gone" } }
+```
+
+Exit code: 0
+
+Result:
+
+```text
+Stopped dotnet test process 58876
+Stopped dotnet test process 10136
+```

@@ -142,7 +142,12 @@
       "BranchCanvasX": 320,
       "BranchCanvasY": 260,
       "Dependencies": [],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 1,
@@ -228,7 +233,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 2,
@@ -315,7 +327,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 3,
@@ -410,7 +429,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     },
     {
       "Order": 4,
@@ -516,7 +542,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 5,
@@ -608,7 +641,13 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ManagedProcessArtifactsOnly"
     }
   ],
   "DocPath": "processes/oss-intake-supply-chain-governance/definition.md",
@@ -689,7 +728,7 @@
         "Clear licensing decisions consumed by delivery teams.",
         "Reduced late-stage OSS licensing surprises.",
         "Documented obligation patterns reused across component reviews.",
-        "Audit or legal review confidence in the role’s output."
+        "Audit or legal review confidence in the role\u2019s output."
       ],
       "DocPath": "processes/oss-intake-supply-chain-governance/roles/license-counsel.md"
     },
@@ -762,7 +801,7 @@
         "Structured SBOM outputs used in later reviews or incidents.",
         "Traceable reconciliation notes for incomplete metadata.",
         "Reduced dependency-visibility gaps over time.",
-        "Stakeholder trust in the curator’s completeness signals."
+        "Stakeholder trust in the curator\u2019s completeness signals."
       ],
       "DocPath": "processes/oss-intake-supply-chain-governance/roles/sbom-curator.md"
     }

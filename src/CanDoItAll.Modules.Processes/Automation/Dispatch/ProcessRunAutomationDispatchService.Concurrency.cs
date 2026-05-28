@@ -14,6 +14,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -22,6 +23,14 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
+    internal sealed record NoProgressRetrySignal(
+        string Fingerprint,
+        Guid ExecutionRunId,
+        string ToolSignature,
+        string ArtifactValidationFingerprint,
+        string MutationDelta,
+        string ProofDelta);
+
     internal static bool HasBlockingAutomationExecutionRun(IReadOnlyList<ExecutionRunRecord> executionRuns)
         => HasBlockingAutomationExecutionRun(executionRuns, DateTimeOffset.UtcNow);
 
@@ -44,6 +53,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         return executionRuns
             .Where(executionRun => IsBlockingAutomationExecutionRun(executionRun, now))
+            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
+                ? executionRun.CreatedAtUtc
+                : executionRun.UpdatedAtUtc)
+            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
+            .Select(executionRun => (Guid?)executionRun.Id)
+            .FirstOrDefault();
+    }
+
+    internal static Guid? ResolveBlockingAutomationExecutionRunId(
+        ProcessStepRun stepRun,
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(stepRun);
+        ArgumentNullException.ThrowIfNull(executionRuns);
+
+        return executionRuns
+            .Where(executionRun =>
+                IsBlockingAutomationExecutionRun(executionRun, now) &&
+                IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
             .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
                 ? executionRun.CreatedAtUtc
                 : executionRun.UpdatedAtUtc)
@@ -93,13 +122,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
                 Take: 20),
             cancellationToken);
-        var blockingExecutionRunId = ResolveBlockingAutomationExecutionRunId(executionRuns, clock.GetUtcNow());
+        var blockingExecutionRunId = ResolveBlockingAutomationExecutionRunId(candidate.StepRun, executionRuns, clock.GetUtcNow());
         if (!blockingExecutionRunId.HasValue)
         {
             return null;
         }
 
         var detail = await workspaceService.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+        for (var pollIndex = 0; pollIndex < 2 && !IsTerminalAutomationExecutionRun(detail.Run); pollIndex++)
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
+            detail = await workspaceService.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+        }
+
         return new ConcurrentAutomationExecution(
             blockingExecutionRunId.Value,
             detail,
@@ -120,7 +155,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var now = clock.GetUtcNow();
         return executionRuns
             .Where(executionRun => executionRun.Id != executionOutcome.Detail.Run.Id)
-            .Where(executionRun => IsBlockingAutomationExecutionRun(executionRun, now))
+            .Where(executionRun =>
+                IsBlockingAutomationExecutionRun(executionRun, now) &&
+                IsRecoverableExecutionRunForCurrentAttempt(executionRun, candidate.StepRun.StartedAtUtc))
             .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
                 ? executionRun.CreatedAtUtc
                 : executionRun.UpdatedAtUtc)
@@ -347,16 +384,331 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        var retryReasons = ResolveIncompleteSuccessfulRunRetryReasons(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            carriedImplementationProof);
+
         return attemptNumber < maxExecutionAttempts
                && run.State == ExecutionState.Completed
                 && run.PendingApprovals.Count == 0
                 && run.Outcome == RunOutcome.Succeeded
-                && ResolveIncompleteSuccessfulRunRetryReasons(
+                && retryReasons.Count > 0
+                && !ShouldCompressNoProgressRetry(
                     candidate,
                     detail,
                     responseText,
                     missingRequiredTools,
-                    carriedImplementationProof).Count > 0;
+                    retryReasons,
+                    attemptNumber);
+    }
+
+    private static bool ShouldCompressNoProgressRetry(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons,
+        int attemptNumber)
+    {
+        if (attemptNumber <= 1)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
+            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
+            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
+        {
+            return false;
+        }
+
+        var fingerprint = TryCreateNoProgressRetryFingerprint(candidate, detail, responseText, missingRequiredTools, retryReasons, attemptNumber);
+        if (!string.IsNullOrWhiteSpace(fingerprint))
+        {
+            return true;
+        }
+
+        return missingRequiredTools.Count > 0 ||
+               retryReasons.Any(IsNoProgressRetryReason);
+    }
+
+    internal static bool HasPriorNoProgressRetrySignal(
+        IEnumerable<ProcessJournalEntry> journalEntries,
+        NoProgressRetrySignal signal)
+    {
+        ArgumentNullException.ThrowIfNull(journalEntries);
+        ArgumentNullException.ThrowIfNull(signal);
+
+        return journalEntries.Any(entry =>
+            IsNoProgressRetryLedgerEvent(entry.EventType) &&
+            string.Equals(entry.CorrelationId, signal.Fingerprint, StringComparison.Ordinal) &&
+            TryResolveNoProgressRetryLedgerExecutionRunId(entry.ReplayContextJson, out var priorExecutionRunId) &&
+            priorExecutionRunId != signal.ExecutionRunId);
+    }
+
+    private async Task<bool> HasPriorNoProgressRetrySignalAsync(
+        DispatchCandidate candidate,
+        NoProgressRetrySignal signal,
+        CancellationToken cancellationToken)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entries = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(entry =>
+                entry.ProcessRunId == candidate.Run.Id &&
+                entry.StepRunId == candidate.StepRun.Id &&
+                entry.CorrelationId == signal.Fingerprint &&
+                (entry.EventType == ProcessRuntimeEventTypes.NoProgressRetryObserved ||
+                 entry.EventType == ProcessRuntimeEventTypes.NoProgressRetryCompressed))
+            .ToListAsync(cancellationToken);
+
+        return HasPriorNoProgressRetrySignal(entries, signal);
+    }
+
+    private static bool HasNewSatisfiedCurrentAttemptEvidence(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        return detail.Artifacts.Any(artifact =>
+                   candidate.ExpectedArtifacts.Any(expectation =>
+                       !candidate.RecordedArtifactExpectationIds.Contains(expectation.Id) &&
+                       ResolveArtifactExpectation(candidate, artifact)?.Id == expectation.Id)) ||
+               detail.ToolReceipts.Any(receipt =>
+                   !IsFailedToolReceipt(receipt) &&
+                   ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal));
+    }
+
+    private static string? TryCreateNoProgressRetryFingerprint(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons,
+        int attemptNumber)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(detail);
+        ArgumentNullException.ThrowIfNull(missingRequiredTools);
+        ArgumentNullException.ThrowIfNull(retryReasons);
+
+        if (attemptNumber <= 1 ||
+            !string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
+            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
+            HasSuccessfulConcreteProductMutation(candidate, detail) ||
+            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
+        {
+            return null;
+        }
+
+        if (missingRequiredTools.Count == 0 &&
+            !retryReasons.Any(IsNoProgressRetryReason))
+        {
+            return null;
+        }
+
+        return TryCreateNoProgressRetrySignal(candidate, detail, responseText, missingRequiredTools, retryReasons)?.Fingerprint;
+    }
+
+    private static NoProgressRetrySignal? TryCreateNoProgressRetrySignal(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        IReadOnlyList<string> retryReasons)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(detail);
+        ArgumentNullException.ThrowIfNull(missingRequiredTools);
+        ArgumentNullException.ThrowIfNull(retryReasons);
+
+        if (!string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
+            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
+            HasSuccessfulConcreteProductMutation(candidate, detail) ||
+            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
+        {
+            return null;
+        }
+
+        if (missingRequiredTools.Count == 0 &&
+            !retryReasons.Any(IsNoProgressRetryReason))
+        {
+            return null;
+        }
+
+        var failedToolNames = detail.ToolReceipts
+            .Where(IsFailedToolReceipt)
+            .Select(receipt => NormalizeToolToken(receipt.ToolName))
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var artifactSignals = detail.Artifacts
+            .Select(artifact => string.Join(
+                ":",
+                NormalizeManagedRelativePathForComparison(artifact.RelativePath),
+                CollapsePromptWhitespace(artifact.DisplayName).ToLowerInvariant(),
+                CollapsePromptWhitespace(artifact.ContentType).ToLowerInvariant(),
+                CreateBoundedTextHash(artifact.Summary)))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var receiptSignals = detail.ToolReceipts
+            .Select(receipt => string.Join(
+                ":",
+                NormalizeToolToken(receipt.ToolName),
+                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
+                CreateBoundedTextHash(receipt.RequestSummary),
+                CreateBoundedTextHash(receipt.ExitSummary),
+                IsFailedToolReceipt(receipt) ? "failed" : "succeeded"))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var unsatisfiedExpectationIds = candidate.ExpectedArtifacts
+            .Where(expectation => expectation.IsRequired && !candidate.RecordedArtifactExpectationIds.Contains(expectation.Id))
+            .Select(expectation => expectation.Id.ToString("D"))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+        var toolSignature = CreateBoundedTextHash(string.Join(
+            "|",
+            string.Join(",", missingRequiredTools.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)),
+            string.Join(",", failedToolNames),
+            string.Join(",", receiptSignals)));
+        var artifactValidationFingerprint = CreateBoundedTextHash(string.Join(
+            "|",
+            string.Join(",", unsatisfiedExpectationIds),
+            string.Join(",", artifactSignals)));
+        var mutationDelta = ResolveNoProgressMutationDelta(candidate, detail);
+        var proofDelta = ResolveNoProgressProofDelta(detail);
+        var normalized = string.Join(
+            "|",
+            "no-progress-retry",
+            candidate.Run.Id.ToString("D"),
+            candidate.StepRun.Id.ToString("D"),
+            toolSignature,
+            artifactValidationFingerprint,
+            mutationDelta,
+            proofDelta,
+            string.Join(",", retryReasons.Select(reason => CollapsePromptWhitespace(reason).ToLowerInvariant()).OrderBy(item => item, StringComparer.Ordinal)));
+        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+        return new NoProgressRetrySignal(
+            fingerprint,
+            detail.Run.Id,
+            toolSignature,
+            artifactValidationFingerprint,
+            mutationDelta,
+            proofDelta);
+    }
+
+    private static string ResolveNoProgressMutationDelta(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail)
+    {
+        var mutationSignals = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
+            .Select(receipt => string.Join(
+                ":",
+                NormalizeToolToken(receipt.ToolName),
+                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
+                IsConcreteProductMutationReceipt(candidate, detail, receipt)
+                    ? "concrete"
+                    : "non-concrete",
+                CreateBoundedTextHash(receipt.RequestSummary),
+                CreateBoundedTextHash(receipt.ExitSummary)))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+
+        return mutationSignals.Length == 0
+            ? "mutation-delta:none"
+            : $"mutation-delta:{CreateBoundedTextHash(string.Join("|", mutationSignals))}";
+    }
+
+    private static string ResolveNoProgressProofDelta(ExecutionRunDetail detail)
+    {
+        var proofSignals = detail.ToolReceipts
+            .Where(receipt => !IsFailedToolReceipt(receipt))
+            .Where(receipt => ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal))
+            .Select(receipt => string.Join(
+                ":",
+                NormalizeToolToken(receipt.ToolName),
+                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
+                CreateBoundedTextHash(receipt.RequestSummary),
+                CreateBoundedTextHash(receipt.ExitSummary)))
+            .OrderBy(item => item, StringComparer.Ordinal)
+            .ToArray();
+
+        return proofSignals.Length == 0
+            ? "proof-delta:none"
+            : $"proof-delta:{CreateBoundedTextHash(string.Join("|", proofSignals))}";
+    }
+
+    private static bool IsNoProgressRetryLedgerEvent(string eventType)
+    {
+        return string.Equals(eventType, ProcessRuntimeEventTypes.NoProgressRetryObserved, StringComparison.Ordinal) ||
+               string.Equals(eventType, ProcessRuntimeEventTypes.NoProgressRetryCompressed, StringComparison.Ordinal);
+    }
+
+    private static bool TryResolveNoProgressRetryLedgerExecutionRunId(
+        string? replayContextJson,
+        out Guid executionRunId)
+    {
+        executionRunId = default;
+        if (string.IsNullOrWhiteSpace(replayContextJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(replayContextJson);
+            if (!document.RootElement.TryGetProperty(nameof(NoProgressRetrySignal.ExecutionRunId), out var executionRunIdElement))
+            {
+                return false;
+            }
+
+            if (executionRunIdElement.ValueKind == JsonValueKind.String &&
+                Guid.TryParse(executionRunIdElement.GetString(), out executionRunId))
+            {
+                return true;
+            }
+
+            return executionRunIdElement.TryGetGuid(out executionRunId);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsTerminalAutomationExecutionRun(ExecutionRunRecord run)
+    {
+        return run.State is ExecutionState.Completed or ExecutionState.Failed;
+    }
+
+    private static string CreateBoundedTextHash(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(CollapsePromptWhitespace(value)))).ToLowerInvariant();
+    }
+
+    private static bool IsNoProgressRetryReason(string retryReason)
+    {
+        return retryReason.StartsWith("missing required tools:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("unresolved critical tool failures:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing concrete proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing concrete implementation proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing runnable application proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("invalid browser proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("invalid quality validation proof:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing required artifact:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("missing upstream artifact inspection:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("stale or ungrounded product path reference:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("shared managed artifact collision risk:", StringComparison.OrdinalIgnoreCase) ||
+               retryReason.StartsWith("recoverable finalizer validation failure:", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ShouldRetryRepairableImplementationBlockedOutcome(
@@ -787,6 +1139,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 carriedImplementationProof);
             if (!contextValidation.IsValid)
             {
+                if (TryRecoverExplicitDispositionBranchSelection(
+                        candidate,
+                        declaredOutcome,
+                        contextValidation,
+                        responseText,
+                        out var explicitDisposition))
+                {
+                    return BuildExplicitDispositionCompletionReason(
+                        explicitDisposition,
+                        declaredOutcome.Reason,
+                        "selected from explicit current-run disposition text");
+                }
+
                 var branchOutcomeSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
                 if (!string.IsNullOrWhiteSpace(branchOutcomeSelectionFailure))
                 {
@@ -879,6 +1244,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var branchOutcomeSelectionFailure = ResolveBranchOutcomeSelectionFailure(candidate, declaredOutcome);
             if (!string.IsNullOrWhiteSpace(branchOutcomeSelectionFailure))
             {
+                if (TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out var explicitDisposition))
+                {
+                    return BuildExplicitDispositionCompletionReason(
+                        explicitDisposition,
+                        declaredOutcome.Reason,
+                        "selected from explicit current-run disposition text");
+                }
+
                 return branchOutcomeSelectionFailure;
             }
 

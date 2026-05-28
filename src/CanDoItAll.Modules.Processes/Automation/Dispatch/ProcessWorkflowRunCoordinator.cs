@@ -199,7 +199,13 @@ internal sealed class ProcessWorkflowRunCoordinator(
             return null;
         }
 
-        return new ProcessWorkflowDispatchContext(run, stepRun, assignment, role, workBrief);
+        var expectedArtifacts = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .Where(item => item.StepDefinitionId == stepRun.StepDefinitionId)
+            .OrderBy(item => item.Title)
+            .ToListAsync(cancellationToken);
+
+        return new ProcessWorkflowDispatchContext(run, stepRun, assignment, role, workBrief, expectedArtifacts);
     }
 
     private static ProcessRunAssignment? ResolveCurrentAssignment(
@@ -246,10 +252,11 @@ internal sealed class ProcessWorkflowRunCoordinator(
         return responsibilityKind switch
         {
             ProcessResponsibilityKind.Responsible => 0,
-            ProcessResponsibilityKind.Approver => 1,
-            ProcessResponsibilityKind.Reviewer => 2,
-            ProcessResponsibilityKind.Backup => 3,
-            _ => 4
+            ProcessResponsibilityKind.Accountable => 1,
+            ProcessResponsibilityKind.Approver => 2,
+            ProcessResponsibilityKind.Reviewer => 3,
+            ProcessResponsibilityKind.Backup => 4,
+            _ => 5
         };
     }
 
@@ -313,6 +320,13 @@ internal sealed class ProcessWorkflowRunCoordinator(
                     ReviewSummary = run.Summary,
                     ManagedStoragePath = string.Empty,
                     ExternalReferenceKey = runReferenceKey,
+                    ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                        new ProcessArtifactProjectionLineage
+                        {
+                            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowRun,
+                            WorkflowRunId = run.RunId.Value,
+                            SourceExternalReferenceKey = runReferenceKey
+                        }),
                     CreatedAtUtc = clock.GetUtcNow()
                 },
                 cancellationToken);
@@ -320,6 +334,11 @@ internal sealed class ProcessWorkflowRunCoordinator(
         }
 
         var workflowArtifacts = await workflowRunStore.ListArtifactsAsync(run.RunId, cancellationToken);
+        var expectations = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .Where(item => item.StepDefinitionId == context.StepRun.StepDefinitionId)
+            .OrderBy(item => item.Title)
+            .ToListAsync(cancellationToken);
         foreach (var artifact in workflowArtifacts)
         {
             var externalReferenceKey = BuildWorkflowArtifactExternalReferenceKey(run.RunId, artifact.Id);
@@ -328,37 +347,89 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 continue;
             }
 
+            var artifactKind = WorkflowSubprocessArtifactMapper.MapWorkflowArtifactKind(artifact.Kind);
+            var expectation = WorkflowSubprocessArtifactMapper.ResolveWorkflowArtifactExpectation(
+                expectations,
+                workflowArtifacts,
+                artifactKind,
+                artifact,
+                out var mappingDiagnostic);
+            if (!string.IsNullOrWhiteSpace(mappingDiagnostic))
+            {
+                if (expectation is null)
+                {
+                    logger.LogWarning(
+                        "Workflow artifact {WorkflowArtifactId} from run {WorkflowRunId} was not mapped to a process artifact expectation. Diagnostic: {Diagnostic}",
+                        artifact.Id.Value,
+                        run.RunId.Value,
+                        mappingDiagnostic);
+                }
+                else
+                {
+                    logger.LogWarning(
+                        "Workflow artifact {WorkflowArtifactId} from run {WorkflowRunId} used compatibility output mapping for process artifact expectation {ArtifactExpectationId}. Diagnostic: {Diagnostic}",
+                        artifact.Id.Value,
+                        run.RunId.Value,
+                        expectation.Id,
+                        mappingDiagnostic);
+                }
+            }
+
+            var isUnmappedAmbiguousArtifact = expectation is null && !string.IsNullOrWhiteSpace(mappingDiagnostic);
             await dbContext.Set<ProcessArtifactRecord>().AddAsync(
                 new ProcessArtifactRecord
                 {
                     ProcessRunId = context.Run.Id,
                     StepRunId = context.StepRun.Id,
-                    ArtifactKind = MapWorkflowArtifactKind(artifact.Kind),
-                    Title = string.IsNullOrWhiteSpace(artifact.Name)
+                    ArtifactExpectationId = expectation?.Id,
+                    ArtifactKind = expectation?.ArtifactKind ?? (isUnmappedAmbiguousArtifact ? ProcessArtifactKind.Other : artifactKind),
+                    Title = expectation?.Title ?? (string.IsNullOrWhiteSpace(artifact.Name)
                         ? $"Workflow artifact {artifact.Id}"
-                        : artifact.Name,
+                        : isUnmappedAmbiguousArtifact
+                            ? $"Unmapped workflow artifact {artifact.Id}"
+                        : artifact.Name),
                     TrustStatus = ResolveWorkflowArtifactTrustStatus(run.State),
-                    SensitivityLevel = ProcessSensitivityLevel.Internal,
-                    ProvenanceSummary = $"Produced by workflow run {run.RunId} at node {artifact.NodeId?.Value ?? "workflow"}.",
-                    AllowedFutureUsageSummary = "Use as process workflow output evidence.",
-                    ReviewSummary = artifact.Summary,
+                    SensitivityLevel = expectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
+                    ProvenanceSummary = $"Produced by workflow run {run.RunId} at node {artifact.NodeId?.Value ?? "workflow"} with workflow artifact id {artifact.Id}.",
+                    AllowedFutureUsageSummary = expectation?.AllowedFutureUsageSummary ?? "Use as process workflow output evidence.",
+                    ReviewSummary = string.IsNullOrWhiteSpace(mappingDiagnostic)
+                        ? artifact.Summary
+                        : $"{artifact.Summary} Mapping diagnostic: {mappingDiagnostic}".Trim(),
                     ManagedStoragePath = artifact.StoragePath,
                     ExternalReferenceKey = externalReferenceKey,
+                    ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                        new ProcessArtifactProjectionLineage
+                        {
+                            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+                            WorkflowRunId = run.RunId.Value,
+                            WorkflowArtifactId = artifact.Id.Value,
+                            SourceExternalReferenceKey = externalReferenceKey
+                        }),
                     CreatedAtUtc = artifact.CreatedAtUtc
                 },
                 cancellationToken);
         }
     }
 
-    private static ProcessArtifactKind MapWorkflowArtifactKind(WorkflowArtifactKind artifactKind)
+    internal static ProcessArtifactExpectation? ResolveWorkflowArtifactExpectation(
+        IReadOnlyList<ProcessArtifactExpectation> expectations,
+        IReadOnlyList<WorkflowArtifactRecord> workflowArtifacts,
+        ProcessArtifactKind artifactKind,
+        WorkflowArtifactRecord artifact,
+        out string diagnostic)
     {
-        return artifactKind switch
-        {
-            WorkflowArtifactKind.Text or WorkflowArtifactKind.Json => ProcessArtifactKind.Deliverable,
-            WorkflowArtifactKind.File or WorkflowArtifactKind.Image or WorkflowArtifactKind.Binary => ProcessArtifactKind.Evidence,
-            WorkflowArtifactKind.ToolReceipt => ProcessArtifactKind.Transcript,
-            _ => ProcessArtifactKind.Other
-        };
+        return WorkflowSubprocessArtifactMapper.ResolveWorkflowArtifactExpectation(
+            expectations,
+            workflowArtifacts,
+            artifactKind,
+            artifact,
+            out diagnostic);
+    }
+
+    internal static IReadOnlyList<ProcessWorkflowOutputArtifactMapping> ResolveWorkflowOutputArtifactMappings(
+        IReadOnlyList<ProcessArtifactExpectation> expectations)
+    {
+        return WorkflowSubprocessArtifactMapper.ResolveWorkflowOutputArtifactMappings(expectations);
     }
 
     private static ProcessArtifactTrustStatus ResolveWorkflowArtifactTrustStatus(WorkflowRunState state)
@@ -380,7 +451,14 @@ internal sealed class ProcessWorkflowRunCoordinator(
                 context.Assignment.DisplayName,
                 context.WorkBrief?.WorkBriefText ?? string.Empty,
                 context.WorkBrief?.ExpectedOutcome ?? string.Empty,
-                trigger),
+                trigger,
+                WorkflowSubprocessArtifactMapper.ResolveWorkflowOutputArtifactMappings(context.ExpectedArtifacts)
+                    .Select(mapping => new ProcessWorkflowOutputMappingInput(
+                        mapping.ProcessArtifactExpectationId,
+                        mapping.WorkflowOutputId,
+                        mapping.WorkflowOutputName,
+                        mapping.WorkflowOutputKind))
+                    .ToList()),
             JsonOptions);
     }
 
@@ -455,7 +533,8 @@ internal sealed class ProcessWorkflowRunCoordinator(
         ProcessStepRun StepRun,
         ProcessRunAssignment Assignment,
         ProcessRoleRequirement? Role,
-        ProcessWorkBrief? WorkBrief);
+        ProcessWorkBrief? WorkBrief,
+        IReadOnlyList<ProcessArtifactExpectation> ExpectedArtifacts);
 
     private sealed record ProcessWorkflowStartInput(
         Guid ProcessRunId,
@@ -466,7 +545,14 @@ internal sealed class ProcessWorkflowRunCoordinator(
         string AssignmentDisplayName,
         string WorkBrief,
         string ExpectedOutcome,
-        string Trigger);
+        string Trigger,
+        IReadOnlyList<ProcessWorkflowOutputMappingInput> ExpectedOutputMappings);
+
+    private sealed record ProcessWorkflowOutputMappingInput(
+        Guid ProcessArtifactExpectationId,
+        string WorkflowOutputId,
+        string WorkflowOutputName,
+        WorkflowArtifactKind? WorkflowOutputKind);
 }
 
 internal sealed record ProcessWorkflowExecutionOutcome(

@@ -1,0 +1,33 @@
+Invariant: SB05-INV-001 - typed final-delivery external target grounding service is present and consumed by prompt, metadata, validation, and recovery.
+
+Command: rg -n "internal static class ProcessExternalTargetGroundingService|ProcessExternalTargetGroundingResult|ProcessExternalTargetReferenceInspection|ResolveProjectStructureGroundingTarget|InspectReferences|RedactUnallowedReferencesForPrompt" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExternalTargetGroundingService.cs
+5:internal static class ProcessExternalTargetGroundingService
+13:    internal static ProcessExternalTargetGroundingResult ResolveProjectStructureGroundingTarget(string? groundingSummary)
+17:            return ProcessExternalTargetGroundingResult.Empty;
+34:            return ProcessExternalTargetGroundingResult.Empty;
+44:        return new ProcessExternalTargetGroundingResult(
+51:    internal static ProcessExternalTargetReferenceInspection InspectReferences(
+57:            return ProcessExternalTargetReferenceInspection.Empty;
+63:            return ProcessExternalTargetReferenceInspection.Empty;
+100:            ? ProcessExternalTargetReferenceInspection.Empty
+101:            : new ProcessExternalTargetReferenceInspection(
+106:    internal static string RedactUnallowedReferencesForPrompt(
+819:internal sealed record ProcessExternalTargetGroundingResult(
+825:    public static ProcessExternalTargetGroundingResult Empty { get; } = new(false, string.Empty, string.Empty, null);
+830:internal sealed record ProcessExternalTargetReferenceInspection(int OutOfScopeReferenceCount, string Summary)
+832:    public static ProcessExternalTargetReferenceInspection Empty { get; } = new(0, string.Empty);
+ExitCode: 0
+
+Command: rg -n "ProcessExternalTargetGroundingService\.ResolveProjectStructureGroundingTarget|ProcessExternalTargetGroundingService\.InspectReferences|ProcessExternalTargetGroundingService\.RedactUnallowedReferencesForPrompt|ProcessExternalTargetGroundingService\.PruneAllowedExternalTargetAliasesForCurrentRun" src\CanDoItAll.Modules.Processes\Automation\Dispatch
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:752:        => ProcessExternalTargetGroundingService.InspectReferences(text, allowedAliases).Summary;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:50:        var groundedExternalTarget = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(projectStructureGroundingSummary);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:1208:        => ProcessExternalTargetGroundingService.PruneAllowedExternalTargetAliasesForCurrentRun(aliases);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProjectPaths.cs:94:        var result = ProcessExternalTargetGroundingService.ResolveProjectStructureGroundingTarget(groundingSummary);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RecoveryDirective.cs:378:        => ProcessExternalTargetGroundingService.RedactUnallowedReferencesForPrompt(text, allowedAliases);
+ExitCode: 0
+
+Command: rg -n "ResolveProjectStructureGroundingTarget_ignores_prohibited_targets|InspectReferences_rejects_escaped_sibling_targets|RedactUnallowedReferencesForPrompt_omits_stale_paths_after_escape_normalization" tests\CanDoItAll.Tests.Integration\ProcessExternalTargetGroundingServiceTests.cs
+26:    public void ResolveProjectStructureGroundingTarget_ignores_prohibited_targets()
+41:    public void InspectReferences_rejects_escaped_sibling_targets(string escapedReference)
+64:    public void RedactUnallowedReferencesForPrompt_omits_stale_paths_after_escape_normalization()
+ExitCode: 0

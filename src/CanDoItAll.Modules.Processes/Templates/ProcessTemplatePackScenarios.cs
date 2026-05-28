@@ -19,6 +19,10 @@ public sealed class ProcessTemplateBaselineScenario
     public List<ProcessTemplateBaselineTransition> Transitions { get; set; } = [];
 
     public List<ProcessTemplateBaselineArtifactRecord> Artifacts { get; set; } = [];
+
+    public List<ProcessTemplateBaselineContractExercise> ContractExercises { get; set; } = [];
+
+    public List<ProcessTemplateBaselineRecoveryExercise> RecoveryExercises { get; set; } = [];
 }
 
 public sealed class ProcessTemplateBaselineAssignment
@@ -44,6 +48,8 @@ public sealed class ProcessTemplateBaselineTransition
 
     public string SelectedBranchOutcomeKey { get; set; } = string.Empty;
 
+    public ProcessStepBlockCause? BlockCause { get; set; }
+
     public string Reason { get; set; } = string.Empty;
 
     public string DecidedBy { get; set; } = string.Empty;
@@ -66,6 +72,88 @@ public sealed class ProcessTemplateBaselineArtifactRecord
     public string AllowedFutureUsageSummary { get; set; } = string.Empty;
 
     public string ReviewSummary { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateBaselineContractExercise
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public ProcessStepTargetScope? ExpectedTargetScope { get; set; }
+
+    public List<ProcessStepOperation> ExpectedAllowedOperations { get; set; } = [];
+
+    public string Purpose { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateBaselineRecoveryExercise
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public ProcessStepBlockCause BlockCause { get; set; }
+
+    public List<ProcessStepRecoveryOption> ExpectedRecoveryOptions { get; set; } = [];
+
+    public string Diagnostic { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateLiveRunProfile
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string ProcessTemplateKey { get; set; } = string.Empty;
+
+    public string RunNameTemplate { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string OperatingMode { get; set; } = string.Empty;
+
+    public string TriggerReasonTemplate { get; set; } = string.Empty;
+
+    public ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy { get; set; } = new();
+
+    public List<ProcessTemplateLiveRunProfileAssignment> Assignments { get; set; } = [];
+
+    public List<ProcessTemplateLiveRunProfileAcceptanceCriterion> AcceptanceCriteria { get; set; } = [];
+
+    public List<string> RequiredProofKinds { get; set; } = [];
+}
+
+public sealed class ProcessTemplateLiveRunFreshRunPolicy
+{
+    public bool RequiresFreshRun { get; set; }
+
+    public bool AllowsSeededTransitions { get; set; }
+
+    public bool AllowsSeededArtifacts { get; set; }
+
+    public List<string> RequiredPreDispatchChecks { get; set; } = [];
+
+    public List<string> RequiredEvidenceChecks { get; set; } = [];
+
+    public string ProjectStructureWritebackGuidance { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateLiveRunProfileAssignment
+{
+    public string StepKey { get; set; } = string.Empty;
+
+    public string RoleKey { get; set; } = string.Empty;
+
+    public string DisplayNameTemplate { get; set; } = string.Empty;
+
+    public string ExecutorKind { get; set; } = string.Empty;
+
+    public string BindingReason { get; set; } = string.Empty;
+}
+
+public sealed class ProcessTemplateLiveRunProfileAcceptanceCriterion
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
 }
 
 public sealed record ProcessTemplateCatalogItem(
@@ -98,4 +186,20 @@ public sealed record ProcessTemplateBaselineScenarioSummary(
     string OperatingMode,
     int AssignmentCount,
     int TransitionCount,
-    int ArtifactCount);
+    int ArtifactCount,
+    int BranchSelectionCount,
+    int BlockedTransitionCount,
+    int ContractExerciseCount,
+    int RecoveryExerciseCount);
+
+public sealed record ProcessTemplateLiveRunProfileSummary(
+    string Key,
+    string ProcessTemplateKey,
+    string RunNameTemplate,
+    string Summary,
+    string OperatingMode,
+    string TriggerReasonTemplate,
+    ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy,
+    int AssignmentCount,
+    int AcceptanceCriterionCount,
+    int RequiredProofKindCount);

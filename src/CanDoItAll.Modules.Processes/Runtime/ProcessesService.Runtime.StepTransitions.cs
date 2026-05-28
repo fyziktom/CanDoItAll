@@ -1,6 +1,7 @@
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -21,6 +22,8 @@ public sealed partial class ProcessesService
             }
 
             var transitionContext = transitionContextResult.Value!;
+            var trimmedReason = request.Reason.Trim();
+            var now = clock.GetUtcNow();
             var availableBranchOutcomes = transitionContext.BranchOutcomesByStepId.GetValueOrDefault(transitionContext.StepRun.StepDefinitionId) ?? [];
             var transitionResolutionResult = ProcessStepTransitionGuard.ValidateAndResolve(
                 request,
@@ -31,6 +34,16 @@ public sealed partial class ProcessesService
                 availableBranchOutcomes);
             if (transitionResolutionResult.IsFailure)
             {
+                await PersistManualTransitionValidationFailureAsync(
+                    dbContext,
+                    transitionContext.Run,
+                    transitionContext.StepRun,
+                    request,
+                    transitionResolutionResult.Errors,
+                    now,
+                    cancellationToken);
+                await dbContext.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
                 return Result.Failure(transitionResolutionResult.Errors);
             }
 
@@ -40,18 +53,28 @@ public sealed partial class ProcessesService
             {
                 var artifactValidationResult = ValidateRequiredArtifactsForCompletion(
                     transitionContext.StepRun,
+                    transitionContext.Run,
                     transitionContext.RequiredArtifactExpectations,
-                    transitionContext.StepArtifacts);
+                    transitionContext.StepArtifacts,
+                    request,
+                    CreateProcessArtifactContentReader());
                 if (artifactValidationResult.IsFailure)
                 {
+                    await PersistManualTransitionValidationFailureAsync(
+                        dbContext,
+                        transitionContext.Run,
+                        transitionContext.StepRun,
+                        request,
+                        artifactValidationResult.Errors,
+                        now,
+                        cancellationToken);
+                    await dbContext.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
                     return Result.Failure(artifactValidationResult.Errors);
                 }
             }
 
-            var trimmedReason = request.Reason.Trim();
-            var now = clock.GetUtcNow();
-
-            ApplyStepRunTransitionState(transitionContext.StepRun, request, selectedBranchOutcome, trimmedReason, now);
+            var recoveryRoutingDecision = ApplyStepRunTransitionState(transitionContext.StepRun, request, selectedBranchOutcome, trimmedReason, now);
 
             var stepRunsByDefinitionId = transitionContext.PersistedStepRuns.ToDictionary(item => item.StepDefinitionId);
             stepRunsByDefinitionId[transitionContext.StepRun.StepDefinitionId] = transitionContext.StepRun;
@@ -123,6 +146,18 @@ public sealed partial class ProcessesService
                     $"definition-version:{transitionContext.Run.ProcessDefinitionVersionId:D}",
                     trimmedReason),
                 cancellationToken);
+
+            if (recoveryRoutingDecision is not null)
+            {
+                await dbContext.Set<ProcessJournalEntry>().AddAsync(
+                    BuildRecoveryRoutingJournalEntry(
+                        transitionContext.Run,
+                        transitionContext.StepRun,
+                        recoveryRoutingDecision,
+                        trimmedReason,
+                        now),
+                    cancellationToken);
+            }
 
             if (request.TargetStatus is ProcessStepRunStatus.Blocked or
                 ProcessStepRunStatus.Refused or
@@ -391,78 +426,224 @@ public sealed partial class ProcessesService
 
     private static Result ValidateRequiredArtifactsForCompletion(
         ProcessStepRun stepRun,
+        ProcessRun run,
         IReadOnlyList<ProcessArtifactExpectation> requiredArtifactExpectations,
-        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+        ProcessStepTransitionRequest request,
+        ProcessRunAutomationDispatchService.IProcessArtifactContentReader managedArtifactContentReader)
     {
         if (requiredArtifactExpectations.Count == 0)
         {
             return Result.Success();
         }
 
-        var unmetRequirements = new List<string>();
-        foreach (var expectation in requiredArtifactExpectations)
-        {
-            var artifact = stepArtifacts.FirstOrDefault(item => SatisfiesArtifactExpectation(item, expectation));
-            if (artifact is null)
-            {
-                unmetRequirements.Add(expectation.Title);
-            }
-        }
-
-        if (unmetRequirements.Count == 0)
+        var artifactValidationContext = ResolveArtifactValidationContext(request, stepArtifacts);
+        var validationResults = requiredArtifactExpectations
+            .Select(expectation => ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+                run.Id,
+                stepRun.Id,
+                ToDispatchArtifactExpectation(expectation),
+                stepArtifacts,
+                artifactValidationContext.ExecutorKind,
+                artifactValidationContext.ExecutionRunId,
+                artifactValidationContext.WorkflowRunId,
+                artifactValidationContext.SubprocessRunId,
+                artifactValidationContext.RecoveryExecutionRunId,
+                artifactValidationContext.RecoveredForExecutionRunId,
+                managedArtifactContentReader: managedArtifactContentReader))
+            .ToArray();
+        var failures = validationResults
+            .Where(result => !result.IsSatisfied)
+            .ToArray();
+        if (failures.Length == 0)
         {
             return Result.Success();
         }
 
+        if (failures.All(result => result.Status == ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Missing))
+        {
+            return Result.Failure(
+                Error.Validation(
+                    $"Step '{stepRun.Title}' cannot be completed until the required artifacts are recorded: {string.Join(", ", failures.Select(result => result.ExpectationTitle))}.",
+                    "processes.step-completion-missing-required-artifacts"));
+        }
+
+        var summary = string.Join(
+            "; ",
+            failures
+                .Take(5)
+                .Select(result => $"{result.ExpectationTitle}: {result.Status} ({result.Diagnostic})"));
         return Result.Failure(
             Error.Validation(
-                $"Step '{stepRun.Title}' cannot be completed until the required artifacts are recorded: {string.Join(", ", unmetRequirements)}.",
-                "processes.step-completion-missing-required-artifacts"));
+                $"Step '{stepRun.Title}' cannot be completed because required artifact contract validation failed: {summary}.",
+                "processes.step-completion-invalid-required-artifacts"));
     }
 
-    private static bool SatisfiesArtifactExpectation(
+    private static ProcessStepTransitionArtifactValidationContext ResolveArtifactValidationContext(
+        ProcessStepTransitionRequest request,
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+    {
+        if (request.ArtifactValidationExecutorKind.HasValue)
+        {
+            return new ProcessStepTransitionArtifactValidationContext(
+                request.ArtifactValidationExecutorKind.Value,
+                request.ArtifactValidationExecutionRunId,
+                request.ArtifactValidationWorkflowRunId,
+                request.ArtifactValidationSubprocessRunId,
+                request.ArtifactValidationRecoveryExecutionRunId,
+                request.ArtifactValidationRecoveredForExecutionRunId);
+        }
+
+        if (IsAutomationDispatchTransition(request) &&
+            TryResolveSingleDirectExecutionRunId(stepArtifacts, out var executionRunId))
+        {
+            return new ProcessStepTransitionArtifactValidationContext(
+                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+                executionRunId,
+                WorkflowRunId: null,
+                SubprocessRunId: null,
+                RecoveryExecutionRunId: null,
+                RecoveredForExecutionRunId: null);
+        }
+
+        return new ProcessStepTransitionArtifactValidationContext(
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.Manual,
+            ExecutionRunId: null,
+            WorkflowRunId: null,
+            SubprocessRunId: null,
+            RecoveryExecutionRunId: null,
+            RecoveredForExecutionRunId: null);
+    }
+
+    private static bool IsAutomationDispatchTransition(ProcessStepTransitionRequest request)
+        => string.Equals(
+            request.DecidedBy,
+            ProcessRunAutomationDispatchService.AutomationActor,
+            StringComparison.OrdinalIgnoreCase);
+
+    private static bool TryResolveSingleDirectExecutionRunId(
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+        out Guid executionRunId)
+    {
+        var executionRunIds = new HashSet<Guid>();
+        foreach (var artifact in stepArtifacts)
+        {
+            AddDirectExecutionRunIds(artifact, executionRunIds);
+            if (executionRunIds.Count > 1)
+            {
+                executionRunId = Guid.Empty;
+                return false;
+            }
+        }
+
+        executionRunId = executionRunIds.SingleOrDefault();
+        return executionRunId != Guid.Empty;
+    }
+
+    private static void AddDirectExecutionRunIds(
         ProcessArtifactRecord artifact,
+        ISet<Guid> executionRunIds)
+    {
+        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+        if (lineage is not null &&
+            IsDirectExecutionLineage(lineage.SourceKind))
+        {
+            AddGuid(executionRunIds, lineage.SourceExecutionRunId);
+            AddGuid(executionRunIds, lineage.ProjectedExecutionRunId);
+        }
+
+        if (TryReadPipeDelimitedExecutionRunId(artifact.ExternalReferenceKey, "workspace-written-artifact|", out var externalReferenceExecutionRunId) ||
+            TryReadPipeDelimitedExecutionRunId(artifact.ExternalReferenceKey, "existing-managed-artifact|", out externalReferenceExecutionRunId) ||
+            TryReadPipeDelimitedExecutionRunId(artifact.ExternalReferenceKey, "assistant-response|", out externalReferenceExecutionRunId) ||
+            TryReadColonDelimitedExecutionRunId(artifact.ExternalReferenceKey, "agentframework-browser-artifact:", out externalReferenceExecutionRunId))
+        {
+            executionRunIds.Add(externalReferenceExecutionRunId);
+        }
+    }
+
+    private static bool IsDirectExecutionLineage(ProcessArtifactProjectionSourceKind sourceKind)
+    {
+        return sourceKind is
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact or
+            ProcessArtifactProjectionSourceKind.WorkspaceWrite or
+            ProcessArtifactProjectionSourceKind.ExistingManagedFile or
+            ProcessArtifactProjectionSourceKind.AssistantResponse or
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser;
+    }
+
+    private static void AddGuid(ISet<Guid> values, Guid? value)
+    {
+        if (value.HasValue && value.Value != Guid.Empty)
+        {
+            values.Add(value.Value);
+        }
+    }
+
+    private static bool TryReadPipeDelimitedExecutionRunId(
+        string value,
+        string prefix,
+        out Guid executionRunId)
+    {
+        executionRunId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remainder = value[prefix.Length..];
+        var separatorIndex = remainder.IndexOf('|', StringComparison.Ordinal);
+        var token = separatorIndex < 0 ? remainder : remainder[..separatorIndex];
+        return Guid.TryParse(token, out executionRunId);
+    }
+
+    private static bool TryReadColonDelimitedExecutionRunId(
+        string value,
+        string prefix,
+        out Guid executionRunId)
+    {
+        executionRunId = Guid.Empty;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var remainder = value[prefix.Length..];
+        var separatorIndex = remainder.IndexOf(':', StringComparison.Ordinal);
+        var token = separatorIndex < 0 ? remainder : remainder[..separatorIndex];
+        return Guid.TryParse(token, out executionRunId);
+    }
+
+    private ProcessRunAutomationDispatchService.IProcessArtifactContentReader CreateProcessArtifactContentReader()
+    {
+        return new ProcessRunAutomationDispatchService.StorageBackedProcessArtifactContentReader(
+            workspacePathResolver,
+            storageCatalogService,
+            storageDriverRegistry);
+    }
+
+    private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation ToDispatchArtifactExpectation(
         ProcessArtifactExpectation expectation)
     {
-        if (artifact.ArtifactKind != expectation.ArtifactKind)
-        {
-            return false;
-        }
-
-        if (artifact.SensitivityLevel < expectation.SensitivityLevel)
-        {
-            return false;
-        }
-
-        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
-        {
-            return false;
-        }
-
-        if (artifact.ArtifactExpectationId.HasValue)
-        {
-            return artifact.ArtifactExpectationId.Value == expectation.Id;
-        }
-
-        return string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
+        return new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+            expectation.Id,
+            expectation.ArtifactKind,
+            expectation.Title,
+            expectation.IsRequired,
+            expectation.TrustRequirement,
+            expectation.SensitivityLevel,
+            expectation.ValidationRequirementSummary,
+            expectation.AllowedFutureUsageSummary);
     }
 
-    private static bool SatisfiesTrustRequirement(
-        ProcessArtifactTrustStatus trustStatus,
-        ProcessArtifactTrustRequirement trustRequirement)
-    {
-        return trustRequirement switch
-        {
-            ProcessArtifactTrustRequirement.None => true,
-            ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
-                ProcessArtifactTrustStatus.ReviewRequired or
-                ProcessArtifactTrustStatus.Approved or
-                ProcessArtifactTrustStatus.TrustedSource,
-            ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
-            ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
-            _ => false
-        };
-    }
+    private sealed record ProcessStepTransitionArtifactValidationContext(
+        ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind ExecutorKind,
+        Guid? ExecutionRunId,
+        Guid? WorkflowRunId,
+        Guid? SubprocessRunId,
+        Guid? RecoveryExecutionRunId,
+        Guid? RecoveredForExecutionRunId);
 
     private static bool ShouldNotifyParentSubprocessStep(ProcessRunStatus status)
     {
@@ -472,7 +653,84 @@ public sealed partial class ProcessesService
             ProcessRunStatus.Failed;
     }
 
-    private static void ApplyStepRunTransitionState(
+    private static async Task PersistManualTransitionValidationFailureAsync(
+        AppDbContext dbContext,
+        ProcessRun run,
+        ProcessStepRun stepRun,
+        ProcessStepTransitionRequest request,
+        IReadOnlyList<Error> errors,
+        DateTimeOffset occurredAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var errorCodes = errors
+            .Select(item => item.Code)
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .ToList();
+        var evidenceKey = ProcessRuntimeInvariantAuditor.BuildManualTransitionValidationFailureEvidenceKey(
+            stepRun.Id,
+            request.TargetStatus,
+            errorCodes);
+        var alreadyRecorded = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .AnyAsync(item =>
+                item.ProcessRunId == run.Id &&
+                item.StepRunId == stepRun.Id &&
+                item.EventType == ProcessRuntimeEventTypes.RuntimeInvariantViolationRecorded &&
+                item.CorrelationId == evidenceKey,
+                cancellationToken);
+        if (alreadyRecorded)
+        {
+            return;
+        }
+
+        var errorSummary = string.Join(
+            "; ",
+            errors
+                .Select(item => string.IsNullOrWhiteSpace(item.Code) ? item.Message : $"{item.Code}: {item.Message}")
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Take(5));
+        if (string.IsNullOrWhiteSpace(errorSummary))
+        {
+            errorSummary = $"Cannot move step from {stepRun.Status} to {request.TargetStatus}.";
+        }
+
+        var recommendedAction = ResolveManualTransitionFailureRecommendedAction(errors);
+        await dbContext.Set<ProcessJournalEntry>().AddAsync(
+            new ProcessJournalEntry
+            {
+                ProcessRunId = run.Id,
+                StepRunId = stepRun.Id,
+                EventType = ProcessRuntimeEventTypes.RuntimeInvariantViolationRecorded,
+                Title = "Manual transition validation failure",
+                Description = errorSummary,
+                CorrelationId = evidenceKey,
+                OperatingMode = run.OperatingMode,
+                PolicyVersion = $"definition-version:{run.ProcessDefinitionVersionId:D}",
+                EnvironmentMode = run.OperatingMode.ToString(),
+                ReplayContextJson = JsonSerializer.Serialize(new
+                {
+                    RunId = run.Id,
+                    StepRunId = stepRun.Id,
+                    Code = ProcessRuntimeInvariantAuditor.ManualTransitionValidationFailureCode,
+                    Severity = ProcessConformanceSeverity.Moderate.ToString(),
+                    CurrentStatus = stepRun.Status.ToString(),
+                    TargetStatus = request.TargetStatus.ToString(),
+                    ErrorCodes = errorCodes,
+                    RecommendedAction = recommendedAction
+                }),
+                OccurredAtUtc = occurredAtUtc
+            },
+            cancellationToken);
+    }
+
+    private static string ResolveManualTransitionFailureRecommendedAction(IReadOnlyList<Error> errors)
+    {
+        return errors.Any(item => item.Code.Contains("artifact", StringComparison.OrdinalIgnoreCase))
+            ? "Record or repair the required artifacts, refresh the run state, and retry the transition."
+            : "Refresh the run state, choose an allowed next status, and retry the transition.";
+    }
+
+    private static ProcessRecoveryRoutingDecision? ApplyStepRunTransitionState(
         ProcessStepRun stepRun,
         ProcessStepTransitionRequest request,
         ProcessStepBranchOutcomeDefinition? selectedBranchOutcome,
@@ -481,6 +739,7 @@ public sealed partial class ProcessesService
     {
         var previousStatus = stepRun.Status;
         var previousStartedAtUtc = stepRun.StartedAtUtc;
+        ProcessRecoveryRoutingDecision? recoveryRoutingDecision = null;
 
         if (request.TargetStatus != ProcessStepRunStatus.InProgress &&
             previousStatus == ProcessStepRunStatus.InProgress &&
@@ -493,6 +752,7 @@ public sealed partial class ProcessesService
         {
             stepRun.CompletedAtUtc = null;
             stepRun.BlockedReason = string.Empty;
+            ProcessStepRunBlockState.Clear(stepRun);
             stepRun.RefusalReason = string.Empty;
             stepRun.ExceptionSummary = string.Empty;
             if (previousStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval &&
@@ -512,6 +772,7 @@ public sealed partial class ProcessesService
         if (request.TargetStatus == ProcessStepRunStatus.Blocked)
         {
             stepRun.BlockedReason = trimmedReason;
+            recoveryRoutingDecision = ProcessStepRunBlockState.Apply(stepRun, trimmedReason, request.BlockCause);
             stepRun.BlockedMinutes = Math.Max(stepRun.BlockedMinutes, 15);
         }
 
@@ -524,7 +785,13 @@ public sealed partial class ProcessesService
         if (request.TargetStatus == ProcessStepRunStatus.Failed)
         {
             stepRun.ExceptionSummary = trimmedReason;
+            recoveryRoutingDecision = ProcessStepRunBlockState.Apply(stepRun, trimmedReason, request.BlockCause);
             stepRun.ReworkCount += 1;
+        }
+
+        if (request.TargetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Skipped or ProcessStepRunStatus.Refused)
+        {
+            ProcessStepRunBlockState.Clear(stepRun);
         }
 
         if (selectedBranchOutcome is not null)
@@ -551,6 +818,43 @@ public sealed partial class ProcessesService
         }
 
         stepRun.Status = request.TargetStatus;
+        return recoveryRoutingDecision;
+    }
+
+    private ProcessJournalEntry BuildRecoveryRoutingJournalEntry(
+        ProcessRun run,
+        ProcessStepRun stepRun,
+        ProcessRecoveryRoutingDecision decision,
+        string diagnostic,
+        DateTimeOffset occurredAtUtc)
+    {
+        return new ProcessJournalEntry
+        {
+            ProcessRunId = run.Id,
+            StepRunId = stepRun.Id,
+            EventType = ProcessRuntimeEventTypes.RecoveryRoutingDecisionRecorded,
+            Title = "Recovery routing decision recorded",
+            Description = $"{stepRun.Title}: {decision.NextAction}. {diagnostic}",
+            CorrelationId = decision.EvidenceFingerprint,
+            OperatingMode = run.OperatingMode,
+            PolicyVersion = $"definition-version:{run.ProcessDefinitionVersionId:D}",
+            EnvironmentMode = run.OperatingMode.ToString(),
+            ReplayContextJson = JsonSerializer.Serialize(new
+            {
+                RunId = run.Id,
+                StepRunId = stepRun.Id,
+                BlockReasonCode = decision.BlockReasonCode.ToString(),
+                FailureOwnership = decision.FailureOwnership?.ToString() ?? string.Empty,
+                NextAction = decision.NextAction.ToString(),
+                Classification = decision.Classification.ToString(),
+                AvailableActions = decision.AvailableActions.Select(action => action.ToString()).ToArray(),
+                decision.EvidenceFingerprint,
+                decision.IsNoProgressGuarded,
+                decision.Reason,
+                Diagnostic = diagnostic
+            }),
+            OccurredAtUtc = occurredAtUtc
+        };
     }
 
     private sealed record ProcessRuntimeTransitionContext(

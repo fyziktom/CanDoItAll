@@ -948,6 +948,11 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
                     .Append(stepRun.RefusalReason);
             }
 
+            if (!string.IsNullOrWhiteSpace(stepRun.ExceptionSummary)) {
+                builder.Append(" / exception=")
+                    .Append(stepRun.ExceptionSummary);
+            }
+
             builder.AppendLine();
         }
 

@@ -1,4 +1,5 @@
 using System.Reflection;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Integration;
@@ -189,6 +190,106 @@ public sealed class AgentFrameworkExecutionCapabilityFilteringIntegrationTests
         Assert.Empty(InvokeResolveAgentMemoryForRun(catalog, agentId, governedRun));
     }
 
+    [Fact]
+    public void AgentCapabilityRequirementEvaluator_reports_typed_missing_required_skill()
+    {
+        var agent = CreateAgent([]);
+        var requirement = new AgentCapabilityRequirement(
+            "process-manager",
+            CapabilityKind.Skill,
+            "candoitall-api-processes",
+            "Process manager roles must inspect and transition process runs through the governed API.");
+
+        var evaluation = AgentCapabilityRequirementEvaluator.Evaluate(agent, [], [requirement]);
+
+        Assert.False(evaluation.IsSatisfied);
+        var diagnostic = Assert.Single(evaluation.Diagnostics);
+        Assert.Equal(AgentCapabilityDiagnosticCode.MissingRequiredCapability, diagnostic.Code);
+        Assert.Equal(AgentCapabilityDiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Equal(agent.Id, diagnostic.AgentId);
+        Assert.Equal("process-manager", diagnostic.RoleKey);
+        Assert.Equal(CapabilityKind.Skill, diagnostic.Kind);
+        Assert.Equal("candoitall-api-processes", diagnostic.CapabilityKey);
+        Assert.Contains("does not have required Skill capability", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentCapabilityRequirementEvaluator_reports_retired_required_skill()
+    {
+        var retiredCapability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Skill,
+            "workspace-delivery-skill",
+            "Workspace Delivery Skill",
+            "Retired sandbox delivery skill.",
+            string.Empty,
+            """{"registeredSkillServiceType":"CanDoItAll.AgentFramework.Sandbox.Hosting.WorkspaceDeliverySkill, CanDoItAll.AgentFramework.Sandbox"}""",
+            CapabilityProofStatus.NotRun,
+            string.Empty,
+            null,
+            true);
+        var agent = CreateAgent(
+            [
+                new AgentCapabilityAssignment(
+                    retiredCapability.Id,
+                    retiredCapability.Key,
+                    retiredCapability.Kind,
+                    retiredCapability.ProofStatus,
+                    retiredCapability.LastVerifiedAtUtc,
+                    retiredCapability.ProofNotes)
+            ]);
+        var requirement = new AgentCapabilityRequirement(
+            "process-executor",
+            CapabilityKind.Skill,
+            retiredCapability.Key,
+            "Executor roles must not depend on retired sandbox delivery skills.");
+
+        var evaluation = AgentCapabilityRequirementEvaluator.Evaluate(agent, [retiredCapability], [requirement]);
+
+        Assert.False(evaluation.IsSatisfied);
+        var diagnostic = Assert.Single(evaluation.Diagnostics);
+        Assert.Equal(AgentCapabilityDiagnosticCode.RetiredCapability, diagnostic.Code);
+        Assert.Equal(retiredCapability.Key, diagnostic.CapabilityKey);
+        Assert.Contains("filtered before execution", diagnostic.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AgentCapabilityRequirementEvaluator_accepts_attached_catalog_capability()
+    {
+        var capability = new CapabilityCatalogItem(
+            Guid.NewGuid(),
+            CapabilityKind.Tool,
+            "processes_run_detail_get",
+            "Process Run Detail",
+            "Loads a process run detail projection.",
+            string.Empty,
+            "{}",
+            CapabilityProofStatus.Verified,
+            "Verified by test.",
+            DateTimeOffset.UtcNow,
+            true);
+        var agent = CreateAgent(
+            [
+                new AgentCapabilityAssignment(
+                    capability.Id,
+                    capability.Key,
+                    capability.Kind,
+                    capability.ProofStatus,
+                    capability.LastVerifiedAtUtc,
+                    capability.ProofNotes)
+            ]);
+        var requirement = new AgentCapabilityRequirement(
+            "process-manager",
+            CapabilityKind.Tool,
+            capability.Key,
+            "Managers need run detail readback before making transitions.");
+
+        var evaluation = AgentCapabilityRequirementEvaluator.Evaluate(agent, [capability], [requirement]);
+
+        Assert.True(evaluation.IsSatisfied);
+        Assert.Empty(evaluation.Diagnostics);
+    }
+
     private static IReadOnlyList<CapabilityCatalogItem> InvokeResolveAttachedCapabilities(
         SandboxWorkspaceCatalog catalog,
         AgentDefinition agent)
@@ -256,5 +357,32 @@ public sealed class AgentFrameworkExecutionCapabilityFilteringIntegrationTests
             PendingApprovals: [],
             ProcessRunId: processRunId,
             ProcessStepId: processStepId);
+    }
+
+    private static AgentDefinition CreateAgent(IReadOnlyList<AgentCapabilityAssignment> capabilities)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new AgentDefinition(
+            Guid.NewGuid(),
+            "Capability Policy Agent",
+            "Process manager",
+            "Exercises governed process capabilities.",
+            "Use only assigned capabilities.",
+            AgentLifecycleStatus.Active,
+            ProviderProfileId: null,
+            Model: "gpt-4.1",
+            Workload: AgentWorkloadKind.Programming,
+            ChatHistoryMode: AgentChatHistoryMode.FrameworkManaged,
+            Temperature: 0.2,
+            RequirePerServiceCallChatHistoryPersistence: false,
+            EnableBackgroundResponses: false,
+            ConfigurationJson: "{}",
+            IsTemplate: false,
+            TemplateKey: string.Empty,
+            Permissions: AgentPermissionsPolicy.Default,
+            Capabilities: capabilities,
+            Tags: [],
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now);
     }
 }

@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
@@ -7,6 +9,7 @@ namespace CanDoItAll.Modules.Processes;
 public sealed class ProcessTemplatePackLoader
 {
     private const string ManifestFileName = "manifest.json";
+    private static readonly JsonSerializerOptions JsonOptions = CreateJsonOptions();
 
     private readonly string? configuredPackRoot;
     private readonly Lazy<ProcessTemplatePack> pack;
@@ -33,6 +36,9 @@ public sealed class ProcessTemplatePackLoader
             ? new ProcessTemplateToolboxChromeCatalog()
             : ReadJson<ProcessTemplateToolboxChromeCatalog>(Path.Combine(root, manifest.Toolbox.ChromeActionsPath));
         var baselineScenarios = ReadJson<List<ProcessTemplateBaselineScenario>>(Path.Combine(root, manifest.SeedCatalog.BaselineScenariosPath));
+        var liveRunProfiles = string.IsNullOrWhiteSpace(manifest.SeedCatalog.LiveRunProfilesPath)
+            ? new List<ProcessTemplateLiveRunProfile>()
+            : ReadJson<List<ProcessTemplateLiveRunProfile>>(Path.Combine(root, manifest.SeedCatalog.LiveRunProfilesPath));
 
         var sharedRoles = LoadJsonDirectory<ProcessTemplateRoleResource>(Path.Combine(root, "shared", "roles"), static item => item.Key);
         var sharedArtifacts = LoadJsonDirectory<ProcessTemplateArtifactResource>(Path.Combine(root, "shared", "artifacts"), static item => item.Key);
@@ -97,6 +103,7 @@ public sealed class ProcessTemplatePackLoader
             ChromeActions = chromeActions,
             Processes = new ReadOnlyDictionary<string, ProcessTemplateDefinition>(processes),
             BaselineScenarios = baselineScenarios,
+            LiveRunProfiles = liveRunProfiles,
             SharedRoles = new ReadOnlyDictionary<string, ProcessTemplateRoleResource>(sharedRoles),
             SharedArtifacts = new ReadOnlyDictionary<string, ProcessTemplateArtifactResource>(sharedArtifacts),
             SharedChecklists = new ReadOnlyDictionary<string, ProcessTemplateChecklistResource>(sharedChecklists),
@@ -135,7 +142,17 @@ public sealed class ProcessTemplatePackLoader
     private static T ReadJson<T>(string path)
         where T : class, new()
     {
-        return JsonFileLoader.ReadRequired<T>(path);
+        return JsonFileLoader.ReadRequired<T>(path, JsonOptions);
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        options.Converters.Add(new JsonStringEnumConverter());
+        return options;
     }
 
     private static string ResolvePackRoot(string? explicitRoot)

@@ -31,7 +31,34 @@ public enum ProcessArtifactExpectationSatisfactionStatus {
     AutoProjected,
     Missing,
     ProjectionFailed,
-    NotApplicable
+    ContentUnavailable,
+    NotApplicable,
+    InvalidFormat,
+    InsufficientEvidence,
+    StaleOrWrongRun,
+    WrongProducerMode,
+    PlaceholderOnly,
+    ContentHashMismatch
+}
+
+public enum ProcessArtifactExpectationValidationStatus {
+    Satisfied,
+    Missing,
+    InvalidFormat,
+    InsufficientEvidence,
+    StaleOrWrongRun,
+    WrongProducerMode,
+    PlaceholderOnly,
+    ContentUnavailable,
+    ContentHashMismatch
+}
+
+public enum ProcessArtifactValidationFailureOwnership {
+    Unknown = -1,
+    OwnOutput = 0,
+    UpstreamInput = 1,
+    RuntimeEvidence = 2,
+    ReviewDisposition = 3
 }
 
 public enum ProcessArtifactExpectationSourceKind {
@@ -63,6 +90,14 @@ public enum ProcessOutboxHealthStatus {
     DeadLettered
 }
 
+public enum ProcessRuntimeInvariantDiagnosticKind {
+    AliasConflict,
+    WeakArtifactRecord,
+    BlockedRecoveryState,
+    DuplicateLineageIdentity,
+    ManualTransitionValidationFailure
+}
+
 public sealed record ProcessArtifactExpectationSatisfactionViewModel(
     Guid StepRunId,
     Guid ArtifactExpectationId,
@@ -74,7 +109,16 @@ public sealed record ProcessArtifactExpectationSatisfactionViewModel(
     Guid? ProcessArtifactRecordId,
     string SatisfiedByTitle,
     string ManagedStoragePath,
-    string Diagnostic);
+    string Diagnostic)
+{
+    public ProcessArtifactExpectationValidationStatus? ValidationStatus { get; init; }
+
+    public ProcessArtifactValidationFailureOwnership FailureOwnership { get; init; } = ProcessArtifactValidationFailureOwnership.Unknown;
+
+    public string ValidationAttemptedPath { get; init; } = string.Empty;
+
+    public string ValidationSuggestedAction { get; init; } = string.Empty;
+}
 
 public sealed record ProcessStepExecutionAttemptViewModel(
     Guid ExecutionRunId,
@@ -100,6 +144,10 @@ public sealed record ProcessStepRunHealthViewModel(
     int DeadLetteredOutboxCount,
     IReadOnlyList<ProcessStepExecutionAttemptViewModel> Attempts)
 {
+    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+
+    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
+
     public static ProcessStepRunHealthViewModel Empty { get; } = new(
         0,
         string.Empty,
@@ -141,6 +189,10 @@ public sealed record ProcessRunHealthSummaryViewModel(
     ProcessRecoveryClassification RecoveryClassification,
     string ActionableReason)
 {
+    public int InvariantDiagnosticCount { get; init; }
+
+    public ProcessStepRecoveryOption RecommendedAction { get; init; } = ProcessStepRecoveryOption.None;
+
     public static ProcessRunHealthSummaryViewModel Empty { get; } = new(
         0,
         0,
@@ -154,6 +206,19 @@ public sealed record ProcessRunHealthSummaryViewModel(
         ProcessRecoveryClassification.None,
         string.Empty);
 }
+
+public sealed record ProcessRuntimeInvariantDiagnosticViewModel(
+    ProcessRuntimeInvariantDiagnosticKind Kind,
+    ProcessConformanceSeverity Severity,
+    Guid? StepRunId,
+    string StepTitle,
+    Guid? ArtifactRecordId,
+    Guid? JournalEntryId,
+    string Title,
+    string Detail,
+    string RecommendedAction,
+    string EvidenceKey,
+    DateTimeOffset ObservedAtUtc);
 
 public sealed record ProcessLaunchPlanListItem(
     Guid Id,
@@ -242,9 +307,19 @@ public sealed record ProcessStepRunViewModel(
 
     public IReadOnlyList<ProcessStepRunArtifactPortViewModel> ArtifactOutputs { get; init; } = [];
 
+    public IReadOnlyList<ProcessStepOperation> AllowedOperations { get; init; } = [];
+
+    public ProcessStepTargetScope? OperationTargetScope { get; init; }
+
     public string ExceptionSummary { get; init; } = string.Empty;
 
     public IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> ArtifactExpectations { get; init; } = [];
+
+    public ProcessStepBlockReasonCode BlockReasonCode { get; init; } = ProcessStepBlockReasonCode.None;
+
+    public ProcessStepRecoveryOption NextRecoveryAction { get; init; } = ProcessStepRecoveryOption.None;
+
+    public IReadOnlyList<ProcessStepRecoveryOption> RecoveryOptions { get; init; } = [];
 
     public ProcessStepRunHealthViewModel Health { get; init; } = ProcessStepRunHealthViewModel.Empty;
 
@@ -273,7 +348,12 @@ public sealed record ProcessArtifactViewModel(
     string AllowedFutureUsageSummary,
     string ManagedStoragePath,
     string ExternalReferenceKey,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc)
+{
+    public string ProjectionLineageJson { get; init; } = string.Empty;
+
+    public string ProjectionIdentityHash { get; init; } = string.Empty;
+}
 
 public sealed record ProcessRunAssignmentViewModel(
     Guid Id,
@@ -631,6 +711,8 @@ public sealed class ProcessRunStartRequest
     public Guid? ParentRunId { get; set; }
 
     public Guid? ParentStepRunId { get; set; }
+
+    public ProcessDefinitionLintMode LintMode { get; set; } = ProcessDefinitionLintMode.Advisory;
 }
 
 public sealed class ProcessRunStopRequest
@@ -714,6 +796,8 @@ public sealed class ProcessStepTransitionRequest
 
     public string Reason { get; set; } = string.Empty;
 
+    public ProcessStepBlockCause? BlockCause { get; set; }
+
     public Guid? SelectedBranchOutcomeId { get; set; }
 
     public string DecidedBy { get; set; } = string.Empty;
@@ -721,6 +805,18 @@ public sealed class ProcessStepTransitionRequest
     public bool SuppressAutomationDispatch { get; set; }
 
     public bool AllowCompletedAgentRerun { get; internal set; }
+
+    internal ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind? ArtifactValidationExecutorKind { get; set; }
+
+    internal Guid? ArtifactValidationExecutionRunId { get; set; }
+
+    internal Guid? ArtifactValidationWorkflowRunId { get; set; }
+
+    internal Guid? ArtifactValidationSubprocessRunId { get; set; }
+
+    internal Guid? ArtifactValidationRecoveryExecutionRunId { get; set; }
+
+    internal Guid? ArtifactValidationRecoveredForExecutionRunId { get; set; }
 }
 
 public sealed class ProcessAgentStepRerunRequest
@@ -782,6 +878,8 @@ public sealed class ProcessArtifactRecordRequest
     public string ManagedStoragePath { get; set; } = string.Empty;
 
     public string ExternalReferenceKey { get; set; } = string.Empty;
+
+    public ProcessArtifactProjectionLineage? ProjectionLineage { get; set; }
 }
 
 public sealed class ProcessDirectMessageRequest

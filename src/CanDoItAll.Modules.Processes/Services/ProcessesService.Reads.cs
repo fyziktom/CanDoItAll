@@ -35,6 +35,14 @@ public sealed partial class ProcessesService {
         return await runtimeReadQueryService.GetRunDetailsAsync(dbContext, runId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ProcessRuntimeInvariantDiagnosticViewModel>> ListRuntimeInvariantDiagnosticsAsync(
+        Guid runId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        return await runtimeReadQueryService.ListRuntimeInvariantDiagnosticsAsync(dbContext, runId, cancellationToken);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, ProcessActiveRunHealthMetrics>> GetActiveRunHealthMetricsAsync(
         IReadOnlyCollection<Guid> runIds,
         CancellationToken cancellationToken = default)
@@ -78,7 +86,11 @@ public sealed partial class ProcessesService {
                 item.AllowedFutureUsageSummary,
                 item.ManagedStoragePath,
                 item.ExternalReferenceKey,
-                item.CreatedAtUtc))
+                item.CreatedAtUtc)
+            {
+                ProjectionLineageJson = item.ProjectionLineageJson,
+                ProjectionIdentityHash = item.ProjectionIdentityHash
+            })
             .ToListAsync(cancellationToken);
         return items
             .OrderByDescending(item => item.CreatedAtUtc)

@@ -91,7 +91,7 @@
       "ExceptionPolicySummary": "Do not proceed when scope and affected domains are not explicit.",
       "TargetLeadHours": 4,
       "DependsOnStepKey": "",
-"DependsOnBranchOutcomeKey": "",
+      "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
       "CanvasX": 260,
       "CanvasY": 0,
@@ -153,7 +153,14 @@
       "BranchCanvasX": 320,
       "BranchCanvasY": 220,
       "Dependencies": [],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -249,7 +256,14 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -343,7 +357,15 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 3,
@@ -360,7 +382,7 @@
       "OutputContractSummary": "Approved or deferred architecture decision with adoption conditions.",
       "EvidenceContractSummary": "Board decision record and named follow-up obligations.",
       "DecisionRightsSummary": "Governance facilitator records the decision; service owner and domain owner must both acknowledge adoption obligations.",
-      "ExceptionPolicySummary": "Do not approve with placeholders for ownership or decision rationale.",
+      "ExceptionPolicySummary": "Do not approve with placeholders for ownership or decision rationale; block when artifact recovery is required for missing or invalid board-decision evidence.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "security-compliance-review",
       "DependsOnBranchOutcomeKey": "",
@@ -435,7 +457,15 @@
           "DependsOnBranchOutcomeKey": ""
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 4,
@@ -527,7 +557,14 @@
           "DependsOnBranchOutcomeKey": "approved"
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -581,7 +618,14 @@
           "DependsOnBranchOutcomeKey": "deferred"
         }
       ],
-      "ArtifactInputs": []
+      "ArtifactInputs": [],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
   "DocPath": "processes/architecture-decision-governance/definition.md",
@@ -621,7 +665,7 @@
         "architecture-governance"
       ],
       "KnowledgeRequirements": [
-        "Deep knowledge of the owned domain’s rules, invariants, operational pain points, and integration surface.",
+        "Deep knowledge of the owned domain\u2019s rules, invariants, operational pain points, and integration surface.",
         "Ability to evaluate whether an architectural proposal preserves domain boundaries and team ownership clarity.",
         "Understanding of business impact if domain semantics are oversimplified or coupled incorrectly.",
         "Knowledge of historical debt or prior incidents tied to domain boundary mistakes.",

@@ -27,6 +27,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         var orderedKinds = new[]
         {
             ProcessResponsibilityKind.Responsible,
+            ProcessResponsibilityKind.Accountable,
             ProcessResponsibilityKind.Reviewer,
             ProcessResponsibilityKind.Approver,
             ProcessResponsibilityKind.Backup
@@ -98,7 +99,11 @@ public sealed partial class ProcessRuntimeReadQueryService
                 item.AllowedFutureUsageSummary,
                 item.ManagedStoragePath,
                 item.ExternalReferenceKey,
-                item.CreatedAtUtc))
+                item.CreatedAtUtc)
+            {
+                ProjectionLineageJson = item.ProjectionLineageJson,
+                ProjectionIdentityHash = item.ProjectionIdentityHash
+            })
             .ToListAsync(cancellationToken);
         return items
             .OrderByDescending(item => item.CreatedAtUtc)
@@ -180,10 +185,144 @@ public sealed partial class ProcessRuntimeReadQueryService
         }
     }
 
+    private const string ArtifactValidationExpectationIdPropertyName = "ExpectationId";
+    private const string ArtifactValidationStatusPropertyName = "Status";
+    private const string ArtifactValidationFailureOwnershipPropertyName = "FailureOwnership";
+    private const string ArtifactValidationArtifactRecordIdPropertyName = "ArtifactRecordId";
+    private const string ArtifactValidationAttemptedPathPropertyName = "AttemptedPath";
+    private const string ArtifactValidationDiagnosticPropertyName = "Diagnostic";
+    private const string ArtifactValidationSuggestedActionPropertyName = "SuggestedAction";
+
+    private static ProcessArtifactValidationDiagnosticProjection? TryReadArtifactValidationDiagnostic(
+        ProcessJournalEntry entry)
+    {
+        if (!entry.StepRunId.HasValue || string.IsNullOrWhiteSpace(entry.ReplayContextJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(entry.ReplayContextJson);
+            var root = document.RootElement;
+            if (!TryReadGuid(root, ArtifactValidationExpectationIdPropertyName, out var expectationId) ||
+                !TryReadArtifactValidationStatus(root, out var status))
+            {
+                return null;
+            }
+
+            if (!TryReadNullableGuid(root, ArtifactValidationArtifactRecordIdPropertyName, out var artifactRecordId))
+            {
+                return null;
+            }
+
+            var diagnostic = ReadString(root, ArtifactValidationDiagnosticPropertyName);
+            return new ProcessArtifactValidationDiagnosticProjection(
+                entry.StepRunId.Value,
+                expectationId,
+                status,
+                artifactRecordId,
+                ReadString(root, ArtifactValidationAttemptedPathPropertyName),
+                string.IsNullOrWhiteSpace(diagnostic) ? entry.Description : diagnostic,
+                ReadString(root, ArtifactValidationSuggestedActionPropertyName),
+                ReadArtifactValidationFailureOwnership(root),
+                entry.OccurredAtUtc);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryReadArtifactValidationStatus(
+        JsonElement root,
+        out ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus status)
+    {
+        status = default;
+        if (!root.TryGetProperty(ArtifactValidationStatusPropertyName, out var property))
+        {
+            return false;
+        }
+
+        if (property.ValueKind == JsonValueKind.String &&
+            Enum.TryParse(property.GetString(), ignoreCase: true, out status))
+        {
+            return true;
+        }
+
+        if (property.ValueKind == JsonValueKind.Number &&
+            property.TryGetInt32(out var numericStatus) &&
+            Enum.IsDefined(typeof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus), numericStatus))
+        {
+            status = (ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus)numericStatus;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static ProcessArtifactValidationFailureOwnership ReadArtifactValidationFailureOwnership(JsonElement root)
+    {
+        if (!root.TryGetProperty(ArtifactValidationFailureOwnershipPropertyName, out var property))
+        {
+            return ProcessArtifactValidationFailureOwnership.Unknown;
+        }
+
+        if (property.ValueKind == JsonValueKind.String &&
+            Enum.TryParse(property.GetString(), ignoreCase: true, out ProcessArtifactValidationFailureOwnership ownership))
+        {
+            return ownership;
+        }
+
+        if (property.ValueKind == JsonValueKind.Number &&
+            property.TryGetInt32(out var numericOwnership) &&
+            Enum.IsDefined(typeof(ProcessArtifactValidationFailureOwnership), numericOwnership))
+        {
+            return (ProcessArtifactValidationFailureOwnership)numericOwnership;
+        }
+
+        return ProcessArtifactValidationFailureOwnership.Unknown;
+    }
+
+    private static bool TryReadGuid(JsonElement root, string propertyName, out Guid value)
+    {
+        value = Guid.Empty;
+        return root.TryGetProperty(propertyName, out var property) &&
+               property.ValueKind == JsonValueKind.String &&
+               Guid.TryParse(property.GetString(), out value);
+    }
+
+    private static bool TryReadNullableGuid(JsonElement root, string propertyName, out Guid? value)
+    {
+        value = null;
+        if (!root.TryGetProperty(propertyName, out var property) ||
+            property.ValueKind == JsonValueKind.Null)
+        {
+            return true;
+        }
+
+        if (property.ValueKind != JsonValueKind.String ||
+            !Guid.TryParse(property.GetString(), out var parsed))
+        {
+            return false;
+        }
+
+        value = parsed;
+        return true;
+    }
+
+    private static string ReadString(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.String
+            ? property.GetString() ?? string.Empty
+            : string.Empty;
+    }
+
     private static IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> BuildArtifactLedger(
         ProcessStepRun stepRun,
         IReadOnlyDictionary<Guid, List<ProcessArtifactExpectation>> artifactExpectationsByStepId,
-        IReadOnlyDictionary<Guid, List<ProcessArtifactRecord>> artifactRecordsByStepRunId)
+        IReadOnlyDictionary<Guid, List<ProcessArtifactRecord>> artifactRecordsByStepRunId,
+        IReadOnlyDictionary<Guid, List<ProcessArtifactValidationDiagnosticProjection>> artifactValidationDiagnosticsByStepRunId)
     {
         if (!artifactExpectationsByStepId.TryGetValue(stepRun.StepDefinitionId, out var expectations) || expectations.Count == 0)
         {
@@ -192,21 +331,61 @@ public sealed partial class ProcessRuntimeReadQueryService
 
         artifactRecordsByStepRunId.TryGetValue(stepRun.Id, out var stepArtifacts);
         stepArtifacts ??= [];
+        artifactValidationDiagnosticsByStepRunId.TryGetValue(stepRun.Id, out var artifactValidationDiagnostics);
+        artifactValidationDiagnostics ??= [];
 
         return expectations
-            .Select(expectation => BuildArtifactLedgerItem(stepRun, expectation, stepArtifacts))
+            .Select(expectation => BuildArtifactLedgerItem(stepRun, expectation, stepArtifacts, artifactValidationDiagnostics))
             .ToList();
     }
+
+    private sealed record ProcessArtifactValidationDiagnosticProjection(
+        Guid StepRunId,
+        Guid ExpectationId,
+        ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus Status,
+        Guid? ArtifactRecordId,
+        string AttemptedPath,
+        string Diagnostic,
+        string SuggestedAction,
+        ProcessArtifactValidationFailureOwnership FailureOwnership,
+        DateTimeOffset OccurredAtUtc);
 
     private static ProcessArtifactExpectationSatisfactionViewModel BuildArtifactLedgerItem(
         ProcessStepRun stepRun,
         ProcessArtifactExpectation expectation,
-        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+        IReadOnlyList<ProcessArtifactValidationDiagnosticProjection> artifactValidationDiagnostics)
     {
         var artifact = ResolveBestArtifactForExpectation(expectation, stepArtifacts);
         if (artifact is not null)
         {
             var sourceKind = ResolveArtifactSourceKind(artifact.ExternalReferenceKey);
+            var validationDiagnostic = ResolveRejectedArtifactValidationDiagnostic(
+                expectation,
+                artifact,
+                artifactValidationDiagnostics);
+            if (validationDiagnostic is not null)
+            {
+                return new ProcessArtifactExpectationSatisfactionViewModel(
+                    stepRun.Id,
+                    expectation.Id,
+                    expectation.ArtifactKind,
+                    expectation.Title,
+                    expectation.IsRequired,
+                    ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(validationDiagnostic.Status),
+                    sourceKind,
+                    artifact.Id,
+                    artifact.Title,
+                    artifact.ManagedStoragePath,
+                    BuildArtifactValidationDiagnostic(validationDiagnostic))
+                {
+                    ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(validationDiagnostic.Status),
+                    FailureOwnership = validationDiagnostic.FailureOwnership,
+                    ValidationAttemptedPath = validationDiagnostic.AttemptedPath,
+                    ValidationSuggestedAction = validationDiagnostic.SuggestedAction
+                };
+            }
+
             return new ProcessArtifactExpectationSatisfactionViewModel(
                 stepRun.Id,
                 expectation.Id,
@@ -223,6 +402,31 @@ public sealed partial class ProcessRuntimeReadQueryService
                 BuildArtifactSatisfiedDiagnostic(sourceKind));
         }
 
+        var missingDiagnostic = ResolveLatestArtifactValidationDiagnostic(
+            expectation,
+            artifactValidationDiagnostics);
+        if (missingDiagnostic is not null)
+        {
+            return new ProcessArtifactExpectationSatisfactionViewModel(
+                stepRun.Id,
+                expectation.Id,
+                expectation.ArtifactKind,
+                expectation.Title,
+                expectation.IsRequired,
+                ProcessArtifactStatusProjectionService.MapFinalizerStatusToSatisfactionStatus(missingDiagnostic.Status),
+                ProcessArtifactExpectationSourceKind.None,
+                missingDiagnostic.ArtifactRecordId,
+                string.Empty,
+                missingDiagnostic.AttemptedPath,
+                BuildArtifactValidationDiagnostic(missingDiagnostic))
+            {
+                ValidationStatus = ProcessArtifactStatusProjectionService.MapFinalizerStatusToValidationStatus(missingDiagnostic.Status),
+                FailureOwnership = missingDiagnostic.FailureOwnership,
+                ValidationAttemptedPath = missingDiagnostic.AttemptedPath,
+                ValidationSuggestedAction = missingDiagnostic.SuggestedAction
+            };
+        }
+
         var status = ResolveUnsatisfiedArtifactStatus(stepRun, expectation);
         return new ProcessArtifactExpectationSatisfactionViewModel(
             stepRun.Id,
@@ -236,6 +440,83 @@ public sealed partial class ProcessRuntimeReadQueryService
             string.Empty,
             string.Empty,
             BuildUnsatisfiedArtifactDiagnostic(stepRun, expectation, status));
+    }
+
+    private static ProcessArtifactValidationDiagnosticProjection? ResolveRejectedArtifactValidationDiagnostic(
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord artifact,
+        IReadOnlyList<ProcessArtifactValidationDiagnosticProjection> artifactValidationDiagnostics)
+    {
+        return artifactValidationDiagnostics
+            .Where(item => IsMatchingRejectedArtifactValidationDiagnostic(expectation, artifact, item))
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static ProcessArtifactValidationDiagnosticProjection? ResolveLatestArtifactValidationDiagnostic(
+        ProcessArtifactExpectation expectation,
+        IReadOnlyList<ProcessArtifactValidationDiagnosticProjection> artifactValidationDiagnostics)
+    {
+        return artifactValidationDiagnostics
+            .Where(item =>
+                item.ExpectationId == expectation.Id &&
+                item.Status != ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied)
+            .OrderByDescending(item => item.OccurredAtUtc)
+            .FirstOrDefault();
+    }
+
+    private static bool IsMatchingRejectedArtifactValidationDiagnostic(
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord artifact,
+        ProcessArtifactValidationDiagnosticProjection diagnostic)
+    {
+        if (diagnostic.ExpectationId != expectation.Id ||
+            diagnostic.Status == ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied ||
+            diagnostic.OccurredAtUtc < artifact.CreatedAtUtc)
+        {
+            return false;
+        }
+
+        if (diagnostic.ArtifactRecordId == artifact.Id)
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(diagnostic.AttemptedPath))
+        {
+            return string.Equals(diagnostic.AttemptedPath, artifact.ManagedStoragePath, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return diagnostic.ArtifactRecordId is null;
+    }
+
+    private static string BuildArtifactValidationDiagnostic(ProcessArtifactValidationDiagnosticProjection diagnostic)
+    {
+        var statusText = diagnostic.Status.ToString();
+        var diagnosticText = diagnostic.Diagnostic.Trim();
+        var parts = new List<string>
+        {
+            diagnosticText.StartsWith(statusText, StringComparison.OrdinalIgnoreCase)
+                ? diagnosticText
+                : $"{statusText}: {diagnosticText}"
+        };
+
+        if (!string.IsNullOrWhiteSpace(diagnostic.AttemptedPath))
+        {
+            parts.Add($"Attempted path: {diagnostic.AttemptedPath}");
+        }
+
+        if (!string.IsNullOrWhiteSpace(diagnostic.SuggestedAction))
+        {
+            parts.Add($"Suggested action: {diagnostic.SuggestedAction}");
+        }
+
+        if (diagnostic.FailureOwnership != ProcessArtifactValidationFailureOwnership.Unknown)
+        {
+            parts.Add($"Failure ownership: {diagnostic.FailureOwnership}");
+        }
+
+        return string.Join(" ", parts);
     }
 
     internal static ProcessArtifactRecord? ResolveBestArtifactForExpectation(
@@ -432,6 +713,7 @@ public sealed partial class ProcessRuntimeReadQueryService
                 ProcessArtifactTrustStatus.Approved or
                 ProcessArtifactTrustStatus.TrustedSource,
             ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
             ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
             _ => false
         };
@@ -442,84 +724,7 @@ public sealed partial class ProcessRuntimeReadQueryService
         IReadOnlyList<ProcessArtifactExpectationSatisfactionViewModel> artifactLedger,
         string manualRecoveryDirective)
     {
-        var missingArtifacts = stepRun.Status == ProcessStepRunStatus.Skipped
-            ? new List<string>()
-            : artifactLedger
-                .Where(item => item.IsRequired)
-                .Where(item => item.Status is ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed)
-                .Select(item => item.Title)
-                .Where(item => !string.IsNullOrWhiteSpace(item))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-        var recoveryClassification = ResolveInitialRecoveryClassification(stepRun, missingArtifacts, manualRecoveryDirective);
-        return ProcessStepRunHealthViewModel.Empty with
-        {
-            RecoveryClassification = recoveryClassification,
-            ActionableReason = BuildInitialActionableReason(stepRun, missingArtifacts, manualRecoveryDirective),
-            CanManualRerun = CanManualRerun(stepRun)
-        };
-    }
-
-    private static ProcessRecoveryClassification ResolveInitialRecoveryClassification(
-        ProcessStepRun stepRun,
-        IReadOnlyCollection<string> missingArtifacts,
-        string manualRecoveryDirective)
-    {
-        if (!string.IsNullOrWhiteSpace(manualRecoveryDirective))
-        {
-            return ProcessRecoveryClassification.ManualRerun;
-        }
-
-        if (missingArtifacts.Count > 0)
-        {
-            return ProcessRecoveryClassification.MissingArtifact;
-        }
-
-        return stepRun.Status switch
-        {
-            ProcessStepRunStatus.InProgress when !string.IsNullOrWhiteSpace(stepRun.ExceptionSummary) => ProcessRecoveryClassification.CrashRecovery,
-            ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed => ProcessRecoveryClassification.AutomaticRetry,
-            _ => ProcessRecoveryClassification.None
-        };
-    }
-
-    private static string BuildInitialActionableReason(
-        ProcessStepRun stepRun,
-        IReadOnlyCollection<string> missingArtifacts,
-        string manualRecoveryDirective)
-    {
-        if (!string.IsNullOrWhiteSpace(manualRecoveryDirective))
-        {
-            return manualRecoveryDirective.Trim();
-        }
-
-        if (missingArtifacts.Count > 0)
-        {
-            return $"Missing required artifacts: {string.Join(", ", missingArtifacts.Take(3))}.";
-        }
-
-        if (!string.IsNullOrWhiteSpace(stepRun.BlockedReason))
-        {
-            return stepRun.BlockedReason.Trim();
-        }
-
-        if (!string.IsNullOrWhiteSpace(stepRun.ExceptionSummary))
-        {
-            return stepRun.ExceptionSummary.Trim();
-        }
-
-        if (!string.IsNullOrWhiteSpace(stepRun.DecisionSummary))
-        {
-            return stepRun.DecisionSummary.Trim();
-        }
-
-        return string.Empty;
-    }
-
-    private static bool CanManualRerun(ProcessStepRun stepRun)
-    {
-        return stepRun.CurrentExecutorPartyId.HasValue &&
-               stepRun.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed;
+        return ProcessHealthInvariantAuditor.BuildStepHealth(stepRun, artifactLedger, manualRecoveryDirective);
     }
 
     private static async Task<IReadOnlyList<ProcessRunAssignmentViewModel>> ListAssignmentsAsync(

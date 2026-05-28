@@ -11,18 +11,6 @@ internal sealed class ProcessCatalogWarmupService(
     ProcessTemplateProjectionService projectionService,
     ILogger<ProcessCatalogWarmupService> logger)
 {
-    private static readonly string[] DefaultProcessKeys =
-    [
-        "dotnet-solution-setup",
-        "dotnet-feature-function-implementation",
-        "dotnet-development-slice",
-        "software-delivery",
-        "ai-assisted-change-delivery",
-        "branching-code-review",
-        "architecture-decision-governance",
-        "release-readiness-and-deployment"
-    ];
-
     public Task WarmupAsync(CancellationToken cancellationToken = default)
     {
         return WarmupAsync(synchronizeExistingDefinitions: false, cancellationToken);
@@ -41,7 +29,7 @@ internal sealed class ProcessCatalogWarmupService(
         var synchronizedCount = 0;
         var publishedCount = 0;
 
-        foreach (var processKey in DefaultProcessKeys)
+        foreach (var processKey in ProcessCatalogDefaultTemplates.Keys)
         {
             if (!pack.Processes.TryGetValue(processKey, out var template))
             {
@@ -127,6 +115,26 @@ internal sealed class ProcessCatalogWarmupService(
             synchronizedCount,
             publishedCount);
     }
+}
+
+internal static class ProcessCatalogDefaultTemplates
+{
+    public static IReadOnlyList<string> Keys { get; } =
+    [
+        "dotnet-solution-setup",
+        "dotnet-feature-function-implementation",
+        "dotnet-development-slice",
+        "blazor-app-delivery",
+        "blazor-app-repair-fix",
+        "blazor-backend-feature",
+        "blazor-frontend-feature",
+        "blazor-fullstack-feature",
+        "software-delivery",
+        "ai-assisted-change-delivery",
+        "branching-code-review",
+        "architecture-decision-governance",
+        "release-readiness-and-deployment"
+    ];
 }
 
 internal sealed class ProcessCatalogWarmupWorker(

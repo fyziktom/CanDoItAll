@@ -679,6 +679,7 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         var leadEngineer = GetSelectedCandidate(details, "Lead engineer");
 
         Assert.Equal("Blazor Application Developer", leadEngineer.DisplayName);
+        Assert.Equal("Delivery Manager", deliveryManager.DisplayName);
         Assert.DoesNotContain(productOwner.DisplayName, TechnicalImplementationAgentNames);
         Assert.DoesNotContain(deliveryManager.DisplayName, TechnicalImplementationAgentNames);
 
@@ -725,6 +726,7 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         var assignmentsByRole = details.Assignments.ToDictionary(item => item.RoleRequirementId);
         Assert.False(assignmentsByRole[leadEngineerRoleId].IsCapabilityGap);
         Assert.Equal("Blazor Application Developer", assignmentsByRole[leadEngineerRoleId].DisplayName);
+        Assert.Equal("Delivery Manager", assignmentsByRole[deliveryManagerRoleId].DisplayName);
         Assert.DoesNotContain(assignmentsByRole[productOwnerRoleId].DisplayName, TechnicalImplementationAgentNames);
         Assert.DoesNotContain(assignmentsByRole[deliveryManagerRoleId].DisplayName, TechnicalImplementationAgentNames);
 
@@ -1035,6 +1037,66 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.Equal("JavaScript Application Developer", implementer.DisplayName);
         Assert.True(javascriptDeveloper.Score > dotnetDeveloper.Score);
         Assert.True(javascriptDeveloper.Score > blazorDeveloper.Score);
+    }
+
+    [Fact]
+    public async Task CreateLaunchPlanAsync_uses_blazor_wasm_pwa_context_to_prefer_blazor_specialist_over_static_client_javascript()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Blazor WASM PWA launch proof {suffix}",
+            objective: "Deliver a client-only Blazor WebAssembly PWA with static hosting.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build Blazor WebAssembly PWA",
+                "Implementation",
+                "Build a Blazor WebAssembly PWA Tetris game under C:\\programovani\\dotnet-demo\\output. No backend; all state is local to the app; host on ordinary static hosting; include PWA manifest and service worker; keyboard controls are required.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericImplementationLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Blazor WASM PWA launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var implementer = GetSelectedCandidate(details!, "Lead engineer");
+        var javascriptDeveloper = GetCandidate(details, "Lead engineer", "JavaScript Application Developer");
+        var blazorDeveloper = GetCandidate(details, "Lead engineer", "Blazor Application Developer");
+
+        Assert.Equal("Blazor Application Developer", implementer.DisplayName);
+        Assert.True(blazorDeveloper.Score > javascriptDeveloper.Score);
     }
 
     [Fact]
@@ -1662,6 +1724,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Selected AI resource owns implementation.",
                     ExceptionPolicySummary = "Fail when a less relevant generalist is selected ahead of a Blazor specialist.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,
@@ -1747,6 +1817,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Product owner owns scope, delivery manager owns sequencing, and lead engineer owns implementation.",
                     ExceptionPolicySummary = "Fail when technology context overrides role accountability.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,

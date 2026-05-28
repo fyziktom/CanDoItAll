@@ -8,6 +8,8 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class MigrationBootstrapIntegrationTests
 {
+    private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
+
     [Fact]
     public async Task Bootstrap_migrates_a_new_postgresql_database()
     {
@@ -29,9 +31,7 @@ public sealed class MigrationBootstrapIntegrationTests
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         Assert.True(await dbContext.Database.CanConnectAsync());
-        Assert.Contains(
-            await dbContext.Database.GetAppliedMigrationsAsync(),
-            migrationId => migrationId.Contains("InitialPostgreSqlBaseline", StringComparison.Ordinal));
+        Assert.Contains(InitialPostgreSqlBaselineMigrationId, await dbContext.Database.GetAppliedMigrationsAsync());
     }
 
     [Fact]
@@ -85,9 +85,7 @@ public sealed class MigrationBootstrapIntegrationTests
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
-        Assert.Contains("20260523211921_InitialPostgreSqlBaseline", appliedMigrations);
-        Assert.Contains("20260524144716_ProcessStepAutomationDispatchClaims", appliedMigrations);
-        Assert.Contains("20260524183000_ProcessClaimHotPathIndexes", appliedMigrations);
+        Assert.Equal(new[] { InitialPostgreSqlBaselineMigrationId }, appliedMigrations);
         Assert.True(await dbContext.Database.CanConnectAsync());
     }
 }

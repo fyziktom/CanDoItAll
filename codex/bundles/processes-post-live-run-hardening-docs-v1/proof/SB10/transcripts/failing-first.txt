@@ -1,0 +1,20 @@
+Invariant: SB10-INV-001
+Invariant: SB10-INV-002
+Invariant: SB10-INV-003
+Command: rg -n "new AgentCapabilityRequirementEvaluation\(\[\]\)" src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs
+ExitCode: 1
+ExpectedExitCode: 1
+
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb10-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~AgentCapabilityRequirementEvaluator_reports_typed_missing_required_skill|FullyQualifiedName~AgentCapabilityRequirementEvaluator_reports_retired_required_skill" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb10-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 32 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb10-unit-bin\ --filter "FullyQualifiedName~EvaluateAsync_denies_unknown_tool_even_when_read_like|FullyQualifiedName~EvaluateAsync_denies_known_tool_when_policy_classification_is_missing" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb10-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 28 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0

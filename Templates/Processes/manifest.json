@@ -1,8 +1,8 @@
 {
-  "PackKey": "candoitall-software-process-template-pack",
-  "Name": "CanDoItAll software process template pack (current architecture aligned)",
-  "Version": "2.0.0-current-architecture",
-  "GeneratedAtUtc": "2026-04-11T17:32:40Z",
+  "PackKey": "candoitall-process-template-pack",
+  "Name": "CanDoItAll process template pack (current architecture aligned)",
+  "Version": "2.1.0-live-run-governance",
+  "GeneratedAtUtc": "2026-05-28T00:00:00Z",
   "SourceFrameworkKeys": [
     "nist-ssdf",
     "nist-ssdf-ai",
@@ -18,7 +18,8 @@
     "ChromeActionsPath": "toolbox/chrome-actions.json"
   },
   "SeedCatalog": {
-    "BaselineScenariosPath": "seed-catalog/baseline-scenarios.json"
+    "BaselineScenariosPath": "seed-catalog/baseline-scenarios.json",
+    "LiveRunProfilesPath": "seed-catalog/live-run-profiles.json"
   },
   "Processes": [
     {

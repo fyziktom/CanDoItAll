@@ -87,13 +87,13 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             });
             Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
 
-            await CompleteStepAsync(processesService, runResult.Value, "strategy-intake");
-            await CompleteStepAsync(processesService, runResult.Value, "product-evidence-review");
-            await CompleteStepAsync(processesService, runResult.Value, "business-plan-draft");
-            await CompleteStepAsync(processesService, runResult.Value, "financial-modeling");
-            await CompleteStepAsync(processesService, runResult.Value, "marketing-plan");
-            await CompleteStepAsync(processesService, runResult.Value, "integrated-review", "approved");
-            await CompleteStepAsync(processesService, runResult.Value, "approved-execution-handoff");
+            await CompleteStepAsync(application, processesService, runResult.Value, "strategy-intake");
+            await CompleteStepAsync(application, processesService, runResult.Value, "product-evidence-review");
+            await CompleteStepAsync(application, processesService, runResult.Value, "business-plan-draft");
+            await CompleteStepAsync(application, processesService, runResult.Value, "financial-modeling");
+            await CompleteStepAsync(application, processesService, runResult.Value, "marketing-plan");
+            await CompleteStepAsync(application, processesService, runResult.Value, "integrated-review", "approved");
+            await CompleteStepAsync(application, processesService, runResult.Value, "approved-execution-handoff");
 
             var runDetails = await processesService.GetRunDetailsAsync(runResult.Value);
             Assert.All(
@@ -132,6 +132,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     }
 
     private static async Task CompleteStepAsync(
+        TestApplication application,
         ProcessesService processesService,
         Guid runId,
         string stepKey,
@@ -157,6 +158,12 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
 
         foreach (var artifactOutput in step.ArtifactOutputs)
         {
+            var managedStoragePath = $"artifacts/business/postgres-validation/{stepKey}.md";
+            await WriteWorkspaceArtifactAsync(
+                application,
+                managedStoragePath,
+                BuildManagedArtifactContent(step, stepKey, artifactOutput.Title));
+
             var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
             {
                 ProcessRunId = runId,
@@ -171,7 +178,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
                 ProvenanceSummary = $"Recorded by PostgreSQL integration validation for {stepKey}.",
                 AllowedFutureUsageSummary = "Reusable by downstream business-plan validation steps.",
                 ReviewSummary = "Atomic validation artifact recorded to satisfy the required handoff.",
-                ManagedStoragePath = $"artifacts/business/postgres-validation/{stepKey}.md"
+                ManagedStoragePath = managedStoragePath
             });
             Assert.True(artifactResult.IsSuccess, string.Join(" | ", artifactResult.Errors.Select(error => error.Message)));
         }
@@ -211,6 +218,34 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             "blocked-correction-plan" => "Capture blocked-plan corrections",
             _ => stepKey.Replace('-', ' ')
         };
+    }
+
+    private static string BuildManagedArtifactContent(
+        ProcessStepRunViewModel step,
+        string stepKey,
+        string artifactTitle)
+    {
+        return $"""
+            # {artifactTitle}
+
+            Step key: {stepKey}
+            Step title: {step.Title}
+            Validation source: PostgreSQL business-plan integration test.
+            Evidence summary: The artifact records a concrete handoff for the current process run, including the reviewed business-plan material, accountable step, and downstream reuse boundary.
+            Outcome: Required artifact contract is satisfied for persistence and runtime completion validation.
+            """;
+    }
+
+    private static async Task WriteWorkspaceArtifactAsync(
+        TestApplication application,
+        string relativePath,
+        string content)
+    {
+        var fullPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(fullPath, content);
     }
 
     private static ProcessArtifactKind ResolveArtifactKind(ProcessStepRunViewModel step, string title)

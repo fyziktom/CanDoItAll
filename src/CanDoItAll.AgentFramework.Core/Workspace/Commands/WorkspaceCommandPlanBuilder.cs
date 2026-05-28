@@ -1,15 +1,23 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
 
 internal sealed class WorkspaceCommandPlanBuilder
 {
+    private const string WebProjectSdk = "Microsoft.NET.Sdk.Web";
+    private const string BlazorWebAssemblyProjectSdk = "Microsoft.NET.Sdk.BlazorWebAssembly";
+
     private static readonly HashSet<string> ApprovedDotnetTemplates = new(StringComparer.OrdinalIgnoreCase)
     {
         "blazor",
+        "blazorserver",
+        "blazorserver-empty",
+        "blazorwasm",
+        "blazorwasm-empty",
         "classlib",
         "console",
         "mstest",
@@ -222,8 +230,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         var target = BuildDotnetRunnableTarget(targetPath, workingDirectory);
         var urls = ResolveDotnetRunUrls(url);
         var normalizedConfiguration = NormalizeConfiguration(configuration);
+        var shouldWaitForHttp = waitForHttp || IsKnownHttpProject(target.ProjectArgument);
 
-        if (!waitForHttp)
+        if (!shouldWaitForHttp)
         {
             var arguments = new List<string>
             {
@@ -278,7 +287,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             boundedStartupTimeoutSeconds,
             keepAlive,
             lifetimeScope);
-        var encodedCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+        WriteDotnetRunScript(artifactPaths.ScriptFullPath, script);
         var planTimeoutSeconds = Math.Max(timeoutSeconds, boundedStartupTimeoutSeconds + 10);
 
         return CreatePlan(
@@ -299,8 +308,8 @@ internal sealed class WorkspaceCommandPlanBuilder
                 "-NonInteractive",
                 "-ExecutionPolicy",
                 "Bypass",
-                "-EncodedCommand",
-                encodedCommand
+                "-File",
+                artifactPaths.ScriptFullPath
             ],
             timeoutSeconds: planTimeoutSeconds,
             stdoutLimitCharacters: 128 * 1024,
@@ -424,7 +433,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         => Directory.EnumerateFiles(directory, "*.*", SearchOption.TopDirectoryOnly)
             .Any(path => AllowedProjectExtensions.Contains(Path.GetExtension(path)));
 
-    public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildPythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".py", StringComparison.OrdinalIgnoreCase))
@@ -452,7 +461,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public WorkspaceCommandPlan BuildPowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
     {
         var scriptResolution = ResolveExistingWorkspacePath(path, allowFiles: true, allowDirectories: false);
         if (!string.Equals(Path.GetExtension(scriptResolution.FullPath), ".ps1", StringComparison.OrdinalIgnoreCase))
@@ -780,17 +789,28 @@ internal sealed class WorkspaceCommandPlanBuilder
         var stdoutRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stdout.log"));
         var stderrRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "app.stderr.log"));
         var startupReceiptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "startup.json"));
+        var scriptRelativePath = WorkspacePathPolicy.NormalizeRelativePath(Path.Combine(relativeDirectory, "run.ps1"));
 
         return new DotnetRunArtifactPaths(
+            ScriptFullPath: Path.Combine(fullDirectory, "run.ps1"),
             StdoutLogFullPath: Path.Combine(fullDirectory, "app.stdout.log"),
             StderrLogFullPath: Path.Combine(fullDirectory, "app.stderr.log"),
             StartupReceiptFullPath: Path.Combine(fullDirectory, "startup.json"),
             TargetPaths:
             [
+                scriptRelativePath,
                 stdoutRelativePath,
                 stderrRelativePath,
                 startupReceiptRelativePath
             ]);
+    }
+
+    private static void WriteDotnetRunScript(string scriptPath, string script)
+    {
+        var scriptDirectory = Path.GetDirectoryName(scriptPath)
+            ?? throw new InvalidOperationException($"Could not resolve dotnet run script directory for '{scriptPath}'.");
+        Directory.CreateDirectory(scriptDirectory);
+        File.WriteAllText(scriptPath, script, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     private static DotnetRunUrls ResolveDotnetRunUrls(string? url)
@@ -825,6 +845,39 @@ internal sealed class WorkspaceCommandPlanBuilder
         }
 
         return IPAddress.TryParse(host, out var address) && IPAddress.IsLoopback(address);
+    }
+
+    private static bool IsKnownHttpProject(string projectPath)
+    {
+        if (!File.Exists(projectPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            var document = XDocument.Load(projectPath);
+            var sdk = document.Root?.Attribute("Sdk")?.Value;
+            return IsKnownHttpProjectSdk(sdk);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsKnownHttpProjectSdk(string? sdk)
+    {
+        if (string.IsNullOrWhiteSpace(sdk))
+        {
+            return false;
+        }
+
+        return sdk
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(item =>
+                item.StartsWith(WebProjectSdk, StringComparison.OrdinalIgnoreCase) ||
+                item.StartsWith(BlazorWebAssemblyProjectSdk, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string BuildDotnetHttpRunPowerShellScript(
@@ -1154,6 +1207,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         IReadOnlyList<string> TargetPaths);
 
     private sealed record DotnetRunArtifactPaths(
+        string ScriptFullPath,
         string StdoutLogFullPath,
         string StderrLogFullPath,
         string StartupReceiptFullPath,

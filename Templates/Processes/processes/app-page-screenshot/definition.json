@@ -108,6 +108,11 @@
       "EvidenceContractSummary": "Route, app root, command, URL, viewport, and storage target.",
       "DecisionRightsSummary": "Manager may block if route or source root is ambiguous.",
       "ExceptionPolicySummary": "Block on missing route, missing source root, or contradictory run commands.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 1,
       "CanvasX": 240,
       "CanvasY": 0,
@@ -182,7 +187,16 @@
           "SourceStepKey": "resolve-single-page-target",
           "ArtifactExpectationKey": "single-page-target-packet"
         }
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -197,6 +211,13 @@
       "EvidenceContractSummary": "Playwright navigation, console summary, screenshot path, viewport, and route URL.",
       "DecisionRightsSummary": "Capture agent can retry browser readiness waits but must not change the route or start a second app instance without a manager-visible blocker.",
       "ExceptionPolicySummary": "Block on navigation errors, console fatal errors, blank screenshot, or missing screenshot file.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 1,
       "CanvasX": 1920,
       "CanvasY": 0,
@@ -259,6 +280,14 @@
       "EvidenceContractSummary": "Acceptance/rejection, image dimensions or visual sanity check, asset node id, and storage locator.",
       "DecisionRightsSummary": "Review/storage agent must reject unusable screenshots instead of storing them as accepted evidence.",
       "ExceptionPolicySummary": "Block on unreadable image, blank image, wrong route, or failed asset storage.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
       "TargetLeadHours": 1,
       "CanvasX": 2760,
       "CanvasY": 0,
@@ -363,7 +392,14 @@
           "SourceStepKey": "review-and-store-screenshot",
           "ArtifactExpectationKey": "image-asset-storage-receipt"
         }
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
   "DocPath": "processes/app-page-screenshot/definition.md"

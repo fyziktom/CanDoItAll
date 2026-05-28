@@ -1,0 +1,30 @@
+Invariant: SB03-INV-003 projection service and tests must contain concrete enum mappings, not placeholder or TODO implementations.
+Command: rg -n "TODO|throw new NotImplementedException|PlaceholderOnly|ContentHashMismatch|ContentUnavailable" src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:20:            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly =>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:21:                ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:22:            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable =>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:23:                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:24:            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch =>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:25:                ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:46:            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly =>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:47:                ProcessArtifactExpectationValidationStatus.PlaceholderOnly,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:48:            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable =>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:49:                ProcessArtifactExpectationValidationStatus.ContentUnavailable,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:50:            ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch =>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:51:                ProcessArtifactExpectationValidationStatus.ContentHashMismatch,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:60:            ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:65:            ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactStatusProjectionService.cs:66:            ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch;
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:32:        nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.PlaceholderOnly),
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:33:        ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly,
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:34:        ProcessArtifactExpectationValidationStatus.PlaceholderOnly)]
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:36:        nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentUnavailable),
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:37:        ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable,
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:38:        ProcessArtifactExpectationValidationStatus.ContentUnavailable)]
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:40:        nameof(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.ContentHashMismatch),
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:41:        ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch,
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:42:        ProcessArtifactExpectationValidationStatus.ContentHashMismatch)]
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:64:    [InlineData(ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable, true)]
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:69:    [InlineData(ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly, true)]
+tests\CanDoItAll.Tests.Integration\ProcessArtifactStatusProjectionServiceTests.cs:70:    [InlineData(ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch, true)]
+ExitCode: 0

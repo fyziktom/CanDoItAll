@@ -2,6 +2,7 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using System.Text.Json;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
@@ -205,6 +206,29 @@ public sealed partial class MafAgentRuntime
             AgentFileSkillScript script,
             AIFunctionArguments arguments,
             CancellationToken cancellationToken)
+            => await RunSkillScriptCoreAsync(
+                skill,
+                script,
+                ResolveSkillScriptArguments(arguments),
+                cancellationToken);
+
+        public async Task<object?> RunSkillScriptAsync(
+            AgentFileSkill skill,
+            AgentFileSkillScript script,
+            JsonElement? arguments,
+            IServiceProvider? serviceProvider,
+            CancellationToken cancellationToken)
+            => await RunSkillScriptCoreAsync(
+                skill,
+                script,
+                ResolveSkillScriptArguments(arguments),
+                cancellationToken);
+
+        private async Task<object?> RunSkillScriptCoreAsync(
+            AgentFileSkill skill,
+            AgentFileSkillScript script,
+            IReadOnlyList<string> scriptArguments,
+            CancellationToken cancellationToken)
         {
             if (!File.Exists(script.FullPath))
             {
@@ -212,6 +236,26 @@ public sealed partial class MafAgentRuntime
             }
 
             var policy = ResolveSkillExecutionPolicy(script.FullPath);
+
+            try
+            {
+                return await workspaceCommandExecutionService.RunSkillScript(
+                    Path.GetFileName(skill.Path),
+                    script.FullPath,
+                    scriptArguments.ToArray(),
+                    Path.GetDirectoryName(script.FullPath),
+                    policy.ApprovalRequired,
+                    policy.TrustLevel,
+                    [policy.RootPath]).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                return $"Error: Failed to execute script '{script.Name}': {exception.Message}";
+            }
+        }
+
+        private static IReadOnlyList<string> ResolveSkillScriptArguments(AIFunctionArguments arguments)
+        {
             var scriptArguments = new List<string>();
             foreach (var argument in arguments)
             {
@@ -229,21 +273,72 @@ public sealed partial class MafAgentRuntime
                 }
             }
 
-            try
+            return scriptArguments;
+        }
+
+        private static IReadOnlyList<string> ResolveSkillScriptArguments(JsonElement? arguments)
+        {
+            if (arguments is null)
             {
-                return await workspaceCommandExecutionService.RunSkillScript(
-                    Path.GetFileName(skill.Path),
-                    script.FullPath,
-                    scriptArguments.ToArray(),
-                    Path.GetDirectoryName(script.FullPath),
-                    policy.ApprovalRequired,
-                    policy.TrustLevel,
-                    [policy.RootPath]).ConfigureAwait(false);
+                return [];
             }
-            catch (Exception exception)
+
+            return arguments.Value.ValueKind switch
             {
-                return $"Error: Failed to execute script '{script.Name}': {exception.Message}";
+                JsonValueKind.Array => ResolveSkillScriptArrayArguments(arguments.Value),
+                JsonValueKind.Object => ResolveSkillScriptObjectArguments(arguments.Value),
+                JsonValueKind.String => [arguments.Value.GetString() ?? string.Empty],
+                JsonValueKind.Number => [arguments.Value.GetRawText()],
+                JsonValueKind.True => ["true"],
+                JsonValueKind.False => ["false"],
+                _ => []
+            };
+        }
+
+        private static IReadOnlyList<string> ResolveSkillScriptArrayArguments(JsonElement arguments)
+        {
+            var scriptArguments = new List<string>();
+            foreach (var item in arguments.EnumerateArray())
+            {
+                var value = item.ValueKind == JsonValueKind.String
+                    ? item.GetString()
+                    : item.GetRawText();
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    scriptArguments.Add(value);
+                }
             }
+
+            return scriptArguments;
+        }
+
+        private static IReadOnlyList<string> ResolveSkillScriptObjectArguments(JsonElement arguments)
+        {
+            var scriptArguments = new List<string>();
+            foreach (var property in arguments.EnumerateObject())
+            {
+                if (property.Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                {
+                    continue;
+                }
+
+                if (property.Value.ValueKind is JsonValueKind.False)
+                {
+                    continue;
+                }
+
+                scriptArguments.Add(NormalizeCliKey(property.Name));
+                if (property.Value.ValueKind is JsonValueKind.True)
+                {
+                    continue;
+                }
+
+                scriptArguments.Add(property.Value.ValueKind == JsonValueKind.String
+                    ? property.Value.GetString() ?? string.Empty
+                    : property.Value.GetRawText());
+            }
+
+            return scriptArguments;
         }
 
         private IReadOnlyList<AITool> ResolveRegisteredPluginTools(

@@ -1330,6 +1330,30 @@
                                     <div class="min-w-0">
                                         <h3>@expectation.Title</h3>
                                         <p>@ResolveArtifactExpectationSummary(expectation)</p>
+                                        @if (!string.IsNullOrWhiteSpace(expectation.Diagnostic))
+                                        {
+                                            <p>@expectation.Diagnostic</p>
+                                        }
+                                        @if (expectation.ValidationStatus.HasValue)
+                                        {
+                                            <p>Finalizer status: @expectation.ValidationStatus</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(expectation.ValidationAttemptedPath))
+                                        {
+                                            <p>Attempted path: @expectation.ValidationAttemptedPath</p>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(expectation.ValidationSuggestedAction))
+                                        {
+                                            <p>Suggested action: @expectation.ValidationSuggestedAction</p>
+                                        }
+                                        @if (expectation.FailureOwnership != ProcessArtifactValidationFailureOwnership.Unknown)
+                                        {
+                                            <p>Failure owner: @expectation.FailureOwnership</p>
+                                        }
+                                        @if (expectation.ProcessArtifactRecordId.HasValue)
+                                        {
+                                            <p>Artifact record: @expectation.ProcessArtifactRecordId</p>
+                                        }
                                     </div>
                                     <StatusBadge Tone="@ResolveArtifactExpectationTone(expectation.Status)"
                                                  Text="@expectation.Status.ToString()" />
@@ -2640,7 +2664,15 @@ Record this operator decision in the process context, continue only when this de
         return status switch
         {
             ProcessArtifactExpectationSatisfactionStatus.Satisfied => "success",
-            ProcessArtifactExpectationSatisfactionStatus.Missing or ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed => "danger",
+            ProcessArtifactExpectationSatisfactionStatus.Missing or
+                ProcessArtifactExpectationSatisfactionStatus.ProjectionFailed or
+                ProcessArtifactExpectationSatisfactionStatus.ContentUnavailable or
+                ProcessArtifactExpectationSatisfactionStatus.InvalidFormat or
+                ProcessArtifactExpectationSatisfactionStatus.InsufficientEvidence or
+                ProcessArtifactExpectationSatisfactionStatus.StaleOrWrongRun or
+                ProcessArtifactExpectationSatisfactionStatus.WrongProducerMode or
+                ProcessArtifactExpectationSatisfactionStatus.PlaceholderOnly or
+                ProcessArtifactExpectationSatisfactionStatus.ContentHashMismatch => "danger",
             ProcessArtifactExpectationSatisfactionStatus.Expected => "warning",
             _ => "neutral"
         };

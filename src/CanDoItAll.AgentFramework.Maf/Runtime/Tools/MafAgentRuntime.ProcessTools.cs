@@ -92,7 +92,7 @@ public sealed partial class MafAgentRuntime
                 AIFunctionFactory.Create(
                     (Guid runId, CancellationToken cancellationToken = default) => ProcessesRunDetailGetAsync(accessState, runId, cancellationToken),
                     "processes_run_detail_get",
-                    "Loads a process run with step runs, decisions, artifacts, assignments, work briefs, conformance observations, and improvements."),
+                    "Loads a process run with health summary, step runs, decisions, artifacts, assignments, work briefs, conformance observations, and improvements."),
                 AIFunctionFactory.Create(
                     (Guid? definitionId = null, Guid? projectId = null, CancellationToken cancellationToken = default) => ProcessesAnalyticsGetAsync(accessState, definitionId, projectId, cancellationToken),
                     "processes_analytics_get",
@@ -139,8 +139,12 @@ public sealed partial class MafAgentRuntime
                     "Projects a folder-based process template into the current module import envelope, imports it, and optionally publishes it."),
                 AIFunctionFactory.Create(
                     (CancellationToken cancellationToken = default) => ProcessesTemplateBaselineScenariosListAsync(accessState, cancellationToken),
-                    "processes_template_baseline_scenarios_list",
-                    "Lists baseline runtime scenarios stored in the process template pack for seeded regression coverage.")
+                    AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
+                    "Lists baseline runtime scenarios stored in the process template pack for seeded regression coverage."),
+                AIFunctionFactory.Create(
+                    (CancellationToken cancellationToken = default) => ProcessesTemplateLiveRunProfilesListAsync(accessState, cancellationToken),
+                    AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList,
+                    "Lists fresh live-run profiles stored in the process template pack, including the typed fresh-run policy that forbids seeded transitions and artifacts.")
             ];
         }
 
@@ -354,6 +358,7 @@ public sealed partial class MafAgentRuntime
 
             return new InternalProcessRunDetailToolData(
                 run,
+                details.Health,
                 details.StepRuns,
                 details.Decisions,
                 details.Artifacts,
@@ -575,7 +580,33 @@ public sealed partial class MafAgentRuntime
                         item.OperatingMode,
                         item.Assignments.Count,
                         item.Transitions.Count,
-                        item.Artifacts.Count))
+                        item.Artifacts.Count,
+                        item.Transitions.Count(transition => !string.IsNullOrWhiteSpace(transition.SelectedBranchOutcomeKey)),
+                        item.Transitions.Count(transition => string.Equals(transition.TargetStatus, ProcessStepRunStatus.Blocked.ToString(), StringComparison.OrdinalIgnoreCase)),
+                        item.ContractExercises.Count,
+                        item.RecoveryExercises.Count))
+                    .ToList());
+        }
+
+        private Task<IReadOnlyList<ProcessTemplateLiveRunProfileSummary>> ProcessesTemplateLiveRunProfilesListAsync(
+            ProcessAccessState accessState,
+            CancellationToken cancellationToken)
+        {
+            EnsureReadAllowed(accessState);
+            var pack = templatePackLoader.Load();
+            return Task.FromResult<IReadOnlyList<ProcessTemplateLiveRunProfileSummary>>(
+                pack.LiveRunProfiles
+                    .Select(item => new ProcessTemplateLiveRunProfileSummary(
+                        item.Key,
+                        item.ProcessTemplateKey,
+                        item.RunNameTemplate,
+                        item.Summary,
+                        item.OperatingMode,
+                        item.TriggerReasonTemplate,
+                        item.FreshRunPolicy,
+                        item.Assignments.Count,
+                        item.AcceptanceCriteria.Count,
+                        item.RequiredProofKinds.Count))
                     .ToList());
         }
 
@@ -872,6 +903,7 @@ public sealed record ProcessDefinitionRoleAddResult(
 
 public sealed record InternalProcessRunDetailToolData(
     ProcessRunListItem Run,
+    ProcessRunHealthSummaryViewModel Health,
     IReadOnlyList<ProcessStepRunViewModel> StepRuns,
     IReadOnlyList<ProcessDecisionViewModel> DecisionRecords,
     IReadOnlyList<ProcessArtifactViewModel> Artifacts,

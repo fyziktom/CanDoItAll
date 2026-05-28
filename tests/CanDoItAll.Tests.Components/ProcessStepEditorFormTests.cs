@@ -96,4 +96,31 @@ public sealed class ProcessStepEditorFormTests
         Assert.Contains("Human approval required", cut.Markup);
         Assert.Contains("Review evidence pack", cut.Markup);
     }
+
+    [Fact]
+    public void Render_SB08_INV_001_operation_contract_controls_update_model()
+    {
+        using var context = new TestContext();
+        var currentStep = new ProcessStepEditorModel
+        {
+            Id = Guid.NewGuid(),
+            Title = "Create report"
+        };
+
+        var cut = context.RenderComponent<ProcessStepEditorForm>(
+            ComponentParameter.CreateParameter(nameof(ProcessStepEditorForm.Model), currentStep));
+
+        cut.Find("[data-testid='processes-operation-target-scope-select']")
+            .Change(ProcessStepTargetScope.ExternalArtifactDestination.ToString());
+        cut.Find("[data-testid='processes-operation-WriteExternalArtifactDestination']")
+            .Change(true);
+
+        Assert.Equal(ProcessStepTargetScope.ExternalArtifactDestination, currentStep.OperationTargetScope);
+        Assert.Contains(ProcessStepOperation.WriteExternalArtifactDestination, currentStep.AllowedOperations);
+
+        cut.Find("[data-testid='processes-operation-WriteExternalArtifactDestination']")
+            .Change(false);
+
+        Assert.DoesNotContain(ProcessStepOperation.WriteExternalArtifactDestination, currentStep.AllowedOperations);
+    }
 }

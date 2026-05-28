@@ -121,12 +121,19 @@ public sealed partial class ProcessDevelopmentSeedService
                 stepRunIdResult.Value,
                 ParseEnum(transition.TargetStatus, ProcessStepRunStatus.Completed),
                 selectedBranchOutcomeIdResult.Value,
+                transition.BlockCause,
                 transition.Reason,
                 transition.DecidedBy,
                 cancellationToken);
             if (transitionResult.IsFailure)
             {
-                return transitionResult;
+                return Result.Failure(
+                    transitionResult.Errors
+                        .Select(error =>
+                            Error.Validation(
+                                $"Baseline scenario '{scenario.Key}' failed to transition step '{transition.StepKey}' to '{transition.TargetStatus}': {error.Message}",
+                                error.Code))
+                        .ToArray());
             }
         }
 

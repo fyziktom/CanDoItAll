@@ -107,6 +107,11 @@ internal sealed class ProcessDefinitionDraftCloneEngine
                 Subtitle = step.Subtitle,
                 Notes = step.Notes,
                 StepKind = step.StepKind,
+                AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                    step.StepKind,
+                    step.AllowedOperations,
+                    step.OperationTargetScope),
+                OperationTargetScope = step.OperationTargetScope,
                 SubprocessDefinitionId = step.SubprocessDefinitionId,
                 SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
                 AllowsManualSkip = step.AllowsManualSkip,
@@ -223,7 +228,11 @@ internal sealed class ProcessDefinitionDraftCloneEngine
                     SensitivityLevel = artifactExpectation.SensitivityLevel,
                     RetentionDays = artifactExpectation.RetentionDays,
                     AllowedFutureUsageSummary = artifactExpectation.AllowedFutureUsageSummary,
-                    ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary
+                    ValidationRequirementSummary = artifactExpectation.ValidationRequirementSummary,
+                    WorkflowOutputId = artifactExpectation.WorkflowOutputId,
+                    WorkflowOutputName = artifactExpectation.WorkflowOutputName,
+                    WorkflowOutputKind = artifactExpectation.WorkflowOutputKind,
+                    SubprocessChildArtifactExpectationId = artifactExpectation.SubprocessChildArtifactExpectationId
                 },
                 cancellationToken);
         }

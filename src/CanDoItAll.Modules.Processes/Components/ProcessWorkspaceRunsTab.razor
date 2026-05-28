@@ -67,6 +67,16 @@
                             <StatusBadge Tone="danger"
                                          Text="@($"{Presenter.SelectedRunHealth.DeadLetteredOutboxCount} dead-lettered")" />
                         }
+                        @if (Presenter.SelectedRunHealth.InvariantDiagnosticCount > 0)
+                        {
+                            <StatusBadge Tone="warning"
+                                         Text="@($"{Presenter.SelectedRunHealth.InvariantDiagnosticCount} diagnostics")" />
+                        }
+                        @if (Presenter.SelectedRunHealth.RecommendedAction != ProcessStepRecoveryOption.None)
+                        {
+                            <StatusBadge Tone="info"
+                                         Text="@($"recommended: {Presenter.FormatRecoveryAction(Presenter.SelectedRunHealth.RecommendedAction)}")" />
+                        }
                         <StatusBadge Tone="neutral"
                                      Text="@($"updated {selectedRun.UpdatedAtUtc.LocalDateTime:g}")" />
                     </Cluster>

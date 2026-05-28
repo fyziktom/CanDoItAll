@@ -53,6 +53,7 @@ public sealed partial class ProcessDevelopmentSeedService
         Guid stepRunId,
         ProcessStepRunStatus targetStatus,
         Guid? selectedBranchOutcomeId,
+        ProcessStepBlockCause? blockCause,
         string reason,
         string decidedBy,
         CancellationToken cancellationToken)
@@ -108,6 +109,9 @@ public sealed partial class ProcessDevelopmentSeedService
                     StepRunId = stepRunId,
                     TargetStatus = transitionStatus,
                     SelectedBranchOutcomeId = transitionStatus == targetStatus ? selectedBranchOutcomeId : null,
+                    BlockCause = transitionStatus == targetStatus && transitionStatus == ProcessStepRunStatus.Blocked
+                        ? blockCause
+                        : null,
                     Reason = transitionStatus == targetStatus ? reason?.Trim() ?? string.Empty : string.Empty,
                     DecidedBy = string.IsNullOrWhiteSpace(decidedBy) ? "process-template-pack" : decidedBy.Trim()
                 },
@@ -140,16 +144,33 @@ public sealed partial class ProcessDevelopmentSeedService
         }
 
         var normalizedTitle = title.Trim();
+        var artifactExpectationId = ResolveArtifactExpectationId(artifactOutputs, normalizedTitle);
         var artifacts = await processesService.ListArtifactsAsync(runId, cancellationToken);
         var existingArtifact = artifacts.FirstOrDefault(item =>
-            string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
-            item.ArtifactKind == artifactKind);
+            artifactExpectationId.HasValue
+                ? item.ArtifactExpectationId == artifactExpectationId.Value
+                : string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
+                  item.ArtifactKind == artifactKind);
         if (existingArtifact is not null)
         {
             return Result.Success();
         }
 
-        var artifactExpectationId = ResolveArtifactExpectationId(artifactOutputs, normalizedTitle);
+        var managedStoragePath = BuildSeedArtifactManagedStoragePath(
+            runId,
+            normalizedTitle,
+            provenanceSummary,
+            allowedFutureUsageSummary,
+            reviewSummary);
+        await WriteSeedManagedArtifactAsync(
+            managedStoragePath,
+            normalizedTitle,
+            artifactKind,
+            provenanceSummary,
+            allowedFutureUsageSummary,
+            reviewSummary,
+            cancellationToken);
+
         var result = await processesService.RecordArtifactAsync(
             new ProcessArtifactRecordRequest
             {
@@ -162,12 +183,135 @@ public sealed partial class ProcessDevelopmentSeedService
                 SensitivityLevel = sensitivityLevel,
                 ProvenanceSummary = provenanceSummary?.Trim() ?? string.Empty,
                 AllowedFutureUsageSummary = allowedFutureUsageSummary?.Trim() ?? string.Empty,
-                ReviewSummary = reviewSummary?.Trim() ?? string.Empty
+                ReviewSummary = reviewSummary?.Trim() ?? string.Empty,
+                ManagedStoragePath = managedStoragePath
             },
             cancellationToken);
         return result.IsFailure
             ? Result.Failure(result.Errors.ToArray())
             : Result.Success();
+    }
+
+    private async Task WriteSeedManagedArtifactAsync(
+        string managedStoragePath,
+        string title,
+        ProcessArtifactKind artifactKind,
+        string provenanceSummary,
+        string allowedFutureUsageSummary,
+        string reviewSummary,
+        CancellationToken cancellationToken)
+    {
+        var fullPath = Path.GetFullPath(Path.Combine(
+            workspacePathResolver.ResolveWorkspaceRoot(),
+            managedStoragePath.Replace('/', Path.DirectorySeparatorChar)));
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(
+            fullPath,
+            BuildSeedManagedArtifactContent(
+                managedStoragePath,
+                title,
+                artifactKind,
+                provenanceSummary,
+                allowedFutureUsageSummary,
+                reviewSummary),
+            cancellationToken);
+    }
+
+    private static string BuildSeedArtifactManagedStoragePath(
+        Guid runId,
+        string title,
+        string provenanceSummary,
+        string allowedFutureUsageSummary,
+        string reviewSummary)
+    {
+        var extension = RequiresImageSeedArtifactPath(
+            title,
+            provenanceSummary,
+            allowedFutureUsageSummary,
+            reviewSummary)
+            ? ".svg"
+            : ".md";
+        return $"artifacts/baseline-seed/{runId:N}/{FileSafeSlugBuilder.Build(title)}{extension}";
+    }
+
+    private static bool RequiresImageSeedArtifactPath(
+        string title,
+        string provenanceSummary,
+        string allowedFutureUsageSummary,
+        string reviewSummary)
+    {
+        var text = string.Join(
+            ' ',
+            title,
+            provenanceSummary,
+            allowedFutureUsageSummary,
+            reviewSummary);
+        return text.Contains("screenshot", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("image asset", StringComparison.OrdinalIgnoreCase) ||
+               text.Contains("regression evidence pack", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string BuildSeedManagedArtifactContent(
+        string managedStoragePath,
+        string title,
+        ProcessArtifactKind artifactKind,
+        string provenanceSummary,
+        string allowedFutureUsageSummary,
+        string reviewSummary)
+    {
+        if (managedStoragePath.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildSeedManagedArtifactSvgContent(
+                title,
+                artifactKind,
+                provenanceSummary,
+                allowedFutureUsageSummary,
+                reviewSummary);
+        }
+
+        return $"""
+            # {title}
+
+            Artifact kind: {artifactKind}
+            Provenance: {provenanceSummary?.Trim() ?? string.Empty}
+            Future usage: {allowedFutureUsageSummary?.Trim() ?? string.Empty}
+            Review: {reviewSummary?.Trim() ?? string.Empty}
+            Baseline seed evidence: This managed artifact is generated as durable current-run evidence for the process template baseline scenario and is bound to the recorded artifact metadata.
+            """;
+    }
+
+    private static string BuildSeedManagedArtifactSvgContent(
+        string title,
+        ProcessArtifactKind artifactKind,
+        string provenanceSummary,
+        string allowedFutureUsageSummary,
+        string reviewSummary)
+    {
+        var titleText = EscapeSvgText(title);
+        var detailText = EscapeSvgText($"Kind: {artifactKind}. {reviewSummary?.Trim() ?? string.Empty}");
+        var provenanceText = EscapeSvgText(provenanceSummary?.Trim() ?? string.Empty);
+        var usageText = EscapeSvgText(allowedFutureUsageSummary?.Trim() ?? string.Empty);
+        return $$"""
+            <svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-label="{{titleText}}">
+              <rect width="960" height="540" fill="#f8fafc" />
+              <rect x="32" y="32" width="896" height="476" fill="#ffffff" stroke="#1f2937" stroke-width="2" />
+              <text x="64" y="96" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#111827">{{titleText}}</text>
+              <text x="64" y="156" font-family="Arial, sans-serif" font-size="20" fill="#1f2937">{{detailText}}</text>
+              <text x="64" y="214" font-family="Arial, sans-serif" font-size="18" fill="#374151">{{provenanceText}}</text>
+              <text x="64" y="270" font-family="Arial, sans-serif" font-size="18" fill="#374151">{{usageText}}</text>
+              <text x="64" y="448" font-family="Arial, sans-serif" font-size="18" fill="#111827">Baseline managed visual proof for the current process run.</text>
+            </svg>
+            """;
+    }
+
+    private static string EscapeSvgText(string value)
+    {
+        return value
+            .Replace("&", "&amp;", StringComparison.Ordinal)
+            .Replace("<", "&lt;", StringComparison.Ordinal)
+            .Replace(">", "&gt;", StringComparison.Ordinal)
+            .Replace("\"", "&quot;", StringComparison.Ordinal)
+            .Replace("'", "&apos;", StringComparison.Ordinal);
     }
 
     private static Guid? ResolveArtifactExpectationId(

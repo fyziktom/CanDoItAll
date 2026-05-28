@@ -15,6 +15,12 @@ public enum ProcessVersionStatus
     Archived
 }
 
+public enum ProcessDefinitionContractMode
+{
+    Compatibility,
+    Strict
+}
+
 public enum ProcessCriticality
 {
     Low,
@@ -43,12 +49,77 @@ public enum ProcessStepKind
     Subprocess = 7
 }
 
+public enum ProcessStepOperation
+{
+    ReadProcessContext,
+    ReadProjectStructure,
+    ReadUpstreamArtifacts,
+    WriteManagedProcessArtifacts,
+    WriteExternalArtifactDestination,
+    MutateProductTarget,
+    RunValidation,
+    LaunchRuntime,
+    CaptureRuntimeProof,
+    ExecuteExternalAction,
+    RecoverArtifactsOnly,
+    EscalateOrDecide
+}
+
+public enum ProcessStepTargetScope
+{
+    ManagedProcessArtifactsOnly,
+    ManagedOutputProduct,
+    ExternalArtifactDestination,
+    ExternalProductTargetReadOnly,
+    ExternalProductTargetMutable,
+    ExternalActionControlled
+}
+
+public enum ProcessStepBlockReasonCode
+{
+    None,
+    MissingUpstreamArtifact,
+    PolicyDeniedExternalPath,
+    ToolUnavailable,
+    MissingCredential,
+    ValidationFailed,
+    NoProgress,
+    RuntimeInvariantViolation,
+    CapabilityGap,
+    ArtifactContractUnsatisfied,
+    AgentExecutionFailed,
+    ManualRerun,
+    Unknown
+}
+
+public enum ProcessStepBlockCause
+{
+    OwnOutput,
+    UpstreamInput,
+    RuntimeEvidence,
+    PolicyDenied
+}
+
+public enum ProcessStepRecoveryOption
+{
+    None,
+    WaitForArtifactMaterialization,
+    RecoverArtifactsOnly,
+    RetryAgent,
+    FreshAgentSession,
+    ReworkContinuation,
+    HumanEscalation,
+    RepairImplementation,
+    RerunValidation
+}
+
 public enum ProcessResponsibilityKind
 {
-    Responsible,
-    Reviewer,
-    Approver,
-    Backup
+    Responsible = 0,
+    Reviewer = 1,
+    Approver = 2,
+    Backup = 3,
+    Accountable = 4
 }
 
 public enum ProcessExecutorKind
@@ -115,23 +186,25 @@ public static class ProcessExecutorKindNames
 
 public enum ProcessArtifactKind
 {
-    Brief,
-    Evidence,
-    Decision,
-    Deliverable,
-    Transcript,
-    Checklist,
-    Prompt,
-    Dataset,
-    Other
+    Brief = 0,
+    Evidence = 1,
+    Decision = 2,
+    Deliverable = 3,
+    Transcript = 4,
+    Checklist = 5,
+    Prompt = 6,
+    Dataset = 7,
+    Other = 8,
+    DecisionRecord = 9
 }
 
 public enum ProcessArtifactTrustRequirement
 {
-    None,
-    ReviewRequired,
-    HumanApproved,
-    TrustedSource
+    None = 0,
+    ReviewRequired = 1,
+    HumanApproved = 2,
+    TrustedSource = 3,
+    ApprovalRequired = 4
 }
 
 public enum ProcessSensitivityLevel
@@ -140,4 +213,74 @@ public enum ProcessSensitivityLevel
     Internal,
     Confidential,
     Restricted
+}
+
+public sealed record ProcessRoleExecutorKindOption(
+    string Value,
+    string Label,
+    string Description);
+
+public static class ProcessRoleExecutorKindOptions
+{
+    public const string Person = "person";
+    public const string Agent = "agent";
+    public const string PersonOrAgent = "person-or-agent";
+
+    public static IReadOnlyList<ProcessRoleExecutorKindOption> Options { get; } =
+    [
+        new(Person, "Person", "Human project member or stakeholder."),
+        new(Agent, "Agent", "AI agent or technical agent resource."),
+        new(PersonOrAgent, "Person or agent", "Either a human or an AI agent can satisfy the role."),
+        new(ProcessExecutorKindNames.Human, "Human", "Legacy human executor value."),
+        new(ProcessExecutorKindNames.AiAgent, "AI agent", "Legacy AI agent executor value."),
+        new(ProcessExecutorKindNames.Workflow, "Workflow", "Workflow-backed executor.")
+    ];
+
+    public static string NormalizeForSelection(string? executorKind)
+    {
+        if (string.IsNullOrWhiteSpace(executorKind))
+        {
+            return Person;
+        }
+
+        var trimmed = executorKind.Trim();
+        var exactOption = Options.FirstOrDefault(option =>
+            string.Equals(option.Value, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (exactOption is not null)
+        {
+            return exactOption.Value;
+        }
+
+        var normalized = NormalizeToken(trimmed);
+        return normalized switch
+        {
+            "personoragent" or "humanoragent" or "personaiagent" or "humanaiagent" => PersonOrAgent,
+            "person" or "people" or "teammember" or "team" or "manual" => Person,
+            "agent" or "ai" or "aiagent" or "artificialintelligence" => Agent,
+            "workflow" or "workflows" => ProcessExecutorKindNames.Workflow,
+            "human" => ProcessExecutorKindNames.Human,
+            _ when normalized.Contains("workflow", StringComparison.Ordinal) => ProcessExecutorKindNames.Workflow,
+            _ when normalized.Contains("person", StringComparison.Ordinal) && normalized.Contains("agent", StringComparison.Ordinal) => PersonOrAgent,
+            _ when normalized.Contains("human", StringComparison.Ordinal) && normalized.Contains("agent", StringComparison.Ordinal) => PersonOrAgent,
+            _ when normalized.Contains("agent", StringComparison.Ordinal) || normalized.Contains("ai", StringComparison.Ordinal) => Agent,
+            _ when normalized.Contains("human", StringComparison.Ordinal) || normalized.Contains("person", StringComparison.Ordinal) => Person,
+            _ => trimmed
+        };
+    }
+
+    public static bool IsWorkflow(string? executorKind)
+    {
+        return string.Equals(
+            NormalizeForSelection(executorKind),
+            ProcessExecutorKindNames.Workflow,
+            StringComparison.Ordinal);
+    }
+
+    private static string NormalizeToken(string value)
+    {
+        return new string(value
+            .Where(char.IsLetterOrDigit)
+            .Select(char.ToLowerInvariant)
+            .ToArray());
+    }
 }

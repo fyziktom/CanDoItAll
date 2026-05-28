@@ -109,6 +109,11 @@
       "EvidenceContractSummary": "Route manifest, app root, command, base URL, viewport set, and storage target.",
       "DecisionRightsSummary": "Manager may block on missing or ambiguous route data.",
       "ExceptionPolicySummary": "Block on missing source root, empty route set, or unresolved parameterized routes.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 1,
       "CanvasX": 240,
       "CanvasY": 0,
@@ -183,7 +188,16 @@
           "SourceStepKey": "resolve-page-set-targets",
           "ArtifactExpectationKey": "page-set-target-manifest"
         }
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -198,6 +212,13 @@
       "EvidenceContractSummary": "Per-route URL, viewport, console summary, screenshot path, and route status.",
       "DecisionRightsSummary": "Capture agent can skip only non-candidate system routes if the manifest marks them as non-candidates and must not start a second app instance during route capture.",
       "ExceptionPolicySummary": "Block when any required screenshot candidate route lacks an image or browser evidence.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 2,
       "CanvasX": 1920,
       "CanvasY": 0,
@@ -260,6 +281,14 @@
       "EvidenceContractSummary": "Accepted/rejected route list, image sanity checks, asset node ids, and storage locators.",
       "DecisionRightsSummary": "Review/storage agent must reject unusable screenshots and request recapture instead of storing bad evidence.",
       "ExceptionPolicySummary": "Block on unreadable images, blank images, wrong routes, incomplete required route set, or failed asset storage.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
       "TargetLeadHours": 2,
       "CanvasX": 2760,
       "CanvasY": 0,
@@ -364,7 +393,14 @@
           "SourceStepKey": "review-and-store-screenshot-set",
           "ArtifactExpectationKey": "image-asset-storage-receipts"
         }
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ],
   "DocPath": "processes/app-pages-screenshot-set/definition.md"

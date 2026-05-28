@@ -18,6 +18,8 @@ Keep app logic strongly typed. Use concrete view models, enums, value types, and
 
 For greenfield modern Blazor Web App work, use `workspace_dotnet_new` with the approved `blazor` template. Architecture notes that say "Blazor Server" for a new app are shorthand for the current Blazor Web App SSR/server-interactive model and never authorize the obsolete `blazorserver` template. If a template call returns an unsuccessful result, inspect that result, switch to the current approved template, and continue only after the created scaffold exists and has been inspected.
 
+For greenfield Blazor WebAssembly PWA work, use the Blazor WebAssembly template with PWA support enabled. After scaffolding, verify the generated app has a manifest under `wwwroot`, service-worker files, and index.html registration before adding product logic. If the scaffold is plain WASM and the contract requires PWA/offline/installable/static-hosting PWA behavior, repair the scaffold in the same implementation step instead of listing PWA as follow-up work.
+
 Workspace command timeout arguments are seconds, not milliseconds. Prefer defaults unless a command actually timed out; when setting one explicitly, use normal second values such as `120`, `300`, `600`, or `1200`.
 
 For an app-building task, deliver a visible app, not only a domain library or default scaffold. Replace starter `Home`, stock navigation, placeholder routes, and template-only content with a product-specific route that reflects the current request's topic and primary workflow. Browser proof must exercise that real route and show a meaningful filled, selected, or changed state with the expected visible result.

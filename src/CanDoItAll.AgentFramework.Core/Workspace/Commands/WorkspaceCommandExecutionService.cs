@@ -85,17 +85,17 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "WorkspaceMutation",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public Task<WorkspaceCommandExecutionResult> PythonRunFile(string path, string[]? arguments = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
         => ExecutePlanAsync(
-            () => planBuilder.BuildPythonRunFile(path, arguments, workingDirectory, timeoutSeconds),
+            () => planBuilder.BuildPythonRunFile(path, arguments, workingDirectory, timeoutSeconds, sideEffectManifest),
             "workspace_python_run_file",
             "python_run_file",
             "LocalExecution",
             approvalRequired: true);
 
-    public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300)
+    public Task<WorkspaceCommandExecutionResult> PowerShellRunScript(string path, string[]? arguments = null, string[]? outputPaths = null, string? workingDirectory = null, int timeoutSeconds = 300, string? sideEffectManifest = null)
         => ExecutePlanAsync(
-            () => planBuilder.BuildPowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds),
+            () => planBuilder.BuildPowerShellRunScript(path, arguments, outputPaths, workingDirectory, timeoutSeconds, sideEffectManifest),
             "workspace_pwsh_run_script",
             "pwsh_run_script",
             "LocalExecution",

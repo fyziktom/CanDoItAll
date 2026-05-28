@@ -15,9 +15,9 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -83,7 +83,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             cancellationToken);
                         dispatchCancellationToken = dispatchHeartbeat.DispatchCancellationToken;
                         var candidateHydrationStarted = Stopwatch.GetTimestamp();
-                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, dispatchCancellationToken);
+                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
                         logger.LogDebug(
                             "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
                             processRunId,
@@ -135,35 +135,28 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             dispatchCancellationToken);
                         if (strandedArtifactRecoveryOutcome is not null)
                         {
-                            var recoveryStepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, dispatchCancellationToken)
-                                ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded after manager artifact recovery.");
-                            if (ShouldSkipAutomationCompletionTransition(recoveryStepRunSnapshot.Status, strandedArtifactRecoveryOutcome.CompletionStatus))
-                            {
-                                logger.LogInformation(
-                                    "Skipping stale process manager artifact recovery transition for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
-                                    candidate.Run.Id,
-                                    candidate.StepRun.Id,
-                                    recoveryStepRunSnapshot.Status,
-                                    strandedArtifactRecoveryOutcome.CompletionStatus);
-                                return;
-                            }
-
-                            var recoveryTransitionResult = await TransitionStepWithClaimAsync(
-                                new ProcessStepTransitionRequest
-                                {
-                                    StepRunId = candidate.StepRun.Id,
-                                    StepRunConcurrencyToken = recoveryStepRunSnapshot.ConcurrencyToken,
-                                    TargetStatus = strandedArtifactRecoveryOutcome.CompletionStatus,
-                                    Reason = strandedArtifactRecoveryOutcome.CompletionReason,
-                                    SelectedBranchOutcomeId = strandedArtifactRecoveryOutcome.SelectedBranchOutcomeId,
-                                    DecidedBy = AutomationActor,
-                                    SuppressAutomationDispatch = strandedArtifactRecoveryOutcome.CompletionStatus != ProcessStepRunStatus.Completed
-                                },
+                            var finalizedRecoveryCompletion = await FinalizeStepCompletionAsync(
+                                new ProcessStepCompletionFinalizerContext(
+                                    ExecutorKind: ProcessStepCompletionExecutorKind.ManagerArtifactRecovery,
+                                    Candidate: candidate,
+                                    CompletionStatus: strandedArtifactRecoveryOutcome.CompletionStatus,
+                                    CompletionReason: strandedArtifactRecoveryOutcome.CompletionReason,
+                                    SelectedBranchOutcomeId: strandedArtifactRecoveryOutcome.SelectedBranchOutcomeId,
+                                    ExecutionDetail: strandedArtifactRecoveryOutcome.Detail,
+                                    WorkflowRunId: null,
+                                    SubprocessRunId: null,
+                                    ResponseText: strandedArtifactRecoveryOutcome.ResponseText,
+                                    ProjectExecutionArtifacts: false,
+                                    AllowManagerArtifactRecovery: false,
+                                    Trigger: trigger,
+                                    RenewLeaseAsync: dispatchRenewLeaseAsync,
+                                    RecoveryExecutionRunId: strandedArtifactRecoveryOutcome.Detail.Run.Id,
+                                    RecoveredForExecutionRunId: candidate.RecoveryExecutionRunId),
                                 dispatchClaim,
                                 dispatchCancellationToken);
-                            if (recoveryTransitionResult.IsFailure)
+                            if (finalizedRecoveryCompletion is not null)
                             {
-                                throw new InvalidOperationException(string.Join(" | ", recoveryTransitionResult.Errors.Select(error => error.Message)));
+                                await ApplyFinalizedStepTransitionAsync(candidate, finalizedRecoveryCompletion, dispatchClaim, dispatchCancellationToken);
                             }
 
                             return;
@@ -196,7 +189,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     candidate.StepRun.Id,
                                     processRunId,
                                     string.Join(" | ", startResult.Errors.Select(error => error.Message)));
-                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, dispatchCancellationToken);
+                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
                                 if (refreshedCandidate is null ||
                                     refreshedCandidate.StepRun.Id != candidate.StepRun.Id ||
                                     refreshedCandidate.StepRun.Status != ProcessStepRunStatus.InProgress)
@@ -248,66 +241,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             return;
                         }
 
-                        var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, dispatchCancellationToken)
-                            ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded before completion.");
-                        if (ShouldSkipAutomationCompletionTransition(stepRunSnapshot.Status, executionOutcome.CompletionStatus))
+                        var finalizedCompletion = await FinalizeStepCompletionAsync(
+                            new ProcessStepCompletionFinalizerContext(
+                                ExecutorKind: ProcessStepCompletionExecutorKind.DirectAgent,
+                                Candidate: candidate,
+                                CompletionStatus: executionOutcome.CompletionStatus,
+                                CompletionReason: executionOutcome.CompletionReason,
+                                SelectedBranchOutcomeId: executionOutcome.SelectedBranchOutcomeId,
+                                ExecutionDetail: executionOutcome.Detail,
+                                WorkflowRunId: null,
+                                SubprocessRunId: null,
+                                ResponseText: executionOutcome.ResponseText,
+                                ProjectExecutionArtifacts: true,
+                                AllowManagerArtifactRecovery: true,
+                                Trigger: trigger,
+                                RenewLeaseAsync: dispatchRenewLeaseAsync),
+                            dispatchClaim,
+                            dispatchCancellationToken);
+                        dispatchHeartbeat.ThrowIfClaimLost();
+                        if (finalizedCompletion is not null)
                         {
-                            logger.LogInformation(
-                                "Skipping stale process automation completion transition for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id,
-                                stepRunSnapshot.Status,
-                                executionOutcome.CompletionStatus);
-                        }
-                        else
-                        {
-                            await ProjectExecutionArtifactsAsync(
-                                candidate,
-                                executionOutcome.Detail,
-                                executionOutcome.ResponseText,
-                                executionOutcome.CompletionStatus,
-                                dispatchClaim,
-                                dispatchCancellationToken);
-                            executionOutcome = await TryRecoverMissingCompletionArtifactsAsync(
-                                candidate,
-                                executionOutcome,
-                                trigger,
-                                dispatchClaim,
-                                dispatchRenewLeaseAsync,
-                                dispatchCancellationToken);
-                            dispatchHeartbeat.ThrowIfClaimLost();
-
-                            var completionResult = await TransitionStepWithClaimAsync(
-                                new ProcessStepTransitionRequest
-                                {
-                                    StepRunId = candidate.StepRun.Id,
-                                    StepRunConcurrencyToken = stepRunSnapshot.ConcurrencyToken,
-                                    TargetStatus = executionOutcome.CompletionStatus,
-                                    Reason = executionOutcome.CompletionReason,
-                                    SelectedBranchOutcomeId = executionOutcome.SelectedBranchOutcomeId,
-                                    DecidedBy = AutomationActor,
-                                    SuppressAutomationDispatch = executionOutcome.CompletionStatus != ProcessStepRunStatus.Completed
-                                },
-                                dispatchClaim,
-                                dispatchCancellationToken);
-                            if (completionResult.IsFailure)
-                            {
-                                var refreshedSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, dispatchCancellationToken);
-                                if (refreshedSnapshot is not null &&
-                                    ShouldSkipAutomationCompletionTransition(refreshedSnapshot.Status, executionOutcome.CompletionStatus))
-                                {
-                                    logger.LogInformation(
-                                        "Skipping stale process automation completion transition after a failed attempt for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
-                                        candidate.Run.Id,
-                                        candidate.StepRun.Id,
-                                        refreshedSnapshot.Status,
-                                        executionOutcome.CompletionStatus);
-                                }
-                                else
-                                {
-                                    throw new InvalidOperationException(string.Join(" | ", completionResult.Errors.Select(error => error.Message)));
-                                }
-                            }
+                            await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, dispatchCancellationToken);
                         }
 
                         return;
@@ -515,46 +469,29 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        var stepRunSnapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken)
-            ?? throw new InvalidOperationException($"Process step run {candidate.StepRun.Id} could not be reloaded after workflow execution.");
-        if (workflowOutcome.CompletionStatus == ProcessStepRunStatus.InProgress ||
-            stepRunSnapshot.Status == workflowOutcome.CompletionStatus)
-        {
-            logger.LogInformation(
-                "Workflow execution for process run {RunId}, step {StepRunId} is {Status}.",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                workflowOutcome.CompletionStatus);
-            return;
-        }
-
-        if (ShouldSkipAutomationCompletionTransition(stepRunSnapshot.Status, workflowOutcome.CompletionStatus))
-        {
-            logger.LogInformation(
-                "Skipping stale workflow completion transition for run {RunId}, step {StepRunId}. Current status is {CurrentStatus}, requested status is {RequestedStatus}.",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                stepRunSnapshot.Status,
-                workflowOutcome.CompletionStatus);
-            return;
-        }
-
-        var transitionResult = await TransitionStepWithClaimAsync(
-            new ProcessStepTransitionRequest
-            {
-                StepRunId = candidate.StepRun.Id,
-                StepRunConcurrencyToken = stepRunSnapshot.ConcurrencyToken,
-                TargetStatus = workflowOutcome.CompletionStatus,
-                Reason = workflowOutcome.CompletionReason,
-                DecidedBy = AutomationActor,
-                SuppressAutomationDispatch = workflowOutcome.CompletionStatus != ProcessStepRunStatus.Completed
-            },
+        var finalizedCompletion = await FinalizeStepCompletionAsync(
+            new ProcessStepCompletionFinalizerContext(
+                ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+                candidate,
+                workflowOutcome.CompletionStatus,
+                workflowOutcome.CompletionReason,
+                SelectedBranchOutcomeId: null,
+                ExecutionDetail: null,
+                WorkflowRunId: workflowOutcome.Link?.WorkflowRunId,
+                SubprocessRunId: null,
+                ResponseText: workflowOutcome.CompletionReason,
+                ProjectExecutionArtifacts: false,
+                AllowManagerArtifactRecovery: false,
+                Trigger: "workflow-execution-outcome",
+                RenewLeaseAsync: null),
             dispatchClaim,
             cancellationToken);
-        if (transitionResult.IsFailure)
+        if (finalizedCompletion is null)
         {
-            throw new InvalidOperationException(string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
+            return;
         }
+
+        await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
     }
 
     private async Task<ProcessStepDispatchClaim?> TryClaimStepDispatchAsync(
@@ -858,8 +795,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
-        if (terminalStatus.Value == ProcessStepRunStatus.Completed) {
+        if (terminalStatus.Value == ProcessStepRunStatus.Completed)
+        {
             await ProjectCompletedSubprocessArtifactsAsync(candidate, subprocessRun, dispatchClaim, cancellationToken);
+            var transitionReason = BuildSubprocessParentTransitionReason(subprocessRun);
+            var finalizedCompletion = await FinalizeStepCompletionAsync(
+                new ProcessStepCompletionFinalizerContext(
+                    ProcessStepCompletionExecutorKind.SubprocessParent,
+                    candidate,
+                    terminalStatus.Value,
+                    transitionReason,
+                    SelectedBranchOutcomeId: null,
+                    ExecutionDetail: null,
+                    WorkflowRunId: null,
+                    SubprocessRunId: subprocessRun.RunId,
+                    ResponseText: transitionReason,
+                    ProjectExecutionArtifacts: false,
+                    AllowManagerArtifactRecovery: false,
+                    Trigger: "subprocess-execution-outcome",
+                    RenewLeaseAsync: null),
+                dispatchClaim,
+                cancellationToken);
+            if (finalizedCompletion is not null)
+            {
+                await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
+            }
+
+            return;
         }
 
         var transitionResult = await TransitionStepWithClaimAsync(
@@ -950,7 +912,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken) {
+        CancellationToken cancellationToken)
+    {
         await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var expectations = await dbContext.Set<ProcessArtifactExpectation>()
@@ -959,7 +922,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 item.IsRequired)
             .OrderBy(item => item.Title)
             .ToListAsync(cancellationToken);
-        if (expectations.Count == 0) {
+        if (expectations.Count == 0)
+        {
             return;
         }
 
@@ -969,10 +933,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 item.StepRunId == candidate.StepRun.Id)
             .ToListAsync(cancellationToken);
         var missingProjectableExpectations = expectations
-            .Where(IsSubprocessCompletionProjectionAllowed)
-            .Where(expectation => !parentArtifacts.Any(artifact => SatisfiesArtifactExpectation(artifact, expectation)))
+            .Where(WorkflowSubprocessArtifactMapper.IsSubprocessCompletionProjectionAllowed)
+            .Where(expectation => !parentArtifacts.Any(artifact =>
+                SatisfiesCurrentSubprocessArtifactExpectation(artifact, expectation, subprocessRun.RunId)))
             .ToList();
-        if (missingProjectableExpectations.Count == 0) {
+        if (missingProjectableExpectations.Count == 0)
+        {
             return;
         }
 
@@ -985,10 +951,29 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
         var now = clock.GetUtcNow();
 
-        foreach (var expectation in missingProjectableExpectations) {
+        foreach (var expectation in missingProjectableExpectations)
+        {
             await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
-            var sourceArtifact = ResolveSubprocessSourceArtifact(childArtifacts, expectation);
-            var artifact = new ProcessArtifactRecord {
+            var sourceArtifact = WorkflowSubprocessArtifactMapper.ResolveSubprocessSourceArtifact(
+                childArtifacts,
+                missingProjectableExpectations,
+                expectation,
+                out var projectionDiagnostic);
+            if (sourceArtifact is null)
+            {
+                await RecordSubprocessProjectionGapAsync(
+                    dbContext,
+                    candidate,
+                    subprocessRun,
+                    expectation,
+                    projectionDiagnostic,
+                    now,
+                    cancellationToken);
+                continue;
+            }
+
+            var artifact = new ProcessArtifactRecord
+            {
                 ProcessRunId = candidate.Run.Id,
                 StepRunId = candidate.StepRun.Id,
                 ArtifactExpectationId = expectation.Id,
@@ -998,14 +983,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 SensitivityLevel = ResolveProjectedSubprocessSensitivity(expectation, sourceArtifact),
                 ProvenanceSummary = BuildSubprocessArtifactProjectionProvenance(candidate, subprocessRun, sourceArtifact),
                 AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
-                ReviewSummary = BuildSubprocessArtifactProjectionReviewSummary(subprocessRun, sourceArtifact),
-                ManagedStoragePath = BoundProjectedSubprocessStoragePath(sourceArtifact?.ManagedStoragePath ?? string.Empty),
-                ExternalReferenceKey = BuildSubprocessArtifactProjectionReferenceKey(subprocessRun.RunId, expectation.Id),
+                ReviewSummary = BuildSubprocessArtifactProjectionReviewSummary(subprocessRun, sourceArtifact, projectionDiagnostic),
+                ManagedStoragePath = BoundProjectedSubprocessStoragePath(sourceArtifact.ManagedStoragePath),
+                ExternalReferenceKey = BuildSubprocessArtifactProjectionReferenceKey(subprocessRun.RunId, sourceArtifact.Id),
+                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+                    new ProcessArtifactProjectionLineage
+                    {
+                        SourceKind = ProcessArtifactProjectionSourceKind.SubprocessArtifact,
+                        SubprocessRunId = subprocessRun.RunId,
+                        SourceArtifactId = sourceArtifact.Id,
+                        SourceExternalReferenceKey = sourceArtifact.ExternalReferenceKey
+                    }),
                 CreatedAtUtc = now
             };
             await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
             await dbContext.Set<ProcessJournalEntry>().AddAsync(
-                new ProcessJournalEntry {
+                new ProcessJournalEntry
+                {
                     ProcessRunId = candidate.Run.Id,
                     StepRunId = candidate.StepRun.Id,
                     EventType = "artifact-recorded",
@@ -1031,24 +1025,91 @@ internal sealed partial class ProcessRunAutomationDispatchService
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static bool IsSubprocessCompletionProjectionAllowed(ProcessArtifactExpectation expectation) {
-        return expectation.TrustRequirement is
-            ProcessArtifactTrustRequirement.None or
-            ProcessArtifactTrustRequirement.ReviewRequired;
+    private async Task RecordSubprocessProjectionGapAsync(
+        AppDbContext dbContext,
+        DispatchCandidate candidate,
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessArtifactExpectation expectation,
+        string projectionDiagnostic,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        var fingerprint = CreateSubprocessProjectionGapFingerprint(candidate.Run.Id, candidate.StepRun.Id, subprocessRun.RunId, expectation.Id);
+        var existingGap = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .AnyAsync(
+                item =>
+                    item.ProcessRunId == candidate.Run.Id &&
+                    item.StepRunId == candidate.StepRun.Id &&
+                    item.EventType == ProcessRuntimeEventTypes.ArtifactValidationDiagnostic &&
+                    item.CorrelationId == fingerprint,
+                cancellationToken);
+        if (existingGap)
+        {
+            return;
+        }
+
+        await dbContext.Set<ProcessJournalEntry>().AddAsync(
+            new ProcessJournalEntry
+            {
+                ProcessRunId = candidate.Run.Id,
+                StepRunId = candidate.StepRun.Id,
+                EventType = ProcessRuntimeEventTypes.ArtifactValidationDiagnostic,
+                Title = $"Subprocess artifact projection gap: {expectation.Title}",
+                Description = string.IsNullOrWhiteSpace(projectionDiagnostic)
+                    ? $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'."
+                    : $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'. {projectionDiagnostic}",
+                CorrelationId = fingerprint,
+                OperatingMode = candidate.Run.OperatingMode,
+                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
+                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                ReplayContextJson = JsonSerializer.Serialize(new
+                {
+                    candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    SubprocessRunId = subprocessRun.RunId,
+                    ExpectationId = expectation.Id,
+                    ExpectationTitle = expectation.Title,
+                    ProjectionDiagnostic = projectionDiagnostic
+                }),
+                OccurredAtUtc = now
+            },
+            cancellationToken);
     }
 
-    private static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
+    private static string CreateSubprocessProjectionGapFingerprint(
+        Guid processRunId,
+        Guid stepRunId,
+        Guid subprocessRunId,
+        Guid expectationId)
+    {
+        var normalized = string.Join(
+            "|",
+            "subprocess-projection-gap",
+            processRunId.ToString("D"),
+            stepRunId.ToString("D"),
+            subprocessRunId.ToString("D"),
+            expectationId.ToString("D"));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+    }
+
+    internal static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
         IReadOnlyList<ProcessArtifactRecord> childArtifacts,
-        ProcessArtifactExpectation expectation) {
-        return childArtifacts
-            .Where(artifact =>
-                artifact.ArtifactKind == expectation.ArtifactKind &&
-                artifact.SensitivityLevel >= expectation.SensitivityLevel &&
-                SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
-            .OrderByDescending(artifact => artifact.ArtifactExpectationId.HasValue)
-            .ThenByDescending(artifact => string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase))
-            .ThenByDescending(artifact => artifact.CreatedAtUtc)
-            .FirstOrDefault();
+        IReadOnlyList<ProcessArtifactExpectation> parentExpectations,
+        ProcessArtifactExpectation expectation,
+        out string diagnostic)
+    {
+        return WorkflowSubprocessArtifactMapper.ResolveSubprocessSourceArtifact(
+            childArtifacts,
+            parentExpectations,
+            expectation,
+            out diagnostic);
+    }
+
+    internal static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveSubprocessOutputArtifactMappings(
+        IReadOnlyList<ProcessArtifactExpectation> parentExpectations)
+    {
+        return WorkflowSubprocessArtifactMapper.ResolveSubprocessOutputArtifactMappings(parentExpectations);
     }
 
     private static bool SatisfiesArtifactExpectation(
@@ -1071,6 +1132,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool SatisfiesCurrentSubprocessArtifactExpectation(
+        ProcessArtifactRecord artifact,
+        ProcessArtifactExpectation expectation,
+        Guid subprocessRunId)
+    {
+        return SatisfiesArtifactExpectation(artifact, expectation) &&
+               artifact.ExternalReferenceKey.StartsWith("subprocess-run:", StringComparison.OrdinalIgnoreCase) &&
+               artifact.ExternalReferenceKey.Contains(subprocessRunId.ToString("D"), StringComparison.OrdinalIgnoreCase);
+    }
+
     private static bool SatisfiesTrustRequirement(
         ProcessArtifactTrustStatus trustStatus,
         ProcessArtifactTrustRequirement trustRequirement) {
@@ -1081,6 +1152,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessArtifactTrustStatus.Approved or
                 ProcessArtifactTrustStatus.TrustedSource,
             ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
+            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
             ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
             _ => false
         };
@@ -1108,14 +1180,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildSubprocessArtifactProjectionReviewSummary(
         ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactRecord? sourceArtifact) {
+        ProcessArtifactRecord? sourceArtifact,
+        string projectionDiagnostic) {
+        var diagnosticSuffix = string.IsNullOrWhiteSpace(projectionDiagnostic)
+            ? string.Empty
+            : $" Mapping diagnostic: {projectionDiagnostic}";
         if (sourceArtifact is null) {
-            return $"Subprocess run '{subprocessRun.RunName}' completed. Review the child run artifact ledger before reusing this parent evidence outside the process.";
+            return $"Subprocess run '{subprocessRun.RunName}' completed. Review the child run artifact ledger before reusing this parent evidence outside the process.{diagnosticSuffix}";
         }
 
-        return string.IsNullOrWhiteSpace(sourceArtifact.ReviewSummary)
+        var summary = string.IsNullOrWhiteSpace(sourceArtifact.ReviewSummary)
             ? $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}."
             : $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}. {sourceArtifact.ReviewSummary}";
+        return $"{summary}{diagnosticSuffix}";
     }
 
     private static string BoundProjectedSubprocessStoragePath(string value) {
@@ -1245,6 +1322,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         StepRunConcurrencyToken = snapshot.ConcurrencyToken,
                         TargetStatus = ProcessStepRunStatus.Blocked,
                         Reason = blockReason,
+                        BlockCause = ProcessStepBlockCause.UpstreamInput,
                         DecidedBy = AutomationActor,
                         SuppressAutomationDispatch = true
                     },
@@ -1264,11 +1342,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (materializationTarget is null)
         {
+            await RecordMissingUpstreamArtifactMaterializationAsync(
+                candidate,
+                missingInputs,
+                materializationTarget,
+                blockReason,
+                cancellationToken);
             logger.LogWarning(
                 "Process run {RunId}, step {StepRunId} is missing required upstream artifacts, but no completed, blocked, or failed agent-owned source step is available for automatic materialization. Missing inputs: {MissingInputs}",
                 candidate.Run.Id,
                 candidate.StepRun.Id,
                 string.Join(" | ", missingInputs.Select(input => $"{input.SourceStepTitle}: {input.ExpectedArtifactTitle}")));
+            return true;
+        }
+
+        var shouldRequestMaterialization = await RecordMissingUpstreamArtifactMaterializationAsync(
+            candidate,
+            missingInputs,
+            materializationTarget,
+            blockReason,
+            cancellationToken);
+        if (!shouldRequestMaterialization)
+        {
+            logger.LogInformation(
+                "Skipping duplicate upstream artifact materialization request for run {RunId}, blocked downstream step {StepRunId}, source step {SourceStepRunId}; the same missing-artifact fingerprint is already recorded.",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                materializationTarget.SourceStepRunId);
             return true;
         }
 
@@ -1300,6 +1400,88 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.Run.Id,
             materializationTarget.ExpectedArtifactTitle);
         return true;
+    }
+
+    private async Task<bool> RecordMissingUpstreamArtifactMaterializationAsync(
+        DispatchCandidate candidate,
+        IReadOnlyList<DispatchArtifactInput> missingInputs,
+        DispatchArtifactInput? materializationTarget,
+        string blockReason,
+        CancellationToken cancellationToken)
+    {
+        var fingerprint = CreateMissingUpstreamArtifactMaterializationFingerprint(candidate, missingInputs, materializationTarget);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var existingFingerprint = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .AnyAsync(
+                item =>
+                    item.ProcessRunId == candidate.Run.Id &&
+                    item.StepRunId == candidate.StepRun.Id &&
+                    item.EventType == ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationRequested &&
+                    item.CorrelationId == fingerprint,
+                cancellationToken);
+        if (existingFingerprint)
+        {
+            return false;
+        }
+
+        var now = clock.GetUtcNow();
+        await dbContext.Set<ProcessJournalEntry>().AddAsync(
+            new ProcessJournalEntry
+            {
+                ProcessRunId = candidate.Run.Id,
+                StepRunId = candidate.StepRun.Id,
+                EventType = ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationRequested,
+                Title = "Missing upstream artifact materialization requested",
+                Description = blockReason,
+                CorrelationId = fingerprint,
+                OperatingMode = candidate.Run.OperatingMode,
+                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
+                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                ReplayContextJson = JsonSerializer.Serialize(new
+                {
+                    candidate.Run.Id,
+                    StepRunId = candidate.StepRun.Id,
+                    MaterializationSourceStepRunId = materializationTarget?.SourceStepRunId,
+                    MissingInputs = missingInputs.Select(input => new
+                    {
+                        input.SourceStepTitle,
+                        input.ExpectedArtifactTitle,
+                        input.ArtifactExpectationId,
+                        input.SourceStepDefinitionId,
+                        input.SourceStepRunId,
+                        input.SourceStepRunStatus
+                    }).ToArray()
+                }),
+                OccurredAtUtc = now
+            },
+            cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private static string CreateMissingUpstreamArtifactMaterializationFingerprint(
+        DispatchCandidate candidate,
+        IReadOnlyList<DispatchArtifactInput> missingInputs,
+        DispatchArtifactInput? materializationTarget)
+    {
+        var normalizedInputs = missingInputs
+            .OrderBy(input => input.SourceStepDefinitionId)
+            .ThenBy(input => input.ArtifactExpectationId)
+            .Select(input => string.Join(
+                ":",
+                input.SourceStepDefinitionId.ToString("D"),
+                input.ArtifactExpectationId.ToString("D"),
+                input.SourceStepRunId?.ToString("D") ?? string.Empty,
+                input.SourceStepRunStatus?.ToString() ?? string.Empty));
+        var normalized = string.Join(
+            "|",
+            "missing-upstream-artifact-materialization",
+            candidate.Run.Id.ToString("D"),
+            candidate.StepRun.Id.ToString("D"),
+            materializationTarget?.SourceStepRunId?.ToString("D") ?? string.Empty,
+            string.Join(",", normalizedInputs));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
     }
 
     private static IReadOnlyList<DispatchArtifactInput> ResolveMissingUpstreamArtifactInputs(DispatchCandidate candidate)
@@ -1384,6 +1566,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
         Guid processRunId,
         Guid claimedStepRunId,
+        string trigger,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -1547,6 +1730,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            artifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
+            var availableBranchOutcomes = branchOutcomesByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredBranchOutcomes)
+                ? configuredBranchOutcomes
+                    .Select(item => new DispatchBranchOutcome(item.Id, item.Key, item.Title, item.Description))
+                    .ToList()
+                : [];
+            var requiresExplicitBranchOutcomeSelection =
+                conditionalDependencyOutcomeIdsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var requiredBranchOutcomeIds) &&
+                availableBranchOutcomes.Any(item => requiredBranchOutcomeIds.Contains(item.Id));
+            var expectedArtifacts = await LoadExpectedArtifactsAsync(dbContext, stepRun.StepDefinitionId, cancellationToken);
+            var recordedArtifactExpectationIds = existingArtifacts
+                .Where(item => item.StepRunId == stepRun.Id && item.ArtifactExpectationId.HasValue)
+                .Select(item => item.ArtifactExpectationId!.Value)
+                .ToHashSet();
+            var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
+                BuildResolvedArtifactInputs(
+                    configuredArtifactInputs ?? [],
+                    artifactExpectationsById,
+                    sourceStepsById,
+                    stepRunsByDefinitionId,
+                    existingArtifacts),
+                workspaceRoot,
+                workspaceScope);
+
             if (stepRun.StepKind == ProcessStepKind.Subprocess)
             {
                 return new DispatchCandidate(
@@ -1556,15 +1763,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     currentStepDefinition,
                     workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                     Guid.Empty,
-                    [],
-                    new HashSet<Guid>(),
-                    [],
+                    expectedArtifacts,
+                    recordedArtifactExpectationIds,
+                    preparedArtifactInputs,
                     externalReferenceKeys,
                     null,
                     null,
                     string.Empty,
-                    [],
-                    false,
+                    availableBranchOutcomes,
+                    requiresExplicitBranchOutcomeSelection,
                     new AgentProcessCooperationMetadata(
                         AgentProcessCooperationMode.ProcessArtifactHandoff,
                         AgentWorkspaceToolProfileKind.ReadOnly,
@@ -1585,15 +1792,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     currentStepDefinition,
                     workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                     Guid.Empty,
-                    [],
-                    new HashSet<Guid>(),
-                    [],
+                    expectedArtifacts,
+                    recordedArtifactExpectationIds,
+                    preparedArtifactInputs,
                     externalReferenceKeys,
                     null,
                     null,
                     string.Empty,
-                    [],
-                    false,
+                    availableBranchOutcomes,
+                    requiresExplicitBranchOutcomeSelection,
                     new AgentProcessCooperationMetadata(
                         AgentProcessCooperationMode.ProcessArtifactHandoff,
                         AgentWorkspaceToolProfileKind.ReadOnly,
@@ -1657,39 +1864,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     stepRun.Id);
             }
 
-            artifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
-            var availableBranchOutcomes = branchOutcomesByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredBranchOutcomes)
-                ? configuredBranchOutcomes
-                    .Select(item => new DispatchBranchOutcome(item.Id, item.Key, item.Title, item.Description))
-                    .ToList()
-                : [];
-            var requiresExplicitBranchOutcomeSelection =
-                conditionalDependencyOutcomeIdsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var requiredBranchOutcomeIds) &&
-                availableBranchOutcomes.Any(item => requiredBranchOutcomeIds.Contains(item.Id));
             stepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var currentStepRoleRequirements);
             var currentAssignment = ResolveDispatchCurrentAssignment(stepRun, currentStepRoleRequirements ?? [], runAssignments);
             var currentRole = currentAssignment is null
                 ? null
                 : roleRequirementsById.GetValueOrDefault(currentAssignment.RoleRequirementId);
-            var expectedArtifacts = await LoadExpectedArtifactsAsync(dbContext, stepRun.StepDefinitionId, cancellationToken);
-            var recordedArtifactExpectationIds = existingArtifacts
-                .Where(item => item.StepRunId == stepRun.Id && item.ArtifactExpectationId.HasValue)
-                .Select(item => item.ArtifactExpectationId!.Value)
-                .ToHashSet();
-            recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
-                stepRun,
-                executionRuns,
-                expectedArtifacts,
-                recordedArtifactExpectationIds);
-            var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
-                BuildResolvedArtifactInputs(
-                    configuredArtifactInputs ?? [],
-                    artifactExpectationsById,
-                    sourceStepsById,
-                    stepRunsByDefinitionId,
-                    existingArtifacts),
-                workspaceRoot,
-                workspaceScope);
+            if (ShouldReusePriorArtifactRecoveryExecutionRun(trigger))
+            {
+                recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
+                    stepRun,
+                    executionRuns,
+                    expectedArtifacts,
+                    recordedArtifactExpectationIds);
+            }
+
             return new DispatchCandidate(
                 run,
                 definition,

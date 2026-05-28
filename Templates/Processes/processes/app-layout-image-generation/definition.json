@@ -92,6 +92,11 @@
       "EvidenceContractSummary": "Project id, delivery node id, screenshot asset node ids, routes, content types, and output naming plan.",
       "DecisionRightsSummary": "Manager may block if no accepted screenshot image asset can be identified.",
       "ExceptionPolicySummary": "Block on missing project, delivery node, or screenshot image asset.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 1,
       "CanvasX": 240,
       "CanvasY": 0,
@@ -131,6 +136,14 @@
       "EvidenceContractSummary": "image_generation_create result, provider/model, generated output path, project asset node id, content type, original file name, and storage locator.",
       "DecisionRightsSummary": "Layout agent may tune the visual prompt but must not change source asset ids or provider without recording the reason.",
       "ExceptionPolicySummary": "Block when credentials are missing, model access fails, source asset is unreadable, generated image data is absent, or asset storage fails.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled",
       "TargetLeadHours": 1,
       "CanvasX": 1080,
       "CanvasY": 0,
@@ -181,6 +194,13 @@
       "EvidenceContractSummary": "Generated asset readback and blocker status.",
       "DecisionRightsSummary": "Layout agent must mark the run blocked if generated asset readback fails.",
       "ExceptionPolicySummary": "Block on missing asset id, unreadable project asset metadata, or provider/model blocker.",
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly",
       "TargetLeadHours": 1,
       "CanvasX": 1920,
       "CanvasY": 0,

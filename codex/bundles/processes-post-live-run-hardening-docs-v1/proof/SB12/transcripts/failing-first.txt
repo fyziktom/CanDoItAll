@@ -1,0 +1,8 @@
+# SB12 Failing-first And Adversarial Proof
+
+Invariant IDs: SB12-INV-001, SB12-INV-002, SB12-INV-003
+Docs-only adversarial check rejects stale process-control guidance and stale MAF package naming.
+
+Command: rg -n "MAF 1\.0|Processes MCP server is active|use the Processes MCP|seeded artifacts are live delivery evidence|seeded transitions are live delivery evidence" [SB12 docs]
+ExitCode: 1
+ExpectedExitCode: 1

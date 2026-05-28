@@ -141,6 +141,16 @@ public sealed partial class ProcessesService
         }
 
         foreach (var step in model.Steps) {
+            foreach (var artifactExpectation in step.ArtifactExpectations) {
+                artifactExpectation.WorkflowOutputId = artifactExpectation.WorkflowOutputId.Trim();
+                artifactExpectation.WorkflowOutputName = artifactExpectation.WorkflowOutputName.Trim();
+                artifactExpectation.SubprocessChildStepKey = artifactExpectation.SubprocessChildStepKey.Trim();
+                artifactExpectation.SubprocessChildArtifactTitle = artifactExpectation.SubprocessChildArtifactTitle.Trim();
+                if (artifactExpectation.SubprocessChildArtifactExpectationId == Guid.Empty) {
+                    artifactExpectation.SubprocessChildArtifactExpectationId = null;
+                }
+            }
+
             if (step.StepKind != ProcessStepKind.Subprocess) {
                 step.SubprocessDefinitionId = null;
                 step.SubprocessDefinitionSnapshotName = string.Empty;
@@ -237,6 +247,83 @@ public sealed partial class ProcessesService
             var resolvedDefinition = preferredMatches[0];
             step.SubprocessDefinitionId = resolvedDefinition.Id;
             step.SubprocessDefinitionSnapshotName = resolvedDefinition.Name;
+
+            var artifactReferenceResolution = await ResolveImportedSubprocessArtifactReferencesAsync(
+                dbContext,
+                step,
+                resolvedDefinition.Id,
+                resolvedDefinition.ActivePublishedVersionId,
+                cancellationToken);
+            if (artifactReferenceResolution.IsFailure)
+            {
+                return artifactReferenceResolution;
+            }
+        }
+
+        return Result.Success();
+    }
+
+    private static async Task<Result> ResolveImportedSubprocessArtifactReferencesAsync(
+        AppDbContext dbContext,
+        ProcessStepEditorModel step,
+        Guid subprocessDefinitionId,
+        Guid? activePublishedVersionId,
+        CancellationToken cancellationToken)
+    {
+        var unresolvedArtifactReferences = step.ArtifactExpectations
+            .Where(artifact =>
+                !artifact.SubprocessChildArtifactExpectationId.HasValue &&
+                !string.IsNullOrWhiteSpace(artifact.SubprocessChildStepKey) &&
+                !string.IsNullOrWhiteSpace(artifact.SubprocessChildArtifactTitle))
+            .ToList();
+        if (unresolvedArtifactReferences.Count == 0)
+        {
+            return Result.Success();
+        }
+
+        if (!activePublishedVersionId.HasValue || activePublishedVersionId.Value == Guid.Empty)
+        {
+            return Result.Failure(Error.Validation(
+                $"Subprocess step '{step.Title}' references child artifact mappings, but subprocess definition '{step.SubprocessDefinitionSnapshotName}' has no active published version.",
+                "processes.subprocess-child-artifact-target-unpublished"));
+        }
+
+        var childArtifactTargets = await (
+                from childStep in dbContext.Set<ProcessStepDefinition>().AsNoTracking()
+                join childArtifact in dbContext.Set<ProcessArtifactExpectation>().AsNoTracking()
+                    on childStep.Id equals childArtifact.StepDefinitionId
+                where childStep.ProcessDefinitionVersionId == activePublishedVersionId.Value
+                select new
+                {
+                    StepKey = childStep.Key,
+                    StepTitle = childStep.Title,
+                    ArtifactId = childArtifact.Id,
+                    ArtifactTitle = childArtifact.Title
+                })
+            .ToListAsync(cancellationToken);
+
+        foreach (var artifact in unresolvedArtifactReferences)
+        {
+            var matches = childArtifactTargets
+                .Where(target =>
+                    string.Equals(target.StepKey, artifact.SubprocessChildStepKey, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(target.ArtifactTitle, artifact.SubprocessChildArtifactTitle, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matches.Count == 0)
+            {
+                return Result.Failure(Error.Validation(
+                    $"Subprocess step '{step.Title}' maps parent artifact '{artifact.Title}' to child step '{artifact.SubprocessChildStepKey}' artifact '{artifact.SubprocessChildArtifactTitle}', but no matching child artifact expectation was found in subprocess definition '{step.SubprocessDefinitionSnapshotName}' ({subprocessDefinitionId:D}).",
+                    "processes.subprocess-child-artifact-target-not-found"));
+            }
+
+            if (matches.Count > 1)
+            {
+                return Result.Failure(Error.Validation(
+                    $"Subprocess step '{step.Title}' maps parent artifact '{artifact.Title}' to child step '{artifact.SubprocessChildStepKey}' artifact '{artifact.SubprocessChildArtifactTitle}', but multiple child artifact expectations matched in subprocess definition '{step.SubprocessDefinitionSnapshotName}' ({subprocessDefinitionId:D}).",
+                    "processes.subprocess-child-artifact-target-ambiguous"));
+            }
+
+            artifact.SubprocessChildArtifactExpectationId = matches[0].ArtifactId;
         }
 
         return Result.Success();
@@ -296,6 +383,173 @@ public sealed partial class ProcessesService
             _ => Error.Validation(
                 $"Process run cannot start because the published process graph contains a dependency cycle: {string.Join(" -> ", issue.StepLabels)}. Publish a corrected definition and try again.",
                 "processes.run-invalid-graph")
+        };
+    }
+
+    private static Error? CreateStrictLintGateError(
+        ProcessDefinitionLintResult lintResult,
+        string operation)
+    {
+        if (!lintResult.HasErrors)
+        {
+            return null;
+        }
+
+        var summary = string.Join(
+            " | ",
+            lintResult.Issues
+                .Where(issue => issue.Severity == ProcessDefinitionLintSeverity.Error)
+                .Take(3)
+                .Select(issue => $"{issue.Code}: {issue.StepTitle}"));
+        return Error.Validation(
+            $"Process definition lint blocked {operation}: {summary}. Run the lint dry-run and correct the strict issues before retrying.",
+            $"processes.{operation}.lint-blocked");
+    }
+
+    private static ProcessDefinitionLintMode ResolveEffectiveLintMode(
+        ProcessDefinitionLintMode requestedMode,
+        ProcessDefinition definition,
+        ProcessDefinitionContractMode contractMode)
+    {
+        var requiresStrictLint = requestedMode == ProcessDefinitionLintMode.Strict ||
+            contractMode == ProcessDefinitionContractMode.Strict ||
+            RequiresStrictLint(definition.Criticality, definition.AutonomyLevel);
+
+        return requiresStrictLint
+            ? ProcessDefinitionLintMode.Strict
+            : ProcessDefinitionLintMode.Advisory;
+    }
+
+    private static bool RequiresStrictLint(
+        ProcessCriticality criticality,
+        ProcessAutonomyLevel autonomyLevel)
+    {
+        return criticality is ProcessCriticality.High or ProcessCriticality.MissionCritical ||
+            autonomyLevel is ProcessAutonomyLevel.Guarded or ProcessAutonomyLevel.Delegated;
+    }
+
+    private static ProcessDefinitionEditorModel BuildLintEditorModel(
+        ProcessDefinition definition,
+        ProcessDefinitionVersion version,
+        IReadOnlyList<ProcessRoleRequirement> roles,
+        IReadOnlyList<ProcessStepDefinition> steps,
+        IReadOnlyList<ProcessStepRoleAssignmentRequirement> stepRoleRequirements,
+        IReadOnlyList<ProcessStepBranchOutcomeDefinition> branchOutcomes,
+        IReadOnlyList<ProcessArtifactExpectation> artifactExpectations)
+    {
+        return new ProcessDefinitionEditorModel
+        {
+            Id = definition.Id,
+            ProjectId = definition.ProjectId,
+            WorkingVersionId = version.Id,
+            Name = definition.Name,
+            Summary = definition.Summary,
+            ValueStatement = definition.ValueStatement,
+            CustomerName = definition.CustomerName,
+            OwnerName = definition.OwnerName,
+            InterfaceContractSummary = definition.InterfaceContractSummary,
+            GovernanceNotes = definition.GovernanceNotes,
+            ChangeSummary = version.ChangeSummary,
+            GovernancePolicySummary = version.GovernancePolicySummary,
+            ConstitutionRuleSummary = version.ConstitutionRuleSummary,
+            OperatingModeSummary = version.OperatingModeSummary,
+            SimulationReadinessSummary = version.SimulationReadinessSummary,
+            Criticality = definition.Criticality,
+            AutonomyLevel = definition.AutonomyLevel,
+            ContractMode = version.ContractMode,
+            Status = definition.Status,
+            Roles = roles
+                .Select(role => new ProcessRoleEditorModel
+                {
+                    Id = role.Id,
+                    Key = role.Key,
+                    DisplayName = role.DisplayName,
+                    Purpose = role.Purpose,
+                    StaffingIntent = role.StaffingIntent,
+                    PreferredExecutorKind = role.PreferredExecutorKind,
+                    PreferredWorkflowDefinitionId = role.PreferredWorkflowDefinitionId,
+                    PreferredWorkflowVersionId = role.PreferredWorkflowVersionId,
+                    PreferredProjectAssignmentRole = role.PreferredProjectAssignmentRole,
+                    IsRequired = role.IsRequired,
+                    AllowsFallback = role.AllowsFallback,
+                    RequiresExplicitApproval = role.RequiresExplicitApproval,
+                    DefaultAllocationPercent = role.DefaultAllocationPercent,
+                    RoleTemplateSourceKey = role.RoleTemplateSourceKey,
+                    RoleTemplateSnapshotName = role.RoleTemplateSnapshotName,
+                    SnapshotSummary = role.SnapshotSummary
+                })
+                .ToList(),
+            Steps = steps
+                .Select(step => new ProcessStepEditorModel
+                {
+                    Id = step.Id,
+                    Key = step.Key,
+                    Title = step.Title,
+                    Subtitle = step.Subtitle,
+                    Notes = step.Notes,
+                    StepKind = step.StepKind,
+                    AllowedOperations = ProcessStepOperationContractState.NormalizeDeclaredAllowedOperations(
+                        step.StepKind,
+                        step.AllowedOperations,
+                        step.OperationTargetScope),
+                    OperationTargetScope = step.OperationTargetScope,
+                    SubprocessDefinitionId = step.SubprocessDefinitionId,
+                    SubprocessDefinitionSnapshotName = step.SubprocessDefinitionSnapshotName,
+                    AllowsManualSkip = step.AllowsManualSkip,
+                    AllowsSafeRefusal = step.AllowsSafeRefusal,
+                    RequiresApproval = step.RequiresApproval,
+                    RequiresDecisionRecord = step.RequiresDecisionRecord,
+                    InputContractSummary = step.InputContractSummary,
+                    OutputContractSummary = step.OutputContractSummary,
+                    EvidenceContractSummary = step.EvidenceContractSummary,
+                    DecisionRightsSummary = step.DecisionRightsSummary,
+                    ExceptionPolicySummary = step.ExceptionPolicySummary,
+                    TargetLeadHours = step.TargetLeadHours,
+                    DecisionRoleRequirementId = step.DecisionRoleRequirementId,
+                    BranchOutcomes = branchOutcomes
+                        .Where(outcome => outcome.StepDefinitionId == step.Id)
+                        .OrderBy(outcome => outcome.DisplayOrder)
+                        .Select(outcome => new ProcessStepBranchOutcomeEditorModel
+                        {
+                            Id = outcome.Id,
+                            Key = outcome.Key,
+                            Title = outcome.Title,
+                            Description = outcome.Description
+                        })
+                        .ToList(),
+                    RoleAssignments = stepRoleRequirements
+                        .Where(requirement => requirement.StepDefinitionId == step.Id)
+                        .Select(requirement => new ProcessStepRoleRequirementEditorModel
+                        {
+                            Id = requirement.Id,
+                            RoleRequirementId = requirement.RoleRequirementId,
+                            ResponsibilityKind = requirement.ResponsibilityKind,
+                            IsRequired = requirement.IsRequired,
+                            FallbackOrder = requirement.FallbackOrder,
+                            RebindPolicySummary = requirement.RebindPolicySummary
+                        })
+                        .ToList(),
+                    ArtifactExpectations = artifactExpectations
+                        .Where(expectation => expectation.StepDefinitionId == step.Id)
+                        .Select(expectation => new ProcessArtifactExpectationEditorModel
+                        {
+                            Id = expectation.Id,
+                            ArtifactKind = expectation.ArtifactKind,
+                            Title = expectation.Title,
+                            IsRequired = expectation.IsRequired,
+                            TrustRequirement = expectation.TrustRequirement,
+                            SensitivityLevel = expectation.SensitivityLevel,
+                            RetentionDays = expectation.RetentionDays,
+                            AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
+                            ValidationRequirementSummary = expectation.ValidationRequirementSummary,
+                            WorkflowOutputId = expectation.WorkflowOutputId,
+                            WorkflowOutputName = expectation.WorkflowOutputName,
+                            WorkflowOutputKind = expectation.WorkflowOutputKind,
+                            SubprocessChildArtifactExpectationId = expectation.SubprocessChildArtifactExpectationId
+                        })
+                        .ToList()
+                })
+                .ToList()
         };
     }
 

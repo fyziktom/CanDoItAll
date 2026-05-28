@@ -191,7 +191,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-slice-intake.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 1,
@@ -208,7 +215,7 @@
       "OutputContractSummary": "Implementation plan and architecture decision or explicit no-ADR rationale.",
       "EvidenceContractSummary": "Touched boundaries, intended file set, source-of-truth decision, and risks.",
       "DecisionRightsSummary": "Feature architect can block or split the feature when ownership or layering is unclear.",
-      "ExceptionPolicySummary": "Block on unclear canonical ownership, missing scaffold, unsafe cross-layer leakage, or scope requiring a separate subprocess.",
+      "ExceptionPolicySummary": "Block on unclear canonical ownership, missing scaffold, unsafe cross-layer leakage, scope requiring a separate subprocess, or artifact recovery when required decision evidence is missing or invalid before branch routing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "feature-slice-intake",
       "DependsOnBranchOutcomeKey": "",
@@ -274,7 +281,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/implementation-approach.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 2,
@@ -291,7 +306,7 @@
       "OutputContractSummary": "Validation contract with required tests, commands, exit-code expectations, and UI proof when applicable.",
       "EvidenceContractSummary": "Mapped acceptance criteria to test/proof actions and any known validation gaps.",
       "DecisionRightsSummary": "Validation owner can require a narrower implementation or additional proof when the behavior cannot be validated deterministically.",
-      "ExceptionPolicySummary": "Block when no focused validation route exists or when the app cannot run without missing environment configuration.",
+      "ExceptionPolicySummary": "Block when no focused validation route exists, when the app cannot run without missing environment configuration, or artifact recovery is required for missing or invalid validation-contract evidence before branch routing.",
       "TargetLeadHours": 2,
       "DependsOnStepKey": "implementation-approach",
       "DependsOnBranchOutcomeKey": "",
@@ -349,7 +364,15 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/test-contract.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 3,
@@ -432,7 +455,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/code-change.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "MutateProductTarget",
+        "RunValidation",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetMutable"
     },
     {
       "Order": 4,
@@ -514,7 +546,16 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/targeted-validation.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "RunValidation",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,
@@ -589,7 +630,14 @@
       "PromptRefs": [],
       "DocRefs": [
         "processes/dotnet-feature-function-implementation/steps/feature-handoff.md"
-      ]
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     }
   ]
 }

@@ -83,7 +83,7 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
 
             try
             {
-                await process.WaitForExitAsync(linkedCancellation.Token).ConfigureAwait(false);
+                await WaitForProcessExitOnlyAsync(process, linkedCancellation.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (timeout.IsCancellationRequested)
             {
@@ -179,11 +179,45 @@ public sealed class LocalWorkspaceProcessHost : IWorkspaceProcessHost
     {
         try
         {
-            await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            await WaitForProcessExitOnlyAsync(process, timeout.Token).ConfigureAwait(false);
         }
         catch
         {
             // Best-effort only after timeout or cancellation.
+        }
+    }
+
+    private static async Task WaitForProcessExitOnlyAsync(Process process, CancellationToken cancellationToken)
+    {
+        if (process.HasExited)
+        {
+            return;
+        }
+
+        var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        void OnExited(object? sender, EventArgs args)
+        {
+            completion.TrySetResult(null);
+        }
+
+        process.EnableRaisingEvents = true;
+        process.Exited += OnExited;
+
+        try
+        {
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            using var registration = cancellationToken.Register(() => completion.TrySetCanceled(cancellationToken));
+            await completion.Task.ConfigureAwait(false);
+        }
+        finally
+        {
+            process.Exited -= OnExited;
         }
     }
 
