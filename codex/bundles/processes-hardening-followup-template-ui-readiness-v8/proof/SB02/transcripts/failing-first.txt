@@ -1,4 +1,0 @@
-Command: Assert MAF process run detail tool data exposes ProcessRunHealthSummaryViewModel Health
-Invariant: SB02-INV-001
-Missing Health summary on InternalProcessRunDetailToolData; MAF run detail is thinner than HTTP ProcessRunDetail.
-ExitCode: 1

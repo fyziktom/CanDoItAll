@@ -1,6 +1,0 @@
-Command: Get-FileHash for SB01 changed and asserted files
-Invariant: SB01-INV-001
-F331787BD5918903322EB2AB43653A23244A11E21D0822DA8E0CE1C2E0BDC1D3  repo://tests/CanDoItAll.Tests.Integration/ProcessStepRecoveryOptionContractTests.cs
-B98A85832DE2179B0EAEC6F6C6EB760A8F0610CE729DFB814DCAB7C04635948D  repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs
-510EAB4DDF72F0818FB969434BAA709B2BFDEE42F91996DD9A759FEDD0C89EB7  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs
-ExitCode: 0

@@ -1,3 +1,0 @@
-Command: rg -n "TODO|NotImplementedException|throw new NotImplementedException" Templates/Processes/seed-catalog/baseline-scenarios.json src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs -S
-ExitCode: 1
-SB10-INV-001 anti-stub audit: no TODO or NotImplementedException markers found in baseline scenario data or production process code relevant to current-run evidence. Exit code 1 is expected because rg found no matches.

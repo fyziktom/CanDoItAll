@@ -1,5 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|branch-specific|return default" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs -S
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB01 anti-stub audit; exit 1 means no matches from rg
-No stub markers found.
-ExitCode: 0

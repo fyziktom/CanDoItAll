@@ -1,9 +1,0 @@
-﻿Command: rg -n "process hardening source assertions" src tests
-ExitCode: 0
-Invariant ID: SB03-INV-001
-Source assertions:
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs line 210 evaluates disposition routing before hard blocking.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs line 608 resolves branch outcomes for artifact validation failures.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs line 623 classifies hard-blocking failures.
-- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 13201 covers repair routing.
-

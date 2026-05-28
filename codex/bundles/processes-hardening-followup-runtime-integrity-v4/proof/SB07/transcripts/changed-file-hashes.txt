@@ -1,6 +1,0 @@
-# SB07 changed-file-hashes.txt
-
-```text
-ADDB1AECC04866BB7E22BF191FF0E4EB5D32A13B74CD7E21D266B8ADCE939054  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
-7FA434375BF1D776367559A058118C2C76A8BE6C809EF08F0D57135CDC9A2CCE  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
-```

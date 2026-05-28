@@ -1,5 +1,0 @@
-Invariant ID: SB01-INV-001
-Command: rg -n 'Microsoft\.Agents\.AI|Microsoft\.Agents\.AI\.A2A|Microsoft\.Agents\.AI\.Workflows|Microsoft\.Agents\.AI\.OpenAI' src\CanDoItAll.AgentFramework.Maf src\CanDoItAll.AgentFramework.Hosting -S
-Result: MAF 1.6 package references and hosting A2A package references are present. Stale 1.3 scan under src/tests returned no matches with exit code 1 as expected.
-Exit code: 0
-

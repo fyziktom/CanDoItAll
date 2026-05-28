@@ -1,4 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" <SB04 changed paths>
-Invariant: SB04-INV-001
-No stub markers found in SB04 changed paths.
-ExitCode: 0

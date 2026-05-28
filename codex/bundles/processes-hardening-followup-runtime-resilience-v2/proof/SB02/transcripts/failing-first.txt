@@ -1,8 +1,0 @@
-# SB02 failing-first.txt
-
-Command: `dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-restore --filter "FullyQualifiedName~AgentToolInvocationPolicyTests|FullyQualifiedName~AgentWorkspaceToolAccessMetadataTests"`
-Working directory: `C:\repositories\CanDoItAll`
-Run label: SB02-INV-001 failing-first/red-team.
-ExitCode: 1
-Pre-change failure summary: failing assertions expected because product-mutation metadata was not passed into tool policy and prompt-grounded aliases could remain writable.
-Red-team cases added before implementation: `EvaluateAsync_denies_external_product_mutation_when_process_step_disallows_product_mutation`, `EvaluateAsync_denies_managed_output_product_write_when_process_step_disallows_product_mutation`, `EvaluateAsync_allows_current_run_artifact_when_process_step_disallows_product_mutation`, and `GroundPromptExternalTargetAliases_adds_prompt_absolute_path_as_readonly_alias_when_process_step_disallows_product_mutation`.

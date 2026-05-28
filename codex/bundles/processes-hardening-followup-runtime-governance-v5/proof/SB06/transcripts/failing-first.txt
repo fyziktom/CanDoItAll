@@ -1,5 +1,0 @@
-Command: red-team pre-fix/shallow-behavior check for SB06-INV-001
-ExitCode: 1
-Invariant ID: SB06-INV-001
-Expected rejected case: Same-kind heuristic mapping is rejected when multiple workflow or subprocess outputs conflict.
-Result: non-zero is intentional for the failing-first or adversarial case. The shallow implementation cannot satisfy SB06.

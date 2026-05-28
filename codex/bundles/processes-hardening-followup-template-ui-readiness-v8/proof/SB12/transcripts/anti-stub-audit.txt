@@ -1,1 +1,0 @@
-No TODO, NotImplemented, or throw new NotImplementedException implementation stub markers found in SB12 changed/asserted paths. The audit excludes the literal test fixture phrase "TODO register" because it is domain data, not a stub marker.

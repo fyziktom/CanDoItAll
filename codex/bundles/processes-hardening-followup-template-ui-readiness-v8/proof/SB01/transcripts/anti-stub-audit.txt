@@ -1,4 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" src/CanDoItAll.Modules.Processes/Definitions src/CanDoItAll.Modules.Processes/Runtime tests/CanDoItAll.Tests.Integration/ProcessStepRecoveryOptionContractTests.cs -S
-Invariant: SB01-INV-001
-Audit result: no TODO, NotImplemented, or throw new NotImplementedException markers found in SB01 source/test scope.
-ExitCode: 0

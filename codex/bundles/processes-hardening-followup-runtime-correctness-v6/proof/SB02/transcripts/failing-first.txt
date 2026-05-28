@@ -1,7 +1,0 @@
-Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~RecordArtifactAsync_SB02_INV_001_dedupes_long_display_keys_by_projection_identity_hash"
-ExitCode: 1
-
-SB02-INV-001 red-team note:
-- A failing-first run was not practical because the reviewed branch already queried by `ProjectionIdentityHash` before `ExternalReferenceKey`.
-- The added long-display-key variation would fail a shallow implementation that dedupes only by bounded external reference key or stores a hash disconnected from persisted lineage.
-

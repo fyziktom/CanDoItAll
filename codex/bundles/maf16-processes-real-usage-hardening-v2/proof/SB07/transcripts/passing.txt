@@ -1,6 +1,0 @@
-Invariant ID: SB07-INV-001
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter FullyQualifiedName=CanDoItAll.Tests.Integration.MafAgentRuntimeHandoffTests.Handoff_workflow_transfers_from_entry_agent_to_target_agent
-Test name: CanDoItAll.Tests.Integration.MafAgentRuntimeHandoffTests.Handoff_workflow_transfers_from_entry_agent_to_target_agent
-Result: Passed 1 test; scripted MAF handoff transferred from entry agent to QA agent.
-Exit code: 0
-

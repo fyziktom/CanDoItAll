@@ -1,8 +1,0 @@
-Command: rg -n "SerializeNormalized|ProjectionIdentityHash|ProjectionLineageJson|RecordArtifactAsync_SB02_INV_001|RecordArtifactAsync_SB05_INV_001" src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
-ExitCode: 0
-
-SB02-INV-001 source assertions:
-- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.Operations.cs normalizes lineage, queries by `ProjectionIdentityHash`, and stores `ProjectionLineageJson` through `SerializeNormalized`.
-- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessArtifactProjectionLineage.cs exposes `SerializeNormalized` to avoid recomputing identity for already-normalized lineage.
-- repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs proves dedupe by identity hash with different display keys and long display keys.
-

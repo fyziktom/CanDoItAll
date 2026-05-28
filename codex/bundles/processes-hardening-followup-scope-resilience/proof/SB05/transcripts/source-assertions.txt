@@ -1,9 +1,0 @@
-﻿Command: rg -n "process hardening source assertions" src tests
-ExitCode: 0
-Invariant ID: SB05-INV-001
-Source assertions:
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs line 696 detects runtime-log signals conservatively.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs line 893 checks subprocess lineage by subprocess run id.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs line 926 requires valid JSON when JSON format is declared.
-- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 12994 starts the validation tuning test block.
-

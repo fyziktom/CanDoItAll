@@ -1,3 +1,0 @@
-Command: rg -n "ExternalProductTargetReadOnly|ExternalActionControlled|MutateProductTarget|implement-blazor-change|repair-blazor-findings" Templates/Processes/processes/blazor-app-delivery/definition.json tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs -S
-ExitCode: 0
-SB03-INV-001 source proof: repo://Templates/Processes/processes/blazor-app-delivery/definition.json keeps mutation on implementation/repair contracts; repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs asserts read-only validation/writeback/escalation boundaries.

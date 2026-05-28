@@ -1,7 +1,0 @@
-Command: source assertion review for SB04
-ExitCode: 0
-Invariant ID: SB04-INV-001
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
-- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
-Result: production source paths exist and contain the shipped behavior asserted by bundle://proof/SB04/manifest.md.

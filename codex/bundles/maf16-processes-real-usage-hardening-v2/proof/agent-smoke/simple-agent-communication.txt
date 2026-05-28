@@ -1,6 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter "FullyQualifiedName=CanDoItAll.Tests.Integration.MafAgentRuntimeHandoffTests.Handoff_workflow_transfers_from_entry_agent_to_target_agent"
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 269 ms - CanDoItAll.Tests.Integration.dll (net10.0)
-Exit code: 0

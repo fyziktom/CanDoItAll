@@ -1,4 +1,0 @@
-Command: rg -n "9bbc0667-9d12-4506-ba81-654ef924cad6|0610f6d6-5d37-4313-b560-09cc9484f5b8" src tests -S
-Exit code: 1
-Invariant ID: SB14-INV-001
-Adversarial negative proof: the live failed run and step identifiers are preserved in bundle inputs, not hard-coded into production or test source. This rejects a branch-specific fix for Validate skills, tools, and agent capability behavior after the upgrade.

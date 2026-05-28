@@ -1,8 +1,0 @@
-Command: rg -n "RemoveWritableCoveredReadOnlyExternalTargetAliases|IsExternalTargetAliasCoveredByAny|EvaluateReadOnlyExternalTargetMutation|IsAllowedExternalTargetAlias\(referencedAlias" src\CanDoItAll.AgentFramework.Core\Execution\ExecutionInvocationMetadata.cs src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs
-ExitCode: 0
-
-SB01-INV-001 source assertions:
-- repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs calls `RemoveWritableCoveredReadOnlyExternalTargetAliases` after prompt alias merge.
-- repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs removes read-only aliases equal to or below trusted writable roots.
-- repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs skips read-only denial when the referenced alias is covered by writable aliases.
-

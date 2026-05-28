@@ -1,8 +1,0 @@
-Command: Get-FileHash -Algorithm SHA256 <changed source files>
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB01 changed file hashes
-3880795eafd95aa7ff524e04b00c9c2be79f40e459e594533a91a42c79915f71  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
-93010ebe0db08b57091c870e93b92b3e8f19bd6499b780a6430f55dc2c0e585c  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.StepTransitions.cs
-3a21ec7a087ab90ec5880820521c1328efd1d9bdbec586e67289d262e8116428  repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeViewModels.cs
-b81e7f56ad7e56b8c64d1cca7ffb2fe814d7583496019d9c43d7b3f0cc6f3fb7  repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-ExitCode: 0

@@ -1,5 +1,0 @@
-Invariant ID: SB06-INV-001
-Command: dotnet restore CanDoItAll.slnx; dotnet build CanDoItAll.slnx --no-restore; dotnet test targeted MAF/process/component buckets
-Result: Restore exit 0, build exit 0, unit bucket 288 passed, integration bucket 726 passed, component bucket 99 passed.
-Exit code: 0
-

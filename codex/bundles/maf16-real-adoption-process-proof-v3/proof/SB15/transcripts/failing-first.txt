@@ -1,3 +1,0 @@
-# SB15 failing-first.txt
-
-Pending.

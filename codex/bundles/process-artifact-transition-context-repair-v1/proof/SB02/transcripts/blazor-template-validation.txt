@@ -1,8 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore --filter "FullyQualifiedName~ProcessTemplateGovernanceTests" -p:BaseOutputPath=.artifacts\codex-test-bin\sb01-passing\
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB02 Blazor template governance validation
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\.artifacts\codex-test-bin\sb01-passing\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:    10, Přeskočeno:     0, Celkem:    10, Doba trvání: 1 m 55 s - CanDoItAll.Tests.Integration.dll (net10.0)
-ExitCode: 0

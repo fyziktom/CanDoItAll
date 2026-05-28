@@ -1,8 +1,0 @@
-COMMAND: git diff --check -- codex\skills\candoitall-api-processes\SKILL.md Templates\Processes\README.md
-warning: in the working copy of 'Templates/Processes/README.md', LF will be replaced by CRLF the next time Git touches it
-warning: in the working copy of 'codex/skills/candoitall-api-processes/SKILL.md', LF will be replaced by CRLF the next time Git touches it
-git diff --check passed for SB13 documentation and skill edits.
-COMMAND: Get-FileHash -Algorithm SHA256 repo skill, active skill, and Templates/Processes/README.md
-SHA256 15D7DB8DC03DD7AF8ECA76524E999C069F91D21F39D11FFFC93005CF89F45E7A C:\repositories\CanDoItAll\codex\skills\candoitall-api-processes\SKILL.md
-SHA256 15D7DB8DC03DD7AF8ECA76524E999C069F91D21F39D11FFFC93005CF89F45E7A C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md
-SHA256 B358C141EA6422BEF4DCF7CB4A6035B21FBA9F1890828518E977A02B2A4714E8 C:\repositories\CanDoItAll\Templates\Processes\README.md

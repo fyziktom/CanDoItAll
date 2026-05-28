@@ -1,3 +1,0 @@
-Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessTemplateGovernanceTests"
-ExitCode: 0
-SB02-INV-001 semantic positive proof: ProcessTemplateGovernanceTests passed 7/7, including Blazor_wasm_pwa_live_run_profile_SB02_INV_001_starts_fresh_and_takes_topic_from_run_request and Blazor_wasm_pwa_baseline_SB05_INV_001_keeps_app_topic_generic_in_scenario_data.

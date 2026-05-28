@@ -1,5 +1,0 @@
-Command: SB13 proof transcript: anti-stub-audit.txt
-ExitCode: 0
-
-No TODO/HACK/STUB/NotImplementedException/XML documentation comment markers found in SB13 changed production/test files.
-

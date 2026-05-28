@@ -1,7 +1,0 @@
-Command: git show HEAD:<operator artifact UI files>; assert finalizer status/action/owner are rendered
-ExitCode: 1
-Output:
-SB12-INV-001
-Failing-first negative proof against repository HEAD before this worktree change.
-Missing required operator visibility tokens in HEAD: Finalizer status:, Suggested action:, Failure owner:, ValidationSuggestedAction
-This shows operators previously lacked explicit finalizer status, suggested action, and owner text.

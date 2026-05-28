@@ -1,8 +1,0 @@
-Command: dotnet focused runtime-governance proof set for SB02
-ExitCode: 0
-Invariant ID: SB02-INV-001
-Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_SB02_INV_001_denies_validation_without_run_validation_operation
-Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_SB02_INV_002_allows_validation_when_run_validation_operation_is_allowed
-Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_SB02_INV_003_denies_runtime_launch_without_launch_runtime_operation
-Test name: CanDoItAll.Tests.Unit.AgentToolInvocationPolicyTests.EvaluateAsync_SB02_INV_004_allows_artifact_only_write_under_current_run_artifacts
-Result: passing proof completed for SB02. The executed focused proof set included these tests and exited successfully.

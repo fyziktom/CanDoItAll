@@ -1,5 +1,0 @@
-Command: red-team pre-fix/shallow-behavior check for SB01-INV-001
-ExitCode: 1
-Invariant ID: SB01-INV-001
-Expected rejected case: Text-only contract inference or editor-only state cannot satisfy the invariant.
-Result: non-zero is intentional for the failing-first or adversarial case. The shallow implementation cannot satisfy SB01.

@@ -1,9 +1,0 @@
-﻿Command: rg -n "process hardening source assertions" src tests
-ExitCode: 0
-Invariant ID: SB07-INV-001
-Source assertions:
-- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs line 35 defines ProcessDefinitionLinter.
-- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionLinter.cs line 21 builds dry-run summaries.
-- repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs line 5 defines the linter test suite.
-- repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs line 137 covers legal decision log false-positive avoidance.
-

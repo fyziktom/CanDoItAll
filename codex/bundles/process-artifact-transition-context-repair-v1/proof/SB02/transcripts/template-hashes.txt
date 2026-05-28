@@ -1,8 +1,0 @@
-Command: Get-FileHash -Algorithm SHA256 <Blazor template readiness files>
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB02 source file hashes
-f1d19cc59a6d819922c9b5423d5fa5062b496519158f137893e428af4bd9a483  repo://Templates/Processes/README.md
-37e343d7fbe57dbdb0c4dc863bf1fb232f6fe4c7ed5feeb2479a3e185ebc0f5d  repo://Templates/Processes/processes/blazor-app-delivery/definition.json
-6292fadff8307eaf618c7a0ad8336b3d21bd1dceafb0d7994f0d7071c7d7bb3c  repo://Templates/Processes/seed-catalog/live-run-profiles.json
-41e7c2cafcc85908370beb6b7fbcad57b117bc05d1d1d909acf796970266c8cc  repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
-ExitCode: 

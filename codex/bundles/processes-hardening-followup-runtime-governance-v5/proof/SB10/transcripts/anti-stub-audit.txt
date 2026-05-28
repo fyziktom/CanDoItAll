@@ -1,4 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|stub" source paths for SB10
-ExitCode: 0
-Invariant ID: SB10-INV-001
-Result: no stub-only production implementation found for SB10. Test doubles are limited to test code where used.

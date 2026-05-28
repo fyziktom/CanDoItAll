@@ -1,3 +1,0 @@
-Command: rg -n "projectionLineage|externalReferenceKey|current-run|stale|Blazor project-structure writeback receipt|baseline-blazor-wasm-pwa-app" Templates/Processes src tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S
-ExitCode: 0
-SB10-INV-001 source proof: repo://Templates/Processes/seed-catalog/baseline-scenarios.json uses generic current-run evidence names; repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs keeps stale/current-run alias checks; repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs asserts the generic writeback receipt.

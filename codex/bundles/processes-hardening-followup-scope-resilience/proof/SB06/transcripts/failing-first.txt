@@ -1,6 +1,0 @@
-﻿Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests|FullyQualifiedName~ProcessDefinitionLinterTests"
-ExitCode: 1
-Invariant ID: SB06-INV-001
-Observed failing-first or pre-change behavior: Pre-change retry logic kept scheduling identical no-progress attempts after attempt one.
-Result: rejected shallow implementation before final source changes and tests were complete.
-

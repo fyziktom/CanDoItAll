@@ -1,9 +1,0 @@
-ExitCode: 0
-
-Command: Get-FileHash -Algorithm SHA256 <SB07 changed paths>
-F4062287850377984FE36215A9841563EFA0786D75DA0F07CEA58E78030ED2F8  src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs
-43BBE455FD1621CBF939E0B70FD57A9B3A11423849F752B5BCDD33CB0034C467  tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs
-FF7E54680DAFA5489B65D8FDCE7EB99C7229ECEE813E1C2EE26D5EFC9D659C9D  tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs
-E2DB6D2EF94E6EBC9FCB0B56F7245894440D965D5B7101576E8490669447A948  Templates\Processes\processes\app-page-screenshot\definition.json
-29866620D853DECC0C3FD1E700871C85B474635274605AC4B3EF43E6C5282E8F  Templates\Processes\processes\app-pages-screenshot-set\definition.json
-79B7825DB5E84E588A2198E8B46A2BE4864C2C88467FB6495994DE6AF26056BE  Templates\Processes\processes\app-layout-image-generation\definition.json

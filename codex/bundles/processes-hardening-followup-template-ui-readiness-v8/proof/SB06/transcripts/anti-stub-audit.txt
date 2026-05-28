@@ -1,5 +1,0 @@
-Command: rg -n --pcre2 "NotImplemented|throw new NotImplementedException|TODO(?! register)" <SB06 changed/asserted paths>
-Invariant: SB06-INV-001
-Note: Existing ProcessRunAutomationDispatchServiceTests fixture text uses the literal title "TODO register" and is excluded as test data, not an implementation stub.
-No implementation stub markers found in SB06 changed/asserted paths.
-ExitCode: 0

@@ -1,9 +1,0 @@
-﻿Command: rg -n "process hardening source assertions" src tests
-ExitCode: 0
-Invariant ID: SB02-INV-001
-Source assertions:
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line 799 projects completed subprocess artifacts before finalizer transition.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line 803 uses ProcessStepCompletionExecutorKind.SubprocessParent.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line 958 records projection gaps instead of synthetic artifacts.
-- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs line 13181 asserts direct, workflow, and subprocess paths use the process-owned finalizer.
-

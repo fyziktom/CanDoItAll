@@ -1,4 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|stub" source paths for SB07
-ExitCode: 0
-Invariant ID: SB07-INV-001
-Result: no stub-only production implementation found for SB07. Test doubles are limited to test code where used.

@@ -1,4 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" <SB02 production/test paths>
-Invariant: SB02-INV-001
-No stub markers found in SB02-touched/asserted files.
-ExitCode: 0

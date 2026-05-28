@@ -1,9 +1,0 @@
-# SB02 changed-file-hashes.txt
-
-Command: Get-FileHash -Algorithm SHA256 tests\CanDoItAll.Tests.Unit\Maf16CapabilityReflectionTests.cs
-ExitCode: 0
-
-Invariant: SB02-INV-001
-Test: Maf16_symbols_are_classified_from_loaded_runtime_assemblies
-
-9FD915784BE199B5B25AA8C898FF8C1912354D6317ECAF1873C5ED43E51024C3 repo://tests/CanDoItAll.Tests.Unit/Maf16CapabilityReflectionTests.cs

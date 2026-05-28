@@ -1,6 +1,0 @@
-Command: Get-FileHash -Algorithm SHA256 changed files for SB10
-ExitCode: 0
-Invariant ID: SB10-INV-001
-- `723a55dcba4d78b63c9ea24f6d820e95ce6694a86bfd30d75f0b18b893bc6af8`  `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `3083277fccf897fb6a73f49bef706d3584fd0250164f245b831a0309f01fccc6`  `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`
-- `834d86d0959e3672f7b21ebed2b33f3bdb0a99f3b233d3dab3821eada9651f43`  `repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs`

@@ -1,8 +1,0 @@
-Command: source assertion review for SB10
-ExitCode: 0
-Invariant ID: SB10-INV-001
-- repo://tests/CanDoItAll.Tests.Integration/ProcessDefinitionLinterTests.cs
-- repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
-- repo://tests/CanDoItAll.Tests.Components/ProcessDefinitionFormTests.cs
-- repo://src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs
-Result: production source paths exist and contain the shipped behavior asserted by bundle://proof/SB10/manifest.md.

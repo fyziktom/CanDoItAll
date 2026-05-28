@@ -1,3 +1,0 @@
-Command: rg -n "baseline-blazor-wasm-pwa-tetris|Tetris project-structure|gameplay assertion" Templates/Processes tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -S
-ExitCode: 1
-SB10-INV-001 adversarial negative proof: stale sample-specific baseline/writeback evidence names no longer satisfy process/template proof fixtures. Exit code 1 is expected because rg found no matches.

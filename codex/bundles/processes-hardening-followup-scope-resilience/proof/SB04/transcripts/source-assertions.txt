@@ -1,9 +1,0 @@
-﻿Command: rg -n "process hardening source assertions" src tests
-ExitCode: 0
-Invariant ID: SB04-INV-001
-Source assertions:
-- repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessRuntimeEventTypes.cs line 14 defines missing-upstream-artifact-materialization-requested.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line 126 checks missing upstream materialization before normal dispatch.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line 1370 records the durable fingerprint event.
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line 1428 creates the fingerprint.
-

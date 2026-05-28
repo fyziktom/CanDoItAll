@@ -1,7 +1,0 @@
-Command: Get-FileHash -Algorithm SHA256 changed files for SB05
-ExitCode: 0
-Invariant ID: SB05-INV-001
-- `9851efe5465d906abe3d79948fbf935e01eae9313433191fd496a3ea4e9e88b3`  `repo://src/CanDoItAll.Modules.Processes/Runtime/ProcessArtifactProjectionLineage.cs`
-- `55b75f3c802b11749d24305820afeb6a3b9e5444af643e37dd20ab83275b2f0a`  `repo://src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs`
-- `3fffed059ebc5e6d14fb1ca8c1806bcac8418c919b4dcaadb0f8be7950221bd4`  `repo://src/CanDoItAll.Migrations.PostgreSql/Migrations/20260525184500_ProcessRuntimeGovernanceV5.cs`
-- `3083277fccf897fb6a73f49bef706d3584fd0250164f245b831a0309f01fccc6`  `repo://tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs`

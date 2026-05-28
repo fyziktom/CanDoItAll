@@ -1,3 +1,0 @@
-# SB12 failing-first.txt
-
-Pending.

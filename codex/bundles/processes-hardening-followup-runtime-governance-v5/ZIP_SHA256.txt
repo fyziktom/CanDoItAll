@@ -1,1 +1,0 @@
-Archive SHA-256 is provided in the final ChatGPT response to avoid self-referential hash changes.

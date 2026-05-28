@@ -1,9 +1,0 @@
-Command: source assertion review for SB02
-ExitCode: 0
-Invariant ID: SB02-INV-001
-- repo://src/CanDoItAll.AgentFramework.Core/Execution/ExecutionInvocationMetadata.cs
-- repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs
-- repo://src/CanDoItAll.AgentFramework.Core/Workspace/Audit/WorkspaceExecutionAuditContext.cs
-- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs
-- repo://tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs
-Result: production source paths exist and contain the shipped behavior asserted by bundle://proof/SB02/manifest.md.
