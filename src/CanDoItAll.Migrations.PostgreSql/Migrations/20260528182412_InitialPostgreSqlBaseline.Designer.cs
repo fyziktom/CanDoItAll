@@ -12,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CanDoItAll.Migrations.PostgreSql.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260524144716_ProcessStepAutomationDispatchClaims")]
-    partial class ProcessStepAutomationDispatchClaims
+    [Migration("20260528182412_InitialPostgreSqlBaseline")]
+    partial class InitialPostgreSqlBaseline
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -11252,6 +11253,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("StepDefinitionId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SubprocessChildArtifactExpectationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -11266,9 +11270,25 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("WorkflowOutputId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("WorkflowOutputKind")
+                        .HasMaxLength(48)
+                        .HasColumnType("character varying(48)");
+
+                    b.Property<string>("WorkflowOutputName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("StepDefinitionId");
+
+                    b.HasIndex("SubprocessChildArtifactExpectationId");
 
                     b.ToTable("Processes_ArtifactExpectations", (string)null);
                 });
@@ -11307,6 +11327,15 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("ProcessRunId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ProjectionIdentityHash")
+                        .IsRequired()
+                        .HasMaxLength(95)
+                        .HasColumnType("character varying(95)");
+
+                    b.Property<string>("ProjectionLineageJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("ProvenanceSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -11340,6 +11369,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.HasIndex("ProcessRunId");
 
                     b.HasIndex("StepRunId");
+
+                    b.HasIndex("ProcessRunId", "ProjectionIdentityHash")
+                        .IsUnique()
+                        .HasFilter("\"ProjectionIdentityHash\" <> ''");
 
                     b.ToTable("Processes_ArtifactRecords", (string)null);
                 });
@@ -11570,6 +11603,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<string>("ConstitutionRuleSummary")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("ContractMode")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
@@ -12648,6 +12686,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AllowedOperations")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<bool>("AllowsManualSkip")
                         .HasColumnType("boolean");
 
@@ -12693,6 +12735,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<string>("Notes")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<string>("OperationTargetScope")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<int>("OrderIndex")
                         .HasColumnType("integer");
@@ -12853,6 +12899,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<DateTimeOffset?>("AutomationDispatchLeaseExpiresAtUtc")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("BlockReasonCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<int>("BlockedMinutes")
                         .HasColumnType("integer");
 
@@ -12892,11 +12943,20 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("NextRecoveryAction")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<Guid>("ProcessRunId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ReadyAtUtc")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RecoveryOptionsJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("RefusalReason")
                         .IsRequired()

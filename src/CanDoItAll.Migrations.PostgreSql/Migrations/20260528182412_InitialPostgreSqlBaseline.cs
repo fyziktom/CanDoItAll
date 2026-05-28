@@ -6169,7 +6169,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     SensitivityLevel = table.Column<string>(type: "character varying(48)", maxLength: 48, nullable: false),
                     RetentionDays = table.Column<int>(type: "integer", nullable: false),
                     AllowedFutureUsageSummary = table.Column<string>(type: "TEXT", nullable: false),
-                    ValidationRequirementSummary = table.Column<string>(type: "TEXT", nullable: false)
+                    ValidationRequirementSummary = table.Column<string>(type: "TEXT", nullable: false),
+                    WorkflowOutputId = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: false),
+                    WorkflowOutputName = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: false),
+                    WorkflowOutputKind = table.Column<string>(type: "character varying(48)", maxLength: 48, nullable: true),
+                    SubprocessChildArtifactExpectationId = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -6193,6 +6197,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     ReviewSummary = table.Column<string>(type: "TEXT", nullable: false),
                     ManagedStoragePath = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     ExternalReferenceKey = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    ProjectionLineageJson = table.Column<string>(type: "TEXT", nullable: false),
+                    ProjectionIdentityHash = table.Column<string>(type: "character varying(95)", maxLength: 95, nullable: false),
                     CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -6294,6 +6300,7 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     ManagerAgentOverrideName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     ImportedFrom = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     ImportWarnings = table.Column<string>(type: "TEXT", nullable: false),
+                    ContractMode = table.Column<string>(type: "character varying(40)", maxLength: 40, nullable: false),
                     CreatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     UpdatedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     PublishedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -6413,6 +6420,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     Subtitle = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Notes = table.Column<string>(type: "TEXT", nullable: false),
                     StepKind = table.Column<string>(type: "character varying(48)", maxLength: 48, nullable: false),
+                    AllowedOperations = table.Column<string>(type: "TEXT", nullable: false),
+                    OperationTargetScope = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: true),
                     SubprocessDefinitionId = table.Column<Guid>(type: "uuid", nullable: true),
                     SubprocessDefinitionSnapshotName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     AllowsManualSkip = table.Column<bool>(type: "boolean", nullable: false),
@@ -6891,6 +6900,9 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     CurrentExecutorPartyId = table.Column<Guid>(type: "uuid", nullable: true),
                     DecisionSummary = table.Column<string>(type: "TEXT", nullable: false),
                     BlockedReason = table.Column<string>(type: "TEXT", nullable: false),
+                    BlockReasonCode = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
+                    RecoveryOptionsJson = table.Column<string>(type: "TEXT", nullable: false),
+                    NextRecoveryAction = table.Column<string>(type: "character varying(80)", maxLength: 80, nullable: false),
                     RefusalReason = table.Column<string>(type: "TEXT", nullable: false),
                     ExceptionSummary = table.Column<string>(type: "TEXT", nullable: false),
                     InputQualitySummary = table.Column<string>(type: "TEXT", nullable: false),
@@ -6904,6 +6916,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     BlockedMinutes = table.Column<int>(type: "integer", nullable: false),
                     ReworkCount = table.Column<int>(type: "integer", nullable: false),
                     CapabilityGapSeverity = table.Column<string>(type: "character varying(48)", maxLength: 48, nullable: false),
+                    AutomationDispatchClaimToken = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    AutomationDispatchClaimedBy = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: false),
+                    AutomationDispatchClaimedAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    AutomationDispatchLeaseExpiresAtUtc = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    AutomationDispatchAttemptCount = table.Column<int>(type: "integer", nullable: false),
                     ConcurrencyToken = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
@@ -9653,6 +9670,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                 column: "StepDefinitionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Processes_ArtifactExpectations_SubprocessChildArtifactExpec~",
+                table: "Processes_ArtifactExpectations",
+                column: "SubprocessChildArtifactExpectationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Processes_ArtifactRecords_ArtifactExpectationId",
                 table: "Processes_ArtifactRecords",
                 column: "ArtifactExpectationId");
@@ -9661,6 +9683,13 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                 name: "IX_Processes_ArtifactRecords_ProcessRunId",
                 table: "Processes_ArtifactRecords",
                 column: "ProcessRunId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Processes_ArtifactRecords_ProcessRunId_ProjectionIdentityHa~",
+                table: "Processes_ArtifactRecords",
+                columns: new[] { "ProcessRunId", "ProjectionIdentityHash" },
+                unique: true,
+                filter: "\"ProjectionIdentityHash\" <> ''");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Processes_ArtifactRecords_StepRunId",
@@ -10123,6 +10152,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Processes_StepRuns_ProcessRunId_AutomationDispatchLeaseExpi~",
+                table: "Processes_StepRuns",
+                columns: new[] { "ProcessRunId", "AutomationDispatchLeaseExpiresAtUtc" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Processes_StepRuns_ProcessRunId_Sequence",
                 table: "Processes_StepRuns",
                 columns: new[] { "ProcessRunId", "Sequence" },
@@ -10384,6 +10418,30 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                 table: "Workspace_ConnectorCommands",
                 columns: new[] { "Status", "ApprovalState", "NextAttemptAtUtc", "LeaseExpiresAtUtc" });
 
+            migrationBuilder.Sql(
+                """
+                CREATE INDEX "IX_Processes_Outbox_PendingClaimOrder"
+                ON "Processes_Outbox" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
+                INCLUDE ("Id", "CommandKey", "ProcessRunId", "LeaseExpiresAtUtc")
+                WHERE "Status" = 0;
+                """);
+
+            migrationBuilder.Sql(
+                """
+                CREATE INDEX "IX_Automation_EnvelopeDeliveries_DueClaimOrder"
+                ON "Automation_EnvelopeDeliveries" ("AvailableAtUtc", "CreatedAtUtc")
+                INCLUDE ("Id", "EnvelopeId", "State", "LockedAtUtc")
+                WHERE "State" IN (0, 1, 2);
+                """);
+
+            migrationBuilder.Sql(
+                """
+                CREATE INDEX "IX_Workspace_ConnectorCommands_PendingClaimOrder"
+                ON "Workspace_ConnectorCommands" ((COALESCE("NextAttemptAtUtc", "CreatedAtUtc")), "CreatedAtUtc")
+                INCLUDE ("Id", "ProjectId", "ConnectorPluginKey", "CommandKey", "LeaseExpiresAtUtc")
+                WHERE "Status" = 0 AND "ApprovalState" <> 1;
+                """);
+
             migrationBuilder.AddForeignKey(
                 name: "FK_CognitiveMemory_BeliefStates_CognitiveMemory_Claims_ClaimId",
                 table: "CognitiveMemory_BeliefStates",
@@ -10564,6 +10622,10 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("""DROP INDEX IF EXISTS "IX_Workspace_ConnectorCommands_PendingClaimOrder";""");
+            migrationBuilder.Sql("""DROP INDEX IF EXISTS "IX_Automation_EnvelopeDeliveries_DueClaimOrder";""");
+            migrationBuilder.Sql("""DROP INDEX IF EXISTS "IX_Processes_Outbox_PendingClaimOrder";""");
+
             migrationBuilder.DropForeignKey(
                 name: "FK_CognitiveMemory_Claims_CognitiveMemory_ScoreEvaluations_Cur~",
                 table: "CognitiveMemory_Claims");
