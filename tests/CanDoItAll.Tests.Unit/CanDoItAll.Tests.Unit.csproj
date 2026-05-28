@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -26,8 +26,7 @@
     <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
-    <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj" />
-    <ProjectReference Include="..\..\src\Space3D\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj" />
+    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
     <ProjectReference Include="..\..\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
     <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
     <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />

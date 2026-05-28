@@ -1,0 +1,7 @@
+
+> build
+> tailwindcss -i ./input.css -o ../src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css
+
+≈ tailwindcss v4.2.1
+
+Done in 738ms

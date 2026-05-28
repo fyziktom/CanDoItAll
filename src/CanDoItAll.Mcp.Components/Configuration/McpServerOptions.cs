@@ -30,19 +30,19 @@ public sealed class ServerOptions
 public sealed class CatalogOptions
 {
     [Required]
-    public string BaseLibRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.BaseLib");
+    public string BaseLibRoot { get; set; } = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.BaseLib");
 
     [Required]
-    public string CanvasLibRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.CanvasLib");
+    public string CanvasLibRoot { get; set; } = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.CanvasLib");
 
     [Required]
-    public string ChartsRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.Charts");
+    public string ChartsRoot { get; set; } = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.Charts");
 
     [Required]
-    public string MermaidRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.Mermaid");
+    public string MermaidRoot { get; set; } = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.Mermaid");
 
     [Required]
-    public string SandboxRoot { get; set; } = Path.Combine("src", "CanDoItAll.Components.Sandbox");
+    public string SandboxRoot { get; set; } = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.Sandbox");
 }
 
 public sealed class McpServerOptionsValidator : IValidateOptions<McpServerOptions>

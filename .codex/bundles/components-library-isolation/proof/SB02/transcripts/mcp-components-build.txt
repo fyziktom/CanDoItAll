@@ -1,0 +1,11 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj (v 675 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj (v 764 ms).
+  CanDoItAll.Mcp.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Core\bin\Release\net10.0\CanDoItAll.Mcp.Core.dll
+  CanDoItAll.Mcp.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.Mcp.Components\bin\Release\net10.0\CanDoItAll.Mcp.Components.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:07.91

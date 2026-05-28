@@ -15,6 +15,8 @@ namespace CanDoItAll.Mcp.Components.Catalog;
 
 public sealed partial class ComponentCatalogService
 {
+    private const string ComponentsRepositoryRelativeRoot = @"..\CanDoItAll.Components";
+
     private readonly Lazy<ComponentCatalogIndex> index;
     private readonly McpServerOptions options;
 
@@ -230,15 +232,13 @@ public sealed partial class ComponentCatalogService
             .Select(item => GetComponentName(item.Type))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var usageExamplesByComponent = BuildConsumerUsageExamples(workspaceRoot, componentNames);
+        var usageExamplesByComponent = BuildConsumerUsageExamples(workspaceRoot, sandboxRoot, componentNames);
 
         var components = componentTypes
             .Select(item => BuildComponentDocument(item.Library, item.Type, examples, groupLookup, componentNames, usageExamplesByComponent))
             .ToArray();
 
         var canvasContracts = BuildCanvasContracts();
-
-        _ = sandboxRoot;
 
         return new ComponentCatalogIndex(components, examples, groups, canvasContracts, usageExamplesByComponent);
     }
@@ -585,11 +585,12 @@ public sealed partial class ComponentCatalogService
 
     private static IReadOnlyDictionary<string, IReadOnlyList<ComponentUsageExampleDocument>> BuildConsumerUsageExamples(
         string workspaceRoot,
+        string sandboxRoot,
         IReadOnlySet<string> componentNames)
     {
         var usageLookup = new Dictionary<string, List<ComponentUsageExampleDocument>>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var consumerRoot in DiscoverConsumerRoots(workspaceRoot))
+        foreach (var consumerRoot in DiscoverConsumerRoots(workspaceRoot, sandboxRoot))
         {
             foreach (var filePath in Directory.EnumerateFiles(consumerRoot.RootPath, "*.razor", SearchOption.AllDirectories))
             {
@@ -909,24 +910,45 @@ public sealed partial class ComponentCatalogService
         return route.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? route.Trim('/');
     }
 
-    private static IReadOnlyList<ConsumerSourceDescriptor> DiscoverConsumerRoots(string workspaceRoot)
+    private static IReadOnlyList<ConsumerSourceDescriptor> DiscoverConsumerRoots(string workspaceRoot, string sandboxRoot)
     {
         var srcRoot = Path.Combine(workspaceRoot, "src");
         if (!Directory.Exists(srcRoot))
         {
-            return [];
+            return DiscoverExternalConsumerRoots(sandboxRoot);
         }
 
-        return Directory.EnumerateDirectories(srcRoot)
+        var consumerRoots = Directory.EnumerateDirectories(srcRoot)
             .Select(rootPath => new ConsumerSourceDescriptor(
                 Path.GetFileName(rootPath),
                 ResolveSourceKind(Path.GetFileName(rootPath)),
                 rootPath))
             .Where(descriptor => !ConsumerProjectExclusions.Contains(descriptor.ProjectName))
+            .Concat(DiscoverExternalConsumerRoots(sandboxRoot))
+            .GroupBy(descriptor => descriptor.RootPath, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
             .Where(descriptor => Directory.EnumerateFiles(descriptor.RootPath, "*.razor", SearchOption.AllDirectories).Any(filePath => !IsGeneratedPath(filePath)))
             .OrderBy(descriptor => GetSourcePriority(descriptor.SourceKind))
             .ThenBy(descriptor => descriptor.ProjectName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+
+        return consumerRoots;
+    }
+
+    private static IReadOnlyList<ConsumerSourceDescriptor> DiscoverExternalConsumerRoots(string sandboxRoot)
+    {
+        if (!Directory.Exists(sandboxRoot))
+        {
+            return [];
+        }
+
+        return
+        [
+            new ConsumerSourceDescriptor(
+                "CanDoItAll.Components.Sandbox",
+                "sandbox",
+                sandboxRoot)
+        ];
     }
 
     private static string ResolveSourceKind(string projectName)
@@ -1015,7 +1037,11 @@ public sealed partial class ComponentCatalogService
         if (string.Equals(library, "CanvasLib", StringComparison.OrdinalIgnoreCase))
         {
             return CanvasLibStylesheets
-                .Select(path => $@"src\CanDoItAll.Components.CanvasLib\wwwroot\{path.Replace("_content/CanDoItAll.Components.CanvasLib/", string.Empty).Replace('/', Path.DirectorySeparatorChar)}")
+                .Select(path => ComponentRepositoryPath(Path.Combine(
+                    "src",
+                    "CanDoItAll.Components.CanvasLib",
+                    "wwwroot",
+                    path.Replace("_content/CanDoItAll.Components.CanvasLib/", string.Empty).Replace('/', Path.DirectorySeparatorChar))))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
         }
@@ -1027,7 +1053,7 @@ public sealed partial class ComponentCatalogService
 
         if (string.Equals(library, "Mermaid", StringComparison.OrdinalIgnoreCase))
         {
-            return [@"src\CanDoItAll.Components.Mermaid\Components\MermaidDiagram.razor.css"];
+            return [ComponentRepositoryPath(Path.Combine("src", "CanDoItAll.Components.Mermaid", "Components", "MermaidDiagram.razor.css"))];
         }
 
         if (!string.Equals(library, "BaseLib", StringComparison.OrdinalIgnoreCase))
@@ -1037,7 +1063,7 @@ public sealed partial class ComponentCatalogService
 
         if (BaseLibCssSourceFilesByComponent.TryGetValue(componentName, out var explicitFiles))
         {
-            return explicitFiles;
+            return ToComponentRepositoryPaths(explicitFiles);
         }
 
         var family = ResolveComponentFamily(library, sourcePath);
@@ -1046,7 +1072,7 @@ public sealed partial class ComponentCatalogService
             return [];
         }
 
-        return family switch
+        IReadOnlyList<string> sourceFiles = family switch
         {
             "Badges" => [@"Tailwind\controls\badges.css"],
             "Buttons" => [@"Tailwind\controls\buttons.css"],
@@ -1057,7 +1083,7 @@ public sealed partial class ComponentCatalogService
             "DataVisualization" => [@"Tailwind\foundation\radzen-layout.css"],
             "Feedback" => componentName.Contains("Popover", StringComparison.OrdinalIgnoreCase) ||
                           componentName.Contains("Tooltip", StringComparison.OrdinalIgnoreCase)
-                ? [@"Tailwind\surfaces\overlays.css"]
+                ? []
                 : [@"Tailwind\feedback\alerts.css"],
             "Forms" => [@"Tailwind\forms\fields.css"],
             "Identity" => [@"Tailwind\typography\text.css"],
@@ -1065,7 +1091,7 @@ public sealed partial class ComponentCatalogService
                 ? [@"Tailwind\layout\stats.css"]
                 : [@"Tailwind\layout\stacks.css", @"Tailwind\layout\sheets.css"],
             "Lists" => [@"Tailwind\layout\sheets.css", @"Tailwind\surfaces\cards.css"],
-            "Modals" => [@"Tailwind\surfaces\overlays.css"],
+            "Modals" => [],
             "Navigation" => componentName.Contains("Tree", StringComparison.OrdinalIgnoreCase)
                 ? [@"Tailwind\navigation\treeview.css"]
                 : componentName.Contains("Tab", StringComparison.OrdinalIgnoreCase)
@@ -1080,7 +1106,17 @@ public sealed partial class ComponentCatalogService
             "Typography" => [@"Tailwind\typography\text.css"],
             _ => []
         };
+
+        return ToComponentRepositoryPaths(sourceFiles);
     }
+
+    private static IReadOnlyList<string> ToComponentRepositoryPaths(IReadOnlyList<string> relativePaths)
+        => relativePaths
+            .Select(ComponentRepositoryPath)
+            .ToArray();
+
+    private static string ComponentRepositoryPath(string relativePath)
+        => Path.Combine(ComponentsRepositoryRelativeRoot, relativePath);
 
     private static string? BuildParameterSummary(string componentName, string parameterName)
     {

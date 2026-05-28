@@ -218,14 +218,14 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     {
         var arguments = WorkspaceRuntimeProcessTools.BuildTailwindWatchArgumentList(
             @"C:\repos\CanDoItAll\Tailwind\input.css",
-            @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css");
+            @"C:\repos\CanDoItAll\src\CanDoItAll.Web\wwwroot\css\output.css");
 
         Assert.Equal(
             [
                 "-i",
                 @"C:\repos\CanDoItAll\Tailwind\input.css",
                 "-o",
-                @"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css",
+                @"C:\repos\CanDoItAll\src\CanDoItAll.Web\wwwroot\css\output.css",
                 "--watch=always"
             ],
             arguments);
@@ -236,14 +236,14 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     {
         var arguments = WorkspaceRuntimeProcessTools.BuildTailwindBuildArgumentList(
             @"Tailwind\input.css",
-            @"..\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css");
+            @"..\src\CanDoItAll.Web\wwwroot\css\output.css");
 
         Assert.Equal(
             [
                 "-i",
                 @"Tailwind\input.css",
                 "-o",
-                @"..\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css"
+                @"..\src\CanDoItAll.Web\wwwroot\css\output.css"
             ],
             arguments);
     }

@@ -128,10 +128,10 @@ public sealed partial class ComponentCatalogService
         ["EmptyState"] = [@"Tailwind\feedback\alerts.css"],
         ["LoadingState"] = [@"Tailwind\feedback\alerts.css"],
         ["Notification"] = [@"Tailwind\feedback\alerts.css"],
-        ["HelpPopover"] = [@"Tailwind\surfaces\overlays.css"],
-        ["Tooltip"] = [@"Tailwind\surfaces\overlays.css"],
-        ["TooltipTarget"] = [@"Tailwind\surfaces\overlays.css"],
-        ["Dialog"] = [@"Tailwind\surfaces\overlays.css"]
+        ["HelpPopover"] = [@"src\CanDoItAll.Components.BaseLib\Components\Feedback\HelpPopover.razor.css"],
+        ["Tooltip"] = [],
+        ["TooltipTarget"] = [],
+        ["Dialog"] = []
     };
     private static readonly IReadOnlyDictionary<string, ComponentGuidanceDocument> GuidanceByFamily = new Dictionary<string, ComponentGuidanceDocument>(StringComparer.OrdinalIgnoreCase)
     {

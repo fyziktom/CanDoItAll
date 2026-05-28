@@ -4,17 +4,20 @@
 
 | Concern | Current implementation |
 | --- | --- |
-| Common primitives | `src/CanDoItAll.Components.Common` |
-| Primary shared UI | `src/CanDoItAll.Components.BaseLib` |
-| Canvas and graph UI | `src/CanDoItAll.Components.CanvasLib` |
-| Overlay windows | `src/CanDoItAll.Components.OverlayLib` |
-| WebGL workbench runtime | `src/CanDoItAll.Components.WebGlLib` |
-| Facade and app shell | `src/CanDoItAll.Components` |
-| Component sandbox | `src/CanDoItAll.Components.Sandbox` |
-| WebGL sandbox | `src/CanDoItAll.Components.WebGlSandbox` |
+| Common primitives | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common` |
+| Primary shared UI | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib` |
+| Canvas and graph UI | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib` |
+| Charts | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Charts` |
+| Mermaid diagrams | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid` |
+| Overlay windows | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib` |
+| WebGL workbench runtime | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib` |
+| Facade and app shell | `C:\repositories\CanDoItAll\src\CanDoItAll.Components` |
+| Component sandbox | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox` |
+| WebGL sandbox | `C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox` |
 | Target framework | `net10.0` |
 | Primary package dependency | `Microsoft.AspNetCore.Components.Web` |
-| Generated stylesheet | `src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css` |
+| Shared generated stylesheet | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css` |
+| Main generated stylesheet | `src/CanDoItAll.Web/wwwroot/css/output.css` |
 
 ## Actual Library Roles
 
@@ -51,7 +54,7 @@ Most product modules should start here before adding local component markup.
 
 `CanDoItAll.Components` is a facade/app-shell layer. Its project file intentionally removes broad historical `Components/**` content and includes only app shell, tab strip, and tuning boundary assets plus references to component libraries.
 
-`CanDoItAll.Components.Sandbox` and `CanDoItAll.Components.WebGlSandbox` are preview and validation hosts. Do not move catalog/demo-only assets into runtime libraries.
+`CanDoItAll.Components.Sandbox` and `CanDoItAll.Components.WebGlSandbox` are preview and validation hosts. Do not move catalog/demo-only assets into runtime libraries. The general component sandbox lives in the components repo; the WebGL process sandbox remains in the main repo while it depends on process modules.
 
 ## Consumption Pattern
 
@@ -60,6 +63,8 @@ Current web integration:
 - `Program.cs` calls `builder.Services.AddCanDoItAllBaseLib()`.
 - Runtime component assemblies are supplied by `CanDoItAll.Composition.ModuleAssemblies.All`.
 - Shared CSS is loaded from `_content/CanDoItAll.Components.BaseLib/css/output.css`.
+- Main-specific CSS is loaded from `css/output.css` after shared CSS.
+- Main projects reference component libraries through `PackageReference` entries at version `0.1.0`; do not reintroduce project references to the moved component repo.
 
 Module integration:
 
@@ -70,7 +75,13 @@ Module integration:
 
 ## Styling Model
 
-BaseLib uses generated utility CSS and component-level class composition. The Tailwind workspace at the repo root emits CSS to BaseLib:
+BaseLib uses generated utility CSS and component-level class composition. The Tailwind workspace in `C:\repositories\CanDoItAll.Components` emits CSS to BaseLib:
+
+```powershell
+npm run tailwind:build
+```
+
+The main repo Tailwind workspace emits only app-specific CSS:
 
 ```powershell
 npm run tailwind:build

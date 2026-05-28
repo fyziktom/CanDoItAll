@@ -1,0 +1,20 @@
+Command: rg -n "ProjectReference Include=.*CanDoItAll\.Components\.(BaseLib|CanvasLib|Common|Charts|Mermaid|OverlayLib|WebGlLib|Sandbox).*\.csproj" src tests tools; Get-ChildItem ExternalPackages/*.nupkg; dotnet build src/CanDoItAll.Mcp.Components/CanDoItAll.Mcp.Components.csproj --configuration Release
+ExitCode: 0
+
+Invariant ID: SB02-LOCAL-PACKAGE-CONSUMPTION
+
+Observed result:
+- No direct moved-component ProjectReference entries found in main repo src, tests, or tools.
+- ExternalPackages contains all eight version 0.1.0 component packages.
+- CanDoItAll.Mcp.Components builds against package references.
+- Anti-stub audit command found no NotImplementedException, placeholder package, or package TODO markers in touched main repo areas.
+
+Representative local package inventory:
+- CanDoItAll.Components.BaseLib.0.1.0.nupkg
+- CanDoItAll.Components.CanvasLib.0.1.0.nupkg
+- CanDoItAll.Components.Common.0.1.0.nupkg
+- CanDoItAll.Components.Charts.0.1.0.nupkg
+- CanDoItAll.Components.Mermaid.0.1.0.nupkg
+- CanDoItAll.Components.OverlayLib.0.1.0.nupkg
+- CanDoItAll.Components.Sandbox.0.1.0.nupkg
+- CanDoItAll.Components.WebGlLib.0.1.0.nupkg

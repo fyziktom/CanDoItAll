@@ -21,9 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
-    <ProjectReference Include="..\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj" />
-    <ProjectReference Include="..\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+    <PackageReference Include="CanDoItAll.Components.Common" Version="0.1.0" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
   </ItemGroup>
 

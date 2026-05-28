@@ -21,10 +21,6 @@ Project references:
 - `../CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj`
 - `../../src/CanDoItAll.Web/CanDoItAll.Web.csproj`
 - `../../src/CanDoItAll.Components/CanDoItAll.Components.csproj`
-- `../../src/CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
-- `../../src/CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
-- `../../src/CanDoItAll.Components.Sandbox/CanDoItAll.Components.Sandbox.csproj`
-- `../../src/CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj`
 - `../../src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj`
 - `../../src/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
 - `../../src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
@@ -44,6 +40,12 @@ Direct package references:
 - `Microsoft.NET.Test.Sdk (17.14.1)`
 - `xunit (2.9.3)`
 - `xunit.runner.visualstudio (3.1.4)`
+- `CanDoItAll.Components.BaseLib (0.1.0)`
+- `CanDoItAll.Components.CanvasLib (0.1.0)`
+- `CanDoItAll.Components.Charts (0.1.0)`
+- `CanDoItAll.Components.Mermaid (0.1.0)`
+- `CanDoItAll.Components.Sandbox (0.1.0)`
+- `CanDoItAll.Components.WebGlLib (0.1.0)`
 
 ## Architecture Notes
 

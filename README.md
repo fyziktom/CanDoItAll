@@ -49,7 +49,7 @@ flowchart LR
 
 - .NET 10 SDK
 - Windows PowerShell for local install scripts and Playwright browser install
-- Node.js and npm when rebuilding the shared Tailwind output
+- Node.js and npm when rebuilding the main Tailwind output
 - `git` when installing or refreshing the portable Codex skill pack
 - Docker Desktop or another Docker-compatible runtime when using the repo-managed PostgreSQL and Qdrant containers
 - PostgreSQL on `127.0.0.1:5432` for the default Development/Visual Studio profile
@@ -207,11 +207,23 @@ For full local MCP resetup, use `tools\Reinstall-CanDoItAllMcps.ps1`; it include
 
 ## Styling
 
-Shared component styling is built through the Tailwind workspace:
+The main repo owns only CanDoItAll-specific Tailwind styles. Shared component styling now lives in the sibling `C:\repositories\CanDoItAll.Components` repo and is consumed from the private packages in `ExternalPackages`.
 
 ```powershell
 npm install
 npm run tailwind:build
 ```
 
-The output is written to `src/CanDoItAll.Components.BaseLib/wwwroot/css/output.css`.
+The main output is written to `src/CanDoItAll.Web/wwwroot/css/output.css` and is loaded after `_content/CanDoItAll.Components.BaseLib/css/output.css`.
+
+Component package refresh flow:
+
+```powershell
+cd C:\repositories\CanDoItAll.Components
+npm install --prefix Tailwind
+npm run tailwind:build
+dotnet pack CanDoItAll.Components.slnx --configuration Release --output artifacts/packages
+Copy-Item artifacts\packages\*.0.1.0.nupkg C:\repositories\CanDoItAll\ExternalPackages -Force
+```
+
+`CanDoItAll.slnx` intentionally excludes Space3D. Use `CanDoItAll.Space3D.slnx` when working on Space3D projects and their tests.
