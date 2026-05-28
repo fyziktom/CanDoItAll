@@ -1,0 +1,19 @@
+Command: dotnet build CanDoItAll.slnx --configuration Release --no-restore; dotnet build CanDoItAll.Space3D.slnx --configuration Release; dotnet test focused impacted projects; Playwright browser smoke against in-memory web startup; slnx/package audits
+ExitCode: 0
+
+Invariant ID: SB04-MAIN-SOLUTION-LIT-UP
+
+Observed result:
+- Main slnx audit: Main slnx excludes moved component and Space3D projects.
+- Main solution build passed with 0 errors and 26 existing EF Core MSB3277 warnings.
+- Space3D solution build passed with 0 errors and 8 existing EF Core MSB3277 warnings.
+- CanDoItAll.Mcp.Components.Tests passed 22 tests.
+- CanDoItAll.Space3D.Tests passed 18 tests.
+- Focused ProjectsPage component test passed.
+- Focused manager Tailwind tests passed 21 tests.
+- Browser smoke loaded `/` with in-memory database override and verified component package CSS plus main app CSS static links returned HTTP 200.
+- Anti-stub audit command found no package-isolation stub markers in touched main repo areas.
+
+Residual observations:
+- PostgreSQL-profile browser startup was blocked by stale local schema and was not adopted as baseline proof.
+- Full component/unit suites had unrelated timeout or nondeterministic failures; focused impacted tests passed.

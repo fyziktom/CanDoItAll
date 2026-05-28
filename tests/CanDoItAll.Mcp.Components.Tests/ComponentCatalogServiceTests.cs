@@ -263,11 +263,11 @@ public sealed class ComponentCatalogServiceTests
             },
             Catalog = new CatalogOptions
             {
-                BaseLibRoot = Path.Combine("src", "CanDoItAll.Components.BaseLib"),
-                CanvasLibRoot = Path.Combine("src", "CanDoItAll.Components.CanvasLib"),
-                ChartsRoot = Path.Combine("src", "CanDoItAll.Components.Charts"),
-                MermaidRoot = Path.Combine("src", "CanDoItAll.Components.Mermaid"),
-                SandboxRoot = Path.Combine("src", "CanDoItAll.Components.Sandbox")
+                BaseLibRoot = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.BaseLib"),
+                CanvasLibRoot = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.CanvasLib"),
+                ChartsRoot = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.Charts"),
+                MermaidRoot = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.Mermaid"),
+                SandboxRoot = Path.Combine("..", "CanDoItAll.Components", "src", "CanDoItAll.Components.Sandbox")
             }
         });
     }

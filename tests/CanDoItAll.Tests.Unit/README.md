@@ -20,8 +20,6 @@ Project references:
 
 - `../CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj`
 - `../../src/CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
-- `../../src/CanDoItAll.Components.WebGlLib/CanDoItAll.Components.WebGlLib.csproj`
-- `../../src/Space3D/CanDoItAll.Space3D.Mouse.Driver/CanDoItAll.Space3D.Mouse.Driver.csproj`
 - `../../src/CanDoItAll.SharedKernel/CanDoItAll.SharedKernel.csproj`
 - `../../src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj`
 - `../../src/CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
@@ -42,6 +40,7 @@ Direct package references:
 - `Microsoft.NET.Test.Sdk (17.14.1)`
 - `xunit (2.9.3)`
 - `xunit.runner.visualstudio (3.1.4)`
+- `CanDoItAll.Components.WebGlLib (0.1.0)`
 
 ## Architecture Notes
 

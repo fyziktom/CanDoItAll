@@ -1,0 +1,23 @@
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\CanDoItAll.Components.Common.csproj (v 325 ms).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox\CanDoItAll.Components.Sandbox.csproj (v 2,05 s).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj (v 2,05 s).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib\CanDoItAll.Components.CanvasLib.csproj (v 2,05 s).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Charts\CanDoItAll.Components.Charts.csproj (v 2,05 s).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid\CanDoItAll.Components.Mermaid.csproj (v 2,05 s).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\CanDoItAll.Components.OverlayLib.csproj (v 2,07 s).
+  Obnovil se projekt C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib\CanDoItAll.Components.WebGlLib.csproj (v 2,07 s).
+  CanDoItAll.Components.Common -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Common\bin\Release\net10.0\CanDoItAll.Components.Common.dll
+  CanDoItAll.Components.Charts -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Charts\bin\Release\net10.0\CanDoItAll.Components.Charts.dll
+  CanDoItAll.Components.Mermaid -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid\bin\Release\net10.0\CanDoItAll.Components.Mermaid.dll
+  CanDoItAll.Components.BaseLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\bin\Release\net10.0\CanDoItAll.Components.BaseLib.dll
+  CanDoItAll.Components.OverlayLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib\bin\Release\net10.0\CanDoItAll.Components.OverlayLib.dll
+  CanDoItAll.Components.WebGlLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib\bin\Release\net10.0\CanDoItAll.Components.WebGlLib.dll
+  CanDoItAll.Components.CanvasLib -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.CanvasLib\bin\Release\net10.0\CanDoItAll.Components.CanvasLib.dll
+  CanDoItAll.Components.Sandbox -> C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox\bin\Release\net10.0\CanDoItAll.Components.Sandbox.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:40.09

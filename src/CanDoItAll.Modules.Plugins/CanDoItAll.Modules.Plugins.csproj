@@ -19,7 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
-    <ProjectReference Include="..\CanDoItAll.Components.BaseLib\CanDoItAll.Components.BaseLib.csproj" />
+    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
     <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
     <ProjectReference Include="..\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />

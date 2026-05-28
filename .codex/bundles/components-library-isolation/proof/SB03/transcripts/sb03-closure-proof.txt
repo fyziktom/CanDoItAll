@@ -1,0 +1,8 @@
+Command: npm --prefix Tailwind run build; npm --prefix ../CanDoItAll.Components/Tailwind run build; rg CSS link order in App.razor
+ExitCode: 0
+
+Observed result:
+- Main Tailwind build output: src/CanDoItAll.Web/wwwroot/css/output.css.
+- Component Tailwind build output: BaseLib package wwwroot/css/output.css in the components repo.
+- App.razor links _content/CanDoItAll.Components.BaseLib/css/output.css before css/output.css.
+- Manager defaults and focused tests use the main Tailwind output path.

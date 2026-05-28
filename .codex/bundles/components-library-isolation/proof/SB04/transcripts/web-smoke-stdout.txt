@@ -1,0 +1,9 @@
+Použití nastavení spuštění z src\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.

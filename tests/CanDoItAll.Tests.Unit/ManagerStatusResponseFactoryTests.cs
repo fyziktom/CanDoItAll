@@ -124,7 +124,7 @@ public sealed class ManagerStatusResponseFactoryTests
         Assert.Equal(TailwindWatchState.Ready.ToString(), response.Tailwind.StateName);
         Assert.Equal(@"C:\repos\CanDoItAll\Tailwind", response.Tailwind.WorkspacePath);
         Assert.Equal(@"C:\repos\CanDoItAll\Tailwind\input.css", response.Tailwind.InputFilePath);
-        Assert.Equal(@"C:\repos\CanDoItAll\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css", response.Tailwind.OutputFilePath);
+        Assert.Equal(@"C:\repos\CanDoItAll\src\CanDoItAll.Web\wwwroot\css\output.css", response.Tailwind.OutputFilePath);
         Assert.Equal("Inputs", tailwindService.ConfiguredLabel);
         Assert.Equal("Outputs", tailwindService.ActiveLabel);
         Assert.Contains(response.Tailwind.OutputFilePath, tailwindService.ActiveTargets);
