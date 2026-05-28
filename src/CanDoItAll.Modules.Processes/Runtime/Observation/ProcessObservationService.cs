@@ -592,6 +592,8 @@ internal sealed class ProcessObservationService(
                     escalation.Title,
                     escalation.Reason,
                     escalation.Owner,
+                    escalation.SourceExecutionRunId,
+                    escalation.SourceApprovalId,
                     escalation.SourceToolName,
                     escalation.CreatedAtUtc,
                     escalation.UpdatedAtUtc,
