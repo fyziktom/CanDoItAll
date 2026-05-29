@@ -1,0 +1,1 @@
+Review the completed subbundle as an adversarial QA architect. Check for shallow-pass tests, unproven claims, raw external effects in tests, duplicate project writes, silent approval bypasses, scheduler no-message failures, and stale template seed behavior. Update the subbundle proof with exact commands and outcomes.
