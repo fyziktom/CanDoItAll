@@ -123,9 +123,9 @@ public sealed class WorkflowExampleCatalogSeedService(
         await settingsService.SaveSettingsAsync(
             new WorkflowSettings(
                 new WorkflowRuntimePolicy(
-                    WorkflowRuntimeBackendKind.DurableTask,
+                    WorkflowRuntimeBackendKind.InProcess,
                     AllowInProcessPreviewRuns: true,
-                    RequireDurableProductionRuns: true,
+                    RequireDurableProductionRuns: false,
                     ExposeAzureFunctionsStatusEndpoint: false,
                     ExposeAzureFunctionsMcpTool: false),
                 new WorkflowArtifactPolicy(
@@ -137,7 +137,8 @@ public sealed class WorkflowExampleCatalogSeedService(
                         WorkflowArtifactKind.Json,
                         WorkflowArtifactKind.File,
                         WorkflowArtifactKind.Image,
-                        WorkflowArtifactKind.ToolReceipt
+                        WorkflowArtifactKind.ToolReceipt,
+                        WorkflowArtifactKind.PreviewSimulation
                     ]),
                 new WorkflowHumanInLoopPolicy(
                     AllowHumanInputNodes: true,

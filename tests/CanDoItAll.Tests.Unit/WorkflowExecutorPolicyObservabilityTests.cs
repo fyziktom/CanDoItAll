@@ -6,6 +6,50 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkflowExecutorPolicyObservabilityTests
 {
     [Fact]
+    public async Task WorkflowPayloadPolicy_redacts_bounds_and_references_artifact_for_oversized_json()
+    {
+        var settings = WorkflowSettings.Default with
+        {
+            ArtifactPolicy = WorkflowSettings.Default.ArtifactPolicy with
+            {
+                MaxInlinePayloadCharacters = 128
+            }
+        };
+        var policy = new WorkflowPayloadPolicyService(new StaticWorkflowSettingsService(settings));
+        var result = await policy.ApplyAsync(new WorkflowPayloadPolicyRequest(
+            RunId: WorkflowRunId.New(),
+            Scope: WorkflowPayloadPolicyScope.ExecutorOutput,
+            Payload: $$"""{"token":"raw-token-value","payload":"{{new string('x', 512)}}"}""",
+            ArtifactKind: WorkflowArtifactKind.Json,
+            Name: "node-output.json",
+            ContentType: "application/json",
+            CreatedAtUtc: DateTimeOffset.UtcNow)
+        {
+            NodeId = new WorkflowNodeId("node-1"),
+            CaptureArtifact = true
+        });
+
+        Assert.True(result.InlineTruncated);
+        Assert.True(result.InlinePayload.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
+        Assert.DoesNotContain("raw-token-value", result.InlinePayload, StringComparison.Ordinal);
+        Assert.NotNull(result.Artifact);
+        Assert.Equal(result.Artifact!.StoragePath, result.Reference);
+        Assert.Equal(WorkflowArtifactKind.Json, result.Artifact.Kind);
+        Assert.Equal(new WorkflowNodeId("node-1"), result.Artifact.NodeId);
+        Assert.Contains("truncated", result.Artifact.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void WorkflowSettings_default_policy_allows_runtime_payload_artifact_kinds()
+    {
+        Assert.Contains(WorkflowArtifactKind.Json, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+        Assert.Contains(WorkflowArtifactKind.Text, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+        Assert.Contains(WorkflowArtifactKind.File, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+        Assert.Contains(WorkflowArtifactKind.ToolReceipt, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+        Assert.Contains(WorkflowArtifactKind.PreviewSimulation, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+    }
+
+    [Fact]
     public void Redaction_removes_secret_values_from_settings_summary()
     {
         var summary = WorkflowExecutorRedaction.RedactSettingsJson("""
@@ -127,6 +171,63 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
         Assert.Equal(0, executor.InvocationCount);
     }
 
+    [Fact]
+    public async Task PluginPolicy_invoker_executes_approval_required_executor_after_approval()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.approved") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.WritesExternalData,
+                WorkflowExecutorApprovalRequirement.RequiredForExternalEffect)
+        };
+        var executor = new RecordingPluginExecutor(descriptor)
+        {
+            OutputPayloadJson = """{"status":"approved"}"""
+        };
+        var invoker = new WorkflowExecutorInvoker(
+            new WorkflowExecutorCatalog([executor]),
+            [executor],
+            approvalGate: new ApprovingApprovalGate("Approved for test."));
+
+        var result = await invoker.ExecuteAsync(
+            CreateDefinition(descriptor.Id, "{\"connectionId\":\"conn-1\"}"),
+            CreateNode(descriptor.Id, "{\"connectionId\":\"conn-1\"}"),
+            new WorkflowNodeInput("{}"));
+
+        Assert.Equal("""{"status":"approved"}""", result.PayloadJson);
+        Assert.Equal(1, executor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task WorkflowExternalRequestApprovalGate_creates_redacted_pending_request_without_executing()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.pending-approval") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.RunsHostCommand | WorkflowExecutorCapabilityFlags.UsesSecrets,
+                WorkflowExecutorApprovalRequirement.AlwaysRequired)
+        };
+        var executor = new RecordingPluginExecutor(descriptor);
+        var invoker = new WorkflowExecutorInvoker(
+            new WorkflowExecutorCatalog([executor]),
+            [executor],
+            approvalGate: new WorkflowExternalRequestApprovalGate());
+        using var auditScope = WorkflowExecutorExecutionAuditScope.Push(WorkflowRunId.New());
+
+        var exception = await Assert.ThrowsAsync<WorkflowExternalRequestPendingException>(() =>
+            invoker.ExecuteAsync(
+                CreateDefinition(descriptor.Id, "{\"token\":\"raw-token-value\"}"),
+                CreateNode(descriptor.Id, "{\"token\":\"raw-token-value\"}"),
+                new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Equal(WorkflowExternalRequestKind.Approval, exception.Request.Kind);
+        Assert.Equal(new WorkflowNodeId("plugin-node"), exception.Request.NodeId);
+        Assert.Contains("plugin.policy.pending-approval", exception.Request.RequestJson, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", exception.Request.RequestJson, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", exception.Request.RequestJson, StringComparison.Ordinal);
+        Assert.Equal(0, executor.InvocationCount);
+    }
+
     private static WorkflowExecutorDescriptor CreatePluginDescriptor(string id)
         => new(
             new WorkflowExecutorId(id),
@@ -234,6 +335,34 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             return ValueTask.FromResult(new WorkflowExecutorApprovalDecision(false, message));
+        }
+    }
+
+    private sealed class ApprovingApprovalGate(string message) : IWorkflowExecutorApprovalGate
+    {
+        public ValueTask<WorkflowExecutorApprovalDecision> RequestApprovalAsync(
+            WorkflowExecutorApprovalRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new WorkflowExecutorApprovalDecision(true, message));
+        }
+    }
+
+    private sealed class StaticWorkflowSettingsService(WorkflowSettings settings) : IWorkflowSettingsService
+    {
+        public Task<WorkflowSettings> GetSettingsAsync(CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(settings);
+        }
+
+        public Task<WorkflowSettings> SaveSettingsAsync(
+            WorkflowSettings updatedSettings,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult(updatedSettings);
         }
     }
 }

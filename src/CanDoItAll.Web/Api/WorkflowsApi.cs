@@ -323,6 +323,13 @@ internal static class WorkflowsApi
             Results.Ok(await runStore.ListArtifactsAsync(new WorkflowRunId(runId), cancellationToken)))
             .WithName("ListWorkflowRunArtifacts");
 
+        workflows.MapGet("/runs/{runId:guid}/checkpoints", async (
+                Guid runId,
+                IWorkflowRunStore runStore,
+                CancellationToken cancellationToken) =>
+            Results.Ok(await runStore.ListCheckpointsAsync(new WorkflowRunId(runId), cancellationToken)))
+            .WithName("ListWorkflowRunCheckpoints");
+
         workflows.MapGet("/runs/{runId:guid}/pending-requests", async (
                 Guid runId,
                 IWorkflowRunStore runStore,
@@ -490,7 +497,8 @@ internal static class WorkflowsApi
             run,
             await runtimeManager.ListEventsAsync(run.RunId, cancellationToken),
             await runStore.ListArtifactsAsync(run.RunId, cancellationToken),
-            await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken));
+            await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken),
+            await runStore.ListCheckpointsAsync(run.RunId, cancellationToken));
     }
 
     private static async Task<WorkflowAnalyticsApiResponse> BuildAnalyticsAsync(
@@ -668,7 +676,8 @@ internal sealed record WorkflowRunDetailApiResponse(
     WorkflowRunSnapshot Run,
     IReadOnlyList<WorkflowEventRecord> Events,
     IReadOnlyList<WorkflowArtifactRecord> Artifacts,
-    IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests);
+    IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests,
+    IReadOnlyList<WorkflowCheckpointRecord> Checkpoints);
 
 internal sealed record WorkflowRunStartRejectedApiResponse(
     WorkflowValidationResult Validation,

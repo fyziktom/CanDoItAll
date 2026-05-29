@@ -1,0 +1,4 @@
+Command: wrapper transcript for bundle://proof/SB07/git-diff-check.txt
+ExitCode: 0
+Result: Diff check passed with line-ending normalization warnings only.
+Source transcript: bundle://proof/SB07/git-diff-check.txt

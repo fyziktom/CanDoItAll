@@ -1,55 +1,91 @@
 # 03-streaming-events-and-node-identity
 
+## Status
+
+- Status: `Completed`
+
 ## Objective
 
 Improve MAF event consumption and persistence so workflow runs can be debugged, observed, resumed, and audited accurately.
 
-## Current problem
+## Covered Inputs
 
-The in-process backend uses non-streaming `RunAsync` and post-processes `OutgoingEvents`. Native MAF events are persisted with `NodeId: null`, generic `ToString()` messages, and reflection-based payload extraction. This loses executor/node identity and request/output/error semantics.
+- R4: Consume streaming MAF events where needed and persist typed event metadata with executor/node identity.
+- R2: Preserve request state needed by execution-position HITL.
+- R5: Provide event foundation for checkpoint capture.
+- R6: Coordinate event payload bounds with artifact policy.
 
-## Exact source references
+## Prerequisites
 
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs`
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
-- `src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowRuntimeModels.cs`
-- `src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowRuntimeManager.cs`
-- `src/CanDoItAll.AgentFramework.Persistence/*`
-- `tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
-- `tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
-- `tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
+- SB02 HITL and approval request behavior is completed or honestly blocked.
+- Event model source references still match current repo state.
 
-## Implementation steps
+## Exact Source References
+
+- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs`
+- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs`
+- `repo://src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowModels.cs`
+- `repo://src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowRuntimeManager.cs`
+- `repo://src/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj`
+- `repo://tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs`
+- `repo://tests/CanDoItAll.Tests.Components/WorkflowsPageTests.cs`
+
+## Scope
+
+- Introduce MAF event normalization with typed pattern matching where APIs permit it.
+- Preserve executor id, node id, request id, output payload/reference, and redacted error summaries.
+- Use streaming execution when needed for request handling, progress, checkpoints, or UI observability.
+
+## Dependency Impact
+
+- SB04 checkpoint metadata, SB05 artifact policy, and SB07 backend honesty depend on reliable runtime event records.
+
+## Validation Depth
+
+- Unit normalizer tests plus runtime/integration proof on multi-node workflows.
+- Critical proof requires production behavior artifact matrix for new event records/states.
+
+## Implementation Steps
 
 1. Introduce `IMafWorkflowEventNormalizer`.
-2. Normalize known MAF event types with typed pattern matching:
-   - workflow started/output/error/warning,
-   - executor invoked/completed/failed,
-   - superstep started/completed,
-   - request info,
-   - agent response/update if available.
-3. Preserve `ExecutorId` and map it back to `WorkflowNodeId` via compiler binding metadata.
-4. Stop relying on event `ToString()` as the primary persisted message.
-5. Use streaming execution where needed for request handling, progress, checkpoints, or UI observability.
-6. Deduplicate CanDoItAll progress events and native executor events or clearly label them as separate event streams.
-7. Add redaction and inline payload bounds to event normalization, coordinated with SB05.
+2. Normalize workflow lifecycle, executor, superstep, request, output, warning, and error events.
+3. Preserve executor id and map it to workflow node id using compiler binding metadata.
+4. Stop using `ToString()` as the primary persisted event message.
+5. Use streaming execution where request/progress/checkpoint observability needs it.
+6. Deduplicate or clearly label CanDoItAll progress events versus native MAF events.
+7. Coordinate redaction and payload bounds with SB05.
 
-## Do not do
+## Do Not Do
 
-- Do not persist raw exceptions with secrets.
+- Do not persist raw exceptions or secrets.
 - Do not store unbounded event payloads inline.
-- Do not break existing event API consumers; add fields in compatible ways or provide migration logic.
+- Do not break existing event API consumers.
 
-## Acceptance checklist
+## Acceptance Checklist
 
-- Event records for executor events include node/executor identity.
+- Executor events include node and executor identity.
 - Output events include final output or artifact reference.
 - Error events include redacted exception summary.
-- Request events include a request id/kind and can be surfaced by UI/API.
-- Component/integration tests assert user-visible event timeline quality.
+- Request events include request id/kind and can be surfaced by UI/API.
 
-## Proof required
+## Proof Required
 
 - Unit tests for event normalizer.
 - Runtime test showing node/executor identity on a multi-node workflow.
-- Integration/UI test showing improved timeline fields.
+- Integration or component test showing improved timeline fields.
+- `bundle://proof/SB03/manifest.md` and `bundle://proof/SB03/semantic-invariants.md`.
+
+## Browser Validation Logging
+
+- Browser proof is required only if the timeline UI is changed; otherwise component/API assertions are sufficient.
+
+## Progression Gate
+
+- Continue to SB04 only after event records can reliably support checkpoints, request state, artifact references, and debugging identity.
+- Result: `Passed`. Proof is captured in `bundle://proof/SB03/manifest.md` and `bundle://proof/SB03/semantic-invariants.md`.
+- Runtime note: the current in-process implementation consumes MAF `Run.OutgoingEvents` plus CanDoItAll progress/request capture. A separate streaming session is not required for the SB03 proof path and remains available to SB04 if checkpoint/resume capture needs it.
+
+## Suggested Agent Prompt
+
+Add typed MAF event normalization and prove persisted workflow event records carry useful node, executor, request, output, and redacted error metadata.

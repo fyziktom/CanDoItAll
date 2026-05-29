@@ -1,0 +1,25 @@
+{
+  "url": "http://127.0.0.1:5099/agents/workflows",
+  "hasRuntimeSelect": true,
+  "options": [
+    {
+      "disabled": false,
+      "text": "InProcess",
+      "title": "Runtime backend is registered and runnable in this host.",
+      "value": "InProcess"
+    },
+    {
+      "disabled": true,
+      "text": "DurableTask (Planned)",
+      "title": "Runtime backend 'DurableTask' is planned but not registered in this host.",
+      "value": "DurableTask"
+    },
+    {
+      "disabled": true,
+      "text": "AzureFunctions (Planned)",
+      "title": "Runtime backend 'AzureFunctions' is planned but not registered in this host.",
+      "value": "AzureFunctions"
+    }
+  ],
+  "selectedValue": "InProcess"
+}

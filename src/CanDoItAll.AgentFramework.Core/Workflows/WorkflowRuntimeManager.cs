@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.AgentFramework.Core;
@@ -41,44 +42,6 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
                 $"Workflow '{definition.Id}' requires a durable production runtime and does not allow in-process preview runs.");
         }
 
-        var humanInputNode = definition.Graph.Nodes.FirstOrDefault(node => node.Kind == WorkflowNodeKind.HumanInput);
-        if (humanInputNode is not null)
-        {
-            var waitingRun = new WorkflowRunSnapshot(
-                runId,
-                definition.Id,
-                definition.VersionId,
-                WorkflowRunState.WaitingForInput,
-                requestedBackend,
-                BackendRunId: runId.ToString(),
-                Summary: $"Workflow is waiting for input at node '{humanInputNode.Id}'.",
-                CreatedAtUtc: now,
-                UpdatedAtUtc: now);
-            var requestRecord = new WorkflowExternalRequestRecord(
-                WorkflowExternalRequestId.New(),
-                runId,
-                humanInputNode.Settings.ExternalRequestKind ?? WorkflowExternalRequestKind.HumanInput,
-                humanInputNode.Id,
-                EventName: humanInputNode.Id.Value,
-                RequestJson: request.InputJson,
-                ResponseJson: string.Empty,
-                CreatedAtUtc: now,
-                RespondedAtUtc: null);
-            var eventRecord = new WorkflowEventRecord(
-                Guid.NewGuid(),
-                runId,
-                WorkflowEventKind.WaitingForInput,
-                humanInputNode.Id,
-                waitingRun.Summary,
-                request.InputJson,
-                now);
-
-            await PersistResultAsync(
-                new WorkflowBackendStartResult(waitingRun, [eventRecord], [requestRecord], []),
-                cancellationToken);
-            return waitingRun;
-        }
-
         if (!backends.TryGetValue(requestedBackend, out var backend))
         {
             throw new InvalidOperationException(
@@ -109,6 +72,13 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         CancellationToken cancellationToken = default)
     {
         return store.ListEventsAsync(runId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default)
+    {
+        return store.ListCheckpointsAsync(runId, cancellationToken);
     }
 
     public Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
@@ -142,7 +112,9 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
             WorkflowEventKind.Cancelled,
             NodeId: null,
             cancelled.Summary,
-            PayloadJson: string.Empty,
+            WorkflowEventPayloads.Serialize(
+                WorkflowEventPayloadSource.Runtime,
+                "WorkflowCancelled"),
             now);
 
         await store.SaveRunAsync(cancelled, cancellationToken);
@@ -177,26 +149,91 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
             ResponseJson = responseJson,
             RespondedAtUtc = now
         };
-        var completed = run with
+        var responseOutcome = ResolveExternalRequestResponseOutcome(request, responseJson);
+        var updatedRun = run with
         {
-            State = WorkflowRunState.Completed,
-            Summary = $"Workflow external request '{request.EventName}' was answered.",
+            State = responseOutcome.State,
+            Summary = responseOutcome.Summary,
             UpdatedAtUtc = now
         };
         var eventRecord = new WorkflowEventRecord(
             Guid.NewGuid(),
             run.RunId,
-            WorkflowEventKind.Completed,
+            responseOutcome.EventKind,
             request.NodeId,
-            completed.Summary,
-            responseJson,
+            updatedRun.Summary,
+            WorkflowEventPayloads.Serialize(
+                WorkflowEventPayloadSource.ExternalRequest,
+                "WorkflowExternalRequestResponse",
+                request.NodeId,
+                requestId: request.Id,
+                requestKind: request.Kind,
+                inlineJson: responseJson),
             now);
 
         await store.SaveExternalRequestAsync(answered, cancellationToken);
-        await store.SaveRunAsync(completed, cancellationToken);
+        await store.SaveRunAsync(updatedRun, cancellationToken);
         await PublishAndStoreEventAsync(eventRecord, cancellationToken);
-        return completed;
+        return updatedRun;
     }
+
+    private static WorkflowExternalRequestResponseOutcome ResolveExternalRequestResponseOutcome(
+        WorkflowExternalRequestRecord request,
+        string responseJson)
+    {
+        if (request.Kind is not (WorkflowExternalRequestKind.Approval or WorkflowExternalRequestKind.ToolApproval))
+        {
+            return new WorkflowExternalRequestResponseOutcome(
+                WorkflowRunState.Completed,
+                WorkflowEventKind.Completed,
+                $"Workflow external request '{request.EventName}' was answered.");
+        }
+
+        WorkflowExternalApprovalResponse? response;
+        try
+        {
+            response = JsonSerializer.Deserialize<WorkflowExternalApprovalResponse>(
+                responseJson,
+                WorkflowExternalRequestJson.Options);
+        }
+        catch (JsonException exception)
+        {
+            throw new ArgumentException(
+                "Workflow approval response JSON must be an object with an approved boolean property.",
+                nameof(responseJson),
+                exception);
+        }
+
+        if (response?.Approved is null)
+        {
+            throw new ArgumentException(
+                "Workflow approval response JSON must be an object with an approved boolean property.",
+                nameof(responseJson));
+        }
+
+        if (response.Approved.Value)
+        {
+            return new WorkflowExternalRequestResponseOutcome(
+                WorkflowRunState.Completed,
+                WorkflowEventKind.Completed,
+                $"Workflow approval request '{request.EventName}' was approved.");
+        }
+
+        var reason = string.IsNullOrWhiteSpace(response.Message)
+            ? string.Empty
+            : $" Reason: {WorkflowExecutorRedaction.RedactText(response.Message)}";
+        return new WorkflowExternalRequestResponseOutcome(
+            WorkflowRunState.Failed,
+            WorkflowEventKind.Error,
+            $"Workflow approval request '{request.EventName}' was denied.{reason}");
+    }
+
+    private sealed record WorkflowExternalApprovalResponse(bool? Approved, string? Message);
+
+    private sealed record WorkflowExternalRequestResponseOutcome(
+        WorkflowRunState State,
+        WorkflowEventKind EventKind,
+        string Summary);
 
     private async Task PersistResultAsync(
         WorkflowBackendStartResult result,
@@ -211,6 +248,11 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         foreach (var request in result.ExternalRequests)
         {
             await store.SaveExternalRequestAsync(request, cancellationToken);
+        }
+
+        foreach (var checkpoint in result.Checkpoints)
+        {
+            await store.SaveCheckpointAsync(checkpoint, cancellationToken);
         }
 
         foreach (var artifact in result.Artifacts)
@@ -238,6 +280,8 @@ public sealed class InMemoryWorkflowRunStore :
     private readonly ConcurrentDictionary<WorkflowExternalRequestId, WorkflowExternalRequestRecord> requests = new();
     private readonly ConcurrentDictionary<WorkflowRunId, ConcurrentQueue<WorkflowExternalRequestId>> requestsByRun = new();
     private readonly ConcurrentDictionary<WorkflowRunId, ConcurrentQueue<WorkflowArtifactRecord>> artifacts = new();
+    private readonly ConcurrentDictionary<WorkflowCheckpointId, WorkflowCheckpointRecord> checkpoints = new();
+    private readonly ConcurrentDictionary<WorkflowRunId, ConcurrentQueue<WorkflowCheckpointId>> checkpointsByRun = new();
 
     public Task SaveRunAsync(WorkflowRunSnapshot run, CancellationToken cancellationToken = default)
     {
@@ -358,6 +402,71 @@ public sealed class InMemoryWorkflowRunStore :
             pageIndex,
             pageSize,
             ordered.Length));
+    }
+
+    public Task<WorkflowCheckpointRecord> SaveCheckpointAsync(
+        WorkflowCheckpointRecord checkpoint,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (checkpoints.TryAdd(checkpoint.Id, checkpoint))
+        {
+            checkpointsByRun.GetOrAdd(checkpoint.RunId, _ => new ConcurrentQueue<WorkflowCheckpointId>())
+                .Enqueue(checkpoint.Id);
+        }
+        else
+        {
+            checkpoints[checkpoint.Id] = checkpoint;
+        }
+
+        return Task.FromResult(checkpoint);
+    }
+
+    public Task<WorkflowCheckpointRecord?> GetCheckpointAsync(
+        WorkflowCheckpointId checkpointId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        checkpoints.TryGetValue(checkpointId, out var checkpoint);
+        return Task.FromResult(checkpoint);
+    }
+
+    public Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!checkpointsByRun.TryGetValue(runId, out var ids))
+        {
+            return Task.FromResult<IReadOnlyList<WorkflowCheckpointRecord>>([]);
+        }
+
+        var records = ids
+            .Select(id => checkpoints.TryGetValue(id, out var checkpoint) ? checkpoint : null)
+            .OfType<WorkflowCheckpointRecord>()
+            .OrderBy(checkpoint => checkpoint.CreatedAtUtc)
+            .ThenBy(checkpoint => checkpoint.Id.Value)
+            .ToArray();
+        return Task.FromResult<IReadOnlyList<WorkflowCheckpointRecord>>(records);
+    }
+
+    public Task<WorkflowCheckpointRecord> MarkCheckpointResumedAsync(
+        WorkflowCheckpointId checkpointId,
+        DateTimeOffset resumedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!checkpoints.TryGetValue(checkpointId, out var checkpoint))
+        {
+            throw new KeyNotFoundException($"Workflow checkpoint '{checkpointId}' was not found.");
+        }
+
+        var resumed = checkpoint with
+        {
+            ResumedAtUtc = resumedAtUtc
+        };
+        checkpoints[checkpointId] = resumed;
+        return Task.FromResult(resumed);
     }
 
     public Task SaveExternalRequestAsync(

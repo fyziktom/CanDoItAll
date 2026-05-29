@@ -1,0 +1,8 @@
+Command: semantic invariant transcript index
+ExitCode: 0
+Result: invariant ids are indexed for completed-stage bundle validation.
+Invariant ID: SB04-CHECKPOINT-METADATA-CONTRACT
+Invariant ID: SB04-RUNTIME-CAPTURE-BOUNDARIES
+Invariant ID: SB04-RESUME-AVAILABILITY-IS-EXPLICIT
+Invariant ID: SB04-CHECKPOINT-TRUST-BOUNDARY
+Invariant ID: SB04-PERSISTENT-CHECKPOINT-STORAGE

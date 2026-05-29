@@ -1,0 +1,10 @@
+Command: dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter 'FullyQualifiedName~WorkflowsPageTests'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:06:02.1172798-04:00
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    13, Přeskočeno:     0, Celkem:    13, Doba trvání: 1 m 7 s - CanDoItAll.Tests.Components.dll (net10.0)
+
+ExitCode: 0

@@ -88,11 +88,12 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         }
 
         services.TryAddScoped<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
-        services.TryAddScoped<IWorkflowExecutorExecutionObserver, NullWorkflowExecutorExecutionObserver>();
+        services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
+        services.TryAddScoped<IWorkflowExecutorApprovalGate, WorkflowExternalRequestApprovalGate>();
         services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddScoped<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
-        services.TryAddScoped<IWorkflowDefinitionValidator, WorkflowDefinitionValidator>();
-        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog, WorkflowRuntimeBackendCatalog>();
+        services.TryAddScoped<IWorkflowDefinitionValidator>(_ => new WorkflowDefinitionValidator());
+        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
         services.TryAddScoped<IWorkflowComponentLibraryService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
@@ -101,6 +102,9 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowRunStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowCheckpointFactory, WorkflowCheckpointFactory>();
+        services.TryAddScoped<IWorkflowPayloadPolicyService, WorkflowPayloadPolicyService>();
         services.TryAddScoped<IWorkflowRuntimeEvidenceSourceProvider, WorkflowRuntimeEvidenceSourceProvider>();
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
         services.TryAddScoped<MafWorkflowCompiler>();

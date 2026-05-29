@@ -1,0 +1,20 @@
+Command: dotnet restore CanDoItAll.slnx
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:07:39.8503854-04:00
+
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj (v 3,92 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj (v 3,92 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj (v 3,91 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj (v 4,01 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Composition\CanDoItAll.Composition.csproj (v 4,01 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tools\CanDoItAll.ScenarioSeeder\CanDoItAll.ScenarioSeeder.csproj (v 3,93 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj (v 3,92 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj (v 4,01 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj (v 3,92 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj (v 3,91 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj (v 4,06 s).
+  Obnovil se projekt C:\repositories\CanDoItAll\src\CanDoItAll.Web\CanDoItAll.Web.csproj (v 3,96 s).
+  56 z 68 projektů jsou v aktuálním stavu pro obnovení.
+
+ExitCode: 0

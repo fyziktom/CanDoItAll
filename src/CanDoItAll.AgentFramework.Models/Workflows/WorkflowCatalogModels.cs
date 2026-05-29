@@ -62,9 +62,9 @@ public sealed record WorkflowSettings(
 {
     public static WorkflowSettings Default { get; } = new(
         new WorkflowRuntimePolicy(
-            WorkflowRuntimeBackendKind.DurableTask,
+            WorkflowRuntimeBackendKind.InProcess,
             AllowInProcessPreviewRuns: true,
-            RequireDurableProductionRuns: true,
+            RequireDurableProductionRuns: false,
             ExposeAzureFunctionsStatusEndpoint: false,
             ExposeAzureFunctionsMcpTool: false),
         new WorkflowArtifactPolicy(
@@ -74,7 +74,9 @@ public sealed record WorkflowSettings(
             [
                 WorkflowArtifactKind.Text,
                 WorkflowArtifactKind.Json,
-                WorkflowArtifactKind.File
+                WorkflowArtifactKind.File,
+                WorkflowArtifactKind.ToolReceipt,
+                WorkflowArtifactKind.PreviewSimulation
             ]),
         new WorkflowHumanInLoopPolicy(
             AllowHumanInputNodes: true,
@@ -130,4 +132,7 @@ public sealed record WorkflowTestRunResult(
     IReadOnlyList<WorkflowEventRecord> Events,
     IReadOnlyList<WorkflowArtifactRecord> Artifacts,
     IReadOnlyList<WorkflowExternalRequestRecord> PendingExternalRequests,
-    string ErrorMessage);
+    string ErrorMessage)
+{
+    public IReadOnlyList<WorkflowCheckpointRecord> Checkpoints { get; init; } = [];
+}

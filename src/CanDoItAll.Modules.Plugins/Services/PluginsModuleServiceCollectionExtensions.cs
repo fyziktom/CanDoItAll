@@ -25,7 +25,7 @@ public static class PluginsModuleServiceCollectionExtensions
         services.AddScoped<PluginGrantEvaluator>();
         services.AddScoped<PluginOAuthService>();
         services.AddScoped<PluginLogStore>();
-        services.TryAddScoped<IWorkflowExecutorExecutionObserver, PluginWorkflowExecutorExecutionObserver>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutorExecutionAuditSink, PluginWorkflowExecutorExecutionObserver>());
         services.TryAddScoped<IPluginExecutionEvents, DurablePluginExecutionEvents>();
         services.AddScoped<PluginHostToolRecipeCatalogService>();
         services.AddScoped<PluginSettingsService>();

@@ -39,6 +39,31 @@ public interface IWorkflowExecutorExecutionObserver
         CancellationToken cancellationToken = default);
 }
 
+public interface IWorkflowExecutorExecutionAuditSink
+{
+    ValueTask RecordAsync(
+        WorkflowExecutorExecutionAuditRecord auditRecord,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed class CompositeWorkflowExecutorExecutionObserver(
+    IEnumerable<IWorkflowExecutorExecutionAuditSink> sinks) : IWorkflowExecutorExecutionObserver
+{
+    private readonly IReadOnlyList<IWorkflowExecutorExecutionAuditSink> orderedSinks = sinks
+        .OrderBy(sink => sink.GetType().FullName, StringComparer.Ordinal)
+        .ToArray();
+
+    public async ValueTask RecordAsync(
+        WorkflowExecutorExecutionAuditRecord auditRecord,
+        CancellationToken cancellationToken = default)
+    {
+        foreach (var sink in orderedSinks)
+        {
+            await sink.RecordAsync(auditRecord, cancellationToken);
+        }
+    }
+}
+
 public sealed class NullWorkflowExecutorExecutionObserver : IWorkflowExecutorExecutionObserver
 {
     public ValueTask RecordAsync(
@@ -177,22 +202,25 @@ public static class WorkflowExecutorRedaction
     }
 
     public static string RedactSettingsJson(string? settingsJson)
+        => RedactJson(settingsJson, WorkflowExecutorPayloadPolicy.MaxRedactedSummaryCharacters);
+
+    public static string RedactJson(string? json, int maxCharacters)
     {
-        if (string.IsNullOrWhiteSpace(settingsJson))
+        if (string.IsNullOrWhiteSpace(json))
         {
             return "{}";
         }
 
         try
         {
-            var node = JsonNode.Parse(settingsJson);
+            var node = JsonNode.Parse(json);
             RedactNode(node);
             var redactedJson = node?.ToJsonString(new JsonSerializerOptions(JsonSerializerDefaults.Web)) ?? "{}";
-            return Truncate(redactedJson, WorkflowExecutorPayloadPolicy.MaxRedactedSummaryCharacters);
+            return Truncate(redactedJson, maxCharacters);
         }
         catch (JsonException)
         {
-            return Truncate(RedactText(settingsJson), WorkflowExecutorPayloadPolicy.MaxRedactedSummaryCharacters);
+            return Truncate(RedactText(json), maxCharacters);
         }
     }
 

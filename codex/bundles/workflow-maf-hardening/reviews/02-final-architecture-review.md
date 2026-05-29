@@ -13,8 +13,8 @@ The bundle can close. The implementation keeps the canonical CanDoItAll workflow
 ## Residual Risks
 
 - Existing `MSB3277` Entity Framework Core Relational version conflict warnings remain outside this bundle.
-- MAF package migration to the current latest line was intentionally deferred; this bundle hardens behavior on the existing package line first.
-- Durable production workflow backends beyond in-process preview still require explicit registration and follow-up implementation where production execution is needed.
+- MAF package migration was deferred in this earlier bundle, but the follow-up bundle `repo://codex/bundles/workflow-maf-hardening-followup` upgraded the MAF baseline to 1.8.0 and aligned A2A preview packages.
+- Durable production workflow backends beyond in-process preview still require explicit registration and follow-up implementation where production execution is needed. The follow-up bundle now makes DurableTask/AzureFunctions planned and unavailable instead of implying runnable durability.
 
 ## Validation
 

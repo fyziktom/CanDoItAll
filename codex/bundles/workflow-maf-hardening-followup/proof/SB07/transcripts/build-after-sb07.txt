@@ -1,0 +1,4 @@
+Command: wrapper transcript for bundle://proof/SB07/build-after-sb07.txt
+ExitCode: 0
+Result: Solution build passed with 0 errors and existing EF Core Relational warnings.
+Source transcript: bundle://proof/SB07/build-after-sb07.txt

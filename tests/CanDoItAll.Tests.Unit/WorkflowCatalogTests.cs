@@ -263,30 +263,53 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
-    public async Task TestRunnerReturnsRuntimeFailureForUnregisteredBackend()
+    public async Task TestRunnerReturnsValidationFailureForUnavailableBackendPolicy()
     {
         var catalog = CreateCatalog();
         var component = await catalog.SaveComponentAsync(CreateComponentRequest());
-        var definition = await catalog.SaveDefinitionAsync(CreateSaveRequest(
-            CreateDefinitionGraph(component.Id),
-            runtimePolicy: new WorkflowRuntimePolicy(
+        var definition = CreateDefinition(CreateDefinitionGraph(component.Id)) with
+        {
+            RuntimePolicy = new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.DurableTask,
                 AllowInProcessPreviewRuns: true,
                 RequireDurableProductionRuns: true,
                 ExposeAzureFunctionsStatusEndpoint: false,
-                ExposeAzureFunctionsMcpTool: false)));
+                ExposeAzureFunctionsMcpTool: false)
+        };
         var runner = CreateRunner(catalog, new InMemoryWorkflowRunStore());
 
         var result = await runner.RunAsync(new WorkflowTestRunRequest(
-            definition.Id,
-            definition.VersionId,
-            DraftDefinition: null,
+            WorkflowId: null,
+            VersionId: null,
+            DraftDefinition: definition,
             "{}",
             WorkflowRuntimeBackendKind.DurableTask,
             ValidateOnly: false));
 
         Assert.False(result.Succeeded);
-        Assert.Contains("not registered", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(result.Run);
+        var issue = Assert.Single(result.Validation.Issues, issue => issue.Code == WorkflowValidationIssueCode.UnsupportedRuntimeBackend);
+        Assert.Contains("not registered", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CatalogRejectsUnavailableProductionBackendOnSave()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            catalog.SaveDefinitionAsync(CreateSaveRequest(
+                CreateDefinitionGraph(component.Id),
+                runtimePolicy: new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    AllowInProcessPreviewRuns: true,
+                    RequireDurableProductionRuns: true,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false))));
+
+        Assert.Contains("not registered", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(WorkflowRuntimeBackendKind.DurableTask), exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

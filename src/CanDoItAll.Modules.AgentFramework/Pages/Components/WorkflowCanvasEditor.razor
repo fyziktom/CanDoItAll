@@ -266,9 +266,11 @@
                                 value="@document.RuntimePolicy.PreferredBackend"
                                 @onchange="HandleRuntimeBackendChanged"
                                 data-testid="workflow-canvas-runtime">
-                            @foreach (var backend in Enum.GetValues<WorkflowRuntimeBackendKind>())
+                            @foreach (var backend in RuntimeBackendOptions)
                             {
-                                <option value="@backend">@backend</option>
+                                <option value="@backend.Kind"
+                                        disabled="@(!backend.IsRunnable)"
+                                        title="@backend.AvailabilityReason">@BuildRuntimeBackendOptionText(backend)</option>
                             }
                         </select>
                     </label>

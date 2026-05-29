@@ -136,6 +136,26 @@ public readonly record struct WorkflowRunId
     public override string ToString() => Value.ToString("D");
 }
 
+[JsonConverter(typeof(WorkflowCheckpointIdJsonConverter))]
+public readonly record struct WorkflowCheckpointId
+{
+    public WorkflowCheckpointId(Guid value)
+    {
+        if (value == Guid.Empty)
+        {
+            throw new ArgumentException("Workflow checkpoint id cannot be empty.", nameof(value));
+        }
+
+        Value = value;
+    }
+
+    public Guid Value { get; }
+
+    public static WorkflowCheckpointId New() => new(Guid.NewGuid());
+
+    public override string ToString() => Value.ToString("D");
+}
+
 [JsonConverter(typeof(WorkflowExternalRequestIdJsonConverter))]
 public readonly record struct WorkflowExternalRequestId
 {
@@ -274,6 +294,13 @@ public enum WorkflowRuntimeBackendKind
     AzureFunctions
 }
 
+public enum WorkflowRuntimeBackendAvailabilityKind
+{
+    Registered,
+    Planned,
+    Unavailable
+}
+
 public enum WorkflowRunState
 {
     NotStarted,
@@ -308,7 +335,8 @@ public enum WorkflowArtifactKind
     File,
     Image,
     Binary,
-    ToolReceipt
+    ToolReceipt,
+    PreviewSimulation
 }
 
 public enum WorkflowExternalRequestKind
@@ -316,6 +344,29 @@ public enum WorkflowExternalRequestKind
     HumanInput,
     Approval,
     ToolApproval
+}
+
+public enum WorkflowCheckpointKind
+{
+    RuntimeBoundary,
+    SuperStep,
+    WaitingForInput,
+    Completed,
+    Failed,
+    Cancelled
+}
+
+public enum WorkflowCheckpointTrustBoundary
+{
+    MetadataOnly,
+    TrustedRuntimeState
+}
+
+public enum WorkflowResumeAvailability
+{
+    NotSupported,
+    BlockedByPolicy,
+    Available
 }
 
 public enum WorkflowExecutorKind
@@ -575,7 +626,16 @@ public sealed record WorkflowRuntimeBackendDescriptor(
     bool SupportsStreaming,
     bool SupportsExternalRequests,
     bool SupportsDashboardObservability,
-    string OperationalNotes);
+    string OperationalNotes)
+{
+    public WorkflowRuntimeBackendAvailabilityKind Availability { get; init; } = WorkflowRuntimeBackendAvailabilityKind.Registered;
+
+    public bool IsRegistered { get; init; } = true;
+
+    public bool IsRunnable { get; init; } = true;
+
+    public string AvailabilityReason { get; init; } = "Runtime backend is registered and runnable in this host.";
+}
 
 public sealed record WorkflowRunStartRequest(
     WorkflowId WorkflowId,
@@ -608,6 +668,26 @@ public sealed record WorkflowEventRecord(
     string PayloadJson,
     DateTimeOffset CreatedAtUtc);
 
+public enum WorkflowEventPayloadSource
+{
+    Runtime,
+    MafNative,
+    CanDoItAllProgress,
+    ExternalRequest
+}
+
+public sealed record WorkflowEventPayloadEnvelope(
+    WorkflowEventPayloadSource Source,
+    string EventType,
+    WorkflowNodeId? NodeId,
+    WorkflowExecutorId? ExecutorId,
+    WorkflowExternalRequestId? RequestId,
+    WorkflowExternalRequestKind? RequestKind,
+    string InlineJson,
+    int? InlineCharacters,
+    bool InlineTruncated,
+    string Reference);
+
 public sealed record WorkflowExternalRequestRecord(
     WorkflowExternalRequestId Id,
     WorkflowRunId RunId,
@@ -618,6 +698,25 @@ public sealed record WorkflowExternalRequestRecord(
     string ResponseJson,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? RespondedAtUtc);
+
+public sealed record WorkflowCheckpointRecord(
+    WorkflowCheckpointId Id,
+    WorkflowRunId RunId,
+    WorkflowId WorkflowId,
+    WorkflowVersionId VersionId,
+    WorkflowRuntimeBackendKind Backend,
+    WorkflowCheckpointKind Kind,
+    WorkflowCheckpointTrustBoundary TrustBoundary,
+    WorkflowResumeAvailability ResumeAvailability,
+    WorkflowNodeId? NodeId,
+    WorkflowExternalRequestId? ExternalRequestId,
+    string BackendCheckpointId,
+    string PayloadReference,
+    string PayloadHash,
+    string Summary,
+    string ResumeUnavailableReason,
+    DateTimeOffset CreatedAtUtc,
+    DateTimeOffset? ResumedAtUtc);
 
 public sealed record WorkflowArtifactRecord(
     WorkflowArtifactId Id,

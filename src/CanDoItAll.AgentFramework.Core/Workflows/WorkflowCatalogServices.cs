@@ -22,6 +22,7 @@ public sealed class InMemoryWorkflowCatalogService :
     private readonly IWorkflowDefinitionValidator validator;
     private readonly IProviderProfileRegistry? providerRegistry;
     private readonly IProviderProfileService? providerProfileService;
+    private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog;
 
     public InMemoryWorkflowCatalogService(IWorkflowDefinitionValidator validator)
         : this(new InMemoryWorkflowCatalogStore(), validator)
@@ -32,7 +33,8 @@ public sealed class InMemoryWorkflowCatalogService :
         InMemoryWorkflowCatalogStore store,
         IWorkflowDefinitionValidator validator,
         IProviderProfileRegistry? providerRegistry = null,
-        IProviderProfileService? providerProfileService = null)
+        IProviderProfileService? providerProfileService = null,
+        IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(validator);
@@ -41,6 +43,7 @@ public sealed class InMemoryWorkflowCatalogService :
         this.validator = validator;
         this.providerRegistry = providerRegistry;
         this.providerProfileService = providerProfileService;
+        this.runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
     }
 
     public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
@@ -283,6 +286,10 @@ public sealed class InMemoryWorkflowCatalogService :
                 "Durable production workflows cannot prefer the in-process runtime backend."));
         }
 
+        issues.AddRange(WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+            definition.RuntimePolicy,
+            runtimeBackendCatalog));
+
         var currentSettings = await GetSettingsAsync(cancellationToken);
         if (!currentSettings.HumanInLoopPolicy.AllowHumanInputNodes &&
             definition.Graph.Nodes.Any(node => node.Kind == WorkflowNodeKind.HumanInput))
@@ -440,6 +447,15 @@ public sealed class InMemoryWorkflowCatalogService :
         if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0)
         {
             throw new InvalidOperationException("Workflow human-in-loop timeout must be positive.");
+        }
+
+        var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+            settings.DefaultRuntimePolicy,
+            runtimeBackendCatalog);
+        if (runtimeIssues.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Workflow default runtime policy is invalid: {string.Join(" ", runtimeIssues.Select(issue => issue.Message))}");
         }
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -730,14 +746,22 @@ public sealed class WorkflowTestRunner(
                     PreviewSimulationPlan = request.PreviewSimulationPlan
                 },
                 cancellationToken);
+            var events = await runtimeManager.ListEventsAsync(run.RunId, cancellationToken);
+            var artifacts = await runStore.ListArtifactsAsync(run.RunId, cancellationToken);
+            var pendingExternalRequests = await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken);
+            var checkpoints = await runStore.ListCheckpointsAsync(run.RunId, cancellationToken);
+
             return new WorkflowTestRunResult(
                 run.State is WorkflowRunState.Completed or WorkflowRunState.WaitingForInput or WorkflowRunState.Idle,
                 validation,
                 run,
-                await runtimeManager.ListEventsAsync(run.RunId, cancellationToken),
-                await runStore.ListArtifactsAsync(run.RunId, cancellationToken),
-                await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken),
-                run.State == WorkflowRunState.Failed ? run.Summary : string.Empty);
+                events,
+                artifacts,
+                pendingExternalRequests,
+                run.State == WorkflowRunState.Failed ? run.Summary : string.Empty)
+            {
+                Checkpoints = checkpoints
+            };
         }
         catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
         {

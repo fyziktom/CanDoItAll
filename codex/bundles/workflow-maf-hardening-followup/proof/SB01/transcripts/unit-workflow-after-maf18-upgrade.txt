@@ -1,0 +1,19 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter 'FullyQualifiedName~WorkflowFoundationTests|FullyQualifiedName~WorkflowExecutorPolicyObservabilityTests|FullyQualifiedName~WorkflowArchitectureBoundaryTests|FullyQualifiedName~Maf16CapabilityReflectionTests'
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:08:40.9589549-04:00
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:01.19]     CanDoItAll.Tests.Unit.Maf16CapabilityReflectionTests.Maf16_symbols_are_classified_from_loaded_runtime_assemblies [FAIL]
+  Neúspěšné CanDoItAll.Tests.Unit.Maf16CapabilityReflectionTests.Maf16_symbols_are_classified_from_loaded_runtime_assemblies [254 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Filter not matched in collection
+Collection: [["Microsoft.Agents.AI.Abstractions"] = "1.8.0.0", ["Microsoft.Extensions.AI.Abstractions"] = "10.5.0.0", ["Microsoft.Agents.AI.Workflows"] = "1.8.0.0", ["A2A"] = "1.0.0.0"]
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.Maf16CapabilityReflectionTests.Maf16_symbols_are_classified_from_loaded_runtime_assemblies() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\Maf16CapabilityReflectionTests.cs:line 35
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+
+Neúspěšné!  - Neúspěšné:     1, Úspěšné:    22, Přeskočeno:     0, Celkem:    23, Doba trvání: 409 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+
+ExitCode: 1

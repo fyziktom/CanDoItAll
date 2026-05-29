@@ -9,6 +9,12 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class MigrationBootstrapIntegrationTests
 {
     private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
+    private const string WorkflowCheckpointsMigrationId = "20260529111314_AddWorkflowCheckpoints";
+    private static readonly string[] ExpectedPostgreSqlMigrations =
+    [
+        InitialPostgreSqlBaselineMigrationId,
+        WorkflowCheckpointsMigrationId
+    ];
 
     [Fact]
     public async Task Bootstrap_migrates_a_new_postgresql_database()
@@ -85,7 +91,7 @@ public sealed class MigrationBootstrapIntegrationTests
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
-        Assert.Equal(new[] { InitialPostgreSqlBaselineMigrationId }, appliedMigrations);
+        Assert.Equal(ExpectedPostgreSqlMigrations, appliedMigrations);
         Assert.True(await dbContext.Database.CanConnectAsync());
     }
 }

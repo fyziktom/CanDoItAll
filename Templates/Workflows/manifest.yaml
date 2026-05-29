@@ -86,9 +86,9 @@ jsonShape:
     {"type":"object","additionalProperties":true}
   description: Workflow JSON payload
 runtimePolicy:
-  preferredBackend: DurableTask
+  preferredBackend: InProcess
   allowInProcessPreviewRuns: true
-  requireDurableProductionRuns: true
+  requireDurableProductionRuns: false
   exposeAzureFunctionsStatusEndpoint: false
   exposeAzureFunctionsMcpTool: false
 executorPolicies:

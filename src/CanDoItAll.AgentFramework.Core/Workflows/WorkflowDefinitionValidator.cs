@@ -594,7 +594,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
 
 public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatalog
 {
-    private static readonly WorkflowRuntimeBackendDescriptor[] Backends =
+    private static readonly WorkflowRuntimeBackendDescriptor[] BackendDefinitions =
     [
         new(
             WorkflowRuntimeBackendKind.InProcess,
@@ -622,11 +622,30 @@ public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatal
             OperationalNotes: "Evaluate for generated HTTP, status/respond, and MCP tool triggers behind product authorization.")
     ];
 
-    public IReadOnlyList<WorkflowRuntimeBackendDescriptor> ListBackends() => Backends;
+    private readonly IReadOnlyList<WorkflowRuntimeBackendDescriptor> backends;
+
+    public WorkflowRuntimeBackendCatalog()
+        : this([WorkflowRuntimeBackendKind.InProcess])
+    {
+    }
+
+    public WorkflowRuntimeBackendCatalog(IEnumerable<WorkflowRuntimeBackendKind> registeredBackends)
+    {
+        ArgumentNullException.ThrowIfNull(registeredBackends);
+
+        var registeredBackendSet = registeredBackends.ToHashSet();
+        backends = BackendDefinitions
+            .Select(descriptor => registeredBackendSet.Contains(descriptor.Kind)
+                ? MarkRegistered(descriptor)
+                : MarkPlanned(descriptor))
+            .ToArray();
+    }
+
+    public IReadOnlyList<WorkflowRuntimeBackendDescriptor> ListBackends() => backends;
 
     public WorkflowRuntimeBackendDescriptor GetRequiredBackend(WorkflowRuntimeBackendKind backend)
     {
-        foreach (var descriptor in Backends)
+        foreach (var descriptor in backends)
         {
             if (descriptor.Kind == backend)
             {
@@ -634,6 +653,62 @@ public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatal
             }
         }
 
-        throw new InvalidOperationException($"Workflow runtime backend '{backend}' is not registered.");
+        throw new InvalidOperationException($"Workflow runtime backend '{backend}' is not recognized by this host.");
+    }
+
+    private static WorkflowRuntimeBackendDescriptor MarkRegistered(WorkflowRuntimeBackendDescriptor descriptor)
+        => descriptor with
+        {
+            Availability = WorkflowRuntimeBackendAvailabilityKind.Registered,
+            IsRegistered = true,
+            IsRunnable = true,
+            AvailabilityReason = "Runtime backend is registered and runnable in this host."
+        };
+
+    private static WorkflowRuntimeBackendDescriptor MarkPlanned(WorkflowRuntimeBackendDescriptor descriptor)
+        => descriptor with
+        {
+            Availability = WorkflowRuntimeBackendAvailabilityKind.Planned,
+            IsRegistered = false,
+            IsRunnable = false,
+            AvailabilityReason = $"Runtime backend '{descriptor.Kind}' is planned but not registered in this host."
+        };
+}
+
+public static class WorkflowRuntimePolicyValidator
+{
+    public static IReadOnlyList<WorkflowValidationIssue> ValidateRegisteredBackendAvailability(WorkflowRuntimePolicy policy)
+        => ValidateRegisteredBackendAvailability(policy, new WorkflowRuntimeBackendCatalog());
+
+    public static IReadOnlyList<WorkflowValidationIssue> ValidateRegisteredBackendAvailability(
+        WorkflowRuntimePolicy policy,
+        IWorkflowRuntimeBackendCatalog backendCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(backendCatalog);
+
+        var issues = new List<WorkflowValidationIssue>();
+        if (!Enum.IsDefined(policy.PreferredBackend))
+        {
+            return issues;
+        }
+
+        var preferredBackend = backendCatalog.GetRequiredBackend(policy.PreferredBackend);
+        if (!preferredBackend.IsRunnable)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.UnsupportedRuntimeBackend,
+                $"Workflow runtime backend '{preferredBackend.Kind}' is not registered in this host. {preferredBackend.AvailabilityReason}"));
+        }
+
+        if ((policy.ExposeAzureFunctionsStatusEndpoint || policy.ExposeAzureFunctionsMcpTool) &&
+            !backendCatalog.GetRequiredBackend(WorkflowRuntimeBackendKind.AzureFunctions).IsRunnable)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidWorkflowSettings,
+                "Azure Functions workflow endpoints require a registered AzureFunctions backend."));
+        }
+
+        return issues;
     }
 }

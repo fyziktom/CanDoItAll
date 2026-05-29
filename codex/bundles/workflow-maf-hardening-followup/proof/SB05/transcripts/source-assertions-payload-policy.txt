@@ -1,0 +1,142 @@
+Command: See proof manifest for the original command captured in this transcript.
+ExitCode: 0
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:320:                MaxInlinePayloadCharacters = 512
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:345:        Assert.True(startedPayload.InlineJson.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:407:                MaxInlinePayloadCharacters = 160
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:444:        Assert.True(startedPayload.InlineJson.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:15:                MaxInlinePayloadCharacters = 128
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:21:            Scope: WorkflowPayloadPolicyScope.ExecutorOutput,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:33:        Assert.True(result.InlinePayload.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:48:        Assert.Contains(WorkflowArtifactKind.ToolReceipt, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:49:        Assert.Contains(WorkflowArtifactKind.PreviewSimulation, WorkflowSettings.Default.ArtifactPolicy.AllowedArtifactKinds);
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:15:    IWorkflowPayloadPolicyService? payloadPolicyService = null)
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:20:    private readonly IWorkflowPayloadPolicyService payloadPolicyService = payloadPolicyService ?? new WorkflowPayloadPolicyService();
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:28:            WorkflowPayloadPolicyScope.PluginLogMessage,
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:36:            WorkflowPayloadPolicyScope.PluginLogDetails,
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:128:        WorkflowPayloadPolicyScope scope,
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:146:            MaxInlinePayloadCharacters = maxInlinePayloadCharacters
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:12:    private readonly IWorkflowPayloadPolicyService payloadPolicyService;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:21:        IWorkflowPayloadPolicyService? payloadPolicyService = null)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:38:        IWorkflowPayloadPolicyService? payloadPolicyService = null)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:75:            request.PreviewSimulationPlan);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:80:                WorkflowPayloadPolicyScope.ExecutorError,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:112:                    maxInlinePayloadCharacters: failurePayload.MaxInlinePayloadCharacters),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:143:            request.PreviewSimulationPlan,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:213:                WorkflowPayloadPolicyScope.RunInput,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:235:                    maxInlinePayloadCharacters: inputPayload.MaxInlinePayloadCharacters),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:315:            WorkflowPayloadPolicyScope.ExternalRequest,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:351:                maxInlinePayloadCharacters: requestPayload.MaxInlinePayloadCharacters),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:524:        WorkflowPreviewSimulationPlan previewSimulationPlan,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:525:        IWorkflowPayloadPolicyService payloadPolicyService,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:572:                    maxInlinePayloadCharacters: payloadResult.MaxInlinePayloadCharacters),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:592:                        ? WorkflowPayloadPolicyScope.PreviewSimulationOutput
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:593:                        : WorkflowPayloadPolicyScope.ExecutorOutput,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:596:                        ? WorkflowArtifactKind.PreviewSimulation
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:614:                    WorkflowPayloadPolicyScope.ExecutorError,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafInProcessWorkflowExecutionBackend.cs:628:                WorkflowPayloadPolicyScope.EventPayload,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:435:        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:730:                    PreviewSimulationPlan = request.PreviewSimulationPlan
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:20:        WorkflowPreviewSimulationPlan? previewSimulationPlan);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:32:        => Compile(definition, components, WorkflowPreviewSimulationPlan.Empty);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:37:        WorkflowPreviewSimulationPlan? previewSimulationPlan)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:53:            var simulationSteps = (previewSimulationPlan ?? WorkflowPreviewSimulationPlan.Empty).Steps
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:210:        IReadOnlyDictionary<WorkflowNodeId, WorkflowPreviewSimulationStep> simulationSteps)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:267:                    return new WorkflowNodeInput(WorkflowPreviewSimulationRenderer.Render(
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:49:    int MaxInlinePayloadCharacters,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:72:            MaxInlinePayloadCharacters: 64_000,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:78:                WorkflowArtifactKind.ToolReceipt,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:79:                WorkflowArtifactKind.PreviewSimulation
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:125:    public WorkflowPreviewSimulationPlan PreviewSimulationPlan { get; init; } = WorkflowPreviewSimulationPlan.Empty;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:411:    bool SupportsPreviewSimulation,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:416:        SupportsPreviewSimulation: false,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:427:            SupportsPreviewSimulation: true,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:331:    ToolReceipt,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:332:    PreviewSimulation
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:578:public sealed record WorkflowPreviewSimulationPlan(IReadOnlyList<WorkflowPreviewSimulationStep> Steps)
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:580:    public static WorkflowPreviewSimulationPlan Empty { get; } = new([]);
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:585:public sealed record WorkflowPreviewSimulationStep(
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:632:    public WorkflowPreviewSimulationPlan PreviewSimulationPlan { get; init; } = WorkflowPreviewSimulationPlan.Empty;
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:97:            ToolReceipts = (await jsonStore.LoadRecordsFromDirectoryAsync<ToolExecutionReceiptRecord>(layout.RunReceiptsRoot(executionRunId), cancellationToken))
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:141:            previousDetail?.ToolReceipts ?? [],
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:142:            normalizedDetail.ToolReceipts,
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:157:            ReceiptCount: currentIndex.ReceiptCount + normalizedDetail.ToolReceipts.Count - (previousDetail?.ToolReceipts.Count ?? 0),
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:618:            ToolReceipts = detail.ToolReceipts.Select(NormalizeToolReceipt).OrderByDescending(item => item.CompletedAtUtc).ToList()
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:622:    private static ToolExecutionReceiptRecord NormalizeToolReceipt(ToolExecutionReceiptRecord receipt)
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:635:        return WorkflowPayloadPolicyService.BoundPayload(redacted, WorkflowEventPayloads.MaxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:665:        EnsureRunScoped(detail.Run.Id, detail.ToolReceipts.Select(item => item.ExecutionRunId), "tool execution receipt");
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowEventPayloads.cs:8:    public const int MaxInlinePayloadCharacters = 64_000;
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowEventPayloads.cs:27:        var inlineLimit = ResolveMaxInlinePayloadCharacters(maxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowEventPayloads.cs:64:            : WorkflowPayloadPolicyService.BoundPayload(payload, maxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowEventPayloads.cs:67:    private static int ResolveMaxInlinePayloadCharacters(int? maxInlinePayloadCharacters)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowEventPayloads.cs:69:        var resolved = maxInlinePayloadCharacters.GetValueOrDefault(MaxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:5:public enum WorkflowPayloadPolicyScope
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:12:    PluginLogMessage,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:13:    PluginLogDetails,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:14:    ToolReceipt,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:15:    PreviewSimulationOutput
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:20:    WorkflowPayloadPolicyScope Scope,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:33:    public int? MaxInlinePayloadCharacters { get; init; }
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:41:    int MaxInlinePayloadCharacters,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:45:public interface IWorkflowPayloadPolicyService
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:53:    IWorkflowSettingsService? settingsService = null) : IWorkflowPayloadPolicyService
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:56:    private const int AbsoluteMaxInlinePayloadCharacters = 1_000_000;
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:66:        var maxInlineCharacters = ResolveMaxInlinePayloadCharacters(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:67:            artifactPolicy.MaxInlinePayloadCharacters,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:68:            request.MaxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:71:        var inlinePayload = BoundPayload(redactedPayload, maxInlineCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:99:        if (settings.ArtifactPolicy.MaxInlinePayloadCharacters <= 0)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:107:    private static int ResolveMaxInlinePayloadCharacters(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:108:        int policyMaxInlinePayloadCharacters,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:109:        int? requestedMaxInlinePayloadCharacters)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:111:        var requestedMax = requestedMaxInlinePayloadCharacters.GetValueOrDefault(policyMaxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:118:            Math.Min(policyMaxInlinePayloadCharacters, requestedMax),
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:120:            AbsoluteMaxInlinePayloadCharacters);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:135:    public static string BoundPayload(string payload, int maxInlinePayloadCharacters)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:201:        WorkflowPayloadPolicyScope scope,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:208:        WorkflowPayloadPolicyScope scope,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:229:            WorkflowPayloadPolicyScope.RunInput => "workflow-input.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:230:            WorkflowPayloadPolicyScope.ExecutorOutput => "workflow-node-output.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:231:            WorkflowPayloadPolicyScope.ExecutorError => "workflow-node-error.txt",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:232:            WorkflowPayloadPolicyScope.ExternalRequest => "workflow-external-request.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:233:            WorkflowPayloadPolicyScope.PluginLogMessage => "plugin-log-message.txt",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:234:            WorkflowPayloadPolicyScope.PluginLogDetails => "plugin-log-details.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:235:            WorkflowPayloadPolicyScope.ToolReceipt => "workflow-tool-receipt.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:236:            WorkflowPayloadPolicyScope.PreviewSimulationOutput => "workflow-preview-output.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:250:            WorkflowArtifactKind.Json or WorkflowArtifactKind.ToolReceipt or WorkflowArtifactKind.PreviewSimulation => "application/json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:256:    private static string ResolveScopeSegment(WorkflowPayloadPolicyScope scope)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:259:            WorkflowPayloadPolicyScope.RunInput => "run-input",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:260:            WorkflowPayloadPolicyScope.EventPayload => "event-payload",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:261:            WorkflowPayloadPolicyScope.ExecutorOutput => "executor-output",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:262:            WorkflowPayloadPolicyScope.ExecutorError => "executor-error",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:263:            WorkflowPayloadPolicyScope.ExternalRequest => "external-request",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:264:            WorkflowPayloadPolicyScope.PluginLogMessage => "plugin-log-message",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:265:            WorkflowPayloadPolicyScope.PluginLogDetails => "plugin-log-details",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:266:            WorkflowPayloadPolicyScope.ToolReceipt => "tool-receipt",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:267:            WorkflowPayloadPolicyScope.PreviewSimulationOutput => "preview-simulation-output",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:271:    private static string ResolveScopeDisplayName(WorkflowPayloadPolicyScope scope)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:274:            WorkflowPayloadPolicyScope.RunInput => "Workflow input",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:275:            WorkflowPayloadPolicyScope.EventPayload => "Workflow event",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:276:            WorkflowPayloadPolicyScope.ExecutorOutput => "Workflow executor output",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:277:            WorkflowPayloadPolicyScope.ExecutorError => "Workflow executor error",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:278:            WorkflowPayloadPolicyScope.ExternalRequest => "Workflow external request",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:279:            WorkflowPayloadPolicyScope.PluginLogMessage => "Plugin log message",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:280:            WorkflowPayloadPolicyScope.PluginLogDetails => "Plugin log details",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:281:            WorkflowPayloadPolicyScope.ToolReceipt => "Workflow tool receipt",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:282:            WorkflowPayloadPolicyScope.PreviewSimulationOutput => "Workflow preview simulation output",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:290:            WorkflowArtifactKind.ToolReceipt => ".tool-receipt.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:291:            WorkflowArtifactKind.PreviewSimulation => ".preview.json",
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:7:public static class WorkflowPreviewSimulationTemplateTokens
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:20:public static class WorkflowPreviewSimulationRenderer
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:25:        WorkflowPreviewSimulationStep step,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:114:        if (string.Equals(text, WorkflowPreviewSimulationTemplateTokens.InputPayload, StringComparison.Ordinal))
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:119:        if (TryReadPathToken(text, WorkflowPreviewSimulationTemplateTokens.InputPathPrefix, out var inputPath))
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:124:        if (TryReadPathToken(text, WorkflowPreviewSimulationTemplateTokens.SettingsPathPrefix, out var settingsPath))
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:136:            .Replace(WorkflowPreviewSimulationTemplateTokens.NodeId, context.Node.Id.Value, StringComparison.Ordinal)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:137:            .Replace(WorkflowPreviewSimulationTemplateTokens.NodeName, context.Node.Name, StringComparison.Ordinal)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:139:                WorkflowPreviewSimulationTemplateTokens.SourceExecutorId,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:142:            .Replace(WorkflowPreviewSimulationTemplateTokens.SimulationReason, context.Step.Reason, StringComparison.Ordinal)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:143:            .Replace(WorkflowPreviewSimulationTemplateTokens.UtcNow, context.GeneratedAtUtc.ToString("O"), StringComparison.Ordinal);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:151:            value.EndsWith(WorkflowPreviewSimulationTemplateTokens.TokenSuffix, StringComparison.Ordinal))
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:153:            jsonPath = value[prefix.Length..^WorkflowPreviewSimulationTemplateTokens.TokenSuffix.Length].Trim();
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPreviewSimulationRenderer.cs:240:        WorkflowPreviewSimulationStep Step,
+

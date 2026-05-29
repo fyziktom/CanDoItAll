@@ -1,0 +1,13 @@
+Command: Assert SB01 package versions, MAF baseline reflection test, and MAF README package baseline
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:14:11.0538101-04:00
+
+PASS: Stable MAF core package upgraded [src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj]
+PASS: Workflow package upgraded [src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj]
+PASS: A2A package upgraded [src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj]
+PASS: A2A hosting package upgraded [src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj]
+PASS: Reflection test asserts MAF 1.8 assembly baseline [tests\CanDoItAll.Tests.Unit\MafPackageBaselineReflectionTests.cs]
+PASS: MAF README documents 1.8 workflow package baseline [src\CanDoItAll.AgentFramework.Maf\README.md]
+Invariant ID: SB01-MAF18-BASELINE
+
+ExitCode: 0

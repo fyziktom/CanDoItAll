@@ -1,0 +1,79 @@
+Command: See proof manifest for the original command captured in this transcript.
+ExitCode: 0
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:419:            services.AddPluginsModule(configuration, contentRootPath: null);
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:420:            services.AddAgentFrameworkModule(configuration);
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:424:            services.AddAgentFrameworkModule(configuration);
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:425:            services.AddPluginsModule(configuration, contentRootPath: null);
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:432:            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorExecutionAuditSink))
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:435:        Assert.Contains(observerDescriptors, descriptor => descriptor.ImplementationType == typeof(CompositeWorkflowExecutorExecutionObserver));
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:436:        Assert.DoesNotContain(observerDescriptors, descriptor => descriptor.ImplementationType == typeof(PluginWorkflowExecutorExecutionObserver));
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:437:        Assert.Contains(sinkDescriptors, descriptor => descriptor.ImplementationType == typeof(PluginWorkflowExecutorExecutionObserver));
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:438:        Assert.Single(sinkDescriptors, descriptor => descriptor.ImplementationType == typeof(PluginWorkflowExecutorExecutionObserver));
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:991:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1005:                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1008:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1025:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1039:                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1042:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1056:                    WorkflowExecutorCapabilityFlags.RunsHostCommand |
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1058:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:110:                        WorkflowExecutorCapabilityFlags.RunsHostCommand |
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:111:                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:124:        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingConnectionMetadata);
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:138:                        WorkflowExecutorCapabilityFlags.WritesExternalData |
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:140:                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:153:        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.InconsistentPermissionPolicy && issue.Message.Contains("approval", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:154:        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.InconsistentPermissionPolicy && issue.Message.Contains("deterministic", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:132:                WorkflowExecutorCapabilityFlags.WritesExternalData,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:154:                WorkflowExecutorCapabilityFlags.RunsHostCommand,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:180:                WorkflowExecutorCapabilityFlags.WritesExternalData,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:207:                WorkflowExecutorCapabilityFlags.RunsHostCommand | WorkflowExecutorCapabilityFlags.UsesSecrets,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:440:    WritesExternalData = 1 << 3,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:443:    RunsHostCommand = 1 << 6,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:445:    SupportsDeterministicTestMode = 1 << 8
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:44:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:224:            WorkflowExecutorCapabilityFlags.WritesExternalData |
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:227:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:48:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:64:                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:67:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:45:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:225:            WorkflowExecutorCapabilityFlags.WritesExternalData |
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:228:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Gmail\GmailBundledPlugin.cs:44:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Gmail\GmailBundledPlugin.cs:60:                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+src\plugins\CanDoItAll.Plugin.Gmail\GmailBundledPlugin.cs:63:                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Docker\DockerWorkflowExecutors.cs:56:            WorkflowExecutorCapabilityFlags.RunsHostCommand |
+src\plugins\CanDoItAll.Plugin.Docker\DockerWorkflowExecutors.cs:58:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\plugins\CanDoItAll.Plugin.Docker\DockerBundledPlugin.cs:77:                WorkflowExecutorCapabilityFlags.RunsHostCommand |
+src\plugins\CanDoItAll.Plugin.Docker\DockerBundledPlugin.cs:79:                WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:64:        services.AddPluginsModule(configuration, contentRootPath);
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:71:        services.AddAgentFrameworkModule(configuration);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:32:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:48:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:80:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:96:            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs:63:        services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:14:    MissingConnectionMetadata,
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:15:    InconsistentPermissionPolicy
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:178:            PluginManifestValidationIssueCode.MissingConnectionMetadata,
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:195:                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData),
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:207:                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.RunsHostCommand),
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:216:                    PluginManifestValidationIssueCode.MissingConnectionMetadata,
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:221:            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData) &&
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:225:                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:230:            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.RunsHostCommand) &&
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:234:                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:273:        var declaresCapability = requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode);
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:280:            PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:21:    public static IServiceCollection AddAgentFrameworkModule(this IServiceCollection services, IConfiguration configuration)
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:91:        services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorObservability.cs:42:public interface IWorkflowExecutorExecutionAuditSink
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorObservability.cs:49:public sealed class CompositeWorkflowExecutorExecutionObserver(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorObservability.cs:50:    IEnumerable<IWorkflowExecutorExecutionAuditSink> sinks) : IWorkflowExecutorExecutionObserver
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorObservability.cs:52:    private readonly IReadOnlyList<IWorkflowExecutorExecutionAuditSink> orderedSinks = sinks
+src\CanDoItAll.Modules.Plugins\Services\PluginsModuleServiceCollectionExtensions.cs:11:    public static IServiceCollection AddPluginsModule(
+src\CanDoItAll.Modules.Plugins\Services\PluginsModuleServiceCollectionExtensions.cs:28:        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutorExecutionAuditSink, PluginWorkflowExecutorExecutionObserver>());
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:180:public sealed class PluginWorkflowExecutorExecutionObserver(
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:181:    PluginLogStore logStore) : IWorkflowExecutorExecutionAuditSink
+

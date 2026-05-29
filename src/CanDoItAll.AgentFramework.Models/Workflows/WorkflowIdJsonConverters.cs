@@ -94,6 +94,19 @@ public sealed class WorkflowRunIdJsonConverter : JsonConverter<WorkflowRunId>
     }
 }
 
+public sealed class WorkflowCheckpointIdJsonConverter : JsonConverter<WorkflowCheckpointId>
+{
+    public override WorkflowCheckpointId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return new WorkflowCheckpointId(WorkflowIdJsonConverterHelpers.ReadGuid(ref reader, nameof(WorkflowCheckpointId)));
+    }
+
+    public override void Write(Utf8JsonWriter writer, WorkflowCheckpointId value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value.Value);
+    }
+}
+
 public sealed class WorkflowExternalRequestIdJsonConverter : JsonConverter<WorkflowExternalRequestId>
 {
     public override WorkflowExternalRequestId Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

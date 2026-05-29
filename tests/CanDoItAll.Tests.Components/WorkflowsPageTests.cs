@@ -239,6 +239,27 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_canvas_marks_planned_runtime_backends_unavailable()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var definition = CreatePreviewProgressDefinition();
+
+        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+
+        var runtimeSelect = cut.Find("[data-testid='workflow-canvas-runtime']");
+        var durableOption = Assert.Single(
+            runtimeSelect.QuerySelectorAll("option"),
+            option => string.Equals(option.GetAttribute("value"), nameof(WorkflowRuntimeBackendKind.DurableTask), StringComparison.Ordinal));
+
+        Assert.True(durableOption.HasAttribute("disabled"));
+        Assert.Contains("Planned", durableOption.TextContent, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not registered", durableOption.GetAttribute("title"), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Workflow_canvas_preview_selects_running_node_from_progress()
     {
         var runner = new NodeProgressWorkflowTestRunner(new WorkflowNodeId("work"));

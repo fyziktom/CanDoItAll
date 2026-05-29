@@ -6,13 +6,17 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Plugins.Abstractions;
+using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Configuration;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -366,8 +370,8 @@ public sealed class PluginCatalogIntegrationTests
             PluginLogOperationKind.PackageInstall,
             PluginLogSeverity.Information,
             "Installed",
-            "Installed package with token=super-secret",
-            "{\"clientSecret\":\"super-secret\",\"safe\":\"value\"}",
+            $"Installed package with token=super-secret {new string('x', 2000)}",
+            $$"""{"clientSecret":"super-secret","safe":"value","payload":"{{new string('x', 10000)}}"}""",
             new PluginId("integration.logs"),
             new PluginPackageId("integration.logs.package")));
         await logStore.WriteAsync(new PluginLogWriteRequest(
@@ -392,7 +396,86 @@ public sealed class PluginCatalogIntegrationTests
         Assert.DoesNotContain("super-secret", installation.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("super-secret", installation.DetailsJson, StringComparison.Ordinal);
         Assert.Contains("[REDACTED]", installation.DetailsJson, StringComparison.Ordinal);
+        Assert.True(installation.Message.Length <= 1200);
+        Assert.True(installation.DetailsJson.Length <= 8000);
         Assert.Equal(PluginLogOperationKind.ExecutorCompleted, runtime.OperationKind);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Workflow_executor_observer_registration_composes_plugin_sink_regardless_module_order(bool pluginsFirst)
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                [LocalRuntimeHostedWorkerPolicy.LaneKindConfigurationKey] = LocalRuntimeHostedWorkerPolicy.McpToolHostLaneKind
+            })
+            .Build();
+        var services = new ServiceCollection();
+
+        if (pluginsFirst)
+        {
+            services.AddPluginsModule(configuration, contentRootPath: null);
+            services.AddAgentFrameworkModule(configuration);
+        }
+        else
+        {
+            services.AddAgentFrameworkModule(configuration);
+            services.AddPluginsModule(configuration, contentRootPath: null);
+        }
+
+        var observerDescriptors = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorExecutionObserver))
+            .ToArray();
+        var sinkDescriptors = services
+            .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutorExecutionAuditSink))
+            .ToArray();
+
+        Assert.Contains(observerDescriptors, descriptor => descriptor.ImplementationType == typeof(CompositeWorkflowExecutorExecutionObserver));
+        Assert.DoesNotContain(observerDescriptors, descriptor => descriptor.ImplementationType == typeof(PluginWorkflowExecutorExecutionObserver));
+        Assert.Contains(sinkDescriptors, descriptor => descriptor.ImplementationType == typeof(PluginWorkflowExecutorExecutionObserver));
+        Assert.Single(sinkDescriptors, descriptor => descriptor.ImplementationType == typeof(PluginWorkflowExecutorExecutionObserver));
+    }
+
+    [Theory]
+    [MemberData(nameof(BundledPluginSimulationCases))]
+    public async Task Bundled_plugin_preview_simulation_avoids_live_external_effects(
+        WorkflowExecutorDescriptor descriptor,
+        string expectedPayloadFragment)
+    {
+        var executor = CreateThrowingWorkflowExecutor(descriptor, out var invocationProbe);
+        var catalog = new WorkflowExecutorCatalog([executor]);
+        var compiler = new MafWorkflowCompiler(
+            new WorkflowDefinitionValidator(catalog),
+            new WorkflowExecutorInvoker(catalog, [executor]));
+        var backend = new MafInProcessWorkflowExecutionBackend(compiler, Array.Empty<LlmCallComponent>());
+        var node = CreateSimulationExecutorNode("plugin-step", descriptor);
+        var definition = CreateSingleExecutorSimulationWorkflow(node);
+        var request = new WorkflowRunStartRequest(
+            definition.Id,
+            definition.VersionId,
+            """{"projectId":"sb06","runContext":{"workflowNodeId":"plugin-step"}}""",
+            WorkflowRuntimeBackendKind.InProcess,
+            SourceProcessRunId: null,
+            SourceProcessAssignmentId: null)
+        {
+            PreviewSimulationPlan = new WorkflowPreviewSimulationPlan(
+            [
+                new WorkflowPreviewSimulationStep(
+                    node.Id,
+                    descriptor.Id,
+                    "SB06 deterministic fake-mode proof",
+                    descriptor.Simulation.OutputTemplateJson)
+            ])
+        };
+
+        var result = await backend.StartAsync(definition, request, WorkflowRunId.New());
+        var eventPayloads = string.Join(Environment.NewLine, result.Events.Select(item => item.Message + item.PayloadJson));
+
+        Assert.Equal(WorkflowRunState.Completed, result.Run.State);
+        Assert.Equal(0, invocationProbe.InvocationCount);
+        Assert.Contains(expectedPayloadFragment, eventPayloads, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -891,6 +974,202 @@ public sealed class PluginCatalogIntegrationTests
         Assert.Contains("Deterministic Docker log summary", eventText, StringComparison.OrdinalIgnoreCase);
     }
 
+    public static IEnumerable<object[]> BundledPluginSimulationCases()
+    {
+        yield return
+        [
+            CreatePluginSimulationDescriptor(
+                GmailPluginConstants.DownloadByLabelExecutorId,
+                "Gmail messages by label",
+                GmailPluginConstants.PluginId,
+                GmailPluginConstants.PackageId,
+                GmailPluginConstants.Icon,
+                new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.ReadsExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.NotRequired),
+                ReadSimulationTemplate(typeof(GmailPluginConstants), "GmailWorkflowSimulationTemplates", "DownloadByLabel")),
+            "simulated-gmail-message-1"
+        ];
+        yield return
+        [
+            CreatePluginSimulationDescriptor(
+                GmailPluginConstants.MarkProcessedExecutorId,
+                "Gmail mark processed",
+                GmailPluginConstants.PluginId,
+                GmailPluginConstants.PackageId,
+                GmailPluginConstants.Icon,
+                new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+                ReadSimulationTemplate(typeof(GmailPluginConstants), "GmailWorkflowSimulationTemplates", "MarkProcessed")),
+            "sourceLabelRemoved"
+        ];
+        yield return
+        [
+            CreatePluginSimulationDescriptor(
+                Office365PluginConstants.DownloadByCategoryExecutorId,
+                "Office365 messages by category",
+                Office365PluginConstants.PluginId,
+                Office365PluginConstants.PackageId,
+                Office365PluginConstants.Icon,
+                new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.ReadsExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.NotRequired),
+                ReadSimulationTemplate(typeof(Office365PluginConstants), "Office365WorkflowSimulationTemplates", "DownloadByCategory")),
+            "simulated-office365-message-1"
+        ];
+        yield return
+        [
+            CreatePluginSimulationDescriptor(
+                Office365PluginConstants.MarkProcessedExecutorId,
+                "Office365 mark processed",
+                Office365PluginConstants.PluginId,
+                Office365PluginConstants.PackageId,
+                Office365PluginConstants.Icon,
+                new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+                ReadSimulationTemplate(typeof(Office365PluginConstants), "Office365WorkflowSimulationTemplates", "MarkProcessed")),
+            "processedCategoryCreated"
+        ];
+        yield return
+        [
+            CreatePluginSimulationDescriptor(
+                DockerPluginConstants.StartContainerExecutorId,
+                "Docker start container",
+                DockerPluginConstants.PluginId,
+                DockerPluginConstants.PackageId,
+                DockerPluginConstants.Icon,
+                new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.RunsHostCommand |
+                    WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.AlwaysRequired),
+                ReadSimulationTemplate(typeof(DockerPluginConstants), "DockerWorkflowSimulationTemplates", "CommandResult")),
+            "simulated docker output"
+        ];
+    }
+
+    private static WorkflowExecutorSimulationDescriptor ReadSimulationTemplate(
+        Type markerType,
+        string typeName,
+        string propertyName)
+    {
+        var fullName = $"{markerType.Namespace}.{typeName}";
+        var templateType = markerType.Assembly.GetType(fullName, throwOnError: true)
+            ?? throw new InvalidOperationException($"Simulation template type '{fullName}' was not found.");
+        var property = templateType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Static)
+            ?? throw new InvalidOperationException($"Simulation template property '{fullName}.{propertyName}' was not found.");
+        return (WorkflowExecutorSimulationDescriptor)(property.GetValue(null)
+            ?? throw new InvalidOperationException($"Simulation template property '{fullName}.{propertyName}' returned null."));
+    }
+
+    private static WorkflowExecutorDescriptor CreatePluginSimulationDescriptor(
+        WorkflowExecutorId executorId,
+        string name,
+        PluginId pluginId,
+        PluginPackageId packageId,
+        UiIconDescriptor icon,
+        WorkflowExecutorPermissionPolicy permissionPolicy,
+        WorkflowExecutorSimulationDescriptor simulation)
+        => new(
+            executorId,
+            name,
+            "Deterministic plugin fake-mode test executor.",
+            WorkflowExecutorCategoryKind.Data,
+            string.IsNullOrWhiteSpace(icon.Value) ? "extension" : icon.Value,
+            "sb06-plugin-fake-mode",
+            WorkflowValueShape.Text,
+            JsonShape(),
+            "{\"type\":\"object\"}",
+            "{}",
+            WorkflowExecutorExecutionPolicy.Default,
+            IsImplemented: true)
+        {
+            Source = WorkflowExecutorSourceDescriptor.BundledPlugin(
+                pluginId.Value,
+                "1.0.0",
+                name,
+                icon),
+            PermissionPolicy = permissionPolicy,
+            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("SB06 fake-mode preview proof."),
+            Simulation = simulation
+        };
+
+    private static WorkflowDefinition CreateSingleExecutorSimulationWorkflow(WorkflowNode executorNode)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "SB06 plugin fake-mode workflow",
+            "Verifies bundled plugin preview simulation without live external effects.",
+            WorkflowLifecycleStatus.Draft,
+            new WorkflowGraph(
+                new WorkflowNodeId("start"),
+                [
+                    CreateNode("start", WorkflowNodeKind.Start),
+                    executorNode,
+                    CreateNode("end", WorkflowNodeKind.End, inputShape: JsonShape(), resultShape: JsonShape())
+                ],
+                [
+                    CreateEdge("start-to-plugin", "start", executorNode.Id.Value),
+                    CreateEdge("plugin-to-end", executorNode.Id.Value, "end")
+                ]),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            now,
+            now);
+    }
+
+    private static WorkflowNode CreateSimulationExecutorNode(
+        string id,
+        WorkflowExecutorDescriptor descriptor)
+        => new(
+            new WorkflowNodeId(id),
+            WorkflowNodeKind.Executor,
+            id,
+            [],
+            new WorkflowNodeSettings(
+                ComponentId: null,
+                AgentId: null,
+                SubworkflowId: null,
+                ExternalRequestKind: null,
+                Instructions: string.Empty,
+                InputShape: WorkflowValueShape.Text,
+                ResultShape: descriptor.ResultShape)
+            {
+                ExecutorId = descriptor.Id,
+                ExecutorSettingsJson = descriptor.DefaultSettingsJson,
+                ExecutionPolicy = descriptor.DefaultPolicy
+            });
+
+    private static IWorkflowExecutor CreateThrowingWorkflowExecutor(
+        WorkflowExecutorDescriptor descriptor,
+        out WorkflowExecutorInvocationProbe invocationProbe)
+    {
+        var executor = DispatchProxy.Create<IWorkflowExecutor, WorkflowExecutorInvocationProbe>();
+        invocationProbe = (WorkflowExecutorInvocationProbe)(object)executor;
+        invocationProbe.Descriptor = descriptor;
+        return executor;
+    }
+
     private static async Task<ServiceProvider> BuildServiceProviderAsync(
         TestDatabaseProfile profile,
         IReadOnlyList<PluginDescriptor> descriptors,
@@ -1351,6 +1630,27 @@ public sealed class PluginCatalogIntegrationTests
         string InstalledRootPath,
         string RuntimeStateRootPath,
         IReadOnlyDictionary<string, string?> ConfigurationOverrides);
+
+    private class WorkflowExecutorInvocationProbe : DispatchProxy
+    {
+        public WorkflowExecutorDescriptor Descriptor { get; set; } = null!;
+
+        public int InvocationCount { get; private set; }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+            => targetMethod?.Name switch
+            {
+                "get_Descriptor" => Descriptor,
+                nameof(IWorkflowExecutor.ExecuteAsync) => ExecuteAsync(),
+                _ => throw new NotSupportedException($"Unsupported workflow executor proxy member '{targetMethod?.Name}'.")
+            };
+
+        private ValueTask<WorkflowNodeExecutionResult> ExecuteAsync()
+        {
+            InvocationCount++;
+            throw new InvalidOperationException("Bundled plugin fake-mode proof must not invoke the live executor.");
+        }
+    }
 
     private sealed class DockerLogSummaryLlmInvoker : IWorkflowLlmComponentInvoker
     {

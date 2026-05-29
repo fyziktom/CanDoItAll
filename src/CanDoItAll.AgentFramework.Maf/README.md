@@ -35,11 +35,11 @@ Direct package references:
 
 - `Azure.AI.OpenAI (2.9.0-beta.1)`
 - `ExcelDataReader (3.8.0)`
-- `Microsoft.Agents.AI (1.6.2)`
-- `Microsoft.Agents.AI.A2A (1.6.2-preview.260521.1)`
+- `Microsoft.Agents.AI (1.8.0)`
+- `Microsoft.Agents.AI.A2A (1.8.0-preview.260528.1)`
 - `Microsoft.Agents.AI.Mem0 (1.0.0-preview.251028.1)`
-- `Microsoft.Agents.AI.OpenAI (1.6.2)`
-- `Microsoft.Agents.AI.Workflows (1.6.2)`
+- `Microsoft.Agents.AI.OpenAI (1.8.0)`
+- `Microsoft.Agents.AI.Workflows (1.8.0)`
 - `ModelContextProtocol (1.1.0)`
 - `OllamaSharp (5.4.25)`
 - `OpenTelemetry.Api (1.15.3)`
@@ -58,7 +58,7 @@ MAF runtime regression proof is tracked by named slices so process automation an
 | Approvals | `Runtime/MafAgentRuntime.AgentFactory.cs` and capability policy code | Approval-required function wrapping, unusable approval-tool filtering, and policy-block static tests. |
 | MCP | `Runtime/Capabilities/MafAgentRuntime.Capabilities.Mcp.cs` | Browser MCP result bounding tests that remove image payloads and cap snapshot text. |
 | A2A | `Runtime/Capabilities/A2ARemoteAgentToolFactory.cs` | Disabled endpoint, missing bearer secret, and invalid endpoint tests. |
-| Workflow mapping | `Runtime/Workflows/MafWorkflowCompiler.cs` and `Runtime/MafHandoffWorkflowFactory.cs` | MAF 1.6 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
+| Workflow mapping | `Runtime/Workflows/MafWorkflowCompiler.cs` and `Runtime/MafHandoffWorkflowFactory.cs` | MAF 1.8 workflow symbol reflection, handoff routing, depth guard, workflow response format, and status/event mapper source assertions. |
 | Trace correlation | `Runtime/Workflows/MafWorkflowCompiler.cs` and execution response models | Tool invocation traces, finalizer invocation traces, workflow audit scope, and OpenTelemetry package presence source assertions. |
 
 ## Architecture Notes
@@ -69,7 +69,7 @@ Keep AgentFramework model contracts, persistence, provider-neutral orchestration
 
 - Internal process tools are composed by `MafAgentRuntime.ProcessToolBuilder` when process services are available. Read tools such as `processes_run_detail_get`, `processes_template_baseline_scenarios_list`, and `processes_template_live_run_profiles_list` must remain approval-free; mutation tools such as transitions, assignment resolution, artifact recording, definition saves, and template imports require approval wrappers unless governed automation explicitly suppresses approvals.
 - MAF process agents should use the process API/tool surface for run state, artifacts, assignments, manager directives, and live-run profiles. They should not infer process state from prompt text, template files, or database rows.
-- Adopted MAF 1.6 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
+- Adopted MAF 1.8 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
 - Deferred or guarded surfaces must fail predictably. A2A endpoints require valid configuration and bearer secrets, browser MCP payloads are bounded, incompatible approval continuations are rejected, and workflow handoff depth is guarded.
 - Process automation that records final delivery must produce current-run evidence and let Processes validate the artifact and transition. MAF finalizers should not mark process steps complete by prose-only conclusion text.
 
