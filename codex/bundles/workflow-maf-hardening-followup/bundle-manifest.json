@@ -1,0 +1,20 @@
+{
+  "bundleKey": "workflow-maf-hardening-followup",
+  "title": "CanDoItAll Workflow MAF Hardening Follow-up",
+  "preparedAtUtc": "2026-05-29T00:00:00Z",
+  "targetRepository": "fyziktom/CanDoItAll",
+  "targetBranch": "processes-hardening",
+  "observedHead": "0c5876df0fe42ffe3ecd2757257770683a9fb041",
+  "baseBundle": "codex/bundles/workflow-maf-hardening",
+  "status": "Prepared",
+  "subbundles": [
+    "01-maf-1-8-upgrade-and-api-delta-gate",
+    "02-hitl-and-approval-gate-runtime",
+    "03-streaming-events-and-node-identity",
+    "04-checkpoint-and-resume-foundation",
+    "05-artifact-and-payload-policy-hardening",
+    "06-plugin-permission-contract-and-observer-composition",
+    "07-backend-catalog-and-production-runtime-honesty",
+    "08-final-regression-ci-and-evidence-cleanup"
+  ]
+}
