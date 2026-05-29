@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -26,13 +26,14 @@ Harden workflow plugin executors so external capabilities can be used safely, de
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Plugins/`
-- `src/CanDoItAll.Plugins.Abstractions/`
-- `src/plugins/CanDoItAll.Plugin.Email/`
-- `src/plugins/CanDoItAll.Plugin.Gmail/`
-- `src/plugins/CanDoItAll.Plugin.Office365/`
-- `src/plugins/CanDoItAll.Plugin.Docker/`
-- Workflow executor registry/compiler hooks from SB03.
+- `repo://src/CanDoItAll.Modules.Plugins`
+- `repo://src/CanDoItAll.Plugins.Abstractions`
+- `repo://src/plugins/CanDoItAll.Plugin.Email`
+- `repo://src/plugins/CanDoItAll.Plugin.Gmail`
+- `repo://src/plugins/CanDoItAll.Plugin.Office365`
+- `repo://src/plugins/CanDoItAll.Plugin.Docker`
+- `repo://src/CanDoItAll.AgentFramework.Maf`
+- `repo://tests/CanDoItAll.Tests.Unit`
 
 ## Deliverables
 
@@ -43,6 +44,18 @@ Harden workflow plugin executors so external capabilities can be used safely, de
 - Timeout/retry/cancellation tests.
 - Artifact/tool receipt tests.
 - Secret redaction tests.
+
+## Dependency Impact
+
+- SB05 event/artifact semantics depend on stable plugin executor descriptors and runtime receipts.
+- SB06 executor availability, approval, and capability UI depends on this registry contract.
+- Any gap in side-effect approval or cancellation must reopen SB04 before SB05/SB06 closure.
+
+## Validation Depth
+
+- Critical foundation with semantic proof required under `proof/SB04/manifest.md` and `proof/SB04/semantic-invariants.md`.
+- Requires adversarial negative proof for unknown executor IDs, invalid settings, denied approvals, and cancellation.
+- Requires positive fake executor proof for success, failure, retry where supported, artifact capture, telemetry, and redaction without live external services.
 
 ## Implementation Steps
 
@@ -80,9 +93,13 @@ Harden workflow plugin executors so external capabilities can be used safely, de
 - Source assertions for descriptor registration and approval enforcement.
 - Redaction test proof.
 
+## Browser Validation Logging
+
+- N/A unless plugin configuration or executor availability UI is changed in this subbundle; if it is, log route, viewport, Playwright evidence, screenshots, and result.
+
 ## Progression Gate
 
-SB05 may finalize runtime event/checkpoint alignment only after plugin executor event/artifact semantics are stable.
+- SB05 may finalize runtime event/checkpoint alignment only after plugin executor event/artifact semantics are stable and SB04 closure proof cites `proof/SB04/manifest.md` plus `proof/SB04/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 

@@ -79,6 +79,54 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
         Assert.DoesNotContain("sk-test-secret-value", failed.RedactedMessage, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task PluginPolicy_invoker_rejects_approval_required_executor_without_gate()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.approval") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.WritesExternalData,
+                WorkflowExecutorApprovalRequirement.RequiredForExternalEffect)
+        };
+        var executor = new RecordingPluginExecutor(descriptor);
+        var invoker = new WorkflowExecutorInvoker(new WorkflowExecutorCatalog([executor]), [executor]);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            invoker.ExecuteAsync(
+                CreateDefinition(descriptor.Id, "{}"),
+                CreateNode(descriptor.Id, "{}"),
+                new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains("requires approval", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, executor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task PluginPolicy_invoker_rejects_denied_approval_before_execution()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.denied") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.RunsHostCommand,
+                WorkflowExecutorApprovalRequirement.AlwaysRequired)
+        };
+        var executor = new RecordingPluginExecutor(descriptor);
+        var invoker = new WorkflowExecutorInvoker(
+            new WorkflowExecutorCatalog([executor]),
+            [executor],
+            approvalGate: new DenyingApprovalGate("Host command denied for test."));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            invoker.ExecuteAsync(
+                CreateDefinition(descriptor.Id, "{\"token\":\"raw-token-value\"}"),
+                CreateNode(descriptor.Id, "{\"token\":\"raw-token-value\"}"),
+                new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains("not approved", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("raw-token-value", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(0, executor.InvocationCount);
+    }
+
     private static WorkflowExecutorDescriptor CreatePluginDescriptor(string id)
         => new(
             new WorkflowExecutorId(id),
@@ -145,11 +193,14 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
 
         public Exception? Failure { get; init; }
 
+        public int InvocationCount { get; private set; }
+
         public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
             WorkflowExecutorExecutionContext context,
             WorkflowNodeInput input,
             CancellationToken cancellationToken = default)
         {
+            InvocationCount++;
             if (Failure is not null)
             {
                 throw Failure;
@@ -172,6 +223,17 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
         {
             Records.Add(auditRecord);
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class DenyingApprovalGate(string message) : IWorkflowExecutorApprovalGate
+    {
+        public ValueTask<WorkflowExecutorApprovalDecision> RequestApprovalAsync(
+            WorkflowExecutorApprovalRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValueTask.FromResult(new WorkflowExecutorApprovalDecision(false, message));
         }
     }
 }

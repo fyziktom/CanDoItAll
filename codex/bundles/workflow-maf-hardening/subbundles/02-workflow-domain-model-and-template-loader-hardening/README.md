@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -27,12 +27,13 @@ Harden the repository workflow definition model and template loader so invalid g
 
 ## Exact Source References
 
-- `Templates/Workflows/manifest.yaml`
-- `Templates/Workflows/workflows/*.yaml`
-- `src/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowTemplatePackLoader.cs`
-- `src/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowExampleCatalogSeedService.cs`
-- Workflow model types found by SB01.
-- Existing workflow template tests found by SB01.
+- `repo://Templates/Workflows/manifest.yaml`
+- `repo://Templates/Workflows/workflows`
+- `repo://src/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowTemplatePackLoader.cs`
+- `repo://src/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowExampleCatalogSeedService.cs`
+- `repo://src/CanDoItAll.AgentFramework.Models`
+- `repo://src/CanDoItAll.AgentFramework.Core`
+- `repo://tests/CanDoItAll.Tests.Unit`
 
 ## Deliverables
 
@@ -40,6 +41,18 @@ Harden the repository workflow definition model and template loader so invalid g
 - Loader refactor if needed: parser/normalizer/validator/model mapper boundaries.
 - Route validation for `BuiltInJsonV1`.
 - Tests for valid templates and representative invalid templates.
+
+## Dependency Impact
+
+- SB03 compiler proof depends on this phase producing a stable, reusable validation boundary.
+- SB06 seed/UI work depends on this phase preserving file-backed templates and managed seed safety.
+- If validation allows invalid repository graphs through, SB03, SB05, and SB06 proof must be reopened.
+
+## Validation Depth
+
+- Critical foundation with semantic proof required under `proof/SB02/manifest.md` and `proof/SB02/semantic-invariants.md`.
+- Requires failing-first invalid graph proof, passing valid template proof, source assertions for file-backed template loading, and anti-stub audit.
+- No browser proof unless UI validation surfaces are changed in this subbundle.
 
 ## Validation Rules To Cover
 
@@ -92,9 +105,13 @@ Harden the repository workflow definition model and template loader so invalid g
 - Source assertions showing no hard-coded workflow examples were added.
 - Updated execution report row.
 
+## Browser Validation Logging
+
+- N/A unless this subbundle changes browser-visible validation surfaces; if it does, add a `## Browser Validation Analytics` row with route, viewport, Playwright evidence, screenshots, and result.
+
 ## Progression Gate
 
-SB03 may start only after repository workflow definitions have a stable validation boundary.
+- SB03 may start only after repository workflow definitions have a stable validation boundary and SB02 closure proof cites `proof/SB02/manifest.md` plus `proof/SB02/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 

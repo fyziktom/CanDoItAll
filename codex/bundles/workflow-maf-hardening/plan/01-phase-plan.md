@@ -1,5 +1,17 @@
 # Phase Plan
 
+## Execution Order
+
+1. SB01 repo-local inventory and MAF version baseline.
+2. SB02 workflow domain model and template loader hardening.
+3. SB03 MAF workflow compiler and executor foundation.
+4. SB04 plugin executor contract and sandbox hardening.
+5. SB05 runtime events, state, and checkpoint alignment.
+6. SB06 agent workflow UI, seeding, and compatibility migration.
+7. SB07 tests, observability, and final hardening review.
+
+## Subbundle Dependency Map
+
 ```mermaid
 flowchart LR
     SB01[SB01 Audit + MAF baseline] --> SB02[SB02 Domain model + loader validation]
@@ -11,7 +23,15 @@ flowchart LR
     SB06 --> SB07[SB07 Tests + observability + final review]
 ```
 
-## Phase gates
+## Critical Subbundles
+
+- SB02 is a critical foundation because every compiler, runtime, UI, and seed path depends on validated canonical workflow graphs.
+- SB03 is a critical foundation because downstream plugin and runtime work must execute through a single native MAF adapter boundary.
+- SB04 is a critical foundation because plugin executors are external-effect runtime components and must be permissioned, cancellable, and deterministic.
+- SB05 is a critical foundation because runtime state, events, checkpoint policy, and artifacts are the durable audit surface for workflow execution.
+- SB06 is critical for data safety because seed refresh and compatibility migration must preserve user-managed workflow definitions.
+
+## Phase Gates
 
 | Gate | Required proof | May proceed when |
 | --- | --- | --- |
@@ -23,7 +43,7 @@ flowchart LR
 | G06 | UI/seed/migration tests | User-managed definitions are preserved and UI reflects new contracts. |
 | G07 | Full validation suite and architecture review | No critical gaps remain undocumented. |
 
-## Rollback strategy
+## Rollback Strategy
 
 - SB01: no functional edits; rollback unnecessary except report corrections.
 - SB02: graph validation can initially be warning-only behind a feature flag if existing data contains invalid definitions; final gate should move to blocking for new/edited definitions.

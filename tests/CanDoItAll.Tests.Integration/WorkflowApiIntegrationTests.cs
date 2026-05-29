@@ -104,21 +104,17 @@ public sealed class WorkflowApiIntegrationTests
     }
 
     [Fact]
-    public async Task Workflow_api_rejects_publish_when_definition_is_invalid()
+    public async Task Workflow_api_rejects_invalid_definition_on_save()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
         var saveResponse = await host.Client.PostAsJsonAsync(
             "/api/workflows/definitions",
             CreateDefinitionSaveRequest(WorkflowComponentId.New()));
         var saveBody = await saveResponse.Content.ReadAsStringAsync();
-        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
-        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
 
-        var response = await host.Client.PostAsync($"/api/workflows/definitions/{definition.Id.Value:D}/publish", content: null);
-        var body = await response.Content.ReadAsStringAsync();
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("cannot be published", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.BadRequest, saveResponse.StatusCode);
+        Assert.Contains("Workflow definition save failed validation", saveBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("prepared LLM Call Component", saveBody, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

@@ -63,8 +63,78 @@ public sealed class WorkflowTemplatePackLoader
                 $"Workflow template pack '{root}' contains duplicate workflow key(s): {string.Join(", ", duplicateKeys)}.");
         }
 
-        return new WorkflowTemplatePack(root, manifest, workflows);
+        var templatePack = new WorkflowTemplatePack(root, manifest, workflows);
+        ValidateTemplateGraphs(templatePack);
+        return templatePack;
     }
+
+    private static void ValidateTemplateGraphs(WorkflowTemplatePack templatePack)
+    {
+        var validator = new WorkflowDefinitionValidator();
+        foreach (var template in templatePack.Workflows)
+        {
+            var component = CreateTemplateValidationComponent(templatePack, template);
+            var context = WorkflowTemplateValidationContext.Create(template);
+            WorkflowGraph graph;
+            try
+            {
+                graph = templatePack.CreateGraph(template, component.Id);
+            }
+            catch (InvalidOperationException exception)
+            {
+                throw new InvalidOperationException(
+                    $"Workflow template '{context}' failed graph conversion: {exception.Message}",
+                    exception);
+            }
+
+            var definition = new WorkflowDefinition(
+                WorkflowId.New(),
+                WorkflowVersionId.New(),
+                string.IsNullOrWhiteSpace(template.Name) ? template.Key : template.Name,
+                template.Description,
+                WorkflowLifecycleStatus.Active,
+                graph,
+                templatePack.RuntimePolicy,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow);
+            var validation = validator.Validate(definition, [component]);
+            if (!validation.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Workflow template '{context}' failed semantic validation: {FormatValidationIssues(validation.Issues)}");
+            }
+        }
+    }
+
+    private static LlmCallComponent CreateTemplateValidationComponent(
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template)
+        => new(
+            WorkflowComponentId.New(),
+            string.IsNullOrWhiteSpace(template.Name) ? template.Key : template.Name,
+            ProviderProfileId: null,
+            Model: "template-validation",
+            WorkflowModality.Text,
+            templatePack.CreateModelSettings(),
+            templatePack.CreateComponentInstructions(template),
+            templatePack.JsonShape,
+            templatePack.JsonShape,
+            AgentPermissionsPolicy.Default,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+    private static string FormatValidationIssues(IReadOnlyList<WorkflowValidationIssue> issues)
+        => string.Join(
+            " ",
+            issues.Select(issue =>
+            {
+                var location = issue.NodeId is { } nodeId
+                    ? $"node '{nodeId}'"
+                    : issue.EdgeId is { } edgeId
+                        ? $"edge '{edgeId}'"
+                        : "template";
+                return $"{location}: {issue.Message}";
+            }));
 
     private static T ReadYaml<T>(string path)
         where T : class, new()
@@ -188,6 +258,14 @@ public sealed class WorkflowTemplatePackLoader
         => string.IsNullOrWhiteSpace(value)
             ? throw new InvalidOperationException($"Workflow template '{path}' is missing required field '{fieldName}'.")
             : value.Trim();
+
+    private static class WorkflowTemplateValidationContext
+    {
+        public static string Create(WorkflowTemplateDefinition template)
+            => string.IsNullOrWhiteSpace(template.SourcePath)
+                ? template.Key
+                : $"{template.SourcePath}#{template.Key}";
+    }
 }
 
 public static class WorkflowTemplatePackOptions

@@ -33,6 +33,14 @@ public sealed class WorkflowRuntimeManager : IWorkflowRuntimeManager
         var runId = WorkflowRunId.New();
         var requestedBackend = request.RequestedBackend ?? definition.RuntimePolicy.PreferredBackend;
         var now = DateTimeOffset.UtcNow;
+        if (requestedBackend == WorkflowRuntimeBackendKind.InProcess &&
+            definition.RuntimePolicy.RequireDurableProductionRuns &&
+            !definition.RuntimePolicy.AllowInProcessPreviewRuns)
+        {
+            throw new InvalidOperationException(
+                $"Workflow '{definition.Id}' requires a durable production runtime and does not allow in-process preview runs.");
+        }
+
         var humanInputNode = definition.Graph.Nodes.FirstOrDefault(node => node.Kind == WorkflowNodeKind.HumanInput);
         if (humanInputNode is not null)
         {

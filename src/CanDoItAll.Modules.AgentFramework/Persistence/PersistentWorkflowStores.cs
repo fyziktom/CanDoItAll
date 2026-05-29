@@ -97,6 +97,10 @@ public sealed class PersistentWorkflowCatalogService(
             current?.CreatedAtUtc ?? now,
             now);
 
+        ThrowIfValidationFailed(
+            await ValidateDefinitionAsync(definition, cancellationToken),
+            "Workflow definition save failed validation");
+
         dbContext.Set<WorkflowDefinitionRecord>().Add(WorkflowDefinitionRecord.FromDefinition(definition));
         await dbContext.SaveChangesAsync(cancellationToken);
         return definition;

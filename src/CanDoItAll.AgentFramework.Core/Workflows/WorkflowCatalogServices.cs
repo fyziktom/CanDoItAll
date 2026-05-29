@@ -108,6 +108,7 @@ public sealed class InMemoryWorkflowCatalogService :
         ArgumentNullException.ThrowIfNull(request.RuntimePolicy);
 
         var now = DateTimeOffset.UtcNow;
+        WorkflowDefinition definition;
         await store.Gate.WaitAsync(cancellationToken);
         try
         {
@@ -121,7 +122,7 @@ public sealed class InMemoryWorkflowCatalogService :
                 throw new InvalidOperationException($"Workflow definition '{workflowId}' was updated by another request.");
             }
 
-            var definition = new WorkflowDefinition(
+            definition = new WorkflowDefinition(
                 workflowId,
                 WorkflowVersionId.New(),
                 request.Name.Trim(),
@@ -131,10 +132,31 @@ public sealed class InMemoryWorkflowCatalogService :
                 request.RuntimePolicy,
                 current?.CreatedAtUtc ?? now,
                 now);
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+
+        ThrowIfValidationFailed(
+            await ValidateDefinitionAsync(definition, cancellationToken),
+            "Workflow definition save failed validation");
+
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            store.Definitions.TryGetValue(definition.Id, out var versions);
+            var current = versions is { Count: > 0 } ? versions[^1] : null;
+            if (request.ExpectedVersionId is { } expectedVersionId &&
+                current is not null &&
+                current.VersionId != expectedVersionId)
+            {
+                throw new InvalidOperationException($"Workflow definition '{definition.Id}' was updated by another request.");
+            }
 
             if (versions is null)
             {
-                store.Definitions[workflowId] = [definition];
+                store.Definitions[definition.Id] = [definition];
             }
             else
             {

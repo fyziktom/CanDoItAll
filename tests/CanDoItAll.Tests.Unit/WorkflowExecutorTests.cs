@@ -72,6 +72,8 @@ public sealed class WorkflowExecutorTests
         Assert.True(descriptor.CanExecute);
         Assert.Equal(WorkflowExecutorSettingsSchemaKind.JsonSchema, descriptor.SettingsSchema.Kind);
         Assert.Equal(descriptor.SettingsSchemaJson, descriptor.SettingsSchema.SchemaJson);
+        Assert.True(descriptor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.ReadsWorkspace));
+        Assert.True(descriptor.DeterministicTestMode.IsSupported);
 
         Assert.False(planned.CanExecute);
         Assert.False(planned.IsImplemented);
@@ -125,6 +127,8 @@ public sealed class WorkflowExecutorTests
         Assert.Equal(WorkflowExecutorAvailabilityKind.Available, descriptor.Availability.Kind);
         Assert.Equal(WorkflowExecutorSettingsSchemaKind.JsonSchema, descriptor.SettingsSchema.Kind);
         Assert.Equal("{\"type\":\"object\"}", descriptor.SettingsSchema.SchemaJson);
+        Assert.Equal(WorkflowExecutorPermissionPolicy.None, descriptor.PermissionPolicy);
+        Assert.False(descriptor.DeterministicTestMode.IsSupported);
     }
 
     [Fact]
@@ -263,6 +267,12 @@ public sealed class WorkflowExecutorTests
 
         Assert.Equal(WorkflowRunState.Completed, result.Run.State);
         Assert.Equal(1, executor.InvocationCount);
+        Assert.Contains(result.Events, workflowEvent =>
+            workflowEvent.Kind == WorkflowEventKind.ExecutorInvoked &&
+            workflowEvent.NodeId == new WorkflowNodeId("tool"));
+        Assert.Contains(result.Events, workflowEvent =>
+            workflowEvent.Kind == WorkflowEventKind.ExecutorCompleted &&
+            workflowEvent.NodeId == new WorkflowNodeId("tool"));
     }
 
     [Fact]

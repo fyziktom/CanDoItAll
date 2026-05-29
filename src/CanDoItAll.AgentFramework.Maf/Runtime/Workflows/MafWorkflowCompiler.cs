@@ -8,11 +8,23 @@ public sealed record MafWorkflowBuildResult(
     Workflow? Workflow,
     WorkflowCompilationResult Compilation);
 
+public interface IWorkflowMafCompiler
+{
+    MafWorkflowBuildResult Compile(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components);
+
+    MafWorkflowBuildResult Compile(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components,
+        WorkflowPreviewSimulationPlan? previewSimulationPlan);
+}
+
 public sealed class MafWorkflowCompiler(
     IWorkflowDefinitionValidator validator,
     IWorkflowExecutorInvoker? executorInvoker = null,
     IWorkflowLlmComponentInvoker? llmComponentInvoker = null,
-    IWorkflowRoutingCompiler? routingCompiler = null)
+    IWorkflowRoutingCompiler? routingCompiler = null) : IWorkflowMafCompiler
 {
     public MafWorkflowBuildResult Compile(
         WorkflowDefinition definition,

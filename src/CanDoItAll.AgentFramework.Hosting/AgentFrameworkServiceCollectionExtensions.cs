@@ -80,6 +80,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();
         services.TryAddSingleton<MafWorkflowCompiler>();
+        services.TryAddSingleton<IWorkflowMafCompiler>(serviceProvider => serviceProvider.GetRequiredService<MafWorkflowCompiler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutionBackend, MafInProcessWorkflowExecutionBackend>());
         services.TryAddScoped<IWorkflowRuntimeManager, WorkflowRuntimeManager>();
         services.TryAddScoped<IWorkflowProcessExecutorBridge, WorkflowProcessExecutorBridge>();

@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -29,12 +29,16 @@ Complete the workflow hardening effort with deterministic tests, observability c
 
 ## Exact Source References
 
-- Entire workflow/agent/plugin surface found by SB01.
-- `tests/CanDoItAll.Tests.Unit/`
-- `tests/CanDoItAll.Tests.Integration/`
-- `tests/CanDoItAll.Tests.Playwright/`
-- `docs/`
-- `.codex/bundles/workflow-maf-hardening/reviews/01-execution-report.md`
+- `repo://src/CanDoItAll.AgentFramework.Maf`
+- `repo://src/CanDoItAll.Modules.AgentFramework`
+- `repo://src/CanDoItAll.Modules.Plugins`
+- `repo://src/CanDoItAll.Plugins.Abstractions`
+- `repo://src/plugins`
+- `repo://tests/CanDoItAll.Tests.Unit`
+- `repo://tests/CanDoItAll.Tests.Integration`
+- `repo://tests/CanDoItAll.Tests.Playwright`
+- `repo://docs`
+- `bundle://reviews/01-execution-report.md`
 
 ## Deliverables
 
@@ -43,6 +47,18 @@ Complete the workflow hardening effort with deterministic tests, observability c
 - Documentation updates.
 - `reviews/02-final-architecture-review.md`
 - Final execution report status.
+
+## Dependency Impact
+
+- Closes the bundle only after SB01 through SB06 proof is internally consistent and no critical runtime path bypasses the hardened gates.
+- Converts any unresolved critical gap into a blocker or follow-up subbundle instead of a vague residual risk.
+- Provides the final reviewer artifact that future work can use as the MAF workflow hardening baseline.
+
+## Validation Depth
+
+- Final closure phase with build, targeted tests, source assertions, anti-stub review, architecture review, browser proof when UI changed, and completed-stage bundle validation.
+- Requires a final fake-proof resistance or verifier artifact across the completed critical subbundles.
+- Live external-service proof remains optional/manual unless secrets and services are configured; deterministic fake proof is required.
 
 ## Implementation Steps
 
@@ -77,9 +93,14 @@ Complete the workflow hardening effort with deterministic tests, observability c
 - Final architecture review.
 - Final execution report.
 
+## Browser Validation Logging
+
+- Required if any UI files changed anywhere in the bundle; cite the SB06 browser evidence or add final Playwright proof.
+- If UI files did not change, record a no-UI-change rationale in `reviews/01-execution-report.md`.
+
 ## Progression Gate
 
-This is the closure gate. If it cannot pass, create follow-up subbundles instead of claiming completion.
+- This is the closure gate. If it cannot pass, create follow-up subbundles instead of claiming completion.
 
 ## Suggested Agent Prompt
 

@@ -430,6 +430,55 @@ public sealed record WorkflowExecutorSimulationDescriptor(
     }
 }
 
+[Flags]
+public enum WorkflowExecutorCapabilityFlags
+{
+    None = 0,
+    ReadsWorkspace = 1 << 0,
+    WritesWorkspace = 1 << 1,
+    ReadsExternalData = 1 << 2,
+    WritesExternalData = 1 << 3,
+    UsesNetwork = 1 << 4,
+    UsesSecrets = 1 << 5,
+    RunsHostCommand = 1 << 6,
+    EmitsArtifacts = 1 << 7,
+    SupportsDeterministicTestMode = 1 << 8
+}
+
+public enum WorkflowExecutorApprovalRequirement
+{
+    NotRequired,
+    RequiredForExternalEffect,
+    AlwaysRequired
+}
+
+public sealed record WorkflowExecutorPermissionPolicy(
+    WorkflowExecutorCapabilityFlags RequiredCapabilities,
+    WorkflowExecutorApprovalRequirement ApprovalRequirement)
+{
+    public bool RequiresApproval => ApprovalRequirement != WorkflowExecutorApprovalRequirement.NotRequired;
+
+    public static WorkflowExecutorPermissionPolicy None { get; } = new(
+        WorkflowExecutorCapabilityFlags.None,
+        WorkflowExecutorApprovalRequirement.NotRequired);
+}
+
+public sealed record WorkflowExecutorDeterministicTestModeDescriptor(
+    bool IsSupported,
+    string Description)
+{
+    public static WorkflowExecutorDeterministicTestModeDescriptor None { get; } = new(
+        IsSupported: false,
+        Description: string.Empty);
+
+    public static WorkflowExecutorDeterministicTestModeDescriptor Supported(string description)
+        => new(
+            IsSupported: true,
+            Description: string.IsNullOrWhiteSpace(description)
+                ? "Executor can run with deterministic fake or preview inputs."
+                : description.Trim());
+}
+
 public sealed record WorkflowExecutorDescriptor(
     WorkflowExecutorId Id,
     string Name,
@@ -456,6 +505,10 @@ public sealed record WorkflowExecutorDescriptor(
     public ConfigurationSchema ConfigurationSchema { get; init; } = ConfigurationSchema.Empty();
 
     public WorkflowExecutorSimulationDescriptor Simulation { get; init; } = WorkflowExecutorSimulationDescriptor.None;
+
+    public WorkflowExecutorPermissionPolicy PermissionPolicy { get; init; } = WorkflowExecutorPermissionPolicy.None;
+
+    public WorkflowExecutorDeterministicTestModeDescriptor DeterministicTestMode { get; init; } = WorkflowExecutorDeterministicTestModeDescriptor.None;
 
     public bool CanExecute => IsImplemented && Availability.IsRunnable;
 }

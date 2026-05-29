@@ -24,7 +24,14 @@ public static class BuiltInWorkflowExecutorDescriptors
         WorkflowExecutorCategoryKind.Storage,
         "folder_open",
         "builtin.storage-file",
-        new WorkflowStorageFileExecutorSettings());
+        new WorkflowStorageFileExecutorSettings(),
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Uses the configured workspace file boundary and can be tested with sandbox files."));
 
     public static WorkflowExecutorDescriptor SourceIngestion { get; } = Create(
         WorkflowExecutorIds.SourceIngestion,
@@ -34,7 +41,13 @@ public static class BuiltInWorkflowExecutorDescriptors
         "drive_folder_upload",
         "builtin.source-ingest",
         new WorkflowSourceIngestionExecutorSettings(),
-        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 90, CaptureOutputArtifact = true });
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 90, CaptureOutputArtifact = true },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Reads bounded local sources and can be tested against fixture files."));
 
     public static WorkflowExecutorDescriptor HttpFetch { get; } = Create(
         WorkflowExecutorIds.HttpFetch,
@@ -44,7 +57,12 @@ public static class BuiltInWorkflowExecutorDescriptors
         "public",
         "builtin.http-fetch",
         new WorkflowHttpExecutorSettings(),
-        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 });
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.UsesSecrets,
+            WorkflowExecutorApprovalRequirement.NotRequired));
 
     public static WorkflowExecutorDescriptor Spreadsheet { get; } = Create(
         WorkflowExecutorIds.Spreadsheet,
@@ -54,7 +72,14 @@ public static class BuiltInWorkflowExecutorDescriptors
         "table_chart",
         "builtin.spreadsheet",
         new WorkflowSpreadsheetExecutorSettings(),
-        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 });
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Uses local workbook fixtures through the document wrapper."));
 
     public static WorkflowExecutorDescriptor ProjectStructure { get; } = Create(
         WorkflowExecutorIds.ProjectStructure,
@@ -64,7 +89,13 @@ public static class BuiltInWorkflowExecutorDescriptors
         "account_tree",
         "builtin.project-structure",
         new WorkflowProjectStructureExecutorSettings(),
-        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 45 });
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 45 },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Supports preview simulation for write operations without mutating project data."));
 
     public static WorkflowExecutorDescriptor ImageGeneration { get; } = Create(
         WorkflowExecutorIds.ImageGeneration,
@@ -74,7 +105,13 @@ public static class BuiltInWorkflowExecutorDescriptors
         "image",
         "builtin.image-generation",
         new WorkflowImageGenerationExecutorSettings(),
-        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 120, CaptureOutputArtifact = true });
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 120, CaptureOutputArtifact = true },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts,
+            WorkflowExecutorApprovalRequirement.NotRequired));
 
     public static IReadOnlyList<WorkflowExecutorDescriptor> Planned { get; } =
     [
@@ -93,7 +130,9 @@ public static class BuiltInWorkflowExecutorDescriptors
         string iconName,
         string setupRendererKey,
         TSettings defaultSettings,
-        WorkflowExecutorExecutionPolicy? defaultPolicy = null)
+        WorkflowExecutorExecutionPolicy? defaultPolicy = null,
+        WorkflowExecutorPermissionPolicy? permissionPolicy = null,
+        WorkflowExecutorDeterministicTestModeDescriptor? deterministicTestMode = null)
     {
         const string schemaJson = "{\"type\":\"object\"}";
         var configurationSchema = CreateSettingsConfigurationSchema<TSettings>();
@@ -114,7 +153,9 @@ public static class BuiltInWorkflowExecutorDescriptors
             Source = BuiltInSource,
             Availability = WorkflowExecutorAvailabilityDescriptor.Available(),
             SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema(SettingsSchemaVersion, schemaJson),
-            ConfigurationSchema = configurationSchema
+            ConfigurationSchema = configurationSchema,
+            PermissionPolicy = permissionPolicy ?? WorkflowExecutorPermissionPolicy.None,
+            DeterministicTestMode = deterministicTestMode ?? WorkflowExecutorDeterministicTestModeDescriptor.None
         };
     }
 

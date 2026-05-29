@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -28,17 +28,20 @@ Create the authoritative repo-local map of Agents/Workflows/Plugins and establis
 
 ## Exact Source References
 
-- `CanDoItAll.slnx`
-- `src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
-- `src/CanDoItAll.Modules.AgentFramework/`
-- `src/CanDoItAll.AgentFramework.Core/`
-- `src/CanDoItAll.AgentFramework.Models/`
-- `src/CanDoItAll.AgentFramework.Persistence/`
-- `src/CanDoItAll.Modules.Plugins/`
-- `src/CanDoItAll.Plugins.Abstractions/`
-- `src/plugins/CanDoItAll.Plugin.*/*`
-- `Templates/Workflows/`
-- `tests/`
+- `repo://CanDoItAll.slnx`
+- `repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
+- `repo://src/CanDoItAll.Modules.AgentFramework`
+- `repo://src/CanDoItAll.AgentFramework.Core`
+- `repo://src/CanDoItAll.AgentFramework.Models`
+- `repo://src/CanDoItAll.AgentFramework.Persistence`
+- `repo://src/CanDoItAll.Modules.Plugins`
+- `repo://src/CanDoItAll.Plugins.Abstractions`
+- `repo://src/plugins/CanDoItAll.Plugin.Email`
+- `repo://src/plugins/CanDoItAll.Plugin.Gmail`
+- `repo://src/plugins/CanDoItAll.Plugin.Office365`
+- `repo://src/plugins/CanDoItAll.Plugin.Docker`
+- `repo://Templates/Workflows`
+- `repo://tests`
 
 ## Deliverables
 
@@ -46,6 +49,18 @@ Create the authoritative repo-local map of Agents/Workflows/Plugins and establis
 - `inventories/03-maf-version-baseline.md`
 - `inventories/04-plugin-executor-inventory.md`
 - Initial proof logs under `proof/SB01/`
+
+## Dependency Impact
+
+- Establishes the source, package, plugin, persistence, UI, and test map that all later subbundles must use.
+- Records whether the branch and SDK environment can support local restore/build proof.
+- Documents any package or environment blocker before implementation changes depend on it.
+
+## Validation Depth
+
+- Process-only gate with command transcripts, source scans, package reference inventory, and restore/build status.
+- No semantic behavior proof is required because SB01 must not change production runtime code.
+- Downstream subbundles must re-check any inventory item they consume if implementation reality contradicts this baseline.
 
 ## Implementation Steps
 
@@ -83,9 +98,13 @@ Create the authoritative repo-local map of Agents/Workflows/Plugins and establis
 - `proof/SB01/transcripts/restore-build.txt`
 - `proof/SB01/maf-version-decision.md`
 
+## Browser Validation Logging
+
+- N/A: SB01 is an inventory and package baseline phase with no browser-visible changes.
+
 ## Progression Gate
 
-SB02 may start only after SB01 gives a clear map of current workflow model, runtime, plugin, UI, persistence, and test surfaces.
+- SB02 may start only after SB01 gives a clear map of current workflow model, runtime, plugin, UI, persistence, and test surfaces.
 
 ## Suggested Agent Prompt
 

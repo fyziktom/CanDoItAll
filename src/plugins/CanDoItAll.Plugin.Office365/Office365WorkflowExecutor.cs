@@ -36,7 +36,14 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
     {
         Source = PluginSource,
         Availability = ResolveAvailability(),
-        Simulation = Office365WorkflowSimulationTemplates.DownloadByCategory
+        Simulation = Office365WorkflowSimulationTemplates.DownloadByCategory,
+        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.UsesSecrets |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -212,7 +219,14 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
     {
         Source = PluginSource,
         Availability = ResolveAvailability(),
-        Simulation = Office365WorkflowSimulationTemplates.MarkProcessed
+        Simulation = Office365WorkflowSimulationTemplates.MarkProcessed,
+        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.WritesExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.UsesSecrets |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Office365 category mutation without changing Microsoft Graph.")
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(

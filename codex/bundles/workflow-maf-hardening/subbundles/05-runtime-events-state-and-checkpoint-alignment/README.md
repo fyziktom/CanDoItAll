@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -28,10 +28,14 @@ Align CanDoItAll workflow runtime records with native MAF execution events, prev
 
 ## Exact Source References
 
-- Workflow runtime services found by SB01.
-- `WorkflowExampleCatalogSeedService` default `WorkflowSettings` behavior.
-- Persistence/run/artifact/event services found by SB01.
-- MAF execution/event APIs.
+- `repo://src/CanDoItAll.AgentFramework.Maf`
+- `repo://src/CanDoItAll.Modules.AgentFramework`
+- `repo://src/CanDoItAll.AgentFramework.Core`
+- `repo://src/CanDoItAll.AgentFramework.Models`
+- `repo://src/CanDoItAll.AgentFramework.Persistence`
+- `repo://src/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowExampleCatalogSeedService.cs`
+- `repo://tests/CanDoItAll.Tests.Unit`
+- `bundle://references/maf-2026-05-28-source-notes.md`
 
 ## Deliverables
 
@@ -40,6 +44,18 @@ Align CanDoItAll workflow runtime records with native MAF execution events, prev
 - Artifact capture and truncation/redaction enforcement.
 - Durable backend availability check.
 - Tests for preview/durable policy, cancellation, retry, event order, and artifact linkage.
+
+## Dependency Impact
+
+- SB06 UI and migration work depends on the runtime policy, event taxonomy, artifact linkage, and durable-backend status defined here.
+- SB07 final observability review depends on this phase exposing stable source assertions and testable runtime records.
+- If event or policy semantics change later, SB05 must be reopened before final closure.
+
+## Validation Depth
+
+- Critical foundation with semantic proof required under `proof/SB05/manifest.md` and `proof/SB05/semantic-invariants.md`.
+- Requires negative durable-production-without-backend proof, positive preview event/artifact proof, cancellation/timeout proof, source assertions, and anti-stub audit.
+- Requires a production behavior artifact matrix for any new runtime event, state, record, or lifecycle signal.
 
 ## Implementation Steps
 
@@ -75,9 +91,13 @@ Align CanDoItAll workflow runtime records with native MAF execution events, prev
 - Event snapshot/golden files if appropriate.
 - Execution report updates.
 
+## Browser Validation Logging
+
+- N/A unless runtime policy or event visibility is exposed in UI during this subbundle; otherwise SB06 owns browser validation.
+
 ## Progression Gate
 
-SB06 may start after runtime contracts are stable enough for UI and migration surfaces.
+- SB06 may start after runtime contracts are stable enough for UI and migration surfaces and SB05 closure proof cites `proof/SB05/manifest.md` plus `proof/SB05/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 

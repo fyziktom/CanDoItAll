@@ -39,7 +39,16 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                 CreateExecutorSettingsSchema(),
                 WorkflowValueShape.Text,
                 EmailBatchShape,
-                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 }),
+                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
+            {
+                PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.ReadsExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.NotRequired),
+                DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
+            },
             new PluginWorkflowExecutorDescriptor(
                 Office365PluginConstants.MarkProcessedExecutorId,
                 "Office365 mark processed",
@@ -50,6 +59,15 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                 WorkflowValueShape.Text,
                 CategoryMutationShape,
                 WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
+            {
+                PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+                DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Office365 category mutation without changing Microsoft Graph.")
+            }
         ],
         PluginSettingsDescriptor.Empty,
         [

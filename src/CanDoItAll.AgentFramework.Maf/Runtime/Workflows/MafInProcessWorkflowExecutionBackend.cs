@@ -7,12 +7,12 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBackend
 {
-    private readonly MafWorkflowCompiler compiler;
+    private readonly IWorkflowMafCompiler compiler;
     private readonly IReadOnlyList<LlmCallComponent>? components;
     private readonly IWorkflowComponentLibraryService? componentLibrary;
 
     public MafInProcessWorkflowExecutionBackend(
-        MafWorkflowCompiler compiler,
+        IWorkflowMafCompiler compiler,
         IReadOnlyList<LlmCallComponent> components)
     {
         ArgumentNullException.ThrowIfNull(compiler);
@@ -23,7 +23,7 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
     }
 
     public MafInProcessWorkflowExecutionBackend(
-        MafWorkflowCompiler compiler,
+        IWorkflowMafCompiler compiler,
         IWorkflowComponentLibraryService componentLibrary)
     {
         ArgumentNullException.ThrowIfNull(compiler);
@@ -84,18 +84,25 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         }
 
         using var auditScope = WorkflowExecutorExecutionAuditScope.Push(runId);
-        await using var run = await InProcessExecution.RunAsync(
+        var progressObserver = new WorkflowBackendProgressEventObserver(
+            runId,
+            WorkflowNodeExecutionProgressScope.Current);
+        await using var run = await RunWithProgressObserverAsync(
             build.Workflow,
-            new WorkflowNodeInput(request.InputJson),
-            runId.ToString(),
+            request,
+            runId,
+            progressObserver,
             cancellationToken);
         var status = await run.GetStatusAsync(cancellationToken);
         var mappedState = MafWorkflowStatusMapper.MapRunStatus(status);
         var finalState = mappedState == WorkflowRunState.Idle
             ? WorkflowRunState.Completed
             : mappedState;
-        var events = run.OutgoingEvents
+        var events = progressObserver.Events
+            .Concat(run.OutgoingEvents
             .Select(workflowEvent => CreateEventRecord(runId, workflowEvent))
+            .ToList())
+            .OrderBy(workflowEvent => workflowEvent.CreatedAtUtc)
             .ToList();
         var failureEvent = events.LastOrDefault(workflowEvent =>
             workflowEvent.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed);
@@ -147,6 +154,21 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
             : [];
 
         return new WorkflowBackendStartResult(snapshot, events, [], artifacts);
+    }
+
+    private static async Task<Run> RunWithProgressObserverAsync(
+        Workflow workflow,
+        WorkflowRunStartRequest request,
+        WorkflowRunId runId,
+        WorkflowBackendProgressEventObserver progressObserver,
+        CancellationToken cancellationToken)
+    {
+        using var progressScope = WorkflowNodeExecutionProgressScope.Push(progressObserver);
+        return await InProcessExecution.RunAsync(
+            workflow,
+            new WorkflowNodeInput(request.InputJson),
+            runId.ToString(),
+            cancellationToken);
     }
 
     private static WorkflowEventRecord CreateEventRecord(
@@ -283,5 +305,42 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
         return resolvedComponents
             .Where(component => referencedComponentIds.Contains(component.Id))
             .ToArray();
+    }
+
+    private sealed class WorkflowBackendProgressEventObserver(
+        WorkflowRunId runId,
+        IWorkflowNodeExecutionProgressObserver? next) : IWorkflowNodeExecutionProgressObserver
+    {
+        private readonly List<WorkflowEventRecord> events = [];
+
+        public IReadOnlyList<WorkflowEventRecord> Events => events;
+
+        public async ValueTask RecordAsync(
+            WorkflowNodeExecutionProgress progress,
+            CancellationToken cancellationToken = default)
+        {
+            events.Add(new WorkflowEventRecord(
+                Guid.NewGuid(),
+                runId,
+                MapProgressState(progress.State),
+                progress.NodeId,
+                $"Workflow node '{progress.NodeId}' {progress.State.ToString().ToLowerInvariant()}.",
+                PayloadJson: string.Empty,
+                progress.OccurredAtUtc));
+
+            if (next is not null)
+            {
+                await next.RecordAsync(progress, cancellationToken);
+            }
+        }
+
+        private static WorkflowEventKind MapProgressState(WorkflowNodeExecutionProgressState state)
+            => state switch
+            {
+                WorkflowNodeExecutionProgressState.Started => WorkflowEventKind.ExecutorInvoked,
+                WorkflowNodeExecutionProgressState.Completed => WorkflowEventKind.ExecutorCompleted,
+                WorkflowNodeExecutionProgressState.Failed => WorkflowEventKind.ExecutorFailed,
+                _ => WorkflowEventKind.Unknown
+            };
     }
 }

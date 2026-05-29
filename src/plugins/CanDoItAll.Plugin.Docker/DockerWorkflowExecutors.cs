@@ -51,7 +51,13 @@ public abstract class DockerWorkflowExecutorBase(
         Availability = ResolveAvailability(),
         SettingsSchema = WorkflowExecutorSettingsSchemaDescriptor.JsonSchema("1.0", SettingsSchemaJson),
         ConfigurationSchema = CreateConfigurationSchema(),
-        Simulation = DockerWorkflowSimulationTemplates.CommandResult
+        Simulation = DockerWorkflowSimulationTemplates.CommandResult,
+        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.RunsHostCommand |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.AlwaysRequired),
+        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates Docker host-tool output without invoking Docker.")
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(

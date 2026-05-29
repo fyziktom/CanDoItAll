@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -28,10 +28,13 @@ Introduce or verify the native MAF workflow compiler/adapter and typed executor 
 
 ## Exact Source References
 
-- `src/CanDoItAll.AgentFramework.Maf/`
-- Workflow runtime services found by SB01.
-- Workflow model and validator from SB02.
-- MAF documentation for `WorkflowBuilder`, executors, edges, events, and supersteps.
+- `repo://src/CanDoItAll.AgentFramework.Maf`
+- `repo://src/CanDoItAll.Modules.AgentFramework`
+- `repo://src/CanDoItAll.AgentFramework.Core`
+- `repo://src/CanDoItAll.AgentFramework.Models`
+- `repo://src/CanDoItAll.AgentFramework.Persistence`
+- `repo://tests/CanDoItAll.Tests.Unit`
+- `bundle://references/maf-2026-05-28-source-notes.md`
 
 ## Deliverables
 
@@ -40,6 +43,18 @@ Introduce or verify the native MAF workflow compiler/adapter and typed executor 
 - Typed message envelope and serializer boundary.
 - Edge mapping for direct/conditional/switch/fan-out/fan-in semantics currently supported by the repository model.
 - Golden tests asserting compiler output behavior via MAF execution, not just DTO snapshots.
+
+## Dependency Impact
+
+- SB04 plugin executor activation depends on the typed message and executor adapter contract created here.
+- SB05 runtime event/state alignment depends on a single execution boundary and stable node/edge mapping.
+- SB06 may not expose runtime capabilities until this phase proves the compiler/adapter behavior.
+
+## Validation Depth
+
+- Critical foundation with semantic proof required under `proof/SB03/manifest.md` and `proof/SB03/semantic-invariants.md`.
+- Requires failing-first proof that custom traversal or raw-object payload shortcuts are rejected, passing MAF execution proof, source assertions for executor patterns, and anti-stub audit.
+- Downstream smoke must exercise at least one plugin or runtime-facing adapter surface before SB04 starts.
 
 ## Implementation Steps
 
@@ -76,9 +91,13 @@ Introduce or verify the native MAF workflow compiler/adapter and typed executor 
 - MAF in-process workflow execution transcript.
 - Source assertions for `[MessageHandler]`/executor patterns or documented rationale where not applicable.
 
+## Browser Validation Logging
+
+- N/A unless compiler changes directly alter browser-visible workflow screens; if they do, add route-specific Playwright evidence and screenshots to `reviews/01-execution-report.md`.
+
 ## Progression Gate
 
-SB04 may start only after the compiler/adapter and executor activation model are stable enough for plugin executors.
+- SB04 may start only after the compiler/adapter and executor activation model are stable enough for plugin executors and SB03 closure proof cites `proof/SB03/manifest.md` plus `proof/SB03/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 

@@ -30,6 +30,23 @@ public interface IWorkflowExecutorInvoker
         CancellationToken cancellationToken = default);
 }
 
+public interface IWorkflowExecutorApprovalGate
+{
+    ValueTask<WorkflowExecutorApprovalDecision> RequestApprovalAsync(
+        WorkflowExecutorApprovalRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record WorkflowExecutorApprovalRequest(
+    WorkflowDefinition Definition,
+    WorkflowNode Node,
+    WorkflowExecutorDescriptor Descriptor,
+    string RedactedSettingsSummary);
+
+public sealed record WorkflowExecutorApprovalDecision(
+    bool Approved,
+    string Message);
+
 public interface IWorkflowLlmComponentInvoker
 {
     ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -103,7 +120,8 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
 public sealed class WorkflowExecutorInvoker(
     IWorkflowExecutorCatalog catalog,
     IEnumerable<IWorkflowExecutor> executors,
-    IWorkflowExecutorExecutionObserver? executionObserver = null) : IWorkflowExecutorInvoker
+    IWorkflowExecutorExecutionObserver? executionObserver = null,
+    IWorkflowExecutorApprovalGate? approvalGate = null) : IWorkflowExecutorInvoker
 {
     private readonly IReadOnlyDictionary<WorkflowExecutorId, IWorkflowExecutor> executorsById = BuildExecutorsById(executors);
     private readonly IWorkflowExecutorExecutionObserver executionObserver = executionObserver ?? new NullWorkflowExecutorExecutionObserver();
@@ -143,6 +161,12 @@ public sealed class WorkflowExecutorInvoker(
             : node.Settings.ExecutorSettingsJson;
         var redactedSettingsSummary = WorkflowExecutorRedaction.RedactSettingsJson(settingsJson);
         var pluginConnectionId = WorkflowExecutorRedaction.ReadStringProperty(settingsJson, "connectionId");
+        await EnforceApprovalPolicyAsync(
+            definition,
+            node,
+            descriptor,
+            redactedSettingsSummary,
+            cancellationToken);
         var context = new WorkflowExecutorExecutionContext(
             definition,
             node,
@@ -241,6 +265,41 @@ public sealed class WorkflowExecutorInvoker(
             policy.TimeoutSeconds,
             $"Workflow executor '{executorId}' failed on node '{node.Id}' after {policy.MaxRetryAttempts + 1} attempt(s).",
             lastException);
+    }
+
+    private async ValueTask EnforceApprovalPolicyAsync(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        WorkflowExecutorDescriptor descriptor,
+        string redactedSettingsSummary,
+        CancellationToken cancellationToken)
+    {
+        if (!descriptor.PermissionPolicy.RequiresApproval)
+        {
+            return;
+        }
+
+        if (approvalGate is null)
+        {
+            throw new InvalidOperationException(
+                $"Workflow executor '{descriptor.Id}' on node '{node.Id}' requires approval, but no workflow executor approval gate is registered.");
+        }
+
+        var decision = await approvalGate.RequestApprovalAsync(
+            new WorkflowExecutorApprovalRequest(
+                definition,
+                node,
+                descriptor,
+                redactedSettingsSummary),
+            cancellationToken);
+        if (!decision.Approved)
+        {
+            var message = string.IsNullOrWhiteSpace(decision.Message)
+                ? "Approval was denied."
+                : WorkflowExecutorRedaction.RedactText(decision.Message);
+            throw new InvalidOperationException(
+                $"Workflow executor '{descriptor.Id}' on node '{node.Id}' was not approved: {message}");
+        }
     }
 
     private async ValueTask RecordExecutionAuditAsync(

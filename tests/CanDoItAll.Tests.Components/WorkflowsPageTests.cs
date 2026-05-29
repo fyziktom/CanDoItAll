@@ -545,6 +545,74 @@ public sealed class WorkflowsPageTests
     }
 
     [Fact]
+    public async Task Workflow_example_seed_preserves_non_managed_definitions_with_template_names()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-preserve-{Guid.NewGuid():N}");
+        var store = new InMemoryWorkflowCatalogStore();
+        var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
+        var templatePack = new WorkflowTemplatePackLoader().Load();
+        var template = templatePack.Workflows[0];
+        var component = await catalogService.SaveComponentAsync(new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: "User component",
+            ProviderProfileId: null,
+            Model: "gpt-5-mini",
+            WorkflowModality.Text,
+            new WorkflowModelSettings(0.2, 256, RequireJsonOutput: false, ResponseFormatJsonSchema: string.Empty),
+            "User-owned workflow component.",
+            WorkflowValueShape.Text,
+            WorkflowValueShape.Text,
+            AgentPermissionsPolicy.Default));
+        var userDescription = "User-owned workflow. No managed seed marker.";
+        var userDefinition = await catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: $"{templatePack.Manifest.DefinitionNamePrefix}{template.Name}",
+            Description: userDescription,
+            WorkflowLifecycleStatus.Active,
+            CreateStarterGraph(component.Id),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
+        var seeder = new WorkflowExampleCatalogSeedService(
+            catalogService,
+            catalogService,
+            catalogService,
+            new WorkspaceFileService(workspaceRoot),
+            new WorkspacePathResolutionService(workspaceRoot),
+            new ClosedXmlSpreadsheetDocumentService(),
+            Options.Create(new WorkflowExampleCatalogSeedOptions
+            {
+                Enabled = true,
+                SeedSampleWorkspaceFiles = false
+            }),
+            NullLogger<WorkflowExampleCatalogSeedService>.Instance);
+
+        try
+        {
+            await seeder.EnsureSeededAsync();
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        var preserved = await catalogService.GetDefinitionAsync(userDefinition.Id);
+        var definitions = await catalogService.ListDefinitionsAsync();
+
+        Assert.NotNull(preserved);
+        Assert.Equal(userDescription, preserved!.Definition.Description);
+        Assert.DoesNotContain(templatePack.Manifest.SeedMarker, preserved.Definition.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(templatePack.Workflows.Count, definitions.Count(item => item.Name.StartsWith("Example:", StringComparison.Ordinal)));
+    }
+
+    [Fact]
     public async Task Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(RegisterDeterministicWorkflowLlmInvoker);
@@ -860,6 +928,50 @@ public sealed class WorkflowsPageTests
                 Instructions: string.Empty,
                 InputShape: inputShape ?? WorkflowValueShape.Text,
                 ResultShape: resultShape ?? WorkflowValueShape.Text));
+
+    private static WorkflowGraph CreateStarterGraph(WorkflowComponentId componentId)
+    {
+        var start = new WorkflowNodeId("start");
+        var llm = new WorkflowNodeId("llm");
+        var end = new WorkflowNodeId("end");
+        return new WorkflowGraph(
+            start,
+            [
+                CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                new WorkflowNode(
+                    llm,
+                    WorkflowNodeKind.LlmCall,
+                    "LLM",
+                    [],
+                    new WorkflowNodeSettings(
+                        componentId,
+                        AgentId: null,
+                        SubworkflowId: null,
+                        ExternalRequestKind: null,
+                        Instructions: "Summarize.",
+                        InputShape: WorkflowValueShape.Text,
+                        ResultShape: WorkflowValueShape.Text)),
+                CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+            ],
+            [
+                new WorkflowEdge(
+                    new WorkflowEdgeId("start-to-llm"),
+                    start,
+                    SourcePortId: null,
+                    llm,
+                    TargetPortId: null,
+                    WorkflowEdgeKind.Direct,
+                    ConditionExpression: string.Empty),
+                new WorkflowEdge(
+                    new WorkflowEdgeId("llm-to-end"),
+                    llm,
+                    SourcePortId: null,
+                    end,
+                    TargetPortId: null,
+                    WorkflowEdgeKind.Direct,
+                    ConditionExpression: string.Empty)
+            ]);
+    }
 
     private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
     {

@@ -1,0 +1,497 @@
+Command: rg package references for Microsoft.Agents and MAF related projects
+WorkingDirectory: C:\repositories\CanDoItAll
+
+tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj:13:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj:14:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj:22:    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj" />
+tests\CanDoItAll.Mcp.Components.Tests\CanDoItAll.Mcp.Components.Tests.csproj:23:    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
+tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj:13:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj:14:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj:15:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj:23:    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj" />
+tests\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:13:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:14:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Space3D.Tests\CanDoItAll.Space3D.Tests.csproj:22:    <ProjectReference Include="..\..\src\Space3D\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:13:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:14:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:22:    <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:23:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:24:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:25:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:26:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:27:    <ProjectReference Include="..\..\src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:28:    <ProjectReference Include="..\..\src\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:29:    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:30:    <ProjectReference Include="..\..\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:31:    <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:32:    <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:33:    <ProjectReference Include="..\..\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:34:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:35:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:36:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:37:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:38:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:39:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:40:    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj" />
+tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj:41:    <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
+src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj:10:    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj:14:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj:15:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+tests\CanDoItAll.Mcp.DotNetWatch.Tests\CanDoItAll.Mcp.DotNetWatch.Tests.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Mcp.DotNetWatch.Tests\CanDoItAll.Mcp.DotNetWatch.Tests.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Mcp.DotNetWatch.Tests\CanDoItAll.Mcp.DotNetWatch.Tests.csproj:13:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Mcp.DotNetWatch.Tests\CanDoItAll.Mcp.DotNetWatch.Tests.csproj:14:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Mcp.DotNetWatch.Tests\CanDoItAll.Mcp.DotNetWatch.Tests.csproj:22:    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj" />
+src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:4:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:5:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj" />
+src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:6:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
+src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:7:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
+src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:11:    <PackageReference Include="Microsoft.Agents.AI.Hosting.A2A" Version="1.6.2-preview.260521.1" />
+src\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj:12:    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+tests\CanDoItAll.Mcp.Mermaid.Tests\CanDoItAll.Mcp.Mermaid.Tests.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Mcp.Mermaid.Tests\CanDoItAll.Mcp.Mermaid.Tests.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Mcp.Mermaid.Tests\CanDoItAll.Mcp.Mermaid.Tests.csproj:13:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Mcp.Mermaid.Tests\CanDoItAll.Mcp.Mermaid.Tests.csproj:14:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Mcp.Mermaid.Tests\CanDoItAll.Mcp.Mermaid.Tests.csproj:22:    <ProjectReference Include="..\..\src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:12:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:13:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:14:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:22:    <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:23:    <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:24:    <ProjectReference Include="..\..\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:25:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:26:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:27:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:28:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:29:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:30:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:31:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:32:    <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:33:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:34:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:35:    <ProjectReference Include="..\..\src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:36:    <ProjectReference Include="..\..\src\plugins\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:37:    <ProjectReference Include="..\..\src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj" />
+tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj:38:    <ProjectReference Include="..\..\src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:15:    <PackageReference Include="Npgsql" Version="10.0.0" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:16:    <PackageReference Include="Quartz.Serialization.Json" Version="3.13.1" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:20:    <ProjectReference Include="..\..\src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:21:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:22:    <ProjectReference Include="..\..\src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:23:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:24:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:25:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:26:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:27:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:28:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:29:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:30:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:31:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:32:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:33:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:34:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:35:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:36:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:37:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:38:    <ProjectReference Include="..\..\src\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:39:    <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
+tests\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj:40:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:11:    <PackageReference Include="Blazor-ApexCharts" Version="6.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:12:    <PackageReference Include="bunit.web" Version="1.40.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:13:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:14:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:15:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:16:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:24:    <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:25:    <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:26:    <ProjectReference Include="..\..\src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:27:    <ProjectReference Include="..\..\src\CanDoItAll.Components\CanDoItAll.Components.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:28:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:29:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:30:    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:31:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:32:    <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:33:    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:34:    <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:35:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:36:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:37:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:38:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:39:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:40:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:41:    <ProjectReference Include="..\..\src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:42:    <ProjectReference Include="..\..\src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
+tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj:43:    <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:11:    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:12:    <PackageReference Include="Microsoft.Playwright" Version="1.55.0" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:13:    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:14:    <PackageReference Include="xunit" Version="2.9.3" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:15:    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:23:    <ProjectReference Include="..\CanDoItAll.Tests.Support\CanDoItAll.Tests.Support.csproj" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:24:    <ProjectReference Include="..\..\src\CanDoItAll.Web\CanDoItAll.Web.csproj" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:25:    <ProjectReference Include="..\..\src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj" />
+tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj:26:    <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:10:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:11:    <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:12:    <ProjectReference Include="..\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:13:    <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:14:    <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:15:    <ProjectReference Include="..\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:16:    <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Qdrant\CanDoItAll.AgentFramework.Rag.Qdrant.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:17:    <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:18:    <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:19:    <ProjectReference Include="..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:20:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:21:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:24:    <ProjectReference Include="..\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:25:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:26:    <ProjectReference Include="..\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:27:    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:28:    <ProjectReference Include="..\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:29:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:30:    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:31:    <ProjectReference Include="..\plugins\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:32:    <ProjectReference Include="..\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj" />
+src\CanDoItAll.Composition\CanDoItAll.Composition.csproj:33:    <ProjectReference Include="..\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:4:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:5:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:6:    <ProjectReference Include="..\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:7:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:8:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:9:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:10:    <ProjectReference Include="..\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:11:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:15:    <PackageReference Include="Azure.AI.OpenAI" Version="2.9.0-beta.1" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:16:    <PackageReference Include="ExcelDataReader" Version="3.8.0" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:17:    <PackageReference Include="Microsoft.Agents.AI" Version="1.6.2" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:18:    <PackageReference Include="Microsoft.Agents.AI.A2A" Version="1.6.2-preview.260521.1" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:19:    <PackageReference Include="Microsoft.Agents.AI.Mem0" Version="1.0.0-preview.251028.1" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:20:    <PackageReference Include="Microsoft.Agents.AI.OpenAI" Version="1.6.2" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:21:    <PackageReference Include="Microsoft.Agents.AI.Workflows" Version="1.6.2" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:22:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:23:    <PackageReference Include="OllamaSharp" Version="5.4.25" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:24:    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:25:    <PackageReference Include="PdfPig" Version="0.1.14" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:15:    <PackageReference Include="Markdig" Version="1.1.2" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:16:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:20:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:21:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:22:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:23:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj:24:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:4:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:12:    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="10.0.7" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:13:    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:14:    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:17:    </PackageReference>
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:18:    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.4" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:19:    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="10.0.0" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:20:    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.0" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:21:    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+src\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj:22:    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
+src\CanDoItAll.Components\CanDoItAll.Components.csproj:20:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Components\CanDoItAll.Components.csproj:24:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Components\CanDoItAll.Components.csproj:25:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Components\CanDoItAll.Components.csproj:26:    <PackageReference Include="CanDoItAll.Components.Common" Version="0.1.0" />
+src\CanDoItAll.Components\CanDoItAll.Components.csproj:27:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj:10:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj:11:    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.0" />
+src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj:12:    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+src\CanDoItAll.Components.WebGlSandbox\CanDoItAll.Components.WebGlSandbox.csproj:13:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj:4:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj:8:    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+src\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj:10:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj:19:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj:20:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj:21:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj:4:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj:5:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj:6:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:19:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:20:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:21:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj:4:    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj:5:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj:6:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:10:    <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
+src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:11:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:12:    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:16:    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+src\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj:19:    </PackageReference>
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:14:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:18:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:19:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:20:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:21:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:22:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:24:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj:25:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:19:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:20:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:21:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:19:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:20:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:21:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj:22:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Sandbox\CanDoItAll.Space3D.Mouse.Sandbox.csproj:10:    <ProjectReference Include="..\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Sandbox\CanDoItAll.Space3D.Mouse.Sandbox.csproj:11:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Sandbox\CanDoItAll.Space3D.Mouse.Sandbox.csproj:12:    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Sandbox\CanDoItAll.Space3D.Mouse.Sandbox.csproj:13:    <ProjectReference Include="..\..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:19:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:20:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:21:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj:24:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:4:    <ProjectReference Include="..\CanDoItAll.Components\CanDoItAll.Components.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:5:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:6:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:7:    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:8:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:9:    <ProjectReference Include="..\CanDoItAll.Composition\CanDoItAll.Composition.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:10:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:11:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:12:    <ProjectReference Include="..\CanDoItAll.Migrations.PostgreSql\CanDoItAll.Migrations.PostgreSql.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:13:    <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:14:    <ProjectReference Include="..\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:15:    <ProjectReference Include="..\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:16:    <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:17:    <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:18:    <ProjectReference Include="..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:19:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:20:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:21:    <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.SchedulerPlanner\CanDoItAll.Modules.SchedulerPlanner.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:24:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:25:    <ProjectReference Include="..\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:26:    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:27:    <ProjectReference Include="..\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:28:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:29:    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:44:    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.4">
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:47:    </PackageReference>
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:48:    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.4" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:49:    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.4" />
+src\CanDoItAll.Web\CanDoItAll.Web.csproj:50:    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:10:    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.0" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:11:    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:12:    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.0" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:13:    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:14:    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:15:    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.4" />
+src\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj:16:    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:14:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:15:    <PackageReference Include="YamlDotNet" Version="16.3.0" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:19:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:20:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:21:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Hosting\CanDoItAll.AgentFramework.Hosting.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:22:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:23:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:24:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Persistence\CanDoItAll.AgentFramework.Persistence.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:25:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:26:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:27:    <PackageReference Include="CanDoItAll.Components.OverlayLib" Version="0.1.0" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:28:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:29:    <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:30:    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:31:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:32:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:33:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:34:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:35:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.AgentFramework\CanDoItAll.Modules.AgentFramework.csproj:36:    <ProjectReference Include="..\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:16:    <PackageReference Include="MQTTnet" Version="5.1.0.1559" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:17:    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:18:    <PackageReference Include="Quartz.Serialization.Json" Version="3.13.1" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:22:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:23:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:24:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:25:    <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+src\CanDoItAll.Modules.Automation\CanDoItAll.Modules.Automation.csproj:26:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:23:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:24:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:25:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:26:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:27:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:28:    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:29:    <ProjectReference Include="..\CanDoItAll.Modules.Prompts\CanDoItAll.Modules.Prompts.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:30:    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj:31:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:13:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:14:    <PackageReference Include="SSH.NET" Version="2025.1.0" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:15:    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:16:    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:17:    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.4" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:18:    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:19:    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj:23:    <ProjectReference Include="..\\CanDoItAll.Mcp.Core\\CanDoItAll.Mcp.Core.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:14:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:15:    <PackageReference Include="PdfPig" Version="0.1.14" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:19:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:20:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:21:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Voice\CanDoItAll.AgentFramework.Voice.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:22:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:23:    <PackageReference Include="CanDoItAll.Components.Common" Version="0.1.0" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:24:    <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\CanDoItAll.AgentFramework.Rag.Driver.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:25:    <ProjectReference Include="..\..\..\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\CanDoItAll.AgentFramework.SemanticCompletion.Driver.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:26:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.CognitiveMemory\CanDoItAll.Modules.CognitiveMemory.csproj:27:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:12:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:16:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:17:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:18:    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:19:    <PackageReference Include="CanDoItAll.Components.Common" Version="0.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:20:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:21:    <PackageReference Include="CanDoItAll.Components.Sandbox" Version="0.1.0" />
+src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj:22:    <ProjectReference Include="..\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:13:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:14:    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:15:    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:16:    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.4" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:17:    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:21:    <ProjectReference Include="..\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:22:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Abstractions\CanDoItAll.CodeAnalytics.Abstractions.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:23:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Analysis\CanDoItAll.CodeAnalytics.Analysis.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:24:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Application\CanDoItAll.CodeAnalytics.Application.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:25:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Facts\CanDoItAll.CodeAnalytics.Facts.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:26:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Rendering\CanDoItAll.CodeAnalytics.Rendering.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:27:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Storage\CanDoItAll.CodeAnalytics.Storage.csproj" />
+src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj:28:    <ProjectReference Include="..\..\..\CanDoItAll.CodeAnalsis\src\CanDoItAll.CodeAnalytics.Workspace\CanDoItAll.CodeAnalytics.Workspace.csproj" />
+src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj:12:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj:13:    <PackageReference Include="System.Management" Version="10.0.0" />
+src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj:17:    <ProjectReference Include="..\\CanDoItAll.Mcp.Core\\CanDoItAll.Mcp.Core.csproj" />
+src\CanDoItAll.Mcp.DotNetWatch\CanDoItAll.Mcp.DotNetWatch.csproj:18:    <ProjectReference Include="..\\CanDoItAll.Mcp.LocalRuntime\\CanDoItAll.Mcp.LocalRuntime.csproj" />
+src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj:13:    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
+src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj:14:    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
+src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj:15:    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.0" />
+src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj:16:    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.5" />
+src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj:17:    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.0" />
+src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj:21:    <ProjectReference Include="..\CanDoItAll.Mcp.Core\CanDoItAll.Mcp.Core.csproj" />
+src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj:4:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj:5:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Tools.Documents\CanDoItAll.Tools.Documents.csproj:4:    <PackageReference Include="ClosedXML" Version="0.105.0" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:14:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:18:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:19:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:20:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:21:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj" />
+src\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj:24:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:11:    <ProjectReference Include="..\CanDoItAll.Space3D.Mouse.Driver\CanDoItAll.Space3D.Mouse.Driver.csproj" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:12:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\Space3D\CanDoItAll.Space3D.Mouse.Components\CanDoItAll.Space3D.Mouse.Components.csproj:13:    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj:19:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj:20:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj:21:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj:22:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Mcp.LocalRuntime\CanDoItAll.Mcp.LocalRuntime.csproj:10:    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+src\CanDoItAll.Mcp.LocalRuntime\CanDoItAll.Mcp.LocalRuntime.csproj:14:    <ProjectReference Include="..\\CanDoItAll.Mcp.Core\\CanDoItAll.Mcp.Core.csproj" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:10:    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:11:    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:15:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:16:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:17:    <ProjectReference Include="..\..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:18:    <ProjectReference Include="..\..\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:19:    <ProjectReference Include="..\..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\plugins\CanDoItAll.Plugin.Office365\CanDoItAll.Plugin.Office365.csproj:20:    <ProjectReference Include="..\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:10:    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:11:    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:15:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:16:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:17:    <ProjectReference Include="..\..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:18:    <ProjectReference Include="..\..\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:19:    <ProjectReference Include="..\..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\plugins\CanDoItAll.Plugin.Gmail\CanDoItAll.Plugin.Gmail.csproj:20:    <ProjectReference Include="..\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:16:    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:20:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:21:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:22:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:23:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.Workspace\CanDoItAll.Modules.Workspace.csproj:24:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\plugins\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj:10:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\plugins\CanDoItAll.Plugin.Email\CanDoItAll.Plugin.Email.csproj:11:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj:14:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj:18:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj:19:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj:20:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:10:    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:11:    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:15:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:16:    <ProjectReference Include="..\..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:17:    <ProjectReference Include="..\..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:18:    <ProjectReference Include="..\..\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:19:    <ProjectReference Include="..\..\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
+src\plugins\CanDoItAll.Plugin.Docker\CanDoItAll.Plugin.Docker.csproj:20:    <ProjectReference Include="..\..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:14:    <PackageReference Include="JsonViewer.Blazor" Version="0.0.6" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:15:    <PackageReference Include="Markdig" Version="1.1.2" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:16:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:20:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:21:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:22:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:23:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:24:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:25:    <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:26:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:27:    <PackageReference Include="CanDoItAll.Components.WebGlLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:28:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:29:    <ProjectReference Include="..\CanDoItAll.Modules.Activity\CanDoItAll.Modules.Activity.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:30:    <ProjectReference Include="..\CanDoItAll.Modules.Collaboration\CanDoItAll.Modules.Collaboration.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:31:    <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:32:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj:33:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:15:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.5" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:16:    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:20:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:21:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:22:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:23:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:24:    <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:25:    <PackageReference Include="CanDoItAll.Components.Mermaid" Version="0.1.0" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:26:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:27:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:28:    <ProjectReference Include="..\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:29:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:30:    <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:31:    <ProjectReference Include="..\CanDoItAll.Modules.Resources\CanDoItAll.Modules.Resources.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:32:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:33:    <ProjectReference Include="..\CanDoItAll.Modules.TestLab\CanDoItAll.Modules.TestLab.csproj" />
+src\CanDoItAll.Modules.Workbench\CanDoItAll.Modules.Workbench.csproj:34:    <ProjectReference Include="..\CanDoItAll.Modules.Validation\CanDoItAll.Modules.Validation.csproj" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:14:    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.4" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:15:    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.4" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:16:    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.7" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:17:    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.4" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:21:    <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:22:    <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:23:    <ProjectReference Include="..\CanDoItAll.Infrastructure\CanDoItAll.Infrastructure.csproj" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:24:    <ProjectReference Include="..\CanDoItAll.Modules.Security\CanDoItAll.Modules.Security.csproj" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:25:    <ProjectReference Include="..\CanDoItAll.Plugins.Abstractions\CanDoItAll.Plugins.Abstractions.csproj" />
+src\CanDoItAll.Modules.Plugins\CanDoItAll.Modules.Plugins.csproj:26:    <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />
+ExitCode: 0

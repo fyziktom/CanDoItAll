@@ -83,6 +83,24 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogRejectsInvalidDefinitionOnSave()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var graph = CreateDefinitionGraph(component.Id);
+        var invalidGraph = new WorkflowGraph(
+            graph.StartNodeId,
+            graph.Nodes,
+            graph.Edges.Append(CreateEdge("start-missing", "start", "missing-node")).ToArray());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            catalog.SaveDefinitionAsync(CreateSaveRequest(invalidGraph)));
+
+        Assert.Contains("save failed validation", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("start-missing", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ValidationCatchesDisconnectedNodesAndShapeMismatch()
     {
         var catalog = CreateCatalog();
@@ -269,6 +287,47 @@ public sealed class WorkflowCatalogTests
 
         Assert.False(result.Succeeded);
         Assert.Contains("not registered", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task RuntimeManagerRejectsInProcessWhenDurablePolicyDisallowsPreview()
+    {
+        var runStore = new InMemoryWorkflowRunStore();
+        var runtimeManager = new WorkflowRuntimeManager(
+            [
+                new MafInProcessWorkflowExecutionBackend(
+                    new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
+                    [])
+            ],
+            runStore);
+        var definition = CreateDefinition(new WorkflowGraph(
+            new WorkflowNodeId("start"),
+            [
+                CreateNode("start", WorkflowNodeKind.Start),
+                CreateNode("end", WorkflowNodeKind.End)
+            ],
+            [CreateEdge("start-end", "start", "end")])) with
+            {
+                RuntimePolicy = new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    AllowInProcessPreviewRuns: false,
+                    RequireDurableProductionRuns: true,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false)
+            };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            runtimeManager.StartAsync(
+                definition,
+                new WorkflowRunStartRequest(
+                    definition.Id,
+                    definition.VersionId,
+                    "{}",
+                    WorkflowRuntimeBackendKind.InProcess,
+                    SourceProcessRunId: null,
+                    SourceProcessAssignmentId: null)));
+
+        Assert.Contains("requires a durable production runtime", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static InMemoryWorkflowCatalogService CreateCatalog(IReadOnlyList<ProviderProfile>? providers = null)

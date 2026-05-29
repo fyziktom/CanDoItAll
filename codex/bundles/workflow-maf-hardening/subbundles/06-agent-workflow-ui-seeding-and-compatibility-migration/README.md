@@ -2,7 +2,7 @@
 
 ## Status
 
-- `Prepared`
+- `Completed`
 
 ## Objective
 
@@ -26,11 +26,14 @@ Update Agents/Workflows UI, managed seeding, and compatibility migration so user
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.AgentFramework/`
-- Workflow pages/components found by SB01.
-- `WorkflowExampleCatalogSeedService`
-- `Templates/Workflows/manifest.yaml`
-- Persistence/migration surfaces found by SB01.
+- `repo://src/CanDoItAll.Modules.AgentFramework`
+- `repo://src/CanDoItAll.AgentFramework.Components`
+- `repo://src/CanDoItAll.Components`
+- `repo://src/CanDoItAll.Modules.AgentFramework/Catalog/WorkflowExampleCatalogSeedService.cs`
+- `repo://Templates/Workflows/manifest.yaml`
+- `repo://src/CanDoItAll.AgentFramework.Persistence`
+- `repo://tests/CanDoItAll.Tests.Unit`
+- `repo://tests/CanDoItAll.Tests.Playwright`
 
 ## Deliverables
 
@@ -38,6 +41,18 @@ Update Agents/Workflows UI, managed seeding, and compatibility migration so user
 - Seed/migration tests.
 - Browser proof for key workflow screens if UI changed.
 - Documentation update for workflow authoring and plugin executor constraints.
+
+## Dependency Impact
+
+- SB07 final review depends on UI, seed, and migration behavior matching the contracts from SB02 through SB05.
+- User data safety depends on this phase preserving non-managed workflow definitions and managed seed markers.
+- Any schema migration or seed refresh defect must be treated as a blocker before final closure.
+
+## Validation Depth
+
+- Critical data-safety phase with semantic proof required under `proof/SB06/manifest.md` and `proof/SB06/semantic-invariants.md`.
+- Requires seed/migration tests proving user-managed definitions survive refresh, plus browser proof when Razor/UI surfaces change.
+- Requires source assertions showing runtime logic is consumed from services rather than duplicated in Razor components.
 
 ## Implementation Steps
 
@@ -73,9 +88,14 @@ Update Agents/Workflows UI, managed seeding, and compatibility migration so user
 - Playwright/browser screenshots or a documented no-UI-change rationale.
 - Execution report update.
 
+## Browser Validation Logging
+
+- Required if UI changes are made: log workflow route, large-screen viewport, narrow-width viewport when layout changes, Playwright actions/assertions, screenshots, overlay/open-state checks if applicable, and pass/fail result.
+- If no UI files change, record a no-UI-change rationale in the browser analytics row.
+
 ## Progression Gate
 
-SB07 may start after UI/seeding/migration surfaces are consistent with runtime contracts.
+- SB07 may start after UI/seeding/migration surfaces are consistent with runtime contracts and SB06 closure proof cites `proof/SB06/manifest.md` plus `proof/SB06/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 
