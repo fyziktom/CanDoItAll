@@ -13745,6 +13745,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("RetryCategory")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 

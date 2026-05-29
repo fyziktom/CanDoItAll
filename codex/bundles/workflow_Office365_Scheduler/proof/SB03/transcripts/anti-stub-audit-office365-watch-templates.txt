@@ -1,0 +1,8 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific" Templates/Workflows src/plugins/CanDoItAll.Plugin.Office365 src/plugins/CanDoItAll.Plugin.Email
+ExpectedExitCode: 1 when no stub markers are present
+ActualExitCode: 1
+StartedUtc: 2026-05-29T19:04:31.4507062Z
+
+
+Finding: no TODO, NotImplemented, or fixture-specific markers found in changed Office365/template surfaces.
+FinishedUtc: 2026-05-29T19:04:31.4570419Z

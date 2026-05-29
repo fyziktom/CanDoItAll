@@ -1,4 +1,5 @@
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Automation;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,28 @@ public enum SchedulerPlanRunDispatchStatus
     Received,
     Dispatching,
     Dispatched,
-    Failed
+    Failed,
+    NoMessages,
+    WaitingForApproval
+}
+
+public enum SchedulerPlanRunRetryCategory
+{
+    None,
+    NoAction,
+    WorkflowWaitingForApproval,
+    TransientExternalFailure,
+    ProjectWriteFailure,
+    WorkflowFailure,
+    SchedulerFailure
+}
+
+public static class SchedulerPlanRunRoutes
+{
+    public const string Processed = "processed";
+    public const string NoMessages = "no_messages";
+    public const string Failed = "failed";
+    public const string WaitingForApproval = "waiting_for_approval";
 }
 
 public sealed class SchedulerPlan
@@ -119,6 +141,10 @@ public sealed class SchedulerPlanRun
 
     public string ErrorMessage { get; set; } = string.Empty;
 
+    public string Route { get; set; } = string.Empty;
+
+    public SchedulerPlanRunRetryCategory RetryCategory { get; set; } = SchedulerPlanRunRetryCategory.None;
+
     public DateTimeOffset? DispatchedAtUtc { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
@@ -136,6 +162,7 @@ internal sealed class SchedulerPlanRunConfiguration : IEntityTypeConfiguration<S
         builder.Property(item => item.TargetRunKind).HasMaxLength(80);
         builder.Property(item => item.Summary).HasColumnType("TEXT");
         builder.Property(item => item.ErrorMessage).HasColumnType("TEXT");
+        builder.Property(item => item.Route).HasMaxLength(80);
         builder.HasIndex(item => item.DedupeKey).IsUnique();
         builder.HasIndex(item => new
         {
@@ -187,6 +214,8 @@ public sealed record SchedulerPlanRunSummary(
     SchedulerPlanRunDispatchStatus Status,
     int AttemptCount,
     Guid? TargetRunId,
+    string Route,
+    SchedulerPlanRunRetryCategory RetryCategory,
     string Summary,
     string ErrorMessage,
     DateTimeOffset UpdatedAtUtc);
@@ -226,6 +255,22 @@ public sealed class SchedulerPlanEditorModel
     public string InputJson { get; set; } = "{}";
 }
 
+public sealed record SchedulerWorkflowInputSchema(
+    WorkflowId WorkflowId,
+    WorkflowVersionId VersionId,
+    string WorkflowName,
+    IReadOnlyList<WorkflowInputParameterDescriptor> Parameters,
+    bool UsesRawJsonFallback);
+
+public sealed record SchedulerWorkflowInputValidationIssue(
+    string ParameterKey,
+    string Message);
+
+public sealed record SchedulerWorkflowInputValidationResult(
+    bool Succeeded,
+    string NormalizedInputJson,
+    IReadOnlyList<SchedulerWorkflowInputValidationIssue> Issues);
+
 public sealed class SchedulerHistoryQuery
 {
     public string Search { get; set; } = string.Empty;
@@ -245,7 +290,10 @@ public sealed record SchedulerTargetLaunchResult(
     SchedulerPlanTargetKind TargetKind,
     Guid TargetRunId,
     string State,
-    string Summary);
+    string Summary,
+    SchedulerPlanRunDispatchStatus DispatchStatus = SchedulerPlanRunDispatchStatus.Dispatched,
+    string Route = SchedulerPlanRunRoutes.Processed,
+    SchedulerPlanRunRetryCategory RetryCategory = SchedulerPlanRunRetryCategory.None);
 
 public sealed record SchedulerPlanAutomationPayload(
     Guid PlanId,

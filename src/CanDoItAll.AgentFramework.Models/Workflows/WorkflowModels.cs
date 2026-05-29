@@ -604,7 +604,10 @@ public sealed record WorkflowDefinition(
     WorkflowGraph Graph,
     WorkflowRuntimePolicy RuntimePolicy,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public IReadOnlyList<WorkflowInputParameterDescriptor> InputParameters { get; init; } = [];
+}
 
 public sealed record WorkflowValidationIssue(
     WorkflowValidationIssueCode Code,

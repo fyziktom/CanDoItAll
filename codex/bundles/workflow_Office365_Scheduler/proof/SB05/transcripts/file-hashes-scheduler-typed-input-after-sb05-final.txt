@@ -1,0 +1,16 @@
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    16B826A2DAF0CCB85EBB93F5B636B88C012AFFEE3D20DF90E46E893618142A2C C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputOptionService.cs
+SHA256    3662EBBF2E7948B1A341A6C08748FF174845BA279C73D6E18045526FB3D190F5 C:\repositories\CanDoItAll\src\CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs
+SHA256    6B9C652E13D3988BD3E79C6AF78499626066D91099012142DB0F8FE7BA94C2C9 C:\repositories\CanDoItAll\src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs
+SHA256    5638F90933493479D5C6844B78B1B346D833847B0CA6125304C0527A23559F01 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor
+SHA256    0626A7478DB68F0398F60D0CC19D0832FB0D3DECCFCA5F2E1AE0D34C1ED307CB C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor.css
+SHA256    9A3D1FCB32988498AF82E6BB5576BEA6FE1A956BA63127511EED11813D820627 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs
+SHA256    19A9ACD85EE83C86BBD45B51099B8227EE36BC5D6B6F504E5ABCD666CE7742DC C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs
+SHA256    85D787FC39065AF2957C91CF5988124542E1E1F9646CFFF7B7B0B45334A22E85 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs
+SHA256    5FCC6997D10F3C399AA702F56093DB1D4E08585C0E91FF015C3C0FAEE125FB3B C:\repositories\CanDoItAll\codex\bundles\workflow_Office365_Scheduler\proof\SB05\browser\scheduler-office365-watch-browser-proof.json
+SHA256    00E94169249A0761D31A7050A5FA6311F6A0DF2E30B3B8A768B4152F9CF68BBA C:\repositories\CanDoItAll\codex\bundles\workflow_Office365_Scheduler\proof\SB05\browser\scheduler-office365-watch-typed-form-desktop.png
+SHA256    0FE2458BCC4D03414B7849ED80972EB1455B7838D44FB6390A77D11564AD8849 C:\repositories\CanDoItAll\codex\bundles\workflow_Office365_Scheduler\proof\SB05\browser\scheduler-office365-watch-validation-narrow.png
+
+

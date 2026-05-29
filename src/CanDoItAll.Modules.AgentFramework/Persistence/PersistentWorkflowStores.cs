@@ -97,7 +97,10 @@ public sealed class PersistentWorkflowCatalogService(
             SnapshotGraph(request.Graph),
             request.RuntimePolicy,
             current?.CreatedAtUtc ?? now,
-            now);
+            now)
+        {
+            InputParameters = SnapshotInputParameters(request.InputParameters)
+        };
 
         ThrowIfValidationFailed(
             await ValidateDefinitionAsync(definition, cancellationToken),
@@ -129,7 +132,10 @@ public sealed class PersistentWorkflowCatalogService(
                 detail.Definition.Description,
                 request.Status,
                 detail.Definition.Graph,
-                detail.Definition.RuntimePolicy),
+                detail.Definition.RuntimePolicy)
+            {
+                InputParameters = detail.Definition.InputParameters
+            },
             cancellationToken);
     }
 
@@ -183,7 +189,10 @@ public sealed class PersistentWorkflowCatalogService(
                 source.Description,
                 importedStatus,
                 source.Graph,
-                source.RuntimePolicy),
+                source.RuntimePolicy)
+            {
+                InputParameters = source.InputParameters
+            },
             cancellationToken);
     }
 
@@ -580,6 +589,18 @@ public sealed class PersistentWorkflowCatalogService(
                 .ToArray(),
             graph.Edges.ToArray());
     }
+
+    private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
+        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters)
+        => inputParameters
+            .Select(parameter => parameter with
+            {
+                OptionSource = parameter.OptionSource with
+                {
+                    StaticOptions = parameter.OptionSource.StaticOptions.ToArray()
+                }
+            })
+            .ToArray();
 
     private static void ThrowIfValidationFailed(
         WorkflowValidationResult validation,

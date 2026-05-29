@@ -83,6 +83,28 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogPreservesWorkflowInputParametersOnSaveAndStatusChange()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var saved = await catalog.SaveDefinitionAsync(CreateSaveRequest(CreateDefinitionGraph(component.Id)) with
+        {
+            InputParameters = CreateWorkflowInputParameters()
+        });
+
+        var active = await catalog.ChangeDefinitionStatusAsync(new WorkflowDefinitionStatusChangeRequest(
+            saved.Id,
+            saved.VersionId,
+            WorkflowLifecycleStatus.Active));
+        var detail = await catalog.GetDefinitionAsync(active.Id, active.VersionId);
+
+        var email = Assert.Single(detail!.Definition.InputParameters, parameter => parameter.Key == "emailAddress");
+        Assert.Equal(WorkflowInputParameterKind.EmailAddress, email.Kind);
+        Assert.Equal(WorkflowInputParameterOptionSourceKind.CrmContacts, email.OptionSource.Kind);
+        Assert.Equal("$.emailAddress", email.JsonPath);
+    }
+
+    [Fact]
     public async Task CatalogRejectsInvalidDefinitionOnSave()
     {
         var catalog = CreateCatalog();
@@ -395,11 +417,33 @@ public sealed class WorkflowCatalogTests
             WorkflowLifecycleStatus.Draft,
             graph,
             runtimePolicy ?? new WorkflowRuntimePolicy(
-                WorkflowRuntimeBackendKind.InProcess,
-                AllowInProcessPreviewRuns: true,
-                RequireDurableProductionRuns: false,
-                ExposeAzureFunctionsStatusEndpoint: false,
-                ExposeAzureFunctionsMcpTool: false));
+            WorkflowRuntimeBackendKind.InProcess,
+            AllowInProcessPreviewRuns: true,
+            RequireDurableProductionRuns: false,
+            ExposeAzureFunctionsStatusEndpoint: false,
+            ExposeAzureFunctionsMcpTool: false));
+    }
+
+    private static IReadOnlyList<WorkflowInputParameterDescriptor> CreateWorkflowInputParameters()
+    {
+        return
+        [
+            new WorkflowInputParameterDescriptor(
+                "emailAddress",
+                "Email address",
+                WorkflowInputParameterKind.EmailAddress,
+                IsRequired: true,
+                "Watched sender address.",
+                "$.emailAddress",
+                DefaultValue: string.Empty,
+                new WorkflowInputParameterOptionSource(
+                    WorkflowInputParameterOptionSourceKind.CrmContacts,
+                    DependsOnParameterKey: string.Empty,
+                    StaticOptions: []),
+                MinimumValue: null,
+                MaximumValue: null,
+                Placeholder: string.Empty)
+        ];
     }
 
     private static WorkflowDefinition CreateDefinition(WorkflowGraph graph)

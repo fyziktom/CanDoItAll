@@ -23,6 +23,14 @@ public sealed class ProjectStructureAgentIntegrationTests
         "tests/project-structure",
         Guid.NewGuid().ToString("N"));
 
+    private static readonly ProjectStructureRuntimeAgentContext DefaultRuntimeAgent = new(
+        DefaultAgent.AgentId,
+        DefaultAgent.AgentName,
+        DefaultAgent.MachineName,
+        DefaultAgent.RepositoryRoot,
+        DefaultAgent.BranchName,
+        DefaultAgent.SessionId);
+
     [Fact]
     public async Task LeaseService_AcquireAsync_reports_conflict_details_for_other_agents()
     {
@@ -83,6 +91,94 @@ public sealed class ProjectStructureAgentIntegrationTests
         Assert.Equal("ok", result);
         Assert.NotNull(preservedLease);
         Assert.Equal(initialLease.LeaseToken, preservedLease!.LeaseToken);
+    }
+
+    [Fact]
+    public async Task RuntimeGateway_CreateAssetAsync_replays_duplicate_idempotency_key_without_duplicate_node()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var gateway = scope.ServiceProvider.GetRequiredService<IProjectStructureRuntimeGateway>();
+
+        var projectId = await CreateProjectAsync(projects, "Runtime asset idempotency");
+        var idempotencyKey = "office365:runtime-message-1:summary";
+        var first = await gateway.CreateAssetAsync(
+            projectId,
+            new ProjectStructureRuntimeAssetCreateRequest(
+                ProjectObjectType.File,
+                "Watched email summary",
+                "Generated from Office365 email",
+                "First delivery should create the markdown asset.",
+                CreateRuntimeMediaPayload("summary.md", "text/markdown", "# Summary"),
+                ParentNodeKey: $"project:{projectId:D}",
+                ObjectSubtype: "md",
+                IdempotencyKey: idempotencyKey,
+                IdempotencyBatchKey: idempotencyKey),
+            DefaultRuntimeAgent);
+        var replayed = await gateway.CreateAssetAsync(
+            projectId,
+            new ProjectStructureRuntimeAssetCreateRequest(
+                ProjectObjectType.File,
+                "Watched email summary duplicate",
+                "Generated from Office365 email",
+                "A retry after mark-processed failure must not create a second asset.",
+                CreateRuntimeMediaPayload("summary-retry.md", "text/markdown", "# Duplicate"),
+                ParentNodeKey: $"project:{projectId:D}",
+                ObjectSubtype: "md",
+                IdempotencyKey: idempotencyKey,
+                IdempotencyBatchKey: idempotencyKey),
+            DefaultRuntimeAgent);
+
+        var surface = await workbench.GetStructureAsync(projectId);
+        var matchingNodes = surface.Nodes
+            .Where(node => HasRuntimeIdempotencyKey(node, idempotencyKey))
+            .ToList();
+
+        Assert.Equal(first.Id, replayed.Id);
+        Assert.Single(matchingNodes);
+        Assert.Equal("Watched email summary", matchingNodes[0].Title);
+    }
+
+    [Fact]
+    public async Task RuntimeGateway_CreateNodeAsync_serializes_concurrent_duplicate_idempotency_key()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projects = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbench = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var gateway = scope.ServiceProvider.GetRequiredService<IProjectStructureRuntimeGateway>();
+
+        var projectId = await CreateProjectAsync(projects, "Runtime task idempotency");
+        var idempotencyKey = "office365:runtime-message-2:tasks:001";
+        var batchKey = "office365:runtime-message-2:tasks";
+        var firstRequest = new ProjectStructureRuntimeNodeCreateRequest(
+            ProjectObjectType.WorkItem,
+            "Confirm renewal scope",
+            "Office365 task",
+            "Task extracted from a watched email.",
+            $"project:{projectId:D}",
+            ObjectSubtype: "task",
+            IdempotencyKey: idempotencyKey,
+            IdempotencyBatchKey: batchKey);
+        var duplicateRequest = firstRequest with
+        {
+            Title = "Confirm renewal scope duplicate",
+            Notes = "Concurrent retry should replay the original node."
+        };
+
+        var results = await Task.WhenAll(
+            gateway.CreateNodeAsync(projectId, firstRequest, DefaultRuntimeAgent),
+            gateway.CreateNodeAsync(projectId, duplicateRequest, DefaultRuntimeAgent));
+        var surface = await workbench.GetStructureAsync(projectId);
+        var matchingNodes = surface.Nodes
+            .Where(node => HasRuntimeIdempotencyKey(node, idempotencyKey))
+            .ToList();
+
+        Assert.Equal(results[0].Id, results[1].Id);
+        Assert.Single(matchingNodes);
+        Assert.Equal("Confirm renewal scope", matchingNodes[0].Title);
     }
 
     [Fact]
@@ -872,6 +968,37 @@ public sealed class ProjectStructureAgentIntegrationTests
             fileName,
             contentType,
             Convert.ToBase64String(Encoding.UTF8.GetBytes(textContent)));
+    }
+
+    private static ProjectStructureRuntimeMediaPayload CreateRuntimeMediaPayload(string fileName, string contentType, string textContent)
+    {
+        return new ProjectStructureRuntimeMediaPayload(
+            fileName,
+            contentType,
+            Convert.ToBase64String(Encoding.UTF8.GetBytes(textContent)));
+    }
+
+    private static bool HasRuntimeIdempotencyKey(ProjectStructureNode node, string idempotencyKey)
+    {
+        if (string.IsNullOrWhiteSpace(node.MetadataJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(node.MetadataJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty(ProjectStructureRuntimeIdempotencyMetadata.MetadataPropertyName, out var runtimeMetadata) &&
+                   runtimeMetadata.ValueKind == JsonValueKind.Object &&
+                   runtimeMetadata.TryGetProperty(ProjectStructureRuntimeIdempotencyMetadata.IdempotencyKeyPropertyName, out var key) &&
+                   key.ValueKind == JsonValueKind.String &&
+                   string.Equals(key.GetString(), idempotencyKey, StringComparison.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static ProjectObjectMediaPayload CreateMediaPayload(string fileName, string contentType, byte[] bytes)

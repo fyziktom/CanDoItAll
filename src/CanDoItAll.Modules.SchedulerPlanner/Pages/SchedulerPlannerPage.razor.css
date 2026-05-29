@@ -58,6 +58,54 @@
     font-weight: 700;
 }
 
+.scheduler-workflow-input {
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(226, 232, 240, 0.95);
+}
+
+.scheduler-workflow-input__title {
+    margin: 0.2rem 0 0;
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.scheduler-workflow-input__grid {
+    margin-top: 0.85rem;
+}
+
+.scheduler-workflow-input__field {
+    display: block;
+    min-width: 0;
+}
+
+.scheduler-workflow-input__field--wide {
+    grid-column: 1 / -1;
+}
+
+.scheduler-workflow-input__description {
+    display: block;
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.scheduler-workflow-input__issue {
+    display: block;
+    margin-top: 0.35rem;
+    color: #be123c;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.scheduler-workflow-input__issue--general {
+    margin: 0.75rem 0 0;
+}
+
 .scheduler-target-card {
     position: relative;
     min-height: 100%;

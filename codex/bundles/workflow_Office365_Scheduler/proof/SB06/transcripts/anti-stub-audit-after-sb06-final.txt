@@ -1,0 +1,28 @@
+Anti-stub scan found matches; reviewed for introduced placeholders:
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:359:public enum WorkflowMarkdownMissingPlaceholderBehavior
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:618:    public string Placeholder { get; init; } = string.Empty;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:639:    public WorkflowMarkdownMissingPlaceholderBehavior MissingPlaceholderBehavior { get; init; } = WorkflowMarkdownMissingPlaceholderBehavior.Fail;
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:20:        placeholder: Latest connected Office365 account
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:212:        placeholder: Latest connected Office365 account
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:492:    public async Task AgentService_UpdateNodeAsync_reclassifies_placeholder_nodes_into_typed_blocks()
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:502:        var placeholder = await workbench.CreateObjectAsync(
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:508:                "Placeholder note that should become a typed block.",
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:522:            placeholder.Id,
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentIntegrationTests.cs:533:        var updatedNode = Assert.Single(surface.Nodes, node => node.Id == placeholder.Id);
+src\CanDoItAll.Modules.Workbench\Workbench\ProjectWorkbenchMetadata.cs:588:            return null;
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:735:                Placeholder: string.Empty),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:750:                Placeholder: string.Empty),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:765:                Placeholder: string.Empty),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:777:                Placeholder: string.Empty),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:789:                Placeholder: string.Empty)
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:264:                                                               placeholder="@parameter.Placeholder"
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:276:                                                               placeholder="@parameter.Placeholder"
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:356:                                       placeholder="Search history"
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:443:                                 Placeholder="Search workflows and processes"
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:452:                                   Placeholder="Filter tags"
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\ProjectStructureWorkflowExecutor.cs:324:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\ProjectStructureWorkflowExecutor.cs:339:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\ProjectStructureWorkflowExecutor.cs:447:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\ProjectStructureWorkflowExecutor.cs:520:            return null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\ProjectStructureWorkflowExecutor.cs:545:            return null;
+src\CanDoItAll.Modules.Workbench\ProjectStructure\WorkbenchProjectStructureRuntimeGateway.cs:349:            return null;

@@ -785,6 +785,12 @@ public sealed record WorkflowProjectStructureExecutorSettings
     public string TaskObjectSubtype { get; init; } = "task";
 
     public int MaxTaskNodes { get; init; } = 20;
+
+    public string IdempotencyKey { get; init; } = string.Empty;
+
+    public string IdempotencyKeyJsonPath { get; init; } = string.Empty;
+
+    public string IdempotencyKeySuffix { get; init; } = string.Empty;
 }
 
 public sealed record WorkflowImageGenerationExecutorSettings

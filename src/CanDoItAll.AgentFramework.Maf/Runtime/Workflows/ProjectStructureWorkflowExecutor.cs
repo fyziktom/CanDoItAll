@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -105,10 +106,14 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
         var tasks = ReadTaskSources(settings, input);
         var createdNodes = new List<ProjectStructureRuntimeNodeSummary>(tasks.Count);
         var agent = BuildAgentContext(input);
+        var idempotencyBatchKey = ResolveProjectWriteIdempotencyKey(settings, input);
+        var taskIndex = 0;
 
         foreach (var task in tasks)
         {
+            taskIndex++;
             cancellationToken.ThrowIfCancellationRequested();
+            var taskIdempotencyKey = BuildTaskIdempotencyKey(idempotencyBatchKey, taskIndex);
             createdNodes.Add(await gateway.CreateNodeAsync(
                 projectId,
                 new ProjectStructureRuntimeNodeCreateRequest(
@@ -119,7 +124,9 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
                     parentNodeId,
                     EndUtc: task.DueUtc,
                     ObjectSubtype: NormalizeTaskSubtype(settings.TaskObjectSubtype),
-                    MetadataJson: BuildTaskMetadataJson(task, input)),
+                    MetadataJson: BuildTaskMetadataJson(task, input),
+                    IdempotencyKey: taskIdempotencyKey,
+                    IdempotencyBatchKey: idempotencyBatchKey),
                 agent,
                 cancellationToken));
         }
@@ -128,6 +135,7 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
         {
             projectId,
             parentNodeId,
+            idempotencyBatchKey,
             createdTaskCount = createdNodes.Count,
             createdNodeIds = createdNodes.Select(node => node.Id).ToArray(),
             createdNodes = createdNodes.Select(node => new
@@ -154,6 +162,7 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
         var sourcePath = string.IsNullOrWhiteSpace(settings.SourceWorkspacePath) ? null : settings.SourceWorkspacePath.Trim();
         ProjectStructureRuntimeMediaPayload? media = null;
         var content = WorkflowInputPayloadText.Resolve(settings.Content, settings.ContentFromInput, input);
+        var idempotencyKey = ResolveProjectWriteIdempotencyKey(settings, input);
 
         if (sourcePath is null)
         {
@@ -175,7 +184,9 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
             MetadataJson: "{}",
             SourceWorkspacePath: sourcePath,
             SourceFileName: $"{SanitizeFileName(title)}.{NormalizeAssetKind(settings.AssetKind)}",
-            SourceContentType: settings.ContentType);
+            SourceContentType: settings.ContentType,
+            IdempotencyKey: idempotencyKey,
+            IdempotencyBatchKey: idempotencyKey);
     }
 
     private static IReadOnlyList<WorkflowTaskNodeSource> ReadTaskSources(
@@ -300,6 +311,48 @@ public sealed class ProjectStructureWorkflowExecutor(IProjectStructureRuntimeGat
                 ["workflowNodeId"] = ReadRunContextString(input, "workflowNodeId")
             },
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+    private static string? ResolveProjectWriteIdempotencyKey(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
+    {
+        var configuredKey = !string.IsNullOrWhiteSpace(settings.IdempotencyKey)
+            ? settings.IdempotencyKey.Trim()
+            : ResolveIdempotencyKeyFromJsonPath(settings, input);
+        if (string.IsNullOrWhiteSpace(configuredKey))
+        {
+            return null;
+        }
+
+        var suffix = settings.IdempotencyKeySuffix.Trim();
+        return string.IsNullOrWhiteSpace(suffix)
+            ? configuredKey
+            : $"{configuredKey}:{suffix}";
+    }
+
+    private static string? ResolveIdempotencyKeyFromJsonPath(
+        WorkflowProjectStructureExecutorSettings settings,
+        WorkflowNodeInput input)
+    {
+        if (string.IsNullOrWhiteSpace(settings.IdempotencyKeyJsonPath))
+        {
+            return null;
+        }
+
+        var resolved = ResolveInputJsonString(input, settings.IdempotencyKeyJsonPath, nameof(settings.IdempotencyKeyJsonPath));
+        if (string.IsNullOrWhiteSpace(resolved))
+        {
+            throw new InvalidOperationException(
+                $"Project-structure executor setting '{nameof(settings.IdempotencyKeyJsonPath)}' resolved an empty idempotency key.");
+        }
+
+        return resolved.Trim();
+    }
+
+    private static string? BuildTaskIdempotencyKey(string? idempotencyBatchKey, int taskIndex)
+        => string.IsNullOrWhiteSpace(idempotencyBatchKey)
+            ? null
+            : $"{idempotencyBatchKey}:{taskIndex.ToString("D3", CultureInfo.InvariantCulture)}";
 
     private static string NormalizeTaskSubtype(string value)
         => string.IsNullOrWhiteSpace(value) ? "task" : value.Trim().ToLowerInvariant();

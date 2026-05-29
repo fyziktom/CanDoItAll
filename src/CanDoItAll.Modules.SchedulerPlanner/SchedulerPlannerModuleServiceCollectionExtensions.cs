@@ -8,6 +8,8 @@ public static class SchedulerPlannerModuleServiceCollectionExtensions
     public static IServiceCollection AddSchedulerPlannerModule(this IServiceCollection services)
     {
         services.AddScoped<ICronDescriptionService, QuartzCronDescriptionService>();
+        services.AddScoped<ISchedulerWorkflowInputSchemaService, SchedulerWorkflowInputSchemaService>();
+        services.AddScoped<ISchedulerWorkflowInputOptionService, SchedulerWorkflowInputOptionService>();
         services.AddScoped<ISchedulerTargetLauncher, SchedulerTargetLauncher>();
         services.AddScoped<ISchedulerPlannerService, SchedulerPlannerService>();
         services.AddScoped<IAutomationMessageHandler, SchedulerPlannerTriggerFireHandler>();

@@ -2,27 +2,34 @@
 
 Prepared: `2026-05-29`  
 Target branch: `processes-hardening`  
-Observed head: `7bdbd7f70eeee2b357b28dfc9afc1c89fd9d5177`
+Observed head: `b70b7f4d0f5402df9980c0c3521bbc6e90b7badc`
+
+## Validation Summary
+
+- Bundle preparation status: `Valid for execution`
+- Bundle readiness gate: `Passed`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed`
+- Final closure gate: `Completed`
+- Browser validation analytics: `Completed`
 
 ## Mission
 
-Review the pushed workflow executor catalog implementation and deliver the next hardening/feature phase focused on:
+Deliver the next hardening and feature phase for the workflow executor catalog work:
 
 1. Office365 email polling by concrete email address.
-2. Managed workflow templates that summarize or create tasks from the matching email.
-3. Automatic marking of processed Office365 messages with a configured Outlook category.
-4. Scheduler Planner readiness for recurring workflow runs, including user-friendly parameter entry for email address / CRM contact, project, and parent project-structure node.
-5. Production-grade guardrails for polling behavior, idempotency, retry, and no-message runs.
+2. Managed workflow templates that summarize matching email or create project task nodes.
+3. Automatic add-only marking of processed Office365 messages with a configured Outlook category.
+4. Scheduler Planner readiness for recurring workflow runs, including user-friendly parameter entry for email address or CRM contact, project, and parent project-structure node.
+5. Production-grade guardrails for polling behavior, idempotency, retry, approval, and no-message runs.
 
 ## Current State Verdict
 
-The previous executor-catalog bundle moved the workflow runtime forward significantly: MAF 1.8 is in place, catalog-backed validation is fixed, artifact content storage exists, and new built-in executors cover storage, JSON transforms, Markdown rendering, delay, approval, HTTP download, and source ingestion.
+The previous executor-catalog bundle moved the workflow runtime forward significantly. The remaining gap is now a concrete business workflow pattern:
 
-The next gap is not a generic executor problem anymore. It is the first real business workflow pattern:
+> Every two hours, check whether a specific person sent me a new unprocessed Office365 email, summarize it or create tasks under a chosen project/node, and then mark that email as processed.
 
-> "Every two hours, check whether a specific person sent me a new unprocessed Office365 email, summarize it or create tasks under a chosen project/node, and then mark that email as processed."
-
-This requires coordinated changes in Office365 plugin executors, workflow templates, Scheduler Planner UX, scheduler dispatch semantics, and idempotency.
+That requires coordinated changes in the Office365 plugin executors, workflow templates, Scheduler Planner input contract and UX, scheduler dispatch semantics, and idempotent project writes.
 
 ## Recommended Execution Order
 
@@ -37,10 +44,21 @@ This requires coordinated changes in Office365 plugin executors, workflow templa
 
 ## Non-negotiable Guardrails
 
-- All code comments must be in English.
-- Do not introduce background claims without proof. Capture restore/build/test/browser evidence in `proof/`.
-- Do not make live Graph calls in automated tests. Use fake `HttpMessageHandler`, fake `Office365GraphClient` seam, or deterministic plugin test mode.
-- Do not require destructive external effects during preview. Preview must simulate Office365 download and category mutation.
-- No scheduled "no matching email" poll may be treated as an error by default.
+- Do not make live Graph calls in automated tests.
+- Do not require destructive external effects during preview.
+- No scheduled no-message poll may be treated as an error by default.
 - Do not let retries duplicate project tasks or summary assets for the same Graph message.
 - Keep `command.process` planned/unavailable unless a separate command sandbox bundle explicitly hardens it.
+- Do not bypass approval for Office365 category mutation merely because Scheduler launched the workflow.
+
+## Bundle Layout
+
+- `inputs/` raw request and source artifacts
+- `analysis/` current state, findings, assumptions, and reopen triggers
+- `requirements/` normalized requirements
+- `architecture/` target solution and flow
+- `plan/` execution order, dependency map, critical subbundles, and phase gates
+- `traceability/` requirement ownership
+- `subbundles/` execution-ready workstreams
+- `proof/` per-subbundle proof manifests, semantic invariants, transcripts, screenshots, and verifier artifacts
+- `reviews/` execution report and closure audit

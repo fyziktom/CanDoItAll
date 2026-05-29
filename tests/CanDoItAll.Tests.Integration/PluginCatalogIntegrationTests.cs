@@ -1030,6 +1030,23 @@ public sealed class PluginCatalogIntegrationTests
         yield return
         [
             CreatePluginSimulationDescriptor(
+                Office365PluginConstants.DownloadByAddressExecutorId,
+                "Office365 unprocessed message by address",
+                Office365PluginConstants.PluginId,
+                Office365PluginConstants.PackageId,
+                Office365PluginConstants.Icon,
+                new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.ReadsExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.NotRequired),
+                ReadSimulationTemplate(typeof(Office365PluginConstants), "Office365WorkflowSimulationTemplates", "DownloadByAddress")),
+            "idempotencyKey"
+        ];
+        yield return
+        [
+            CreatePluginSimulationDescriptor(
                 Office365PluginConstants.MarkProcessedExecutorId,
                 "Office365 mark processed",
                 Office365PluginConstants.PluginId,

@@ -2,14 +2,37 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Plugins.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class EmailPluginClientTests
 {
+    [Fact]
+    public void Office365_plugin_descriptor_and_di_register_address_executor()
+    {
+        var services = new ServiceCollection();
+
+        services.AddCanDoItAllOffice365Plugin();
+
+        using var provider = services.BuildServiceProvider();
+        var plugin = Assert.Single(provider.GetServices<ICanDoItAllPlugin>(), item => item.Descriptor.Id == Office365PluginConstants.PluginId);
+        Assert.Contains(
+            plugin.Descriptor.WorkflowExecutors,
+            executor => executor.ExecutorId == Office365PluginConstants.DownloadByAddressExecutorId &&
+                        executor.Name == "Office365 unprocessed message by address" &&
+                        executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.ReadsExternalData) &&
+                        executor.DeterministicTestMode.IsSupported);
+        Assert.Contains(
+            services,
+            descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor) &&
+                          descriptor.ImplementationType == typeof(Office365DownloadByAddressWorkflowExecutor));
+    }
+
     [Fact]
     public void Gmail_download_payload_uses_resolved_connection_id()
     {
@@ -76,6 +99,101 @@ public sealed class EmailPluginClientTests
         var root = document.RootElement;
         Assert.Equal(connectionId.ToString(), root.GetProperty("office365Processing").GetProperty("connectionId").GetString());
         Assert.Equal(connectionId.ToString(), root.GetProperty("runContext").GetProperty("office365Processing").GetProperty("connectionId").GetString());
+    }
+
+    [Fact]
+    public void Office365_address_download_payload_preserves_scheduler_context_and_idempotency()
+    {
+        var connectionId = new PluginConnectionId(Guid.Parse("22222222-2222-2222-2222-222222222222"));
+        var payload = InvokeOffice365AddressDownloadPayloadFactory(
+            new WorkflowNodeInput("""
+            {
+              "emailAddress": "sender@example.test",
+              "projectId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+              "nodeId": "node-1",
+              "runContext": {
+                "workflowNodeId": "scheduler-node"
+              }
+            }
+            """),
+            new Office365MessageAddressWorkflowExecutorSettings
+            {
+                ConnectionId = string.Empty,
+                ProcessedCategory = "CanDoItAllProcessed"
+            },
+            connectionId,
+            new PluginEmailMessageBatch(
+                "office365",
+                "emailAddress",
+                "sender@example.test",
+                1,
+                [CreateMessage("graph-1")]));
+
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        var processing = root.GetProperty("office365Processing");
+        Assert.Equal(connectionId.ToString(), processing.GetProperty("connectionId").GetString());
+        Assert.Equal("graph-1", processing.GetProperty("selectedMessageId").GetString());
+        Assert.Equal("office365:graph-1", processing.GetProperty("idempotencyKey").GetString());
+        Assert.Equal("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", root.GetProperty("projectId").GetString());
+        Assert.Equal("node-1", root.GetProperty("nodeId").GetString());
+        Assert.Equal(
+            "office365:graph-1",
+            root.GetProperty("runContext").GetProperty("office365Processing").GetProperty("idempotencyKey").GetString());
+    }
+
+    [Fact]
+    public void Office365_address_download_payload_marks_no_message_as_success_route()
+    {
+        var payload = InvokeOffice365AddressDownloadPayloadFactory(
+            new WorkflowNodeInput("""{"emailAddress":"sender@example.test"}"""),
+            new Office365MessageAddressWorkflowExecutorSettings
+            {
+                ProcessedCategory = "CanDoItAllProcessed"
+            },
+            new PluginConnectionId(Guid.Parse("22222222-2222-2222-2222-222222222222")),
+            new PluginEmailMessageBatch(
+                "office365",
+                "emailAddress",
+                "sender@example.test",
+                0,
+                []));
+
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        Assert.Equal(0, root.GetProperty("count").GetInt32());
+        Assert.True(root.GetProperty("noMessages").GetBoolean());
+        Assert.Equal("no_messages", root.GetProperty("route").GetString());
+        Assert.Empty(root.GetProperty("messages").EnumerateArray());
+        Assert.Empty(root.GetProperty("office365Processing").GetProperty("messageIds").EnumerateArray());
+        Assert.Equal(string.Empty, root.GetProperty("office365Processing").GetProperty("selectedMessageId").GetString());
+    }
+
+    [Fact]
+    public void Office365_address_filter_settings_resolve_scheduler_input_paths()
+    {
+        var settings = new Office365MessageAddressWorkflowExecutorSettings
+        {
+            EmailAddressJsonPath = "$.email",
+            ProcessedCategory = string.Empty,
+            ProcessedCategoryJsonPath = "$.processedCategory",
+            LookbackHours = 336,
+            LookbackHoursJsonPath = "$.lookbackHours"
+        };
+
+        var filter = InvokeOffice365AddressFilterSettingsFactory(
+            settings,
+            new WorkflowNodeInput("""
+            {
+              "email": "Sender@Example.Test",
+              "processedCategory": "Office365SchedulerProcessed",
+              "lookbackHours": 2
+            }
+            """));
+
+        Assert.Equal("Sender@Example.Test", filter.EmailAddress);
+        Assert.Equal("Office365SchedulerProcessed", filter.ProcessedCategory);
+        Assert.Equal(2, filter.LookbackHours);
     }
 
     [Fact]
@@ -258,6 +376,191 @@ public sealed class EmailPluginClientTests
     }
 
     [Fact]
+    public async Task Office365_client_downloads_one_unprocessed_message_by_address_with_processed_category_exclusion()
+    {
+        var client = new Office365GraphClient(new FakeHttpClientFactory(request =>
+        {
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("graph-token", request.Headers.Authorization?.Parameter);
+            var decoded = WebUtility.UrlDecode(request.RequestUri!.Query);
+            Assert.Contains("$top=1", decoded, StringComparison.Ordinal);
+            Assert.Contains("from/emailAddress/address eq 'sender@example.test'", decoded, StringComparison.Ordinal);
+            Assert.Contains("sender/emailAddress/address eq 'sender@example.test'", decoded, StringComparison.Ordinal);
+            Assert.Contains("not(categories/any(c:c eq 'CanDoItAllProcessed'))", decoded, StringComparison.Ordinal);
+            return Json(new
+            {
+                value = new[]
+                {
+                    new
+                    {
+                        id = "graph-1",
+                        conversationId = "conversation-1",
+                        internetMessageId = "internet-1",
+                        subject = "Graph subject",
+                        from = new
+                        {
+                            emailAddress = new
+                            {
+                                name = "Sender",
+                                address = "sender@example.test"
+                            }
+                        },
+                        sender = new
+                        {
+                            emailAddress = new
+                            {
+                                name = "Sender",
+                                address = "sender@example.test"
+                            }
+                        },
+                        receivedDateTime = "2026-05-13T10:00:00Z",
+                        bodyPreview = "preview",
+                        body = new
+                        {
+                            contentType = "text",
+                            content = "Graph body"
+                        },
+                        categories = Array.Empty<string>(),
+                        webLink = "https://outlook.office.test/message"
+                    }
+                }
+            });
+        }));
+
+        var batch = await client.DownloadOneUnprocessedMessageByAddressAsync(
+            "graph-token",
+            new Office365MessageAddressFilterSettings
+            {
+                EmailAddress = "Sender@Example.Test",
+                ProcessedCategory = "CanDoItAllProcessed",
+                MaxCandidateMessages = 5
+            });
+
+        var message = Assert.Single(batch.Messages);
+        Assert.Equal("office365", batch.Provider);
+        Assert.Equal("emailAddress", batch.FilterKind);
+        Assert.Equal("sender@example.test", batch.FilterValue);
+        Assert.Equal("conversation-1", message.ThreadId);
+        Assert.Equal("Graph subject", message.Subject);
+        Assert.Equal("sender@example.test", message.From);
+        Assert.Equal("Graph body", message.BodyText);
+    }
+
+    [Fact]
+    public async Task Office365_client_uses_bounded_fallback_and_ignores_processed_or_wrong_address_messages()
+    {
+        var requestNumber = 0;
+        var client = new Office365GraphClient(new FakeHttpClientFactory(request =>
+        {
+            requestNumber++;
+            var decoded = WebUtility.UrlDecode(request.RequestUri!.Query);
+            if (requestNumber == 1)
+            {
+                Assert.Contains("from/emailAddress/address eq 'sender@example.test'", decoded, StringComparison.Ordinal);
+                return Json(new
+                {
+                    error = new
+                    {
+                        code = "Request_UnsupportedQuery",
+                        message = "Complex filter is unsupported."
+                    }
+                }, HttpStatusCode.BadRequest);
+            }
+
+            Assert.Contains("$top=3", decoded, StringComparison.Ordinal);
+            Assert.Contains("not(categories/any(c:c eq 'CanDoItAllProcessed'))", decoded, StringComparison.Ordinal);
+            return Json(new
+            {
+                value = new[]
+                {
+                    new
+                    {
+                        id = "graph-processed",
+                        subject = "Already processed",
+                        from = new { emailAddress = new { name = "Sender", address = "sender@example.test" } },
+                        sender = new { emailAddress = new { name = "Sender", address = "sender@example.test" } },
+                        receivedDateTime = "2026-05-13T12:00:00Z",
+                        bodyPreview = "processed",
+                        body = new { contentType = "text", content = "Processed body" },
+                        categories = new[] { "CanDoItAllProcessed" },
+                        webLink = "https://outlook.office.test/processed"
+                    },
+                    new
+                    {
+                        id = "graph-other",
+                        subject = "Wrong sender",
+                        from = new { emailAddress = new { name = "Other", address = "other@example.test" } },
+                        sender = new { emailAddress = new { name = "Other", address = "other@example.test" } },
+                        receivedDateTime = "2026-05-13T11:00:00Z",
+                        bodyPreview = "other",
+                        body = new { contentType = "text", content = "Other body" },
+                        categories = Array.Empty<string>(),
+                        webLink = "https://outlook.office.test/other"
+                    },
+                    new
+                    {
+                        id = "graph-good",
+                        subject = "Good sender",
+                        from = new { emailAddress = new { name = "Delegate", address = "delegate@example.test" } },
+                        sender = new { emailAddress = new { name = "Sender", address = "sender@example.test" } },
+                        receivedDateTime = "2026-05-13T10:00:00Z",
+                        bodyPreview = "good",
+                        body = new { contentType = "text", content = "Good body" },
+                        categories = Array.Empty<string>(),
+                        webLink = "https://outlook.office.test/good"
+                    }
+                }
+            });
+        }));
+
+        var batch = await client.DownloadOneUnprocessedMessageByAddressAsync(
+            "graph-token",
+            new Office365MessageAddressFilterSettings
+            {
+                EmailAddress = "sender@example.test",
+                ProcessedCategory = "CanDoItAllProcessed",
+                MaxCandidateMessages = 3
+            });
+
+        var message = Assert.Single(batch.Messages);
+        Assert.Equal("graph-good", message.Id);
+        Assert.Equal(2, requestNumber);
+    }
+
+    [Fact]
+    public async Task Office365_client_download_by_address_returns_empty_batch_when_no_candidate_matches()
+    {
+        var client = new Office365GraphClient(new FakeHttpClientFactory(_ => Json(new { value = Array.Empty<object>() })));
+
+        var batch = await client.DownloadOneUnprocessedMessageByAddressAsync(
+            "graph-token",
+            new Office365MessageAddressFilterSettings
+            {
+                EmailAddress = "sender@example.test",
+                ProcessedCategory = "CanDoItAllProcessed"
+            });
+
+        Assert.Equal(0, batch.Count);
+        Assert.Empty(batch.Messages);
+    }
+
+    [Fact]
+    public async Task Office365_client_rejects_invalid_address_before_graph_call()
+    {
+        var client = new Office365GraphClient(new FakeHttpClientFactory(_ => throw new InvalidOperationException("Graph should not be called.")));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => client.DownloadOneUnprocessedMessageByAddressAsync(
+            "graph-token",
+            new Office365MessageAddressFilterSettings
+            {
+                EmailAddress = "Sender <sender@example.test>",
+                ProcessedCategory = "CanDoItAllProcessed"
+            }));
+
+        Assert.Contains("single address", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Office365_client_marks_message_processed_by_moving_categories_and_creating_processed_category()
     {
         var createCalled = false;
@@ -333,6 +636,66 @@ public sealed class EmailPluginClientTests
         Assert.True(patchCalled);
     }
 
+    [Fact]
+    public async Task Office365_client_can_mark_processed_by_adding_category_without_source_category()
+    {
+        var patchCalled = false;
+        var client = new Office365GraphClient(new FakeHttpClientFactory(request =>
+        {
+            var pathAndQuery = request.RequestUri!.PathAndQuery;
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/v1.0/me/outlook/masterCategories?$select=displayName,color")
+            {
+                return Json(new
+                {
+                    value = new[]
+                    {
+                        new { displayName = "CanDoItAllProcessed", color = "preset1" }
+                    }
+                });
+            }
+
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/v1.0/me/messages/graph-1?$select=id,categories")
+            {
+                return Json(new
+                {
+                    id = "graph-1",
+                    categories = new[] { "Existing" }
+                });
+            }
+
+            if (request.Method == HttpMethod.Patch &&
+                pathAndQuery == "/v1.0/me/messages/graph-1")
+            {
+                patchCalled = true;
+                var body = request.Content!.ReadAsStringAsync().GetAwaiter().GetResult();
+                using var document = JsonDocument.Parse(body);
+                var categories = document.RootElement.GetProperty("categories")
+                    .EnumerateArray()
+                    .Select(item => item.GetString())
+                    .ToArray();
+                Assert.Contains("Existing", categories);
+                Assert.Contains("CanDoItAllProcessed", categories);
+                return new HttpResponseMessage(HttpStatusCode.NoContent);
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+
+        var result = await client.MarkMessageProcessedAsync(
+            "graph-token",
+            "graph-1",
+            string.Empty,
+            "CanDoItAllProcessed");
+
+        Assert.Equal("graph-1", result.MessageId);
+        Assert.False(result.SourceCategoryRemoved);
+        Assert.True(result.ProcessedCategoryAdded);
+        Assert.False(result.ProcessedCategoryCreated);
+        Assert.True(patchCalled);
+    }
+
     private static HttpResponseMessage Json(object payload, HttpStatusCode statusCode = HttpStatusCode.OK)
         => new(statusCode)
         {
@@ -378,6 +741,26 @@ public sealed class EmailPluginClientTests
             settings,
             connectionId,
             batch);
+
+    private static string InvokeOffice365AddressDownloadPayloadFactory(
+        WorkflowNodeInput input,
+        Office365MessageAddressWorkflowExecutorSettings settings,
+        PluginConnectionId connectionId,
+        PluginEmailMessageBatch batch)
+        => InvokeDownloadPayloadFactory<Office365DownloadByAddressWorkflowExecutor>(
+            input,
+            settings,
+            connectionId,
+            batch);
+
+    private static Office365MessageAddressFilterSettings InvokeOffice365AddressFilterSettingsFactory(
+        Office365MessageAddressWorkflowExecutorSettings settings,
+        WorkflowNodeInput input)
+        => (Office365MessageAddressFilterSettings)(typeof(Office365DownloadByAddressWorkflowExecutor).GetMethod(
+                "CreateFilterSettings",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?.Invoke(null, [settings, input])
+            ?? throw new InvalidOperationException("Could not invoke Office365 address filter settings factory."));
 
     private static string InvokeDownloadPayloadFactory<TExecutor>(
         WorkflowNodeInput input,

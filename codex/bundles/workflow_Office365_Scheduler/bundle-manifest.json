@@ -2,8 +2,8 @@
   "bundleKey": "workflow-office365-scheduler-followup",
   "preparedAt": "2026-05-29",
   "targetBranch": "processes-hardening",
-  "observedHead": "7bdbd7f70eeee2b357b28dfc9afc1c89fd9d5177",
-  "status": "prepared",
+  "observedHead": "b70b7f4d0f5402df9980c0c3521bbc6e90b7badc",
+  "status": "completed",
   "subbundles": [
     "01-current-state-regression-and-gap-baseline",
     "02-office365-message-by-address-unprocessed-executor",

@@ -56,6 +56,7 @@ public sealed class WorkflowExampleCatalogSeedService(
             cancellationToken.ThrowIfCancellationRequested();
             var component = await EnsureComponentAsync(templatePack, template, provider, existingComponents, cancellationToken);
             var graph = templatePack.CreateGraph(template, component.Id);
+            var inputParameters = templatePack.CreateInputParameters(template);
             var definitionName = $"{templatePack.Manifest.DefinitionNamePrefix}{template.Name}";
             var description = $"{template.Description} {templatePack.Manifest.SeedMarker}: {templatePack.Manifest.SeedVersion}.";
             var existing = existingDefinitions.FirstOrDefault(item => string.Equals(item.Name, definitionName, StringComparison.OrdinalIgnoreCase));
@@ -79,25 +80,33 @@ public sealed class WorkflowExampleCatalogSeedService(
                     continue;
                 }
 
-                await SaveDefinitionAsync(
+                if (!await TrySaveDefinitionAsync(
                     existing.Id,
                     existing.VersionId,
                     definitionName,
                     description,
                     graph,
+                    inputParameters,
                     templatePack.RuntimePolicy,
-                    cancellationToken);
+                    cancellationToken))
+                {
+                    continue;
+                }
             }
             else
             {
-                await SaveDefinitionAsync(
+                if (!await TrySaveDefinitionAsync(
                     null,
                     null,
                     definitionName,
                     description,
                     graph,
+                    inputParameters,
                     templatePack.RuntimePolicy,
-                    cancellationToken);
+                    cancellationToken))
+                {
+                    continue;
+                }
             }
 
             seededCount++;
@@ -213,15 +222,46 @@ public sealed class WorkflowExampleCatalogSeedService(
                    : provider.DefaultModel);
     }
 
-    private async Task SaveDefinitionAsync(
+    private async Task<bool> TrySaveDefinitionAsync(
         WorkflowId? id,
         WorkflowVersionId? expectedVersionId,
         string name,
         string description,
         WorkflowGraph graph,
+        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters,
         WorkflowRuntimePolicy runtimePolicy,
         CancellationToken cancellationToken)
     {
+        var now = DateTimeOffset.UtcNow;
+        var validationDefinition = new WorkflowDefinition(
+            id ?? WorkflowId.New(),
+            WorkflowVersionId.New(),
+            name.Trim(),
+            description.Trim(),
+            WorkflowLifecycleStatus.Active,
+            graph,
+            runtimePolicy,
+            now,
+            now)
+        {
+            InputParameters = inputParameters
+        };
+        var validation = await catalogService.ValidateDefinitionAsync(validationDefinition, cancellationToken);
+        if (!validation.Succeeded)
+        {
+            var validationMessage = string.Join(" ", validation.Issues.Select(issue => issue.Message));
+            if (IsUnavailableTemplateDependencyValidation(validation))
+            {
+                logger.LogWarning(
+                    "Skipping workflow example seed '{WorkflowName}' because one or more optional workflow executors are unavailable in this host: {ValidationIssues}",
+                    name,
+                    validationMessage);
+                return false;
+            }
+
+            throw new InvalidOperationException($"Workflow definition seed failed validation for '{name}': {validationMessage}");
+        }
+
         await catalogService.SaveDefinitionAsync(
             new WorkflowDefinitionSaveRequest(
                 id,
@@ -230,8 +270,20 @@ public sealed class WorkflowExampleCatalogSeedService(
                 description,
                 WorkflowLifecycleStatus.Active,
                 graph,
-                runtimePolicy),
+                runtimePolicy)
+            {
+                InputParameters = inputParameters
+            },
             cancellationToken);
+        return true;
+    }
+
+    private static bool IsUnavailableTemplateDependencyValidation(WorkflowValidationResult validation)
+    {
+        return validation.Issues.Count > 0 &&
+               validation.Issues.All(issue =>
+                   issue.Code == WorkflowValidationIssueCode.InvalidExecutorReference &&
+                   issue.Message.Contains(" is not runnable:", StringComparison.OrdinalIgnoreCase));
     }
 
     private void SeedWorkspaceAssets()

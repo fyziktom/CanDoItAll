@@ -1,0 +1,8 @@
+Command: git grep -n -E "office365-email-watch-summary-to-project|office365-email-watch-tasks-to-project|office365.message-by-address-unprocessed" HEAD -- Templates/Workflows
+ExpectedExitCode: 1
+ActualExitCode: 1
+StartedUtc: 2026-05-29T19:04:05.0408095Z
+
+
+Finding: HEAD did not contain the Office365 email-watch workflow templates before this subbundle implementation.
+FinishedUtc: 2026-05-29T19:04:05.0454780Z

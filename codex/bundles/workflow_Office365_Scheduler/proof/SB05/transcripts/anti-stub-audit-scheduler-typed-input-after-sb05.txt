@@ -1,0 +1,2 @@
+No banned implementation stub markers found.
+ExitCode: 0

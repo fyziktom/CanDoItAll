@@ -1,0 +1,6 @@
+Command: rg -n "office365\.message-by-address-unprocessed|WorkflowInputParameterDescriptor|inputParameters:" src Templates tests
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 
+2026-05-29T18:25:47.5002450Z
+Expected: failure before implementation because executor id and schema contract are absent.
+ExitCode: 1 EndTimeUtc: 2026-05-29T18:25:47.9037939Z

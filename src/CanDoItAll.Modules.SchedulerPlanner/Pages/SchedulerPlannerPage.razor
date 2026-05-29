@@ -1,9 +1,15 @@
 @page "/scheduler"
+@using System.Globalization
+@using System.Text.Json
+@using System.Text.Json.Nodes
+@using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 @using CanDoItAll.Components.CanvasLib
 @using CanDoItAll.Modules.Automation
 @inject ISchedulerPlannerService SchedulerPlannerService
 @inject ICronDescriptionService CronDescriptionService
+@inject ISchedulerWorkflowInputSchemaService WorkflowInputSchemaService
+@inject ISchedulerWorkflowInputOptionService WorkflowInputOptionService
 
 <PageTitle>Scheduler</PageTitle>
 
@@ -18,6 +24,8 @@
                 <CompactStat Label="enabled" Value="@Plans.Count(item => item.IsEnabled).ToString()" TooltipText="Plans currently projected into Quartz." Tone="success" />
                 <CompactStat Label="next 30 days" Value="@CalendarEventCount.ToString()" TooltipText="Projected calendar events." Tone="accent" />
                 <CompactStat Label="failures" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.Failed).ToString()" TooltipText="Failed dispatch attempts in the current history view." Tone="warning" />
+                <CompactStat Label="no action" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString()" TooltipText="No-message polling runs in the current history view." Tone="neutral" />
+                <CompactStat Label="waiting" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString()" TooltipText="Runs paused for explicit approval." Tone="info" />
             </Stats>
             <Actions>
                 <PageHeaderActionButton Icon="refresh"
@@ -163,6 +171,27 @@
                                                data-testid="scheduler-cron" />
                                 </label>
 
+                                <Cluster Gap="LayoutGap.Small"
+                                         Wrap="FlexWrap.Wrap"
+                                         data-testid="scheduler-cron-presets">
+                                    <Button Text="Every 2 hours"
+                                            Icon="schedule"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPreset(SchedulerCronPreset.EveryTwoHours))"
+                                            data-testid="scheduler-cron-preset-every-two-hours" />
+                                    <Button Text="Weekdays 9 AM"
+                                            Icon="work_history"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPreset(SchedulerCronPreset.WeekdaysAtNine))" />
+                                    <Button Text="Daily 9 AM"
+                                            Icon="today"
+                                            ButtonStyle="ButtonStyle.Light"
+                                            Size="ButtonSize.Small"
+                                            Click="@(() => ApplyCronPreset(SchedulerCronPreset.DailyAtNine))" />
+                                </Cluster>
+
                                 <label class="block">
                                     <span class="cda-eyebrow">Time zone</span>
                                     <InputText @bind-Value="editor.TimeZoneId"
@@ -182,9 +211,106 @@
                                     </InputSelect>
                                 </label>
 
+                                @if (workflowInputSchema is not null && workflowInputSchema.Parameters.Count > 0)
+                                {
+                                    <section class="scheduler-workflow-input" data-testid="scheduler-typed-inputs">
+                                        <Split Gap="LayoutGap.Small"
+                                               AlignItems="AlignItems.Start"
+                                               JustifyContent="JustifyContent.SpaceBetween"
+                                               Wrap="FlexWrap.Wrap">
+                                            <div class="min-w-0">
+                                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Workflow input" />
+                                                <h3 class="scheduler-workflow-input__title">@workflowInputSchema.WorkflowName</h3>
+                                            </div>
+                                            <StatusBadge Tone="info" Text="@($"{workflowInputSchema.Parameters.Count} field(s)")" />
+                                        </Split>
+
+                                        @if (!string.IsNullOrWhiteSpace(ResolveWorkflowInputIssue(string.Empty)))
+                                        {
+                                            <p class="scheduler-workflow-input__issue scheduler-workflow-input__issue--general"
+                                               data-testid="scheduler-input-general-error">@ResolveWorkflowInputIssue(string.Empty)</p>
+                                        }
+
+                                        <Grid Gap="LayoutGap.Medium"
+                                              ColumnsMd="2"
+                                              Class="scheduler-workflow-input__grid">
+                                            @foreach (var parameter in workflowInputSchema.Parameters)
+                                            {
+                                                var options = ResolveWorkflowInputOptions(parameter);
+                                                var issue = ResolveWorkflowInputIssue(parameter.Key);
+                                                var fieldClass = ResolveWorkflowInputFieldClass(parameter);
+
+                                                <label class="@fieldClass" data-testid="@BuildWorkflowInputFieldTestId(parameter)">
+                                                    <span class="cda-eyebrow">@parameter.Label</span>
+                                                    @if (ShouldRenderSelect(parameter, options))
+                                                    {
+                                                        <select value="@GetWorkflowInputValue(parameter.Key)"
+                                                                class="cda-input mt-1"
+                                                                aria-required="@parameter.IsRequired"
+                                                                @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                                data-testid="@BuildWorkflowInputTestId(parameter)">
+                                                            <option value="">@ResolveEmptyOptionText(parameter)</option>
+                                                            @foreach (var option in options)
+                                                            {
+                                                                <option value="@option.Value">@option.Label</option>
+                                                            }
+                                                        </select>
+                                                    }
+                                                    else if (parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes)
+                                                    {
+                                                        <input type="number"
+                                                               min="@parameter.MinimumValue"
+                                                               max="@parameter.MaximumValue"
+                                                               value="@GetWorkflowInputValue(parameter.Key)"
+                                                               class="cda-input mt-1"
+                                                               placeholder="@parameter.Placeholder"
+                                                               aria-required="@parameter.IsRequired"
+                                                               @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               data-testid="@BuildWorkflowInputTestId(parameter)" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <input type="text"
+                                                               list="@BuildWorkflowInputDatalistId(parameter)"
+                                                               value="@GetWorkflowInputValue(parameter.Key)"
+                                                               class="cda-input mt-1"
+                                                               placeholder="@parameter.Placeholder"
+                                                               aria-required="@parameter.IsRequired"
+                                                               @oninput="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               @onchange="@(async args => await HandleWorkflowInputValueChangedAsync(parameter, args.Value?.ToString() ?? string.Empty))"
+                                                               data-testid="@BuildWorkflowInputTestId(parameter)" />
+                                                        @if (options.Count > 0)
+                                                        {
+                                                            <datalist id="@BuildWorkflowInputDatalistId(parameter)">
+                                                                @foreach (var option in options)
+                                                                {
+                                                                    <option value="@option.Value">@option.Label</option>
+                                                                }
+                                                            </datalist>
+                                                        }
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(parameter.Description))
+                                                    {
+                                                        <span class="scheduler-workflow-input__description">@parameter.Description</span>
+                                                    }
+
+                                                    @if (!string.IsNullOrWhiteSpace(issue))
+                                                    {
+                                                        <span class="scheduler-workflow-input__issue" data-testid="@BuildWorkflowInputIssueTestId(parameter)">@issue</span>
+                                                    }
+                                                </label>
+                                            }
+                                        </Grid>
+                                    </section>
+                                }
+
                                 <label class="block">
-                                    <span class="cda-eyebrow">Input JSON</span>
-                                    <InputTextArea @bind-Value="editor.InputJson"
+                                    <span class="cda-eyebrow">Advanced input JSON</span>
+                                    <InputTextArea Value="@editor.InputJson"
+                                                   ValueChanged="HandleRawInputJsonChangedAsync"
+                                                   ValueExpression="@(() => editor.InputJson)"
                                                    class="cda-input cda-input--textarea mt-1 font-mono"
                                                    data-testid="scheduler-input-json" />
                                 </label>
@@ -289,9 +415,20 @@
                                                 <StatusBadge Tone="@ResolveRunTone(run.Status)" Text="@run.Status.ToString()" />
                                             </Template>
                                         </DataGridColumn>
+                                        <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Route">
+                                            <Template Context="run">
+                                                <StatusBadge Tone="@ResolveRouteTone(run)" Text="@FormatRunRoute(run.Route)" />
+                                            </Template>
+                                        </DataGridColumn>
                                         <DataGridColumn TItem="SchedulerPlanRunSummary" Title="Result">
                                             <Template Context="run">
-                                                <span class="text-sm text-slate-600">@ResolveRunResult(run)</span>
+                                                <div class="space-y-1">
+                                                    <span class="text-sm text-slate-600">@ResolveRunResult(run)</span>
+                                                    @if (run.RetryCategory != SchedulerPlanRunRetryCategory.None)
+                                                    {
+                                                        <p class="text-xs font-medium text-slate-500">@FormatRunPolicy(run.RetryCategory)</p>
+                                                    }
+                                                </div>
                                             </Template>
                                         </DataGridColumn>
                                     </Columns>
@@ -380,7 +517,7 @@
                                     <button type="button"
                                             class="scheduler-target-card__select"
                                             aria-label="@($"Select {target.Name}")"
-                                            @onclick="@(() => SelectTarget(target))"
+                                            @onclick="@(() => SelectTargetAsync(target))"
                                             data-testid="scheduler-target-card">
                                         <Stack GapScale="LayoutGap.Small"
                                                AlignItems="AlignItems.Stretch">
@@ -438,6 +575,22 @@
     private IReadOnlyList<string> targetTagFilters = [];
     private bool showProcessTargets = true;
     private bool showWorkflowTargets = true;
+    private SchedulerWorkflowInputSchema? workflowInputSchema;
+    private Dictionary<string, string> workflowInputValues = new(StringComparer.Ordinal);
+    private Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>> workflowInputOptionsByKey = new(StringComparer.Ordinal);
+    private IReadOnlyList<SchedulerWorkflowInputValidationIssue> workflowInputIssues = [];
+
+    private static readonly JsonSerializerOptions WorkflowInputJsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        WriteIndented = true
+    };
+
+    private enum SchedulerCronPreset
+    {
+        EveryTwoHours,
+        WeekdaysAtNine,
+        DailyAtNine
+    }
 
     private IReadOnlyList<SchedulerPlanSummary> Plans => workspace?.Plans ?? [];
 
@@ -492,7 +645,11 @@
     protected override async Task OnInitializedAsync()
     {
         await RefreshAsync();
-        editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+        await RunUiOperationAsync(async () =>
+        {
+            editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+            await LoadWorkflowInputEditorAsync();
+        });
     }
 
     private async Task RefreshAsync()
@@ -507,9 +664,16 @@
     {
         await RunUiOperationAsync(async () =>
         {
+            SynchronizeWorkflowInputJson();
+            if (!await ValidateWorkflowInputEditorAsync())
+            {
+                return;
+            }
+
             await SchedulerPlannerService.SavePlanAsync(editor);
             workspace = await SchedulerPlannerService.GetWorkspaceAsync(historyQuery);
             editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+            await LoadWorkflowInputEditorAsync();
             activeTabIndex = 0;
         });
     }
@@ -517,6 +681,7 @@
     private async Task ResetEditorAsync()
     {
         editor = await SchedulerPlannerService.CreateDefaultEditorAsync();
+        await LoadWorkflowInputEditorAsync();
         isTargetPickerOpen = false;
     }
 
@@ -562,18 +727,377 @@
         return Task.CompletedTask;
     }
 
-    private void SelectTarget(SchedulerTargetOption target)
+    private async Task SelectTargetAsync(SchedulerTargetOption target)
     {
-        editor.TargetKind = target.Kind;
-        editor.TargetId = target.Id;
-        editor.TargetVersionId = target.VersionId;
-
-        if (string.IsNullOrWhiteSpace(editor.Name))
+        await RunUiOperationAsync(async () =>
         {
-            editor.Name = $"{target.Name} schedule";
+            editor.TargetKind = target.Kind;
+            editor.TargetId = target.Id;
+            editor.TargetVersionId = target.VersionId;
+
+            if (string.IsNullOrWhiteSpace(editor.Name))
+            {
+                editor.Name = $"{target.Name} schedule";
+            }
+
+            isTargetPickerOpen = false;
+            await LoadWorkflowInputEditorAsync();
+        });
+    }
+
+    private void ApplyCronPreset(SchedulerCronPreset preset)
+    {
+        editor.CronExpression = preset switch
+        {
+            SchedulerCronPreset.EveryTwoHours => "0 0 0/2 ? * *",
+            SchedulerCronPreset.WeekdaysAtNine => "0 0 9 ? * MON-FRI",
+            SchedulerCronPreset.DailyAtNine => "0 0 9 ? * *",
+            _ => editor.CronExpression
+        };
+    }
+
+    private async Task LoadWorkflowInputEditorAsync()
+    {
+        workflowInputSchema = null;
+        workflowInputValues = new Dictionary<string, string>(StringComparer.Ordinal);
+        workflowInputOptionsByKey = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
+        workflowInputIssues = [];
+
+        if (editor.TargetKind != SchedulerPlanTargetKind.Workflow || editor.TargetId == Guid.Empty)
+        {
+            return;
         }
 
-        isTargetPickerOpen = false;
+        var selectedTarget = SelectedTarget;
+        var versionId = selectedTarget?.VersionId ?? editor.TargetVersionId;
+        workflowInputSchema = await WorkflowInputSchemaService.ResolveSchemaAsync(
+            new WorkflowId(editor.TargetId),
+            versionId.HasValue ? new WorkflowVersionId(versionId.Value) : null);
+        if (workflowInputSchema.Parameters.Count == 0)
+        {
+            return;
+        }
+
+        InitializeWorkflowInputValuesFromJson();
+        SynchronizeWorkflowInputJson();
+        await LoadWorkflowInputOptionsAsync();
+    }
+
+    private async Task LoadWorkflowInputOptionsAsync()
+    {
+        if (workflowInputSchema is null)
+        {
+            workflowInputOptionsByKey.Clear();
+            return;
+        }
+
+        var resolved = new Dictionary<string, IReadOnlyList<WorkflowInputParameterOption>>(StringComparer.Ordinal);
+        foreach (var parameter in workflowInputSchema.Parameters)
+        {
+            resolved[parameter.Key] = await WorkflowInputOptionService.ListOptionsAsync(
+                parameter,
+                workflowInputValues,
+                CancellationToken.None);
+        }
+
+        workflowInputOptionsByKey = resolved;
+    }
+
+    private void InitializeWorkflowInputValuesFromJson()
+    {
+        if (workflowInputSchema is null)
+        {
+            return;
+        }
+
+        JsonObject root;
+        try
+        {
+            root = ParseWorkflowInputJsonObject();
+        }
+        catch (JsonException exception)
+        {
+            workflowInputIssues = [new SchedulerWorkflowInputValidationIssue(string.Empty, $"Workflow input JSON is invalid: {exception.Message}")];
+            return;
+        }
+
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var parameter in workflowInputSchema.Parameters)
+        {
+            if (TryResolveRootPropertyName(parameter, out var propertyName) &&
+                root.TryGetPropertyValue(propertyName, out var value) &&
+                value is not null &&
+                TryFormatWorkflowInputValue(value, out var text))
+            {
+                values[parameter.Key] = text;
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(parameter.DefaultValue))
+            {
+                values[parameter.Key] = parameter.DefaultValue.Trim();
+            }
+        }
+
+        workflowInputValues = values;
+    }
+
+    private async Task HandleWorkflowInputValueChangedAsync(
+        WorkflowInputParameterDescriptor parameter,
+        string value)
+    {
+        var normalizedValue = value.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedValue))
+        {
+            workflowInputValues.Remove(parameter.Key);
+        }
+        else
+        {
+            workflowInputValues[parameter.Key] = normalizedValue;
+        }
+
+        RemoveWorkflowInputIssues(parameter.Key);
+        ClearDependentWorkflowInputValues(parameter.Key);
+        SynchronizeWorkflowInputJson();
+        await LoadWorkflowInputOptionsAsync();
+    }
+
+    private async Task HandleRawInputJsonChangedAsync(string? value)
+    {
+        editor.InputJson = string.IsNullOrWhiteSpace(value) ? "{}" : value;
+        InitializeWorkflowInputValuesFromJson();
+        await LoadWorkflowInputOptionsAsync();
+    }
+
+    private async Task<bool> ValidateWorkflowInputEditorAsync()
+    {
+        if (workflowInputSchema is null || workflowInputSchema.Parameters.Count == 0 || editor.TargetKind != SchedulerPlanTargetKind.Workflow)
+        {
+            return true;
+        }
+
+        var selectedTarget = SelectedTarget;
+        var versionId = selectedTarget?.VersionId ?? editor.TargetVersionId;
+        var validation = await WorkflowInputSchemaService.ValidateInputAsync(
+            new WorkflowId(editor.TargetId),
+            versionId.HasValue ? new WorkflowVersionId(versionId.Value) : null,
+            editor.InputJson);
+        workflowInputIssues = validation.Issues;
+        if (!validation.Succeeded)
+        {
+            errorMessage = "Workflow input needs attention before the schedule can be saved.";
+            return false;
+        }
+
+        editor.InputJson = validation.NormalizedInputJson;
+        InitializeWorkflowInputValuesFromJson();
+        return true;
+    }
+
+    private void SynchronizeWorkflowInputJson()
+    {
+        if (workflowInputSchema is null || workflowInputSchema.Parameters.Count == 0)
+        {
+            return;
+        }
+
+        var root = ParseWorkflowInputJsonObjectOrNew();
+        foreach (var parameter in workflowInputSchema.Parameters)
+        {
+            if (!TryResolveRootPropertyName(parameter, out var propertyName))
+            {
+                continue;
+            }
+
+            var value = GetWorkflowInputValue(parameter.Key);
+            if (string.IsNullOrWhiteSpace(value) && !string.IsNullOrWhiteSpace(parameter.DefaultValue))
+            {
+                value = parameter.DefaultValue.Trim();
+                workflowInputValues[parameter.Key] = value;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                root.Remove(propertyName);
+                continue;
+            }
+
+            root[propertyName] = CreateWorkflowInputJsonValue(parameter, value);
+        }
+
+        editor.InputJson = root.ToJsonString(WorkflowInputJsonOptions);
+    }
+
+    private JsonObject ParseWorkflowInputJsonObject()
+    {
+        var parsed = JsonNode.Parse(string.IsNullOrWhiteSpace(editor.InputJson) ? "{}" : editor.InputJson.Trim());
+        return parsed as JsonObject
+               ?? throw new JsonException("Workflow input must be a JSON object.");
+    }
+
+    private JsonObject ParseWorkflowInputJsonObjectOrNew()
+    {
+        try
+        {
+            return ParseWorkflowInputJsonObject();
+        }
+        catch (JsonException)
+        {
+            return new JsonObject();
+        }
+    }
+
+    private static JsonNode? CreateWorkflowInputJsonValue(
+        WorkflowInputParameterDescriptor parameter,
+        string value)
+    {
+        if (parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes &&
+            int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var integerValue))
+        {
+            return JsonValue.Create(integerValue);
+        }
+
+        return JsonValue.Create(value);
+    }
+
+    private void ClearDependentWorkflowInputValues(string parameterKey)
+    {
+        if (workflowInputSchema is null)
+        {
+            return;
+        }
+
+        foreach (var dependent in workflowInputSchema.Parameters
+                     .Where(item => string.Equals(item.OptionSource.DependsOnParameterKey, parameterKey, StringComparison.Ordinal)))
+        {
+            workflowInputValues.Remove(dependent.Key);
+            RemoveWorkflowInputIssues(dependent.Key);
+        }
+    }
+
+    private void RemoveWorkflowInputIssues(string parameterKey)
+    {
+        workflowInputIssues = workflowInputIssues
+            .Where(issue => !string.Equals(issue.ParameterKey, parameterKey, StringComparison.Ordinal))
+            .ToArray();
+    }
+
+    private IReadOnlyList<WorkflowInputParameterOption> ResolveWorkflowInputOptions(WorkflowInputParameterDescriptor parameter)
+        => workflowInputOptionsByKey.TryGetValue(parameter.Key, out var options) ? options : [];
+
+    private string GetWorkflowInputValue(string parameterKey)
+        => workflowInputValues.TryGetValue(parameterKey, out var value) ? value : string.Empty;
+
+    private string ResolveWorkflowInputIssue(string parameterKey)
+        => workflowInputIssues
+            .FirstOrDefault(issue => string.Equals(issue.ParameterKey, parameterKey, StringComparison.Ordinal))
+            ?.Message ?? string.Empty;
+
+    private static bool ShouldRenderSelect(
+        WorkflowInputParameterDescriptor parameter,
+        IReadOnlyList<WorkflowInputParameterOption> options)
+    {
+        if (options.Count == 0)
+        {
+            return false;
+        }
+
+        return parameter.OptionSource.Kind is WorkflowInputParameterOptionSourceKind.ProjectStructureProjects
+            or WorkflowInputParameterOptionSourceKind.ProjectStructureNodes
+            or WorkflowInputParameterOptionSourceKind.Office365Connections
+            or WorkflowInputParameterOptionSourceKind.Static;
+    }
+
+    private static string ResolveEmptyOptionText(WorkflowInputParameterDescriptor parameter)
+    {
+        if (!parameter.IsRequired)
+        {
+            return parameter.Kind == WorkflowInputParameterKind.ExternalConnectionId
+                ? "Use default connection"
+                : "Optional";
+        }
+
+        return $"Choose {parameter.Label.ToLowerInvariant()}";
+    }
+
+    private static string ResolveWorkflowInputFieldClass(WorkflowInputParameterDescriptor parameter)
+    {
+        var classes = new List<string>
+        {
+            "scheduler-workflow-input__field"
+        };
+
+        if (parameter.Kind is WorkflowInputParameterKind.EmailAddress or WorkflowInputParameterKind.CrmContactEmail)
+        {
+            classes.Add("scheduler-workflow-input__field--wide");
+        }
+
+        return string.Join(' ', classes);
+    }
+
+    private static string BuildWorkflowInputFieldTestId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-field-{parameter.Key}";
+
+    private static string BuildWorkflowInputTestId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-{parameter.Key}";
+
+    private static string BuildWorkflowInputIssueTestId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-{parameter.Key}-error";
+
+    private static string BuildWorkflowInputDatalistId(WorkflowInputParameterDescriptor parameter)
+        => $"scheduler-input-options-{parameter.Key}";
+
+    private static bool TryResolveRootPropertyName(
+        WorkflowInputParameterDescriptor parameter,
+        out string propertyName)
+    {
+        var jsonPath = string.IsNullOrWhiteSpace(parameter.JsonPath)
+            ? $"$.{parameter.Key}"
+            : parameter.JsonPath.Trim();
+        if (!jsonPath.StartsWith("$.", StringComparison.Ordinal) ||
+            jsonPath.Length <= 2 ||
+            jsonPath[2..].Contains('.', StringComparison.Ordinal) ||
+            jsonPath.Contains('[', StringComparison.Ordinal))
+        {
+            propertyName = string.Empty;
+            return false;
+        }
+
+        propertyName = jsonPath[2..];
+        return true;
+    }
+
+    private static bool TryFormatWorkflowInputValue(JsonNode value, out string text)
+    {
+        if (value is JsonValue jsonValue)
+        {
+            if (jsonValue.TryGetValue<string>(out var stringValue))
+            {
+                text = stringValue.Trim();
+                return true;
+            }
+
+            if (jsonValue.TryGetValue<int>(out var integerValue))
+            {
+                text = integerValue.ToString(CultureInfo.InvariantCulture);
+                return true;
+            }
+
+            if (jsonValue.TryGetValue<long>(out var longValue))
+            {
+                text = longValue.ToString(CultureInfo.InvariantCulture);
+                return true;
+            }
+
+            if (jsonValue.TryGetValue<bool>(out var boolValue))
+            {
+                text = boolValue.ToString(CultureInfo.InvariantCulture);
+                return true;
+            }
+        }
+
+        text = string.Empty;
+        return false;
     }
 
     private async Task RunUiOperationAsync(Func<Task> operation)
@@ -734,8 +1258,41 @@
         {
             SchedulerPlanRunDispatchStatus.Dispatched => "success",
             SchedulerPlanRunDispatchStatus.Failed => "danger",
+            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+            SchedulerPlanRunDispatchStatus.WaitingForApproval => "warning",
             SchedulerPlanRunDispatchStatus.Dispatching => "info",
             _ => "neutral"
+        };
+    }
+
+    private static string ResolveRouteTone(SchedulerPlanRunSummary run)
+    {
+        return run.Status switch
+        {
+            SchedulerPlanRunDispatchStatus.Failed => "danger",
+            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+            SchedulerPlanRunDispatchStatus.WaitingForApproval => "warning",
+            SchedulerPlanRunDispatchStatus.Dispatched => "success",
+            _ => "info"
+        };
+    }
+
+    private static string FormatRunRoute(string route)
+        => string.IsNullOrWhiteSpace(route)
+            ? SchedulerPlanRunRoutes.Processed
+            : route;
+
+    private static string FormatRunPolicy(SchedulerPlanRunRetryCategory retryCategory)
+    {
+        return retryCategory switch
+        {
+            SchedulerPlanRunRetryCategory.NoAction => "No retry: no matching message.",
+            SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval => "No retry: waiting for approval.",
+            SchedulerPlanRunRetryCategory.TransientExternalFailure => "Retry scheduled: external dependency.",
+            SchedulerPlanRunRetryCategory.ProjectWriteFailure => "Retry scheduled: project write.",
+            SchedulerPlanRunRetryCategory.WorkflowFailure => "Retry scheduled: workflow failure.",
+            SchedulerPlanRunRetryCategory.SchedulerFailure => "Retry scheduled: scheduler failure.",
+            _ => string.Empty
         };
     }
 

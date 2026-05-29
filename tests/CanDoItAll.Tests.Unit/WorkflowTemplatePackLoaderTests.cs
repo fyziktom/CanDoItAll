@@ -1,3 +1,4 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 
 namespace CanDoItAll.Tests.Unit;
@@ -62,6 +63,53 @@ public sealed class WorkflowTemplatePackLoaderTests
         Assert.Contains("invalid-missing-target", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("invalid-graph.yaml", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("start-to-missing", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Load_parses_office365_watch_input_parameters()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+        var summary = Assert.Single(
+            pack.Workflows,
+            template => string.Equals(template.Key, "office365-email-watch-summary-to-project", StringComparison.OrdinalIgnoreCase));
+        var tasks = Assert.Single(
+            pack.Workflows,
+            template => string.Equals(template.Key, "office365-email-watch-tasks-to-project", StringComparison.OrdinalIgnoreCase));
+
+        AssertOffice365WatchInputParameters(pack.CreateInputParameters(summary));
+        AssertOffice365WatchInputParameters(pack.CreateInputParameters(tasks));
+    }
+
+    private static void AssertOffice365WatchInputParameters(IReadOnlyList<WorkflowInputParameterDescriptor> parameters)
+    {
+        Assert.Equal(6, parameters.Count);
+        var email = Assert.Single(parameters, parameter => parameter.Key == "emailAddress");
+        Assert.Equal(WorkflowInputParameterKind.EmailAddress, email.Kind);
+        Assert.True(email.IsRequired);
+        Assert.Equal("$.emailAddress", email.JsonPath);
+        Assert.Equal(WorkflowInputParameterOptionSourceKind.CrmContacts, email.OptionSource.Kind);
+
+        var project = Assert.Single(parameters, parameter => parameter.Key == "projectId");
+        Assert.Equal(WorkflowInputParameterKind.ProjectId, project.Kind);
+        Assert.True(project.IsRequired);
+        Assert.Equal(WorkflowInputParameterOptionSourceKind.ProjectStructureProjects, project.OptionSource.Kind);
+
+        var node = Assert.Single(parameters, parameter => parameter.Key == "nodeId");
+        Assert.Equal(WorkflowInputParameterKind.ProjectNodeId, node.Kind);
+        Assert.True(node.IsRequired);
+        Assert.Equal(WorkflowInputParameterOptionSourceKind.ProjectStructureNodes, node.OptionSource.Kind);
+        Assert.Equal("projectId", node.OptionSource.DependsOnParameterKey);
+
+        var processedCategory = Assert.Single(parameters, parameter => parameter.Key == "processedCategory");
+        Assert.Equal(WorkflowInputParameterKind.Category, processedCategory.Kind);
+        Assert.False(processedCategory.IsRequired);
+        Assert.Equal("CanDoItAllProcessed", processedCategory.DefaultValue);
+
+        var lookback = Assert.Single(parameters, parameter => parameter.Key == "lookbackHours");
+        Assert.Equal(WorkflowInputParameterKind.Integer, lookback.Kind);
+        Assert.Equal("336", lookback.DefaultValue);
+        Assert.Equal(1, lookback.MinimumValue);
+        Assert.Equal(720, lookback.MaximumValue);
     }
 
     private sealed class TemporaryWorkflowTemplatePack : IDisposable

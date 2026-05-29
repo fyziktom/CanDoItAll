@@ -1,0 +1,421 @@
+workflows:
+  - key: office365-email-watch-summary-to-project
+    name: Office365 Email Watch Summary To Project
+    description: Watches a Microsoft 365 mailbox for one unprocessed message from a configured address, stores a Markdown summary under the selected project node, and marks the message processed only after the project write succeeds.
+    routingInstructions: |-
+      Summarize the downloaded Office365 email-watch message.
+      If no message was downloaded, route must remain `no_messages`; that branch is handled before the LLM and must not be produced by this component.
+      For one downloaded message, return route as `summarized`.
+      Preserve projectId, nodeId, project, and runContext from the Office365 payload. Preserve runContext.office365Processing unchanged so the final Office365 step can mark the exact message processed.
+      Preserve sourceUrl from the first message webLink when available.
+      The markdown field must include watched address, processed category, sender, subject, received time, evidence from the message, open gaps, and recommended next actions.
+      Do not include full message bodies unless a short excerpt is needed as evidence.
+    inputParameters:
+      - key: connectionId
+        label: Office365 connection
+        kind: ExternalConnectionId
+        required: false
+        description: Optional connected Office365 OAuth connection id. Leave empty to use the latest connected account.
+        jsonPath: "$.connectionId"
+        placeholder: Latest connected Office365 account
+        optionSource:
+          kind: Office365Connections
+      - key: emailAddress
+        label: Watched email address
+        kind: EmailAddress
+        required: true
+        description: Sender or sender-account email address to poll for one unprocessed message.
+        jsonPath: "$.emailAddress"
+        optionSource:
+          kind: CrmContacts
+      - key: projectId
+        label: Project
+        kind: ProjectId
+        required: true
+        description: Project that receives the Markdown summary asset.
+        jsonPath: "$.projectId"
+        optionSource:
+          kind: ProjectStructureProjects
+      - key: nodeId
+        label: Parent node
+        kind: ProjectNodeId
+        required: true
+        description: Project node where the summary asset is stored.
+        jsonPath: "$.nodeId"
+        optionSource:
+          kind: ProjectStructureNodes
+          dependsOnParameterKey: projectId
+      - key: processedCategory
+        label: Processed category
+        kind: Category
+        required: false
+        description: Outlook category added after the project write succeeds.
+        jsonPath: "$.processedCategory"
+        defaultValue: CanDoItAllProcessed
+      - key: lookbackHours
+        label: Lookback hours
+        kind: Integer
+        required: false
+        description: How far back the poller scans for candidate messages.
+        jsonPath: "$.lookbackHours"
+        defaultValue: "336"
+        minimumValue: 1
+        maximumValue: 720
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 260 }
+        - id: download-office365-watch
+          kind: Executor
+          name: Download Office365 watched address
+          x: 340
+          y: 260
+          executor:
+            id: office365.message-by-address-unprocessed
+            settings:
+              connectionId: ""
+              connectionIdJsonPath: "$.connectionId"
+              emailAddress: ""
+              emailAddressJsonPath: "$.emailAddress"
+              processedCategory: ""
+              processedCategoryJsonPath: "$.processedCategory"
+              maxCandidateMessages: 25
+              lookbackHours: 336
+              lookbackHoursJsonPath: "$.lookbackHours"
+              maxBodyCharacters: 60000
+              includeBody: true
+              noMessageBehavior: SuccessNoMessages
+          instructions: Download at most one newest unprocessed Microsoft 365 message matching the configured watched address.
+        - { id: office365-watch-message-switch, kind: Triage, name: SWITCH, x: 650, y: 260 }
+        - id: compact-office365-summary-no-message
+          kind: Executor
+          name: Compact no-message result
+          x: 970
+          y: 430
+          executor:
+            id: json.transform
+            policy: fast
+            settings:
+              operations:
+                - operation: Template
+                  destinationPath: "$"
+                  template:
+                    route: "$.route"
+                    noMessages: "$.noMessages"
+                    count: "$.count"
+                    watchedAddress: "$.filterValue"
+                    processedCategory: "$.processedCategory"
+                    projectId: "$.projectId"
+                    nodeId: "$.nodeId"
+                    runContext: "$.runContext"
+              maxOutputCharacters: 200000
+          instructions: Return a compact successful no-message result without invoking LLM, project writes, or Office365 category mutation.
+        - { id: summarize-office365-watch, kind: LlmCall, name: Summarize Office365 watched email, x: 970, y: 180 }
+        - id: store-office365-watch-summary
+          kind: Executor
+          name: Store Office365 watched email summary
+          x: 1280
+          y: 180
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Office365 watched email summary
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+              idempotencyKeyJsonPath: "$.runContext.office365Processing.idempotencyKey"
+              idempotencyKeySuffix: summary
+          instructions: Store the LLM markdown summary under the selected project-structure node before marking the Office365 message processed.
+        - id: mark-office365-watch-summary-processed
+          kind: Executor
+          name: Mark Office365 watched email processed
+          x: 1590
+          y: 180
+          executor:
+            id: office365.mark-message-processed
+            settings:
+              connectionId: ""
+              connectionIdJsonPath: "$.inputPayload.runContext.office365Processing.connectionId"
+              sourceCategory: ""
+              processedCategory: ""
+              processedCategoryJsonPath: "$.inputPayload.runContext.office365Processing.processedCategory"
+              messageIdJsonPath: "$.inputPayload.runContext.office365Processing.selectedMessageId"
+          instructions: Add the processed Outlook category after the summary asset write succeeds.
+        - id: compact-office365-summary-result
+          kind: Executor
+          name: Compact Office365 summary result
+          x: 1900
+          y: 180
+          executor:
+            id: json.transform
+            policy: fast
+            settings:
+              operations:
+                - operation: Template
+                  destinationPath: "$"
+                  template:
+                    route: "$.inputPayload.inputPayload.route"
+                    summary: "$.inputPayload.inputPayload.summary"
+                    projectId: "$.inputPayload.inputPayload.projectId"
+                    nodeId: "$.inputPayload.inputPayload.nodeId"
+                    messageId: "$.messageId"
+                    processedCategory: "$.processedCategory"
+                    processedCategoryAdded: "$.processedCategoryAdded"
+                    projectResult: "$.inputPayload.result"
+              maxOutputCharacters: 200000
+          instructions: Return compact Scheduler-friendly completion JSON after project write and Office365 mark-processed succeed.
+        - { id: end, kind: End, name: End, x: 2220, y: 260 }
+      edges:
+        - { source: start, target: download-office365-watch }
+        - { source: download-office365-watch, target: office365-watch-message-switch }
+        - id: office365-watch-summary-no-message
+          source: office365-watch-message-switch
+          target: compact-office365-summary-no-message
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: no_messages, expectedValueKind: String, label: No messages }
+        - id: office365-watch-summary-has-message
+          source: office365-watch-message-switch
+          target: summarize-office365-watch
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: Message found }
+        - { source: compact-office365-summary-no-message, target: end }
+        - { source: summarize-office365-watch, target: store-office365-watch-summary }
+        - { source: store-office365-watch-summary, target: mark-office365-watch-summary-processed }
+        - { source: mark-office365-watch-summary-processed, target: compact-office365-summary-result }
+        - { source: compact-office365-summary-result, target: end }
+
+  - key: office365-email-watch-tasks-to-project
+    name: Office365 Email Watch Tasks To Project
+    description: Watches a Microsoft 365 mailbox for one unprocessed message from a configured address, creates project task nodes for actionable requests, stores a no-task Markdown summary when appropriate, and marks the message processed only after project output succeeds.
+    routingInstructions: |-
+      Classify route as `tasks`, `asap_response`, `informative`, or `no_action`.
+      If no message was downloaded, route must remain `no_messages`; that branch is handled before the LLM and must not be produced by this component.
+      Use `tasks` when the sender asks me or the current project team to do concrete work.
+      Use `asap_response` when the sender expects an urgent same-day, blocked, escalated, immediate, or ASAP response.
+      Use `informative` when the message is only FYI, context, or status and no work is assigned to me or the current project team.
+      Use `no_action` when the message is delegated to someone else, irrelevant, or spam-like.
+      For `tasks` and `asap_response`, return a non-empty tasks array. Each task requires title, summary, owner, dueUtc when present, urgency, requiresResponse, asap, sourceEmailId, and evidence.
+      For `informative` and `no_action`, return tasks as [] and write a concise markdown summary explaining why no task was created.
+      Preserve projectId, nodeId, project, and runContext from the Office365 payload. Preserve runContext.office365Processing unchanged so the final Office365 step can mark the exact message processed.
+      The markdown field must include watched address, processed category, sender, subject, received time, route decision, task evidence, and open questions.
+    inputParameters:
+      - key: connectionId
+        label: Office365 connection
+        kind: ExternalConnectionId
+        required: false
+        description: Optional connected Office365 OAuth connection id. Leave empty to use the latest connected account.
+        jsonPath: "$.connectionId"
+        placeholder: Latest connected Office365 account
+        optionSource:
+          kind: Office365Connections
+      - key: emailAddress
+        label: Watched email address
+        kind: EmailAddress
+        required: true
+        description: Sender or sender-account email address to poll for one unprocessed message.
+        jsonPath: "$.emailAddress"
+        optionSource:
+          kind: CrmContacts
+      - key: projectId
+        label: Project
+        kind: ProjectId
+        required: true
+        description: Project that receives created tasks or the no-task summary asset.
+        jsonPath: "$.projectId"
+        optionSource:
+          kind: ProjectStructureProjects
+      - key: nodeId
+        label: Parent node
+        kind: ProjectNodeId
+        required: true
+        description: Project node where tasks or no-task summary are stored.
+        jsonPath: "$.nodeId"
+        optionSource:
+          kind: ProjectStructureNodes
+          dependsOnParameterKey: projectId
+      - key: processedCategory
+        label: Processed category
+        kind: Category
+        required: false
+        description: Outlook category added after the project output succeeds.
+        jsonPath: "$.processedCategory"
+        defaultValue: CanDoItAllProcessed
+      - key: lookbackHours
+        label: Lookback hours
+        kind: Integer
+        required: false
+        description: How far back the poller scans for candidate messages.
+        jsonPath: "$.lookbackHours"
+        defaultValue: "336"
+        minimumValue: 1
+        maximumValue: 720
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 280 }
+        - id: download-office365-watch
+          kind: Executor
+          name: Download Office365 watched address
+          x: 340
+          y: 280
+          executor:
+            id: office365.message-by-address-unprocessed
+            settings:
+              connectionId: ""
+              connectionIdJsonPath: "$.connectionId"
+              emailAddress: ""
+              emailAddressJsonPath: "$.emailAddress"
+              processedCategory: ""
+              processedCategoryJsonPath: "$.processedCategory"
+              maxCandidateMessages: 25
+              lookbackHours: 336
+              lookbackHoursJsonPath: "$.lookbackHours"
+              maxBodyCharacters: 60000
+              includeBody: true
+              noMessageBehavior: SuccessNoMessages
+          instructions: Download at most one newest unprocessed Microsoft 365 message matching the configured watched address.
+        - { id: office365-watch-message-switch, kind: Triage, name: SWITCH, x: 650, y: 280 }
+        - id: compact-office365-tasks-no-message
+          kind: Executor
+          name: Compact no-message result
+          x: 970
+          y: 520
+          executor:
+            id: json.transform
+            policy: fast
+            settings:
+              operations:
+                - operation: Template
+                  destinationPath: "$"
+                  template:
+                    route: "$.route"
+                    noMessages: "$.noMessages"
+                    count: "$.count"
+                    watchedAddress: "$.filterValue"
+                    processedCategory: "$.processedCategory"
+                    projectId: "$.projectId"
+                    nodeId: "$.nodeId"
+                    runContext: "$.runContext"
+              maxOutputCharacters: 200000
+          instructions: Return a compact successful no-message result without invoking LLM, project writes, or Office365 category mutation.
+        - { id: extract-office365-watch-tasks, kind: LlmCall, name: Extract Office365 watched email tasks, x: 970, y: 220 }
+        - { id: office365-watch-task-switch, kind: Triage, name: SWITCH, x: 1280, y: 220 }
+        - id: create-office365-watch-task-nodes
+          kind: Executor
+          name: Create Office365 watched email task nodes
+          x: 1600
+          y: 80
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateTaskNodes
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              taskItemsJsonPath: "$.tasks"
+              taskObjectSubtype: task
+              maxTaskNodes: 12
+              includeInputPayload: true
+              idempotencyKeyJsonPath: "$.runContext.office365Processing.idempotencyKey"
+              idempotencyKeySuffix: tasks
+          instructions: Create WorkItem/task nodes under the selected project-structure node before marking the Office365 message processed.
+        - id: store-office365-watch-no-task-summary
+          kind: Executor
+          name: Store Office365 watched email no-task summary
+          x: 1600
+          y: 360
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateAsset
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              title: Office365 watched no-task email summary
+              assetKind: md
+              contentFromInput: true
+              includeInputPayload: true
+              contentType: text/markdown
+              idempotencyKeyJsonPath: "$.runContext.office365Processing.idempotencyKey"
+              idempotencyKeySuffix: tasks
+          instructions: Store the LLM markdown summary when the message contains no actionable task.
+        - id: mark-office365-watch-tasks-processed
+          kind: Executor
+          name: Mark Office365 watched task email processed
+          x: 1910
+          y: 220
+          executor:
+            id: office365.mark-message-processed
+            settings:
+              connectionId: ""
+              connectionIdJsonPath: "$.inputPayload.runContext.office365Processing.connectionId"
+              sourceCategory: ""
+              processedCategory: ""
+              processedCategoryJsonPath: "$.inputPayload.runContext.office365Processing.processedCategory"
+              messageIdJsonPath: "$.inputPayload.runContext.office365Processing.selectedMessageId"
+          instructions: Add the processed Outlook category after task nodes or the no-task summary write succeeds.
+        - id: compact-office365-tasks-result
+          kind: Executor
+          name: Compact Office365 task result
+          x: 2220
+          y: 220
+          executor:
+            id: json.transform
+            policy: fast
+            settings:
+              operations:
+                - operation: Template
+                  destinationPath: "$"
+                  template:
+                    route: "$.inputPayload.inputPayload.route"
+                    summary: "$.inputPayload.inputPayload.summary"
+                    projectId: "$.inputPayload.inputPayload.projectId"
+                    nodeId: "$.inputPayload.inputPayload.nodeId"
+                    messageId: "$.messageId"
+                    processedCategory: "$.processedCategory"
+                    processedCategoryAdded: "$.processedCategoryAdded"
+                    projectResult: "$.inputPayload.result"
+              maxOutputCharacters: 200000
+          instructions: Return compact Scheduler-friendly completion JSON after project output and Office365 mark-processed succeed.
+        - { id: end, kind: End, name: End, x: 2540, y: 280 }
+      edges:
+        - { source: start, target: download-office365-watch }
+        - { source: download-office365-watch, target: office365-watch-message-switch }
+        - id: office365-watch-tasks-no-message
+          source: office365-watch-message-switch
+          target: compact-office365-tasks-no-message
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: no_messages, expectedValueKind: String, label: No messages }
+        - id: office365-watch-tasks-has-message
+          source: office365-watch-message-switch
+          target: extract-office365-watch-tasks
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: Message found }
+        - { source: compact-office365-tasks-no-message, target: end }
+        - { source: extract-office365-watch-tasks, target: office365-watch-task-switch }
+        - id: office365-watch-route-create-task-nodes-tasks
+          source: office365-watch-task-switch
+          target: create-office365-watch-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: tasks, expectedValueKind: String, label: Tasks }
+        - id: office365-watch-route-create-task-nodes-asap-response
+          source: office365-watch-task-switch
+          target: create-office365-watch-task-nodes
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: asap_response, expectedValueKind: String, label: ASAP response }
+        - id: office365-watch-route-store-no-task-summary-informative
+          source: office365-watch-task-switch
+          target: store-office365-watch-no-task-summary
+          kind: Conditional
+          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: informative, expectedValueKind: String, label: Informative }
+        - id: office365-watch-route-store-no-task-summary-default
+          source: office365-watch-task-switch
+          target: store-office365-watch-no-task-summary
+          kind: Conditional
+          routing: { kind: SwitchDefault, label: DEFAULT }
+        - { source: create-office365-watch-task-nodes, target: mark-office365-watch-tasks-processed }
+        - { source: store-office365-watch-no-task-summary, target: mark-office365-watch-tasks-processed }
+        - { source: mark-office365-watch-tasks-processed, target: compact-office365-tasks-result }
+        - { source: compact-office365-tasks-result, target: end }

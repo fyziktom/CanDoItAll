@@ -16,7 +16,10 @@ public sealed record WorkflowDefinitionSaveRequest(
     string Description,
     WorkflowLifecycleStatus Status,
     WorkflowGraph Graph,
-    WorkflowRuntimePolicy RuntimePolicy);
+    WorkflowRuntimePolicy RuntimePolicy)
+{
+    public IReadOnlyList<WorkflowInputParameterDescriptor> InputParameters { get; init; } = [];
+}
 
 public static class WorkflowDefinitionExchangeFormats
 {
