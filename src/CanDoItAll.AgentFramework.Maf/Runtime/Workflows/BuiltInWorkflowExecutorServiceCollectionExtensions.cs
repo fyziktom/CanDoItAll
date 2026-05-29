@@ -11,9 +11,14 @@ public static class BuiltInWorkflowExecutorServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
 
         services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutorDescriptorSource, BuiltInWorkflowExecutorDescriptorSource>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, JsonTransformWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, MarkdownRenderWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, DelayWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, HumanApprovalWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutor, ImageGenerationWorkflowExecutor>());

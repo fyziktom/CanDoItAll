@@ -28,13 +28,15 @@ public sealed class WorkflowExecutorTests
         var catalog = new WorkflowExecutorCatalog(
         [
             new RecordingWorkflowExecutor(),
+            new JsonTransformWorkflowExecutor(),
             new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0])
         ]);
 
         var descriptors = catalog.ListExecutors();
 
         Assert.Contains(descriptors, descriptor => descriptor.Id == WorkflowExecutorIds.StorageFile);
-        Assert.Contains(descriptors, descriptor => descriptor.Id == WorkflowExecutorIds.JsonTransform && !descriptor.IsImplemented);
+        Assert.Contains(descriptors, descriptor => descriptor.Id == WorkflowExecutorIds.JsonTransform && descriptor.CanExecute);
+        Assert.Contains(descriptors, descriptor => descriptor.Id == WorkflowExecutorIds.CommandProcess && !descriptor.IsImplemented);
     }
 
     [Fact]
@@ -47,10 +49,14 @@ public sealed class WorkflowExecutorTests
         var executorDescriptors = services
             .Where(descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor))
             .ToArray();
-        Assert.Equal(6 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
+        Assert.Equal(10 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(WorkspaceFileWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(JsonTransformWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(MarkdownRenderWorkflowExecutor));
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SourceIngestionWorkflowExecutor));
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HttpFetchWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(DelayWorkflowExecutor));
+        Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(HumanApprovalWorkflowExecutor));
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(SpreadsheetWorkflowExecutor));
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ProjectStructureWorkflowExecutor));
         Assert.Contains(executorDescriptors, descriptor => descriptor.ImplementationType == typeof(ImageGenerationWorkflowExecutor));
@@ -366,7 +372,7 @@ public sealed class WorkflowExecutorTests
                 SourceProcessAssignmentId: null),
             WorkflowRunId.New());
 
-        var artifact = Assert.Single(result.Artifacts);
+        var artifact = Assert.Single(result.Artifacts, artifact => artifact.Kind == WorkflowArtifactKind.File);
         Assert.Equal(WorkflowRunState.Completed, result.Run.State);
         Assert.Equal(WorkflowArtifactKind.File, artifact.Kind);
         Assert.Equal(new WorkflowNodeId("write-summary"), artifact.NodeId);
@@ -915,6 +921,201 @@ public sealed class WorkflowExecutorTests
     }
 
     [Fact]
+    public async Task WorkspaceFileExecutorSupportsDirectoryHashZipAndDryRunDelete()
+    {
+        using var temp = new TempDirectory();
+        var service = new WorkspaceFileService(temp.Path);
+        var executor = new WorkspaceFileWorkflowExecutor(service);
+
+        await ExecuteDirectAsync(executor, new WorkflowStorageFileExecutorSettings
+        {
+            Operation = WorkflowStorageFileOperation.CreateDirectory,
+            Path = "reports"
+        });
+        await ExecuteDirectAsync(executor, new WorkflowStorageFileExecutorSettings
+        {
+            Operation = WorkflowStorageFileOperation.WriteText,
+            Path = "reports/a.md",
+            Content = "alpha"
+        });
+        var hash = await ExecuteDirectAsync(executor, new WorkflowStorageFileExecutorSettings
+        {
+            Operation = WorkflowStorageFileOperation.Hash,
+            Path = "reports"
+        });
+        var zip = await ExecuteDirectAsync(executor, new WorkflowStorageFileExecutorSettings
+        {
+            Operation = WorkflowStorageFileOperation.Zip,
+            Path = "reports",
+            DestinationPath = "archive/reports.zip"
+        });
+        var dryRun = await ExecuteDirectAsync(executor, new WorkflowStorageFileExecutorSettings
+        {
+            Operation = WorkflowStorageFileOperation.Delete,
+            Path = "reports",
+            Recursive = true,
+            DryRun = true
+        });
+
+        Assert.Contains("sha-256", hash.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("reports.zip", zip.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"dryRun\":true", dryRun.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        Assert.True(Directory.Exists(Path.Combine(temp.Path, "reports")));
+    }
+
+    [Fact]
+    public async Task JsonTransformExecutorShapesArraysAndRejectsInvalidPaths()
+    {
+        var executor = new JsonTransformWorkflowExecutor();
+        var result = await ExecuteDirectAsync(
+            executor,
+            new WorkflowJsonTransformExecutorSettings
+            {
+                Operations =
+                [
+                    new WorkflowJsonTransformStep
+                    {
+                        Operation = WorkflowJsonTransformOperation.ArrayFilter,
+                        Path = "$.items",
+                        DestinationPath = "$.openItems",
+                        PredicatePath = "$.status",
+                        ExpectedValueJson = "\"open\""
+                    },
+                    new WorkflowJsonTransformStep
+                    {
+                        Operation = WorkflowJsonTransformOperation.Count,
+                        Path = "$.openItems",
+                        DestinationPath = "$.openCount"
+                    }
+                ]
+            },
+            """{"items":[{"title":"A","status":"open"},{"title":"B","status":"done"}]}""");
+
+        Assert.Contains("\"openCount\":1", result.PayloadJson, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(
+            executor,
+            new WorkflowJsonTransformExecutorSettings
+            {
+                Operations =
+                [
+                    new WorkflowJsonTransformStep
+                    {
+                        Operation = WorkflowJsonTransformOperation.Select,
+                        Path = "$.missing"
+                    }
+                ]
+            },
+            "{}"));
+    }
+
+    [Fact]
+    public async Task MarkdownRenderExecutorRendersTablesAndWritesOutputFile()
+    {
+        using var temp = new TempDirectory();
+        var files = new WorkspaceFileService(temp.Path);
+        var executor = new MarkdownRenderWorkflowExecutor(files);
+
+        var result = await ExecuteDirectAsync(
+            executor,
+            new WorkflowMarkdownRenderExecutorSettings
+            {
+                Template = "# {{title}}\n\n{{itemsTable}}",
+                Bindings = new Dictionary<string, string>
+                {
+                    ["title"] = "$.title"
+                },
+                Tables =
+                [
+                    new WorkflowMarkdownTableBinding
+                    {
+                        Placeholder = "itemsTable",
+                        JsonPath = "$.items",
+                        Columns = ["name", "status"]
+                    }
+                ],
+                OutputPath = "reports/report.md"
+            },
+            """{"title":"Run report","items":[{"name":"A","status":"open"}]}""");
+
+        Assert.Contains("| name | status |", result.PayloadJson, StringComparison.Ordinal);
+        Assert.Contains("Run report", File.ReadAllText(Path.Combine(temp.Path, "reports", "report.md")), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task DelayAndApprovalExecutorsUseBoundedRuntimeSemantics()
+    {
+        var delay = new DelayWorkflowExecutor();
+        var delayResult = await ExecuteDirectAsync(delay, new WorkflowDelayExecutorSettings
+        {
+            DelayMilliseconds = 1,
+            MaxDelayMilliseconds = 10
+        });
+        Assert.Contains("\"durableScheduling\":false", delayResult.PayloadJson, StringComparison.OrdinalIgnoreCase);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(delay, new WorkflowDelayExecutorSettings
+        {
+            DelayMilliseconds = 50,
+            MaxDelayMilliseconds = 10
+        }));
+
+        var approval = new HumanApprovalWorkflowExecutor();
+        var approvalContext = CreateExecutionContext(approval.Descriptor, new WorkflowApprovalExecutorSettings
+        {
+            Prompt = "Approve release?"
+        }) with
+        {
+            RunId = WorkflowRunId.New()
+        };
+        var exception = await Assert.ThrowsAsync<WorkflowExternalRequestPendingException>(() => approval.ExecuteAsync(
+            approvalContext,
+            new WorkflowNodeInput("{\"release\":\"v1\"}")).AsTask());
+        Assert.Equal(WorkflowExternalRequestKind.Approval, exception.Request.Kind);
+        Assert.Equal(approvalContext.Node.Id, exception.Request.NodeId);
+    }
+
+    [Fact]
+    public async Task HttpFetchBlocksPrivateNetworkTargetsByDefault()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new HttpFetchWorkflowExecutor(), new WorkflowHttpExecutorSettings
+        {
+            Url = "http://127.0.0.1:12345"
+        }));
+    }
+
+    [Fact]
+    public async Task HttpFetchDownloadsToWorkspaceAndSourceIngestionReadsOutputPath()
+    {
+        using var temp = new TempDirectory();
+        var files = new WorkspaceFileService(temp.Path);
+        await using var server = SingleResponseHttpServer.Html(200, "<html><body><h1>Download evidence</h1></body></html>");
+        var httpResult = await ExecuteDirectAsync(new HttpFetchWorkflowExecutor(files: files), new WorkflowHttpExecutorSettings
+        {
+            Url = server.Url,
+            AllowPrivateNetworkTargets = true,
+            DownloadToWorkspace = true,
+            OutputPath = "downloads/source.html"
+        });
+
+        Assert.True(File.Exists(Path.Combine(temp.Path, "downloads", "source.html")));
+        Assert.Contains("\"outputPath\":\"downloads/source.html\"", httpResult.PayloadJson, StringComparison.Ordinal);
+
+        var ingestion = await ExecuteDirectAsync(
+            new SourceIngestionWorkflowExecutor(new WorkspacePathResolutionService(temp.Path)),
+            new WorkflowSourceIngestionExecutorSettings
+            {
+                IncludeAdditionalSources = true,
+                IncludeParentNodePath = false,
+                IncludeSelectedNodePaths = false,
+                IncludeParentSubtreePaths = false,
+                AllowedExtensions = [".html"],
+                MaxFiles = 1
+            },
+            httpResult.PayloadJson);
+
+        Assert.Contains("Download evidence", ingestion.PayloadJson, StringComparison.Ordinal);
+        Assert.Contains("html-text", ingestion.PayloadJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SpreadsheetDocumentServiceCreatesReadsAndRendersWorkbook()
     {
         using var temp = new TempDirectory();
@@ -1053,7 +1254,8 @@ public sealed class WorkflowExecutorTests
             var result = await ExecuteDirectAsync(new HttpFetchWorkflowExecutor(), new WorkflowHttpExecutorSettings
             {
                 Method = WorkflowHttpMethodKind.Get,
-                Url = server.Url
+                Url = server.Url,
+                AllowPrivateNetworkTargets = true
             });
 
             Assert.Contains("ok", result.PayloadJson, StringComparison.Ordinal);
@@ -1068,7 +1270,8 @@ public sealed class WorkflowExecutorTests
                 {
                     Method = WorkflowHttpMethodKind.Get,
                     UrlJsonPath = "$.source.url",
-                    IncludeInputPayload = true
+                    IncludeInputPayload = true,
+                    AllowPrivateNetworkTargets = true
                 },
                 $$"""{"source":{"url":"{{server.Url}}"},"projectId":"11111111-1111-1111-1111-111111111111"}""");
 
@@ -1083,7 +1286,8 @@ public sealed class WorkflowExecutorTests
             {
                 Method = WorkflowHttpMethodKind.Post,
                 Url = server.Url,
-                Body = "{\"name\":\"report\"}"
+                Body = "{\"name\":\"report\"}",
+                AllowPrivateNetworkTargets = true
             });
 
             Assert.Contains("201", result.PayloadJson, StringComparison.Ordinal);
@@ -1099,6 +1303,7 @@ public sealed class WorkflowExecutorTests
                 {
                     Method = WorkflowHttpMethodKind.Get,
                     Url = server.Url,
+                    AllowPrivateNetworkTargets = true,
                     SecretHeader = new WorkflowHttpSecretHeaderBinding
                     {
                         SecretId = secretId,
@@ -1131,7 +1336,8 @@ public sealed class WorkflowExecutorTests
             await Assert.ThrowsAsync<InvalidOperationException>(() => ExecuteDirectAsync(new HttpFetchWorkflowExecutor(), new WorkflowHttpExecutorSettings
             {
                 Method = WorkflowHttpMethodKind.Get,
-                Url = server.Url
+                Url = server.Url,
+                AllowPrivateNetworkTargets = true
             }));
         });
 
@@ -1736,6 +1942,9 @@ public sealed class WorkflowExecutorTests
 
         public static SingleResponseHttpServer Json(int statusCode, string body)
             => new(statusCode, body, "application/json");
+
+        public static SingleResponseHttpServer Html(int statusCode, string body)
+            => new(statusCode, body, "text/html");
 
         public async ValueTask DisposeAsync()
         {

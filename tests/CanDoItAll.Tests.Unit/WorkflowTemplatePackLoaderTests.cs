@@ -5,6 +5,28 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class WorkflowTemplatePackLoaderTests
 {
     [Fact]
+    public void Load_default_pack_includes_workflow_executor_catalog_examples()
+    {
+        var pack = new WorkflowTemplatePackLoader().Load();
+        var templates = pack.Workflows.ToDictionary(template => template.Key, StringComparer.OrdinalIgnoreCase);
+
+        Assert.Contains("local-folder-summary-markdown-report", templates.Keys);
+        Assert.Contains("file-diff-markdown-report", templates.Keys);
+        Assert.Contains("http-download-document-extraction-report", templates.Keys);
+        Assert.Contains("json-transform-project-task-creation", templates.Keys);
+        Assert.Contains("approval-gated-http-action", templates.Keys);
+        Assert.Contains(
+            templates["json-transform-project-task-creation"].Graph.Nodes,
+            node => node.Executor?.Id == "json.transform");
+        Assert.Contains(
+            templates["local-folder-summary-markdown-report"].Graph.Nodes,
+            node => node.Executor?.Id == "markdown.render");
+        Assert.Contains(
+            templates["approval-gated-http-action"].Graph.Nodes,
+            node => node.Executor?.Id == "human.approval");
+    }
+
+    [Fact]
     public void Load_rejects_semantically_invalid_template_graph_with_source_context()
     {
         using var packDirectory = new TemporaryWorkflowTemplatePack(

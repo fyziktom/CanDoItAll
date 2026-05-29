@@ -260,6 +260,47 @@ public sealed class WorkflowExampleCatalogSeedService(
             Weekly launch meeting: payment validation passed, inventory check is blocked by supplier ETA, shipment reservation needs owner confirmation.
             Send a concise recap and create follow-up tasks for blocked or owner-dependent items.
             """);
+        WriteTextAsset(
+            "samples/workflows/diff-before.md",
+            """
+            # Release checklist
+
+            - Payment validation pending.
+            - Inventory check pending.
+            - Shipment reservation pending.
+            """);
+        WriteTextAsset(
+            "samples/workflows/diff-after.md",
+            """
+            # Release checklist
+
+            - Payment validation passed.
+            - Inventory check blocked by supplier ETA.
+            - Shipment reservation needs owner confirmation.
+            - Customer notification draft required.
+            """);
+        WriteTextAsset(
+            "samples/workflows/task-intake.json",
+            """
+            {
+              "projectId": "00000000-0000-0000-0000-000000000000",
+              "nodeId": "sample-workflow-node",
+              "summary": "Sample task intake payload for workflow template testing.",
+              "tasks": [
+                {
+                  "title": "Review release blocker",
+                  "summary": "Check supplier ETA and confirm whether launch can proceed.",
+                  "owner": "project team",
+                  "dueUtc": "",
+                  "urgency": "high",
+                  "requiresResponse": true,
+                  "asap": true,
+                  "sourceEmailId": "sample",
+                  "evidence": ["Inventory check is blocked by supplier ETA."]
+                }
+              ]
+            }
+            """);
         WriteWorkbook(
             "samples/workflows/invoices.xlsx",
             "Invoices",

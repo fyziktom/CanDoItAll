@@ -467,6 +467,60 @@ public sealed class WorkflowFoundationTests
     }
 
     [Fact]
+    public async Task WorkflowPayloadPolicyService_writes_retrievable_redacted_artifact_content()
+    {
+        var settings = WorkflowSettings.Default with
+        {
+            ArtifactPolicy = WorkflowSettings.Default.ArtifactPolicy with
+            {
+                MaxInlinePayloadCharacters = 32
+            }
+        };
+        var contentStore = new InMemoryWorkflowArtifactContentStore();
+        var payloadPolicy = new WorkflowPayloadPolicyService(
+            new StaticWorkflowSettingsService(settings),
+            contentStore);
+
+        var result = await payloadPolicy.ApplyAsync(new WorkflowPayloadPolicyRequest(
+            WorkflowRunId.New(),
+            WorkflowPayloadPolicyScope.RunInput,
+            "{\"token\":\"raw-token-value\",\"message\":\"" + new string('x', 256) + "\"}",
+            WorkflowArtifactKind.Json,
+            "workflow-input.json",
+            "application/json",
+            DateTimeOffset.UtcNow)
+        {
+            CaptureArtifact = true
+        });
+
+        Assert.NotNull(result.Artifact);
+        var content = await contentStore.ReadContentAsync(result.Artifact);
+        Assert.NotNull(content);
+        Assert.Contains("[REDACTED]", content.Content, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", content.Content, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task InMemoryWorkflowArtifactContentStore_returns_null_for_missing_content()
+    {
+        var artifact = new WorkflowArtifactRecord(
+            WorkflowArtifactId.New(),
+            WorkflowRunId.New(),
+            WorkflowArtifactKind.Text,
+            NodeId: null,
+            "missing.txt",
+            "text/plain",
+            "workflow-runs/missing/payloads/missing.txt",
+            "Missing content test.",
+            DateTimeOffset.UtcNow);
+        var contentStore = new InMemoryWorkflowArtifactContentStore();
+
+        var content = await contentStore.ReadContentAsync(artifact);
+
+        Assert.Null(content);
+    }
+
+    [Fact]
     public async Task RuntimeManager_does_not_wait_for_unreached_human_input_route()
     {
         var definition = CreateDefinition([

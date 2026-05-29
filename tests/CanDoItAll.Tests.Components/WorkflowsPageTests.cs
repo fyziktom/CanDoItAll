@@ -7,6 +7,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,6 +107,80 @@ public sealed class WorkflowsPageTests
         cut.WaitForElement("[data-testid='workflows-components']");
         Assert.Equal(1, counter.ListComponentsCount);
         Assert.Equal(1, counter.ListProviderOptionsCount);
+    }
+
+    [Fact]
+    public async Task Workflows_templates_tab_lists_executor_catalog_examples()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-template-page-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-templates']");
+        AssertNoWorkflowPageError(cut);
+        ClickTabButton(cut, "Templates");
+        cut.WaitForElement("[data-testid='workflows-templates']");
+
+        cut.WaitForAssertion(() =>
+        {
+            var templates = cut.FindAll("[data-testid='workflows-template-pack-item']");
+            Assert.Contains(templates, item => item.TextContent.Contains("Local Folder Summary Markdown Report", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("File Diff Markdown Report", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("HTTP Download Document Extraction Report", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("JSON Transform Project Task Creation", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("Approval Gated HTTP Action", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_toolbox_exposes_executor_catalog_metadata()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-canvas-catalog-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        ClickTabButton(cut, "Editor");
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        var toolboxSearch = EnsureWorkflowToolboxVisible(cut);
+
+        toolboxSearch.Input("json");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-json-transform", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Deterministic preview", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("markdown");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-markdown-render", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("delay");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-utility-delay", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("http");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Approval required", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("command");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-command-process", cut.Markup, StringComparison.Ordinal);
+            Assert.True(cut.Find("[data-testid='workflow-toolbox-executor-command-process']").HasAttribute("disabled"));
+        });
     }
 
     [Fact]
@@ -563,6 +638,18 @@ public sealed class WorkflowsPageTests
         Assert.Contains(internetDetail.Definition.Graph.Nodes, node =>
             node.Settings.ExecutorId == WorkflowExecutorIds.HttpFetch &&
             node.Settings.ExecutorSettingsJson.Contains("urlJsonPath", StringComparison.Ordinal));
+
+        var folderReport = Assert.Single(examples, item => item.Name == "Example: Local Folder Summary Markdown Report");
+        var folderReportDetail = await catalogService.GetDefinitionAsync(folderReport.Id);
+        Assert.NotNull(folderReportDetail);
+        Assert.True(folderReportDetail!.Validation.Succeeded);
+        Assert.Contains(folderReportDetail.Definition.Graph.Nodes, node => node.Settings.ExecutorId == WorkflowExecutorIds.MarkdownRender);
+
+        var taskTransform = Assert.Single(examples, item => item.Name == "Example: JSON Transform Project Task Creation");
+        var taskTransformDetail = await catalogService.GetDefinitionAsync(taskTransform.Id);
+        Assert.NotNull(taskTransformDetail);
+        Assert.True(taskTransformDetail!.Validation.Succeeded);
+        Assert.Contains(taskTransformDetail.Definition.Graph.Nodes, node => node.Settings.ExecutorId == WorkflowExecutorIds.JsonTransform);
     }
 
     [Fact]
@@ -783,9 +870,46 @@ public sealed class WorkflowsPageTests
             serviceProvider.GetRequiredService<WorkflowComponentLibraryCallCounter>()));
     }
 
+    private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(CanDoItAllTestEnvironment environment)
+    {
+        var profile = environment.CreateInMemoryProfile("primary");
+        return ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = environment,
+            ActiveProfile = profile,
+            SchemaModules = TestSchemaBootstrapModules.Default
+        });
+    }
+
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private static void ClickTabButton(IRenderedFragment cut, string text)
+    {
+        var button = cut.FindAll("button")
+            .First(button => button.TextContent.Contains(text, StringComparison.OrdinalIgnoreCase));
+        button.Click();
+    }
+
+    private static IElement EnsureWorkflowToolboxVisible(IRenderedFragment cut)
+    {
+        const string searchSelector = "input[placeholder='Search nodes, executors, files, HTTP, spreadsheets']";
+        var inputs = cut.FindAll(searchSelector);
+        if (inputs.Count > 0)
+        {
+            return inputs[0];
+        }
+
+        cut.Find("[data-testid='workflow-canvas-toggle-toolbox']").Click();
+        return cut.WaitForElement(searchSelector);
+    }
+
+    private static void AssertNoWorkflowPageError(IRenderedFragment cut)
+    {
+        var errors = cut.FindAll("[data-testid='workflows-error']");
+        Assert.True(errors.Count == 0, string.Join(" | ", errors.Select(error => error.TextContent.Trim())));
+    }
 
     private static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
     {

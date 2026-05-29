@@ -64,7 +64,8 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.AddScoped<IAgentFrameworkWorkspaceService, CurrentProfileAgentFrameworkWorkspaceService>();
         services.AddScoped<IAgentFrameworkOrganizationCatalogRepairService, AgentFrameworkOrganizationCatalogRepairService>();
         services.AddScoped<AgentFrameworkCatalogWarmupService>();
-        services.TryAddSingleton<WorkflowTemplatePackLoader>();
+        services.TryAddScoped(serviceProvider => new WorkflowTemplatePackLoader(
+            serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
         services.AddScoped<WorkflowExampleCatalogSeedService>();
         services.AddScoped<ProcessMockAgentCatalogService>();
         services.AddScoped<AgentFrameworkExecutionRecoveryService>();
@@ -77,22 +78,29 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.TryAddScoped<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, WorkspaceFileWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, JsonTransformWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, MarkdownRenderWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, SourceIngestionWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, HttpFetchWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, DelayWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, HumanApprovalWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, SpreadsheetWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, ProjectStructureWorkflowExecutor>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, ImageGenerationWorkflowExecutor>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkflowExecutorDescriptorSource, BuiltInWorkflowExecutorDescriptorSource>());
         foreach (var descriptor in BuiltInWorkflowExecutorDescriptors.Planned)
         {
             services.AddScoped<IWorkflowExecutor>(_ => new PlannedWorkflowExecutor(descriptor));
         }
 
-        services.TryAddScoped<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddScoped<IWorkflowExecutorCatalog>(serviceProvider =>
+            WorkflowExecutorCatalog.FromDescriptorSources(serviceProvider.GetServices<IWorkflowExecutorDescriptorSource>()));
         services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
         services.TryAddScoped<IWorkflowExecutorApprovalGate, WorkflowExternalRequestApprovalGate>();
         services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddScoped<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
-        services.TryAddScoped<IWorkflowDefinitionValidator>(_ => new WorkflowDefinitionValidator());
+        services.TryAddScoped<IWorkflowDefinitionValidator>(serviceProvider => new WorkflowDefinitionValidator(
+            serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
         services.TryAddScoped<PersistentWorkflowCatalogService>();
         services.TryAddScoped<IWorkflowCatalogService>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowCatalogService>());
@@ -103,6 +111,11 @@ public static class AgentFrameworkModuleServiceCollectionExtensions
         services.TryAddScoped<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
         services.TryAddScoped<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<PersistentWorkflowRunStore>());
+        services.TryAddScoped<IWorkflowArtifactContentStore>(serviceProvider =>
+        {
+            var (workspaceRoot, scope) = ResolveCurrentWorkspaceScope(serviceProvider);
+            return new FileWorkflowArtifactContentStore(workspaceRoot, scope);
+        });
         services.TryAddScoped<IWorkflowCheckpointFactory, WorkflowCheckpointFactory>();
         services.TryAddScoped<IWorkflowPayloadPolicyService, WorkflowPayloadPolicyService>();
         services.TryAddScoped<IWorkflowRuntimeEvidenceSourceProvider, WorkflowRuntimeEvidenceSourceProvider>();

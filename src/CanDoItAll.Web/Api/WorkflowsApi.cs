@@ -323,6 +323,20 @@ internal static class WorkflowsApi
             Results.Ok(await runStore.ListArtifactsAsync(new WorkflowRunId(runId), cancellationToken)))
             .WithName("ListWorkflowRunArtifacts");
 
+        workflows.MapGet("/runs/{runId:guid}/artifacts/{artifactId:guid}/content", async (
+                Guid runId,
+                Guid artifactId,
+                IWorkflowRunStore runStore,
+                IWorkflowArtifactContentStore artifactContentStore,
+                CancellationToken cancellationToken) =>
+            await GetArtifactContentResultAsync(
+                new WorkflowRunId(runId),
+                new WorkflowArtifactId(artifactId),
+                runStore,
+                artifactContentStore,
+                cancellationToken))
+            .WithName("GetWorkflowRunArtifactContent");
+
         workflows.MapGet("/runs/{runId:guid}/checkpoints", async (
                 Guid runId,
                 IWorkflowRunStore runStore,
@@ -485,6 +499,29 @@ internal static class WorkflowsApi
         return run is null
             ? ApiEndpointResults.NotFound("Workflow run was not found.", "workflows.run-not-found")
             : Results.Ok(await BuildRunDetailAsync(run, runtimeManager, runStore, cancellationToken));
+    }
+
+    private static async Task<IResult> GetArtifactContentResultAsync(
+        WorkflowRunId runId,
+        WorkflowArtifactId artifactId,
+        IWorkflowRunStore runStore,
+        IWorkflowArtifactContentStore artifactContentStore,
+        CancellationToken cancellationToken)
+    {
+        var artifacts = await runStore.ListArtifactsAsync(runId, cancellationToken);
+        var artifact = artifacts.SingleOrDefault(item => item.Id == artifactId);
+        if (artifact is null)
+        {
+            return ApiEndpointResults.NotFound("Workflow artifact was not found for this run.", "workflows.artifact-not-found");
+        }
+
+        var content = await artifactContentStore.ReadContentAsync(artifact, cancellationToken);
+        if (content is null)
+        {
+            return ApiEndpointResults.NotFound("Workflow artifact content was not found for this artifact.", "workflows.artifact-content-not-found");
+        }
+
+        return Results.Text(content.Content, artifact.ContentType);
     }
 
     private static async Task<WorkflowRunDetailApiResponse> BuildRunDetailAsync(

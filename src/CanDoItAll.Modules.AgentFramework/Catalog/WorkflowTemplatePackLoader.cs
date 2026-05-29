@@ -21,11 +21,23 @@ public sealed class WorkflowTemplatePackLoader
         .Build();
 
     private readonly string? configuredPackRoot;
+    private readonly IWorkflowExecutorCatalog? executorCatalog;
     private readonly Lazy<WorkflowTemplatePack> pack;
 
     public WorkflowTemplatePackLoader(string? packRoot = null)
+        : this(packRoot, executorCatalog: null)
+    {
+    }
+
+    public WorkflowTemplatePackLoader(IWorkflowExecutorCatalog executorCatalog)
+        : this(packRoot: null, executorCatalog)
+    {
+    }
+
+    private WorkflowTemplatePackLoader(string? packRoot, IWorkflowExecutorCatalog? executorCatalog)
     {
         configuredPackRoot = packRoot;
+        this.executorCatalog = executorCatalog;
         pack = new Lazy<WorkflowTemplatePack>(LoadCore, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -68,9 +80,13 @@ public sealed class WorkflowTemplatePackLoader
         return templatePack;
     }
 
-    private static void ValidateTemplateGraphs(WorkflowTemplatePack templatePack)
+    private void ValidateTemplateGraphs(WorkflowTemplatePack templatePack)
     {
-        var validator = new WorkflowDefinitionValidator();
+        var validator = executorCatalog is null
+            ? new WorkflowDefinitionValidator()
+            : new WorkflowDefinitionValidator(
+                executorCatalog,
+                WorkflowDefinitionValidationOptions.RegisteredExecutorsOnly);
         foreach (var template in templatePack.Workflows)
         {
             var component = CreateTemplateValidationComponent(templatePack, template);

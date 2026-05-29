@@ -238,6 +238,22 @@ public interface IWorkflowArtifactStore
         CancellationToken cancellationToken = default);
 }
 
+public sealed record WorkflowArtifactContent(
+    WorkflowArtifactRecord Artifact,
+    string Content);
+
+public interface IWorkflowArtifactContentStore
+{
+    Task SaveContentAsync(
+        WorkflowArtifactRecord artifact,
+        string content,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowArtifactContent?> ReadContentAsync(
+        WorkflowArtifactRecord artifact,
+        CancellationToken cancellationToken = default);
+}
+
 public interface IWorkflowExternalRequestStore
 {
     Task<IReadOnlyList<WorkflowExternalRequestRecord>> ListPendingRequestsAsync(

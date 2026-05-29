@@ -323,12 +323,43 @@ public sealed record WorkflowExecutorSettingsSchemaDescriptor
 public enum WorkflowStorageFileOperation
 {
     List,
+    Exists,
+    Tree,
     Stat,
     ReadText,
     WriteText,
     AppendText,
+    CreateDirectory,
+    Delete,
+    Copy,
+    Move,
+    Hash,
+    Zip,
+    Unzip,
     SearchText,
     DiffText
+}
+
+public enum WorkflowJsonTransformOperation
+{
+    Select,
+    Set,
+    Remove,
+    Merge,
+    Count,
+    Template,
+    ArrayMap,
+    ArrayFilter,
+    ArraySort,
+    ArrayDistinct,
+    ArrayTake,
+    ValidateSchema
+}
+
+public enum WorkflowMarkdownMissingPlaceholderBehavior
+{
+    Fail,
+    Empty
 }
 
 public enum WorkflowHttpMethodKind
@@ -529,13 +560,97 @@ public sealed record WorkflowStorageFileExecutorSettings
 
     public string SearchPattern { get; init; } = "*";
 
+    public IReadOnlyList<string> IncludeGlobs { get; init; } = [];
+
+    public IReadOnlyList<string> ExcludeGlobs { get; init; } = [];
+
     public int MaxResults { get; init; } = 100;
+
+    public int MaxFiles { get; init; } = 200;
+
+    public long MaxBytes { get; init; } = 10 * 1024 * 1024;
 
     public int MaxCharacters { get; init; } = 12000;
 
     public int MaxLines { get; init; } = 160;
 
     public bool Overwrite { get; init; } = true;
+
+    public bool Recursive { get; init; }
+
+    public bool DryRun { get; init; }
+}
+
+public sealed record WorkflowJsonTransformStep
+{
+    public WorkflowJsonTransformOperation Operation { get; init; } = WorkflowJsonTransformOperation.Select;
+
+    public string Path { get; init; } = "$";
+
+    public string DestinationPath { get; init; } = "$";
+
+    public string ValueJson { get; init; } = string.Empty;
+
+    public string Key { get; init; } = string.Empty;
+
+    public string PredicatePath { get; init; } = string.Empty;
+
+    public string ExpectedValueJson { get; init; } = string.Empty;
+
+    public int Take { get; init; }
+
+    public IReadOnlyDictionary<string, string> Template { get; init; } = new Dictionary<string, string>();
+
+    public IReadOnlyList<string> RequiredPaths { get; init; } = [];
+}
+
+public sealed record WorkflowJsonTransformExecutorSettings
+{
+    public IReadOnlyList<WorkflowJsonTransformStep> Operations { get; init; } = [];
+
+    public int MaxOutputCharacters { get; init; } = 500000;
+}
+
+public sealed record WorkflowMarkdownTableBinding
+{
+    public string JsonPath { get; init; } = "$";
+
+    public string Placeholder { get; init; } = string.Empty;
+
+    public IReadOnlyList<string> Columns { get; init; } = [];
+}
+
+public sealed record WorkflowMarkdownRenderExecutorSettings
+{
+    public string Template { get; init; } = string.Empty;
+
+    public string TemplatePath { get; init; } = string.Empty;
+
+    public IReadOnlyDictionary<string, string> Bindings { get; init; } = new Dictionary<string, string>();
+
+    public IReadOnlyList<WorkflowMarkdownTableBinding> Tables { get; init; } = [];
+
+    public string OutputPath { get; init; } = string.Empty;
+
+    public bool Append { get; init; }
+
+    public bool Overwrite { get; init; } = true;
+
+    public WorkflowMarkdownMissingPlaceholderBehavior MissingPlaceholderBehavior { get; init; } = WorkflowMarkdownMissingPlaceholderBehavior.Fail;
+}
+
+public sealed record WorkflowDelayExecutorSettings
+{
+    public int DelayMilliseconds { get; init; } = 1000;
+
+    public int MaxDelayMilliseconds { get; init; } = 30000;
+}
+
+public sealed record WorkflowApprovalExecutorSettings
+{
+    public string Prompt { get; init; } = string.Empty;
+
+    public bool IncludeInputPayload { get; init; } = true;
 }
 
 public sealed record WorkflowSourceIngestionExecutorSettings
@@ -548,8 +663,12 @@ public sealed record WorkflowSourceIngestionExecutorSettings
         ".txt",
         ".eml",
         ".csv",
+        ".html",
+        ".htm",
         ".json",
         ".pdf",
+        ".docx",
+        ".zip",
         ".xls",
         ".xlsx"
     ];
@@ -590,6 +709,14 @@ public sealed record WorkflowHttpExecutorSettings
     public int MaxResponseBytes { get; init; } = 262144;
 
     public bool IncludeInputPayload { get; init; }
+
+    public bool AllowPrivateNetworkTargets { get; init; }
+
+    public bool DownloadToWorkspace { get; init; }
+
+    public string OutputPath { get; init; } = string.Empty;
+
+    public bool Overwrite { get; init; } = true;
 }
 
 public sealed record WorkflowSpreadsheetCellWrite(string CellAddress, string Value);

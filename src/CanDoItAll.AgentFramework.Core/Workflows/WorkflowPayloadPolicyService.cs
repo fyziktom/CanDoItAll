@@ -49,11 +49,21 @@ public interface IWorkflowPayloadPolicyService
         CancellationToken cancellationToken = default);
 }
 
-public sealed class WorkflowPayloadPolicyService(
-    IWorkflowSettingsService? settingsService = null) : IWorkflowPayloadPolicyService
+public sealed class WorkflowPayloadPolicyService : IWorkflowPayloadPolicyService
 {
     public const string TruncationMarker = "...[TRUNCATED]";
     private const int AbsoluteMaxInlinePayloadCharacters = 1_000_000;
+
+    private readonly IWorkflowSettingsService? settingsService;
+    private readonly IWorkflowArtifactContentStore? artifactContentStore;
+
+    public WorkflowPayloadPolicyService(
+        IWorkflowSettingsService? settingsService = null,
+        IWorkflowArtifactContentStore? artifactContentStore = null)
+    {
+        this.settingsService = settingsService;
+        this.artifactContentStore = artifactContentStore;
+    }
 
     public async ValueTask<WorkflowPayloadPolicyResult> ApplyAsync(
         WorkflowPayloadPolicyRequest request,
@@ -80,6 +90,13 @@ public sealed class WorkflowPayloadPolicyService(
                 redactedPayload.Length,
                 maxInlineCharacters)
             : null;
+        if (artifact is not null && artifactContentStore is not null)
+        {
+            await artifactContentStore.SaveContentAsync(
+                artifact,
+                redactedPayload,
+                cancellationToken);
+        }
 
         return new WorkflowPayloadPolicyResult(
             inlinePayload,

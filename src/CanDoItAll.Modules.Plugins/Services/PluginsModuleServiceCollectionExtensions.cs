@@ -18,6 +18,7 @@ public static class PluginsModuleServiceCollectionExtensions
         RuntimePluginAssemblyRegistrar.RegisterInstalledPackages(services, packageOptions);
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPluginCatalogSource, BundledPluginCatalogSource>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IPluginCatalogSource, InstalledPluginPackageCatalogSource>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutorDescriptorSource, PluginWorkflowExecutorDescriptorSource>());
         services.AddHttpClient();
         services.AddScoped<PluginInstallationStore>();
         services.AddScoped<PluginGrantStore>();

@@ -477,6 +477,22 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                 : null;
         }
 
+        if (node.Settings.ExecutorId == WorkflowExecutorIds.MarkdownRender)
+        {
+            var settings = WorkflowExecutorJson.Deserialize<WorkflowMarkdownRenderExecutorSettings>(node.Settings.ExecutorSettingsJson);
+            return !string.IsNullOrWhiteSpace(settings.OutputPath)
+                ? CreateFileArtifact(runId, node.Id, settings.OutputPath.Trim(), "text/markdown", createdAtUtc)
+                : null;
+        }
+
+        if (node.Settings.ExecutorId == WorkflowExecutorIds.HttpFetch)
+        {
+            var settings = WorkflowExecutorJson.Deserialize<WorkflowHttpExecutorSettings>(node.Settings.ExecutorSettingsJson);
+            return settings.DownloadToWorkspace && !string.IsNullOrWhiteSpace(settings.OutputPath)
+                ? CreateFileArtifact(runId, node.Id, settings.OutputPath.Trim(), "application/octet-stream", createdAtUtc)
+                : null;
+        }
+
         return null;
     }
 

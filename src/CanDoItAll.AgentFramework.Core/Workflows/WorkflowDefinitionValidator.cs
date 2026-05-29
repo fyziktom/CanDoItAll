@@ -9,14 +9,24 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
     private static readonly IConfigurationSchemaValidator SettingsSchemaValidator = new ConfigurationSchemaValidator();
 
     private readonly IWorkflowExecutorCatalog? executorCatalog;
+    private readonly WorkflowDefinitionValidationOptions options;
 
     public WorkflowDefinitionValidator()
+        : this(executorCatalog: null, WorkflowDefinitionValidationOptions.Default)
     {
     }
 
     public WorkflowDefinitionValidator(IWorkflowExecutorCatalog executorCatalog)
+        : this(executorCatalog, WorkflowDefinitionValidationOptions.Default)
+    {
+    }
+
+    public WorkflowDefinitionValidator(
+        IWorkflowExecutorCatalog? executorCatalog,
+        WorkflowDefinitionValidationOptions options)
     {
         this.executorCatalog = executorCatalog;
+        this.options = options;
     }
 
     public WorkflowValidationResult Validate(WorkflowDefinition definition, IReadOnlyList<LlmCallComponent> components)
@@ -102,6 +112,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
             }
         }
 
+        AddNodeKindIssues(definition, issues);
         AddRoutingIssues(graph, issues);
         var componentIds = components.Select(component => component.Id).ToHashSet();
         var componentsById = components.ToDictionary(component => component.Id);
@@ -195,7 +206,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                         $"Workflow executor '{executorId}' is not registered.",
                         node.Id));
                 }
-                else if (!descriptor.CanExecute)
+                else if (options.RequireRunnableExecutors && !descriptor.CanExecute)
                 {
                     issues.Add(new WorkflowValidationIssue(
                         WorkflowValidationIssueCode.InvalidExecutorReference,
@@ -238,6 +249,37 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
             using (settingsDocument)
             {
                 AddExecutorSettingsSchemaIssues(node, descriptor, settingsDocument.RootElement, issues);
+            }
+        }
+    }
+
+    private static void AddNodeKindIssues(
+        WorkflowDefinition definition,
+        List<WorkflowValidationIssue> issues)
+    {
+        foreach (var node in definition.Graph.Nodes)
+        {
+            if (!Enum.IsDefined(node.Kind))
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.UnsupportedNodeKind,
+                    $"Workflow node '{node.Id}' uses unsupported node kind '{node.Kind}'.",
+                    node.Id));
+                continue;
+            }
+
+            if (definition.Status != WorkflowLifecycleStatus.Active ||
+                node.Settings.ExecutorId is not null)
+            {
+                continue;
+            }
+
+            if (node.Kind is WorkflowNodeKind.Artifact or WorkflowNodeKind.AgentStep or WorkflowNodeKind.Subworkflow)
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.UnsupportedNodeKind,
+                    $"Active workflow node '{node.Id}' uses '{node.Kind}', which is not executable in this runtime. Use an executor-backed node or keep the workflow in draft.",
+                    node.Id));
             }
         }
     }
@@ -590,6 +632,13 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
 
         return node.Settings.ResultShape;
     }
+}
+
+public sealed record WorkflowDefinitionValidationOptions(bool RequireRunnableExecutors)
+{
+    public static WorkflowDefinitionValidationOptions Default { get; } = new(RequireRunnableExecutors: true);
+
+    public static WorkflowDefinitionValidationOptions RegisteredExecutorsOnly { get; } = new(RequireRunnableExecutors: false);
 }
 
 public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatalog

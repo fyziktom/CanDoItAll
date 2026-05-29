@@ -11,6 +11,11 @@ public interface IWorkflowExecutorCatalog
     WorkflowExecutorDescriptor GetRequiredExecutor(WorkflowExecutorId executorId);
 }
 
+public interface IWorkflowExecutorDescriptorSource
+{
+    IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors();
+}
+
 public interface IWorkflowExecutor
 {
     WorkflowExecutorDescriptor Descriptor { get; }
@@ -77,12 +82,15 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
     private readonly IReadOnlyDictionary<WorkflowExecutorId, WorkflowExecutorDescriptor> descriptorsById;
 
     public WorkflowExecutorCatalog(IEnumerable<IWorkflowExecutor> executors)
+        : this(ResolveDescriptors(executors))
     {
-        ArgumentNullException.ThrowIfNull(executors);
+    }
 
-        var resolvedDescriptors = executors
-            .Select(executor => executor.Descriptor)
-            .ToArray();
+    private WorkflowExecutorCatalog(IEnumerable<WorkflowExecutorDescriptor> descriptors)
+    {
+        ArgumentNullException.ThrowIfNull(descriptors);
+
+        var resolvedDescriptors = descriptors.ToArray();
         var duplicateIds = resolvedDescriptors
             .GroupBy(descriptor => descriptor.Id)
             .Where(group => group.Count() > 1)
@@ -94,11 +102,20 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
             throw new InvalidOperationException($"Workflow executor catalog contains duplicate executor id(s): {string.Join(", ", duplicateIds)}.");
         }
 
-        descriptors = resolvedDescriptors
+        this.descriptors = resolvedDescriptors
             .OrderBy(descriptor => descriptor.Category)
             .ThenBy(descriptor => descriptor.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         descriptorsById = resolvedDescriptors.ToDictionary(descriptor => descriptor.Id);
+    }
+
+    public static WorkflowExecutorCatalog FromDescriptors(IEnumerable<WorkflowExecutorDescriptor> descriptors)
+        => new(descriptors);
+
+    public static WorkflowExecutorCatalog FromDescriptorSources(IEnumerable<IWorkflowExecutorDescriptorSource> sources)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+        return new WorkflowExecutorCatalog(sources.SelectMany(source => source.ListExecutorDescriptors()));
     }
 
     public IReadOnlyList<WorkflowExecutorDescriptor> ListExecutors() => descriptors;
@@ -114,6 +131,12 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
         }
 
         throw new InvalidOperationException($"Workflow executor '{executorId}' is not registered.");
+    }
+
+    private static IEnumerable<WorkflowExecutorDescriptor> ResolveDescriptors(IEnumerable<IWorkflowExecutor> executors)
+    {
+        ArgumentNullException.ThrowIfNull(executors);
+        return executors.Select(executor => executor.Descriptor);
     }
 }
 

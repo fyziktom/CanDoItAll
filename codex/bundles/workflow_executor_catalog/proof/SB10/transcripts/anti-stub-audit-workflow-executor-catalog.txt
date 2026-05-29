@@ -1,0 +1,42 @@
+Command: rg -n TODO|FIXME|NotImplementedException|throw new NotImplemented|throw new NotSupportedException|placeholder|stub workflow executor catalog touched paths -S
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:897:        const string searchSelector = "input[placeholder='Search nodes, executors, files, HTTP, spreadsheets']";
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1848:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1854:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1859:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1865:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1887:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1892:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1897:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1903:            => throw new NotSupportedException();
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentCatalogPanel.razor:26:                           placeholder="Search agents"
+Templates\Workflows\workflows\default-workflows.yaml:665:      Treat the loaded SEAMARK folder as the primary source. Read every loaded PDF text and produce a real device summary, not a placeholder.
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MarkdownRenderWorkflowExecutor.cs:73:                throw new InvalidOperationException("Markdown table binding placeholder is required.");
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MarkdownRenderWorkflowExecutor.cs:139:            throw new InvalidOperationException($"Markdown render placeholder '{key}' does not have a binding.");
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\PlannedWorkflowExecutor.cs:15:        throw new NotSupportedException($"Workflow executor '{Descriptor.Id}' is planned but not implemented in this bundle.");
+Templates\Workflows\workflows\workflow-executor-catalog-workflows.yaml:53:                - placeholder: entries
+Templates\Workflows\workflows\workflow-executor-catalog-workflows.yaml:193:                - placeholder: documents
+src\CanDoItAll.Modules.Plugins\Pages\PluginsPage.razor:317:                                                                                   placeholder="@(PluginsPageHelpers.ResolveFieldPlaceholder(selectedSettings, field, Navigation.ToAbsoluteUri("/api/plugins/oauth/callback").ToString()))"
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:97:            var placeholders = severities
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:100:                    var placeholder = $"{{{parameters.Count}}}";
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:102:                    return placeholder;
+src\CanDoItAll.Modules.Plugins\Catalog\PluginLogServices.cs:104:            filters.Add($@"""Severity"" IN ({string.Join(", ", placeholders)})");
+src\CanDoItAll.Modules.Plugins\Persistence\PluginSchemaInitializer.cs:22:        throw new NotSupportedException($"Plugin schema initialization only supports PostgreSQL relational providers. Provider '{provider}' is not supported.");
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentDetailsDialog.razor:300:                                                   placeholder="C:\repositories\OtherRepo&#10;external-target/D/work/repos/demo"
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentDetailsDialog.razor:340:                                                   placeholder="00000000-0000-0000-0000-000000000000"
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentTeamMembersDialog.razor:10:                   placeholder="Search agents"
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:965:                                           placeholder="$.status"
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:1551:                                                       placeholder="$.route"
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:463:        string placeholder = "",
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:473:            Placeholder = placeholder,
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:482:        string placeholder = "",
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:484:        => TextField(key, section, label, placeholder, "textarea", required);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:490:        string placeholder)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:491:        => TextField(key, section, label, placeholder, "number");
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasModels.cs:1332:    private static CanvasWorkbenchInputField RouteJsonPathField(string sectionTitle, string placeholder)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasModels.cs:1340:            Placeholder = placeholder,
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasModels.cs:1344:    private static CanvasWorkbenchInputField BranchLabelField(string key, string label, string placeholder)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasModels.cs:1352:            Placeholder = placeholder,
+

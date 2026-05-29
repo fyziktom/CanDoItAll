@@ -1493,7 +1493,7 @@ public partial class WorkflowCanvasEditor
             .Select(executor => new OverlayToolboxItem(
                 WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
                 executor.Name,
-                executor.Description,
+                WorkflowExecutorCanvasCatalog.BuildExecutorSummary(executor),
                 Icon: executor.IconName,
                 Tone: WorkflowExecutorCanvasCatalog.ResolveTone(executor.Category),
                 IsDisabled: !executor.CanExecute,
@@ -1528,7 +1528,7 @@ public partial class WorkflowCanvasEditor
             .Select(executor => new OverlayToolboxItem(
                 WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
                 executor.Name,
-                executor.Description,
+                WorkflowExecutorCanvasCatalog.BuildExecutorSummary(executor),
                 Icon: executor.IconName,
                 Tone: "accent",
                 IsDisabled: !executor.CanExecute,

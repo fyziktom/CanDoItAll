@@ -1,10 +1,17 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.AgentFramework.Maf;
+
+public sealed class BuiltInWorkflowExecutorDescriptorSource : IWorkflowExecutorDescriptorSource
+{
+    public IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors()
+        => BuiltInWorkflowExecutorDescriptors.All;
+}
 
 public static class BuiltInWorkflowExecutorDescriptors
 {
@@ -20,7 +27,7 @@ public static class BuiltInWorkflowExecutorDescriptors
     public static WorkflowExecutorDescriptor StorageFile { get; } = Create(
         WorkflowExecutorIds.StorageFile,
         "Workspace files",
-        "Lists, reads, writes, appends, searches, stats, and diffs files through the workspace storage boundary.",
+        "Lists, reads, writes, moves, deletes, hashes, zips, unzips, searches, stats, and diffs files through the workspace storage boundary.",
         WorkflowExecutorCategoryKind.Storage,
         "folder_open",
         "builtin.storage-file",
@@ -32,6 +39,36 @@ public static class BuiltInWorkflowExecutorDescriptors
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
             WorkflowExecutorApprovalRequirement.NotRequired),
         deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Uses the configured workspace file boundary and can be tested with sandbox files."));
+
+    public static WorkflowExecutorDescriptor JsonTransform { get; } = Create(
+        WorkflowExecutorIds.JsonTransform,
+        "JSON transform",
+        "Transforms JSON with typed deterministic select, set, remove, merge, array, count, template, and validation operations.",
+        WorkflowExecutorCategoryKind.Data,
+        "data_object",
+        "builtin.json-transform",
+        new WorkflowJsonTransformExecutorSettings(),
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Runs deterministic JSON transformations without external calls or arbitrary code."));
+
+    public static WorkflowExecutorDescriptor MarkdownRender { get; } = Create(
+        WorkflowExecutorIds.MarkdownRender,
+        "Markdown render",
+        "Renders Markdown from JSON bindings and tables, with optional workspace file output.",
+        WorkflowExecutorCategoryKind.Markdown,
+        "article",
+        "builtin.markdown-render",
+        new WorkflowMarkdownRenderExecutorSettings(),
+        defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { CaptureOutputArtifact = true },
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsWorkspace |
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Renders deterministic Markdown from local JSON payloads and workspace templates."));
 
     public static WorkflowExecutorDescriptor SourceIngestion { get; } = Create(
         WorkflowExecutorIds.SourceIngestion,
@@ -52,7 +89,7 @@ public static class BuiltInWorkflowExecutorDescriptors
     public static WorkflowExecutorDescriptor HttpFetch { get; } = Create(
         WorkflowExecutorIds.HttpFetch,
         "HTTP fetch",
-        "Fetches bounded HTTP/HTTPS content with explicit method, headers, body, and size settings.",
+        "Fetches or downloads bounded HTTP/HTTPS content with SSRF guardrails, explicit method, headers, body, and size settings.",
         WorkflowExecutorCategoryKind.Http,
         "public",
         "builtin.http-fetch",
@@ -60,9 +97,37 @@ public static class BuiltInWorkflowExecutorDescriptors
         defaultPolicy: WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 20 },
         permissionPolicy: new WorkflowExecutorPermissionPolicy(
             WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.WritesWorkspace |
+            WorkflowExecutorCapabilityFlags.EmitsArtifacts |
             WorkflowExecutorCapabilityFlags.UsesNetwork |
             WorkflowExecutorCapabilityFlags.UsesSecrets,
-            WorkflowExecutorApprovalRequirement.NotRequired));
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect));
+
+    public static WorkflowExecutorDescriptor Delay { get; } = Create(
+        WorkflowExecutorIds.Delay,
+        "Delay",
+        "Waits for a short bounded in-process delay. This is not durable scheduling.",
+        WorkflowExecutorCategoryKind.Utility,
+        "timer",
+        "builtin.delay",
+        new WorkflowDelayExecutorSettings(),
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Supports short bounded in-process delay tests."));
+
+    public static WorkflowExecutorDescriptor ApprovalRequest { get; } = Create(
+        WorkflowExecutorIds.ApprovalRequest,
+        "Approval request",
+        "Creates a workflow approval request through the existing external request runtime.",
+        WorkflowExecutorCategoryKind.Human,
+        "approval",
+        "builtin.approval-request",
+        new WorkflowApprovalExecutorSettings(),
+        permissionPolicy: new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        deterministicTestMode: WorkflowExecutorDeterministicTestModeDescriptor.Supported("Creates deterministic external approval request records when reached."));
 
     public static WorkflowExecutorDescriptor Spreadsheet { get; } = Create(
         WorkflowExecutorIds.Spreadsheet,
@@ -111,15 +176,31 @@ public static class BuiltInWorkflowExecutorDescriptors
             WorkflowExecutorCapabilityFlags.ReadsExternalData |
             WorkflowExecutorCapabilityFlags.UsesNetwork |
             WorkflowExecutorCapabilityFlags.EmitsArtifacts,
-            WorkflowExecutorApprovalRequirement.NotRequired));
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect));
 
     public static IReadOnlyList<WorkflowExecutorDescriptor> Planned { get; } =
     [
-        CreatePlanned(WorkflowExecutorIds.JsonTransform, "JSON transform", "Transforms JSON using a typed projection expression.", WorkflowExecutorCategoryKind.Data, "data_object", "planned.json-transform"),
-        CreatePlanned(WorkflowExecutorIds.MarkdownRender, "Markdown render", "Builds Markdown from structured workflow values.", WorkflowExecutorCategoryKind.Markdown, "article", "planned.markdown-render"),
-        CreatePlanned(WorkflowExecutorIds.Delay, "Delay", "Waits or schedules a workflow continuation.", WorkflowExecutorCategoryKind.Utility, "timer", "planned.delay"),
-        CreatePlanned(WorkflowExecutorIds.ApprovalRequest, "Approval request", "Creates a human approval/request node during workflow execution.", WorkflowExecutorCategoryKind.Human, "approval", "planned.approval-request"),
         CreatePlanned(WorkflowExecutorIds.CommandProcess, "Command process", "Runs a bounded local process through the existing workspace command service.", WorkflowExecutorCategoryKind.Command, "terminal", "planned.command-process")
+    ];
+
+    public static IReadOnlyList<WorkflowExecutorDescriptor> Implemented { get; } =
+    [
+        StorageFile,
+        JsonTransform,
+        MarkdownRender,
+        SourceIngestion,
+        HttpFetch,
+        Delay,
+        ApprovalRequest,
+        Spreadsheet,
+        ProjectStructure,
+        ImageGeneration
+    ];
+
+    public static IReadOnlyList<WorkflowExecutorDescriptor> All { get; } =
+    [
+        .. Implemented,
+        .. Planned
     ];
 
     private static WorkflowExecutorDescriptor Create<TSettings>(

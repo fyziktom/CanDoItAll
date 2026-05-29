@@ -59,12 +59,14 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<ISpreadsheetDocumentService, ClosedXmlSpreadsheetDocumentService>();
         services.TryAddSingleton<IProjectStructureRuntimeGateway, UnavailableProjectStructureRuntimeGateway>();
         services.AddBuiltInWorkflowExecutors();
-        services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+        services.TryAddScoped<IWorkflowExecutorCatalog>(serviceProvider =>
+            WorkflowExecutorCatalog.FromDescriptorSources(serviceProvider.GetServices<IWorkflowExecutorDescriptorSource>()));
         services.TryAddScoped<IWorkflowExecutorExecutionObserver, CompositeWorkflowExecutorExecutionObserver>();
         services.TryAddSingleton<IWorkflowExecutorApprovalGate, WorkflowExternalRequestApprovalGate>();
         services.TryAddScoped<IWorkflowExecutorInvoker, WorkflowExecutorInvoker>();
         services.TryAddSingleton<IWorkflowLlmComponentInvoker, MafWorkflowLlmComponentInvoker>();
-        services.TryAddSingleton<IWorkflowDefinitionValidator>(_ => new WorkflowDefinitionValidator());
+        services.TryAddScoped<IWorkflowDefinitionValidator>(serviceProvider => new WorkflowDefinitionValidator(
+            serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
         services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
         services.TryAddSingleton<InMemoryWorkflowCatalogStore>();
         services.TryAddScoped(serviceProvider => new InMemoryWorkflowCatalogService(
@@ -81,6 +83,7 @@ public static class AgentFrameworkServiceCollectionExtensions
         services.TryAddSingleton<IWorkflowArtifactStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowExternalRequestStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
         services.TryAddSingleton<IWorkflowCheckpointStore>(serviceProvider => serviceProvider.GetRequiredService<InMemoryWorkflowRunStore>());
+        services.TryAddSingleton<IWorkflowArtifactContentStore>(_ => new FileWorkflowArtifactContentStore(normalizedWorkspaceRoot, resolvedScope));
         services.TryAddSingleton<IWorkflowCheckpointFactory, WorkflowCheckpointFactory>();
         services.TryAddScoped<IWorkflowPayloadPolicyService, WorkflowPayloadPolicyService>();
         services.TryAddSingleton<IWorkflowEventSink, NullWorkflowEventSink>();

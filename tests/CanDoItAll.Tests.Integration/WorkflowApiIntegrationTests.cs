@@ -423,6 +423,15 @@ public sealed class WorkflowApiIntegrationTests
         Assert.Contains(result.Artifacts, artifact =>
             artifact.Kind == WorkflowArtifactKind.Json &&
             artifact.NodeId == new WorkflowNodeId("logic"));
+
+        var inputArtifact = Assert.Single(result.Artifacts, artifact =>
+            artifact.Kind == WorkflowArtifactKind.Json &&
+            artifact.Name.Contains("input", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(result.Run);
+        var artifactContent = await host.Client.GetStringAsync(
+            $"/api/workflows/runs/{result.Run!.RunId.Value:D}/artifacts/{inputArtifact.Id.Value:D}/content");
+        Assert.Contains("[REDACTED]", artifactContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", artifactContent, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -443,6 +452,7 @@ public sealed class WorkflowApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/workflows/definitions/import", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/events", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/checkpoints", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/artifacts/{artifactId}/content", out _));
     }
 
     [Fact]
