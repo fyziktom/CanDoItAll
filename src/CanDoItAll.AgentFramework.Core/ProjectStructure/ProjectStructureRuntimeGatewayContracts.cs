@@ -24,6 +24,13 @@ public interface IProjectStructureRuntimeGateway
         CancellationToken cancellationToken = default);
 }
 
+public static class ProjectStructureRuntimeIdempotencyMetadata
+{
+    public const string MetadataPropertyName = "workflowProjectWrite";
+    public const string IdempotencyKeyPropertyName = "idempotencyKey";
+    public const string BatchIdempotencyKeyPropertyName = "batchIdempotencyKey";
+}
+
 public sealed class UnavailableProjectStructureRuntimeGateway : IProjectStructureRuntimeGateway
 {
     public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default)
@@ -195,7 +202,9 @@ public sealed record ProjectStructureRuntimeNodeCreateRequest(
     ProjectStructureRuntimeMediaPayload? Media = null,
     string? MetadataJson = null,
     string? LeaseToken = null,
-    int? DurationSeconds = null);
+    int? DurationSeconds = null,
+    string? IdempotencyKey = null,
+    string? IdempotencyBatchKey = null);
 
 public sealed record ProjectStructureRuntimeAssetCreateRequest(
     ProjectObjectType ObjectType,
@@ -209,4 +218,6 @@ public sealed record ProjectStructureRuntimeAssetCreateRequest(
     string? LeaseToken = null,
     string? SourceWorkspacePath = null,
     string? SourceFileName = null,
-    string? SourceContentType = null);
+    string? SourceContentType = null,
+    string? IdempotencyKey = null,
+    string? IdempotencyBatchKey = null);

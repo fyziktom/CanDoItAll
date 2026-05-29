@@ -8,11 +8,23 @@ public sealed record MafWorkflowBuildResult(
     Workflow? Workflow,
     WorkflowCompilationResult Compilation);
 
+public interface IWorkflowMafCompiler
+{
+    MafWorkflowBuildResult Compile(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components);
+
+    MafWorkflowBuildResult Compile(
+        WorkflowDefinition definition,
+        IReadOnlyList<LlmCallComponent> components,
+        WorkflowPreviewSimulationPlan? previewSimulationPlan);
+}
+
 public sealed class MafWorkflowCompiler(
     IWorkflowDefinitionValidator validator,
     IWorkflowExecutorInvoker? executorInvoker = null,
     IWorkflowLlmComponentInvoker? llmComponentInvoker = null,
-    IWorkflowRoutingCompiler? routingCompiler = null)
+    IWorkflowRoutingCompiler? routingCompiler = null) : IWorkflowMafCompiler
 {
     public MafWorkflowBuildResult Compile(
         WorkflowDefinition definition,
@@ -206,7 +218,7 @@ public sealed class MafWorkflowCompiler(
             await RecordProgressAsync(
                 progressObserver,
                 definition,
-                node.Id,
+                node,
                 WorkflowNodeExecutionProgressState.Started,
                 cancellationToken);
 
@@ -216,19 +228,25 @@ public sealed class MafWorkflowCompiler(
                 await RecordProgressAsync(
                     progressObserver,
                     definition,
-                    node.Id,
+                    node,
                     WorkflowNodeExecutionProgressState.Completed,
-                    cancellationToken);
+                    cancellationToken,
+                    payloadJson: output.PayloadJson);
                 return output;
             }
-            catch
+            catch (WorkflowExternalRequestPendingException)
+            {
+                throw;
+            }
+            catch (Exception exception)
             {
                 await RecordProgressAsync(
                     progressObserver,
                     definition,
-                    node.Id,
+                    node,
                     WorkflowNodeExecutionProgressState.Failed,
-                    CancellationToken.None);
+                    CancellationToken.None,
+                    errorMessage: exception.Message);
                 throw;
             }
 
@@ -286,6 +304,28 @@ public sealed class MafWorkflowCompiler(
                     return new WorkflowNodeInput(result.PayloadJson);
                 }
 
+                if (node.Kind == WorkflowNodeKind.HumanInput)
+                {
+                    var runId = WorkflowExecutorExecutionAuditScope.CurrentRunId
+                        ?? throw new InvalidOperationException($"Human input workflow node '{node.Id}' requires an active workflow run id.");
+                    var now = DateTimeOffset.UtcNow;
+                    var requestRecord = new WorkflowExternalRequestRecord(
+                        WorkflowExternalRequestId.New(),
+                        runId,
+                        node.Settings.ExternalRequestKind ?? WorkflowExternalRequestKind.HumanInput,
+                        node.Id,
+                        EventName: node.Id.Value,
+                        RequestJson: nodeInput.PayloadJson,
+                        ResponseJson: string.Empty,
+                        CreatedAtUtc: now,
+                        RespondedAtUtc: null);
+                    WorkflowExternalRequestCaptureScope.Record(requestRecord);
+
+                    throw new WorkflowExternalRequestPendingException(
+                        requestRecord,
+                        $"Workflow is waiting for input at node '{node.Id}'.");
+                }
+
                 return nodeInput;
             }
         }
@@ -297,9 +337,11 @@ public sealed class MafWorkflowCompiler(
     private static ValueTask RecordProgressAsync(
         IWorkflowNodeExecutionProgressObserver? observer,
         WorkflowDefinition definition,
-        WorkflowNodeId nodeId,
+        WorkflowNode node,
         WorkflowNodeExecutionProgressState state,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string payloadJson = "",
+        string errorMessage = "")
     {
         return observer is null
             ? ValueTask.CompletedTask
@@ -308,9 +350,14 @@ public sealed class MafWorkflowCompiler(
                     definition.Id,
                     definition.VersionId,
                     WorkflowExecutorExecutionAuditScope.CurrentRunId,
-                    nodeId,
+                    node.Id,
                     state,
-                    DateTimeOffset.UtcNow),
+                    DateTimeOffset.UtcNow)
+                {
+                    ExecutorId = node.Settings.ExecutorId,
+                    PayloadJson = payloadJson,
+                    ErrorMessage = errorMessage
+                },
                 cancellationToken);
     }
 }

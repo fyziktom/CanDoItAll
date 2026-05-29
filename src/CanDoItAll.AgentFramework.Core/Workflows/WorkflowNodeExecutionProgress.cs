@@ -15,7 +15,14 @@ public sealed record WorkflowNodeExecutionProgress(
     WorkflowRunId? RunId,
     WorkflowNodeId NodeId,
     WorkflowNodeExecutionProgressState State,
-    DateTimeOffset OccurredAtUtc);
+    DateTimeOffset OccurredAtUtc)
+{
+    public WorkflowExecutorId? ExecutorId { get; init; }
+
+    public string PayloadJson { get; init; } = string.Empty;
+
+    public string ErrorMessage { get; init; } = string.Empty;
+}
 
 public interface IWorkflowNodeExecutionProgressObserver
 {

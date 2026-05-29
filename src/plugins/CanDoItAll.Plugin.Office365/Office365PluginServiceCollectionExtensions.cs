@@ -21,6 +21,7 @@ public static class Office365PluginServiceCollectionExtensions
         if (registerWorkflowExecutors)
         {
             services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByCategoryWorkflowExecutor>());
+            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365DownloadByAddressWorkflowExecutor>());
             services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365MarkProcessedWorkflowExecutor>());
         }
 

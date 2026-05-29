@@ -11,17 +11,35 @@ namespace CanDoItAll.Modules.Plugins;
 
 public sealed class PluginLogStore(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IClock clock)
+    IClock clock,
+    IWorkflowPayloadPolicyService? payloadPolicyService = null)
 {
     private const int MaxMessageLength = 1200;
     private const int MaxDetailsLength = 8000;
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly IWorkflowPayloadPolicyService payloadPolicyService = payloadPolicyService ?? new WorkflowPayloadPolicyService();
 
     public async Task<PluginLogItem> WriteAsync(
         PluginLogWriteRequest request,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        var message = await ApplyLogPayloadPolicyAsync(
+            WorkflowPayloadPolicyScope.PluginLogMessage,
+            request.Message,
+            WorkflowArtifactKind.Text,
+            "plugin-log-message.txt",
+            "text/plain",
+            MaxMessageLength,
+            cancellationToken);
+        var detailsJson = await ApplyLogPayloadPolicyAsync(
+            WorkflowPayloadPolicyScope.PluginLogDetails,
+            request.DetailsJson,
+            WorkflowArtifactKind.Json,
+            "plugin-log-details.json",
+            "application/json",
+            MaxDetailsLength,
+            cancellationToken);
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var record = new PluginLogRecord
         {
@@ -32,8 +50,8 @@ public sealed class PluginLogStore(
             OperationKind = request.OperationKind.ToString(),
             Severity = request.Severity.ToString(),
             Status = NormalizeStatus(request.Status),
-            Message = Truncate(WorkflowExecutorRedaction.RedactText(request.Message), MaxMessageLength),
-            DetailsJson = NormalizeDetailsJson(request.DetailsJson),
+            Message = message.InlinePayload,
+            DetailsJson = string.IsNullOrWhiteSpace(detailsJson.InlinePayload) ? "{}" : detailsJson.InlinePayload,
             CorrelationId = string.IsNullOrWhiteSpace(request.CorrelationId) ? Guid.NewGuid().ToString("N") : request.CorrelationId.Trim(),
             CreatedAtUtc = clock.GetUtcNow()
         };
@@ -106,19 +124,31 @@ public sealed class PluginLogStore(
     public static string SerializeDetails(object details)
         => JsonSerializer.Serialize(details, JsonOptions);
 
+    private async ValueTask<WorkflowPayloadPolicyResult> ApplyLogPayloadPolicyAsync(
+        WorkflowPayloadPolicyScope scope,
+        string payload,
+        WorkflowArtifactKind artifactKind,
+        string name,
+        string contentType,
+        int maxInlinePayloadCharacters,
+        CancellationToken cancellationToken)
+    {
+        return await payloadPolicyService.ApplyAsync(new WorkflowPayloadPolicyRequest(
+            RunId: null,
+            scope,
+            payload,
+            artifactKind,
+            name,
+            contentType,
+            clock.GetUtcNow())
+        {
+            CaptureArtifact = false,
+            MaxInlinePayloadCharacters = maxInlinePayloadCharacters
+        }, cancellationToken);
+    }
+
     private static string NormalizeStatus(string status)
         => string.IsNullOrWhiteSpace(status) ? "Recorded" : Truncate(status.Trim(), 80);
-
-    private static string NormalizeDetailsJson(string detailsJson)
-    {
-        if (string.IsNullOrWhiteSpace(detailsJson))
-        {
-            return "{}";
-        }
-
-        var redacted = WorkflowExecutorRedaction.RedactSettingsJson(detailsJson);
-        return Truncate(redacted, MaxDetailsLength);
-    }
 
     private static string[] ResolveSeverityFilter(PluginLogSeverity severity)
         => severity switch
@@ -148,7 +178,7 @@ public sealed class PluginLogStore(
 }
 
 public sealed class PluginWorkflowExecutorExecutionObserver(
-    PluginLogStore logStore) : IWorkflowExecutorExecutionObserver
+    PluginLogStore logStore) : IWorkflowExecutorExecutionAuditSink
 {
     public async ValueTask RecordAsync(
         WorkflowExecutorExecutionAuditRecord auditRecord,

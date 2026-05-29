@@ -166,6 +166,8 @@ public enum ProjectLlmActionKind
 
 public sealed class ProjectObjectMetadataEnvelope
 {
+    public ProjectWorkflowProjectWriteMetadata? WorkflowProjectWrite { get; set; }
+
     public ProjectMeetingMetadata? Meeting { get; set; }
 
     public ProjectRecordingMetadata? Recording { get; set; }
@@ -191,6 +193,13 @@ public sealed class ProjectObjectMetadataEnvelope
     public ProjectLinkMetadata? Link { get; set; }
 
     public ProjectWorkflowNodeMetadata? Workflow { get; set; }
+}
+
+public sealed class ProjectWorkflowProjectWriteMetadata
+{
+    public string IdempotencyKey { get; set; } = string.Empty;
+
+    public string BatchIdempotencyKey { get; set; } = string.Empty;
 }
 
 public sealed record ProjectNodeMarker(

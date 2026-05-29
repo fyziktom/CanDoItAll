@@ -42,6 +42,10 @@ public interface IWorkflowRuntimeManager
         WorkflowRunId runId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default);
+
     Task<WorkflowListPage<WorkflowEventRecord>> ListEventPageAsync(
         WorkflowEventPageRequest request,
         CancellationToken cancellationToken = default);
@@ -60,7 +64,10 @@ public sealed record WorkflowBackendStartResult(
     WorkflowRunSnapshot Run,
     IReadOnlyList<WorkflowEventRecord> Events,
     IReadOnlyList<WorkflowExternalRequestRecord> ExternalRequests,
-    IReadOnlyList<WorkflowArtifactRecord> Artifacts);
+    IReadOnlyList<WorkflowArtifactRecord> Artifacts)
+{
+    public IReadOnlyList<WorkflowCheckpointRecord> Checkpoints { get; init; } = [];
+}
 
 public interface IWorkflowExecutionBackend
 {
@@ -73,7 +80,90 @@ public interface IWorkflowExecutionBackend
         CancellationToken cancellationToken = default);
 }
 
-public interface IWorkflowRunStore
+public interface IWorkflowCheckpointStore
+{
+    Task<WorkflowCheckpointRecord> SaveCheckpointAsync(
+        WorkflowCheckpointRecord checkpoint,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowCheckpointRecord?> GetCheckpointAsync(
+        WorkflowCheckpointId checkpointId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowCheckpointRecord> MarkCheckpointResumedAsync(
+        WorkflowCheckpointId checkpointId,
+        DateTimeOffset resumedAtUtc,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record WorkflowCheckpointCreateRequest(
+    WorkflowDefinition Definition,
+    WorkflowRunId RunId,
+    WorkflowRuntimeBackendKind Backend,
+    WorkflowCheckpointKind Kind,
+    DateTimeOffset CreatedAtUtc)
+{
+    public WorkflowNodeId? NodeId { get; init; }
+
+    public WorkflowExternalRequestId? ExternalRequestId { get; init; }
+
+    public string BackendCheckpointId { get; init; } = string.Empty;
+
+    public string PayloadReference { get; init; } = string.Empty;
+
+    public string Summary { get; init; } = string.Empty;
+}
+
+public interface IWorkflowCheckpointFactory
+{
+    WorkflowCheckpointRecord CreateMetadataCheckpoint(WorkflowCheckpointCreateRequest request);
+}
+
+public sealed class WorkflowCheckpointFactory : IWorkflowCheckpointFactory
+{
+    public const string MetadataOnlyPayloadReference = "runtime://metadata-only";
+
+    public const string MetadataOnlyResumeUnavailableReason =
+        "Resume is not available for metadata-only workflow checkpoints. Use a durable workflow backend with trusted runtime state before enabling resume.";
+
+    public WorkflowCheckpointRecord CreateMetadataCheckpoint(WorkflowCheckpointCreateRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Definition);
+
+        var payloadReference = string.IsNullOrWhiteSpace(request.PayloadReference)
+            ? MetadataOnlyPayloadReference
+            : request.PayloadReference.Trim();
+        var summary = string.IsNullOrWhiteSpace(request.Summary)
+            ? $"Workflow checkpoint '{request.Kind}' captured."
+            : request.Summary.Trim();
+
+        return new WorkflowCheckpointRecord(
+            WorkflowCheckpointId.New(),
+            request.RunId,
+            request.Definition.Id,
+            request.Definition.VersionId,
+            request.Backend,
+            request.Kind,
+            WorkflowCheckpointTrustBoundary.MetadataOnly,
+            WorkflowResumeAvailability.NotSupported,
+            request.NodeId,
+            request.ExternalRequestId,
+            request.BackendCheckpointId.Trim(),
+            payloadReference,
+            PayloadHash: string.Empty,
+            summary,
+            MetadataOnlyResumeUnavailableReason,
+            request.CreatedAtUtc,
+            ResumedAtUtc: null);
+    }
+}
+
+public interface IWorkflowRunStore : IWorkflowCheckpointStore
 {
     Task SaveRunAsync(WorkflowRunSnapshot run, CancellationToken cancellationToken = default);
 
@@ -144,6 +234,22 @@ public interface IWorkflowArtifactStore
         CancellationToken cancellationToken = default);
 
     Task<WorkflowArtifactRecord> SaveArtifactAsync(
+        WorkflowArtifactRecord artifact,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record WorkflowArtifactContent(
+    WorkflowArtifactRecord Artifact,
+    string Content);
+
+public interface IWorkflowArtifactContentStore
+{
+    Task SaveContentAsync(
+        WorkflowArtifactRecord artifact,
+        string content,
+        CancellationToken cancellationToken = default);
+
+    Task<WorkflowArtifactContent?> ReadContentAsync(
         WorkflowArtifactRecord artifact,
         CancellationToken cancellationToken = default);
 }

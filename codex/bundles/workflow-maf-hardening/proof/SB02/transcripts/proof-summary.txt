@@ -1,0 +1,22 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowTemplatePackLoaderTests.Load_rejects_semantically_invalid_template_graph_with_source_context" --no-restore
+ExitCode: 1
+Result: Failing-first run before template graph validation was added. The invalid workflow template was accepted, proving the test guarded real behavior.
+- Invariant ID: SB02-INV-001
+- Test name: CanDoItAll.Tests.Unit.WorkflowTemplatePackLoaderTests.Load_rejects_semantically_invalid_template_graph_with_source_context
+
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowTemplatePackLoaderTests|FullyQualifiedName~WorkflowCatalogTests.CatalogRejectsInvalidDefinitionOnSave|FullyQualifiedName~ProjectStructureWorkflowPreviewSimulationSupportTests.Default_template_pack_loads_file_backed_workflow_examples" --no-restore
+ExitCode: 0
+Result: Template pack semantic validation and catalog save validation passed.
+- Invariant ID: SB02-INV-001
+- Test name: CanDoItAll.Tests.Unit.WorkflowCatalogTests.CatalogRejectsInvalidDefinitionOnSave
+
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~WorkflowApiIntegrationTests" --no-restore
+ExitCode: 0
+Result: API save now rejects invalid workflow definitions before persistence.
+- Invariant ID: SB02-INV-001
+- Test name: CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_rejects_invalid_definition_on_save
+
+Command: rg -n "ValidateTemplateGraphs|Workflow definition save failed validation|ThrowIfValidationFailed|CatalogRejectsInvalidDefinitionOnSave|Workflow_api_rejects_invalid_definition_on_save" src tests
+ExitCode: 0
+Result: Anti-stub audit found production validation paths and tests.
+- Invariant ID: SB02-INV-001

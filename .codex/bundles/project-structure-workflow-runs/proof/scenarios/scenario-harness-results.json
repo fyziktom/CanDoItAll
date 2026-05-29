@@ -1,5 +1,5 @@
 {
-  "completedAtUtc": "2026-05-25T21:15:36.056629+00:00",
+  "completedAtUtc": "2026-05-29T23:01:21.3599843+00:00",
   "databaseProvider": "PostgreSql",
   "databaseProfileKey": "scenario-harness",
   "providerPlan": "InProcess deterministic workflow definitions; provider-specific runs are owned by subbundle 07.",
@@ -8,18 +8,24 @@
       "id": "S01",
       "title": "Mouser order XLS/PDF reconciliation",
       "workflowName": "Scenario Harness: S01 Mouser order XLS/PDF reconciliation",
-      "runId": "903a444e-b87d-48f2-8b55-2eb2fa930f6c",
+      "runId": "4c5020ba-4d7d-48b4-a2a0-6ae8745eb350",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:591ac224016347e59f342a55b007ea5f"
+        "custom:1a9bde1ca3fc40269578a8c3d50df226"
       ],
       "createdAssetIds": [
-        "custom:591ac224016347e59f342a55b007ea5f"
+        "custom:1a9bde1ca3fc40269578a8c3d50df226"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/4c5020ba4d7d48b4a2a06ae8745eb350/payloads/executor-output-462a1237b43c4eaf80c8f34b3524b4e1.json",
+        "workflow-runs/4c5020ba4d7d48b4a2a06ae8745eb350/payloads/executor-output-b6e86efdce414bdbafd88c58e03bd12e.json",
+        "workflow-runs/4c5020ba4d7d48b4a2a06ae8745eb350/payloads/executor-output-dbe088faf8aa45ae90778f93b56a88ee.json",
+        "workflow-runs/4c5020ba4d7d48b4a2a06ae8745eb350/payloads/executor-output-1986e5ec0f1a416f9bc4899f60632694.json",
+        "workflow-runs/4c5020ba4d7d48b4a2a06ae8745eb350/payloads/executor-output-2f1872f1371f4d67973c20e0478d7667.json"
+      ],
       "validations": [
         "Validated result contains \u002789566550\u0027.",
         "Validated result contains \u0027485-4754\u0027.",
@@ -31,18 +37,24 @@
       "id": "S02",
       "title": "Mouser order purchasing summary",
       "workflowName": "Scenario Harness: S02 Mouser order purchasing summary",
-      "runId": "851ff9f7-2b6f-4726-af31-36e22a055d23",
+      "runId": "045b327e-b393-4215-a809-64992877c2aa",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:b3f0233368ea4f6887e858a003608121"
+        "custom:c27e9d6047014941a43aebd2395b694c"
       ],
       "createdAssetIds": [
-        "custom:b3f0233368ea4f6887e858a003608121"
+        "custom:c27e9d6047014941a43aebd2395b694c"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/045b327eb3934215a80964992877c2aa/payloads/executor-output-0207288907784d7ab235bcb7fd458ed0.json",
+        "workflow-runs/045b327eb3934215a80964992877c2aa/payloads/executor-output-b6d8c21987974019b72c3bd98b3ba081.json",
+        "workflow-runs/045b327eb3934215a80964992877c2aa/payloads/executor-output-6d2e6a4a3f0c406c91b8a6e9f798952f.json",
+        "workflow-runs/045b327eb3934215a80964992877c2aa/payloads/executor-output-8e19b949b3f44b9c8ab425f854c457a8.json",
+        "workflow-runs/045b327eb3934215a80964992877c2aa/payloads/executor-output-1aa9cc8a23534848bccfd07c0d64a17e.json"
+      ],
       "validations": [
         "Validated result contains \u002789566550\u0027.",
         "Validated result contains \u0027Adafruit\u0027.",
@@ -53,18 +65,24 @@
       "id": "S03",
       "title": "SEAMARK folder x-ray device summary",
       "workflowName": "Scenario Harness: S03 SEAMARK folder x-ray device summary",
-      "runId": "d392db3b-aaf2-44bf-be52-961f44795112",
+      "runId": "15ed2333-9ff0-48c9-9a11-4676ec71128a",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:90a2ae6cbcc24e379f9edc6aa2787742"
+        "custom:032dd22ebedf46d7a5e3f86cbdb30e90"
       ],
       "createdAssetIds": [
-        "custom:90a2ae6cbcc24e379f9edc6aa2787742"
+        "custom:032dd22ebedf46d7a5e3f86cbdb30e90"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/15ed23339ff048c99a114676ec71128a/payloads/executor-output-872de54622164b11b5d39a318c351f76.json",
+        "workflow-runs/15ed23339ff048c99a114676ec71128a/payloads/executor-output-26211e25e33749e7b8a3cfdbf9cbf163.json",
+        "workflow-runs/15ed23339ff048c99a114676ec71128a/payloads/executor-output-731a933a31fe4b7bacedca452d663f1d.json",
+        "workflow-runs/15ed23339ff048c99a114676ec71128a/payloads/executor-output-8a6f5aa07833403cbd1de9b425cd1fba.json",
+        "workflow-runs/15ed23339ff048c99a114676ec71128a/payloads/executor-output-f09050ef1ecd408fb54ceee58ed58c47.json"
+      ],
       "validations": [
         "Validated result contains \u0027ZM-x5600\u0027.",
         "Validated result contains \u0027$35,000\u0027.",
@@ -76,18 +94,24 @@
       "id": "S04",
       "title": "SEAMARK price list extraction",
       "workflowName": "Scenario Harness: S04 SEAMARK price list extraction",
-      "runId": "a4f6908e-b0cc-4075-b2d8-077df4086531",
+      "runId": "7d9f065c-c34d-4b56-ad75-383562da8e6e",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:fcdd9632badd46779679e26076a8a4b6"
+        "custom:283910cec98641fbb1233f37abdec4af"
       ],
       "createdAssetIds": [
-        "custom:fcdd9632badd46779679e26076a8a4b6"
+        "custom:283910cec98641fbb1233f37abdec4af"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/7d9f065cc34d4b56ad75383562da8e6e/payloads/executor-output-c4d02df12dea4287984dc02f50a39109.json",
+        "workflow-runs/7d9f065cc34d4b56ad75383562da8e6e/payloads/executor-output-82bb25b39aea4190ab155ade82652c6b.json",
+        "workflow-runs/7d9f065cc34d4b56ad75383562da8e6e/payloads/executor-output-d2ed0a519a394860bd94576907cac7bf.json",
+        "workflow-runs/7d9f065cc34d4b56ad75383562da8e6e/payloads/executor-output-9dc9d2620a584ae5ac26cf50eead4d4e.json",
+        "workflow-runs/7d9f065cc34d4b56ad75383562da8e6e/payloads/executor-output-a1be67c463e840369105979331822a3a.json"
+      ],
       "validations": [
         "Validated result contains \u0027Quotation Date: 2018.10.15\u0027.",
         "Validated result contains \u0027USD73000-78000\u0027.",
@@ -98,18 +122,24 @@
       "id": "S05",
       "title": "SEAMARK model comparison",
       "workflowName": "Scenario Harness: S05 SEAMARK model comparison",
-      "runId": "f1ea3bac-ac31-4235-b5ea-a3770f205a00",
+      "runId": "4f740d3f-47b1-452c-93f0-c8212548a05c",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:e60eab1231ad4eeab6c1c4e83980cb8f"
+        "custom:faad0bf1241a4b04bf25f85e4888af57"
       ],
       "createdAssetIds": [
-        "custom:e60eab1231ad4eeab6c1c4e83980cb8f"
+        "custom:faad0bf1241a4b04bf25f85e4888af57"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/4f740d3f47b1452c93f0c8212548a05c/payloads/executor-output-206085301ce84c7db1f2b62111655d87.json",
+        "workflow-runs/4f740d3f47b1452c93f0c8212548a05c/payloads/executor-output-e0ad43bd03ac4f7ba8160de314dbb378.json",
+        "workflow-runs/4f740d3f47b1452c93f0c8212548a05c/payloads/executor-output-33a1c92536b04962b11a39c8b15621c0.json",
+        "workflow-runs/4f740d3f47b1452c93f0c8212548a05c/payloads/executor-output-610e26d791a4436f99bb756b15a34db6.json",
+        "workflow-runs/4f740d3f47b1452c93f0c8212548a05c/payloads/executor-output-30d795cd78ef46c1b798f77d9f7c74e9.json"
+      ],
       "validations": [
         "Validated result contains \u0027X-5600\u0027.",
         "Validated result contains \u0027X-6600\u0027.",
@@ -121,18 +151,24 @@
       "id": "S06",
       "title": "IoTFactory financial plan review",
       "workflowName": "Scenario Harness: S06 IoTFactory financial plan review",
-      "runId": "8e9a0072-eb57-406d-9ad3-6451645df3a1",
+      "runId": "67a644c0-8aac-4fbd-aa66-4856571efe04",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:503d9b0f95d04b11a6680f84a7159cb7"
+        "custom:b0e2d1da058d4121beb4e0d15fdff338"
       ],
       "createdAssetIds": [
-        "custom:503d9b0f95d04b11a6680f84a7159cb7"
+        "custom:b0e2d1da058d4121beb4e0d15fdff338"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/67a644c08aac4fbdaa664856571efe04/payloads/executor-output-3b0f057cf05746208cc77563e6e749d3.json",
+        "workflow-runs/67a644c08aac4fbdaa664856571efe04/payloads/executor-output-df2864f9303f4a4ab515f1666052f6fe.json",
+        "workflow-runs/67a644c08aac4fbdaa664856571efe04/payloads/executor-output-bca80cd2b6ef45b9b3809eccc1e0470b.json",
+        "workflow-runs/67a644c08aac4fbdaa664856571efe04/payloads/executor-output-7713f044a5b74270bbbf8f07732fa1a2.json",
+        "workflow-runs/67a644c08aac4fbdaa664856571efe04/payloads/executor-output-040e1ad5a0934d05a9a61abcf6c3b5f0.json"
+      ],
       "validations": [
         "Validated result contains \u0027Summary Rozpo\u010Det\u0027.",
         "Validated result contains \u0027P\u0159\u00EDjmy z modul\u016F\u0027.",
@@ -143,18 +179,24 @@
       "id": "S07",
       "title": "Business plan markdown review",
       "workflowName": "Scenario Harness: S07 Business plan markdown review",
-      "runId": "71f7be31-fbfe-4203-a06e-b0e13b63bceb",
+      "runId": "45faad65-1952-49ce-9736-1c996cbe8ac9",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:e03178d1a7f04036a3717bf1573c67c6"
+        "custom:2a33f6b9d4bd4dacb126832e78b02073"
       ],
       "createdAssetIds": [
-        "custom:e03178d1a7f04036a3717bf1573c67c6"
+        "custom:2a33f6b9d4bd4dacb126832e78b02073"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/45faad65195249ce97361c996cbe8ac9/payloads/executor-output-0f648a6019d84d85a2cae5b77eabae39.json",
+        "workflow-runs/45faad65195249ce97361c996cbe8ac9/payloads/executor-output-93483626d1a14b8594ceadeeb39e6807.json",
+        "workflow-runs/45faad65195249ce97361c996cbe8ac9/payloads/executor-output-ac46ba84591c46c9866dda7cfb862deb.json",
+        "workflow-runs/45faad65195249ce97361c996cbe8ac9/payloads/executor-output-fb34b9769252441b932ee1910ed74851.json",
+        "workflow-runs/45faad65195249ce97361c996cbe8ac9/payloads/executor-output-d04e41b961ff47b88aac2a93b2333797.json"
+      ],
       "validations": [
         "Validated result contains \u0027regional distributors\u0027.",
         "Validated result contains \u0027gross margin\u0027.",
@@ -165,18 +207,24 @@
       "id": "S08",
       "title": "Customer email task extraction",
       "workflowName": "Scenario Harness: S08 Customer email task extraction",
-      "runId": "fdc60b11-bb68-4f4d-92e0-cc28047afba0",
+      "runId": "b4c61c12-5665-46f7-b4e6-d37086098410",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:4c245c0e3a1046f5826fc7fc06a886c0"
+        "custom:19608c61217b4137ba743d989776f690"
       ],
       "createdAssetIds": [
-        "custom:4c245c0e3a1046f5826fc7fc06a886c0"
+        "custom:19608c61217b4137ba743d989776f690"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/b4c61c12566546f7b4e6d37086098410/payloads/executor-output-6d5a384a1ec34373825f66a87a47e7c2.json",
+        "workflow-runs/b4c61c12566546f7b4e6d37086098410/payloads/executor-output-1cf1b06f28fe45cab59ffaa897266ec9.json",
+        "workflow-runs/b4c61c12566546f7b4e6d37086098410/payloads/executor-output-f80ab019d6af44b697b82f9c30b7a53a.json",
+        "workflow-runs/b4c61c12566546f7b4e6d37086098410/payloads/executor-output-31499c2d7a554f33acd90c9632c83396.json",
+        "workflow-runs/b4c61c12566546f7b4e6d37086098410/payloads/executor-output-39eebace022a49bf8da7ded42b9fce4b.json"
+      ],
       "validations": [
         "Validated result contains \u0027INV-1042\u0027.",
         "Validated result contains \u0027finance\u0027.",
@@ -187,18 +235,24 @@
       "id": "S09",
       "title": "Vendor renewal risk",
       "workflowName": "Scenario Harness: S09 Vendor renewal risk",
-      "runId": "9f51c483-6299-4286-ba90-c69fe9cf2a7c",
+      "runId": "c3b45098-5fc0-4d43-867f-29c7680f0785",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:70d98d14902348aab0476a82e912efa5"
+        "custom:20c86c56994142868cfa743d2720efb4"
       ],
       "createdAssetIds": [
-        "custom:70d98d14902348aab0476a82e912efa5"
+        "custom:20c86c56994142868cfa743d2720efb4"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/c3b450985fc04d43867f29c7680f0785/payloads/executor-output-271b88fcc2464c2e9a78e47fd54055bf.json",
+        "workflow-runs/c3b450985fc04d43867f29c7680f0785/payloads/executor-output-a6b20338e1c7417793e5799d81a22eeb.json",
+        "workflow-runs/c3b450985fc04d43867f29c7680f0785/payloads/executor-output-f3ef7a28229746c0bed2fffad421967e.json",
+        "workflow-runs/c3b450985fc04d43867f29c7680f0785/payloads/executor-output-a8161a9e11a8471fbb6a4d97d7e0949a.json",
+        "workflow-runs/c3b450985fc04d43867f29c7680f0785/payloads/executor-output-cdf211fd8f4942468612b5090066e144.json"
+      ],
       "validations": [
         "Validated result contains \u0027two-year renewal\u0027.",
         "Validated result contains \u002714 percent price increase\u0027.",
@@ -209,18 +263,24 @@
       "id": "S10",
       "title": "Support SLA escalation",
       "workflowName": "Scenario Harness: S10 Support SLA escalation",
-      "runId": "5ce8301d-0e14-4d9c-90e4-bb9b38c4b989",
+      "runId": "7a2940a5-e5f9-4065-864c-584583762458",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:bcdf7895051f4d3dbd6927aaec8215ad"
+        "custom:a678bc1728e24e1689d395b120da567e"
       ],
       "createdAssetIds": [
-        "custom:bcdf7895051f4d3dbd6927aaec8215ad"
+        "custom:a678bc1728e24e1689d395b120da567e"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/7a2940a5e5f94065864c584583762458/payloads/executor-output-e7765d7eb8be4d21a68f16ff89bb596d.json",
+        "workflow-runs/7a2940a5e5f94065864c584583762458/payloads/executor-output-c7ef6c02897b4210b851af13624618d3.json",
+        "workflow-runs/7a2940a5e5f94065864c584583762458/payloads/executor-output-9fcc2fa95ae942a9a1994811d0169e38.json",
+        "workflow-runs/7a2940a5e5f94065864c584583762458/payloads/executor-output-c0da0de0dd8145cabb2bb718039b659c.json",
+        "workflow-runs/7a2940a5e5f94065864c584583762458/payloads/executor-output-12e415fdfd5646ababc28db7cc180b09.json"
+      ],
       "validations": [
         "Validated result contains \u0027P1 support ticket\u0027.",
         "Validated result contains \u0027Billing outage\u0027.",
@@ -231,18 +291,24 @@
       "id": "S11",
       "title": "Meeting notes action extraction",
       "workflowName": "Scenario Harness: S11 Meeting notes action extraction",
-      "runId": "8327dadc-ffa3-4b5c-a735-0969eef4f401",
+      "runId": "8c474f39-1eab-44f1-bb19-4baf6836aeb9",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:189da6602be24129a674e572c6e3635d"
+        "custom:1ea07884c791409bb16fafa8009914e7"
       ],
       "createdAssetIds": [
-        "custom:189da6602be24129a674e572c6e3635d"
+        "custom:1ea07884c791409bb16fafa8009914e7"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/8c474f391eab44f1bb194baf6836aeb9/payloads/executor-output-d930999eb55043d08e22a3bf3f2135df.json",
+        "workflow-runs/8c474f391eab44f1bb194baf6836aeb9/payloads/executor-output-2120e3ddfcd7442980b7d5c6f7b3e2d0.json",
+        "workflow-runs/8c474f391eab44f1bb194baf6836aeb9/payloads/executor-output-0e025184a67e414cad34b3f0cf9fcb33.json",
+        "workflow-runs/8c474f391eab44f1bb194baf6836aeb9/payloads/executor-output-f98d851fe91448e4a5c7fa582634558e.json",
+        "workflow-runs/8c474f391eab44f1bb194baf6836aeb9/payloads/executor-output-d98412a029274c5880eb8c941391b518.json"
+      ],
       "validations": [
         "Validated result contains \u0027inventory check\u0027.",
         "Validated result contains \u0027supplier ETA\u0027.",
@@ -253,18 +319,24 @@
       "id": "S12",
       "title": "Release readiness gate",
       "workflowName": "Scenario Harness: S12 Release readiness gate",
-      "runId": "a4414026-e409-438c-bb3d-111e90f53dcd",
+      "runId": "0d3b982e-96c6-4472-a9f9-06b7782d3a44",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:00811ab28eba40ac876a932568592958"
+        "custom:8235a0db292e4c77a496738d39d8aa14"
       ],
       "createdAssetIds": [
-        "custom:00811ab28eba40ac876a932568592958"
+        "custom:8235a0db292e4c77a496738d39d8aa14"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/0d3b982e96c64472a9f906b7782d3a44/payloads/executor-output-82118fc0406649c0bc476306a03b74ef.json",
+        "workflow-runs/0d3b982e96c64472a9f906b7782d3a44/payloads/executor-output-6ba16e86c79f4ad39a09c7b98ea89609.json",
+        "workflow-runs/0d3b982e96c64472a9f906b7782d3a44/payloads/executor-output-6c280a2956f940fd81867a53bb7e460f.json",
+        "workflow-runs/0d3b982e96c64472a9f906b7782d3a44/payloads/executor-output-b3ac0d111a5f4a9c949caaf48ee21a04.json",
+        "workflow-runs/0d3b982e96c64472a9f906b7782d3a44/payloads/executor-output-5e1aef9976da49cf925aea664aeba43e.json"
+      ],
       "validations": [
         "Validated result contains \u0027Release candidate 2026.05\u0027.",
         "Validated result contains \u0027regression\u0027.",
@@ -275,18 +347,24 @@
       "id": "S13",
       "title": "Vendor risk routing",
       "workflowName": "Scenario Harness: S13 Vendor risk routing",
-      "runId": "961f85d4-35d7-4744-a7f3-11b147b89c33",
+      "runId": "6aa73d9d-3199-4bf6-8dad-7b8e081ebb8c",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:7dbede5e7da94e9fa4844cc2ded64edf"
+        "custom:482200f5740e46e4bbfe7d0723b8c060"
       ],
       "createdAssetIds": [
-        "custom:7dbede5e7da94e9fa4844cc2ded64edf"
+        "custom:482200f5740e46e4bbfe7d0723b8c060"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/6aa73d9d31994bf68dad7b8e081ebb8c/payloads/executor-output-7c32d6f5ce5646628bd26f534956f324.json",
+        "workflow-runs/6aa73d9d31994bf68dad7b8e081ebb8c/payloads/executor-output-ed47c8baa61749ce8efb1c6c1123c4c9.json",
+        "workflow-runs/6aa73d9d31994bf68dad7b8e081ebb8c/payloads/executor-output-945dd7f92a454a38b91b056831d3d1e0.json",
+        "workflow-runs/6aa73d9d31994bf68dad7b8e081ebb8c/payloads/executor-output-91e1c56b53b242d0a6e6bdc685f907fb.json",
+        "workflow-runs/6aa73d9d31994bf68dad7b8e081ebb8c/payloads/executor-output-20bb26ed78ca45a5a2d5f61caeef3136.json"
+      ],
       "validations": [
         "Validated result contains \u0027analytics vendor\u0027.",
         "Validated result contains \u0027SSO\u0027.",
@@ -297,18 +375,24 @@
       "id": "S14",
       "title": "Sales lead qualification",
       "workflowName": "Scenario Harness: S14 Sales lead qualification",
-      "runId": "3640e414-4815-4907-948b-8cc361c46e4b",
+      "runId": "d9117d2a-2744-4bda-9262-f18ed0618411",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:8326c73ca5bd40e49bcc82ee627ec3d7"
+        "custom:1870ba3343734fa89851268667b34d3e"
       ],
       "createdAssetIds": [
-        "custom:8326c73ca5bd40e49bcc82ee627ec3d7"
+        "custom:1870ba3343734fa89851268667b34d3e"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/d9117d2a27444bda9262f18ed0618411/payloads/executor-output-cda7fbe963ff498e86001e25434f9745.json",
+        "workflow-runs/d9117d2a27444bda9262f18ed0618411/payloads/executor-output-9417775b3a1845e8812159b8ac861f3d.json",
+        "workflow-runs/d9117d2a27444bda9262f18ed0618411/payloads/executor-output-c7504941e4d1453bb2fef40b8ffe39f8.json",
+        "workflow-runs/d9117d2a27444bda9262f18ed0618411/payloads/executor-output-bbcacfd9b34041a4996d6066673dfb5a.json",
+        "workflow-runs/d9117d2a27444bda9262f18ed0618411/payloads/executor-output-5b4e02cf9e164435a7e6e6db0ca72efc.json"
+      ],
       "validations": [
         "Validated result contains \u0027ACME score 91\u0027.",
         "Validated result contains \u0027Globex score 74\u0027.",
@@ -319,18 +403,24 @@
       "id": "S15",
       "title": "Incident response fan-out",
       "workflowName": "Scenario Harness: S15 Incident response fan-out",
-      "runId": "7865e601-2ae8-494d-91ff-4f80d0736371",
+      "runId": "43a8abde-04ac-4bf9-849e-221cc58fa5f3",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:56afa0cf1c364cdb8dfb383d72de129d"
+        "custom:308b4a89f7f24350867b8568266dca26"
       ],
       "createdAssetIds": [
-        "custom:56afa0cf1c364cdb8dfb383d72de129d"
+        "custom:308b4a89f7f24350867b8568266dca26"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/43a8abde04ac4bf9849e221cc58fa5f3/payloads/executor-output-1ac5f0c35f294aa29cc01d4e357c253e.json",
+        "workflow-runs/43a8abde04ac4bf9849e221cc58fa5f3/payloads/executor-output-002c4ef1d3af43dfa0debd27996b480b.json",
+        "workflow-runs/43a8abde04ac4bf9849e221cc58fa5f3/payloads/executor-output-dcb59dc2720d4425b89ba8d5bcc04718.json",
+        "workflow-runs/43a8abde04ac4bf9849e221cc58fa5f3/payloads/executor-output-3dcad89625db46a4b24165ff139a8bef.json",
+        "workflow-runs/43a8abde04ac4bf9849e221cc58fa5f3/payloads/executor-output-bd6b122f69504ef58cd2c39fdda680dd.json"
+      ],
       "validations": [
         "Validated result contains \u0027incident\u0027.",
         "Validated result contains \u0027engineering\u0027.",
@@ -341,18 +431,24 @@
       "id": "S16",
       "title": "Folder intake summary",
       "workflowName": "Scenario Harness: S16 Folder intake summary",
-      "runId": "f3e84d30-a1d1-4458-8f7b-b53397dba80e",
+      "runId": "97971db2-1333-4132-8c22-a2af55ac6739",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:ab27b68988a441899cd0fc8af31440fd"
+        "custom:5656a50cdc1a4d43b211428404560467"
       ],
       "createdAssetIds": [
-        "custom:ab27b68988a441899cd0fc8af31440fd"
+        "custom:5656a50cdc1a4d43b211428404560467"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/97971db2133341328c22a2af55ac6739/payloads/executor-output-ef2ebbe7da7a41c784b144efe706906e.json",
+        "workflow-runs/97971db2133341328c22a2af55ac6739/payloads/executor-output-2c65496bb8894ad0a6ce9860df900dae.json",
+        "workflow-runs/97971db2133341328c22a2af55ac6739/payloads/executor-output-51523ca98f2d4eb0a991998d56092e6c.json",
+        "workflow-runs/97971db2133341328c22a2af55ac6739/payloads/executor-output-0f8898eeee4948439e289cab3c14d1a4.json",
+        "workflow-runs/97971db2133341328c22a2af55ac6739/payloads/executor-output-cf39b3fad4f94bfb9c7403e59baadf6e.json"
+      ],
       "validations": [
         "Validated result contains \u0027folder intake\u0027.",
         "Validated result contains \u0027scope.md\u0027.",
@@ -363,18 +459,25 @@
       "id": "S17",
       "title": "File-save workflow",
       "workflowName": "Scenario Harness: S17 File-save workflow",
-      "runId": "1cbe3452-d2fc-4ac1-bc3b-db35d6c8f245",
+      "runId": "cb460ccb-2223-4325-baf8-03df61cbd68d",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 6,
       "stepCount": 6,
       "createdNodeIds": [
-        "custom:578af647fc3e43e286d9e9682fdcfb64"
+        "custom:c8e39a03531d42cf84c8a280067ef977"
       ],
       "createdAssetIds": [
-        "custom:578af647fc3e43e286d9e9682fdcfb64"
+        "custom:c8e39a03531d42cf84c8a280067ef977"
       ],
       "createdFilePaths": [
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-d25e879da4bb4e1fa27c692169dbf9b6.json",
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-60d515a9bc5e4421a7dfd8ec14bde81b.json",
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-a4c42b65d5e943a1b37b28408e16ce05.json",
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-f8ef0fea619f412880019098c130faa2.json",
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-f90a4097aa104faaaa8db0c6c84521b6.json",
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-5cf2b8fdbab64fe0b943806a8d5fefc4.json",
+        "workflow-runs/cb460ccb22234325baf803df61cbd68d/payloads/executor-output-6af9c134cf674400b0198e0d0910a84f.json",
         "samples/workflows/scenario-harness/S17-file-save-result.md"
       ],
       "validations": [
@@ -387,18 +490,24 @@
       "id": "S18",
       "title": "Project subtree summary",
       "workflowName": "Scenario Harness: S18 Project subtree summary",
-      "runId": "5768ef9e-c206-474d-91df-3ce8b53d2222",
+      "runId": "46d5c2f1-43a9-4bdd-a88a-51befc43cabd",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:c4374bcae9fe44039f652346b7f79835"
+        "custom:baa1465ac236477db8c74f8b7ef7a17f"
       ],
       "createdAssetIds": [
-        "custom:c4374bcae9fe44039f652346b7f79835"
+        "custom:baa1465ac236477db8c74f8b7ef7a17f"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/46d5c2f143a94bdda88a51befc43cabd/payloads/executor-output-34be6c42d35a4136af558a896f6b9bc3.json",
+        "workflow-runs/46d5c2f143a94bdda88a51befc43cabd/payloads/executor-output-1d77af331bcf4578a25f72607c1d10f7.json",
+        "workflow-runs/46d5c2f143a94bdda88a51befc43cabd/payloads/executor-output-047601afc3684e3dbf288ebb4625a975.json",
+        "workflow-runs/46d5c2f143a94bdda88a51befc43cabd/payloads/executor-output-cdb77bf8c8a64710978846893dcdb565.json",
+        "workflow-runs/46d5c2f143a94bdda88a51befc43cabd/payloads/executor-output-48cacbe13e28471ba9d99b53c6c1d9a6.json"
+      ],
       "validations": [
         "Validated result contains \u0027project subtree\u0027.",
         "Validated result contains \u0027Design task\u0027.",
@@ -409,18 +518,24 @@
       "id": "S19",
       "title": "Prompt session cleanup plan",
       "workflowName": "Scenario Harness: S19 Prompt session cleanup plan",
-      "runId": "29b6b805-b43c-4406-8ede-9d83e5ad745c",
+      "runId": "7a3e5995-81b8-4b57-9971-8dc90ed4b37a",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:174dff4cef3548daacfd3e3e4661cac6"
+        "custom:8a1c2b3eed3249f28c8b93836dc4c51e"
       ],
       "createdAssetIds": [
-        "custom:174dff4cef3548daacfd3e3e4661cac6"
+        "custom:8a1c2b3eed3249f28c8b93836dc4c51e"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/7a3e599581b84b5799718dc90ed4b37a/payloads/executor-output-14ff7591e5cf40a78ebec92280bd5623.json",
+        "workflow-runs/7a3e599581b84b5799718dc90ed4b37a/payloads/executor-output-2e32a95c5a28437d94b63d79d2b8a72f.json",
+        "workflow-runs/7a3e599581b84b5799718dc90ed4b37a/payloads/executor-output-7c69ff443f3348f780eed83780d4c835.json",
+        "workflow-runs/7a3e599581b84b5799718dc90ed4b37a/payloads/executor-output-58f5592922754c398a3c769b165af5be.json",
+        "workflow-runs/7a3e599581b84b5799718dc90ed4b37a/payloads/executor-output-95c6fae6c4084c8d8175597b6b54bf34.json"
+      ],
       "validations": [
         "Validated result contains \u0027prompt\u0027.",
         "Validated result contains \u0027session\u0027.",
@@ -431,18 +546,24 @@
       "id": "S20",
       "title": "Compliance checklist extraction",
       "workflowName": "Scenario Harness: S20 Compliance checklist extraction",
-      "runId": "1325733b-c908-4a94-b7a5-cea3d2ed2f1a",
+      "runId": "97d39763-630f-4d4b-bc10-0593df61c26b",
       "state": "Completed",
       "progressPercent": 100,
       "currentStepIndex": 5,
       "stepCount": 5,
       "createdNodeIds": [
-        "custom:343b8c3452114a3f841947edcbe524b4"
+        "custom:3356a9d0208149a1a7abedb9a9304801"
       ],
       "createdAssetIds": [
-        "custom:343b8c3452114a3f841947edcbe524b4"
+        "custom:3356a9d0208149a1a7abedb9a9304801"
       ],
-      "createdFilePaths": [],
+      "createdFilePaths": [
+        "workflow-runs/97d39763630f4d4bbc100593df61c26b/payloads/executor-output-46a7e641e4544fdaa44bd7514b65029d.json",
+        "workflow-runs/97d39763630f4d4bbc100593df61c26b/payloads/executor-output-35beb0545cc34357a698101fe4cc071b.json",
+        "workflow-runs/97d39763630f4d4bbc100593df61c26b/payloads/executor-output-d019e20a5194401588f92c7ab6eed346.json",
+        "workflow-runs/97d39763630f4d4bbc100593df61c26b/payloads/executor-output-75d928c275734cb08f85ac6673dfa5de.json",
+        "workflow-runs/97d39763630f4d4bbc100593df61c26b/payloads/executor-output-8ccca2ac422e40fba2ae3c8f84096a04.json"
+      ],
       "validations": [
         "Validated result contains \u0027compliance\u0027.",
         "Validated result contains \u0027checklist\u0027.",

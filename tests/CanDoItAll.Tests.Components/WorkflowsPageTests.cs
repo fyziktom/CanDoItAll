@@ -7,6 +7,7 @@ using CanDoItAll.Components.CanvasLib;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Pages;
 using CanDoItAll.Modules.AgentFramework.Pages.Components;
+using CanDoItAll.Tests.Support;
 using CanDoItAll.Tools.Documents;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
@@ -106,6 +107,80 @@ public sealed class WorkflowsPageTests
         cut.WaitForElement("[data-testid='workflows-components']");
         Assert.Equal(1, counter.ListComponentsCount);
         Assert.Equal(1, counter.ListProviderOptionsCount);
+    }
+
+    [Fact]
+    public async Task Workflows_templates_tab_lists_executor_catalog_examples()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-template-page-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-templates']");
+        AssertNoWorkflowPageError(cut);
+        ClickTabButton(cut, "Templates");
+        cut.WaitForElement("[data-testid='workflows-templates']");
+
+        cut.WaitForAssertion(() =>
+        {
+            var templates = cut.FindAll("[data-testid='workflows-template-pack-item']");
+            Assert.Contains(templates, item => item.TextContent.Contains("Local Folder Summary Markdown Report", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("File Diff Markdown Report", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("HTTP Download Document Extraction Report", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("JSON Transform Project Task Creation", StringComparison.Ordinal));
+            Assert.Contains(templates, item => item.TextContent.Contains("Approval Gated HTTP Action", StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_toolbox_exposes_executor_catalog_metadata()
+    {
+        await using var environment = CanDoItAllTestEnvironment.Create("workflow-canvas-catalog-tests");
+        await using var harness = await CreateInMemoryWorkflowHarnessAsync(environment);
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/agents/workflows");
+        var cut = harness.Context.RenderComponent<WorkflowsPage>();
+
+        cut.WaitForElement("[data-testid='workflows-tab-editor']");
+        ClickTabButton(cut, "Editor");
+        cut.WaitForElement("[data-testid='workflow-canvas-editor']");
+        var toolboxSearch = EnsureWorkflowToolboxVisible(cut);
+
+        toolboxSearch.Input("json");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-json-transform", cut.Markup, StringComparison.Ordinal);
+            Assert.Contains("Deterministic preview", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("markdown");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-markdown-render", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("delay");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-utility-delay", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("http");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Approval required", cut.Markup, StringComparison.Ordinal);
+        });
+
+        toolboxSearch.Input("command");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("workflow-toolbox-executor-command-process", cut.Markup, StringComparison.Ordinal);
+            Assert.True(cut.Find("[data-testid='workflow-toolbox-executor-command-process']").HasAttribute("disabled"));
+        });
     }
 
     [Fact]
@@ -236,6 +311,27 @@ public sealed class WorkflowsPageTests
         Assert.Equal(storeNode.Id, simulatedStep.NodeId);
         Assert.Equal(WorkflowExecutorIds.ProjectStructure, simulatedStep.SourceExecutorId);
         Assert.Contains("inputPayload", simulatedStep.OutputTemplateJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workflow_canvas_marks_planned_runtime_backends_unavailable()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var definition = CreatePreviewProgressDefinition();
+
+        var cut = harness.Context.RenderComponent<WorkflowCanvasEditor>(parameters => parameters
+            .Add(component => component.Definition, definition)
+            .Add(component => component.Components, [])
+            .Add(component => component.ProviderOptions, []));
+
+        var runtimeSelect = cut.Find("[data-testid='workflow-canvas-runtime']");
+        var durableOption = Assert.Single(
+            runtimeSelect.QuerySelectorAll("option"),
+            option => string.Equals(option.GetAttribute("value"), nameof(WorkflowRuntimeBackendKind.DurableTask), StringComparison.Ordinal));
+
+        Assert.True(durableOption.HasAttribute("disabled"));
+        Assert.Contains("Planned", durableOption.TextContent, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not registered", durableOption.GetAttribute("title"), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -542,6 +638,86 @@ public sealed class WorkflowsPageTests
         Assert.Contains(internetDetail.Definition.Graph.Nodes, node =>
             node.Settings.ExecutorId == WorkflowExecutorIds.HttpFetch &&
             node.Settings.ExecutorSettingsJson.Contains("urlJsonPath", StringComparison.Ordinal));
+
+        var folderReport = Assert.Single(examples, item => item.Name == "Example: Local Folder Summary Markdown Report");
+        var folderReportDetail = await catalogService.GetDefinitionAsync(folderReport.Id);
+        Assert.NotNull(folderReportDetail);
+        Assert.True(folderReportDetail!.Validation.Succeeded);
+        Assert.Contains(folderReportDetail.Definition.Graph.Nodes, node => node.Settings.ExecutorId == WorkflowExecutorIds.MarkdownRender);
+
+        var taskTransform = Assert.Single(examples, item => item.Name == "Example: JSON Transform Project Task Creation");
+        var taskTransformDetail = await catalogService.GetDefinitionAsync(taskTransform.Id);
+        Assert.NotNull(taskTransformDetail);
+        Assert.True(taskTransformDetail!.Validation.Succeeded);
+        Assert.Contains(taskTransformDetail.Definition.Graph.Nodes, node => node.Settings.ExecutorId == WorkflowExecutorIds.JsonTransform);
+    }
+
+    [Fact]
+    public async Task Workflow_example_seed_preserves_non_managed_definitions_with_template_names()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"workflow-example-seed-preserve-{Guid.NewGuid():N}");
+        var store = new InMemoryWorkflowCatalogStore();
+        var catalogService = new InMemoryWorkflowCatalogService(store, new WorkflowDefinitionValidator());
+        var templatePack = new WorkflowTemplatePackLoader().Load();
+        var template = templatePack.Workflows[0];
+        var component = await catalogService.SaveComponentAsync(new LlmCallComponentSaveRequest(
+            Id: null,
+            Name: "User component",
+            ProviderProfileId: null,
+            Model: "gpt-5-mini",
+            WorkflowModality.Text,
+            new WorkflowModelSettings(0.2, 256, RequireJsonOutput: false, ResponseFormatJsonSchema: string.Empty),
+            "User-owned workflow component.",
+            WorkflowValueShape.Text,
+            WorkflowValueShape.Text,
+            AgentPermissionsPolicy.Default));
+        var userDescription = "User-owned workflow. No managed seed marker.";
+        var userDefinition = await catalogService.SaveDefinitionAsync(new WorkflowDefinitionSaveRequest(
+            Id: null,
+            ExpectedVersionId: null,
+            Name: $"{templatePack.Manifest.DefinitionNamePrefix}{template.Name}",
+            Description: userDescription,
+            WorkflowLifecycleStatus.Active,
+            CreateStarterGraph(component.Id),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)));
+        var seeder = new WorkflowExampleCatalogSeedService(
+            catalogService,
+            catalogService,
+            catalogService,
+            new WorkspaceFileService(workspaceRoot),
+            new WorkspacePathResolutionService(workspaceRoot),
+            new ClosedXmlSpreadsheetDocumentService(),
+            Options.Create(new WorkflowExampleCatalogSeedOptions
+            {
+                Enabled = true,
+                SeedSampleWorkspaceFiles = false
+            }),
+            NullLogger<WorkflowExampleCatalogSeedService>.Instance);
+
+        try
+        {
+            await seeder.EnsureSeededAsync();
+        }
+        finally
+        {
+            if (Directory.Exists(workspaceRoot))
+            {
+                Directory.Delete(workspaceRoot, recursive: true);
+            }
+        }
+
+        var preserved = await catalogService.GetDefinitionAsync(userDefinition.Id);
+        var definitions = await catalogService.ListDefinitionsAsync();
+
+        Assert.NotNull(preserved);
+        Assert.Equal(userDescription, preserved!.Definition.Description);
+        Assert.DoesNotContain(templatePack.Manifest.SeedMarker, preserved.Definition.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(templatePack.Workflows.Count, definitions.Count(item => item.Name.StartsWith("Example:", StringComparison.Ordinal)));
     }
 
     [Fact]
@@ -694,9 +870,46 @@ public sealed class WorkflowsPageTests
             serviceProvider.GetRequiredService<WorkflowComponentLibraryCallCounter>()));
     }
 
+    private static Task<ComponentTestHarness> CreateInMemoryWorkflowHarnessAsync(CanDoItAllTestEnvironment environment)
+    {
+        var profile = environment.CreateInMemoryProfile("primary");
+        return ComponentTestHarness.CreateAsync(options: new TestHarnessOptions
+        {
+            TestEnvironment = environment,
+            ActiveProfile = profile,
+            SchemaModules = TestSchemaBootstrapModules.Default
+        });
+    }
+
     private static IElement FindButtonByTitle(IRenderedFragment cut, string title)
         => cut.FindAll("button")
             .First(button => button.GetAttribute("title")?.Contains(title, StringComparison.Ordinal) == true);
+
+    private static void ClickTabButton(IRenderedFragment cut, string text)
+    {
+        var button = cut.FindAll("button")
+            .First(button => button.TextContent.Contains(text, StringComparison.OrdinalIgnoreCase));
+        button.Click();
+    }
+
+    private static IElement EnsureWorkflowToolboxVisible(IRenderedFragment cut)
+    {
+        const string searchSelector = "input[placeholder='Search nodes, executors, files, HTTP, spreadsheets']";
+        var inputs = cut.FindAll(searchSelector);
+        if (inputs.Count > 0)
+        {
+            return inputs[0];
+        }
+
+        cut.Find("[data-testid='workflow-canvas-toggle-toolbox']").Click();
+        return cut.WaitForElement(searchSelector);
+    }
+
+    private static void AssertNoWorkflowPageError(IRenderedFragment cut)
+    {
+        var errors = cut.FindAll("[data-testid='workflows-error']");
+        Assert.True(errors.Count == 0, string.Join(" | ", errors.Select(error => error.TextContent.Trim())));
+    }
 
     private static Task<WorkflowDefinition> CreateHistoryDefinitionAsync(IWorkflowCatalogService catalogService)
     {
@@ -860,6 +1073,50 @@ public sealed class WorkflowsPageTests
                 Instructions: string.Empty,
                 InputShape: inputShape ?? WorkflowValueShape.Text,
                 ResultShape: resultShape ?? WorkflowValueShape.Text));
+
+    private static WorkflowGraph CreateStarterGraph(WorkflowComponentId componentId)
+    {
+        var start = new WorkflowNodeId("start");
+        var llm = new WorkflowNodeId("llm");
+        var end = new WorkflowNodeId("end");
+        return new WorkflowGraph(
+            start,
+            [
+                CreateHistoryNode(start, WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
+                new WorkflowNode(
+                    llm,
+                    WorkflowNodeKind.LlmCall,
+                    "LLM",
+                    [],
+                    new WorkflowNodeSettings(
+                        componentId,
+                        AgentId: null,
+                        SubworkflowId: null,
+                        ExternalRequestKind: null,
+                        Instructions: "Summarize.",
+                        InputShape: WorkflowValueShape.Text,
+                        ResultShape: WorkflowValueShape.Text)),
+                CreateHistoryNode(end, WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
+            ],
+            [
+                new WorkflowEdge(
+                    new WorkflowEdgeId("start-to-llm"),
+                    start,
+                    SourcePortId: null,
+                    llm,
+                    TargetPortId: null,
+                    WorkflowEdgeKind.Direct,
+                    ConditionExpression: string.Empty),
+                new WorkflowEdge(
+                    new WorkflowEdgeId("llm-to-end"),
+                    llm,
+                    SourcePortId: null,
+                    end,
+                    TargetPortId: null,
+                    WorkflowEdgeKind.Direct,
+                    ConditionExpression: string.Empty)
+            ]);
+    }
 
     private sealed class DeterministicWorkflowLlmComponentInvoker : IWorkflowLlmComponentInvoker
     {

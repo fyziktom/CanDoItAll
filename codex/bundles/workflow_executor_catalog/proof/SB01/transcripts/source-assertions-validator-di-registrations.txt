@@ -1,0 +1,14 @@
+Command: rg -n "IWorkflowDefinitionValidator|IWorkflowExecutorCatalog|new WorkflowDefinitionValidator" src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:24:    private readonly IWorkflowExecutorCatalog? executorCatalog;
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:32:    public WorkflowTemplatePackLoader(IWorkflowExecutorCatalog executorCatalog)
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:37:    private WorkflowTemplatePackLoader(string? packRoot, IWorkflowExecutorCatalog? executorCatalog)
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:86:            ? new WorkflowDefinitionValidator()
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:87:            : new WorkflowDefinitionValidator(executorCatalog);
+src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs:62:        services.TryAddSingleton<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs:67:        services.TryAddSingleton<IWorkflowDefinitionValidator>(serviceProvider => new WorkflowDefinitionValidator(
+src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs:68:            serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
+src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs:73:            serviceProvider.GetRequiredService<IWorkflowDefinitionValidator>(),
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:90:        services.TryAddScoped<IWorkflowExecutorCatalog, WorkflowExecutorCatalog>();
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:95:        services.TryAddScoped<IWorkflowDefinitionValidator>(serviceProvider => new WorkflowDefinitionValidator(
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:96:            serviceProvider.GetRequiredService<IWorkflowExecutorCatalog>()));
+ExitCode: 0

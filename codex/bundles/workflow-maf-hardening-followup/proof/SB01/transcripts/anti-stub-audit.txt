@@ -1,0 +1,8 @@
+Command: Select-String -Pattern TODO,NotImplemented,fixture-specific,Maf16 over SB01 changed source files
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:13:09.2270846-04:00
+
+No anti-stub markers found in SB01 changed source files.
+Invariant ID: SB01-MAF18-BASELINE
+
+ExitCode: 0

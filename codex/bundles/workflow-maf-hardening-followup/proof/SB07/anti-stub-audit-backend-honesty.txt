@@ -1,0 +1,15 @@
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:541:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:548:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:555:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:563:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:214:            CreateNode("fallback", WorkflowNodeKind.End)
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:217:            CreateEdge("start-fallback", "start", "fallback", WorkflowEdgeKind.Conditional, WorkflowEdgeRouting.SwitchDefault("Fallback"))
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:1851:        string fallback)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:1855:            return fallback;
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:1860:        return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:2632:        int fallback)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:2633:        => int.TryParse(GetInputValue(request, key, string.Empty), out var value) ? value : fallback;
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:2638:        bool fallback)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:2639:        => bool.TryParse(GetInputValue(request, key, string.Empty), out var value) ? value : fallback;
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:2699:    private static int ReadInt(ChangeEventArgs args, int fallback)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:2700:        => int.TryParse(args.Value?.ToString(), out var value) ? value : fallback;

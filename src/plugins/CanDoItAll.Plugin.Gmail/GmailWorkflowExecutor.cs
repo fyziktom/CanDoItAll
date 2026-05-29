@@ -37,7 +37,14 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
     {
         Source = PluginSource,
         Availability = ResolveAvailability(),
-        Simulation = GmailWorkflowSimulationTemplates.DownloadByLabel
+        Simulation = GmailWorkflowSimulationTemplates.DownloadByLabel,
+        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.ReadsExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.UsesSecrets |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.NotRequired),
+        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Gmail messages without calling Gmail.")
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -213,7 +220,14 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
     {
         Source = PluginSource,
         Availability = ResolveAvailability(),
-        Simulation = GmailWorkflowSimulationTemplates.MarkProcessed
+        Simulation = GmailWorkflowSimulationTemplates.MarkProcessed,
+        PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+            WorkflowExecutorCapabilityFlags.WritesExternalData |
+            WorkflowExecutorCapabilityFlags.UsesNetwork |
+            WorkflowExecutorCapabilityFlags.UsesSecrets |
+            WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+        DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
     };
 
     public async ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(

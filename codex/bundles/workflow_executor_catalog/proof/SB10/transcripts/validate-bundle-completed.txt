@@ -1,0 +1,5 @@
+Command: python codex\\skills\\bundles\\candoitall-bundle-preparation\\scripts\\validate_bundle.py codex\\bundles\\workflow_executor_catalog --stage completed --repo-root . --bundle-root codex\\bundles\\workflow_executor_catalog
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\workflow_executor_catalog

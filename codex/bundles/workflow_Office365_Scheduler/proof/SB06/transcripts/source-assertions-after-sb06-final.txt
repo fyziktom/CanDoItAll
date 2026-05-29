@@ -1,0 +1,61 @@
+## runtime idempotency constants
+27:public static class ProjectStructureRuntimeIdempotencyMetadata
+
+## project executor idempotency settings
+791:    public string IdempotencyKeyJsonPath { get; init; } = string.Empty;
+
+## project executor stable idempotency key builder
+116:            var taskIdempotencyKey = BuildTaskIdempotencyKey(idempotencyBatchKey, taskIndex);
+352:    private static string? BuildTaskIdempotencyKey(string? idempotencyBatchKey, int taskIndex)
+
+## runtime gateway idempotency lock
+87:        return await RunWithIdempotencyLockAsync(
+142:        return await RunWithIdempotencyLockAsync(
+188:    private static async Task<T> RunWithIdempotencyLockAsync<T>(
+
+## workbench metadata envelope preserves workflow write marker
+169:    public ProjectWorkflowProjectWriteMetadata? WorkflowProjectWrite { get; set; }
+198:public sealed class ProjectWorkflowProjectWriteMetadata
+
+## project node metadata scoping preserves workflow write marker
+274:            WorkflowProjectWrite = metadata.WorkflowProjectWrite,
+
+## scheduler NoMessages dispatch enum
+22:    NoMessages
+
+## scheduler no-message route constant
+757:    private const string WorkflowNoMessagesRoute = "no_messages";
+933:                   string.Equals(routeElement.GetString(), WorkflowNoMessagesRoute, StringComparison.Ordinal);
+
+## scheduler no-message terminal success
+1022:        if (run is not null && IsSuccessfulTerminalStatus(run.Status))
+1077:    private static bool IsSuccessfulTerminalStatus(SchedulerPlanRunDispatchStatus status)
+
+## scheduler UI no-message tone
+1248:            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+
+## summary idempotency suffix in template
+131:              idempotencyKeySuffix: summary
+
+## task idempotency suffix in template
+323:              idempotencyKeySuffix: tasks
+342:              idempotencyKeySuffix: tasks
+
+## unit test for summary idempotency
+130:    public async Task ProjectStructure_executor_builds_office365_summary_idempotency_key()
+
+## unit test for task idempotency
+168:    public async Task ProjectStructure_executor_builds_stable_office365_task_idempotency_keys()
+
+## integration test for no-message dispatch
+178:    public async Task Trigger_fire_handler_records_no_messages_as_success_without_retry()
+
+## integration test for launcher no-message parsing
+379:    public async Task Target_launcher_records_no_messages_for_completed_workflow_output()
+
+## integration test for asset idempotency
+97:    public async Task RuntimeGateway_CreateAssetAsync_replays_duplicate_idempotency_key_without_duplicate_node()
+
+## integration test for concurrent node idempotency
+145:    public async Task RuntimeGateway_CreateNodeAsync_serializes_concurrent_duplicate_idempotency_key()
+

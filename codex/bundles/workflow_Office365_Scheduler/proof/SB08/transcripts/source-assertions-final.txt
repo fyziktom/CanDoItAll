@@ -1,0 +1,209 @@
+Command: rg source assertions for Office365, Scheduler, templates, and Workflows catalog
+ExitCode: 0
+
+== Office365 executor source assertions ==
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:26:            executor => executor.ExecutorId == Office365PluginConstants.DownloadByAddressExecutorId &&
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:137:        Assert.Equal("office365:graph-1", processing.GetProperty("idempotencyKey").GetString());
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:142:            root.GetProperty("runContext").GetProperty("office365Processing").GetProperty("idempotencyKey").GetString());
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:166:        Assert.Equal("no_messages", root.GetProperty("route").GetString());
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:315:        var result = await client.MarkMessageProcessedAsync(
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:430:        var batch = await client.DownloadOneUnprocessedMessageByAddressAsync(
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:516:        var batch = await client.DownloadOneUnprocessedMessageByAddressAsync(
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:535:        var batch = await client.DownloadOneUnprocessedMessageByAddressAsync(
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:552:        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => client.DownloadOneUnprocessedMessageByAddressAsync(
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:624:        var result = await client.MarkMessageProcessedAsync(
+tests\CanDoItAll.Tests.Integration\EmailPluginClientTests.cs:686:        var result = await client.MarkMessageProcessedAsync(
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:53:                Office365PluginConstants.DownloadByAddressExecutorId,
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:72:                Office365PluginConstants.MarkProcessedExecutorId,
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:87:                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+src\plugins\CanDoItAll.Plugin.Office365\Office365PluginConstants.cs:18:    public static WorkflowExecutorId DownloadByAddressExecutorId { get; } = new("office365.message-by-address-unprocessed");
+src\plugins\CanDoItAll.Plugin.Office365\Office365PluginConstants.cs:20:    public static WorkflowExecutorId MarkProcessedExecutorId { get; } = new("office365.mark-message-processed");
+src\plugins\CanDoItAll.Plugin.Office365\Office365GraphClient.cs:40:    public async Task<PluginEmailMessageBatch> DownloadOneUnprocessedMessageByAddressAsync(
+src\plugins\CanDoItAll.Plugin.Office365\Office365GraphClient.cs:87:    public async Task<Office365MessageCategoryMutationResult> MarkMessageProcessedAsync(
+src\plugins\CanDoItAll.Plugin.Office365\Office365PluginModels.cs:21:public enum Office365NoMessageBehavior
+src\plugins\CanDoItAll.Plugin.Office365\Office365PluginModels.cs:55:    public Office365NoMessageBehavior NoMessageBehavior { get; init; } = Office365NoMessageBehavior.SuccessNoMessages;
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:207:        Office365PluginConstants.DownloadByAddressExecutorId,
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:257:        var batch = await graphClient.DownloadOneUnprocessedMessageByAddressAsync(
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:261:        if (batch.Count == 0 && settings.NoMessageBehavior == Office365NoMessageBehavior.Fail)
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:329:            payload["route"] = "no_messages";
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:367:            ["idempotencyKey"] = string.IsNullOrWhiteSpace(selectedMessageId)
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:447:        Office365PluginConstants.MarkProcessedExecutorId,
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:468:            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:513:        var result = await graphClient.MarkMessageProcessedAsync(
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:675:            "idempotencyKey": "office365:simulated-office365-message-1"
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:689:              "idempotencyKey": "office365:simulated-office365-message-1"
+== Workflow template source assertions ==
+Templates\Workflows\workflows\default-workflows.yaml:294:              processedCategory: CanDoItAllSummaryTestProcessed
+Templates\Workflows\workflows\default-workflows.yaml:321:            id: office365.mark-message-processed
+Templates\Workflows\workflows\default-workflows.yaml:325:              processedCategory: CanDoItAllSummaryTestProcessed
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:2:  - key: office365-email-watch-summary-to-project
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:7:      If no message was downloaded, route must remain `no_messages`; that branch is handled before the LLM and must not be produced by this component.
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:13:    inputParameters:
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:48:      - key: processedCategory
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:53:        jsonPath: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:74:            id: office365.message-by-address-unprocessed
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:80:              processedCategory: ""
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:81:              processedCategoryJsonPath: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:107:                    processedCategory: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:130:              idempotencyKeyJsonPath: "$.runContext.office365Processing.idempotencyKey"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:131:              idempotencyKeySuffix: summary
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:139:            id: office365.mark-message-processed
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:144:              processedCategory: ""
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:145:              processedCategoryJsonPath: "$.inputPayload.runContext.office365Processing.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:166:                    processedCategory: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:167:                    processedCategoryAdded: "$.processedCategoryAdded"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:179:          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: no_messages, expectedValueKind: String, label: No messages }
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:191:  - key: office365-email-watch-tasks-to-project
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:196:      If no message was downloaded, route must remain `no_messages`; that branch is handled before the LLM and must not be produced by this component.
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:205:    inputParameters:
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:240:      - key: processedCategory
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:245:        jsonPath: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:266:            id: office365.message-by-address-unprocessed
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:272:              processedCategory: ""
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:273:              processedCategoryJsonPath: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:299:                    processedCategory: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:322:              idempotencyKeyJsonPath: "$.runContext.office365Processing.idempotencyKey"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:323:              idempotencyKeySuffix: tasks
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:341:              idempotencyKeyJsonPath: "$.runContext.office365Processing.idempotencyKey"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:342:              idempotencyKeySuffix: tasks
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:350:            id: office365.mark-message-processed
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:355:              processedCategory: ""
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:356:              processedCategoryJsonPath: "$.inputPayload.runContext.office365Processing.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:377:                    processedCategory: "$.processedCategory"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:378:                    processedCategoryAdded: "$.processedCategoryAdded"
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:390:          routing: { kind: SwitchCase, jsonPath: "$.route", expectedValue: no_messages, expectedValueKind: String, label: No messages }
+Templates\Workflows\workflows\email-plugin-task-workflows.yaml:136:              processedCategory: CanDoItAllTaskIntakeProcessed
+Templates\Workflows\workflows\email-plugin-task-workflows.yaml:180:            id: office365.mark-message-processed
+Templates\Workflows\workflows\email-plugin-task-workflows.yaml:184:              processedCategory: CanDoItAllTaskIntakeProcessed
+== Scheduler source assertions ==
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:79:            Assert.Contains(SchedulerPlanRunRoutes.NoMessages, cut.Markup);
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:80:            Assert.Contains(SchedulerPlanRunRoutes.WaitingForApproval, cut.Markup);
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:213:        cut.Find("[data-testid='scheduler-input-emailAddress']").Change("ada@example.com");
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:222:        cut.Find("[data-testid='scheduler-cron-preset-every-two-hours']").Click();
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:226:            var inputJson = cut.Find("[data-testid='scheduler-input-json']").GetAttribute("value") ?? string.Empty;
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:242:        cut.Find("[data-testid='scheduler-input-json']").Change(manualJson);
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:246:            Assert.Equal("manual@example.com", cut.Find("[data-testid='scheduler-input-emailAddress']").GetAttribute("value"));
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:339:        cut.Find("[data-testid='scheduler-input-emailAddress']").Change("ada@example.com");
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:346:            var inputJson = cut.Find("[data-testid='scheduler-input-json']").GetAttribute("value") ?? string.Empty;
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:350:        cut.Find("[data-testid='scheduler-input-emailAddress']").Change(string.Empty);
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:354:            var inputJson = cut.Find("[data-testid='scheduler-input-json']").GetAttribute("value") ?? string.Empty;
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:416:                    SchedulerPlanRunDispatchStatus.NoMessages,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:419:                    SchedulerPlanRunRoutes.NoMessages,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:420:                    SchedulerPlanRunRetryCategory.NoAction,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:431:                    SchedulerPlanRunDispatchStatus.WaitingForApproval,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:434:                    SchedulerPlanRunRoutes.WaitingForApproval,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:435:                    SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:450:                    SchedulerPlanRunRetryCategory.ProjectWriteFailure,
+tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:573:            UsesRawJsonFallback: false);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:186:            SchedulerPlanRunDispatchStatus.NoMessages.ToString(),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:188:            SchedulerPlanRunDispatchStatus.NoMessages,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:189:            SchedulerPlanRunRoutes.NoMessages,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:190:            SchedulerPlanRunRetryCategory.NoAction);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:254:        Assert.Equal(SchedulerPlanRunDispatchStatus.NoMessages, run.Status);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:258:        Assert.Equal(SchedulerPlanRunRoutes.NoMessages, run.Route);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:259:        Assert.Equal(SchedulerPlanRunRetryCategory.NoAction, run.RetryCategory);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:274:            SchedulerPlanRunDispatchStatus.WaitingForApproval,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:275:            SchedulerPlanRunRoutes.WaitingForApproval,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:276:            SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:340:        Assert.Equal(SchedulerPlanRunDispatchStatus.WaitingForApproval, run.Status);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:343:        Assert.Equal(SchedulerPlanRunRoutes.WaitingForApproval, run.Route);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:344:        Assert.Equal(SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval, run.RetryCategory);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:414:        Assert.Equal(SchedulerPlanRunRetryCategory.TransientExternalFailure, run.RetryCategory);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:484:        Assert.Equal(SchedulerPlanRunRetryCategory.ProjectWriteFailure, run.RetryCategory);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:639:        Assert.Equal(SchedulerPlanRunDispatchStatus.NoMessages, result.DispatchStatus);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:640:        Assert.Equal(SchedulerPlanRunDispatchStatus.NoMessages.ToString(), result.State);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:642:        Assert.Equal(SchedulerPlanRunRoutes.NoMessages, result.Route);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:643:        Assert.Equal(SchedulerPlanRunRetryCategory.NoAction, result.RetryCategory);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:679:        Assert.Equal(SchedulerPlanRunDispatchStatus.WaitingForApproval, result.DispatchStatus);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:680:        Assert.Equal(SchedulerPlanRunRoutes.WaitingForApproval, result.Route);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:681:        Assert.Equal(SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval, result.RetryCategory);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:737:        Assert.False(schema.UsesRawJsonFallback);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:22:    NoMessages,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:23:    WaitingForApproval
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:26:public enum SchedulerPlanRunRetryCategory
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:30:    WorkflowWaitingForApproval,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:31:    TransientExternalFailure,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:32:    ProjectWriteFailure,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:40:    public const string NoMessages = "no_messages";
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:42:    public const string WaitingForApproval = "waiting_for_approval";
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:146:    public SchedulerPlanRunRetryCategory RetryCategory { get; set; } = SchedulerPlanRunRetryCategory.None;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:218:    SchedulerPlanRunRetryCategory RetryCategory,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:263:    bool UsesRawJsonFallback);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:296:    SchedulerPlanRunRetryCategory RetryCategory = SchedulerPlanRunRetryCategory.None);
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:27:                <CompactStat Label="no action" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.NoMessages).ToString()" TooltipText="No-message polling runs in the current history view." Tone="neutral" />
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:28:                <CompactStat Label="waiting" Value="@History.Count(item => item.Status == SchedulerPlanRunDispatchStatus.WaitingForApproval).ToString()" TooltipText="Runs paused for explicit approval." Tone="info" />
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:182:                                            data-testid="scheduler-cron-preset-every-two-hours" />
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:315:                                                   data-testid="scheduler-input-json" />
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:427:                                                    @if (run.RetryCategory != SchedulerPlanRunRetryCategory.None)
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:429:                                                        <p class="text-xs font-medium text-slate-500">@FormatRunPolicy(run.RetryCategory)</p>
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1261:            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1262:            SchedulerPlanRunDispatchStatus.WaitingForApproval => "warning",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1273:            SchedulerPlanRunDispatchStatus.NoMessages => "neutral",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1274:            SchedulerPlanRunDispatchStatus.WaitingForApproval => "warning",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1285:    private static string FormatRunPolicy(SchedulerPlanRunRetryCategory retryCategory)
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1289:            SchedulerPlanRunRetryCategory.NoAction => "No retry: no matching message.",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1290:            SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval => "No retry: waiting for approval.",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1291:            SchedulerPlanRunRetryCategory.TransientExternalFailure => "Retry scheduled: external dependency.",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1292:            SchedulerPlanRunRetryCategory.ProjectWriteFailure => "Retry scheduled: project write.",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1293:            SchedulerPlanRunRetryCategory.WorkflowFailure => "Retry scheduled: workflow failure.",
+src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:1294:            SchedulerPlanRunRetryCategory.SchedulerFailure => "Retry scheduled: scheduler failure.",
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:51:        SchedulerPlanRunRetryCategory retryCategory,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:58:        RetryCategory = retryCategory;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:64:    public SchedulerPlanRunRetryCategory RetryCategory { get; }
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:75:    public static SchedulerPlanRunRetryCategory Classify(Exception exception)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:79:            return launchException.RetryCategory;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:84:            return SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:89:            return SchedulerPlanRunRetryCategory.TransientExternalFailure;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:95:    public static SchedulerPlanRunRetryCategory ClassifyWorkflowFailure(string failureText)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:98:        return classified == SchedulerPlanRunRetryCategory.SchedulerFailure
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:99:            ? SchedulerPlanRunRetryCategory.WorkflowFailure
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:103:    private static SchedulerPlanRunRetryCategory ClassifyMessage(string failureText)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:107:            return SchedulerPlanRunRetryCategory.TransientExternalFailure;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:112:            return SchedulerPlanRunRetryCategory.ProjectWriteFailure;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:117:            return SchedulerPlanRunRetryCategory.WorkflowFailure;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:120:        return SchedulerPlanRunRetryCategory.SchedulerFailure;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:430:                item.Run.RetryCategory,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:463:                SchedulerPlanRunDispatchStatus.NoMessages => "#64748b",
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:464:                SchedulerPlanRunDispatchStatus.WaitingForApproval => "#d97706",
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:496:            EventStatuses = ["Scheduled", "Dispatching", "Dispatched", "Failed", "NoMessages", "WaitingForApproval"],
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:839:    private const string WorkflowNoMessagesPropertyName = "noMessages";
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:926:                SchedulerPlanRunDispatchStatus.WaitingForApproval,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:927:                SchedulerPlanRunRoutes.WaitingForApproval,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:928:                SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:942:        var dispatchStatus = routeResult.IsNoMessages
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:943:            ? SchedulerPlanRunDispatchStatus.NoMessages
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:949:            routeResult.IsNoMessages ? SchedulerPlanRunDispatchStatus.NoMessages.ToString() : run.State.ToString(),
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:950:            routeResult.IsNoMessages
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:951:                ? ResolveNoMessagesSummary(routeResult.Summary)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:959:            routeResult.IsNoMessages
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:960:                ? SchedulerPlanRunRetryCategory.NoAction
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:961:                : SchedulerPlanRunRetryCategory.None);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:971:                !TryReadWorkflowRoutePayload(payloadJson, out var route, out var summary, out var isNoMessages))
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:979:                isNoMessages);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1019:        out bool isNoMessages)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1023:        isNoMessages = false;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1049:            if (document.RootElement.TryGetProperty(WorkflowNoMessagesPropertyName, out var noMessagesElement) &&
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1053:                route = SchedulerPlanRunRoutes.NoMessages;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1054:                isNoMessages = true;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1058:            if (string.Equals(route, SchedulerPlanRunRoutes.NoMessages, StringComparison.Ordinal))
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1060:                isNoMessages = true;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1071:    private static string ResolveNoMessagesSummary(string summary)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1097:        bool IsNoMessages)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1206:        run.RetryCategory = SchedulerPlanRunRetryCategory.None;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1220:            run.RetryCategory = launchResult.RetryCategory;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1235:            run.Status = SchedulerPlanRunDispatchStatus.WaitingForApproval;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1238:            run.Route = SchedulerPlanRunRoutes.WaitingForApproval;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1239:            run.RetryCategory = SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1259:            run.RetryCategory = retryCategory;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1271:            or SchedulerPlanRunDispatchStatus.NoMessages
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:1272:            or SchedulerPlanRunDispatchStatus.WaitingForApproval;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:40:            UsesRawJsonFallback: definition.InputParameters.Count == 0);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerSchemaInitializer.cs:70:            "RetryCategory" integer NOT NULL DEFAULT 0,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerSchemaInitializer.cs:77:        ALTER TABLE "SchedulerPlanner_Runs" ADD COLUMN IF NOT EXISTS "RetryCategory" integer NOT NULL DEFAULT 0;
+== Workflows/catalog source assertions ==
+tests\CanDoItAll.Tests.Components\WorkflowExecutorCanvasCatalogTests.cs:9:    public void BuildQuickCreateActions_groups_plugin_executors_under_plugin_menu()
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:113:    public async Task Workflows_templates_tab_lists_executor_catalog_examples()
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:139:    public async Task Workflow_canvas_toolbox_exposes_executor_catalog_metadata()
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:575:    public async Task Workflow_example_seed_creates_production_examples_when_enabled()
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:3:    name: Office365 Email Watch Summary To Project
+Templates\Workflows\workflows\office365-email-watch-workflows.yaml:192:    name: Office365 Email Watch Tasks To Project

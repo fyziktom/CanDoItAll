@@ -10,7 +10,9 @@ public enum PluginManifestValidationIssueCode
     DuplicateRendererKey,
     DuplicateConnectionKey,
     MissingCapability,
-    UnsupportedCapability
+    UnsupportedCapability,
+    MissingConnectionMetadata,
+    InconsistentPermissionPolicy
 }
 
 public sealed record PluginManifestValidationIssue(
@@ -96,10 +98,18 @@ public static class PluginManifestValidator
             issues);
         RequireCapability(
             descriptor,
+            descriptor.Connections.Any(connection => connection.AuthKind == PluginConnectionAuthKind.OAuth2),
+            PluginCapabilityKind.OAuth2,
+            "OAuth2 connections",
+            issues);
+        RequireCapability(
+            descriptor,
             descriptor.Connections.Any(connection => RequiresSecretCapability(connection.AuthKind)),
             PluginCapabilityKind.SecretReference,
             "secret-backed connections",
             issues);
+        ValidateOAuthConnectionMetadata(descriptor, issues);
+        ValidateWorkflowExecutorPermissionPolicies(descriptor, issues);
 
         return new PluginManifestValidationResult(issues);
     }
@@ -144,6 +154,131 @@ public static class PluginManifestValidator
         issues.Add(new PluginManifestValidationIssue(
             PluginManifestValidationIssueCode.MissingCapability,
             $"Plugin '{descriptor.Id}' declares {featureName} but does not include capability '{requiredCapability}'.",
+            descriptor.Id));
+    }
+
+    private static void ValidateOAuthConnectionMetadata(
+        PluginDescriptor descriptor,
+        List<PluginManifestValidationIssue> issues)
+    {
+        if (descriptor.OAuth2 is null)
+        {
+            return;
+        }
+
+        var hasMatchingConnection = descriptor.Connections.Any(connection =>
+            connection.AuthKind == PluginConnectionAuthKind.OAuth2 &&
+            connection.Key == descriptor.OAuth2.ConnectionKey);
+        if (hasMatchingConnection)
+        {
+            return;
+        }
+
+        issues.Add(new PluginManifestValidationIssue(
+            PluginManifestValidationIssueCode.MissingConnectionMetadata,
+            $"Plugin '{descriptor.Id}' declares OAuth2 metadata for connection '{descriptor.OAuth2.ConnectionKey}' but no matching OAuth2 connection.",
+            descriptor.Id));
+    }
+
+    private static void ValidateWorkflowExecutorPermissionPolicies(
+        PluginDescriptor descriptor,
+        List<PluginManifestValidationIssue> issues)
+    {
+        foreach (var executor in descriptor.WorkflowExecutors)
+        {
+            var requiredCapabilities = executor.PermissionPolicy.RequiredCapabilities;
+
+            RequireAnyCapability(
+                descriptor,
+                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.UsesNetwork) ||
+                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.ReadsExternalData) ||
+                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData),
+                [PluginCapabilityKind.HttpClient, PluginCapabilityKind.OAuth2],
+                $"workflow executor '{executor.ExecutorId}' network or external data access",
+                issues);
+            RequireAnyCapability(
+                descriptor,
+                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.UsesSecrets),
+                [PluginCapabilityKind.SecretReference, PluginCapabilityKind.OAuth2],
+                $"workflow executor '{executor.ExecutorId}' secret access",
+                issues);
+            RequireCapability(
+                descriptor,
+                requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.RunsHostCommand),
+                PluginCapabilityKind.HostCommand,
+                $"workflow executor '{executor.ExecutorId}' host-command access",
+                issues);
+
+            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.UsesSecrets) &&
+                !HasSecretOrOAuthConnectionMetadata(descriptor))
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.MissingConnectionMetadata,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' requires secrets but no secret or OAuth2 connection metadata is declared.",
+                    descriptor.Id));
+            }
+
+            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData) &&
+                executor.PermissionPolicy.ApprovalRequirement == WorkflowExecutorApprovalRequirement.NotRequired)
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' writes external data but does not require approval.",
+                    descriptor.Id));
+            }
+
+            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.RunsHostCommand) &&
+                executor.PermissionPolicy.ApprovalRequirement != WorkflowExecutorApprovalRequirement.AlwaysRequired)
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' runs host commands and must always require approval.",
+                    descriptor.Id));
+            }
+
+            ValidateDeterministicTestMode(descriptor, executor, requiredCapabilities, issues);
+        }
+    }
+
+    private static void RequireAnyCapability(
+        PluginDescriptor descriptor,
+        bool hasFeature,
+        IReadOnlyList<PluginCapabilityKind> requiredCapabilities,
+        string featureName,
+        List<PluginManifestValidationIssue> issues)
+    {
+        if (!hasFeature || requiredCapabilities.Any(capability => (descriptor.Capabilities & capability) == capability))
+        {
+            return;
+        }
+
+        issues.Add(new PluginManifestValidationIssue(
+            PluginManifestValidationIssueCode.MissingCapability,
+            $"Plugin '{descriptor.Id}' declares {featureName} but does not include any required capability: {string.Join(", ", requiredCapabilities)}.",
+            descriptor.Id));
+    }
+
+    private static bool HasSecretOrOAuthConnectionMetadata(PluginDescriptor descriptor)
+        => descriptor.OAuth2 is not null ||
+           descriptor.Connections.Any(connection =>
+               connection.AuthKind == PluginConnectionAuthKind.OAuth2 ||
+               RequiresSecretCapability(connection.AuthKind));
+
+    private static void ValidateDeterministicTestMode(
+        PluginDescriptor descriptor,
+        PluginWorkflowExecutorDescriptor executor,
+        WorkflowExecutorCapabilityFlags requiredCapabilities,
+        List<PluginManifestValidationIssue> issues)
+    {
+        var declaresCapability = requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode);
+        if (declaresCapability == executor.DeterministicTestMode.IsSupported)
+        {
+            return;
+        }
+
+        issues.Add(new PluginManifestValidationIssue(
+            PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+            $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' has inconsistent deterministic test-mode capability and descriptor metadata.",
             descriptor.Id));
     }
 

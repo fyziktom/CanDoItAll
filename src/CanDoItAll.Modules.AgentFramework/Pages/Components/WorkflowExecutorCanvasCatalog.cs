@@ -61,7 +61,7 @@ public static class WorkflowExecutorCanvasCatalog
             ActionId = BuildCreateActionId(descriptor.Id),
             Label = descriptor.Name,
             MenuLabel = TrimMenuLabel(descriptor.Name),
-            Description = descriptor.Description,
+            Description = BuildExecutorSummary(descriptor),
             Icon = descriptor.IconName,
             Tone = ResolveTone(descriptor.Category),
             SetupRendererKey = $"workflow-executor-{descriptor.Category.ToString().ToLowerInvariant()}",
@@ -103,6 +103,7 @@ public static class WorkflowExecutorCanvasCatalog
             WorkflowExecutorCategoryKind.Data => "accent",
             WorkflowExecutorCategoryKind.Markdown => "info",
             WorkflowExecutorCategoryKind.Human => "warning",
+            WorkflowExecutorCategoryKind.Utility => "neutral",
             WorkflowExecutorCategoryKind.Command => "danger",
             _ => "neutral"
         };
@@ -116,6 +117,7 @@ public static class WorkflowExecutorCanvasCatalog
             WorkflowExecutorCategoryKind.Data => "Data",
             WorkflowExecutorCategoryKind.Markdown => "Markdown",
             WorkflowExecutorCategoryKind.Human => "Human",
+            WorkflowExecutorCategoryKind.Utility => "Utility",
             WorkflowExecutorCategoryKind.Command => "Commands",
             WorkflowExecutorCategoryKind.Image => "Images",
             WorkflowExecutorCategoryKind.Storage => "Storage",
@@ -133,6 +135,7 @@ public static class WorkflowExecutorCanvasCatalog
             WorkflowExecutorCategoryKind.Data => "Structured payload transformations.",
             WorkflowExecutorCategoryKind.Markdown => "Markdown rendering and report assembly.",
             WorkflowExecutorCategoryKind.Human => "Human approvals and workflow pauses.",
+            WorkflowExecutorCategoryKind.Utility => "Bounded helper executors for local control flow.",
             WorkflowExecutorCategoryKind.Command => "Bounded local process execution.",
             _ => "Workflow executor tools."
         };
@@ -148,9 +151,29 @@ public static class WorkflowExecutorCanvasCatalog
             WorkflowExecutorCategoryKind.Data => "data_object",
             WorkflowExecutorCategoryKind.Markdown => "article",
             WorkflowExecutorCategoryKind.Human => "approval",
+            WorkflowExecutorCategoryKind.Utility => "timer",
             WorkflowExecutorCategoryKind.Command => "terminal",
             _ => "bolt"
         };
+
+    public static string BuildExecutorSummary(WorkflowExecutorDescriptor descriptor)
+    {
+        var badges = new List<string>
+        {
+            descriptor.CanExecute ? "Available" : descriptor.Availability.Kind.ToString()
+        };
+        if (descriptor.PermissionPolicy.RequiresApproval)
+        {
+            badges.Add("Approval required");
+        }
+
+        if (descriptor.DeterministicTestMode.IsSupported)
+        {
+            badges.Add("Deterministic preview");
+        }
+
+        return $"{descriptor.Description} {string.Join(" · ", badges)}.";
+    }
 
     private static CanvasWorkbenchAction? BuildPluginExecutorsAction(
         IReadOnlyList<WorkflowExecutorDescriptor> executors,

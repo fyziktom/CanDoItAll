@@ -1,0 +1,15 @@
+Command: rg -n UnsupportedNodeKind|RegisteredExecutorsOnly|IWorkflowExecutorDescriptorSource|PluginWorkflowExecutorDescriptorSource|FromDescriptorSources|FromDescriptors src tests -S
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:89:                WorkflowDefinitionValidationOptions.RegisteredExecutorsOnly);
+src\CanDoItAll.Modules.Plugins\Services\PluginsModuleServiceCollectionExtensions.cs:21:        services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutorDescriptorSource, PluginWorkflowExecutorDescriptorSource>());
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:265:                    WorkflowValidationIssueCode.UnsupportedNodeKind,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:280:                    WorkflowValidationIssueCode.UnsupportedNodeKind,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:641:    public static WorkflowDefinitionValidationOptions RegisteredExecutorsOnly { get; } = new(RequireRunnableExecutors: false);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorContracts.cs:14:public interface IWorkflowExecutorDescriptorSource
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorContracts.cs:112:    public static WorkflowExecutorCatalog FromDescriptors(IEnumerable<WorkflowExecutorDescriptor> descriptors)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowExecutorContracts.cs:115:    public static WorkflowExecutorCatalog FromDescriptorSources(IEnumerable<IWorkflowExecutorDescriptorSource> sources)
+src\CanDoItAll.Modules.Plugins\Catalog\PluginWorkflowExecutorDescriptorSource.cs:7:public sealed class PluginWorkflowExecutorDescriptorSource(
+src\CanDoItAll.Modules.Plugins\Catalog\PluginWorkflowExecutorDescriptorSource.cs:9:    PluginGrantEvaluator grantEvaluator) : IWorkflowExecutorDescriptorSource
+

@@ -12,6 +12,8 @@ public interface IWorkspaceFileService
 
     WorkspacePathStatResult StatPath(string path);
 
+    WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760);
+
     WorkspaceFileMutationResult CreateDirectory(string path);
 
     WorkspaceFileMutationResult WriteTextFile(string path, string content, bool overwrite = true);
@@ -23,6 +25,10 @@ public interface IWorkspaceFileService
     WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false);
 
     WorkspaceFileMutationResult DeletePath(string path, bool recursive = false);
+
+    WorkspaceArchiveMutationResult ZipPath(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760);
+
+    WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760);
 
     WorkspaceTextDiffResult DiffTextFiles(string leftPath, string rightPath, int maxLines = 160);
 }

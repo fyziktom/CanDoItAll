@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.Projects;
@@ -13,6 +16,8 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
     IProjectStructureLocalFileOpener localFileOpener,
     ProjectStructureSourceWorkspacePathResolver sourceWorkspacePathResolver) : IProjectStructureRuntimeGateway
 {
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> IdempotentMutationLocks = new(StringComparer.Ordinal);
     private static readonly ProjectStructureRuntimeReadRequest FullNodeReadRequest = new(
         IncludeLayout: true,
         IncludeMetadata: true,
@@ -78,32 +83,43 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(agent);
 
-        return await leaseService.RunWithProjectMutationLeaseAsync(
+        var idempotencyKey = NormalizeIdempotencyKey(request.IdempotencyKey);
+        return await RunWithIdempotencyLockAsync(
             projectId,
-            request.LeaseToken,
-            MapAgent(agent),
-            "create-runtime-structure-node",
-            async cancellationToken =>
-            {
-                var createdNode = await projectWorkbenchService.CreateObjectAsync(
-                    projectId,
-                    new ProjectObjectCreateRequest(
-                        request.ObjectType,
-                        request.Title,
-                        request.Subtitle,
-                        request.Notes,
-                        request.ParentNodeKey,
-                        request.X,
-                        request.Y,
-                        request.StartUtc,
-                        request.EndUtc,
-                        ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
-                        MapMedia(request.Media),
-                        request.MetadataJson,
-                        request.DurationSeconds),
-                    cancellationToken);
-                return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);
-            },
+            idempotencyKey,
+            async cancellationToken => await leaseService.RunWithProjectMutationLeaseAsync(
+                projectId,
+                request.LeaseToken,
+                MapAgent(agent),
+                "create-runtime-structure-node",
+                async cancellationToken =>
+                {
+                    if (idempotencyKey is not null &&
+                        await TryFindExistingIdempotentNodeAsync(projectId, idempotencyKey, cancellationToken) is { } existingNode)
+                    {
+                        return existingNode;
+                    }
+
+                    var createdNode = await projectWorkbenchService.CreateObjectAsync(
+                        projectId,
+                        new ProjectObjectCreateRequest(
+                            request.ObjectType,
+                            request.Title,
+                            request.Subtitle,
+                            request.Notes,
+                            request.ParentNodeKey,
+                            request.X,
+                            request.Y,
+                            request.StartUtc,
+                            request.EndUtc,
+                            ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
+                            MapMedia(request.Media),
+                            BuildIdempotentMetadataJson(request.MetadataJson, idempotencyKey, request.IdempotencyBatchKey),
+                            request.DurationSeconds),
+                        cancellationToken);
+                    return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);
+                },
+                cancellationToken),
             cancellationToken);
     }
 
@@ -121,29 +137,153 @@ public sealed class WorkbenchProjectStructureRuntimeGateway(
             throw new ProjectStructureAgentException(400, "AssetTypeRequired", "Asset nodes must be File, ImageAsset, or VideoAsset.");
         }
 
+        var idempotencyKey = NormalizeIdempotencyKey(request.IdempotencyKey);
         var media = await ResolveAssetCreateMediaAsync(request, cancellationToken);
-        return await leaseService.RunWithProjectMutationLeaseAsync(
+        return await RunWithIdempotencyLockAsync(
             projectId,
-            request.LeaseToken,
-            MapAgent(agent),
-            "create-runtime-structure-asset",
-            async cancellationToken =>
-            {
-                var createdNode = await projectWorkbenchService.CreateObjectAsync(
-                    projectId,
-                    new ProjectObjectCreateRequest(
-                        request.ObjectType,
-                        request.Title,
-                        request.Subtitle,
-                        request.Notes,
-                        request.ParentNodeKey,
-                        ObjectSubtype: ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
-                        Media: media,
-                        MetadataJson: request.MetadataJson),
-                    cancellationToken);
-                return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);
-            },
+            idempotencyKey,
+            async cancellationToken => await leaseService.RunWithProjectMutationLeaseAsync(
+                projectId,
+                request.LeaseToken,
+                MapAgent(agent),
+                "create-runtime-structure-asset",
+                async cancellationToken =>
+                {
+                    if (idempotencyKey is not null &&
+                        await TryFindExistingIdempotentNodeAsync(projectId, idempotencyKey, cancellationToken) is { } existingNode)
+                    {
+                        return existingNode;
+                    }
+
+                    var createdNode = await projectWorkbenchService.CreateObjectAsync(
+                        projectId,
+                        new ProjectObjectCreateRequest(
+                            request.ObjectType,
+                            request.Title,
+                            request.Subtitle,
+                            request.Notes,
+                            request.ParentNodeKey,
+                            ObjectSubtype: ProjectStructureRequestedNodeKindParser.NormalizeSubtypeForType(request.ObjectType, request.ObjectSubtype),
+                            Media: media,
+                            MetadataJson: BuildIdempotentMetadataJson(request.MetadataJson, idempotencyKey, request.IdempotencyBatchKey)),
+                        cancellationToken);
+                    return MapNode(createdNode, createdNode.Priority, FullNodeReadRequest);
+                },
+                cancellationToken),
             cancellationToken);
+    }
+
+    private async Task<ProjectStructureRuntimeNodeSummary?> TryFindExistingIdempotentNodeAsync(
+        Guid projectId,
+        string idempotencyKey,
+        CancellationToken cancellationToken)
+    {
+        var surface = await projectWorkbenchService.GetStructureAsync(projectId, cancellationToken);
+        var existingNode = surface.Nodes.FirstOrDefault(node => HasIdempotencyKey(node.MetadataJson, idempotencyKey));
+        return existingNode is null
+            ? null
+            : MapNode(existingNode, existingNode.Priority, FullNodeReadRequest);
+    }
+
+    private static async Task<T> RunWithIdempotencyLockAsync<T>(
+        Guid projectId,
+        string? idempotencyKey,
+        Func<CancellationToken, Task<T>> callback,
+        CancellationToken cancellationToken)
+    {
+        if (idempotencyKey is null)
+        {
+            return await callback(cancellationToken);
+        }
+
+        var lockKey = $"{projectId:D}:{idempotencyKey}";
+        var semaphore = IdempotentMutationLocks.GetOrAdd(lockKey, _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync(cancellationToken);
+        try
+        {
+            return await callback(cancellationToken);
+        }
+        finally
+        {
+            semaphore.Release();
+        }
+    }
+
+    private static string? NormalizeIdempotencyKey(string? idempotencyKey)
+        => string.IsNullOrWhiteSpace(idempotencyKey)
+            ? null
+            : idempotencyKey.Trim();
+
+    private static string? NormalizeIdempotencyBatchKey(string? idempotencyBatchKey)
+        => string.IsNullOrWhiteSpace(idempotencyBatchKey)
+            ? null
+            : idempotencyBatchKey.Trim();
+
+    private static string? BuildIdempotentMetadataJson(
+        string? metadataJson,
+        string? idempotencyKey,
+        string? idempotencyBatchKey)
+    {
+        if (idempotencyKey is null && string.IsNullOrWhiteSpace(idempotencyBatchKey))
+        {
+            return metadataJson;
+        }
+
+        var root = ParseMetadataObject(metadataJson);
+        var metadata = root[ProjectStructureRuntimeIdempotencyMetadata.MetadataPropertyName] as JsonObject ?? new JsonObject();
+        if (idempotencyKey is not null)
+        {
+            metadata[ProjectStructureRuntimeIdempotencyMetadata.IdempotencyKeyPropertyName] = idempotencyKey;
+        }
+
+        if (NormalizeIdempotencyBatchKey(idempotencyBatchKey) is { } batchKey)
+        {
+            metadata[ProjectStructureRuntimeIdempotencyMetadata.BatchIdempotencyKeyPropertyName] = batchKey;
+        }
+
+        root[ProjectStructureRuntimeIdempotencyMetadata.MetadataPropertyName] = metadata;
+        return root.ToJsonString(JsonOptions);
+    }
+
+    private static JsonObject ParseMetadataObject(string? metadataJson)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return new JsonObject();
+        }
+
+        try
+        {
+            return JsonNode.Parse(metadataJson) as JsonObject
+                   ?? throw new InvalidOperationException("Project-structure idempotent write metadata must be a JSON object.");
+        }
+        catch (JsonException exception)
+        {
+            throw new InvalidOperationException("Project-structure idempotent write metadata must be valid JSON.", exception);
+        }
+    }
+
+    private static bool HasIdempotencyKey(string? metadataJson, string idempotencyKey)
+    {
+        if (string.IsNullOrWhiteSpace(metadataJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(metadataJson);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty(ProjectStructureRuntimeIdempotencyMetadata.MetadataPropertyName, out var metadata) &&
+                   metadata.ValueKind == JsonValueKind.Object &&
+                   metadata.TryGetProperty(ProjectStructureRuntimeIdempotencyMetadata.IdempotencyKeyPropertyName, out var key) &&
+                   key.ValueKind == JsonValueKind.String &&
+                   string.Equals(key.GetString(), idempotencyKey, StringComparison.Ordinal);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     private static ProjectStructureRuntimeProjectSummary MapProject(ProjectSummary project)

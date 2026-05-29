@@ -37,6 +37,9 @@ public partial class WorkflowsPage
     public WorkflowExampleCatalogSeedService ExampleCatalogSeedService { get; set; } = default!;
 
     [Inject]
+    public WorkflowTemplatePackLoader TemplatePackLoader { get; set; } = default!;
+
+    [Inject]
     public IWorkflowRuntimeManager RuntimeManager { get; set; } = default!;
 
     [Inject]
@@ -59,6 +62,7 @@ public partial class WorkflowsPage
     private IReadOnlyList<WorkflowArtifactRecord> artifacts = [];
     private IReadOnlyList<WorkflowExternalRequestRecord> pendingRequests = [];
     private IReadOnlyList<WorkflowValidationIssue> validationIssues = [];
+    private WorkflowTemplatePack? templatePack;
     private WorkflowSettings settings = WorkflowSettings.Default;
     private WorkflowDefinition? selectedDefinition;
     private WorkflowRunSnapshot? selectedRun;
@@ -89,6 +93,10 @@ public partial class WorkflowsPage
     private string SelectedDefinitionTitle => selectedDefinition?.Name ?? "Workflow detail";
 
     private string ComponentCountText => componentLibraryLoaded ? components.Count.ToString() : "-";
+
+    private IReadOnlyList<WorkflowTemplateDefinition> WorkflowTemplates => templatePack?.Workflows ?? [];
+
+    private string WorkflowTemplateSeedText => templatePack?.Manifest.SeedVersion ?? "-";
 
     private string ValidationText => validationIssues.Count == 0 ? "Valid" : $"{validationIssues.Count} issue(s)";
 
@@ -154,6 +162,7 @@ public partial class WorkflowsPage
     {
         var settingsTask = SettingsService.GetSettingsAsync();
         var definitionsTask = CatalogService.ListDefinitionsAsync();
+        templatePack ??= TemplatePackLoader.Load();
         await Task.WhenAll(settingsTask, definitionsTask);
 
         settings = await settingsTask;

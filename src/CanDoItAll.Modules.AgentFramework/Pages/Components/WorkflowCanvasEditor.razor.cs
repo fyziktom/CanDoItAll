@@ -34,6 +34,9 @@ public partial class WorkflowCanvasEditor
     public IWorkflowExecutorCatalog ExecutorCatalog { get; set; } = default!;
 
     [Inject]
+    public IWorkflowRuntimeBackendCatalog RuntimeBackendCatalog { get; set; } = default!;
+
+    [Inject]
     public IWorkflowComponentLibraryService ComponentLibrary { get; set; } = default!;
 
     [Inject]
@@ -766,6 +769,14 @@ public partial class WorkflowCanvasEditor
     private static string BuildPreviewSimulationTestId(WorkflowPreviewSimulationRequirement requirement)
         => $"workflow-canvas-preview-simulate-{requirement.NodeId.Value}";
 
+    private IReadOnlyList<WorkflowRuntimeBackendDescriptor> RuntimeBackendOptions
+        => RuntimeBackendCatalog.ListBackends();
+
+    private static string BuildRuntimeBackendOptionText(WorkflowRuntimeBackendDescriptor backend)
+        => backend.IsRunnable
+            ? backend.Kind.ToString()
+            : $"{backend.Kind} ({backend.Availability})";
+
     private async Task RunPreviewCoreAsync(
         WorkflowDefinition definition,
         string inputJson,
@@ -1090,6 +1101,13 @@ public partial class WorkflowCanvasEditor
     {
         if (!Enum.TryParse<WorkflowRuntimeBackendKind>(args.Value?.ToString(), out var backend))
         {
+            return;
+        }
+
+        var backendDescriptor = RuntimeBackendCatalog.GetRequiredBackend(backend);
+        if (!backendDescriptor.IsRunnable)
+        {
+            NotificationService.Warning("Runtime backend unavailable", backendDescriptor.AvailabilityReason);
             return;
         }
 
@@ -1475,7 +1493,7 @@ public partial class WorkflowCanvasEditor
             .Select(executor => new OverlayToolboxItem(
                 WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
                 executor.Name,
-                executor.Description,
+                WorkflowExecutorCanvasCatalog.BuildExecutorSummary(executor),
                 Icon: executor.IconName,
                 Tone: WorkflowExecutorCanvasCatalog.ResolveTone(executor.Category),
                 IsDisabled: !executor.CanExecute,
@@ -1510,7 +1528,7 @@ public partial class WorkflowCanvasEditor
             .Select(executor => new OverlayToolboxItem(
                 WorkflowExecutorCanvasCatalog.BuildCreateActionId(executor.Id),
                 executor.Name,
-                executor.Description,
+                WorkflowExecutorCanvasCatalog.BuildExecutorSummary(executor),
                 Icon: executor.IconName,
                 Tone: "accent",
                 IsDisabled: !executor.CanExecute,

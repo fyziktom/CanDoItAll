@@ -11,6 +11,11 @@ public interface IWorkflowExecutorCatalog
     WorkflowExecutorDescriptor GetRequiredExecutor(WorkflowExecutorId executorId);
 }
 
+public interface IWorkflowExecutorDescriptorSource
+{
+    IEnumerable<WorkflowExecutorDescriptor> ListExecutorDescriptors();
+}
+
 public interface IWorkflowExecutor
 {
     WorkflowExecutorDescriptor Descriptor { get; }
@@ -29,6 +34,23 @@ public interface IWorkflowExecutorInvoker
         WorkflowNodeInput input,
         CancellationToken cancellationToken = default);
 }
+
+public interface IWorkflowExecutorApprovalGate
+{
+    ValueTask<WorkflowExecutorApprovalDecision> RequestApprovalAsync(
+        WorkflowExecutorApprovalRequest request,
+        CancellationToken cancellationToken = default);
+}
+
+public sealed record WorkflowExecutorApprovalRequest(
+    WorkflowDefinition Definition,
+    WorkflowNode Node,
+    WorkflowExecutorDescriptor Descriptor,
+    string RedactedSettingsSummary);
+
+public sealed record WorkflowExecutorApprovalDecision(
+    bool Approved,
+    string Message);
 
 public interface IWorkflowLlmComponentInvoker
 {
@@ -60,12 +82,15 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
     private readonly IReadOnlyDictionary<WorkflowExecutorId, WorkflowExecutorDescriptor> descriptorsById;
 
     public WorkflowExecutorCatalog(IEnumerable<IWorkflowExecutor> executors)
+        : this(ResolveDescriptors(executors))
     {
-        ArgumentNullException.ThrowIfNull(executors);
+    }
 
-        var resolvedDescriptors = executors
-            .Select(executor => executor.Descriptor)
-            .ToArray();
+    private WorkflowExecutorCatalog(IEnumerable<WorkflowExecutorDescriptor> descriptors)
+    {
+        ArgumentNullException.ThrowIfNull(descriptors);
+
+        var resolvedDescriptors = descriptors.ToArray();
         var duplicateIds = resolvedDescriptors
             .GroupBy(descriptor => descriptor.Id)
             .Where(group => group.Count() > 1)
@@ -77,11 +102,20 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
             throw new InvalidOperationException($"Workflow executor catalog contains duplicate executor id(s): {string.Join(", ", duplicateIds)}.");
         }
 
-        descriptors = resolvedDescriptors
+        this.descriptors = resolvedDescriptors
             .OrderBy(descriptor => descriptor.Category)
             .ThenBy(descriptor => descriptor.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
         descriptorsById = resolvedDescriptors.ToDictionary(descriptor => descriptor.Id);
+    }
+
+    public static WorkflowExecutorCatalog FromDescriptors(IEnumerable<WorkflowExecutorDescriptor> descriptors)
+        => new(descriptors);
+
+    public static WorkflowExecutorCatalog FromDescriptorSources(IEnumerable<IWorkflowExecutorDescriptorSource> sources)
+    {
+        ArgumentNullException.ThrowIfNull(sources);
+        return new WorkflowExecutorCatalog(sources.SelectMany(source => source.ListExecutorDescriptors()));
     }
 
     public IReadOnlyList<WorkflowExecutorDescriptor> ListExecutors() => descriptors;
@@ -98,12 +132,19 @@ public sealed class WorkflowExecutorCatalog : IWorkflowExecutorCatalog
 
         throw new InvalidOperationException($"Workflow executor '{executorId}' is not registered.");
     }
+
+    private static IEnumerable<WorkflowExecutorDescriptor> ResolveDescriptors(IEnumerable<IWorkflowExecutor> executors)
+    {
+        ArgumentNullException.ThrowIfNull(executors);
+        return executors.Select(executor => executor.Descriptor);
+    }
 }
 
 public sealed class WorkflowExecutorInvoker(
     IWorkflowExecutorCatalog catalog,
     IEnumerable<IWorkflowExecutor> executors,
-    IWorkflowExecutorExecutionObserver? executionObserver = null) : IWorkflowExecutorInvoker
+    IWorkflowExecutorExecutionObserver? executionObserver = null,
+    IWorkflowExecutorApprovalGate? approvalGate = null) : IWorkflowExecutorInvoker
 {
     private readonly IReadOnlyDictionary<WorkflowExecutorId, IWorkflowExecutor> executorsById = BuildExecutorsById(executors);
     private readonly IWorkflowExecutorExecutionObserver executionObserver = executionObserver ?? new NullWorkflowExecutorExecutionObserver();
@@ -143,6 +184,12 @@ public sealed class WorkflowExecutorInvoker(
             : node.Settings.ExecutorSettingsJson;
         var redactedSettingsSummary = WorkflowExecutorRedaction.RedactSettingsJson(settingsJson);
         var pluginConnectionId = WorkflowExecutorRedaction.ReadStringProperty(settingsJson, "connectionId");
+        await EnforceApprovalPolicyAsync(
+            definition,
+            node,
+            descriptor,
+            redactedSettingsSummary,
+            cancellationToken);
         var context = new WorkflowExecutorExecutionContext(
             definition,
             node,
@@ -241,6 +288,41 @@ public sealed class WorkflowExecutorInvoker(
             policy.TimeoutSeconds,
             $"Workflow executor '{executorId}' failed on node '{node.Id}' after {policy.MaxRetryAttempts + 1} attempt(s).",
             lastException);
+    }
+
+    private async ValueTask EnforceApprovalPolicyAsync(
+        WorkflowDefinition definition,
+        WorkflowNode node,
+        WorkflowExecutorDescriptor descriptor,
+        string redactedSettingsSummary,
+        CancellationToken cancellationToken)
+    {
+        if (!descriptor.PermissionPolicy.RequiresApproval)
+        {
+            return;
+        }
+
+        if (approvalGate is null)
+        {
+            throw new InvalidOperationException(
+                $"Workflow executor '{descriptor.Id}' on node '{node.Id}' requires approval, but no workflow executor approval gate is registered.");
+        }
+
+        var decision = await approvalGate.RequestApprovalAsync(
+            new WorkflowExecutorApprovalRequest(
+                definition,
+                node,
+                descriptor,
+                redactedSettingsSummary),
+            cancellationToken);
+        if (!decision.Approved)
+        {
+            var message = string.IsNullOrWhiteSpace(decision.Message)
+                ? "Approval was denied."
+                : WorkflowExecutorRedaction.RedactText(decision.Message);
+            throw new InvalidOperationException(
+                $"Workflow executor '{descriptor.Id}' on node '{node.Id}' was not approved: {message}");
+        }
     }
 
     private async ValueTask RecordExecutionAuditAsync(

@@ -1,0 +1,17 @@
+Command: compute before/after SHA-256 hashes for SB02 changed files
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:34:50.5176650-04:00
+
+| File | Before SHA-256 | After SHA-256 |
+| --- | --- | --- |
+| `repo://src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowRuntimeManager.cs` | `72326de89c7ad02a0374c50bc10c85b3376e469538fad521d48f115774b70734` | `78bd808534769744d82094e43f1e3d1076309bc2d75bd326688fec5e0b4fe85a` |
+| `repo://src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExternalRequestRuntime.cs` | `N/A` | `e081d2c2d062e1cec0829fe4b445b420860d3586207135d212c306adf86cdfbd` |
+| `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowCompiler.cs` | `25494b334d8ccf99f5dc61c413cee8b2aaf1cd2a593120333605e86acbd59441` | `96b653674188cf7cb29816e46bb012c49be12c31ec53ecbec1d07b13875742f2` |
+| `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafInProcessWorkflowExecutionBackend.cs` | `b9816a124b44ea5e7dfcd4f950d204217115faf2b389e178bced2a7aad110670` | `71d2a0c7e941c626a65ffc20cbd9d23f1a5b746abad859c3d7af167e1318e14d` |
+| `repo://src/CanDoItAll.AgentFramework.Hosting/AgentFrameworkServiceCollectionExtensions.cs` | `7d43ba73d3842ee62dcc2815768d8f522357a459b4390a72374203630a4bf5c2` | `94ef579acd43813ecfd7b615765785f492e0040080a8e736eea51d55d8bfaa86` |
+| `repo://src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs` | `3109526e4813ffcad02c5a75e96e7528c1024ed61ea242011a29a6616e88c614` | `571a5a438495146da0884ca2a4395407feaf25e4fcc5e5d78b514c32765095d6` |
+| `repo://tests/CanDoItAll.Tests.Unit/WorkflowFoundationTests.cs` | `29d0e9423e82b492b757b0ef2030af6cf2d58588b0d7ea570e24e2eab0cd37e1` | `bdd78f1dc3fb972bf7cc7b6f3646cbc13d3fcf0d19c0cc1513cfacf7f1586a19` |
+| `repo://tests/CanDoItAll.Tests.Unit/WorkflowExecutorPolicyObservabilityTests.cs` | `9856819b495dc3cc23e7f553fc45bffe21b380b95577af6a96e5ee34a1d22eeb` | `6422b459ce0be164ec120b804dbd6ac1d9ee363e2205ec2f7d8abf6ab26f0620` |
+| `repo://tests/CanDoItAll.Tests.Integration/WorkflowApiIntegrationTests.cs` | `feab3a744263cd5c85b2cedc3393fbe62aab54c504f77400fa7d04860c788355` | `d61d175b96022e60d4baf19a3af287a803cc1ec522a4f45f791808f94e8fcfc8` |
+
+ExitCode: 0

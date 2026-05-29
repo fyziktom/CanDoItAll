@@ -61,10 +61,40 @@ public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
 
         AssertTemplateGraph(pack, "gmail-label-email-summary-to-project");
         AssertTemplateGraph(pack, "office365-category-email-summary-to-project");
+        var office365WatchSummary = AssertTemplateGraph(pack, "office365-email-watch-summary-to-project");
+        var office365WatchTasks = AssertTemplateGraph(pack, "office365-email-watch-tasks-to-project");
         var gmailTasks = AssertTemplateGraph(pack, "gmail-label-email-tasks-to-project");
         var officeTasks = AssertTemplateGraph(pack, "office365-category-email-tasks-to-project");
         var mermaid = AssertTemplateGraph(pack, "file-to-mermaid-graph-asset");
         var sourceCode = AssertTemplateGraph(pack, "source-code-file-summary-to-project");
+
+        AssertOffice365WatchDownloadSettings(office365WatchSummary, "download-office365-watch");
+        AssertOffice365WatchDownloadSettings(office365WatchTasks, "download-office365-watch");
+        AssertProjectStructureOperation(
+            office365WatchSummary,
+            "store-office365-watch-summary",
+            WorkflowProjectStructureOperation.CreateAsset,
+            includeInputPayload: true,
+            idempotencyKeySuffix: "summary");
+        AssertProjectStructureOperation(
+            office365WatchTasks,
+            "create-office365-watch-task-nodes",
+            WorkflowProjectStructureOperation.CreateTaskNodes,
+            includeInputPayload: true,
+            idempotencyKeySuffix: "tasks");
+        AssertProjectStructureOperation(
+            office365WatchTasks,
+            "store-office365-watch-no-task-summary",
+            WorkflowProjectStructureOperation.CreateAsset,
+            includeInputPayload: true,
+            idempotencyKeySuffix: "tasks");
+        AssertOffice365WatchMarkSettings(office365WatchSummary, "mark-office365-watch-summary-processed");
+        AssertOffice365WatchMarkSettings(office365WatchTasks, "mark-office365-watch-tasks-processed");
+        AssertEdge(office365WatchSummary, "store-office365-watch-summary", "mark-office365-watch-summary-processed");
+        AssertEdge(office365WatchTasks, "create-office365-watch-task-nodes", "mark-office365-watch-tasks-processed");
+        AssertEdge(office365WatchTasks, "store-office365-watch-no-task-summary", "mark-office365-watch-tasks-processed");
+        AssertNoMessageBranch(office365WatchSummary, "office365-watch-message-switch", "compact-office365-summary-no-message", "summarize-office365-watch");
+        AssertNoMessageBranch(office365WatchTasks, "office365-watch-message-switch", "compact-office365-tasks-no-message", "extract-office365-watch-tasks");
 
         Assert.Contains(gmailTasks.Nodes, node => node.Settings.ExecutorId == new WorkflowExecutorId("gmail.messages-by-label"));
         Assert.Contains(gmailTasks.Nodes, node => node.Settings.ExecutorId == new WorkflowExecutorId("gmail.mark-message-processed"));
@@ -159,7 +189,8 @@ public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
         WorkflowGraph graph,
         string nodeId,
         WorkflowProjectStructureOperation operation,
-        bool includeInputPayload)
+        bool includeInputPayload,
+        string? idempotencyKeySuffix = null)
     {
         var node = Assert.Single(graph.Nodes, item => item.Id.Value == nodeId);
         Assert.Equal(WorkflowExecutorIds.ProjectStructure, node.Settings.ExecutorId);
@@ -171,6 +202,81 @@ public sealed class ProjectStructureWorkflowPreviewSimulationSupportTests
         Assert.NotNull(settings);
         Assert.Equal(operation, settings.Operation);
         Assert.Equal(includeInputPayload, settings.IncludeInputPayload);
+
+        if (idempotencyKeySuffix is not null)
+        {
+            Assert.Equal("$.runContext.office365Processing.idempotencyKey", settings.IdempotencyKeyJsonPath);
+            Assert.Equal(idempotencyKeySuffix, settings.IdempotencyKeySuffix);
+        }
+    }
+
+    private static void AssertOffice365WatchDownloadSettings(
+        WorkflowGraph graph,
+        string nodeId)
+    {
+        var node = AssertSingleExecutorNode(graph, nodeId, "office365.message-by-address-unprocessed");
+        using var document = JsonDocument.Parse(node.Settings.ExecutorSettingsJson);
+        var root = document.RootElement;
+
+        Assert.Equal("$.connectionId", root.GetProperty("connectionIdJsonPath").GetString());
+        Assert.Equal("$.emailAddress", root.GetProperty("emailAddressJsonPath").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("processedCategory").GetString());
+        Assert.Equal("$.processedCategory", root.GetProperty("processedCategoryJsonPath").GetString());
+        Assert.Equal("$.lookbackHours", root.GetProperty("lookbackHoursJsonPath").GetString());
+        Assert.Equal("SuccessNoMessages", root.GetProperty("noMessageBehavior").GetString());
+    }
+
+    private static void AssertOffice365WatchMarkSettings(
+        WorkflowGraph graph,
+        string nodeId)
+    {
+        var node = AssertSingleExecutorNode(graph, nodeId, "office365.mark-message-processed");
+        using var document = JsonDocument.Parse(node.Settings.ExecutorSettingsJson);
+        var root = document.RootElement;
+
+        Assert.Equal("$.inputPayload.runContext.office365Processing.connectionId", root.GetProperty("connectionIdJsonPath").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("sourceCategory").GetString());
+        Assert.Equal(string.Empty, root.GetProperty("processedCategory").GetString());
+        Assert.Equal("$.inputPayload.runContext.office365Processing.processedCategory", root.GetProperty("processedCategoryJsonPath").GetString());
+        Assert.Equal("$.inputPayload.runContext.office365Processing.selectedMessageId", root.GetProperty("messageIdJsonPath").GetString());
+    }
+
+    private static WorkflowNode AssertSingleExecutorNode(
+        WorkflowGraph graph,
+        string nodeId,
+        string executorId)
+    {
+        var node = Assert.Single(graph.Nodes, item => item.Id.Value == nodeId);
+        Assert.Equal(new WorkflowExecutorId(executorId), node.Settings.ExecutorId);
+        return node;
+    }
+
+    private static void AssertEdge(
+        WorkflowGraph graph,
+        string sourceNodeId,
+        string targetNodeId)
+        => Assert.Contains(
+            graph.Edges,
+            edge => edge.SourceNodeId.Value == sourceNodeId &&
+                    edge.TargetNodeId.Value == targetNodeId);
+
+    private static void AssertNoMessageBranch(
+        WorkflowGraph graph,
+        string switchNodeId,
+        string noMessageTargetNodeId,
+        string messageTargetNodeId)
+    {
+        Assert.Contains(
+            graph.Edges,
+            edge => edge.SourceNodeId.Value == switchNodeId &&
+                    edge.TargetNodeId.Value == noMessageTargetNodeId &&
+                    edge.Routing.Kind == WorkflowRouteKind.SwitchCase &&
+                    edge.Routing.ExpectedValueJson == "\"no_messages\"");
+        Assert.Contains(
+            graph.Edges,
+            edge => edge.SourceNodeId.Value == switchNodeId &&
+                    edge.TargetNodeId.Value == messageTargetNodeId &&
+                    edge.Routing.Kind == WorkflowRouteKind.SwitchDefault);
     }
 
     private static void AssertSourceIngestionAllows(

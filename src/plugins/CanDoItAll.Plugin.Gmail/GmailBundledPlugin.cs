@@ -35,7 +35,16 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                 CreateExecutorSettingsSchema(),
                 WorkflowValueShape.Text,
                 EmailBatchShape,
-                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 }),
+                WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
+            {
+                PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.ReadsExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.NotRequired),
+                DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Gmail messages without calling Gmail.")
+            },
             new PluginWorkflowExecutorDescriptor(
                 GmailPluginConstants.MarkProcessedExecutorId,
                 "Gmail mark processed",
@@ -46,6 +55,15 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                 WorkflowValueShape.Text,
                 LabelMutationShape,
                 WorkflowExecutorExecutionPolicy.Default with { TimeoutSeconds = 60 })
+            {
+                PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                    WorkflowExecutorCapabilityFlags.WritesExternalData |
+                    WorkflowExecutorCapabilityFlags.UsesNetwork |
+                    WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+                DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
+            }
         ],
         PluginSettingsDescriptor.Empty,
         [

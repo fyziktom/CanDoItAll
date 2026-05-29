@@ -1,0 +1,4 @@
+Command: semantic invariant transcript index
+ExitCode: 0
+Result: invariant ids are indexed for completed-stage bundle validation.
+Invariant ID: SB08-FINAL-REGRESSION-CLOSURE

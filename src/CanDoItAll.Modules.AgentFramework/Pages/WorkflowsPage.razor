@@ -244,9 +244,14 @@
                           Class="workflows-layout"
                           ColumnTemplateLg="minmax(0,0.9fr) minmax(0,1.1fr)">
                         <SurfaceCard data-testid="workflows-templates">
-                            <TextBlock TextStyle="TextStyle.Eyebrow" Value="Templates" />
-                            <h2 class="workflows-card-title">Starter workflow</h2>
-                            <p class="workflows-muted mt-3">Creates a draft workflow with one prepared LLM call and in-process preview policy.</p>
+                            <Split Gap="LayoutGap.Small">
+                                <div>
+                                    <TextBlock TextStyle="TextStyle.Eyebrow" Value="Templates" />
+                                    <h2 class="workflows-card-title">Starter workflow</h2>
+                                </div>
+                                <StatusBadge Tone="info" Text="@($"{WorkflowTemplates.Count} examples")" />
+                            </Split>
+                            <p class="workflows-muted mt-3">Seed @WorkflowTemplateSeedText</p>
                             <Cluster Gap="LayoutGap.Small" Wrap="FlexWrap.Wrap" Class="mt-4">
                                 <Button Text="Create starter"
                                         Icon="add"
@@ -254,6 +259,19 @@
                                         Disabled="@isBusy"
                                         data-testid="workflows-template-create-starter" />
                             </Cluster>
+                            @if (WorkflowTemplates.Count > 0)
+                            {
+                                <Stack GapScale="LayoutGap.Small" Class="mt-4">
+                                    @foreach (var template in WorkflowTemplates)
+                                    {
+                                        <div class="workflows-artifact" data-testid="workflows-template-pack-item">
+                                            <strong>@template.Name</strong>
+                                            <span>@template.Description</span>
+                                            <small>@template.Key</small>
+                                        </div>
+                                    }
+                                </Stack>
+                            }
                         </SurfaceCard>
 
                         <SurfaceCard data-testid="workflows-components">

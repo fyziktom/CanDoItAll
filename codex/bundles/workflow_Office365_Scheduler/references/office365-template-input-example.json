@@ -1,0 +1,9 @@
+{
+  "emailAddress": "person@example.com",
+  "processedCategory": "CanDoItAllProcessed",
+  "projectId": "00000000-0000-0000-0000-000000000000",
+  "nodeId": "root-or-selected-node",
+  "connectionId": "",
+  "lookbackHours": 336,
+  "maxMessages": 1
+}

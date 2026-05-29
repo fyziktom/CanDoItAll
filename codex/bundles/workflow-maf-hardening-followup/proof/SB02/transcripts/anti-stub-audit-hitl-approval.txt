@@ -1,0 +1,16 @@
+Command: rg anti-stub audit for SB02 changed production and test files
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTime: 2026-05-29T06:33:15.1126021-04:00
+
+## Stub markers
+
+StubMarkerExitCode: 1
+Expected: 1 means no matches.
+
+## Live external effect guard terms in new proof tests
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:88:                WorkflowExecutorCapabilityFlags.WritesExternalData,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:110:                WorkflowExecutorCapabilityFlags.RunsHostCommand,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:136:                WorkflowExecutorCapabilityFlags.WritesExternalData,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:163:                WorkflowExecutorCapabilityFlags.RunsHostCommand | WorkflowExecutorCapabilityFlags.UsesSecrets,
+
+ExitCode: 0

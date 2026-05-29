@@ -71,6 +71,17 @@ public sealed record WorkspacePathStatResult(
     DateTimeOffset? LastWriteTimeUtc,
     int? ChildCount);
 
+public sealed record WorkspacePathHashResult(
+    bool Succeeded,
+    string Message,
+    string Path,
+    string PathKind,
+    string Algorithm,
+    string Hash,
+    long SizeBytes,
+    int FileCount,
+    bool IsTruncated);
+
 public sealed record WorkspaceFileMutationResult(
     bool Succeeded,
     string Message,
@@ -82,6 +93,15 @@ public sealed record WorkspaceFileMutationResult(
     bool CreatedNewPath,
     bool OverwroteExistingPath,
     int CharacterCount);
+
+public sealed record WorkspaceArchiveMutationResult(
+    bool Succeeded,
+    string Message,
+    string SourcePath,
+    string DestinationPath,
+    int FileCount,
+    long TotalBytes,
+    bool IsTruncated);
 
 public sealed record WorkspaceTextDiffResult(
     bool Succeeded,

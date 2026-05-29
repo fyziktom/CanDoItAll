@@ -127,6 +127,96 @@ public sealed class PluginCapabilityFacadeTests
     }
 
     [Fact]
+    public async Task ProjectStructure_executor_builds_office365_summary_idempotency_key()
+    {
+        var projectId = Guid.NewGuid();
+        var gateway = new RecordingProjectStructureGateway();
+        var payloadJson = $$"""
+            {
+              "projectId": "{{projectId:D}}",
+              "nodeId": "summary-parent",
+              "markdown": "# Summary",
+              "runContext": {
+                "office365Processing": {
+                  "idempotencyKey": "office365:graph-message-1"
+                }
+              }
+            }
+            """;
+
+        await ExecuteProjectStructureAsync(
+            gateway,
+            new WorkflowProjectStructureExecutorSettings
+            {
+                Operation = WorkflowProjectStructureOperation.CreateAsset,
+                ProjectIdJsonPath = "$.projectId",
+                NodeIdJsonPath = "$.nodeId",
+                Title = "Office365 watched email summary",
+                AssetKind = "md",
+                ContentFromInput = true,
+                IdempotencyKeyJsonPath = "$.runContext.office365Processing.idempotencyKey",
+                IdempotencyKeySuffix = "summary"
+            },
+            payloadJson);
+
+        var created = Assert.Single(gateway.CreatedAssets);
+        Assert.Equal("office365:graph-message-1:summary", created.Request.IdempotencyKey);
+        Assert.Equal("office365:graph-message-1:summary", created.Request.IdempotencyBatchKey);
+    }
+
+    [Fact]
+    public async Task ProjectStructure_executor_builds_stable_office365_task_idempotency_keys()
+    {
+        var projectId = Guid.NewGuid();
+        var gateway = new RecordingProjectStructureGateway();
+        var payloadJson = """
+            {
+              "runContext": {
+                "office365Processing": {
+                  "idempotencyKey": "office365:graph-message-2"
+                }
+              },
+              "tasks": [
+                {
+                  "title": "Confirm renewal scope",
+                  "summary": "Ask the sender for final renewal scope."
+                },
+                {
+                  "title": "Prepare support plan",
+                  "summary": "Draft the support plan."
+                }
+              ]
+            }
+            """;
+
+        await ExecuteProjectStructureAsync(
+            gateway,
+            new WorkflowProjectStructureExecutorSettings
+            {
+                Operation = WorkflowProjectStructureOperation.CreateTaskNodes,
+                ProjectId = projectId,
+                NodeId = "task-parent",
+                TaskItemsJsonPath = "$.tasks",
+                IdempotencyKeyJsonPath = "$.runContext.office365Processing.idempotencyKey",
+                IdempotencyKeySuffix = "tasks"
+            },
+            payloadJson);
+
+        Assert.Collection(
+            gateway.CreatedNodes,
+            first =>
+            {
+                Assert.Equal("office365:graph-message-2:tasks:001", first.Request.IdempotencyKey);
+                Assert.Equal("office365:graph-message-2:tasks", first.Request.IdempotencyBatchKey);
+            },
+            second =>
+            {
+                Assert.Equal("office365:graph-message-2:tasks:002", second.Request.IdempotencyKey);
+                Assert.Equal("office365:graph-message-2:tasks", second.Request.IdempotencyBatchKey);
+            });
+    }
+
+    [Fact]
     public async Task ProjectStructure_executor_reports_missing_runtime_gateway()
     {
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -248,6 +338,8 @@ public sealed class PluginCapabilityFacadeTests
     {
         public List<ProjectStructureNodeCreateCall> CreatedNodes { get; } = [];
 
+        public List<ProjectStructureAssetCreateCall> CreatedAssets { get; } = [];
+
         public Task<IReadOnlyList<ProjectStructureRuntimeProjectSummary>> ListProjectsAsync(CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ProjectStructureRuntimeProjectSummary>>([]);
 
@@ -303,12 +395,50 @@ public sealed class PluginCapabilityFacadeTests
             ProjectStructureRuntimeAssetCreateRequest request,
             ProjectStructureRuntimeAgentContext agent,
             CancellationToken cancellationToken = default)
-            => throw new NotSupportedException();
+        {
+            CreatedAssets.Add(new ProjectStructureAssetCreateCall(projectId, request, agent));
+            return Task.FromResult(new ProjectStructureRuntimeNodeSummary(
+                $"asset-{CreatedAssets.Count}",
+                request.ParentNodeKey,
+                request.ObjectType,
+                request.ObjectSubtype ?? string.Empty,
+                request.Title,
+                request.Subtitle,
+                "new",
+                request.Notes,
+                string.Empty,
+                string.Empty,
+                null,
+                null,
+                request.Media?.ContentType,
+                request.Media?.FileName,
+                [],
+                "none",
+                0,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                0,
+                0,
+                null,
+                null,
+                request.MetadataJson,
+                ProjectStructureRuntimeProjectRole.ActiveProject,
+                null,
+                0,
+                null,
+                null));
+        }
     }
 
     private sealed record ProjectStructureNodeCreateCall(
         Guid ProjectId,
         ProjectStructureRuntimeNodeCreateRequest Request,
+        ProjectStructureRuntimeAgentContext Agent);
+
+    private sealed record ProjectStructureAssetCreateCall(
+        Guid ProjectId,
+        ProjectStructureRuntimeAssetCreateRequest Request,
         ProjectStructureRuntimeAgentContext Agent);
 
     private sealed class RecordingStorageAccessService : IStorageAccessService

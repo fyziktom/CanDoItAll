@@ -1,0 +1,19 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:02.13]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:02.41]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:02.46]   Starting:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Office365_mark_processed_executor_requires_approval_before_external_effect [20 s]
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Target_launcher_records_no_messages_for_completed_workflow_output [11 s]
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Trigger_fire_handler_classifies_project_write_failures_for_retry [11 s]
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Trigger_fire_handler_records_no_messages_as_success_without_retry [9 s]
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Target_launcher_waits_for_approval_when_workflow_requests_human_approval [9 s]
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Trigger_fire_handler_classifies_graph_failures_for_retry [10 s]
+[xUnit.net 00:01:25.46]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.SchedulerPlannerIntegrationTests.Trigger_fire_handler_records_waiting_for_approval_without_retry [9 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 7
+     Úspěšné: 7
+ Celkový čas: 1,4502 Minuty

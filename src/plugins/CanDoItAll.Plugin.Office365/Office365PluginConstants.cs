@@ -15,6 +15,8 @@ public static class Office365PluginConstants
 
     public static WorkflowExecutorId DownloadByCategoryExecutorId { get; } = new("office365.messages-by-category");
 
+    public static WorkflowExecutorId DownloadByAddressExecutorId { get; } = new("office365.message-by-address-unprocessed");
+
     public static WorkflowExecutorId MarkProcessedExecutorId { get; } = new("office365.mark-message-processed");
 
     public static PluginRendererKey SettingsRendererKey { get; } = new("office365.settings");
@@ -22,6 +24,8 @@ public static class Office365PluginConstants
     public const string DefaultSourceCategory = "CanDoItAllSummaryTest";
 
     public const string DefaultProcessedCategory = "CanDoItAllSummaryTestProcessed";
+
+    public const string DefaultEmailWatchProcessedCategory = "CanDoItAllProcessed";
 
     public const string MailReadScope = "https://graph.microsoft.com/Mail.Read";
 

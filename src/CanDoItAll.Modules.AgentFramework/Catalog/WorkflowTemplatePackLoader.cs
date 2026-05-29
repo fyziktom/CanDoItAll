@@ -21,11 +21,23 @@ public sealed class WorkflowTemplatePackLoader
         .Build();
 
     private readonly string? configuredPackRoot;
+    private readonly IWorkflowExecutorCatalog? executorCatalog;
     private readonly Lazy<WorkflowTemplatePack> pack;
 
     public WorkflowTemplatePackLoader(string? packRoot = null)
+        : this(packRoot, executorCatalog: null)
+    {
+    }
+
+    public WorkflowTemplatePackLoader(IWorkflowExecutorCatalog executorCatalog)
+        : this(packRoot: null, executorCatalog)
+    {
+    }
+
+    private WorkflowTemplatePackLoader(string? packRoot, IWorkflowExecutorCatalog? executorCatalog)
     {
         configuredPackRoot = packRoot;
+        this.executorCatalog = executorCatalog;
         pack = new Lazy<WorkflowTemplatePack>(LoadCore, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -63,8 +75,91 @@ public sealed class WorkflowTemplatePackLoader
                 $"Workflow template pack '{root}' contains duplicate workflow key(s): {string.Join(", ", duplicateKeys)}.");
         }
 
-        return new WorkflowTemplatePack(root, manifest, workflows);
+        var templatePack = new WorkflowTemplatePack(root, manifest, workflows);
+        ValidateTemplateGraphs(templatePack);
+        ValidateTemplateInputParameters(templatePack);
+        return templatePack;
     }
+
+    private static void ValidateTemplateInputParameters(WorkflowTemplatePack templatePack)
+    {
+        foreach (var template in templatePack.Workflows)
+        {
+            _ = templatePack.CreateInputParameters(template);
+        }
+    }
+
+    private void ValidateTemplateGraphs(WorkflowTemplatePack templatePack)
+    {
+        var validator = executorCatalog is null
+            ? new WorkflowDefinitionValidator()
+            : new WorkflowDefinitionValidator(
+                executorCatalog,
+                WorkflowDefinitionValidationOptions.RegisteredExecutorsOnly);
+        foreach (var template in templatePack.Workflows)
+        {
+            var component = CreateTemplateValidationComponent(templatePack, template);
+            var context = WorkflowTemplateValidationContext.Create(template);
+            WorkflowGraph graph;
+            try
+            {
+                graph = templatePack.CreateGraph(template, component.Id);
+            }
+            catch (InvalidOperationException exception)
+            {
+                throw new InvalidOperationException(
+                    $"Workflow template '{context}' failed graph conversion: {exception.Message}",
+                    exception);
+            }
+
+            var definition = new WorkflowDefinition(
+                WorkflowId.New(),
+                WorkflowVersionId.New(),
+                string.IsNullOrWhiteSpace(template.Name) ? template.Key : template.Name,
+                template.Description,
+                WorkflowLifecycleStatus.Active,
+                graph,
+                templatePack.RuntimePolicy,
+                DateTimeOffset.UtcNow,
+                DateTimeOffset.UtcNow);
+            var validation = validator.Validate(definition, [component]);
+            if (!validation.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Workflow template '{context}' failed semantic validation: {FormatValidationIssues(validation.Issues)}");
+            }
+        }
+    }
+
+    private static LlmCallComponent CreateTemplateValidationComponent(
+        WorkflowTemplatePack templatePack,
+        WorkflowTemplateDefinition template)
+        => new(
+            WorkflowComponentId.New(),
+            string.IsNullOrWhiteSpace(template.Name) ? template.Key : template.Name,
+            ProviderProfileId: null,
+            Model: "template-validation",
+            WorkflowModality.Text,
+            templatePack.CreateModelSettings(),
+            templatePack.CreateComponentInstructions(template),
+            templatePack.JsonShape,
+            templatePack.JsonShape,
+            AgentPermissionsPolicy.Default,
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+    private static string FormatValidationIssues(IReadOnlyList<WorkflowValidationIssue> issues)
+        => string.Join(
+            " ",
+            issues.Select(issue =>
+            {
+                var location = issue.NodeId is { } nodeId
+                    ? $"node '{nodeId}'"
+                    : issue.EdgeId is { } edgeId
+                        ? $"edge '{edgeId}'"
+                        : "template";
+                return $"{location}: {issue.Message}";
+            }));
 
     private static T ReadYaml<T>(string path)
         where T : class, new()
@@ -188,6 +283,14 @@ public sealed class WorkflowTemplatePackLoader
         => string.IsNullOrWhiteSpace(value)
             ? throw new InvalidOperationException($"Workflow template '{path}' is missing required field '{fieldName}'.")
             : value.Trim();
+
+    private static class WorkflowTemplateValidationContext
+    {
+        public static string Create(WorkflowTemplateDefinition template)
+            => string.IsNullOrWhiteSpace(template.SourcePath)
+                ? template.Key
+                : $"{template.SourcePath}#{template.Key}";
+    }
 }
 
 public static class WorkflowTemplatePackOptions
@@ -219,6 +322,31 @@ public sealed record WorkflowTemplatePack(
             JsonShape,
             Manifest.NodeInstructionDefaults,
             Manifest.ExecutorPolicies);
+    }
+
+    public IReadOnlyList<WorkflowInputParameterDescriptor> CreateInputParameters(WorkflowTemplateDefinition template)
+    {
+        ArgumentNullException.ThrowIfNull(template);
+
+        var context = string.IsNullOrWhiteSpace(template.SourcePath)
+            ? template.Key
+            : $"{template.SourcePath}#{template.Key}";
+        var descriptors = template.InputParameters
+            .Select(parameter => parameter.ToModel(context))
+            .ToArray();
+        var duplicateKeys = descriptors
+            .GroupBy(parameter => parameter.Key, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .OrderBy(key => key, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (duplicateKeys.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"Workflow template '{context}' contains duplicate input parameter key(s): {string.Join(", ", duplicateKeys)}.");
+        }
+
+        return descriptors;
     }
 
     public WorkflowModelSettings CreateModelSettings()
@@ -285,9 +413,109 @@ public sealed class WorkflowTemplateDefinition
 
     public string RoutingInstructions { get; set; } = string.Empty;
 
+    public List<WorkflowTemplateInputParameter> InputParameters { get; set; } = [];
+
     public WorkflowTemplateGraph Graph { get; set; } = new();
 
     internal string SourcePath { get; set; } = string.Empty;
+}
+
+public sealed class WorkflowTemplateInputParameter
+{
+    public string Key { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = string.Empty;
+
+    public bool Required { get; set; }
+
+    public string Description { get; set; } = string.Empty;
+
+    public string JsonPath { get; set; } = string.Empty;
+
+    public string DefaultValue { get; set; } = string.Empty;
+
+    public WorkflowTemplateInputParameterOptionSource? OptionSource { get; set; }
+
+    public int? MinimumValue { get; set; }
+
+    public int? MaximumValue { get; set; }
+
+    public string Placeholder { get; set; } = string.Empty;
+
+    public WorkflowInputParameterDescriptor ToModel(string context)
+    {
+        var key = WorkflowTemplatePackLoader.Require(Key, "input parameter key", context);
+        var jsonPath = string.IsNullOrWhiteSpace(JsonPath) ? $"$.{key}" : JsonPath.Trim();
+        if (MinimumValue.HasValue && MaximumValue.HasValue && MinimumValue.Value > MaximumValue.Value)
+        {
+            throw new InvalidOperationException(
+                $"Workflow template '{context}' input parameter '{key}' has minimumValue greater than maximumValue.");
+        }
+
+        return new WorkflowInputParameterDescriptor(
+            key,
+            string.IsNullOrWhiteSpace(Label) ? key : Label.Trim(),
+            ParseEnum<WorkflowInputParameterKind>(Kind, $"input parameter '{key}' kind", context),
+            Required,
+            Description.Trim(),
+            jsonPath,
+            DefaultValue.Trim(),
+            OptionSource?.ToModel(context, key) ?? WorkflowInputParameterOptionSource.None,
+            MinimumValue,
+            MaximumValue,
+            Placeholder.Trim());
+    }
+
+    private static TEnum ParseEnum<TEnum>(string value, string fieldName, string context)
+        where TEnum : struct, Enum
+        => Enum.TryParse<TEnum>(value, ignoreCase: true, out var result) && Enum.IsDefined(result)
+            ? result
+            : throw new InvalidOperationException(
+                $"Workflow template '{context}' has invalid {fieldName} '{value}'.");
+}
+
+public sealed class WorkflowTemplateInputParameterOptionSource
+{
+    public string Kind { get; set; } = string.Empty;
+
+    public string DependsOnParameterKey { get; set; } = string.Empty;
+
+    public List<WorkflowTemplateInputParameterOption> StaticOptions { get; set; } = [];
+
+    public WorkflowInputParameterOptionSource ToModel(string context, string parameterKey)
+        => new(
+            string.IsNullOrWhiteSpace(Kind)
+                ? WorkflowInputParameterOptionSourceKind.None
+                : ParseEnum<WorkflowInputParameterOptionSourceKind>(Kind, $"input parameter '{parameterKey}' optionSource.kind", context),
+            DependsOnParameterKey.Trim(),
+            StaticOptions.Select(option => option.ToModel(context, parameterKey)).ToArray());
+
+    private static TEnum ParseEnum<TEnum>(string value, string fieldName, string context)
+        where TEnum : struct, Enum
+        => Enum.TryParse<TEnum>(value, ignoreCase: true, out var result) && Enum.IsDefined(result)
+            ? result
+            : throw new InvalidOperationException(
+                $"Workflow template '{context}' has invalid {fieldName} '{value}'.");
+}
+
+public sealed class WorkflowTemplateInputParameterOption
+{
+    public string Value { get; set; } = string.Empty;
+
+    public string Label { get; set; } = string.Empty;
+
+    public string Description { get; set; } = string.Empty;
+
+    public WorkflowInputParameterOption ToModel(string context, string parameterKey)
+    {
+        var value = WorkflowTemplatePackLoader.Require(Value, $"input parameter '{parameterKey}' option value", context);
+        return new WorkflowInputParameterOption(
+            value,
+            string.IsNullOrWhiteSpace(Label) ? value : Label.Trim(),
+            Description.Trim());
+    }
 }
 
 public sealed class WorkflowTemplateGraph

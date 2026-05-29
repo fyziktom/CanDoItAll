@@ -1,0 +1,1 @@
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\workflow-maf-hardening-followup

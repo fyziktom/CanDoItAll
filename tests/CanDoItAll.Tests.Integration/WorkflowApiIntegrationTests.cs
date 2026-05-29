@@ -104,21 +104,17 @@ public sealed class WorkflowApiIntegrationTests
     }
 
     [Fact]
-    public async Task Workflow_api_rejects_publish_when_definition_is_invalid()
+    public async Task Workflow_api_rejects_invalid_definition_on_save()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
         var saveResponse = await host.Client.PostAsJsonAsync(
             "/api/workflows/definitions",
             CreateDefinitionSaveRequest(WorkflowComponentId.New()));
         var saveBody = await saveResponse.Content.ReadAsStringAsync();
-        Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
-        var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
 
-        var response = await host.Client.PostAsync($"/api/workflows/definitions/{definition.Id.Value:D}/publish", content: null);
-        var body = await response.Content.ReadAsStringAsync();
-
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Contains("cannot be published", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(HttpStatusCode.BadRequest, saveResponse.StatusCode);
+        Assert.Contains("Workflow definition save failed validation", saveBody, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("prepared LLM Call Component", saveBody, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -167,6 +163,79 @@ public sealed class WorkflowApiIntegrationTests
     }
 
     [Fact]
+    public async Task Workflow_api_test_run_pauses_human_input_only_when_route_reaches_node()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var draft = new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "HITL routing API workflow",
+            "Workflow API proof for execution-position HITL.",
+            WorkflowLifecycleStatus.Draft,
+            CreateHumanInputRoutingGraph(),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+
+        var automaticResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                WorkflowId: null,
+                VersionId: null,
+                draft,
+                "{\"route\":\"automatic\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                ValidateOnly: false));
+        var automaticBody = await automaticResponse.Content.ReadAsStringAsync();
+        Assert.True(automaticResponse.IsSuccessStatusCode, automaticBody);
+        var automatic = JsonSerializer.Deserialize<WorkflowTestRunResult>(automaticBody, JsonOptions())!;
+
+        var manualResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                WorkflowId: null,
+                VersionId: null,
+                draft,
+                "{\"route\":\"manual\"}",
+                WorkflowRuntimeBackendKind.InProcess,
+                ValidateOnly: false));
+        var manualBody = await manualResponse.Content.ReadAsStringAsync();
+        Assert.True(manualResponse.IsSuccessStatusCode, manualBody);
+        var manual = JsonSerializer.Deserialize<WorkflowTestRunResult>(manualBody, JsonOptions())!;
+
+        Assert.True(automatic.Succeeded, automatic.ErrorMessage);
+        Assert.Equal(WorkflowRunState.Completed, automatic.Run?.State);
+        Assert.Empty(automatic.PendingExternalRequests);
+        Assert.True(manual.Succeeded, manual.ErrorMessage);
+        Assert.Equal(WorkflowRunState.WaitingForInput, manual.Run?.State);
+        var request = Assert.Single(manual.PendingExternalRequests);
+        Assert.Equal(WorkflowExternalRequestKind.HumanInput, request.Kind);
+        Assert.Equal(new WorkflowNodeId("human"), request.NodeId);
+        var waitingEvent = Assert.Single(manual.Events, workflowEvent =>
+            workflowEvent.Kind == WorkflowEventKind.WaitingForInput &&
+            workflowEvent.NodeId == new WorkflowNodeId("human"));
+        var waitingPayload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(waitingEvent.PayloadJson, JsonOptions())!;
+        Assert.Equal(WorkflowEventPayloadSource.ExternalRequest, waitingPayload.Source);
+        Assert.Equal(request.Id, waitingPayload.RequestId);
+        Assert.Equal(WorkflowExternalRequestKind.HumanInput, waitingPayload.RequestKind);
+        Assert.Equal(new WorkflowNodeId("human"), waitingPayload.NodeId);
+        Assert.Contains("\"route\":\"manual\"", waitingPayload.InlineJson, StringComparison.Ordinal);
+        var automaticCheckpoint = Assert.Single(automatic.Checkpoints);
+        Assert.Equal(WorkflowCheckpointKind.Completed, automaticCheckpoint.Kind);
+        Assert.Equal(WorkflowResumeAvailability.NotSupported, automaticCheckpoint.ResumeAvailability);
+        var manualCheckpoint = Assert.Single(manual.Checkpoints);
+        Assert.Equal(WorkflowCheckpointKind.WaitingForInput, manualCheckpoint.Kind);
+        Assert.Equal(request.Id, manualCheckpoint.ExternalRequestId);
+        Assert.Equal(WorkflowCheckpointTrustBoundary.MetadataOnly, manualCheckpoint.TrustBoundary);
+        Assert.Contains("durable", manualCheckpoint.ResumeUnavailableReason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Workflow_api_returns_validation_failure_for_invalid_test_run()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
@@ -190,11 +259,70 @@ public sealed class WorkflowApiIntegrationTests
     }
 
     [Fact]
-    public async Task Workflow_api_returns_runtime_failure_for_unregistered_durable_backend()
+    public async Task Workflow_api_test_run_rejects_unregistered_durable_backend_policy_before_runtime()
     {
         await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
         var component = await SaveComponentAsync(host);
-        var saveResponse = await host.Client.PostAsJsonAsync(
+        var definition = CreateDefinition(component.Id) with
+        {
+            RuntimePolicy = new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.DurableTask,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: true,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false)
+        };
+
+        var response = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                WorkflowId: null,
+                VersionId: null,
+                DraftDefinition: definition,
+                InputJson: "{}",
+                RequestedBackend: WorkflowRuntimeBackendKind.DurableTask,
+                ValidateOnly: false));
+        var body = await response.Content.ReadAsStringAsync();
+        var result = JsonSerializer.Deserialize<WorkflowTestRunResult>(body, JsonOptions())!;
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Validation.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.UnsupportedRuntimeBackend &&
+            issue.Message.Contains("not registered", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Workflow_api_runtime_backend_catalog_marks_unregistered_durable_backends_unavailable()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+
+        var response = await host.Client.GetAsync("/api/workflows/runtime-backends");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var backends = JsonSerializer.Deserialize<IReadOnlyList<WorkflowRuntimeBackendDescriptor>>(body, JsonOptions())!;
+
+        var inProcess = Assert.Single(backends, backend => backend.Kind == WorkflowRuntimeBackendKind.InProcess);
+        var durableTask = Assert.Single(backends, backend => backend.Kind == WorkflowRuntimeBackendKind.DurableTask);
+        var azureFunctions = Assert.Single(backends, backend => backend.Kind == WorkflowRuntimeBackendKind.AzureFunctions);
+        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Registered, inProcess.Availability);
+        Assert.True(inProcess.IsRegistered);
+        Assert.True(inProcess.IsRunnable);
+        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, durableTask.Availability);
+        Assert.False(durableTask.IsRegistered);
+        Assert.False(durableTask.IsRunnable);
+        Assert.Contains("not registered", durableTask.AvailabilityReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, azureFunctions.Availability);
+        Assert.False(azureFunctions.IsRunnable);
+    }
+
+    [Fact]
+    public async Task Workflow_api_rejects_unregistered_durable_backend_policy_on_save()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var component = await SaveComponentAsync(host);
+
+        var response = await host.Client.PostAsJsonAsync(
             "/api/workflows/definitions",
             CreateDefinitionSaveRequest(
                 component.Id,
@@ -204,25 +332,106 @@ public sealed class WorkflowApiIntegrationTests
                     RequireDurableProductionRuns: true,
                     ExposeAzureFunctionsStatusEndpoint: false,
                     ExposeAzureFunctionsMcpTool: false)));
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("not registered", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(WorkflowRuntimeBackendKind.DurableTask), body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workflow_api_rejects_unregistered_durable_backend_start_request()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var component = await SaveComponentAsync(host);
+        var saveResponse = await host.Client.PostAsJsonAsync(
+            "/api/workflows/definitions",
+            CreateDefinitionSaveRequest(component.Id, graph: CreatePassthroughGraph()));
         var saveBody = await saveResponse.Content.ReadAsStringAsync();
         Assert.True(saveResponse.IsSuccessStatusCode, saveBody);
         var definition = JsonSerializer.Deserialize<WorkflowDefinition>(saveBody, JsonOptions())!;
 
         var response = await host.Client.PostAsJsonAsync(
-            "/api/workflows/test-runs",
-            new WorkflowTestRunRequest(
-                definition.Id,
-                definition.VersionId,
-                DraftDefinition: null,
-                InputJson: "{}",
-                RequestedBackend: WorkflowRuntimeBackendKind.DurableTask,
-                ValidateOnly: false));
+            "/api/workflows/runs/start",
+            new
+            {
+                workflowId = definition.Id.Value,
+                inputJson = "{}",
+                requestedBackend = WorkflowRuntimeBackendKind.DurableTask
+            });
         var body = await response.Content.ReadAsStringAsync();
-        var result = JsonSerializer.Deserialize<WorkflowTestRunResult>(body, JsonOptions())!;
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.False(result.Succeeded);
-        Assert.Contains("not registered", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not registered", body, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(WorkflowRuntimeBackendKind.DurableTask), body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Workflow_api_test_run_applies_payload_policy_to_large_runtime_payloads()
+    {
+        await using var host = await ApiTestHost.CreateAsync(jwtEnabled: false);
+        var draft = new WorkflowDefinition(
+            WorkflowId.New(),
+            WorkflowVersionId.New(),
+            "Large payload API workflow",
+            "Workflow API proof for runtime payload artifact policy.",
+            WorkflowLifecycleStatus.Draft,
+            CreatePassthroughGraph(),
+            new WorkflowRuntimePolicy(
+                WorkflowRuntimeBackendKind.InProcess,
+                AllowInProcessPreviewRuns: true,
+                RequireDurableProductionRuns: false,
+                ExposeAzureFunctionsStatusEndpoint: false,
+                ExposeAzureFunctionsMcpTool: false),
+            DateTimeOffset.UtcNow,
+            DateTimeOffset.UtcNow);
+        var settings = WorkflowSettings.Default with
+        {
+            ArtifactPolicy = WorkflowSettings.Default.ArtifactPolicy with
+            {
+                MaxInlinePayloadCharacters = 512
+            }
+        };
+        var settingsResponse = await host.Client.PostAsJsonAsync("/api/workflows/settings", settings);
+        var settingsBody = await settingsResponse.Content.ReadAsStringAsync();
+        Assert.True(settingsResponse.IsSuccessStatusCode, settingsBody);
+        var inputJson = $$"""{"token":"raw-token-value","prompt":"{{new string('x', 2048)}}"}""";
+
+        var response = await host.Client.PostAsJsonAsync(
+            "/api/workflows/test-runs",
+            new WorkflowTestRunRequest(
+                WorkflowId: null,
+                VersionId: null,
+                DraftDefinition: draft,
+                InputJson: inputJson,
+                RequestedBackend: WorkflowRuntimeBackendKind.InProcess,
+                ValidateOnly: false));
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        var result = JsonSerializer.Deserialize<WorkflowTestRunResult>(body, JsonOptions())!;
+        var started = Assert.Single(result.Events, workflowEvent => workflowEvent.Kind == WorkflowEventKind.Started);
+        var startedPayload = JsonSerializer.Deserialize<WorkflowEventPayloadEnvelope>(started.PayloadJson, JsonOptions())!;
+
+        Assert.True(result.Succeeded, result.ErrorMessage);
+        Assert.True(startedPayload.InlineTruncated);
+        Assert.True(startedPayload.InlineJson.Length <= settings.ArtifactPolicy.MaxInlinePayloadCharacters);
+        Assert.NotEmpty(startedPayload.Reference);
+        Assert.DoesNotContain("raw-token-value", startedPayload.InlineJson, StringComparison.Ordinal);
+        Assert.Contains(result.Artifacts, artifact =>
+            artifact.Kind == WorkflowArtifactKind.Json &&
+            artifact.Name.Contains("input", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Artifacts, artifact =>
+            artifact.Kind == WorkflowArtifactKind.Json &&
+            artifact.NodeId == new WorkflowNodeId("logic"));
+
+        var inputArtifact = Assert.Single(result.Artifacts, artifact =>
+            artifact.Kind == WorkflowArtifactKind.Json &&
+            artifact.Name.Contains("input", StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(result.Run);
+        var artifactContent = await host.Client.GetStringAsync(
+            $"/api/workflows/runs/{result.Run!.RunId.Value:D}/artifacts/{inputArtifact.Id.Value:D}/content");
+        Assert.Contains("[REDACTED]", artifactContent, StringComparison.Ordinal);
+        Assert.DoesNotContain("raw-token-value", artifactContent, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -236,11 +445,14 @@ public sealed class WorkflowApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/workflows/definitions", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/provider-options", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/components", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/runtime-backends", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/test-runs", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/definitions/{workflowId}/publish", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/definitions/{workflowId}/export", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/definitions/import", out _));
         Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/events", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/checkpoints", out _));
+        Assert.True(paths.TryGetProperty("/api/workflows/runs/{runId}/artifacts/{artifactId}/content", out _));
     }
 
     [Fact]
@@ -364,6 +576,36 @@ public sealed class WorkflowApiIntegrationTests
                     WorkflowEdgeRouting.SwitchDefault("Default")),
                 CreateEdge("enterprise-to-end", "enterprise", "end"),
                 CreateEdge("standard-to-end", "standard", "end")
+            ]);
+    }
+
+    private static WorkflowGraph CreateHumanInputRoutingGraph()
+    {
+        return new WorkflowGraph(
+            new WorkflowNodeId("start"),
+            [
+                CreateNode("start", WorkflowNodeKind.Start, resultShape: JsonShape()),
+                CreateNode("human", WorkflowNodeKind.HumanInput, inputShape: JsonShape(), resultShape: JsonShape()),
+                CreateNode("end", WorkflowNodeKind.End, inputShape: JsonShape())
+            ],
+            [
+                CreateEdge(
+                    "start-to-human",
+                    "start",
+                    "human",
+                    WorkflowEdgeKind.Conditional,
+                    WorkflowEdgeRouting.SwitchCase(
+                        "$.route",
+                        "\"manual\"",
+                        WorkflowRouteValueKind.String,
+                        "Manual")),
+                CreateEdge(
+                    "start-to-end",
+                    "start",
+                    "end",
+                    WorkflowEdgeKind.Conditional,
+                    WorkflowEdgeRouting.SwitchDefault("Automatic")),
+                CreateEdge("human-to-end", "human", "end")
             ]);
     }
 

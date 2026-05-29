@@ -66,11 +66,15 @@ public static class SchedulerPlannerSchemaInitializer
             "TargetRunKind" character varying(80) NOT NULL,
             "Summary" text NOT NULL,
             "ErrorMessage" text NOT NULL,
+            "Route" character varying(80) NOT NULL DEFAULT '',
+            "RetryCategory" integer NOT NULL DEFAULT 0,
             "DispatchedAtUtc" timestamp with time zone NULL,
             "CreatedAtUtc" timestamp with time zone NOT NULL,
             "UpdatedAtUtc" timestamp with time zone NOT NULL,
             CONSTRAINT "FK_SchedulerPlanner_Runs_SchedulerPlanner_Plans_PlanId" FOREIGN KEY ("PlanId") REFERENCES "SchedulerPlanner_Plans" ("Id") ON DELETE CASCADE
         );
+        ALTER TABLE "SchedulerPlanner_Runs" ADD COLUMN IF NOT EXISTS "Route" character varying(80) NOT NULL DEFAULT '';
+        ALTER TABLE "SchedulerPlanner_Runs" ADD COLUMN IF NOT EXISTS "RetryCategory" integer NOT NULL DEFAULT 0;
         CREATE UNIQUE INDEX IF NOT EXISTS "IX_SchedulerPlanner_Runs_DedupeKey" ON "SchedulerPlanner_Runs" ("DedupeKey");
         CREATE INDEX IF NOT EXISTS "IX_SchedulerPlanner_Runs_PlanId_FiredAtUtc" ON "SchedulerPlanner_Runs" ("PlanId", "FiredAtUtc");
         """;

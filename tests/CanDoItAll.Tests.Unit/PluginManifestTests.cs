@@ -95,6 +95,66 @@ public sealed class PluginManifestTests
     }
 
     [Fact]
+    public void PluginManifest_validator_rejects_executor_permission_policy_without_manifest_capabilities()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor(
+                    "sample.exec",
+                    "settings.renderer") with
+                {
+                    PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                        WorkflowExecutorCapabilityFlags.UsesNetwork |
+                        WorkflowExecutorCapabilityFlags.UsesSecrets |
+                        WorkflowExecutorCapabilityFlags.RunsHostCommand |
+                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                        WorkflowExecutorApprovalRequirement.AlwaysRequired),
+                    DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Fake mode")
+                }
+            ],
+            capabilities: PluginCapabilityKind.WorkflowExecutor);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains(nameof(PluginCapabilityKind.HttpClient), StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains(nameof(PluginCapabilityKind.SecretReference), StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingCapability && issue.Message.Contains(nameof(PluginCapabilityKind.HostCommand), StringComparison.Ordinal));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.MissingConnectionMetadata);
+    }
+
+    [Fact]
+    public void PluginManifest_validator_rejects_external_write_without_approval_and_deterministic_mismatch()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor(
+                    "sample.write",
+                    "settings.renderer") with
+                {
+                    PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                        WorkflowExecutorCapabilityFlags.WritesExternalData |
+                        WorkflowExecutorCapabilityFlags.UsesNetwork |
+                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                        WorkflowExecutorApprovalRequirement.NotRequired)
+                }
+            ],
+            connections: [CreateConnection("api")],
+            capabilities:
+                PluginCapabilityKind.WorkflowExecutor |
+                PluginCapabilityKind.HttpClient |
+                PluginCapabilityKind.SecretReference);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.InconsistentPermissionPolicy && issue.Message.Contains("approval", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(result.Issues, issue => issue.Code == PluginManifestValidationIssueCode.InconsistentPermissionPolicy && issue.Message.Contains("deterministic", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void PluginManifest_validator_rejects_duplicate_catalog_ids_and_unsupported_capabilities()
     {
         var unsupportedCapability = (PluginCapabilityKind)(1 << 20);

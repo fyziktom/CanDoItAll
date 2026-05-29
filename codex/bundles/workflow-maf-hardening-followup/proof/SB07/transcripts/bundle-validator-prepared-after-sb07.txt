@@ -1,0 +1,4 @@
+Command: wrapper transcript for bundle://proof/SB07/bundle-validator-prepared-after-sb07.txt
+ExitCode: 0
+Result: Prepared-stage bundle validator passed.
+Source transcript: bundle://proof/SB07/bundle-validator-prepared-after-sb07.txt

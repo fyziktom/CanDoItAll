@@ -7,7 +7,7 @@ namespace CanDoItAll.AgentFramework.Maf;
 
 internal static class WorkflowExecutorJson
 {
-    private static readonly JsonSerializerOptions Options = CreateOptions();
+    public static JsonSerializerOptions Options { get; } = CreateOptions();
 
     public static string Serialize<T>(T value)
         => JsonSerializer.Serialize(value, Options);

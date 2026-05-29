@@ -25,6 +25,7 @@ These docs are for readers who need to understand what CanDoItAll does before th
 - [DotNetWatch persistent backend benefits](mcp-dotnetwatch-persistent-backend-benefits.md): development-sidecar runtime notes.
 - [Process agent operator runbook](process-agent-operator-runbook.md): operational triage for escalations, approvals, rework, and recovery.
 - [Agent output contracts](agent-output-contracts.md): typed structured-output and finalizer-tool contracts for machine-critical agent decisions.
+- [Workflow MAF hardening](workflow-maf-hardening.md): workflow authoring, MAF runtime boundary, executor approval policy, and deterministic validation guidance.
 
 ## Setup Scripts
 

@@ -1,0 +1,12 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowExecutorTests.MafCompilerInvokesExecutorNodeThroughInvoker|FullyQualifiedName~WorkflowExecutorTests.MafCompilerSkipsPredicateFalseBranch|FullyQualifiedName~WorkflowExecutorTests.MafCompilerFanOutRoutesOnlySelectedTargets|FullyQualifiedName~WorkflowCatalogTests.RuntimeManagerRejectsInProcessWhenDurablePolicyDisallowsPreview|FullyQualifiedName~WorkflowCatalogTests.TestRunnerReturnsRuntimeFailureForUnregisteredBackend" --no-restore
+ExitCode: 0
+Result: MAF compiler and in-process backend tests passed for executor invocation, route semantics, and backend failure behavior.
+- Invariant ID: SB03-INV-001
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorTests.MafCompilerInvokesExecutorNodeThroughInvoker
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorTests.MafCompilerSkipsPredicateFalseBranch
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorTests.MafCompilerFanOutRoutesOnlySelectedTargets
+
+Command: rg -n "IWorkflowMafCompiler|MafWorkflowCompiler|MafInProcessWorkflowExecutionBackend|WorkflowBackendProgressEventObserver|WorkflowNodeExecutionProgressScope" src tests
+ExitCode: 0
+Result: Anti-stub audit found the adapter interface, backend dependency, DI registrations, and progress observer.
+- Invariant ID: SB03-INV-001

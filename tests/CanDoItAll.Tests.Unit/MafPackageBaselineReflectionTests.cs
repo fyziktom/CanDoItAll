@@ -6,10 +6,12 @@ using Microsoft.Extensions.AI;
 
 namespace CanDoItAll.Tests.Unit;
 
-public sealed class Maf16CapabilityReflectionTests
+public sealed class MafPackageBaselineReflectionTests
 {
+    private const string ExpectedMafAssemblyVersionPrefix = "1.8.0.";
+
     [Fact]
-    public void Maf16_symbols_are_classified_from_loaded_runtime_assemblies()
+    public void Maf18_symbols_are_classified_from_loaded_runtime_assemblies()
     {
         var assemblies = new[]
         {
@@ -35,11 +37,11 @@ public sealed class Maf16CapabilityReflectionTests
         Assert.Contains(
             assemblyVersions,
             assembly => assembly.Key.StartsWith("Microsoft.Agents.AI", StringComparison.Ordinal) &&
-                        assembly.Value.StartsWith("1.6.2.", StringComparison.Ordinal));
+                        assembly.Value.StartsWith(ExpectedMafAssemblyVersionPrefix, StringComparison.Ordinal));
         Assert.Contains(
             assemblyVersions,
             assembly => assembly.Key.Contains("Workflows", StringComparison.Ordinal) &&
-                        assembly.Value.StartsWith("1.6.2.", StringComparison.Ordinal));
+                        assembly.Value.StartsWith(ExpectedMafAssemblyVersionPrefix, StringComparison.Ordinal));
         Assert.Contains("MessageAIContextProvider", availableTypeNames);
         Assert.Contains("ApprovalRequiredAIFunction", availableTypeNames);
         Assert.Contains("WorkflowBuilder", availableTypeNames);

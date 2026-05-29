@@ -1,8 +1,8 @@
 packKey: candoitall-workflow-template-pack
 name: CanDoItAll default workflow template pack
-version: 2026-05-workflow-template-examples-v1
+version: 2026-05-office365-email-watch-schema-v1
 seedMarker: Managed workflow example seed
-seedVersion: 2026-05-workflow-template-examples-v1
+seedVersion: 2026-05-office365-email-watch-schema-v1
 definitionNamePrefix: "Example: "
 componentNamePrefix: "Example LLM: "
 component:
@@ -86,9 +86,9 @@ jsonShape:
     {"type":"object","additionalProperties":true}
   description: Workflow JSON payload
 runtimePolicy:
-  preferredBackend: DurableTask
+  preferredBackend: InProcess
   allowInProcessPreviewRuns: true
-  requireDurableProductionRuns: true
+  requireDurableProductionRuns: false
   exposeAzureFunctionsStatusEndpoint: false
   exposeAzureFunctionsMcpTool: false
 executorPolicies:
@@ -112,4 +112,6 @@ nodeInstructionDefaults:
 workflowFiles:
   - relativePath: workflows/default-workflows.yaml
   - relativePath: workflows/email-plugin-task-workflows.yaml
+  - relativePath: workflows/office365-email-watch-workflows.yaml
   - relativePath: workflows/file-analysis-workflows.yaml
+  - relativePath: workflows/workflow-executor-catalog-workflows.yaml

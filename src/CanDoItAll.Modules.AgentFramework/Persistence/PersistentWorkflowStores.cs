@@ -11,13 +11,15 @@ public sealed class PersistentWorkflowCatalogService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IWorkflowDefinitionValidator validator,
     IProviderProfileRegistry? providerRegistry = null,
-    IProviderProfileService? providerProfileService = null) :
+    IProviderProfileService? providerProfileService = null,
+    IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null) :
     IWorkflowCatalogService,
     IWorkflowComponentLibraryService,
     IWorkflowSettingsService
 {
     private const string DefaultSettingsId = "default";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
 
     public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
         CancellationToken cancellationToken = default)
@@ -95,7 +97,14 @@ public sealed class PersistentWorkflowCatalogService(
             SnapshotGraph(request.Graph),
             request.RuntimePolicy,
             current?.CreatedAtUtc ?? now,
-            now);
+            now)
+        {
+            InputParameters = SnapshotInputParameters(request.InputParameters)
+        };
+
+        ThrowIfValidationFailed(
+            await ValidateDefinitionAsync(definition, cancellationToken),
+            "Workflow definition save failed validation");
 
         dbContext.Set<WorkflowDefinitionRecord>().Add(WorkflowDefinitionRecord.FromDefinition(definition));
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -123,7 +132,10 @@ public sealed class PersistentWorkflowCatalogService(
                 detail.Definition.Description,
                 request.Status,
                 detail.Definition.Graph,
-                detail.Definition.RuntimePolicy),
+                detail.Definition.RuntimePolicy)
+            {
+                InputParameters = detail.Definition.InputParameters
+            },
             cancellationToken);
     }
 
@@ -177,7 +189,10 @@ public sealed class PersistentWorkflowCatalogService(
                 source.Description,
                 importedStatus,
                 source.Graph,
-                source.RuntimePolicy),
+                source.RuntimePolicy)
+            {
+                InputParameters = source.InputParameters
+            },
             cancellationToken);
     }
 
@@ -215,6 +230,10 @@ public sealed class PersistentWorkflowCatalogService(
                 WorkflowValidationIssueCode.InvalidWorkflowSettings,
                 "Durable production workflows cannot prefer the in-process runtime backend."));
         }
+
+        issues.AddRange(WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+            definition.RuntimePolicy,
+            runtimeBackendCatalog));
 
         var currentSettings = await GetSettingsAsync(cancellationToken);
         if (!currentSettings.HumanInLoopPolicy.AllowHumanInputNodes &&
@@ -381,6 +400,15 @@ public sealed class PersistentWorkflowCatalogService(
         if (settings.HumanInLoopPolicy.DefaultRequestTimeoutMinutes <= 0)
         {
             throw new InvalidOperationException("Workflow human-in-loop timeout must be positive.");
+        }
+
+        var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+            settings.DefaultRuntimePolicy,
+            runtimeBackendCatalog);
+        if (runtimeIssues.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Workflow default runtime policy is invalid: {string.Join(" ", runtimeIssues.Select(issue => issue.Message))}");
         }
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -561,6 +589,18 @@ public sealed class PersistentWorkflowCatalogService(
                 .ToArray(),
             graph.Edges.ToArray());
     }
+
+    private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
+        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters)
+        => inputParameters
+            .Select(parameter => parameter with
+            {
+                OptionSource = parameter.OptionSource with
+                {
+                    StaticOptions = parameter.OptionSource.StaticOptions.ToArray()
+                }
+            })
+            .ToArray();
 
     private static void ThrowIfValidationFailed(
         WorkflowValidationResult validation,
@@ -836,6 +876,86 @@ public sealed class PersistentWorkflowRunStore(IDbContextFactory<AppDbContext> d
             pageIndex,
             pageSize,
             totalCount);
+    }
+
+    public async Task<WorkflowCheckpointRecord> SaveCheckpointAsync(
+        WorkflowCheckpointRecord checkpoint,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await dbContext.Set<WorkflowCheckpointRecordEntity>()
+            .SingleOrDefaultAsync(item => item.Id == checkpoint.Id.Value, cancellationToken);
+        if (record is null)
+        {
+            dbContext.Set<WorkflowCheckpointRecordEntity>().Add(WorkflowCheckpointRecordEntity.FromCheckpoint(checkpoint));
+        }
+        else
+        {
+            record.RunId = checkpoint.RunId.Value;
+            record.WorkflowId = checkpoint.WorkflowId.Value;
+            record.VersionId = checkpoint.VersionId.Value;
+            record.Backend = checkpoint.Backend;
+            record.Kind = checkpoint.Kind;
+            record.TrustBoundary = checkpoint.TrustBoundary;
+            record.ResumeAvailability = checkpoint.ResumeAvailability;
+            record.NodeId = checkpoint.NodeId?.Value;
+            record.ExternalRequestId = checkpoint.ExternalRequestId?.Value;
+            record.BackendCheckpointId = checkpoint.BackendCheckpointId;
+            record.PayloadReference = checkpoint.PayloadReference;
+            record.PayloadHash = checkpoint.PayloadHash;
+            record.Summary = checkpoint.Summary;
+            record.ResumeUnavailableReason = checkpoint.ResumeUnavailableReason;
+            record.CreatedAtUtc = checkpoint.CreatedAtUtc;
+            record.ResumedAtUtc = checkpoint.ResumedAtUtc;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return checkpoint;
+    }
+
+    public async Task<WorkflowCheckpointRecord?> GetCheckpointAsync(
+        WorkflowCheckpointId checkpointId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await dbContext.Set<WorkflowCheckpointRecordEntity>()
+            .AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == checkpointId.Value, cancellationToken);
+
+        return record?.ToCheckpoint();
+    }
+
+    public async Task<IReadOnlyList<WorkflowCheckpointRecord>> ListCheckpointsAsync(
+        WorkflowRunId runId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var query = dbContext.Set<WorkflowCheckpointRecordEntity>()
+            .AsNoTracking()
+            .Where(item => item.RunId == runId.Value);
+        var records = await query
+            .OrderBy(item => item.CreatedAtUtc)
+            .ThenBy(item => item.Id)
+            .ToListAsync(cancellationToken);
+
+        return records
+            .Select(item => item.ToCheckpoint())
+            .ToArray();
+    }
+
+    public async Task<WorkflowCheckpointRecord> MarkCheckpointResumedAsync(
+        WorkflowCheckpointId checkpointId,
+        DateTimeOffset resumedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var record = await dbContext.Set<WorkflowCheckpointRecordEntity>()
+            .SingleOrDefaultAsync(item => item.Id == checkpointId.Value, cancellationToken)
+            ?? throw new KeyNotFoundException($"Workflow checkpoint '{checkpointId}' was not found.");
+
+        record.ResumedAtUtc = resumedAtUtc;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return record.ToCheckpoint();
     }
 
     public async Task SaveExternalRequestAsync(
@@ -1198,6 +1318,83 @@ public sealed class WorkflowExternalRequestRecordEntity
         RespondedAtUtc);
 }
 
+public sealed class WorkflowCheckpointRecordEntity
+{
+    public Guid Id { get; set; }
+
+    public Guid RunId { get; set; }
+
+    public Guid WorkflowId { get; set; }
+
+    public Guid VersionId { get; set; }
+
+    public WorkflowRuntimeBackendKind Backend { get; set; }
+
+    public WorkflowCheckpointKind Kind { get; set; }
+
+    public WorkflowCheckpointTrustBoundary TrustBoundary { get; set; }
+
+    public WorkflowResumeAvailability ResumeAvailability { get; set; }
+
+    public string? NodeId { get; set; }
+
+    public Guid? ExternalRequestId { get; set; }
+
+    public string BackendCheckpointId { get; set; } = string.Empty;
+
+    public string PayloadReference { get; set; } = string.Empty;
+
+    public string PayloadHash { get; set; } = string.Empty;
+
+    public string Summary { get; set; } = string.Empty;
+
+    public string ResumeUnavailableReason { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public DateTimeOffset? ResumedAtUtc { get; set; }
+
+    public static WorkflowCheckpointRecordEntity FromCheckpoint(WorkflowCheckpointRecord checkpoint) => new()
+    {
+        Id = checkpoint.Id.Value,
+        RunId = checkpoint.RunId.Value,
+        WorkflowId = checkpoint.WorkflowId.Value,
+        VersionId = checkpoint.VersionId.Value,
+        Backend = checkpoint.Backend,
+        Kind = checkpoint.Kind,
+        TrustBoundary = checkpoint.TrustBoundary,
+        ResumeAvailability = checkpoint.ResumeAvailability,
+        NodeId = checkpoint.NodeId?.Value,
+        ExternalRequestId = checkpoint.ExternalRequestId?.Value,
+        BackendCheckpointId = checkpoint.BackendCheckpointId,
+        PayloadReference = checkpoint.PayloadReference,
+        PayloadHash = checkpoint.PayloadHash,
+        Summary = checkpoint.Summary,
+        ResumeUnavailableReason = checkpoint.ResumeUnavailableReason,
+        CreatedAtUtc = checkpoint.CreatedAtUtc,
+        ResumedAtUtc = checkpoint.ResumedAtUtc
+    };
+
+    public WorkflowCheckpointRecord ToCheckpoint() => new(
+        new WorkflowCheckpointId(Id),
+        new WorkflowRunId(RunId),
+        new WorkflowId(WorkflowId),
+        new WorkflowVersionId(VersionId),
+        Backend,
+        Kind,
+        TrustBoundary,
+        ResumeAvailability,
+        string.IsNullOrWhiteSpace(NodeId) ? null : new WorkflowNodeId(NodeId),
+        ExternalRequestId.HasValue ? new WorkflowExternalRequestId(ExternalRequestId.Value) : null,
+        BackendCheckpointId,
+        PayloadReference,
+        PayloadHash,
+        Summary,
+        ResumeUnavailableReason,
+        CreatedAtUtc,
+        ResumedAtUtc);
+}
+
 public sealed class WorkflowArtifactRecordEntity
 {
     public Guid Id { get; set; }
@@ -1326,6 +1523,28 @@ internal sealed class WorkflowExternalRequestRecordEntityConfiguration : IEntity
         builder.Property(item => item.RequestJson).HasColumnType("TEXT");
         builder.Property(item => item.ResponseJson).HasColumnType("TEXT");
         builder.HasIndex(item => new { item.RunId, item.RespondedAtUtc });
+    }
+}
+
+internal sealed class WorkflowCheckpointRecordEntityConfiguration : IEntityTypeConfiguration<WorkflowCheckpointRecordEntity>
+{
+    public void Configure(EntityTypeBuilder<WorkflowCheckpointRecordEntity> builder)
+    {
+        builder.ToTable("AgentFramework_WorkflowCheckpoints");
+        builder.HasKey(item => item.Id);
+        builder.Property(item => item.Backend).HasConversion<int>();
+        builder.Property(item => item.Kind).HasConversion<int>();
+        builder.Property(item => item.TrustBoundary).HasConversion<int>();
+        builder.Property(item => item.ResumeAvailability).HasConversion<int>();
+        builder.Property(item => item.NodeId).HasMaxLength(200);
+        builder.Property(item => item.BackendCheckpointId).HasMaxLength(300);
+        builder.Property(item => item.PayloadReference).HasMaxLength(1200);
+        builder.Property(item => item.PayloadHash).HasMaxLength(128);
+        builder.Property(item => item.Summary).HasColumnType("TEXT");
+        builder.Property(item => item.ResumeUnavailableReason).HasColumnType("TEXT");
+        builder.HasIndex(item => new { item.RunId, item.CreatedAtUtc });
+        builder.HasIndex(item => new { item.RunId, item.Kind });
+        builder.HasIndex(item => item.ExternalRequestId);
     }
 }
 

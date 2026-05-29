@@ -1,0 +1,255 @@
+Command: rg -n WorkspaceFileOperation|CreateDirectory|Delete|Copy|Move|Hash|Zip|Unzip|DryRun|IncludePatterns|ExcludePatterns|Exists|Tree workspace file paths -S
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:21:            WorkflowStorageFileOperation.Tree => EnsureSucceeded(FilterList(files.ListFiles(EmptyToNull(settings.Path), settings.SearchPattern, settings.MaxFiles), settings)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:22:            WorkflowStorageFileOperation.Exists => EnsureSucceeded(files.StatPath(Require(settings.Path, nameof(settings.Path)))),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:27:            WorkflowStorageFileOperation.CreateDirectory => EnsureSucceeded(files.CreateDirectory(Require(settings.Path, nameof(settings.Path)))),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:28:            WorkflowStorageFileOperation.Delete => settings.DryRun
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:29:                ? BuildDryRunDelete(files, settings)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:30:                : EnsureSucceeded(files.DeletePath(Require(settings.Path, nameof(settings.Path)), settings.Recursive)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:31:            WorkflowStorageFileOperation.Copy => EnsureSucceeded(files.CopyPath(Require(settings.Path, nameof(settings.Path)), Require(settings.DestinationPath, nameof(settings.DestinationPath)), settings.Overwrite)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:32:            WorkflowStorageFileOperation.Move => EnsureSucceeded(files.MovePath(Require(settings.Path, nameof(settings.Path)), Require(settings.DestinationPath, nameof(settings.DestinationPath)), settings.Overwrite)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:33:            WorkflowStorageFileOperation.Hash => EnsureSucceeded(files.HashPath(Require(settings.Path, nameof(settings.Path)), settings.MaxFiles, settings.MaxBytes)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:34:            WorkflowStorageFileOperation.Zip => EnsureSucceeded(files.ZipPath(Require(settings.Path, nameof(settings.Path)), Require(settings.DestinationPath, nameof(settings.DestinationPath)), settings.Overwrite, settings.MaxFiles, settings.MaxBytes)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:35:            WorkflowStorageFileOperation.Unzip => EnsureSucceeded(files.UnzipArchive(Require(settings.Path, nameof(settings.Path)), Require(settings.DestinationPath, nameof(settings.DestinationPath)), settings.Overwrite, settings.MaxFiles, settings.MaxBytes)),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:66:    private static object BuildDryRunDelete(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:76:            stat.Exists,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\WorkspaceFileWorkflowExecutor.cs:79:            message = stat.Exists
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:642:            CreateRouteScenario("contract expiration is present", "{\"contract\":{\"expiresOn\":\"2026-12-31\"}}", "$.contract.expiresOn", WorkflowRouteOperator.Exists, "", WorkflowRouteValueKind.Json, true),
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:924:    public async Task WorkspaceFileExecutorSupportsDirectoryHashZipAndDryRunDelete()
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:932:            Operation = WorkflowStorageFileOperation.CreateDirectory,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:943:            Operation = WorkflowStorageFileOperation.Hash,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:948:            Operation = WorkflowStorageFileOperation.Zip,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:954:            Operation = WorkflowStorageFileOperation.Delete,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:957:            DryRun = true
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:963:        Assert.True(Directory.Exists(Path.Combine(temp.Path, "reports")));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1098:        Assert.True(File.Exists(Path.Combine(temp.Path, "downloads", "source.html")));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1167:            Assert.True(File.Exists(Path.Combine(temp.Path, "reports", "summary.md")));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1364:            Assert.True(File.Exists(Path.Combine(temp.Path, "invoices.xlsx")));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1393:            Assert.True(File.Exists(Path.Combine(temp.Path, "invoices.xlsx")));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1894:        public Task DeleteProviderAsync(
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1911:            Directory.CreateDirectory(Path);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1918:            if (Directory.Exists(Path))
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1920:                Directory.Delete(Path, recursive: true);
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:20:    public Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:21:        => catalogService.DeleteAgentAsync(agentId, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:42:    public Task DeleteAgentTeamAsync(Guid teamId, CancellationToken cancellationToken = default)
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:43:        => catalogService.DeleteAgentTeamAsync(teamId, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:70:    public Task DeleteProviderAsync(Guid providerId, CancellationToken cancellationToken = default)
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:71:        => catalogService.DeleteProviderAsync(providerId, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:101:    public Task DeleteCapabilityAsync(Guid capabilityId, CancellationToken cancellationToken = default)
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:102:        => catalogService.DeleteCapabilityAsync(capabilityId, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:117:    public Task DeleteMemoryAsync(Guid memoryId, CancellationToken cancellationToken = default)
+src\CanDoItAll.AgentFramework.Core\Workspace\AgentFrameworkWorkspaceService.CatalogFacade.cs:118:        => catalogService.DeleteMemoryAsync(memoryId, cancellationToken);
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathAliasSession.cs:157:            .ToHashSet();
+src\CanDoItAll.AgentFramework.Core\Workspace\Process\LocalWorkspaceProcessHost.cs:92:                TryKillProcessTree(process);
+src\CanDoItAll.AgentFramework.Core\Workspace\Process\LocalWorkspaceProcessHost.cs:99:                TryKillProcessTree(process);
+src\CanDoItAll.AgentFramework.Core\Workspace\Process\LocalWorkspaceProcessHost.cs:257:    private static void TryKillProcessTree(Process process)
+src\CanDoItAll.AgentFramework.Core\Workspace\Process\LocalWorkspaceProcessHost.cs:261:            process.Kill(entireProcessTree: true);
+src\CanDoItAll.AgentFramework.Core\Workspace\Artifacts\WorkspaceArtifactToolService.cs:37:        if (!File.Exists(outputFullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathPolicy.cs:121:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathPolicy.cs:131:        if (Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathPolicy.cs:154:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathPolicy.cs:159:        if (!Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathPolicy.cs:166:            Directory.CreateDirectory(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathResolutionContracts.cs:28:        if (!allowMissing && !File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathResolutionContracts.cs:33:        if (Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathResolutionContracts.cs:50:        if (!allowMissing && !Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Paths\WorkspacePathResolutionContracts.cs:55:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:103:        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:110:        Directory.CreateDirectory(directory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:116:            if (File.Exists(fullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:122:                File.Move(tempPath, fullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:127:            if (File.Exists(tempPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:129:                File.Delete(tempPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:136:        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(key));
+src\CanDoItAll.AgentFramework.Core\Workspace\Audit\WorkspaceExecutionAuditTrailWriter.cs:138:        hash.AsSpan(0, 16).CopyTo(buffer);
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:14:    private static readonly HashSet<string> ApprovedDotnetTemplates = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:35:    private static readonly HashSet<string> AllowedProjectExtensions = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:44:    private static readonly HashSet<string> AllowedRunnableProjectExtensions = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:51:    private static readonly HashSet<string> AllowedSpreadsheetExtensions = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:348:        if (Directory.Exists(workingDirectoryResolution.FullPath) &&
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:358:        if (Directory.Exists(targetFullPath) && ContainsProjectFile(targetFullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:365:            Directory.Exists(targetFullPath) &&
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:552:            Directory.CreateDirectory(outputDirectory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:812:        Directory.CreateDirectory(scriptDirectory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:852:        if (!File.Exists(projectPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:928:        builder.AppendLine("function Resolve-ProcessTreeIds {");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:949:        builder.AppendLine("function Stop-AppProcessTree {");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:960:        builder.AppendLine("    $processTreeIds = if ($CleanupProcessIds.Count -gt 0) { @($CleanupProcessIds) } elseif ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:969:        builder.AppendLine("        appProcessTreeIds = @($processTreeIds)");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:981:        builder.AppendLine("        stopCommand = if ($processTreeIds.Count -gt 0) { 'Stop-Process -Id ' + ($processTreeIds -join ',') + ' -Force' } else { '' }");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1040:        builder.AppendLine("        $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1041:        builder.AppendLine("        Stop-AppProcessTree $processTreeIds");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1042:        builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. Process tree was stopped after smoke validation.\" ($processTreeIds.Count -gt 0) $processTreeIds");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1047:        builder.AppendLine("    $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1048:        builder.AppendLine("    Stop-AppProcessTree $processTreeIds");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1049:        builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds");
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1087:        if (allowFiles && File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1092:        if (allowDirectories && Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandPlanBuilder.cs:1107:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandProcessRunner.cs:361:            if (File.Exists(rootPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandProcessRunner.cs:369:            if (!Directory.Exists(rootPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandProcessRunner.cs:397:                ComputeFileHash(path));
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandProcessRunner.cs:400:        private static string ComputeFileHash(string path)
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandProcessRunner.cs:404:            return Convert.ToHexString(sha256.ComputeHash(stream));
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandReceiptWriter.cs:34:        Directory.CreateDirectory(artifactDirectory.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandReceiptWriter.cs:143:        Directory.CreateDirectory(artifactDirectory.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceExecutableLocator.cs:30:                if (File.Exists(candidatePath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Commands\WorkspaceCommandEnvironmentPolicy.cs:7:    private static readonly HashSet<string> DefaultEnvironmentNames = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:24:    WorkspaceFileMutationResult CreateDirectory(string path);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:30:    WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:32:    WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:34:    WorkspaceFileMutationResult DeletePath(string path, bool recursive = false);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:67:    public WorkspaceFileMutationResult CreateDirectory(string path)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:68:        => files.CreateDirectory(RequirePath(path));
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:82:    public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:83:        => files.CopyPath(RequirePath(sourcePath), RequirePath(destinationPath), overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:85:    public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:86:        => files.MovePath(RequirePath(sourcePath), RequirePath(destinationPath), overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:88:    public WorkspaceFileMutationResult DeletePath(string path, bool recursive = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\PluginWorkspaceFiles.cs:89:        => files.DeletePath(RequirePath(path), recursive);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:15:    WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:17:    WorkspaceFileMutationResult CreateDirectory(string path);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:23:    WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:25:    WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:27:    WorkspaceFileMutationResult DeletePath(string path, bool recursive = false);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:29:    WorkspaceArchiveMutationResult ZipPath(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileContracts.cs:31:    WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileReceiptWriter.cs:93:        Directory.CreateDirectory(Path.GetDirectoryName(receiptFullPath)!);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:20:    private static readonly HashSet<string> ProjectFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:29:    private static readonly HashSet<string> ProjectSourceFileExtensions = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:38:    private static readonly HashSet<string> ProtectedProjectSurfaceFiles = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:55:    private static readonly HashSet<string> CurrentBlazorWebAppSurfaceFiles = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:61:    private static readonly HashSet<string> LegacyBlazorServerHostFiles = new(StringComparer.OrdinalIgnoreCase)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:84:    public WorkspaceFileMutationResult CreateDirectory(string path)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:92:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:114:        var existedBefore = Directory.Exists(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:115:        Directory.CreateDirectory(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:142:        if (Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:157:        var existedBefore = File.Exists(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:230:            Directory.CreateDirectory(directory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:260:        if (Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:274:            Directory.CreateDirectory(directory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:277:        var existedBefore = File.Exists(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:298:    public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:322:        if (File.Exists(sourceResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:324:            if (Directory.Exists(destinationResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:338:                Directory.CreateDirectory(destinationDirectory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:341:            var existedBefore = File.Exists(destinationResolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:353:            File.Copy(sourceResolution.FullPath, destinationResolution.FullPath, overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:372:        if (Directory.Exists(sourceResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:374:            if (File.Exists(destinationResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:407:            var existedBefore = Directory.Exists(destinationResolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:421:                Directory.Delete(destinationResolution.FullPath, recursive: true);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:424:            CopyDirectory(sourceResolution.FullPath, destinationResolution.FullPath, overwrite: true);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:452:    public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:476:        if (File.Exists(sourceResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:478:            if (Directory.Exists(destinationResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:492:                Directory.CreateDirectory(destinationDirectory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:495:            var existedBefore = File.Exists(destinationResolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:507:            File.Move(sourceResolution.FullPath, destinationResolution.FullPath, overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:509:                ? $"Moved '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}' and replaced the previous file."
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:510:                : $"Moved '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}'.";
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:526:        if (Directory.Exists(sourceResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:528:            if (File.Exists(destinationResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:550:            var existedBefore = Directory.Exists(destinationResolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:564:                Directory.Delete(destinationResolution.FullPath, recursive: true);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:570:                Directory.CreateDirectory(destinationDirectory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:573:            Directory.Move(sourceResolution.FullPath, destinationResolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:575:                ? $"Moved directory '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}' and replaced the previous directory."
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:576:                : $"Moved directory '{sourceResolution.RelativePath}' to '{destinationResolution.RelativePath}'.";
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:601:    public WorkspaceFileMutationResult DeletePath(string path, bool recursive = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:609:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:611:            if (TryGetProtectedProjectSurfaceDeleteMessage(resolution.FullPath, resolution.RelativePath, out var protectedDeleteMessage))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:615:                    protectedDeleteMessage,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:622:            File.Delete(resolution.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:623:            var message = $"Deleted file '{resolution.RelativePath}'.";
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:638:        if (Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:676:            Directory.Delete(resolution.FullPath, recursive);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:678:                ? $"Deleted directory '{resolution.RelativePath}' recursively."
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:679:                : $"Deleted empty directory '{resolution.RelativePath}'.";
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:755:        if (File.Exists(fullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:760:        if (Directory.Exists(fullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:777:    private static void CopyDirectory(string sourcePath, string destinationPath, bool overwrite)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:779:        Directory.CreateDirectory(destinationPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:792:            Directory.CreateDirectory(Path.Combine(destinationPath, relativePath));
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:807:            Directory.CreateDirectory(Path.GetDirectoryName(destinationFile)!);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:808:            File.Copy(file, destinationFile, overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:920:            File.Exists(Path.Combine(projectDirectory, relativePath.Replace('/', Path.DirectorySeparatorChar))));
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:951:        var currentDirectory = Directory.Exists(targetDirectory)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1027:        => Directory.Exists(directory) &&
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1032:        => Directory.Exists(directory) &&
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1041:        if (!Directory.Exists(containerDirectory))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1101:    private static bool TryGetProtectedProjectSurfaceDeleteMessage(
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1149:            if (TryGetProtectedProjectSurfaceDeleteMessage(file, file, out _))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1173:            if (Directory.Exists(currentDirectory.FullName) &&
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1190:        if (Directory.Exists(fullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileMutationService.cs:1195:        var searchPath = File.Exists(fullPath) || !string.IsNullOrWhiteSpace(Path.GetExtension(fullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:36:    public WorkspacePathHashResult HashPath(string path, int maxFiles = 200, long maxBytes = 10485760)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:40:            return new WorkspacePathHashResult(
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:46:                Hash: string.Empty,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:54:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:59:                return CreateHashFailure(resolution.RelativePath, "file", $"File '{resolution.RelativePath}' exceeds the configured hash byte limit.");
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:63:            var hash = SHA256.HashData(stream);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:64:            return new WorkspacePathHashResult(
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:70:                Hash: Convert.ToHexString(hash).ToLowerInvariant(),
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:76:        if (!Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:78:            return CreateHashFailure(resolution.RelativePath, "missing", $"Path '{resolution.RelativePath}' does not exist in the workspace.");
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:94:            return CreateHashFailure(resolution.RelativePath, "directory", $"Directory '{resolution.RelativePath}' exceeds the configured hash file limit.");
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:97:        using var incrementalHash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:105:                return CreateHashFailure(resolution.RelativePath, "directory", $"Directory '{resolution.RelativePath}' exceeds the configured hash byte limit.");
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:109:            incrementalHash.AppendData(Encoding.UTF8.GetBytes(relativePath));
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:110:            incrementalHash.AppendData([0]);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:116:                incrementalHash.AppendData(buffer, 0, read);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:120:        return new WorkspacePathHashResult(
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:126:            Hash: Convert.ToHexString(incrementalHash.GetHashAndReset()).ToLowerInvariant(),
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:132:    public WorkspaceFileMutationResult CreateDirectory(string path)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:133:        => mutationService.CreateDirectory(path);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:141:    public WorkspaceFileMutationResult CopyPath(string sourcePath, string destinationPath, bool overwrite = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:142:        => mutationService.CopyPath(sourcePath, destinationPath, overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:144:    public WorkspaceFileMutationResult MovePath(string sourcePath, string destinationPath, bool overwrite = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:145:        => mutationService.MovePath(sourcePath, destinationPath, overwrite);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:147:    public WorkspaceFileMutationResult DeletePath(string path, bool recursive = false)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:148:        => mutationService.DeletePath(path, recursive);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:150:    public WorkspaceArchiveMutationResult ZipPath(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:162:        if (Directory.Exists(destination.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:167:        if (File.Exists(destination.FullPath) && !overwrite)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:172:        if (File.Exists(destination.FullPath) && overwrite)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:174:            File.Delete(destination.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:191:            Directory.CreateDirectory(directory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:194:        using (var archive = ZipFile.Open(destination.FullPath, ZipArchiveMode.Create))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:215:    public WorkspaceArchiveMutationResult UnzipArchive(string sourcePath, string destinationPath, bool overwrite = false, int maxFiles = 200, long maxBytes = 10485760)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:222:        if (!File.Exists(source.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:232:        if (File.Exists(destination.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:237:        using var archive = ZipFile.OpenRead(source.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:252:        Directory.CreateDirectory(destination.FullPath);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:264:                Directory.CreateDirectory(targetDirectory);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:267:            if (File.Exists(targetPath) && !overwrite)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:288:    private static WorkspacePathHashResult CreateHashFailure(string path, string pathKind, string message)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:295:            Hash: string.Empty,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:314:        if (File.Exists(source.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileService.cs:320:        if (!Directory.Exists(source.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:41:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:55:        if (!Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:149:        if (!File.Exists(resolution.FullPath) && !Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:176:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:266:        if (!File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:318:                Exists: false,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:325:        if (File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:334:                Exists: true,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:341:        if (Directory.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:356:                Exists: true,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:369:            Exists: false,
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:389:        if (!File.Exists(leftResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:394:        if (!File.Exists(rightResolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:497:        return File.Exists(fullPath)
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:507:                LastWriteTimeUtc: Directory.Exists(fullPath) ? Directory.GetLastWriteTimeUtc(fullPath) : null);
+src\CanDoItAll.AgentFramework.Core\Workspace\Files\WorkspaceFileQueryService.cs:512:        if (File.Exists(rootPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:96:        if (!File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Tools\WorkspaceArtifactToolService.cs:172:            || !File.Exists(resolution.FullPath))
+src\CanDoItAll.AgentFramework.Core\Workspace\Retrieval\WorkspaceRetrievalNoisePolicy.cs:23:        var excludedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+src\CanDoItAll.AgentFramework.Core\Workspace\Retrieval\WorkspaceRetrievalNoisePolicy.cs:55:    private static void AddPaths(HashSet<string> destination, IEnumerable<string>? paths)
+src\CanDoItAll.AgentFramework.Core\Workspace\Retrieval\WorkspaceRetrievalNoisePolicy.cs:74:        var comparisonRoot = File.Exists(workspaceRoot)
+

@@ -1,0 +1,34 @@
+Command: Invoke NuGet flat-container metadata for Microsoft.Agents packages
+WorkingDirectory: C:\repositories\CanDoItAll
+
+Package: Microsoft.Agents.AI
+Url: https://api.nuget.org/v3-flatcontainer/microsoft.agents.ai/index.json
+Latest listed version: 1.8.0
+Recent versions: 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.8.0
+
+Package: Microsoft.Agents.AI.A2A
+Url: https://api.nuget.org/v3-flatcontainer/microsoft.agents.ai.a2a/index.json
+Latest listed version: 1.8.0-preview.260528.1
+Recent versions: 1.3.0-preview.260423.1, 1.4.0-preview.260505.1, 1.5.0-preview.260507.1, 1.6.0-preview.260512.1, 1.6.1-preview.260514.1, 1.6.2-preview.260521.1, 1.7.0-preview.260526.1, 1.8.0-preview.260528.1
+
+Package: Microsoft.Agents.AI.Mem0
+Url: https://api.nuget.org/v3-flatcontainer/microsoft.agents.ai.mem0/index.json
+Latest listed version: 1.0.0-preview.251028.1
+Recent versions: 1.0.0-preview.251028.1
+
+Package: Microsoft.Agents.AI.OpenAI
+Url: https://api.nuget.org/v3-flatcontainer/microsoft.agents.ai.openai/index.json
+Latest listed version: 1.8.0
+Recent versions: 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.8.0
+
+Package: Microsoft.Agents.AI.Workflows
+Url: https://api.nuget.org/v3-flatcontainer/microsoft.agents.ai.workflows/index.json
+Latest listed version: 1.8.0
+Recent versions: 1.3.0, 1.4.0, 1.5.0, 1.6.0, 1.6.1, 1.6.2, 1.7.0, 1.8.0
+
+Package: Microsoft.Agents.AI.Hosting.A2A
+Url: https://api.nuget.org/v3-flatcontainer/microsoft.agents.ai.hosting.a2a/index.json
+Latest listed version: 1.8.0-preview.260528.1
+Recent versions: 1.3.0-preview.260423.1, 1.4.0-preview.260505.1, 1.5.0-preview.260507.1, 1.6.0-preview.260512.1, 1.6.1-preview.260514.1, 1.6.2-preview.260521.1, 1.7.0-preview.260526.1, 1.8.0-preview.260528.1
+
+ExitCode: 0

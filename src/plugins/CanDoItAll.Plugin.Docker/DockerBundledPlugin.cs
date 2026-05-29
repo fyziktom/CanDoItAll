@@ -71,5 +71,13 @@ internal sealed class DockerBundledPlugin : IBundledPlugin
             ConfigurationSchema.Empty(),
             WorkflowValueShape.Text,
             JsonShape,
-            defaultPolicy);
+            defaultPolicy)
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.RunsHostCommand |
+                WorkflowExecutorCapabilityFlags.EmitsArtifacts |
+                WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                WorkflowExecutorApprovalRequirement.AlwaysRequired),
+            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates Docker host-tool output without invoking Docker.")
+        };
 }

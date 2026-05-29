@@ -75,6 +75,7 @@ public static class RuntimeHostServiceCollectionExtensions
         services.AddSchedulerPlannerModule();
         services.AddCollaborationModule();
         services.AddCrmHrModule();
+        services.AddSchedulerPlannerWorkflowInputOptionProviders();
         return services;
     }
 

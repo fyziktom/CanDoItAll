@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
@@ -6,7 +8,9 @@ using CanDoItAll.Modules.Security;
 
 namespace CanDoItAll.AgentFramework.Maf;
 
-public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretResolver = null) : IWorkflowExecutor
+public sealed class HttpFetchWorkflowExecutor(
+    ISecretRuntimeResolver? secretResolver = null,
+    IWorkspaceFileService? files = null) : IWorkflowExecutor
 {
     public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.HttpFetch;
 
@@ -36,6 +40,7 @@ public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretReso
         }
 
         await ApplySecretHeaderAsync(request, settings.SecretHeader, context, cancellationToken);
+        await EnsureAllowedTargetAsync(uri, settings.AllowPrivateNetworkTargets, cancellationToken);
 
         if (!string.IsNullOrEmpty(settings.Body) && settings.Method is not WorkflowHttpMethodKind.Get)
         {
@@ -50,6 +55,19 @@ public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretReso
             throw new InvalidOperationException($"HTTP executor received {(int)response.StatusCode} {response.ReasonPhrase} from '{uri}'.");
         }
 
+        var outputPath = string.Empty;
+        if (settings.DownloadToWorkspace)
+        {
+            if (files is null)
+            {
+                throw new InvalidOperationException("HTTP download-to-workspace requires a registered workspace file service.");
+            }
+
+            outputPath = ResolveOutputPath(settings, uri);
+            var writeResult = files.WriteTextFile(outputPath, body.Text, settings.Overwrite);
+            EnsureSucceeded(writeResult);
+        }
+
         var result = new
         {
             url = uri.ToString(),
@@ -58,6 +76,8 @@ public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretReso
             contentType = response.Content.Headers.ContentType?.ToString() ?? string.Empty,
             body.Text,
             body.IsTruncated,
+            downloadToWorkspace = settings.DownloadToWorkspace,
+            outputPath,
             inputPayload = settings.IncludeInputPayload ? input.PayloadJson : string.Empty,
             headers = response.Headers
                 .Concat(response.Content.Headers)
@@ -77,6 +97,109 @@ public sealed class HttpFetchWorkflowExecutor(ISecretRuntimeResolver? secretReso
             WorkflowHttpMethodKind.Delete => HttpMethod.Delete,
             _ => throw new InvalidOperationException($"HTTP method '{method}' is not supported.")
         };
+
+    private static async Task EnsureAllowedTargetAsync(
+        Uri uri,
+        bool allowPrivateNetworkTargets,
+        CancellationToken cancellationToken)
+    {
+        if (allowPrivateNetworkTargets)
+        {
+            return;
+        }
+
+        if (string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("HTTP executor blocks localhost targets by default.");
+        }
+
+        IPAddress[] addresses;
+        if (IPAddress.TryParse(uri.Host, out var literalAddress))
+        {
+            addresses = [literalAddress];
+        }
+        else
+        {
+            try
+            {
+                addresses = await Dns.GetHostAddressesAsync(uri.DnsSafeHost, cancellationToken);
+            }
+            catch (SocketException exception)
+            {
+                throw new InvalidOperationException($"HTTP executor could not resolve host '{uri.DnsSafeHost}'.", exception);
+            }
+        }
+
+        if (addresses.Any(IsBlockedAddress))
+        {
+            throw new InvalidOperationException("HTTP executor blocks loopback, private, and link-local network targets by default.");
+        }
+    }
+
+    private static bool IsBlockedAddress(IPAddress address)
+    {
+        if (IPAddress.IsLoopback(address))
+        {
+            return true;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetwork)
+        {
+            var bytes = address.GetAddressBytes();
+            return bytes[0] == 10 ||
+                   bytes[0] == 127 ||
+                   bytes[0] == 169 && bytes[1] == 254 ||
+                   bytes[0] == 172 && bytes[1] is >= 16 and <= 31 ||
+                   bytes[0] == 192 && bytes[1] == 168;
+        }
+
+        if (address.AddressFamily == AddressFamily.InterNetworkV6)
+        {
+            return address.IsIPv6LinkLocal ||
+                   address.IsIPv6SiteLocal ||
+                   address.IsIPv6UniqueLocal ||
+                   address.Equals(IPAddress.IPv6Loopback);
+        }
+
+        return true;
+    }
+
+    private static string ResolveOutputPath(
+        WorkflowHttpExecutorSettings settings,
+        Uri uri)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.OutputPath))
+        {
+            return settings.OutputPath.Trim();
+        }
+
+        var fileName = Path.GetFileName(uri.LocalPath);
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            fileName = "download.txt";
+        }
+
+        if (fileName.Contains("..", StringComparison.Ordinal) ||
+            fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            throw new InvalidOperationException("HTTP download output filename is unsafe.");
+        }
+
+        return $"downloads/{fileName}";
+    }
+
+    private static T EnsureSucceeded<T>(T result)
+    {
+        var succeededProperty = typeof(T).GetProperty("Succeeded");
+        var messageProperty = typeof(T).GetProperty("Message");
+        if (succeededProperty?.GetValue(result) is false)
+        {
+            var message = messageProperty?.GetValue(result)?.ToString() ?? "HTTP workspace write failed.";
+            throw new InvalidOperationException(message);
+        }
+
+        return result;
+    }
 
     private async Task ApplySecretHeaderAsync(
         HttpRequestMessage request,

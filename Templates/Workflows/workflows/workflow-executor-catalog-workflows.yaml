@@ -1,0 +1,302 @@
+workflows:
+  - key: local-folder-summary-markdown-report
+    name: Local Folder Summary Markdown Report
+    description: Lists a bounded workspace folder tree and renders a Markdown inventory report to a workspace file.
+    routingInstructions: Return route as `summarized` when the folder inventory is available.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: list-folder
+          kind: Executor
+          name: List workflow folder
+          x: 340
+          y: 220
+          executor:
+            id: storage.file
+            policy: fast
+            settings:
+              operation: Tree
+              path: samples/workflows
+              searchPattern: "*"
+              includeGlobs:
+                - "**/*.md"
+                - "**/*.txt"
+                - "**/*.json"
+              excludeGlobs:
+                - "**/bin/**"
+                - "**/obj/**"
+              recursive: true
+              maxFiles: 80
+              maxBytes: 2097152
+          instructions: Read a bounded workspace folder inventory without leaving the workspace storage boundary.
+        - id: render-folder-report
+          kind: Executor
+          name: Render folder report
+          x: 650
+          y: 220
+          executor:
+            id: markdown.render
+            policy: fast
+            settings:
+              template: |-
+                # Folder inventory
+
+                Root: {{rootPath}}
+                Search pattern: {{searchPattern}}
+
+                {{entries}}
+              bindings:
+                rootPath: "$.rootPath"
+                searchPattern: "$.searchPattern"
+              tables:
+                - placeholder: entries
+                  jsonPath: "$.entries"
+                  columns:
+                    - relativePath
+                    - pathKind
+                    - sizeBytes
+              outputPath: samples/workflows/folder-summary.md
+              overwrite: true
+              missingPlaceholderBehavior: Fail
+          instructions: Render the folder inventory to Markdown and write it to the workspace.
+        - { id: end, kind: End, name: End, x: 950, y: 220 }
+      edges:
+        - { source: start, target: list-folder }
+        - { source: list-folder, target: render-folder-report }
+        - { source: render-folder-report, target: end }
+
+  - key: file-diff-markdown-report
+    name: File Diff Markdown Report
+    description: Diffs two workspace text files and renders a compact Markdown change report.
+    routingInstructions: Return route as `diffed` after the diff preview is generated.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: diff-files
+          kind: Executor
+          name: Diff workflow notes
+          x: 340
+          y: 220
+          executor:
+            id: storage.file
+            policy: fast
+            settings:
+              operation: DiffText
+              path: samples/workflows/diff-before.md
+              destinationPath: samples/workflows/diff-after.md
+              maxLines: 120
+          instructions: Compare two workspace text files and return a bounded diff preview.
+        - id: render-diff-report
+          kind: Executor
+          name: Render diff report
+          x: 650
+          y: 220
+          executor:
+            id: markdown.render
+            policy: fast
+            settings:
+              template: |-
+                # File diff report
+
+                Left: {{leftPath}}
+                Right: {{rightPath}}
+                Added lines: {{addedLineCount}}
+                Removed lines: {{removedLineCount}}
+
+                ```diff
+                {{diffPreview}}
+                ```
+              bindings:
+                leftPath: "$.leftPath"
+                rightPath: "$.rightPath"
+                addedLineCount: "$.addedLineCount"
+                removedLineCount: "$.removedLineCount"
+                diffPreview: "$.diffPreview"
+              outputPath: samples/workflows/diff-report.md
+              overwrite: true
+              missingPlaceholderBehavior: Fail
+          instructions: Render the bounded diff preview to a Markdown report.
+        - { id: end, kind: End, name: End, x: 950, y: 220 }
+      edges:
+        - { source: start, target: diff-files }
+        - { source: diff-files, target: render-diff-report }
+        - { source: render-diff-report, target: end }
+
+  - key: http-download-document-extraction-report
+    name: HTTP Download Document Extraction Report
+    description: Downloads a bounded HTTP document to workspace storage, extracts supported document text, and renders extraction evidence to Markdown.
+    routingInstructions: Return route as `extracted` when source ingestion produced document evidence.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: download-document
+          kind: Executor
+          name: Download source document
+          x: 330
+          y: 220
+          executor:
+            id: http.fetch
+            settings:
+              method: Get
+              url: https://example.com
+              maxResponseBytes: 262144
+              downloadToWorkspace: true
+              outputPath: samples/workflows/downloaded-source.html
+              overwrite: true
+          instructions: Download a bounded remote document through HTTP guardrails and write it to workspace storage.
+        - id: ingest-downloaded-document
+          kind: Executor
+          name: Extract downloaded document
+          x: 640
+          y: 220
+          executor:
+            id: source.ingest
+            settings:
+              includeAdditionalSources: true
+              includeParentNodePath: false
+              includeSelectedNodePaths: false
+              includeParentSubtreePaths: false
+              recursiveFolders: false
+              maxFiles: 1
+              maxCharactersPerFile: 24000
+              maxTotalCharacters: 24000
+              allowedExtensions:
+                - .html
+                - .htm
+                - .pdf
+                - .docx
+                - .zip
+                - .md
+                - .txt
+          instructions: Extract text or a manifest from the downloaded workspace document.
+        - id: render-extraction-report
+          kind: Executor
+          name: Render extraction report
+          x: 960
+          y: 220
+          executor:
+            id: markdown.render
+            policy: fast
+            settings:
+              template: |-
+                # Document extraction report
+
+                {{sourceSummary}}
+
+                {{documents}}
+              bindings:
+                sourceSummary: "$.sourceSummary"
+              tables:
+                - placeholder: documents
+                  jsonPath: "$.documents"
+                  columns:
+                    - fileName
+                    - extension
+                    - extractionStatus
+                    - totalCharacters
+                    - isTruncated
+              outputPath: samples/workflows/downloaded-source-report.md
+              overwrite: true
+              missingPlaceholderBehavior: Fail
+          instructions: Render extracted document evidence to Markdown.
+        - { id: end, kind: End, name: End, x: 1260, y: 220 }
+      edges:
+        - { source: start, target: download-document }
+        - { source: download-document, target: ingest-downloaded-document }
+        - { source: ingest-downloaded-document, target: render-extraction-report }
+        - { source: render-extraction-report, target: end }
+
+  - key: json-transform-project-task-creation
+    name: JSON Transform Project Task Creation
+    description: Validates a task intake payload, reshapes it deterministically, and creates project-structure task nodes from the normalized task array.
+    routingInstructions: Return route as `tasks` when the normalized payload contains concrete task objects.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: normalize-task-payload
+          kind: Executor
+          name: Normalize task payload
+          x: 350
+          y: 220
+          executor:
+            id: json.transform
+            policy: fast
+            settings:
+              operations:
+                - operation: ValidateSchema
+                  requiredPaths:
+                    - "$.projectId"
+                    - "$.nodeId"
+                    - "$.tasks"
+                - operation: Template
+                  destinationPath: "$"
+                  template:
+                    projectId: "$.projectId"
+                    nodeId: "$.nodeId"
+                    tasks: "$.tasks"
+                    summary: "$.summary"
+              maxOutputCharacters: 200000
+          instructions: Validate and reshape task intake JSON without arbitrary code execution.
+        - id: create-task-nodes
+          kind: Executor
+          name: Create project task nodes
+          x: 680
+          y: 220
+          executor:
+            id: project-structure
+            settings:
+              operation: CreateTaskNodes
+              projectIdJsonPath: "$.projectId"
+              nodeIdJsonPath: "$.nodeId"
+              taskItemsJsonPath: "$.tasks"
+              taskObjectSubtype: task
+              maxTaskNodes: 12
+              includeInputPayload: true
+          instructions: Create WorkItem/task nodes from the normalized task array.
+        - { id: end, kind: End, name: End, x: 980, y: 220 }
+      edges:
+        - { source: start, target: normalize-task-payload }
+        - { source: normalize-task-payload, target: create-task-nodes }
+        - { source: create-task-nodes, target: end }
+
+  - key: approval-gated-http-action
+    name: Approval Gated HTTP Action
+    description: Requires explicit workflow approval before a bounded HTTP action can run.
+    routingInstructions: Return route as `approved` only after approval response data is present.
+    graph:
+      startNodeId: start
+      nodes:
+        - { id: start, kind: Start, name: Start, x: 80, y: 220 }
+        - id: request-approval
+          kind: Executor
+          name: Request external action approval
+          x: 350
+          y: 220
+          executor:
+            id: human.approval
+            settings:
+              prompt: Approve the external HTTP action before the workflow continues.
+              includeInputPayload: true
+          instructions: Create an explicit workflow approval request and pause the run until a response is supplied.
+        - id: call-approved-endpoint
+          kind: Executor
+          name: Call approved endpoint
+          x: 700
+          y: 220
+          executor:
+            id: http.fetch
+            settings:
+              method: Get
+              url: https://example.com
+              maxResponseBytes: 131072
+              includeInputPayload: true
+          instructions: Run the external HTTP action only after approval resumes the workflow.
+        - { id: end, kind: End, name: End, x: 1010, y: 220 }
+      edges:
+        - { source: start, target: request-approval }
+        - { source: request-approval, target: call-approved-endpoint }
+        - { source: call-approved-endpoint, target: end }

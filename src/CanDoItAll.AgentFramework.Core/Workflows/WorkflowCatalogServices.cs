@@ -22,6 +22,7 @@ public sealed class InMemoryWorkflowCatalogService :
     private readonly IWorkflowDefinitionValidator validator;
     private readonly IProviderProfileRegistry? providerRegistry;
     private readonly IProviderProfileService? providerProfileService;
+    private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog;
 
     public InMemoryWorkflowCatalogService(IWorkflowDefinitionValidator validator)
         : this(new InMemoryWorkflowCatalogStore(), validator)
@@ -32,7 +33,8 @@ public sealed class InMemoryWorkflowCatalogService :
         InMemoryWorkflowCatalogStore store,
         IWorkflowDefinitionValidator validator,
         IProviderProfileRegistry? providerRegistry = null,
-        IProviderProfileService? providerProfileService = null)
+        IProviderProfileService? providerProfileService = null,
+        IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null)
     {
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(validator);
@@ -41,6 +43,7 @@ public sealed class InMemoryWorkflowCatalogService :
         this.validator = validator;
         this.providerRegistry = providerRegistry;
         this.providerProfileService = providerProfileService;
+        this.runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
     }
 
     public async Task<IReadOnlyList<WorkflowCatalogItem>> ListDefinitionsAsync(
@@ -108,6 +111,7 @@ public sealed class InMemoryWorkflowCatalogService :
         ArgumentNullException.ThrowIfNull(request.RuntimePolicy);
 
         var now = DateTimeOffset.UtcNow;
+        WorkflowDefinition definition;
         await store.Gate.WaitAsync(cancellationToken);
         try
         {
@@ -121,7 +125,7 @@ public sealed class InMemoryWorkflowCatalogService :
                 throw new InvalidOperationException($"Workflow definition '{workflowId}' was updated by another request.");
             }
 
-            var definition = new WorkflowDefinition(
+            definition = new WorkflowDefinition(
                 workflowId,
                 WorkflowVersionId.New(),
                 request.Name.Trim(),
@@ -130,11 +134,35 @@ public sealed class InMemoryWorkflowCatalogService :
                 SnapshotGraph(request.Graph),
                 request.RuntimePolicy,
                 current?.CreatedAtUtc ?? now,
-                now);
+                now)
+            {
+                InputParameters = SnapshotInputParameters(request.InputParameters)
+            };
+        }
+        finally
+        {
+            store.Gate.Release();
+        }
+
+        ThrowIfValidationFailed(
+            await ValidateDefinitionAsync(definition, cancellationToken),
+            "Workflow definition save failed validation");
+
+        await store.Gate.WaitAsync(cancellationToken);
+        try
+        {
+            store.Definitions.TryGetValue(definition.Id, out var versions);
+            var current = versions is { Count: > 0 } ? versions[^1] : null;
+            if (request.ExpectedVersionId is { } expectedVersionId &&
+                current is not null &&
+                current.VersionId != expectedVersionId)
+            {
+                throw new InvalidOperationException($"Workflow definition '{definition.Id}' was updated by another request.");
+            }
 
             if (versions is null)
             {
-                store.Definitions[workflowId] = [definition];
+                store.Definitions[definition.Id] = [definition];
             }
             else
             {
@@ -170,7 +198,10 @@ public sealed class InMemoryWorkflowCatalogService :
                 detail.Definition.Description,
                 request.Status,
                 detail.Definition.Graph,
-                detail.Definition.RuntimePolicy),
+                detail.Definition.RuntimePolicy)
+            {
+                InputParameters = detail.Definition.InputParameters
+            },
             cancellationToken);
     }
 
@@ -224,7 +255,10 @@ public sealed class InMemoryWorkflowCatalogService :
                 source.Description,
                 importedStatus,
                 source.Graph,
-                source.RuntimePolicy),
+                source.RuntimePolicy)
+            {
+                InputParameters = source.InputParameters
+            },
             cancellationToken);
     }
 
@@ -260,6 +294,10 @@ public sealed class InMemoryWorkflowCatalogService :
                 WorkflowValidationIssueCode.InvalidWorkflowSettings,
                 "Durable production workflows cannot prefer the in-process runtime backend."));
         }
+
+        issues.AddRange(WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+            definition.RuntimePolicy,
+            runtimeBackendCatalog));
 
         var currentSettings = await GetSettingsAsync(cancellationToken);
         if (!currentSettings.HumanInLoopPolicy.AllowHumanInputNodes &&
@@ -420,6 +458,15 @@ public sealed class InMemoryWorkflowCatalogService :
             throw new InvalidOperationException("Workflow human-in-loop timeout must be positive.");
         }
 
+        var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+            settings.DefaultRuntimePolicy,
+            runtimeBackendCatalog);
+        if (runtimeIssues.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Workflow default runtime policy is invalid: {string.Join(" ", runtimeIssues.Select(issue => issue.Message))}");
+        }
+
         cancellationToken.ThrowIfCancellationRequested();
         store.Settings = settings;
         return Task.FromResult(settings);
@@ -540,6 +587,18 @@ public sealed class InMemoryWorkflowCatalogService :
                 .ToArray(),
             graph.Edges.ToArray());
     }
+
+    private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
+        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters)
+        => inputParameters
+            .Select(parameter => parameter with
+            {
+                OptionSource = parameter.OptionSource with
+                {
+                    StaticOptions = parameter.OptionSource.StaticOptions.ToArray()
+                }
+            })
+            .ToArray();
 
     private static void ThrowIfValidationFailed(
         WorkflowValidationResult validation,
@@ -708,14 +767,22 @@ public sealed class WorkflowTestRunner(
                     PreviewSimulationPlan = request.PreviewSimulationPlan
                 },
                 cancellationToken);
+            var events = await runtimeManager.ListEventsAsync(run.RunId, cancellationToken);
+            var artifacts = await runStore.ListArtifactsAsync(run.RunId, cancellationToken);
+            var pendingExternalRequests = await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken);
+            var checkpoints = await runStore.ListCheckpointsAsync(run.RunId, cancellationToken);
+
             return new WorkflowTestRunResult(
                 run.State is WorkflowRunState.Completed or WorkflowRunState.WaitingForInput or WorkflowRunState.Idle,
                 validation,
                 run,
-                await runtimeManager.ListEventsAsync(run.RunId, cancellationToken),
-                await runStore.ListArtifactsAsync(run.RunId, cancellationToken),
-                await runStore.ListPendingExternalRequestsAsync(run.RunId, cancellationToken),
-                run.State == WorkflowRunState.Failed ? run.Summary : string.Empty);
+                events,
+                artifacts,
+                pendingExternalRequests,
+                run.State == WorkflowRunState.Failed ? run.Summary : string.Empty)
+            {
+                Checkpoints = checkpoints
+            };
         }
         catch (Exception exception) when (exception is InvalidOperationException or KeyNotFoundException)
         {

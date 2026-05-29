@@ -1,0 +1,134 @@
+Command: rg -n "WorkflowInputParameterDescriptor|WorkflowInputParameterKind|inputParameters:|CreateInputParameters|ISchedulerWorkflowInputSchemaService|SchedulerWorkflowInputSchemaService|ValidateInputAsync|InputParameters =|processedCategory|lookbackHours" src/CanDoItAll.AgentFramework.Models src/CanDoItAll.AgentFramework.Core src/CanDoItAll.Modules.AgentFramework src/CanDoItAll.Modules.SchedulerPlanner Templates/Workflows/workflows/office365-email-watch-workflows.yaml tests/CanDoItAll.Tests.Unit tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs
+StartedUtc: 2026-05-29T19:22:24.2641117Z
+
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:307:        var schemaService = scope.ServiceProvider.GetRequiredService<ISchedulerWorkflowInputSchemaService>();
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:313:        var validation = await schemaService.ValidateInputAsync(
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:323:        var rawValidation = await schemaService.ValidateInputAsync(rawDefinition.Id, rawDefinition.VersionId, "[1,2,3]");
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:326:        Assert.Contains(schema.Parameters, parameter => parameter.Key == "emailAddress" && parameter.Kind == WorkflowInputParameterKind.EmailAddress);
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:330:            Assert.Equal("CanDoItAllProcessed", document.RootElement.GetProperty("processedCategory").GetString());
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:331:            Assert.Equal(336, document.RootElement.GetProperty("lookbackHours").GetInt32());
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:409:        Assert.Equal("CanDoItAllProcessed", input.RootElement.GetProperty("processedCategory").GetString());
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:410:        Assert.Equal(336, input.RootElement.GetProperty("lookbackHours").GetInt32());
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:517:        IReadOnlyList<WorkflowInputParameterDescriptor>? inputParameters = null)
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:550:            InputParameters = inputParameters ?? []
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:556:    private static IReadOnlyList<WorkflowInputParameterDescriptor> CreateSchedulerWorkflowInputParameters()
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:560:            new WorkflowInputParameterDescriptor(
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:563:                WorkflowInputParameterKind.EmailAddress,
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:575:            new WorkflowInputParameterDescriptor(
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:578:                WorkflowInputParameterKind.ProjectId,
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:590:            new WorkflowInputParameterDescriptor(
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:593:                WorkflowInputParameterKind.ProjectNodeId,
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:605:            new WorkflowInputParameterDescriptor(
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:606:                "processedCategory",
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:608:                WorkflowInputParameterKind.Category,
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:611:                "$.processedCategory",
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:617:            new WorkflowInputParameterDescriptor(
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:618:                "lookbackHours",
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:620:                WorkflowInputParameterKind.Integer,
+tests/CanDoItAll.Tests.Integration/SchedulerPlannerIntegrationTests.cs:623:                "$.lookbackHours",
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:13:    inputParameters:
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:48:      - key: processedCategory
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:53:        jsonPath: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:55:      - key: lookbackHours
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:60:        jsonPath: "$.lookbackHours"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:80:              processedCategory: ""
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:81:              processedCategoryJsonPath: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:83:              lookbackHours: 336
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:84:              lookbackHoursJsonPath: "$.lookbackHours"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:107:                    processedCategory: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:142:              processedCategory: ""
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:143:              processedCategoryJsonPath: "$.inputPayload.runContext.office365Processing.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:164:                    processedCategory: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:165:                    processedCategoryAdded: "$.processedCategoryAdded"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:203:    inputParameters:
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:238:      - key: processedCategory
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:243:        jsonPath: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:245:      - key: lookbackHours
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:250:        jsonPath: "$.lookbackHours"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:270:              processedCategory: ""
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:271:              processedCategoryJsonPath: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:273:              lookbackHours: 336
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:274:              lookbackHoursJsonPath: "$.lookbackHours"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:297:                    processedCategory: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:349:              processedCategory: ""
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:350:              processedCategoryJsonPath: "$.inputPayload.runContext.office365Processing.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:371:                    processedCategory: "$.processedCategory"
+Templates/Workflows/workflows/office365-email-watch-workflows.yaml:372:                    processedCategoryAdded: "$.processedCategoryAdded"
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:10:public interface ISchedulerWorkflowInputSchemaService
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:17:    Task<SchedulerWorkflowInputValidationResult> ValidateInputAsync(
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:24:public sealed class SchedulerWorkflowInputSchemaService(
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:25:    IWorkflowCatalogService workflowCatalogService) : ISchedulerWorkflowInputSchemaService
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:43:    public async Task<SchedulerWorkflowInputValidationResult> ValidateInputAsync(
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:101:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:132:            case WorkflowInputParameterKind.EmailAddress:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:133:            case WorkflowInputParameterKind.CrmContactEmail:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:136:            case WorkflowInputParameterKind.ProjectId:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:139:            case WorkflowInputParameterKind.ProjectNodeId:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:140:            case WorkflowInputParameterKind.Category:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:141:            case WorkflowInputParameterKind.Text:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:142:            case WorkflowInputParameterKind.ExternalConnectionId:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:145:            case WorkflowInputParameterKind.Integer:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:146:            case WorkflowInputParameterKind.DurationMinutes:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:149:            case WorkflowInputParameterKind.TimeZone:
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:161:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:164:        if (parameter.Kind is WorkflowInputParameterKind.Integer or WorkflowInputParameterKind.DurationMinutes)
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:181:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:206:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:217:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:230:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:254:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:279:        WorkflowInputParameterDescriptor parameter,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:352:    private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputSchemaService.cs:353:        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters)
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModuleServiceCollectionExtensions.cs:11:        services.AddScoped<ISchedulerWorkflowInputSchemaService, SchedulerWorkflowInputSchemaService>();
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:53:    ISchedulerWorkflowInputSchemaService workflowInputSchemaService,
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:268:        var validation = await workflowInputSchemaService.ValidateInputAsync(
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:234:    IReadOnlyList<WorkflowInputParameterDescriptor> Parameters,
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs:59:            var inputParameters = templatePack.CreateInputParameters(template);
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs:225:        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters,
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs:239:                InputParameters = inputParameters
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:88:            _ = templatePack.CreateInputParameters(template);
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:327:    public IReadOnlyList<WorkflowInputParameterDescriptor> CreateInputParameters(WorkflowTemplateDefinition template)
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:447:    public WorkflowInputParameterDescriptor ToModel(string context)
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:457:        return new WorkflowInputParameterDescriptor(
+src/CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs:460:            ParseEnum<WorkflowInputParameterKind>(Kind, $"input parameter '{key}' kind", context),
+src/CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:102:            InputParameters = SnapshotInputParameters(request.InputParameters)
+src/CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:137:                InputParameters = detail.Definition.InputParameters
+src/CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:194:                InputParameters = source.InputParameters
+src/CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:593:    private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
+src/CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:594:        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters)
+src/CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:609:    public IReadOnlyList<WorkflowInputParameterDescriptor> InputParameters { get; init; } = [];
+src/CanDoItAll.AgentFramework.Models\Workflows\WorkflowInputParameterModels.cs:3:public enum WorkflowInputParameterKind
+src/CanDoItAll.AgentFramework.Models\Workflows\WorkflowInputParameterModels.cs:43:public sealed record WorkflowInputParameterDescriptor(
+src/CanDoItAll.AgentFramework.Models\Workflows\WorkflowInputParameterModels.cs:46:    WorkflowInputParameterKind Kind,
+src/CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:21:    public IReadOnlyList<WorkflowInputParameterDescriptor> InputParameters { get; init; } = [];
+src/CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:139:                InputParameters = SnapshotInputParameters(request.InputParameters)
+src/CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:203:                InputParameters = detail.Definition.InputParameters
+src/CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:260:                InputParameters = source.InputParameters
+src/CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:591:    private static IReadOnlyList<WorkflowInputParameterDescriptor> SnapshotInputParameters(
+src/CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:592:        IReadOnlyList<WorkflowInputParameterDescriptor> inputParameters)
+tests/CanDoItAll.Tests.Unit\ProjectStructureWorkflowPreviewSimulationSupportTests.cs:201:        Assert.Equal(string.Empty, root.GetProperty("processedCategory").GetString());
+tests/CanDoItAll.Tests.Unit\ProjectStructureWorkflowPreviewSimulationSupportTests.cs:202:        Assert.Equal("$.processedCategory", root.GetProperty("processedCategoryJsonPath").GetString());
+tests/CanDoItAll.Tests.Unit\ProjectStructureWorkflowPreviewSimulationSupportTests.cs:203:        Assert.Equal("$.lookbackHours", root.GetProperty("lookbackHoursJsonPath").GetString());
+tests/CanDoItAll.Tests.Unit\ProjectStructureWorkflowPreviewSimulationSupportTests.cs:217:        Assert.Equal(string.Empty, root.GetProperty("processedCategory").GetString());
+tests/CanDoItAll.Tests.Unit\ProjectStructureWorkflowPreviewSimulationSupportTests.cs:218:        Assert.Equal("$.inputPayload.runContext.office365Processing.processedCategory", root.GetProperty("processedCategoryJsonPath").GetString());
+tests/CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:92:            InputParameters = CreateWorkflowInputParameters()
+tests/CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:102:        Assert.Equal(WorkflowInputParameterKind.EmailAddress, email.Kind);
+tests/CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:427:    private static IReadOnlyList<WorkflowInputParameterDescriptor> CreateWorkflowInputParameters()
+tests/CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:431:            new WorkflowInputParameterDescriptor(
+tests/CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:434:                WorkflowInputParameterKind.EmailAddress,
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:79:        AssertOffice365WatchInputParameters(pack.CreateInputParameters(summary));
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:80:        AssertOffice365WatchInputParameters(pack.CreateInputParameters(tasks));
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:83:    private static void AssertOffice365WatchInputParameters(IReadOnlyList<WorkflowInputParameterDescriptor> parameters)
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:87:        Assert.Equal(WorkflowInputParameterKind.EmailAddress, email.Kind);
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:93:        Assert.Equal(WorkflowInputParameterKind.ProjectId, project.Kind);
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:98:        Assert.Equal(WorkflowInputParameterKind.ProjectNodeId, node.Kind);
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:103:        var processedCategory = Assert.Single(parameters, parameter => parameter.Key == "processedCategory");
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:104:        Assert.Equal(WorkflowInputParameterKind.Category, processedCategory.Kind);
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:105:        Assert.False(processedCategory.IsRequired);
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:106:        Assert.Equal("CanDoItAllProcessed", processedCategory.DefaultValue);
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:108:        var lookback = Assert.Single(parameters, parameter => parameter.Key == "lookbackHours");
+tests/CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:109:        Assert.Equal(WorkflowInputParameterKind.Integer, lookback.Kind);
+
+ExitCode: 0
+FinishedUtc: 2026-05-29T19:22:24.2729562Z

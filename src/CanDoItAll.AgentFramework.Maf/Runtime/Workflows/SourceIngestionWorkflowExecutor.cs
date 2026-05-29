@@ -1,5 +1,8 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
+using System.IO.Compression;
+using System.Xml.Linq;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using ExcelDataReader;
@@ -175,6 +178,9 @@ public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionServ
         var result = extension switch
         {
             ".pdf" => ReadPdf(file.FullPath, maxCharacters),
+            ".docx" => ReadDocx(file.FullPath, maxCharacters),
+            ".html" or ".htm" => ReadHtml(file.FullPath, maxCharacters),
+            ".zip" => ReadZipManifest(file.FullPath, maxCharacters),
             ".xls" or ".xlsx" => ReadWorkbook(file.FullPath, maxCharacters),
             _ => ReadText(file.FullPath, maxCharacters)
         };
@@ -222,7 +228,72 @@ public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionServ
             text,
             totalCharacters,
             isTruncated,
-            string.IsNullOrWhiteSpace(text) ? "pdf-no-extractable-text" : "pdf-text");
+            string.IsNullOrWhiteSpace(text)
+                ? $"pdf-pages-{pdf.NumberOfPages}-no-extractable-text"
+                : $"pdf-pages-{pdf.NumberOfPages}-text");
+    }
+
+    private static WorkflowSourceReadResult ReadDocx(string fullPath, int maxCharacters)
+    {
+        using var archive = ZipFile.OpenRead(fullPath);
+        var documentEntry = archive.GetEntry("word/document.xml");
+        if (documentEntry is null)
+        {
+            return new WorkflowSourceReadResult(string.Empty, 0, false, "docx-missing-document-xml");
+        }
+
+        using var stream = documentEntry.Open();
+        var document = XDocument.Load(stream);
+        var text = string.Join(
+            Environment.NewLine,
+            document.Descendants()
+                .Where(element => element.Name.LocalName == "t")
+                .Select(element => element.Value)
+                .Where(value => !string.IsNullOrWhiteSpace(value)));
+        var truncated = text.Length > maxCharacters;
+        return new WorkflowSourceReadResult(
+            truncated ? text[..maxCharacters] : text,
+            text.Length,
+            truncated,
+            "docx-text");
+    }
+
+    private static WorkflowSourceReadResult ReadHtml(string fullPath, int maxCharacters)
+    {
+        var html = File.ReadAllText(fullPath);
+        var text = Regex.Replace(html, "<script[\\s\\S]*?</script>|<style[\\s\\S]*?</style>", " ", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        text = Regex.Replace(text, "<[^>]+>", " ", RegexOptions.CultureInvariant);
+        text = Regex.Replace(text, "\\s+", " ", RegexOptions.CultureInvariant).Trim();
+        var truncated = text.Length > maxCharacters;
+        return new WorkflowSourceReadResult(
+            truncated ? text[..maxCharacters] : text,
+            text.Length,
+            truncated,
+            "html-text");
+    }
+
+    private static WorkflowSourceReadResult ReadZipManifest(string fullPath, int maxCharacters)
+    {
+        using var archive = ZipFile.OpenRead(fullPath);
+        var builder = new StringBuilder(Math.Min(maxCharacters, 8192));
+        var totalCharacters = 0;
+        var truncated = false;
+        foreach (var entry in archive.Entries.OrderBy(entry => entry.FullName, StringComparer.OrdinalIgnoreCase).Take(200))
+        {
+            var line = $"{entry.FullName}\t{entry.Length} bytes";
+            totalCharacters += line.Length;
+            AppendBounded(builder, line + Environment.NewLine, maxCharacters, ref truncated);
+            if (truncated)
+            {
+                break;
+            }
+        }
+
+        return new WorkflowSourceReadResult(
+            builder.ToString().Trim(),
+            totalCharacters,
+            truncated || archive.Entries.Count > 200,
+            "zip-manifest");
     }
 
     private static WorkflowSourceReadResult ReadWorkbook(string fullPath, int maxCharacters)
@@ -424,6 +495,22 @@ public sealed class SourceIngestionWorkflowExecutor(IWorkspacePathResolutionServ
                     kind,
                     value,
                     "additional-source"));
+            }
+        }
+
+        if (settings.IncludeAdditionalSources &&
+            root.TryGetProperty("outputPath", out var outputPathProperty) &&
+            outputPathProperty.ValueKind == JsonValueKind.String)
+        {
+            var outputPath = outputPathProperty.GetString();
+            if (!string.IsNullOrWhiteSpace(outputPath))
+            {
+                candidates.Add(new WorkflowSourceCandidate(
+                    "outputPath",
+                    "Previous executor output",
+                    "filePath",
+                    outputPath,
+                    "executor-output"));
             }
         }
 

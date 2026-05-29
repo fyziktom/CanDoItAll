@@ -1,0 +1,33 @@
+- generic [active] [ref=e1] [box=0,0,1440,1000]:
+  - generic [ref=e176] [box=0,0,1440,1000]:
+    - complementary [ref=e177] [box=16,8,76,984]:
+      - generic [ref=e178] [box=27,19,54,962]:
+        - generic [ref=e179] [box=27,19,54,40]
+        - navigation "Primary navigation" [ref=e185] [box=27,67,54,803]
+        - generic [ref=e248] [box=27,887,54,94]
+    - main [ref=e259] [box=100,8,1324,984]:
+      - generic [ref=e260] [box=100,8,1324,34]:
+        - generic [ref=e264] [box=104,8,795,30]
+        - generic [ref=e274] [box=919,12,505,26]
+      - generic [ref=e283] [box=121,71,1282,174]:
+        - paragraph [ref=e284] [box=142,104,1240,16]: Database startup
+        - heading "Continue with the active database to load the workspace" [level=3] [ref=e285] [box=142,128,1240,28]
+        - paragraph [ref=e286] [box=426,164,672,48]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+  - dialog "Database profiles" [ref=e289] [box=16,157,1408,686]:
+    - banner [ref=e290] [box=17,158,1406,109]:
+      - generic [ref=e291] [box=41,174,1358,76]:
+        - generic [ref=e292] [box=41,174,677,76]
+        - button "Close" [ref=e298] [box=1307,174,92,42]
+    - generic [ref=e302] [box=41,291,1358,452]:
+      - generic [ref=e303] [box=41,291,613,242]:
+        - generic [ref=e304] [box=58,308,579,44]
+        - generic [ref=e312] [box=58,364,579,124]
+        - paragraph [ref=e329] [box=58,500,579,16]: "Selection source: Explicit startup override"
+      - generic [ref=e330] [box=41,549,1029,50]: Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+      - generic [ref=e333] [box=58,632,325,94]:
+        - button "Local PostgreSQL PostgreSQL PostgreSQL connection localhost:5432/candoitall" [ref=e334] [box=58,632,281,94]
+        - button "Copy database target for Local PostgreSQL" [ref=e344] [box=351,632,32,38]
+    - contentinfo [ref=e348] [box=17,767,1406,75]:
+      - generic [ref=e349] [box=41,784,1358,42]:
+        - generic [ref=e350] [box=41,784,276,42]
+        - button "Activate for restart" [disabled] [ref=e356] [box=1234,784,165,42]

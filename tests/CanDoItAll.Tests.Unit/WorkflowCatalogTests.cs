@@ -83,6 +83,46 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
+    public async Task CatalogPreservesWorkflowInputParametersOnSaveAndStatusChange()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var saved = await catalog.SaveDefinitionAsync(CreateSaveRequest(CreateDefinitionGraph(component.Id)) with
+        {
+            InputParameters = CreateWorkflowInputParameters()
+        });
+
+        var active = await catalog.ChangeDefinitionStatusAsync(new WorkflowDefinitionStatusChangeRequest(
+            saved.Id,
+            saved.VersionId,
+            WorkflowLifecycleStatus.Active));
+        var detail = await catalog.GetDefinitionAsync(active.Id, active.VersionId);
+
+        var email = Assert.Single(detail!.Definition.InputParameters, parameter => parameter.Key == "emailAddress");
+        Assert.Equal(WorkflowInputParameterKind.EmailAddress, email.Kind);
+        Assert.Equal(WorkflowInputParameterOptionSourceKind.CrmContacts, email.OptionSource.Kind);
+        Assert.Equal("$.emailAddress", email.JsonPath);
+    }
+
+    [Fact]
+    public async Task CatalogRejectsInvalidDefinitionOnSave()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+        var graph = CreateDefinitionGraph(component.Id);
+        var invalidGraph = new WorkflowGraph(
+            graph.StartNodeId,
+            graph.Nodes,
+            graph.Edges.Append(CreateEdge("start-missing", "start", "missing-node")).ToArray());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            catalog.SaveDefinitionAsync(CreateSaveRequest(invalidGraph)));
+
+        Assert.Contains("save failed validation", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("start-missing", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task ValidationCatchesDisconnectedNodesAndShapeMismatch()
     {
         var catalog = CreateCatalog();
@@ -245,30 +285,94 @@ public sealed class WorkflowCatalogTests
     }
 
     [Fact]
-    public async Task TestRunnerReturnsRuntimeFailureForUnregisteredBackend()
+    public async Task TestRunnerReturnsValidationFailureForUnavailableBackendPolicy()
     {
         var catalog = CreateCatalog();
         var component = await catalog.SaveComponentAsync(CreateComponentRequest());
-        var definition = await catalog.SaveDefinitionAsync(CreateSaveRequest(
-            CreateDefinitionGraph(component.Id),
-            runtimePolicy: new WorkflowRuntimePolicy(
+        var definition = CreateDefinition(CreateDefinitionGraph(component.Id)) with
+        {
+            RuntimePolicy = new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.DurableTask,
                 AllowInProcessPreviewRuns: true,
                 RequireDurableProductionRuns: true,
                 ExposeAzureFunctionsStatusEndpoint: false,
-                ExposeAzureFunctionsMcpTool: false)));
+                ExposeAzureFunctionsMcpTool: false)
+        };
         var runner = CreateRunner(catalog, new InMemoryWorkflowRunStore());
 
         var result = await runner.RunAsync(new WorkflowTestRunRequest(
-            definition.Id,
-            definition.VersionId,
-            DraftDefinition: null,
+            WorkflowId: null,
+            VersionId: null,
+            DraftDefinition: definition,
             "{}",
             WorkflowRuntimeBackendKind.DurableTask,
             ValidateOnly: false));
 
         Assert.False(result.Succeeded);
-        Assert.Contains("not registered", result.ErrorMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.Null(result.Run);
+        var issue = Assert.Single(result.Validation.Issues, issue => issue.Code == WorkflowValidationIssueCode.UnsupportedRuntimeBackend);
+        Assert.Contains("not registered", issue.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task CatalogRejectsUnavailableProductionBackendOnSave()
+    {
+        var catalog = CreateCatalog();
+        var component = await catalog.SaveComponentAsync(CreateComponentRequest());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            catalog.SaveDefinitionAsync(CreateSaveRequest(
+                CreateDefinitionGraph(component.Id),
+                runtimePolicy: new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    AllowInProcessPreviewRuns: true,
+                    RequireDurableProductionRuns: true,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false))));
+
+        Assert.Contains("not registered", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(nameof(WorkflowRuntimeBackendKind.DurableTask), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RuntimeManagerRejectsInProcessWhenDurablePolicyDisallowsPreview()
+    {
+        var runStore = new InMemoryWorkflowRunStore();
+        var runtimeManager = new WorkflowRuntimeManager(
+            [
+                new MafInProcessWorkflowExecutionBackend(
+                    new MafWorkflowCompiler(new WorkflowDefinitionValidator()),
+                    [])
+            ],
+            runStore);
+        var definition = CreateDefinition(new WorkflowGraph(
+            new WorkflowNodeId("start"),
+            [
+                CreateNode("start", WorkflowNodeKind.Start),
+                CreateNode("end", WorkflowNodeKind.End)
+            ],
+            [CreateEdge("start-end", "start", "end")])) with
+            {
+                RuntimePolicy = new WorkflowRuntimePolicy(
+                    WorkflowRuntimeBackendKind.DurableTask,
+                    AllowInProcessPreviewRuns: false,
+                    RequireDurableProductionRuns: true,
+                    ExposeAzureFunctionsStatusEndpoint: false,
+                    ExposeAzureFunctionsMcpTool: false)
+            };
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            runtimeManager.StartAsync(
+                definition,
+                new WorkflowRunStartRequest(
+                    definition.Id,
+                    definition.VersionId,
+                    "{}",
+                    WorkflowRuntimeBackendKind.InProcess,
+                    SourceProcessRunId: null,
+                    SourceProcessAssignmentId: null)));
+
+        Assert.Contains("requires a durable production runtime", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static InMemoryWorkflowCatalogService CreateCatalog(IReadOnlyList<ProviderProfile>? providers = null)
@@ -313,11 +417,33 @@ public sealed class WorkflowCatalogTests
             WorkflowLifecycleStatus.Draft,
             graph,
             runtimePolicy ?? new WorkflowRuntimePolicy(
-                WorkflowRuntimeBackendKind.InProcess,
-                AllowInProcessPreviewRuns: true,
-                RequireDurableProductionRuns: false,
-                ExposeAzureFunctionsStatusEndpoint: false,
-                ExposeAzureFunctionsMcpTool: false));
+            WorkflowRuntimeBackendKind.InProcess,
+            AllowInProcessPreviewRuns: true,
+            RequireDurableProductionRuns: false,
+            ExposeAzureFunctionsStatusEndpoint: false,
+            ExposeAzureFunctionsMcpTool: false));
+    }
+
+    private static IReadOnlyList<WorkflowInputParameterDescriptor> CreateWorkflowInputParameters()
+    {
+        return
+        [
+            new WorkflowInputParameterDescriptor(
+                "emailAddress",
+                "Email address",
+                WorkflowInputParameterKind.EmailAddress,
+                IsRequired: true,
+                "Watched sender address.",
+                "$.emailAddress",
+                DefaultValue: string.Empty,
+                new WorkflowInputParameterOptionSource(
+                    WorkflowInputParameterOptionSourceKind.CrmContacts,
+                    DependsOnParameterKey: string.Empty,
+                    StaticOptions: []),
+                MinimumValue: null,
+                MaximumValue: null,
+                Placeholder: string.Empty)
+        ];
     }
 
     private static WorkflowDefinition CreateDefinition(WorkflowGraph graph)

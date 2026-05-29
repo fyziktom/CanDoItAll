@@ -44,12 +44,93 @@ public interface ISchedulerTargetLauncher
         CancellationToken cancellationToken = default);
 }
 
+public sealed class SchedulerTargetLaunchException : InvalidOperationException
+{
+    public SchedulerTargetLaunchException(
+        string message,
+        SchedulerPlanRunRetryCategory retryCategory,
+        string route,
+        Guid? targetRunId = null,
+        SchedulerPlanTargetKind? targetKind = null,
+        Exception? innerException = null)
+        : base(message, innerException)
+    {
+        RetryCategory = retryCategory;
+        Route = route;
+        TargetRunId = targetRunId;
+        TargetKind = targetKind;
+    }
+
+    public SchedulerPlanRunRetryCategory RetryCategory { get; }
+
+    public string Route { get; }
+
+    public Guid? TargetRunId { get; }
+
+    public SchedulerPlanTargetKind? TargetKind { get; }
+}
+
+internal static class SchedulerPlanRunRetryClassifier
+{
+    public static SchedulerPlanRunRetryCategory Classify(Exception exception)
+    {
+        if (exception is SchedulerTargetLaunchException launchException)
+        {
+            return launchException.RetryCategory;
+        }
+
+        if (WorkflowExternalRequestPendingException.TryFind(exception, out _))
+        {
+            return SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval;
+        }
+
+        if (exception is HttpRequestException or TimeoutException)
+        {
+            return SchedulerPlanRunRetryCategory.TransientExternalFailure;
+        }
+
+        return ClassifyMessage(exception.ToString());
+    }
+
+    public static SchedulerPlanRunRetryCategory ClassifyWorkflowFailure(string failureText)
+    {
+        var classified = ClassifyMessage(failureText);
+        return classified == SchedulerPlanRunRetryCategory.SchedulerFailure
+            ? SchedulerPlanRunRetryCategory.WorkflowFailure
+            : classified;
+    }
+
+    private static SchedulerPlanRunRetryCategory ClassifyMessage(string failureText)
+    {
+        if (ContainsAny(failureText, "Microsoft Graph", "Office365", "OAuth"))
+        {
+            return SchedulerPlanRunRetryCategory.TransientExternalFailure;
+        }
+
+        if (ContainsAny(failureText, "project structure", "project-structure", "project node", "project asset"))
+        {
+            return SchedulerPlanRunRetryCategory.ProjectWriteFailure;
+        }
+
+        if (ContainsAny(failureText, "workflow executor", "workflow run", "workflow definition"))
+        {
+            return SchedulerPlanRunRetryCategory.WorkflowFailure;
+        }
+
+        return SchedulerPlanRunRetryCategory.SchedulerFailure;
+    }
+
+    private static bool ContainsAny(string value, params string[] candidates)
+        => candidates.Any(candidate => value.Contains(candidate, StringComparison.OrdinalIgnoreCase));
+}
+
 public sealed class SchedulerPlannerService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IAutomationTriggerRegistry triggerRegistry,
     ICronDescriptionService cronDescriptionService,
     ProcessesService processesService,
     IWorkflowCatalogService workflowCatalogService,
+    ISchedulerWorkflowInputSchemaService workflowInputSchemaService,
     IClock clock,
     ILogger<SchedulerPlannerService> logger) : ISchedulerPlannerService
 {
@@ -111,6 +192,7 @@ public sealed class SchedulerPlannerService(
         ValidateEditor(editor);
 
         var target = await ResolveTargetAsync(editor.TargetKind, editor.TargetId, editor.TargetVersionId, cancellationToken);
+        var normalizedInputJson = await ResolveValidatedInputJsonAsync(editor, target, cancellationToken);
         var now = clock.GetUtcNow();
         var cronDescription = cronDescriptionService.Describe(editor.CronExpression, editor.TimeZoneId);
 
@@ -151,7 +233,7 @@ public sealed class SchedulerPlannerService(
         plan.IsEnabled = editor.IsEnabled;
         plan.StartAtUtc = editor.StartAtUtc;
         plan.EndAtUtc = editor.EndAtUtc;
-        plan.InputJson = NormalizeJson(editor.InputJson);
+        plan.InputJson = normalizedInputJson;
         plan.LastError = string.Empty;
         plan.UpdatedAtUtc = now;
 
@@ -253,6 +335,35 @@ public sealed class SchedulerPlannerService(
             $"Scheduler target '{targetKind}:{targetId:D}' was not found. Create or publish the target before scheduling it.");
     }
 
+    private async Task<string> ResolveValidatedInputJsonAsync(
+        SchedulerPlanEditorModel editor,
+        SchedulerTargetOption target,
+        CancellationToken cancellationToken)
+    {
+        if (editor.TargetKind != SchedulerPlanTargetKind.Workflow)
+        {
+            return NormalizeJson(editor.InputJson);
+        }
+
+        var validation = await workflowInputSchemaService.ValidateInputAsync(
+            new WorkflowId(editor.TargetId),
+            target.VersionId.HasValue ? new WorkflowVersionId(target.VersionId.Value) : null,
+            editor.InputJson,
+            cancellationToken);
+        if (validation.Succeeded)
+        {
+            return validation.NormalizedInputJson;
+        }
+
+        var issues = string.Join(
+            " ",
+            validation.Issues.Select(issue =>
+                string.IsNullOrWhiteSpace(issue.ParameterKey)
+                    ? issue.Message
+                    : $"{issue.ParameterKey}: {issue.Message}"));
+        throw new InvalidOperationException($"Scheduler workflow input is invalid: {issues}");
+    }
+
     private async Task<IReadOnlyList<SchedulerPlanRunSummary>> SearchHistoryAsync(
         AppDbContext dbContext,
         SchedulerHistoryQuery query,
@@ -288,7 +399,8 @@ public sealed class SchedulerPlannerService(
                 item.Plan.Name.Contains(search) ||
                 item.Plan.TargetNameSnapshot.Contains(search) ||
                 item.Run.Summary.Contains(search) ||
-                item.Run.ErrorMessage.Contains(search));
+                item.Run.ErrorMessage.Contains(search) ||
+                item.Run.Route.Contains(search));
         }
 
         if (query.FromUtc.HasValue)
@@ -314,6 +426,8 @@ public sealed class SchedulerPlannerService(
                 item.Run.Status,
                 item.Run.AttemptCount,
                 item.Run.TargetRunId,
+                item.Run.Route,
+                item.Run.RetryCategory,
                 item.Run.Summary,
                 item.Run.ErrorMessage,
                 item.Run.UpdatedAtUtc))
@@ -343,7 +457,13 @@ public sealed class SchedulerPlannerService(
 
         foreach (var run in history.Where(item => item.FiredAtUtc >= now.AddDays(-14)))
         {
-            var color = run.Status == SchedulerPlanRunDispatchStatus.Failed ? "#dc2626" : "#059669";
+            var color = run.Status switch
+            {
+                SchedulerPlanRunDispatchStatus.Failed => "#dc2626",
+                SchedulerPlanRunDispatchStatus.NoMessages => "#64748b",
+                SchedulerPlanRunDispatchStatus.WaitingForApproval => "#d97706",
+                _ => "#059669"
+            };
             events.Add(CreateCalendarEvent(
                 $"run-{run.Id:N}",
                 run.PlanName,
@@ -373,7 +493,7 @@ public sealed class SchedulerPlannerService(
             EnableListExport = true,
             WorkspaceModal = false,
             EventTypes = ["Process", "Workflow"],
-            EventStatuses = ["Scheduled", "Dispatching", "Dispatched", "Failed"],
+            EventStatuses = ["Scheduled", "Dispatching", "Dispatched", "Failed", "NoMessages", "WaitingForApproval"],
             TimeZoneOptions = BuildTimeZoneOptions(),
             Events = events
                 .OrderBy(item => item.StartUtc)
@@ -715,6 +835,11 @@ public sealed class SchedulerTargetLauncher(
     IWorkflowCatalogService workflowCatalogService,
     IWorkflowRuntimeManager workflowRuntimeManager) : ISchedulerTargetLauncher
 {
+    private const string WorkflowEventInlineJsonPropertyName = "inlineJson";
+    private const string WorkflowNoMessagesPropertyName = "noMessages";
+    private const string WorkflowRoutePropertyName = "route";
+    private const string WorkflowSummaryPropertyName = "summary";
+
     public async Task<SchedulerTargetLaunchResult> LaunchAsync(
         SchedulerPlan plan,
         DateTimeOffset firedAtUtc,
@@ -786,14 +911,195 @@ public sealed class SchedulerTargetLauncher(
                 SourceProcessRunId: null,
                 SourceProcessAssignmentId: null),
             cancellationToken);
+        var events = await workflowRuntimeManager.ListEventsAsync(run.RunId, cancellationToken);
+        var routeResult = ResolveWorkflowRouteResult(events);
+
+        if (run.State == WorkflowRunState.WaitingForInput)
+        {
+            return new SchedulerTargetLaunchResult(
+                SchedulerPlanTargetKind.Workflow,
+                run.RunId.Value,
+                run.State.ToString(),
+                string.IsNullOrWhiteSpace(run.Summary)
+                    ? $"Workflow run '{run.RunId.Value:D}' is waiting for approval."
+                    : run.Summary,
+                SchedulerPlanRunDispatchStatus.WaitingForApproval,
+                SchedulerPlanRunRoutes.WaitingForApproval,
+                SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval);
+        }
+
+        if (run.State == WorkflowRunState.Failed)
+        {
+            var failureSummary = ResolveWorkflowFailureSummary(events, run.Summary);
+            throw new SchedulerTargetLaunchException(
+                $"Workflow run '{run.RunId.Value:D}' failed: {failureSummary}",
+                SchedulerPlanRunRetryClassifier.ClassifyWorkflowFailure(failureSummary),
+                SchedulerPlanRunRoutes.Failed,
+                run.RunId.Value,
+                SchedulerPlanTargetKind.Workflow);
+        }
+
+        var dispatchStatus = routeResult.IsNoMessages
+            ? SchedulerPlanRunDispatchStatus.NoMessages
+            : SchedulerPlanRunDispatchStatus.Dispatched;
 
         return new SchedulerTargetLaunchResult(
             SchedulerPlanTargetKind.Workflow,
             run.RunId.Value,
-            run.State.ToString(),
-            string.IsNullOrWhiteSpace(run.Summary)
+            routeResult.IsNoMessages ? SchedulerPlanRunDispatchStatus.NoMessages.ToString() : run.State.ToString(),
+            routeResult.IsNoMessages
+                ? ResolveNoMessagesSummary(routeResult.Summary)
+                : !string.IsNullOrWhiteSpace(routeResult.Summary)
+                ? routeResult.Summary
+                : string.IsNullOrWhiteSpace(run.Summary)
                 ? $"Started workflow run '{run.RunId.Value:D}'."
-                : run.Summary);
+                : run.Summary,
+            dispatchStatus,
+            routeResult.Route,
+            routeResult.IsNoMessages
+                ? SchedulerPlanRunRetryCategory.NoAction
+                : SchedulerPlanRunRetryCategory.None);
+    }
+
+    private static SchedulerWorkflowRouteLaunchResult ResolveWorkflowRouteResult(IReadOnlyList<WorkflowEventRecord> events)
+    {
+        foreach (var workflowEvent in events
+                     .Reverse()
+                     .Where(item => item.Kind is WorkflowEventKind.Output or WorkflowEventKind.ExecutorCompleted))
+        {
+            if (!TryResolveEventInlineJson(workflowEvent, out var payloadJson) ||
+                !TryReadWorkflowRoutePayload(payloadJson, out var route, out var summary, out var isNoMessages))
+            {
+                continue;
+            }
+
+            return new SchedulerWorkflowRouteLaunchResult(
+                string.IsNullOrWhiteSpace(route) ? SchedulerPlanRunRoutes.Processed : route,
+                summary,
+                isNoMessages);
+        }
+
+        return SchedulerWorkflowRouteLaunchResult.Processed;
+    }
+
+    private static bool TryResolveEventInlineJson(
+        WorkflowEventRecord workflowEvent,
+        out string payloadJson)
+    {
+        payloadJson = string.Empty;
+        if (string.IsNullOrWhiteSpace(workflowEvent.PayloadJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(workflowEvent.PayloadJson);
+            if (document.RootElement.ValueKind == JsonValueKind.Object &&
+                document.RootElement.TryGetProperty(WorkflowEventInlineJsonPropertyName, out var inlineJson) &&
+                inlineJson.ValueKind == JsonValueKind.String)
+            {
+                payloadJson = inlineJson.GetString() ?? string.Empty;
+                return !string.IsNullOrWhiteSpace(payloadJson);
+            }
+
+            payloadJson = workflowEvent.PayloadJson;
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static bool TryReadWorkflowRoutePayload(
+        string payloadJson,
+        out string route,
+        out string summary,
+        out bool isNoMessages)
+    {
+        route = string.Empty;
+        summary = string.Empty;
+        isNoMessages = false;
+        if (string.IsNullOrWhiteSpace(payloadJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(payloadJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            if (document.RootElement.TryGetProperty(WorkflowSummaryPropertyName, out var summaryElement) &&
+                summaryElement.ValueKind == JsonValueKind.String)
+            {
+                summary = summaryElement.GetString() ?? string.Empty;
+            }
+
+            if (document.RootElement.TryGetProperty(WorkflowRoutePropertyName, out var routeElement) &&
+                routeElement.ValueKind == JsonValueKind.String)
+            {
+                route = routeElement.GetString() ?? string.Empty;
+            }
+
+            if (document.RootElement.TryGetProperty(WorkflowNoMessagesPropertyName, out var noMessagesElement) &&
+                noMessagesElement.ValueKind is JsonValueKind.True or JsonValueKind.False &&
+                noMessagesElement.GetBoolean())
+            {
+                route = SchedulerPlanRunRoutes.NoMessages;
+                isNoMessages = true;
+                return true;
+            }
+
+            if (string.Equals(route, SchedulerPlanRunRoutes.NoMessages, StringComparison.Ordinal))
+            {
+                isNoMessages = true;
+            }
+
+            return !string.IsNullOrWhiteSpace(route) || !string.IsNullOrWhiteSpace(summary);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static string ResolveNoMessagesSummary(string summary)
+        => string.IsNullOrWhiteSpace(summary)
+            ? "No unprocessed Office365 email matched the configured address."
+            : summary;
+
+    private static string ResolveWorkflowFailureSummary(
+        IReadOnlyList<WorkflowEventRecord> events,
+        string runSummary)
+    {
+        var failureSummary = events
+            .Reverse()
+            .FirstOrDefault(item => item.Kind is WorkflowEventKind.Error or WorkflowEventKind.ExecutorFailed)
+            ?.Message;
+        if (!string.IsNullOrWhiteSpace(failureSummary))
+        {
+            return failureSummary;
+        }
+
+        return string.IsNullOrWhiteSpace(runSummary)
+            ? "Workflow failed without an error summary."
+            : runSummary;
+    }
+
+    private sealed record SchedulerWorkflowRouteLaunchResult(
+        string Route,
+        string Summary,
+        bool IsNoMessages)
+    {
+        public static SchedulerWorkflowRouteLaunchResult Processed { get; } = new(
+            SchedulerPlanRunRoutes.Processed,
+            string.Empty,
+            false);
     }
 }
 
@@ -870,7 +1176,7 @@ public sealed class SchedulerPlannerTriggerFireHandler(
 
         var run = await dbContext.Set<SchedulerPlanRun>()
             .SingleOrDefaultAsync(item => item.DedupeKey == dedupeKey, cancellationToken);
-        if (run is not null && run.Status == SchedulerPlanRunDispatchStatus.Dispatched)
+        if (run is not null && IsNoRetryTerminalStatus(run.Status))
         {
             return;
         }
@@ -892,7 +1198,13 @@ public sealed class SchedulerPlannerTriggerFireHandler(
 
         run.Status = SchedulerPlanRunDispatchStatus.Dispatching;
         run.AttemptCount++;
+        run.TargetRunId = null;
+        run.TargetRunKind = string.Empty;
+        run.Summary = string.Empty;
         run.ErrorMessage = string.Empty;
+        run.Route = string.Empty;
+        run.RetryCategory = SchedulerPlanRunRetryCategory.None;
+        run.DispatchedAtUtc = null;
         run.UpdatedAtUtc = now;
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -900,22 +1212,51 @@ public sealed class SchedulerPlannerTriggerFireHandler(
         {
             var launchResult = await targetLauncher.LaunchAsync(plan, envelope.FiredAtUtc, cancellationToken);
             var completedAt = clock.GetUtcNow();
-            run.Status = SchedulerPlanRunDispatchStatus.Dispatched;
+            run.Status = launchResult.DispatchStatus;
             run.TargetRunId = launchResult.TargetRunId;
             run.TargetRunKind = launchResult.TargetKind.ToString();
             run.Summary = launchResult.Summary;
+            run.Route = launchResult.Route;
+            run.RetryCategory = launchResult.RetryCategory;
             run.DispatchedAtUtc = completedAt;
             run.UpdatedAtUtc = completedAt;
-            plan.LastError = string.Empty;
+            if (launchResult.DispatchStatus == SchedulerPlanRunDispatchStatus.Dispatched)
+            {
+                plan.LastError = string.Empty;
+            }
+
             plan.LastFiredAtUtc = envelope.FiredAtUtc;
             plan.UpdatedAtUtc = completedAt;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (WorkflowExternalRequestPendingException.TryFind(exception, out _))
+        {
+            var waitingAt = clock.GetUtcNow();
+            run.Status = SchedulerPlanRunDispatchStatus.WaitingForApproval;
+            run.Summary = exception.GetBaseException().Message;
+            run.ErrorMessage = string.Empty;
+            run.Route = SchedulerPlanRunRoutes.WaitingForApproval;
+            run.RetryCategory = SchedulerPlanRunRetryCategory.WorkflowWaitingForApproval;
+            run.DispatchedAtUtc = waitingAt;
+            run.UpdatedAtUtc = waitingAt;
+            plan.LastFiredAtUtc = envelope.FiredAtUtc;
+            plan.UpdatedAtUtc = waitingAt;
             await dbContext.SaveChangesAsync(cancellationToken);
         }
         catch (Exception exception)
         {
             var failedAt = clock.GetUtcNow();
+            var retryCategory = SchedulerPlanRunRetryClassifier.Classify(exception);
             run.Status = SchedulerPlanRunDispatchStatus.Failed;
+            if (exception is SchedulerTargetLaunchException launchException)
+            {
+                run.TargetRunId = launchException.TargetRunId;
+                run.TargetRunKind = launchException.TargetKind?.ToString() ?? string.Empty;
+            }
+
             run.ErrorMessage = exception.Message;
+            run.Route = SchedulerPlanRunRoutes.Failed;
+            run.RetryCategory = retryCategory;
             run.UpdatedAtUtc = failedAt;
             plan.LastError = exception.Message;
             plan.LastFiredAtUtc = envelope.FiredAtUtc;
@@ -924,4 +1265,9 @@ public sealed class SchedulerPlannerTriggerFireHandler(
             throw;
         }
     }
+
+    private static bool IsNoRetryTerminalStatus(SchedulerPlanRunDispatchStatus status)
+        => status is SchedulerPlanRunDispatchStatus.Dispatched
+            or SchedulerPlanRunDispatchStatus.NoMessages
+            or SchedulerPlanRunDispatchStatus.WaitingForApproval;
 }

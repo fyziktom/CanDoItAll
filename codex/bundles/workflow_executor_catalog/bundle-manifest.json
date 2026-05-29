@@ -1,0 +1,27 @@
+{
+  "bundleKey": "workflow-executor-catalog-followup",
+  "preparedDate": "2026-05-29",
+  "repository": "fyziktom/CanDoItAll",
+  "branch": "processes-hardening",
+  "baselineCommit": "0c5876df0fe42ffe3ecd2757257770683a9fb041",
+  "status": "Prepared",
+  "focus": [
+    "Workflow executor catalog completeness",
+    "Workspace/local file and folder workflows",
+    "Helper nodes and planned executors",
+    "Validation/runtime guardrails",
+    "Artifact payload persistence"
+  ],
+  "subbundles": [
+    "01-validator-catalog-and-runtime-guardrails",
+    "02-artifact-content-store-and-payload-retrieval",
+    "03-workspace-file-and-folder-executor-expansion",
+    "04-json-transform-and-data-shaping-executor",
+    "05-markdown-render-and-report-output-executor",
+    "06-delay-approval-and-control-helper-nodes",
+    "07-http-download-and-document-ingestion-expansion",
+    "08-agent-subworkflow-and-artifact-node-policy",
+    "09-workflow-template-and-ui-authoring-pack",
+    "10-regression-scenario-harness-and-final-review"
+  ]
+}

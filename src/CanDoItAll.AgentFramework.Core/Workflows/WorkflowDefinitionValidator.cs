@@ -9,14 +9,24 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
     private static readonly IConfigurationSchemaValidator SettingsSchemaValidator = new ConfigurationSchemaValidator();
 
     private readonly IWorkflowExecutorCatalog? executorCatalog;
+    private readonly WorkflowDefinitionValidationOptions options;
 
     public WorkflowDefinitionValidator()
+        : this(executorCatalog: null, WorkflowDefinitionValidationOptions.Default)
     {
     }
 
     public WorkflowDefinitionValidator(IWorkflowExecutorCatalog executorCatalog)
+        : this(executorCatalog, WorkflowDefinitionValidationOptions.Default)
+    {
+    }
+
+    public WorkflowDefinitionValidator(
+        IWorkflowExecutorCatalog? executorCatalog,
+        WorkflowDefinitionValidationOptions options)
     {
         this.executorCatalog = executorCatalog;
+        this.options = options;
     }
 
     public WorkflowValidationResult Validate(WorkflowDefinition definition, IReadOnlyList<LlmCallComponent> components)
@@ -102,6 +112,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
             }
         }
 
+        AddNodeKindIssues(definition, issues);
         AddRoutingIssues(graph, issues);
         var componentIds = components.Select(component => component.Id).ToHashSet();
         var componentsById = components.ToDictionary(component => component.Id);
@@ -195,7 +206,7 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                         $"Workflow executor '{executorId}' is not registered.",
                         node.Id));
                 }
-                else if (!descriptor.CanExecute)
+                else if (options.RequireRunnableExecutors && !descriptor.CanExecute)
                 {
                     issues.Add(new WorkflowValidationIssue(
                         WorkflowValidationIssueCode.InvalidExecutorReference,
@@ -238,6 +249,37 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
             using (settingsDocument)
             {
                 AddExecutorSettingsSchemaIssues(node, descriptor, settingsDocument.RootElement, issues);
+            }
+        }
+    }
+
+    private static void AddNodeKindIssues(
+        WorkflowDefinition definition,
+        List<WorkflowValidationIssue> issues)
+    {
+        foreach (var node in definition.Graph.Nodes)
+        {
+            if (!Enum.IsDefined(node.Kind))
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.UnsupportedNodeKind,
+                    $"Workflow node '{node.Id}' uses unsupported node kind '{node.Kind}'.",
+                    node.Id));
+                continue;
+            }
+
+            if (definition.Status != WorkflowLifecycleStatus.Active ||
+                node.Settings.ExecutorId is not null)
+            {
+                continue;
+            }
+
+            if (node.Kind is WorkflowNodeKind.Artifact or WorkflowNodeKind.AgentStep or WorkflowNodeKind.Subworkflow)
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.UnsupportedNodeKind,
+                    $"Active workflow node '{node.Id}' uses '{node.Kind}', which is not executable in this runtime. Use an executor-backed node or keep the workflow in draft.",
+                    node.Id));
             }
         }
     }
@@ -592,9 +634,16 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
     }
 }
 
+public sealed record WorkflowDefinitionValidationOptions(bool RequireRunnableExecutors)
+{
+    public static WorkflowDefinitionValidationOptions Default { get; } = new(RequireRunnableExecutors: true);
+
+    public static WorkflowDefinitionValidationOptions RegisteredExecutorsOnly { get; } = new(RequireRunnableExecutors: false);
+}
+
 public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatalog
 {
-    private static readonly WorkflowRuntimeBackendDescriptor[] Backends =
+    private static readonly WorkflowRuntimeBackendDescriptor[] BackendDefinitions =
     [
         new(
             WorkflowRuntimeBackendKind.InProcess,
@@ -622,11 +671,30 @@ public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatal
             OperationalNotes: "Evaluate for generated HTTP, status/respond, and MCP tool triggers behind product authorization.")
     ];
 
-    public IReadOnlyList<WorkflowRuntimeBackendDescriptor> ListBackends() => Backends;
+    private readonly IReadOnlyList<WorkflowRuntimeBackendDescriptor> backends;
+
+    public WorkflowRuntimeBackendCatalog()
+        : this([WorkflowRuntimeBackendKind.InProcess])
+    {
+    }
+
+    public WorkflowRuntimeBackendCatalog(IEnumerable<WorkflowRuntimeBackendKind> registeredBackends)
+    {
+        ArgumentNullException.ThrowIfNull(registeredBackends);
+
+        var registeredBackendSet = registeredBackends.ToHashSet();
+        backends = BackendDefinitions
+            .Select(descriptor => registeredBackendSet.Contains(descriptor.Kind)
+                ? MarkRegistered(descriptor)
+                : MarkPlanned(descriptor))
+            .ToArray();
+    }
+
+    public IReadOnlyList<WorkflowRuntimeBackendDescriptor> ListBackends() => backends;
 
     public WorkflowRuntimeBackendDescriptor GetRequiredBackend(WorkflowRuntimeBackendKind backend)
     {
-        foreach (var descriptor in Backends)
+        foreach (var descriptor in backends)
         {
             if (descriptor.Kind == backend)
             {
@@ -634,6 +702,62 @@ public sealed class WorkflowRuntimeBackendCatalog : IWorkflowRuntimeBackendCatal
             }
         }
 
-        throw new InvalidOperationException($"Workflow runtime backend '{backend}' is not registered.");
+        throw new InvalidOperationException($"Workflow runtime backend '{backend}' is not recognized by this host.");
+    }
+
+    private static WorkflowRuntimeBackendDescriptor MarkRegistered(WorkflowRuntimeBackendDescriptor descriptor)
+        => descriptor with
+        {
+            Availability = WorkflowRuntimeBackendAvailabilityKind.Registered,
+            IsRegistered = true,
+            IsRunnable = true,
+            AvailabilityReason = "Runtime backend is registered and runnable in this host."
+        };
+
+    private static WorkflowRuntimeBackendDescriptor MarkPlanned(WorkflowRuntimeBackendDescriptor descriptor)
+        => descriptor with
+        {
+            Availability = WorkflowRuntimeBackendAvailabilityKind.Planned,
+            IsRegistered = false,
+            IsRunnable = false,
+            AvailabilityReason = $"Runtime backend '{descriptor.Kind}' is planned but not registered in this host."
+        };
+}
+
+public static class WorkflowRuntimePolicyValidator
+{
+    public static IReadOnlyList<WorkflowValidationIssue> ValidateRegisteredBackendAvailability(WorkflowRuntimePolicy policy)
+        => ValidateRegisteredBackendAvailability(policy, new WorkflowRuntimeBackendCatalog());
+
+    public static IReadOnlyList<WorkflowValidationIssue> ValidateRegisteredBackendAvailability(
+        WorkflowRuntimePolicy policy,
+        IWorkflowRuntimeBackendCatalog backendCatalog)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(backendCatalog);
+
+        var issues = new List<WorkflowValidationIssue>();
+        if (!Enum.IsDefined(policy.PreferredBackend))
+        {
+            return issues;
+        }
+
+        var preferredBackend = backendCatalog.GetRequiredBackend(policy.PreferredBackend);
+        if (!preferredBackend.IsRunnable)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.UnsupportedRuntimeBackend,
+                $"Workflow runtime backend '{preferredBackend.Kind}' is not registered in this host. {preferredBackend.AvailabilityReason}"));
+        }
+
+        if ((policy.ExposeAzureFunctionsStatusEndpoint || policy.ExposeAzureFunctionsMcpTool) &&
+            !backendCatalog.GetRequiredBackend(WorkflowRuntimeBackendKind.AzureFunctions).IsRunnable)
+        {
+            issues.Add(new WorkflowValidationIssue(
+                WorkflowValidationIssueCode.InvalidWorkflowSettings,
+                "Azure Functions workflow endpoints require a registered AzureFunctions backend."));
+        }
+
+        return issues;
     }
 }

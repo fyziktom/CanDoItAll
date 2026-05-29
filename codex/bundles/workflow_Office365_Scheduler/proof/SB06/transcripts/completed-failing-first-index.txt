@@ -1,0 +1,7 @@
+Command: completed failing-first index for SB06 no-message and idempotency semantics
+ExitCode: 1
+
+Expected pre-implementation failure:
+- Scheduler could not persist NoMessages as terminal success.
+- Office365 summary/task project writes did not carry durable message-id idempotency keys.
+- The red proof is preserved in bundle://proof/SB06/transcripts/failing-first-no-message-idempotency-before-implementation.txt.

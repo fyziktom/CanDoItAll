@@ -615,8 +615,24 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             Approvals = detail.Approvals.OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc).ToList(),
             Artifacts = detail.Artifacts.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Checkpoints = detail.Checkpoints.OrderByDescending(item => item.CapturedAtUtc).ToList(),
-            ToolReceipts = detail.ToolReceipts.OrderByDescending(item => item.CompletedAtUtc).ToList()
+            ToolReceipts = detail.ToolReceipts.Select(NormalizeToolReceipt).OrderByDescending(item => item.CompletedAtUtc).ToList()
         };
+    }
+
+    private static ToolExecutionReceiptRecord NormalizeToolReceipt(ToolExecutionReceiptRecord receipt)
+    {
+        return receipt with
+        {
+            RequestSummary = NormalizeReceiptText(receipt.RequestSummary),
+            WorkingDirectory = NormalizeReceiptText(receipt.WorkingDirectory),
+            ExitSummary = NormalizeReceiptText(receipt.ExitSummary)
+        };
+    }
+
+    private static string NormalizeReceiptText(string value)
+    {
+        var redacted = WorkflowExecutorRedaction.RedactText(value);
+        return WorkflowPayloadPolicyService.BoundPayload(redacted, WorkflowEventPayloads.MaxInlinePayloadCharacters);
     }
 
     private static void EnsureRunDetailConsistency(ExecutionRunDetail detail)

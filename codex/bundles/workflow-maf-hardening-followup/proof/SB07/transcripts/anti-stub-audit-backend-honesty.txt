@@ -1,0 +1,4 @@
+Command: wrapper transcript for bundle://proof/SB07/anti-stub-audit-backend-honesty.txt
+ExitCode: 0
+Result: No SB07 product stub markers found; listed matches are existing test helper stubs/local parameter names.
+Source transcript: bundle://proof/SB07/anti-stub-audit-backend-honesty.txt

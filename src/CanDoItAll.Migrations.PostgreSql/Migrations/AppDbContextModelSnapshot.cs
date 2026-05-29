@@ -376,6 +376,80 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("AgentFramework_WorkflowArtifacts", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowCheckpointRecordEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Backend")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BackendCheckpointId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ExternalRequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NodeId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PayloadHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("PayloadReference")
+                        .IsRequired()
+                        .HasMaxLength(1200)
+                        .HasColumnType("character varying(1200)");
+
+                    b.Property<int>("ResumeAvailability")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResumeUnavailableReason")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTimeOffset?>("ResumedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TrustBoundary")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkflowId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalRequestId");
+
+                    b.HasIndex("RunId", "CreatedAtUtc");
+
+                    b.HasIndex("RunId", "Kind");
+
+                    b.ToTable("AgentFramework_WorkflowCheckpoints", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.AgentFramework.WorkflowComponentRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -13670,6 +13744,14 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("RetryCategory")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");

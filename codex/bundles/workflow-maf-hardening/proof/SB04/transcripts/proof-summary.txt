@@ -1,0 +1,18 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~WorkflowExecutorPolicyObservabilityTests|FullyQualifiedName~WorkflowExecutorTests.BuiltInDescriptorsExposeSourceAvailabilityAndSchemaMetadata|FullyQualifiedName~WorkflowExecutorTests.WorkflowExecutorDescriptorDeserializesLegacyJsonWithDefaultMetadata|FullyQualifiedName~WorkflowExecutorTests.InvokerRejectsPlannedExecutorBeforeCallingImplementation" --no-restore
+ExitCode: 0
+Result: Executor descriptor metadata, legacy defaults, approval denial, missing gate rejection, and redaction tests passed.
+- Invariant ID: SB04-INV-001
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorPolicyObservabilityTests.PluginPolicy_invoker_rejects_approval_required_executor_without_gate
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorPolicyObservabilityTests.PluginPolicy_invoker_rejects_denied_approval_before_execution
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorTests.BuiltInDescriptorsExposeSourceAvailabilityAndSchemaMetadata
+- Test name: CanDoItAll.Tests.Unit.WorkflowExecutorTests.WorkflowExecutorDescriptorDeserializesLegacyJsonWithDefaultMetadata
+
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName=CanDoItAll.Tests.Integration.PluginCatalogIntegrationTests.Runtime_package_assembly_registers_executor_without_bundled_descriptor|FullyQualifiedName=CanDoItAll.Tests.Integration.PluginCatalogIntegrationTests.Plugin_grant_evaluator_requires_install_enabled_capability_and_recipe_grants" --no-build
+ExitCode: 0
+Result: Plugin package executor registration and grant policy integration checks passed.
+- Invariant ID: SB04-INV-001
+
+Command: rg -n "IWorkflowExecutorApprovalGate|EnforceApprovalPolicyAsync|PermissionPolicy|ApprovalRequirement|DeterministicTestMode|WorkflowExecutorCapabilityFlags" src tests
+ExitCode: 0
+Result: Anti-stub audit found production policy models, approval enforcement, descriptor metadata, plugin descriptors, and tests.
+- Invariant ID: SB04-INV-001

@@ -62,7 +62,12 @@ public sealed record PluginWorkflowExecutorDescriptor(
     ConfigurationSchema SettingsSchema,
     WorkflowValueShape InputShape,
     WorkflowValueShape ResultShape,
-    WorkflowExecutorExecutionPolicy DefaultPolicy);
+    WorkflowExecutorExecutionPolicy DefaultPolicy)
+{
+    public WorkflowExecutorPermissionPolicy PermissionPolicy { get; init; } = WorkflowExecutorPermissionPolicy.None;
+
+    public WorkflowExecutorDeterministicTestModeDescriptor DeterministicTestMode { get; init; } = WorkflowExecutorDeterministicTestModeDescriptor.None;
+}
 
 public sealed record PluginPackageDescriptor(
     PluginPackageId PackageId,
