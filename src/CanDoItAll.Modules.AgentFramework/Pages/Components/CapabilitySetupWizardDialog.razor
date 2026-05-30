@@ -1,0 +1,318 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+@using Microsoft.AspNetCore.Components.Forms
+
+<EditForm Model="editorModel" OnValidSubmit="CreateAsync">
+    <div class="capability-setup-wizard">
+    <Stack Class="min-h-0" GapScale="LayoutGap.Large">
+        <Steps @bind-Value="wizardStep"
+               CanSelect="false"
+               data-testid="agents-capability-setup-wizard">
+            <StepsItem Text="Identity" Icon="badge">
+                <FormSection Title="Type and identity"
+                             Description="Create a catalog entry with explicit metadata before binding runtime parameters. Tags drive the tree, search, and later prompt-time grouping.">
+                    <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                        <div>
+                            <label class="cda-field-label">Capability type</label>
+                            <InputSelect TValue="CapabilityKind"
+                                         Value="@editorModel.Kind"
+                                         ValueChanged="HandleKindChangedAsync"
+                                         ValueExpression="@(() => editorModel.Kind)"
+                                         class="cda-input"
+                                         data-testid="agents-capability-setup-kind">
+                                <option value="@CapabilityKind.McpServer">MCP server</option>
+                                <option value="@CapabilityKind.Skill">Skill</option>
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Name</label>
+                            <InputText Value="@editorModel.Name"
+                                       ValueChanged="HandleNameChangedAsync"
+                                       ValueExpression="@(() => editorModel.Name)"
+                                       class="cda-input"
+                                       data-testid="agents-capability-setup-name" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Key</label>
+                            <InputText Value="@editorModel.Key"
+                                       ValueChanged="HandleKeyChangedAsync"
+                                       ValueExpression="@(() => editorModel.Key)"
+                                       class="cda-input"
+                                       data-testid="agents-capability-setup-key" />
+                        </div>
+                    </Grid>
+
+                    <div>
+                        <label class="cda-field-label">Description</label>
+                        <InputTextArea @bind-Value="editorModel.Description"
+                                       class="cda-input cda-input--textarea capability-setup-wizard__textarea"
+                                       data-testid="agents-capability-setup-description" />
+                    </div>
+
+                    <TagEditor Value="@capabilityTags"
+                               ValueChanged="HandleTagsChangedAsync"
+                               Suggestions="@VisibleTagSuggestions"
+                               Placeholder="Add capability tag"
+                               MaxTags="12"
+                               TestId="agents-capability-setup-tags"
+                               InputTestId="agents-capability-setup-tags-input" />
+                </FormSection>
+            </StepsItem>
+
+            <StepsItem Text="Configure" Icon="settings">
+                @if (editorModel.Kind == CapabilityKind.McpServer)
+                {
+                    <FormSection Title="MCP server configuration"
+                                 Description="Choose a local stdio launch or remote endpoint. Local servers must declare allowed tools before the runtime can launch them.">
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                            <div>
+                                <label class="cda-field-label">Transport</label>
+                                <InputSelect @bind-Value="mcpState.Transport"
+                                             class="cda-input"
+                                             data-testid="agents-capability-setup-mcp-transport">
+                                    <option value="stdio">Stdio</option>
+                                    <option value="http">HTTP</option>
+                                    <option value="sse">SSE</option>
+                                    <option value="logical">Logical seam</option>
+                                </InputSelect>
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Server name</label>
+                                <InputText @bind-Value="mcpState.ServerName"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-mcp-server" />
+                            </div>
+                            <label class="cda-inline-option capability-setup-wizard__inline-option">
+                                <InputCheckbox @bind-Value="mcpState.Hosted"
+                                               data-testid="agents-capability-setup-mcp-hosted" />
+                                Hosted provider MCP
+                            </label>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                            <div>
+                                <label class="cda-field-label">Endpoint</label>
+                                <InputText @bind-Value="mcpState.Endpoint"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-mcp-endpoint" />
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Command</label>
+                                <InputText @bind-Value="mcpState.Command"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-mcp-command" />
+                            </div>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                            <div>
+                                <label class="cda-field-label">Arguments</label>
+                                <InputTextArea @bind-Value="mcpState.ArgumentsText"
+                                               class="cda-input cda-input--textarea capability-setup-wizard__textarea"
+                                               data-testid="agents-capability-setup-mcp-arguments" />
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Allowed tools</label>
+                                <InputTextArea @bind-Value="mcpState.AllowedToolsText"
+                                               class="cda-input cda-input--textarea capability-setup-wizard__textarea"
+                                               data-testid="agents-capability-setup-mcp-tools" />
+                            </div>
+                        </Grid>
+
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                            <div>
+                                <label class="cda-field-label">Working directory</label>
+                                <InputText @bind-Value="mcpState.WorkingDirectory"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-mcp-working-directory" />
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Approval mode</label>
+                                <InputSelect @bind-Value="mcpState.ApprovalMode"
+                                             class="cda-input"
+                                             data-testid="agents-capability-setup-mcp-approval">
+                                    <option value="NeverRequire">Never Require</option>
+                                    <option value="AlwaysRequire">Always Require</option>
+                                </InputSelect>
+                            </div>
+                            <div>
+                                <label class="cda-field-label">Allowed working roots</label>
+                                <InputTextArea @bind-Value="mcpState.AllowedWorkingDirectoriesText"
+                                               class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                               data-testid="agents-capability-setup-mcp-roots" />
+                            </div>
+                        </Grid>
+                    </FormSection>
+                }
+                else
+                {
+                    <FormSection Title="Skill configuration"
+                                 Description="Add a file-backed skill from a known path, write inline instructions, or upload a SKILL.md into an inline catalog entry.">
+                        <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                            <div>
+                                <label class="cda-field-label">Setup mode</label>
+                                <InputSelect @bind-Value="skillInputMode"
+                                             class="cda-input"
+                                             data-testid="agents-capability-setup-skill-mode">
+                                    <option value="@CapabilityWizardSkillInputMode.FilePath">Path</option>
+                                    <option value="@CapabilityWizardSkillInputMode.Inline">Inline</option>
+                                    <option value="@CapabilityWizardSkillInputMode.Upload">Upload SKILL.md</option>
+                                </InputSelect>
+                            </div>
+                            <label class="cda-inline-option capability-setup-wizard__inline-option">
+                                <InputCheckbox @bind-Value="skillState.ScriptApproval"
+                                               data-testid="agents-capability-setup-skill-approval" />
+                                Require script approval
+                            </label>
+                            <div>
+                                <label class="cda-field-label">Trust level</label>
+                                <InputText @bind-Value="skillState.ScriptTrustLevel"
+                                           class="cda-input"
+                                           data-testid="agents-capability-setup-skill-trust" />
+                            </div>
+                        </Grid>
+
+                        @if (skillInputMode == CapabilityWizardSkillInputMode.FilePath)
+                        {
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                <div>
+                                    <label class="cda-field-label">Skill root or SKILL.md path</label>
+                                    <InputText @bind-Value="skillState.SkillRoot"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-skill-root" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Allowed external roots</label>
+                                    <InputTextArea @bind-Value="skillState.AllowedExternalRootsText"
+                                                   class="cda-input cda-input--textarea capability-setup-wizard__small-textarea"
+                                                   data-testid="agents-capability-setup-skill-roots" />
+                                </div>
+                            </Grid>
+                        }
+                        else
+                        {
+                            @if (skillInputMode == CapabilityWizardSkillInputMode.Upload)
+                            {
+                                <div class="capability-setup-wizard__upload">
+                                    <label class="cda-field-label" for="agents-capability-setup-skill-file">SKILL.md file</label>
+                                    <InputFile id="agents-capability-setup-skill-file"
+                                               class="cda-input"
+                                               accept=".md,text/markdown,text/plain"
+                                               data-testid="agents-capability-setup-skill-file"
+                                               OnChange="UploadSkillAsync" />
+                                    @if (!string.IsNullOrWhiteSpace(uploadedSkillFileName))
+                                    {
+                                        <p class="cda-body-muted break-all">@uploadedSkillFileName</p>
+                                    }
+                                </div>
+                            }
+
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                <div>
+                                    <label class="cda-field-label">Inline name</label>
+                                    <InputText @bind-Value="skillState.InlineName"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-inline-name" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Inline description</label>
+                                    <InputText @bind-Value="skillState.InlineDescription"
+                                               class="cda-input"
+                                               data-testid="agents-capability-setup-inline-description" />
+                                </div>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Instructions</label>
+                                <InputTextArea @bind-Value="skillState.InlineInstructions"
+                                               class="cda-input cda-input--textarea capability-setup-wizard__large-textarea"
+                                               data-testid="agents-capability-setup-inline-instructions" />
+                            </div>
+                        }
+                    </FormSection>
+                }
+            </StepsItem>
+
+            <StepsItem Text="Review" Icon="fact_check">
+                <FormSection Title="Review"
+                             Description="Confirm the persisted identity and runtime shape before creating the capability. Assignment remains explicit per agent.">
+                    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                        <FactTable>
+                            <div class="grid gap-3">
+                                <div>
+                                    <p class="cda-field-label">Type</p>
+                                    <p>@ResolveCapabilityKindLabel(editorModel.Kind)</p>
+                                </div>
+                                <div>
+                                    <p class="cda-field-label">Name</p>
+                                    <p>@editorModel.Name</p>
+                                </div>
+                                <div>
+                                    <p class="cda-field-label">Key</p>
+                                    <p class="capability-setup-wizard__mono">@editorModel.Key</p>
+                                </div>
+                                <div>
+                                    <p class="cda-field-label">Endpoint preview</p>
+                                    <p class="capability-setup-wizard__mono">@ResolveEndpointPreview()</p>
+                                </div>
+                            </div>
+                        </FactTable>
+
+                        <SurfaceCard Soft="true">
+                            <Stack GapScale="LayoutGap.Small">
+                                <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
+                                    @foreach (var tag in capabilityTags)
+                                    {
+                                        <StatusBadge Tone="neutral" Text="@tag" />
+                                    }
+                                    @if (capabilityTags.Count == 0)
+                                    {
+                                        <StatusBadge Tone="warning" Text="No tags" />
+                                    }
+                                </Cluster>
+                                <p class="cda-body-muted">@ResolveReviewSummary()</p>
+                            </Stack>
+                        </SurfaceCard>
+                    </Grid>
+                </FormSection>
+            </StepsItem>
+        </Steps>
+
+        <StickyActionFooter StatusLabel="Capability setup">
+            <SecondaryActions>
+                <Button Text="Cancel"
+                        Icon="close"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@isBusy"
+                        Click="CancelAsync" />
+                <Button Text="Back"
+                        Icon="arrow_back"
+                        ButtonStyle="ButtonStyle.Light"
+                        Disabled="@(wizardStep == 0 || isBusy)"
+                        Click="MoveBackAsync"
+                        data-testid="agents-capability-setup-back" />
+            </SecondaryActions>
+            <PrimaryActions>
+                @if (wizardStep < LastWizardStep)
+                {
+                    <Button Text="Next"
+                            Icon="arrow_forward"
+                            Disabled="@isBusy"
+                            Click="MoveNextAsync"
+                            data-testid="agents-capability-setup-next" />
+                }
+                else
+                {
+                    <Button Text="Create capability"
+                            Icon="check"
+                            Type="submit"
+                            Disabled="@isBusy"
+                            IsBusy="@isBusy"
+                            data-testid="agents-capability-setup-create" />
+                }
+            </PrimaryActions>
+        </StickyActionFooter>
+    </Stack>
+    </div>
+</EditForm>

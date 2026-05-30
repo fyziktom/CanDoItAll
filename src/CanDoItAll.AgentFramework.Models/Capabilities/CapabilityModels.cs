@@ -11,7 +11,10 @@ public sealed record CapabilityCatalogItem(
     CapabilityProofStatus ProofStatus,
     string ProofNotes,
     DateTimeOffset? LastVerifiedAtUtc,
-    bool IsBuiltIn);
+    bool IsBuiltIn)
+{
+    public IReadOnlyList<string> Tags { get; init; } = [];
+}
 
 public sealed record CapabilityVerificationResult(
     CapabilityProofStatus Status,

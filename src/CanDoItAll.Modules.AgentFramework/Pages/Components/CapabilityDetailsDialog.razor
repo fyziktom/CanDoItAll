@@ -1,0 +1,331 @@
+@using CanDoItAll.AgentFramework.Core
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+
+@if (isLoading)
+{
+    <SurfaceCard Soft="true" data-testid="agents-capability-details-loading">
+        <p class="cda-eyebrow">Loading capability</p>
+        <h3 class="cda-title-md">Preparing capability details</h3>
+    </SurfaceCard>
+}
+else
+{
+    <EditForm Model="editorModel" OnValidSubmit="SaveAsync">
+        <div class="capability-details-dialog">
+        <Stack Class="min-h-0" GapScale="LayoutGap.Large">
+            <Tabs SelectedIndex="@selectedTabIndex"
+                  SelectedIndexChanged="HandleSelectedTabIndexChanged"
+                  Variant="@(TabsVariant.ModalCompact)"
+                  BorderMode="@(TabsBorderMode.Soft)"
+                  Tone="@(TabsTone.Info)"
+                  OverflowMode="@(TabsOverflowMode.Scroll)"
+                  PanelOverflowMode="@(TabsPanelOverflowMode.Auto)"
+                  FillHeight="true"
+                  Class="capability-details-dialog__tabs w-full min-w-0 flex-1 min-h-0"
+                  AriaLabel="Capability details sections">
+                <TabItems>
+                    <TabsItem Text="Identity">
+                        <FormSection Title="Capability identity"
+                                     Description="@ResolveIdentityDescription()">
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                <div>
+                                    <label class="cda-field-label">Kind</label>
+                                    <InputSelect TValue="CapabilityKind"
+                                                 Value="@editorModel.Kind"
+                                                 ValueChanged="HandleKindChangedAsync"
+                                                 ValueExpression="@(() => editorModel.Kind)"
+                                                 class="cda-input"
+                                                 disabled="@IsKindLocked"
+                                                 data-testid="agents-capability-details-kind">
+                                        @foreach (var kind in Enum.GetValues<CapabilityKind>())
+                                        {
+                                            <option value="@kind">@ResolveCapabilityKindLabel(kind)</option>
+                                        }
+                                    </InputSelect>
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Key</label>
+                                    <InputText @bind-Value="editorModel.Key"
+                                               class="cda-input"
+                                               disabled="@IsIdentityLocked"
+                                               data-testid="agents-capability-details-key" />
+                                </div>
+                                <div>
+                                    <label class="cda-field-label">Name</label>
+                                    <InputText @bind-Value="editorModel.Name"
+                                               class="cda-input"
+                                               disabled="@IsIdentityLocked"
+                                               data-testid="agents-capability-details-name" />
+                                </div>
+                            </Grid>
+
+                            <div>
+                                <label class="cda-field-label">Description</label>
+                                <InputTextArea @bind-Value="editorModel.Description"
+                                               class="cda-input cda-input--textarea capability-details-dialog__textarea"
+                                               disabled="@IsIdentityLocked"
+                                               data-testid="agents-capability-details-description" />
+                            </div>
+
+                            <div>
+                                <label class="cda-field-label">Endpoint or path</label>
+                                <InputText @bind-Value="editorModel.EndpointOrPath"
+                                           class="cda-input"
+                                           disabled="@IsEndpointLocked"
+                                           data-testid="agents-capability-details-endpoint" />
+                            </div>
+
+                            <TagEditor Value="@capabilityTags"
+                                       ValueChanged="HandleTagsChangedAsync"
+                                       Suggestions="@VisibleTagSuggestions"
+                                       Placeholder="Add capability tag"
+                                       MaxTags="12"
+                                       TestId="agents-capability-details-tags"
+                                       InputTestId="agents-capability-details-tags-input" />
+                        </FormSection>
+                    </TabsItem>
+
+                    <TabsItem Text="Configuration">
+                        @if (editorModel.Kind == CapabilityKind.McpServer)
+                        {
+                            <FormSection Title="MCP server"
+                                         Description="Edit the launch or remote endpoint parameters that the runtime uses when this capability is attached. Store only bindings, not raw secrets.">
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                    <div>
+                                        <label class="cda-field-label">Transport</label>
+                                        <InputSelect @bind-Value="mcpState.Transport"
+                                                     class="cda-input"
+                                                     data-testid="agents-capability-details-mcp-transport">
+                                            <option value="stdio">Stdio</option>
+                                            <option value="http">HTTP</option>
+                                            <option value="sse">SSE</option>
+                                            <option value="logical">Logical seam</option>
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Server name</label>
+                                        <InputText @bind-Value="mcpState.ServerName"
+                                                   class="cda-input"
+                                                   data-testid="agents-capability-details-mcp-server" />
+                                    </div>
+                                    <label class="cda-inline-option capability-details-dialog__inline-option">
+                                        <InputCheckbox @bind-Value="mcpState.Hosted"
+                                                       data-testid="agents-capability-details-mcp-hosted" />
+                                        Hosted provider MCP
+                                    </label>
+                                </Grid>
+
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                    <div>
+                                        <label class="cda-field-label">Endpoint</label>
+                                        <InputText @bind-Value="mcpState.Endpoint"
+                                                   class="cda-input"
+                                                   data-testid="agents-capability-details-mcp-endpoint" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Command</label>
+                                        <InputText @bind-Value="mcpState.Command"
+                                                   class="cda-input"
+                                                   data-testid="agents-capability-details-mcp-command" />
+                                    </div>
+                                </Grid>
+
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                    <div>
+                                        <label class="cda-field-label">Arguments</label>
+                                        <InputTextArea @bind-Value="mcpState.ArgumentsText"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__textarea"
+                                                       data-testid="agents-capability-details-mcp-arguments" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Allowed tools</label>
+                                        <InputTextArea @bind-Value="mcpState.AllowedToolsText"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__textarea"
+                                                       data-testid="agents-capability-details-mcp-tools" />
+                                    </div>
+                                </Grid>
+
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                    <div>
+                                        <label class="cda-field-label">Working directory</label>
+                                        <InputText @bind-Value="mcpState.WorkingDirectory"
+                                                   class="cda-input"
+                                                   data-testid="agents-capability-details-mcp-working-directory" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Approval mode</label>
+                                        <InputSelect @bind-Value="mcpState.ApprovalMode"
+                                                     class="cda-input"
+                                                     data-testid="agents-capability-details-mcp-approval">
+                                            <option value="NeverRequire">Never Require</option>
+                                            <option value="AlwaysRequire">Always Require</option>
+                                        </InputSelect>
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Allowed working roots</label>
+                                        <InputTextArea @bind-Value="mcpState.AllowedWorkingDirectoriesText"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                       data-testid="agents-capability-details-mcp-roots" />
+                                    </div>
+                                </Grid>
+
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                    <div>
+                                        <label class="cda-field-label">Environment variable bindings</label>
+                                        <InputTextArea @bind-Value="mcpState.EnvironmentVariableBindingsText"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                       data-testid="agents-capability-details-mcp-env-bindings" />
+                                    </div>
+                                    <div>
+                                        <label class="cda-field-label">Header bindings</label>
+                                        <InputTextArea @bind-Value="mcpState.HeaderBindingsText"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                       data-testid="agents-capability-details-mcp-header-bindings" />
+                                    </div>
+                                </Grid>
+                            </FormSection>
+                        }
+                        else if (editorModel.Kind == CapabilityKind.Skill)
+                        {
+                            <FormSection Title="Skill configuration"
+                                         Description="Configure a file-backed, inline, or registered skill entry. File skills may require script approval before execution.">
+                                <Grid Gap="LayoutGap.Large" ColumnsLg="3">
+                                    <div>
+                                        <label class="cda-field-label">Source</label>
+                                        <InputSelect @bind-Value="skillState.SkillSource"
+                                                     class="cda-input"
+                                                     data-testid="agents-capability-details-skill-source">
+                                            <option value="file">File skill</option>
+                                            <option value="inline">Inline skill</option>
+                                            <option value="registered">Registered service</option>
+                                        </InputSelect>
+                                    </div>
+                                    <label class="cda-inline-option capability-details-dialog__inline-option">
+                                        <InputCheckbox @bind-Value="skillState.ScriptApproval"
+                                                       data-testid="agents-capability-details-skill-approval" />
+                                        Require script approval
+                                    </label>
+                                    <div>
+                                        <label class="cda-field-label">Trust level</label>
+                                        <InputText @bind-Value="skillState.ScriptTrustLevel"
+                                                   class="cda-input"
+                                                   data-testid="agents-capability-details-skill-trust" />
+                                    </div>
+                                </Grid>
+
+                                @if (string.Equals(skillState.SkillSource, "inline", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                        <div>
+                                            <label class="cda-field-label">Inline name</label>
+                                            <InputText @bind-Value="skillState.InlineName"
+                                                       class="cda-input"
+                                                       data-testid="agents-capability-details-inline-name" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Inline description</label>
+                                            <InputText @bind-Value="skillState.InlineDescription"
+                                                       class="cda-input"
+                                                       data-testid="agents-capability-details-inline-description" />
+                                        </div>
+                                    </Grid>
+                                    <div>
+                                        <label class="cda-field-label">Instructions</label>
+                                        <InputTextArea @bind-Value="skillState.InlineInstructions"
+                                                       class="cda-input cda-input--textarea capability-details-dialog__large-textarea"
+                                                       data-testid="agents-capability-details-inline-instructions" />
+                                    </div>
+                                }
+                                else if (string.Equals(skillState.SkillSource, "registered", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <div>
+                                        <label class="cda-field-label">Registered service type</label>
+                                        <InputText @bind-Value="skillState.RegisteredSkillServiceType"
+                                                   class="cda-input"
+                                                   data-testid="agents-capability-details-skill-registered-type" />
+                                    </div>
+                                }
+                                else
+                                {
+                                    <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                        <div>
+                                            <label class="cda-field-label">Skill root or SKILL.md path</label>
+                                            <InputText @bind-Value="skillState.SkillRoot"
+                                                       class="cda-input"
+                                                       data-testid="agents-capability-details-skill-root" />
+                                        </div>
+                                        <div>
+                                            <label class="cda-field-label">Allowed external roots</label>
+                                            <InputTextArea @bind-Value="skillState.AllowedExternalRootsText"
+                                                           class="cda-input cda-input--textarea capability-details-dialog__small-textarea"
+                                                           data-testid="agents-capability-details-skill-roots" />
+                                        </div>
+                                    </Grid>
+                                }
+                            </FormSection>
+                        }
+                        else
+                        {
+                            <FormSection Title="Configuration JSON"
+                                         Description="This capability kind does not have a specialized editor yet. Built-in tools keep their runtime configuration read-only here.">
+                                <InputTextArea @bind-Value="rawConfigurationJson"
+                                               class="cda-input cda-input--textarea capability-details-dialog__large-textarea"
+                                               disabled="@editorModel.IsBuiltIn"
+                                               data-testid="agents-capability-details-raw-config" />
+                            </FormSection>
+                        }
+                    </TabsItem>
+
+                    <TabsItem Text="Raw">
+                        <FormSection Title="Raw metadata"
+                                     Description="Read the persisted shape without leaving the dialog. Specialized editors regenerate their JSON during save.">
+                            <Grid Gap="LayoutGap.Large" ColumnsLg="2">
+                                <FactTable>
+                                    <div class="grid gap-3">
+                                        <div>
+                                            <p class="cda-field-label">Capability id</p>
+                                            <p class="capability-details-dialog__mono">@editorModel.Id</p>
+                                        </div>
+                                        <div>
+                                            <p class="cda-field-label">Built-in</p>
+                                            <p>@(editorModel.IsBuiltIn ? "Yes" : "No")</p>
+                                        </div>
+                                    </div>
+                                </FactTable>
+                                <div>
+                                    <label class="cda-field-label">Configuration JSON</label>
+                                    <InputTextArea Value="@rawConfigurationJson"
+                                                   ValueChanged="HandleRawConfigurationChangedAsync"
+                                                   ValueExpression="@(() => rawConfigurationJson)"
+                                                   class="cda-input cda-input--textarea capability-details-dialog__large-textarea"
+                                                   disabled="@IsRawConfigurationLocked"
+                                                   data-testid="agents-capability-details-raw-json" />
+                                </div>
+                            </Grid>
+                        </FormSection>
+                    </TabsItem>
+                </TabItems>
+            </Tabs>
+
+            <StickyActionFooter StatusLabel="Capability catalog">
+                <SecondaryActions>
+                    <Button Text="Cancel"
+                            Icon="close"
+                            ButtonStyle="ButtonStyle.Light"
+                            Disabled="@isBusy"
+                            Click="CancelAsync" />
+                </SecondaryActions>
+                <PrimaryActions>
+                    <Button Text="Save capability"
+                            Icon="check"
+                            Type="submit"
+                            Disabled="@isBusy"
+                            IsBusy="@isBusy"
+                            data-testid="agents-capability-details-save" />
+                </PrimaryActions>
+            </StickyActionFooter>
+        </Stack>
+        </div>
+    </EditForm>
+}

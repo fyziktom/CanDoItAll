@@ -52,7 +52,8 @@ public sealed class ProviderProfileService : IProviderProfileService
             SuggestedModels: NormalizeSuggestedModels(model.SuggestedModels))
         {
             IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider),
-            ModelPrices = modelPrices
+            ModelPrices = modelPrices,
+            Tags = NormalizeTags(model.Tags)
         };
 
         return NormalizeImportedProfile(profile);
@@ -119,7 +120,8 @@ public sealed class ProviderProfileService : IProviderProfileService
                 normalizedKind,
                 metadata.IsPrivateProvider ?? provider.IsPrivateProvider),
             SuggestedModels = NormalizeSuggestedModels(provider.SuggestedModels),
-            ModelPrices = normalizedModelPrices
+            ModelPrices = normalizedModelPrices,
+            Tags = NormalizeTags(provider.Tags)
         };
     }
 
@@ -310,6 +312,18 @@ public sealed class ProviderProfileService : IProviderProfileService
             .Where(item => !string.IsNullOrWhiteSpace(item))
             .Select(item => item.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
+    }
+
+    private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
+    {
+        return tags?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim().TrimStart('#').ToLowerInvariant())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
             .ToList()
             ?? [];
     }

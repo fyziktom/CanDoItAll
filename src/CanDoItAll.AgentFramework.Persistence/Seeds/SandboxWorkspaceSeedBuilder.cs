@@ -37,6 +37,7 @@ internal static class SandboxWorkspaceSeedBuilder
         var openAiChatProviderId = CreateStableGuid("providers/openai-chat-completions");
         var openAiImageProviderId = CreateStableGuid("providers/openai-image-generation");
         var ollamaProviderId = CreateStableGuid("providers/ollama-local");
+        var localOllamaProviderId = CreateStableGuid("providers/ollama-local-default");
 
         var playwrightLocalMcpCapabilityId = CreateStableGuid("capabilities/playwright-local-mcp");
         var bundleWorkflowCapabilityId = CreateStableGuid("capabilities/candoitall-bundle-workflow");
@@ -433,7 +434,10 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Responses profile for hosted routes, DevUI, and background-response scenarios.",
                 "Not checked",
                 null,
-                OpenAiSuggestedModels),
+                OpenAiSuggestedModels)
+            {
+                Tags = ["openai", "cloud", "responses", "chat"]
+            },
             new(
                 openAiChatProviderId,
                 "OpenAI chat completions",
@@ -451,7 +455,10 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Chat-completions profile for local history, approvals, compaction, and workload-specific skill runs.",
                 "Not checked",
                 null,
-                OpenAiSuggestedModels),
+                OpenAiSuggestedModels)
+            {
+                Tags = ["openai", "cloud", "chat-completions", "chat"]
+            },
             new(
                 openAiImageProviderId,
                 "OpenAI image generation",
@@ -470,7 +477,31 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Not checked",
                 null,
                 OpenAiImageSuggestedModels,
-                ProviderProfilePurpose.ImageGeneration),
+                ProviderProfilePurpose.ImageGeneration)
+            {
+                Tags = ["openai", "cloud", "image-generation", "image"]
+            },
+            new(
+                localOllamaProviderId,
+                "Local Ollama",
+                ProviderKind.Ollama,
+                "http://127.0.0.1:11434",
+                string.Empty,
+                "llama3.1",
+                ProviderTransportKind.ChatCompletions,
+                true,
+                true,
+                true,
+                true,
+                false,
+                SerializeConfiguration(new { history = "framework-managed", local = true, timeoutSeconds = 45 }),
+                "Local Ollama provider for developer workstations running the standard Ollama API endpoint.",
+                "Not checked",
+                null,
+                ["llama3.1", "qwen3.5:9b", "phi4-16k", "mistral-nemo"])
+            {
+                Tags = ["ollama", "local", "chat"]
+            },
             new(
                 ollamaProviderId,
                 "Remote Ollama",
@@ -489,6 +520,9 @@ internal static class SandboxWorkspaceSeedBuilder
                 "Not checked",
                 null,
                 ["qwen3.5:9b", "gemma3-12b-128k:latest", "deepseek-r1:8b-32k", "qwen3.5:2b", "phi4-16k", "mistral-nemo"])
+            {
+                Tags = ["ollama", "remote", "fallback", "chat"]
+            }
         };
 
         var providerIdsByKey = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase)
@@ -496,7 +530,8 @@ internal static class SandboxWorkspaceSeedBuilder
             ["openai-default"] = openAiProviderId,
             ["openai-chat-completions"] = openAiChatProviderId,
             ["openai-image-generation"] = openAiImageProviderId,
-            ["ollama-local"] = ollamaProviderId,
+            ["ollama-local"] = localOllamaProviderId,
+            ["ollama-remote"] = ollamaProviderId,
             ["managed-seed-openai-default"] = ollamaProviderId
         };
         var agentSeed = BuildAgentSeedFromTemplates(now, providerIdsByKey, capabilities);

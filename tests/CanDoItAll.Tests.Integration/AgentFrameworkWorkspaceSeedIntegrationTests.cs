@@ -138,6 +138,64 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var providers = await workspaceService.ListProvidersAsync();
+        var openAiDefault = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.OpenAi &&
+                    string.Equals(item.Name, "OpenAI default", StringComparison.Ordinal));
+        var localOllama = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Local Ollama", StringComparison.Ordinal));
+        var remoteOllama = Assert.Single(
+            providers,
+            item => item.Kind == ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Remote Ollama", StringComparison.Ordinal));
+
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, openAiDefault.DefaultModel);
+        Assert.Contains("openai", openAiDefault.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("responses", openAiDefault.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal("http://127.0.0.1:11434", localOllama.BaseUrl);
+        Assert.Equal("llama3.1", localOllama.DefaultModel);
+        Assert.Contains("ollama", localOllama.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("local", localOllama.Tags, StringComparer.OrdinalIgnoreCase);
+        Assert.Contains("remote", remoteOllama.Tags, StringComparer.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Capability_catalog_save_normalizes_and_persists_tags()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+
+        var capabilityId = await workspaceService.SaveCapabilityAsync(new CapabilityEditorModel
+        {
+            Kind = CapabilityKind.McpServer,
+            Key = "tagged-mcp-proof",
+            Name = "Tagged MCP Proof",
+            Description = "Capability tag persistence proof.",
+            EndpointOrPath = "npx",
+            ConfigurationJson = """{"transport":"logical"}""",
+            Tags = ["Economy", "#mcp", "economy"]
+        });
+
+        var savedCapability = Assert.Single(
+            await workspaceService.ListCapabilitiesAsync(),
+            item => item.Id == capabilityId);
+
+        Assert.Equal(["economy", "mcp"], savedCapability.Tags);
+    }
+
+    [Fact]
     public async Task Organization_workspace_seeds_screenshot_agent_templates_with_required_access()
     {
         await using var application = await TestApplication.CreateAsync();

@@ -896,6 +896,26 @@ public sealed class AiAgentsPageTests
         Assert.Equal(0, repairService.CallCount);
     }
 
+    [Fact]
+    public async Task Providers_tab_renders_agentframework_provider_tree_with_seeded_local_ollama()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/agents?tab=providers");
+
+        var cut = harness.Context.RenderComponent<AgentsHomePage>();
+
+        cut.WaitForElement("[data-testid='providers-tree']");
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("OpenAI default", cut.Markup);
+            Assert.Contains("Local Ollama", cut.Markup);
+            Assert.Contains("openai", cut.Markup);
+            Assert.Contains("ollama", cut.Markup);
+            Assert.Contains("gpt-5.4-mini", cut.Markup);
+        });
+    }
+
     private static void SelectDialogTab(IRenderedFragment host, string tabText)
     {
         host.FindAll("[role='tab']")

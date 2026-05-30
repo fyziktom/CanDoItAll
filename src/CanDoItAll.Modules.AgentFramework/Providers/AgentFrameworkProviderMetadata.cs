@@ -17,6 +17,7 @@ internal static class AgentFrameworkProviderMetadata
     private const string SecretRecordIdPropertyName = "secretRecordId";
     private const string TimeoutSecondsPropertyName = "timeoutSeconds";
     private const string TransportPropertyName = "providerTransport";
+    private const string TagsPropertyName = "tags";
 
     public static string BuildConfigurationJson(
         WorkspaceProviderProfile provider)
@@ -49,13 +50,15 @@ internal static class AgentFrameworkProviderMetadata
         string configSchemaVersion,
         Guid? secretRecordId,
         int timeoutSeconds,
-        ProviderTransportKind transport)
+        ProviderTransportKind transport,
+        IEnumerable<string>? tags = null)
     {
         var configuration = ParseObject(configurationJson);
         configuration[ConnectorPluginKeyPropertyName] = connectorPluginKey;
         configuration[ConfigSchemaVersionPropertyName] = configSchemaVersion;
         configuration[TimeoutSecondsPropertyName] = timeoutSeconds;
         configuration[TransportPropertyName] = transport.ToString();
+        WriteTags(configuration, tags);
         if (secretRecordId.HasValue)
         {
             configuration[SecretRecordIdPropertyName] = secretRecordId.Value.ToString("D");
@@ -66,6 +69,32 @@ internal static class AgentFrameworkProviderMetadata
         }
 
         return configuration.ToJsonString();
+    }
+
+    public static IReadOnlyList<string> ReadTags(
+        WorkspaceProviderProfile provider)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        return ReadTags(provider.ExtraSettingsJson);
+    }
+
+    public static IReadOnlyList<string> ReadTags(
+        string? configurationJson)
+    {
+        var configuration = ParseObject(configurationJson);
+        if (configuration[TagsPropertyName] is not JsonArray tagsArray)
+        {
+            return [];
+        }
+
+        return tagsArray
+            .Select(item => item?.GetValue<string>())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item!.Trim().TrimStart('#').ToLowerInvariant())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public static ProviderTransportKind ResolveTransport(
@@ -220,6 +249,33 @@ internal static class AgentFrameworkProviderMetadata
         {
             return new JsonObject();
         }
+    }
+
+    private static void WriteTags(
+        JsonObject configuration,
+        IEnumerable<string>? tags)
+    {
+        var normalizedTags = tags?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim().TrimStart('#').ToLowerInvariant())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+            ?? [];
+        if (normalizedTags.Length == 0)
+        {
+            configuration.Remove(TagsPropertyName);
+            return;
+        }
+
+        var tagArray = new JsonArray();
+        foreach (var tag in normalizedTags)
+        {
+            tagArray.Add(JsonValue.Create(tag));
+        }
+
+        configuration[TagsPropertyName] = tagArray;
     }
 
     private static bool TryResolveTransport(

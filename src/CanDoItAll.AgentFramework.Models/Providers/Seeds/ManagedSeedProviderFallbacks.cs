@@ -99,7 +99,8 @@ public static class ManagedSeedProviderFallbacks
             ConfigurationJson = CreateFallbackConfigurationJson("managed-seed-openai"),
             Notes = "Managed-seed fallback provider used for generated seed agents.",
             HealthStatus = "Fallback active",
-            SuggestedModels = ManagedSeedFallbackSuggestedModels
+            SuggestedModels = ManagedSeedFallbackSuggestedModels,
+            Tags = ["ollama", "remote", "fallback", "chat"]
         };
     }
 
@@ -240,7 +241,8 @@ public static class ManagedSeedProviderFallbacks
             ConfigurationJson = CreateOpenAiConfigurationJson("service-managed"),
             Notes = "OpenAI Responses provider selected for managed seed agents.",
             HealthStatus = "OpenAI active",
-            SuggestedModels = ManagedSeedOpenAiSuggestedModels
+            SuggestedModels = ManagedSeedOpenAiSuggestedModels,
+            Tags = ["openai", "cloud", "responses", "chat"]
         };
     }
 

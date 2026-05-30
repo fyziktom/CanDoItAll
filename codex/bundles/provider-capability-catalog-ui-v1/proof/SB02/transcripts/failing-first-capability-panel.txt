@@ -1,0 +1,5 @@
+Command: rg "CapabilityDetailsDialog|CapabilitySetupWizardDialog|TreeView Items=\"@AgentTreeNodes\"|CapabilityConfigurationEditorSupport" src/CanDoItAll.Modules.AgentFramework before implementation
+Exit code: 1
+
+SB02-CAPABILITY-TREE-FILTERS failing-first: before this repair, the capability tab did not expose the requested agent-tree selection plus filter/card surface.
+SB02-CAPABILITY-DETAILS-TAGS-CONFIG failing-first: before this repair, the source did not contain CapabilityDetailsDialog or typed capability configuration editor support.

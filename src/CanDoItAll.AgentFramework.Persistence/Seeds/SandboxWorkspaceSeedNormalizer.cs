@@ -73,17 +73,26 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static MergeResult<ProviderProfile> MergeProviders(IReadOnlyList<ProviderProfile> existingProviders, IReadOnlyList<ProviderProfile> seededProviders)
     {
-        var merged = existingProviders.Select(ProviderProfileService.NormalizeImportedProfile).ToList();
+        var merged = existingProviders
+            .Select(provider => ProviderProfileService.NormalizeImportedProfile(provider with
+            {
+                Tags = ResolveProviderTags(provider)
+            }))
+            .ToList();
         var idMap = new Dictionary<Guid, Guid>();
 
         foreach (var seededProvider in seededProviders.Select(ProviderProfileService.NormalizeImportedProfile))
         {
+            var normalizedSeededProvider = seededProvider with
+            {
+                Tags = ResolveProviderTags(seededProvider)
+            };
             var match = merged.FirstOrDefault(item => item.Id == seededProvider.Id)
                 ?? merged.FirstOrDefault(item => string.Equals(item.Name, seededProvider.Name, StringComparison.OrdinalIgnoreCase) && item.Kind == seededProvider.Kind);
 
             if (match is null)
             {
-                merged.Add(seededProvider);
+                merged.Add(normalizedSeededProvider);
                 idMap[seededProvider.Id] = seededProvider.Id;
                 continue;
             }
@@ -105,7 +114,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                 Notes = string.IsNullOrWhiteSpace(match.Notes) ? seededProvider.Notes : match.Notes,
                 SuggestedModels = isManagedSeedOpenAiProvider
                     ? seededProvider.SuggestedModels.Concat(match.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
-                    : match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+                    : match.SuggestedModels.Concat(seededProvider.SuggestedModels).Where(item => !string.IsNullOrWhiteSpace(item)).Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+                Tags = NormalizeTags(match.Tags.Concat(normalizedSeededProvider.Tags))
             };
 
             ReplaceById(
@@ -135,17 +145,23 @@ internal static class SandboxWorkspaceSeedNormalizer
 
     private static MergeResult<CapabilityCatalogItem> MergeCapabilities(IReadOnlyList<CapabilityCatalogItem> existingCapabilities, IReadOnlyList<CapabilityCatalogItem> seededCapabilities)
     {
-        var merged = existingCapabilities.ToList();
+        var merged = existingCapabilities
+            .Select(capability => capability with { Tags = ResolveCapabilityTags(capability) })
+            .ToList();
         var idMap = new Dictionary<Guid, Guid>();
 
         foreach (var seededCapability in seededCapabilities)
         {
+            var normalizedSeededCapability = seededCapability with
+            {
+                Tags = ResolveCapabilityTags(seededCapability)
+            };
             var match = merged.FirstOrDefault(item => item.Id == seededCapability.Id)
                 ?? merged.FirstOrDefault(item => item.Kind == seededCapability.Kind && string.Equals(item.Key, seededCapability.Key, StringComparison.OrdinalIgnoreCase));
 
             if (match is null)
             {
-                merged.Add(seededCapability);
+                merged.Add(normalizedSeededCapability);
                 idMap[seededCapability.Id] = seededCapability.Id;
                 continue;
             }
@@ -158,7 +174,8 @@ internal static class SandboxWorkspaceSeedNormalizer
                 EndpointOrPath = string.IsNullOrWhiteSpace(match.EndpointOrPath) ? seededCapability.EndpointOrPath : match.EndpointOrPath,
                 ConfigurationJson = string.IsNullOrWhiteSpace(match.ConfigurationJson) ? seededCapability.ConfigurationJson : match.ConfigurationJson,
                 ProofNotes = string.IsNullOrWhiteSpace(match.ProofNotes) ? seededCapability.ProofNotes : match.ProofNotes,
-                IsBuiltIn = match.IsBuiltIn || seededCapability.IsBuiltIn
+                IsBuiltIn = match.IsBuiltIn || seededCapability.IsBuiltIn,
+                Tags = NormalizeTags(match.Tags.Concat(normalizedSeededCapability.Tags))
             };
 
             if (ShouldRefreshManagedCapabilityFromSeed(match, seededCapability))
@@ -509,8 +526,101 @@ internal static class SandboxWorkspaceSeedNormalizer
             EndpointOrPath = seededCapability.EndpointOrPath,
             ConfigurationJson = seededCapability.ConfigurationJson,
             ProofNotes = seededCapability.ProofNotes,
-            IsBuiltIn = seededCapability.IsBuiltIn
+            IsBuiltIn = seededCapability.IsBuiltIn,
+            Tags = ResolveCapabilityTags(seededCapability)
         };
+    }
+
+    private static IReadOnlyList<string> ResolveProviderTags(ProviderProfile provider)
+    {
+        var tags = provider.Tags?.Where(item => !string.IsNullOrWhiteSpace(item)).ToList() ?? [];
+        if (tags.Count == 0)
+        {
+            tags.Add(provider.Kind == ProviderKind.Ollama ? "ollama" : "openai");
+            tags.Add(provider.BaseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                     provider.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+                ? "local"
+                : provider.BaseUrl.Contains("192.168.", StringComparison.OrdinalIgnoreCase) ||
+                  provider.BaseUrl.Contains("ollama", StringComparison.OrdinalIgnoreCase)
+                    ? "remote"
+                    : "cloud");
+            tags.Add(provider.Purpose == ProviderProfilePurpose.ImageGeneration ? "image" : "chat");
+            if (provider.Purpose == ProviderProfilePurpose.ImageGeneration)
+            {
+                tags.Add("image-generation");
+            }
+            else
+            {
+                tags.Add(provider.Transport == ProviderTransportKind.Responses ? "responses" : "chat-completions");
+            }
+
+            if (provider.Name.Contains("fallback", StringComparison.OrdinalIgnoreCase) ||
+                provider.Notes.Contains("fallback", StringComparison.OrdinalIgnoreCase))
+            {
+                tags.Add("fallback");
+            }
+        }
+
+        return NormalizeTags(tags);
+    }
+
+    private static IReadOnlyList<string> ResolveCapabilityTags(CapabilityCatalogItem capability)
+    {
+        var tags = capability.Tags?.Where(item => !string.IsNullOrWhiteSpace(item)).ToList() ?? [];
+        if (tags.Count == 0)
+        {
+            tags.Add(capability.Kind switch
+            {
+                CapabilityKind.McpServer => "mcp",
+                CapabilityKind.Skill => "skill",
+                CapabilityKind.Tool => "tool",
+                CapabilityKind.Rag => "rag",
+                CapabilityKind.Memory => "memory",
+                CapabilityKind.AiContext => "context",
+                _ => capability.Kind.ToString().ToLowerInvariant()
+            });
+
+            if (capability.Key.StartsWith("workspace-", StringComparison.OrdinalIgnoreCase))
+            {
+                tags.Add("workspace");
+            }
+
+            if (capability.Key.Contains("dotnet", StringComparison.OrdinalIgnoreCase) ||
+                capability.Name.Contains(".NET", StringComparison.OrdinalIgnoreCase))
+            {
+                tags.Add("dotnet");
+            }
+
+            if (capability.Key.Contains("blazor", StringComparison.OrdinalIgnoreCase))
+            {
+                tags.Add("blazor");
+            }
+
+            if (capability.Key.Contains("playwright", StringComparison.OrdinalIgnoreCase) ||
+                capability.Key.Contains("browser", StringComparison.OrdinalIgnoreCase))
+            {
+                tags.Add("browser");
+            }
+
+            if (capability.IsBuiltIn)
+            {
+                tags.Add("built-in");
+            }
+        }
+
+        return NormalizeTags(tags);
+    }
+
+    private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
+    {
+        return tags?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim().TrimStart('#').ToLowerInvariant())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
     }
 
     private static bool InlineSkillInstructionsContain(string configurationJson, string expectedPhrase)

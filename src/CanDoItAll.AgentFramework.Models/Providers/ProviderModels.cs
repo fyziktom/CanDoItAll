@@ -108,6 +108,8 @@ public sealed record ProviderProfile(
     public bool IsPrivateProvider { get; init; }
 
     public IReadOnlyList<ProviderModelTokenPrice> ModelPrices { get; init; } = [];
+
+    public IReadOnlyList<string> Tags { get; init; } = [];
 }
 
 public sealed record ProviderHealthResult(

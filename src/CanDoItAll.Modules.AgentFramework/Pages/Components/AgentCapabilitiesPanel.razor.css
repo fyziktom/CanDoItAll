@@ -1,0 +1,59 @@
+.agent-capabilities-panel__grid {
+    align-items: stretch;
+}
+
+.agent-capabilities-panel__filters {
+    align-items: start;
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(14rem, 1.25fr) minmax(13rem, 1fr) minmax(9rem, 0.55fr) minmax(8rem, 0.45fr) auto;
+    width: 100%;
+}
+
+.agent-capabilities-panel__filter-input,
+.agent-capabilities-panel__filter-select {
+    min-width: 0;
+    width: 100%;
+}
+
+.agent-capabilities-panel__card {
+    min-width: 0;
+}
+
+.agent-capabilities-panel__card ::deep .cda-surface-card {
+    height: 100%;
+}
+
+.agent-capabilities-panel__card-body {
+    min-height: 9.25rem;
+    min-width: 0;
+}
+
+.agent-capabilities-panel__card-title {
+    color: rgb(15 23 42);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.agent-capabilities-panel__card-description {
+    color: rgb(71 85 105);
+    display: -webkit-box;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin: 0.5rem 0 0;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+.agent-capabilities-panel__path {
+    color: rgb(51 65 85);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    margin: 0.75rem 0 0;
+    overflow-wrap: anywhere;
+}

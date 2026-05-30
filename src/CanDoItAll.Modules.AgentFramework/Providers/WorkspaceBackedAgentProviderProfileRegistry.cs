@@ -171,7 +171,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 configSchemaVersion,
                 secretRecordId,
                 timeoutSeconds,
-                selectedTransport),
+                selectedTransport,
+                model.Tags),
             ProviderPricingDefaults.ResolveIsPrivateProvider(capabilityProfile.Kind, model.IsPrivateProvider),
             modelPrices);
 
@@ -328,9 +329,37 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             providerRegistry.Resolve(provider)?.Manifest.DisplayName ?? provider.ConnectorPluginKey,
             provider.LastHealthStatus ?? "Not checked",
             provider.LastHealthCheckAtUtc,
-            string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel]);
+            string.IsNullOrWhiteSpace(provider.DefaultModel) ? [] : [provider.DefaultModel])
+        {
+            Tags = ResolveWorkspaceProviderTags(provider, mappedKind, mappedTransport)
+        };
 
         return providerProfileService.NormalizeImportedProfile(mappedProvider);
+    }
+
+    private static IReadOnlyList<string> ResolveWorkspaceProviderTags(
+        WorkspaceProviderProfile provider,
+        AgentFrameworkProviderKind mappedKind,
+        ProviderTransportKind mappedTransport)
+    {
+        var storedTags = AgentFrameworkProviderMetadata.ReadTags(provider);
+        if (storedTags.Count > 0)
+        {
+            return storedTags;
+        }
+
+        var tags = new List<string>();
+        tags.Add(mappedKind == AgentFrameworkProviderKind.Ollama ? "ollama" : "openai");
+        tags.Add(provider.BaseUrl.Contains("127.0.0.1", StringComparison.OrdinalIgnoreCase) ||
+                 provider.BaseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
+            ? "local"
+            : "cloud");
+        tags.Add(mappedTransport == ProviderTransportKind.Responses ? "responses" : "chat-completions");
+        tags.Add("chat");
+        return tags
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private static string ResolveApiKeyEnvironmentVariable(
@@ -405,7 +434,8 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
             IsPrivateProvider = true,
             ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
                 AgentFrameworkProviderKind.Ollama,
-                ManagedSeedProviderFallbacks.FallbackModel)
+                ManagedSeedProviderFallbacks.FallbackModel),
+            Tags = ["ollama", "remote", "fallback", "chat"]
         };
     }
 

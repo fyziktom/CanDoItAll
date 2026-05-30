@@ -1,0 +1,46 @@
+.capability-details-dialog {
+    display: flex;
+    flex-direction: column;
+    height: min(48rem, calc(100vh - 12rem));
+    min-height: 36rem;
+    overflow: hidden;
+}
+
+.capability-details-dialog ::deep .capability-details-dialog__tabs {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.capability-details-dialog ::deep [role="tabpanel"] {
+    max-height: calc(100vh - 23rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.capability-details-dialog ::deep .capability-details-dialog__textarea {
+    min-height: 8rem;
+    resize: vertical;
+}
+
+.capability-details-dialog ::deep .capability-details-dialog__small-textarea {
+    min-height: 6rem;
+    resize: vertical;
+}
+
+.capability-details-dialog ::deep .capability-details-dialog__large-textarea {
+    min-height: 18rem;
+    resize: vertical;
+}
+
+.capability-details-dialog ::deep .capability-details-dialog__inline-option {
+    min-height: 2.75rem;
+}
+
+.capability-details-dialog ::deep .capability-details-dialog__mono {
+    color: rgb(51 65 85);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}

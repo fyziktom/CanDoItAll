@@ -102,6 +102,7 @@ public sealed class ProviderProfileEditorModel
     public bool IsPrivateProvider { get; set; }
     public List<string> SuggestedModels { get; set; } = [];
     public List<ProviderModelTokenPriceEditorModel> ModelPrices { get; set; } = [];
+    public List<string> Tags { get; set; } = [];
 
     public static ProviderProfileEditorModel FromDefinition(ProviderProfile definition)
     {
@@ -124,7 +125,8 @@ public sealed class ProviderProfileEditorModel
             Notes = definition.Notes,
             IsPrivateProvider = definition.IsPrivateProvider,
             SuggestedModels = definition.SuggestedModels.ToList(),
-            ModelPrices = ProviderPricingDefaults.ToEditorModels(definition.ModelPrices)
+            ModelPrices = ProviderPricingDefaults.ToEditorModels(definition.ModelPrices),
+            Tags = definition.Tags.ToList()
         };
     }
 }
@@ -139,6 +141,7 @@ public sealed class CapabilityEditorModel
     public string EndpointOrPath { get; set; } = string.Empty;
     public string ConfigurationJson { get; set; } = string.Empty;
     public bool IsBuiltIn { get; set; }
+    public List<string> Tags { get; set; } = [];
 
     public static CapabilityEditorModel FromDefinition(CapabilityCatalogItem definition)
     {
@@ -151,7 +154,8 @@ public sealed class CapabilityEditorModel
             Description = definition.Description,
             EndpointOrPath = definition.EndpointOrPath,
             ConfigurationJson = definition.ConfigurationJson,
-            IsBuiltIn = definition.IsBuiltIn
+            IsBuiltIn = definition.IsBuiltIn,
+            Tags = definition.Tags.ToList()
         };
     }
 }

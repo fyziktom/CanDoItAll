@@ -1,0 +1,211 @@
+<ListDetailShell ListPaneWidth="25rem"
+                 data-testid="agents-provider-profiles-panel">
+    <ListHeader>
+        <ListPanelHeader Title="Provider profiles"
+                         Description="AgentFramework provider catalog, including workspace profiles and seeded runtime providers."
+                         Count="@($"{FilteredProviders.Count} profile(s)")">
+            <Actions>
+                <Button Text="New provider"
+                        Icon="add"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="ResetProviderAsync"
+                        data-testid="providers-new" />
+                <Button Text="Refresh"
+                        Icon="refresh"
+                        ButtonStyle="ButtonStyle.Light"
+                        Size="ButtonSize.Small"
+                        Click="LoadAsync"
+                        data-testid="providers-refresh" />
+            </Actions>
+            <Filters>
+                <FilterBar ResultText="@($"{FilteredProviders.Count} of {providers.Count} provider(s)")">
+                    <input @bind="providerSearch"
+                           @bind:event="oninput"
+                           class="cda-input min-w-[14rem] flex-1"
+                           placeholder="Search providers"
+                           data-testid="providers-search" />
+                    <Button Text="Reset"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="ResetProviderSearch" />
+                </FilterBar>
+            </Filters>
+        </ListPanelHeader>
+    </ListHeader>
+
+    <ListContent>
+        @if (isLoading)
+        {
+            <EmptyState Eyebrow="Loading"
+                        Title="Loading provider catalog"
+                        Description="AgentFramework is reading workspace-backed and seeded provider profiles." />
+        }
+        else if (FilteredProviders.Count == 0)
+        {
+            <EmptyState Eyebrow="No providers"
+                        Title="No provider profiles match the current filter"
+                        Description="Clear the search filter or create a provider profile." />
+        }
+        else
+        {
+            <TreeView Items="@ProviderTreeNodes"
+                      Style="TreeViewStyle.Workbench"
+                      AriaLabel="Provider profiles grouped by tag"
+                      EmptyText="No provider profiles are available."
+                      OnSelect="HandleProviderTreeSelectAsync"
+                      OnToggle="HandleProviderTreeToggleAsync"
+                      data-testid="providers-tree" />
+        }
+    </ListContent>
+
+    <DetailHeader>
+        <Stack GapScale="LayoutGap.Tiny">
+            <p class="cda-eyebrow">Provider editor</p>
+            <h2 class="cda-title-xl">@(providerModel.Id.HasValue ? providerModel.Name : "New provider profile")</h2>
+            <p class="cda-body-muted">@ResolveSelectedProviderStatus()</p>
+        </Stack>
+    </DetailHeader>
+
+    <DetailContent>
+        <EditForm Model="providerModel" OnValidSubmit="SaveProviderAsync">
+            <Stack Class="min-h-full" GapScale="LayoutGap.XXLarge">
+                <FormSection Title="Identity" Description="Provider identity, endpoint, model, and grouping tags. Tags drive the tree and future capability search.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label">Name</label>
+                            <InputText @bind-Value="providerModel.Name"
+                                       class="cda-input"
+                                       data-testid="providers-name-input" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Default model</label>
+                            <InputText @bind-Value="providerModel.DefaultModel"
+                                       class="cda-input"
+                                       data-testid="providers-model-input" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Provider kind</label>
+                            <InputSelect @bind-Value="providerModel.Kind"
+                                         class="cda-input"
+                                         data-testid="providers-kind-select">
+                                @foreach (var kind in Enum.GetValues<ProviderKind>())
+                                {
+                                    <option value="@kind">@kind</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Purpose</label>
+                            <InputSelect @bind-Value="providerModel.Purpose"
+                                         class="cda-input"
+                                         data-testid="providers-purpose-select">
+                                @foreach (var purpose in Enum.GetValues<ProviderProfilePurpose>())
+                                {
+                                    <option value="@purpose">@purpose</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </Grid>
+
+                    <div>
+                        <label class="cda-field-label">Base URL</label>
+                        <InputText @bind-Value="providerModel.BaseUrl"
+                                   class="cda-input"
+                                   data-testid="providers-base-url-input" />
+                    </div>
+
+                    <div>
+                        <label class="cda-field-label">API key environment variable or secret reference</label>
+                        <InputText @bind-Value="providerModel.ApiKeyEnvironmentVariable"
+                                   class="cda-input"
+                                   data-testid="providers-api-key-input" />
+                    </div>
+
+                    <TagEditor Value="@providerTagValues"
+                               ValueChanged="HandleProviderTagsChangedAsync"
+                               Suggestions="@AvailableProviderTags"
+                               Placeholder="Add provider tag"
+                               Hint="Use tags such as openai, ollama, local, cloud, chat, image, or fallback."
+                               MaxTags="12"
+                               TestId="providers-tags"
+                               InputTestId="providers-tags-input" />
+                </FormSection>
+
+                <FormSection Title="Runtime behavior" Description="Keep transport and advertised runtime capabilities explicit.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label">Transport</label>
+                            <InputSelect @bind-Value="providerModel.Transport"
+                                         class="cda-input"
+                                         data-testid="providers-transport-select">
+                                @foreach (var transport in Enum.GetValues<ProviderTransportKind>())
+                                {
+                                    <option value="@transport">@transport</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Suggested models</label>
+                            <textarea @bind="suggestedModelsText"
+                                      class="cda-input min-h-[7rem]"
+                                      data-testid="providers-suggested-models"></textarea>
+                        </div>
+                    </Grid>
+
+                    <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsEnabled" /> Enabled</label>
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsStreaming" /> Streaming</label>
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsTools" /> Tool calling</label>
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.PreferFrameworkManagedChatHistory" /> Framework-managed history</label>
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.SupportsBackgroundResponses" /> Background responses</label>
+                        <label class="cda-inline-option"><InputCheckbox @bind-Value="providerModel.IsPrivateProvider" /> Private pricing</label>
+                    </Grid>
+                </FormSection>
+
+                <FormSection Title="Configuration and notes" Description="Advanced provider metadata. Keep JSON valid and explicit.">
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        <div>
+                            <label class="cda-field-label">Configuration JSON</label>
+                            <InputTextArea @bind-Value="providerModel.ConfigurationJson"
+                                           class="cda-input min-h-[12rem] font-mono text-xs"
+                                           data-testid="providers-config-json" />
+                        </div>
+                        <div>
+                            <label class="cda-field-label">Notes</label>
+                            <InputTextArea @bind-Value="providerModel.Notes"
+                                           class="cda-input min-h-[12rem]"
+                                           data-testid="providers-notes" />
+                        </div>
+                    </Grid>
+                </FormSection>
+
+                <StickyActionFooter StatusLabel="Provider profiles">
+                    <SecondaryActions>
+                        <Button Text="Clear" ButtonStyle="ButtonStyle.Light" Click="ResetProviderAsync" />
+                        @if (providerModel.Id.HasValue)
+                        {
+                            <Button Text="Health" ButtonStyle="ButtonStyle.Info" Disabled="@isBusy" Click="@(() => TestProviderAsync(providerModel.Id.Value))" />
+                        }
+                    </SecondaryActions>
+                    <PrimaryActions>
+                        <Button Text="Save provider"
+                                Type="submit"
+                                Disabled="@isBusy"
+                                IsBusy="@isBusy"
+                                data-testid="providers-save" />
+                    </PrimaryActions>
+                    <DangerActions>
+                        @if (providerModel.Id.HasValue)
+                        {
+                            <Button Text="Delete"
+                                    ButtonStyle="ButtonStyle.Danger"
+                                    Disabled="@isBusy"
+                                    Click="@(() => DeleteProviderAsync(providerModel.Id.Value))" />
+                        }
+                    </DangerActions>
+                </StickyActionFooter>
+            </Stack>
+        </EditForm>
+    </DetailContent>
+</ListDetailShell>

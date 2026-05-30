@@ -134,7 +134,10 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                 ProofStatus: current?.ProofStatus ?? CapabilityProofStatus.NotRun,
                 ProofNotes: current?.ProofNotes ?? string.Empty,
                 LastVerifiedAtUtc: current?.LastVerifiedAtUtc,
-                IsBuiltIn: model.IsBuiltIn);
+                IsBuiltIn: model.IsBuiltIn)
+            {
+                Tags = NormalizeTags(model.Tags)
+            };
             capabilityId = capability.Id;
             EnsureUniqueCapabilityIdentity(catalog.Capabilities, capability);
 
@@ -239,5 +242,17 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
         throw new InvalidOperationException(
             $"Capability save would reuse canonical capability identity '{identityKey}', which already belongs to: {string.Join(", ", collisions)}.");
+    }
+
+    private static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
+    {
+        return tags?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item.Trim().TrimStart('#').ToLowerInvariant())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            ?? [];
     }
 }
