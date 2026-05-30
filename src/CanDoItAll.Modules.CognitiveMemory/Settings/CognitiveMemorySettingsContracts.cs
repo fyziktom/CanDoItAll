@@ -160,7 +160,7 @@ public sealed record CognitiveMemoryModelExecutionProfile(
 
 public static class CognitiveMemoryModelExecutionProfileDefaults
 {
-    public const string OpenAiDefaultModelId = "gpt-5-mini";
+    public const string OpenAiDefaultModelId = "gpt-5.4-mini";
     public const string OllamaValidationModelId = "gptoss20b64k";
     public const int DefaultOpenAiMaxOutputTokens = 4096;
     public const int DefaultOllamaMaxOutputTokens = 8192;

@@ -175,7 +175,7 @@ Agent execution is handled by `CanDoItAll.AgentFramework.*`. The Microsoft Agent
 
 Real process-agent automation should run against a PostgreSQL AppDbContext profile when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled. SQLite remains useful for local module smoke work, but governed multi-agent process runs are expected to use PostgreSQL so step journals, tool receipts, artifacts, and recovery attempts do not bottleneck the run.
 
-The managed OpenAI agent/provider seed defaults to `gpt-5-mini`. The runtime omits temperature for OpenAI-style models that only accept the provider default temperature and retries without temperature when the provider reports an unsupported temperature parameter.
+The managed OpenAI agent/provider seed defaults to `gpt-5.4-mini`. The runtime omits temperature for OpenAI-style models that only accept the provider default temperature and retries without temperature when the provider reports an unsupported temperature parameter.
 
 ## Local Data
 

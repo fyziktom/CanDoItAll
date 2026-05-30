@@ -15,7 +15,7 @@ internal static class SandboxWorkspaceSeedBuilder
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
     [
         ManagedSeedProviderFallbacks.OpenAiDefaultModel,
-        "gpt-5.4-mini",
+        "gpt-5.4",
         "gpt-4.1-mini",
         "gpt-4.1"
     ];
