@@ -2,7 +2,7 @@
 
 CanDoItAll is a local-first .NET 10 Blazor Web App for project delivery work. It combines project structure, process templates and runs, workbench views, prompts, resources, validation, test evidence, activity, automation, CRM/HR staffing, AgentFramework-backed AI agents, and an HTTP API control plane in one workspace.
 
-The current architecture is modular: `CanDoItAll.Web` hosts the app and HTTP API, `CanDoItAll.Composition` wires the runtime, `CanDoItAll.Infrastructure` owns data/storage/control-plane concerns, `CanDoItAll.Modules.*` own product behavior, `CanDoItAll.AgentFramework.*` owns technical agent execution, and `CanDoItAll.Mcp.*` exposes selected local-development sidecars. Process, project-structure, and agent operations should use the HTTP APIs and repo-managed Codex skills; the old Processes and ProjectStructure MCP servers are suppressed for now.
+The current architecture is modular: `CanDoItAll.Web` hosts the app and HTTP API, `CanDoItAll.Composition` wires the runtime, `CanDoItAll.Infrastructure` owns data/storage/control-plane concerns, `CanDoItAll.Modules.*` own product behavior, and `CanDoItAll.AgentFramework.*` owns technical agent execution. MCP source now lives in the sibling `CanDoItAll.Mcp` repository, while this repo still owns MCP settings, installed artifacts, and skill sync. Process, project-structure, and agent operations should use the HTTP APIs and repo-managed Codex skills; the old Processes and ProjectStructure MCP servers are suppressed for now.
 
 ## Overview
 
@@ -107,17 +107,17 @@ Use these scripts from the repo root:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\tools\Install-CanDoItAllWebApp.ps1
-powershell -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1
+powershell -ExecutionPolicy Bypass -File .\tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp
 powershell -ExecutionPolicy Bypass -File .\codex\scripts\install-candoitall-skills.ps1
 ```
 
 What they do:
 
 - `tools\Install-CanDoItAllWebApp.ps1` publishes `CanDoItAll.Web` as a self-contained Windows app under `%LOCALAPPDATA%\CanDoItAll\WebApp` by default, creates `Start-CanDoItAll.ps1`, creates a desktop shortcut, and can launch the app with `-StartAfterInstall`.
-- `tools\Reinstall-CanDoItAllMcps.ps1` rebuilds and installs the repo-managed Components, CodeAnalytics, and SshOps MCP sidecars plus companion tools under `.artifacts\mcp-installs`, prepares the DotNetWatch shadow artifact, updates VS Code and Codex MCP configuration, creates DotNetWatch tray shortcuts, and removes stale `candoitall_processes` and `candoitall_projectstructure` config sections.
+- `tools\Reinstall-CanDoItAllMcps.ps1` rebuilds MCP projects from the sibling `CanDoItAll.Mcp` repo, installs Components, CodeAnalytics, and SshOps sidecars plus companion tools under `.artifacts\mcp-installs`, prepares the DotNetWatch shadow artifact, updates VS Code and Codex MCP configuration, creates DotNetWatch tray shortcuts, syncs skills from this repo, and removes stale `candoitall_processes` and `candoitall_projectstructure` config sections.
 - `codex\scripts\install-candoitall-skills.ps1` installs repo-managed CanDoItAll skills into `$CODEX_HOME\skills` and installs required public sibling skills from `openai/skills` and `dotnet/skills`.
 
-Current active MCP sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, SshOps, and LocalRuntime helpers. Processes and ProjectStructure MCP servers are not active; use the HTTP API control plane and repo-managed `candoitall-api-*` skills for those surfaces.
+Current active MCP sidecar source lives in `C:\repositories\CanDoItAll.Mcp`. Active sidecars are CodeAnalytics, Components, DotNetWatch, Mermaid, SshOps, and LocalRuntime helpers. Processes and ProjectStructure MCP servers are not active; use the HTTP API control plane and repo-managed `candoitall-api-*` skills for those surfaces.
 
 ## Run The Development Manager
 
@@ -161,10 +161,9 @@ powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\D
 | `CanDoItAll.AgentFramework.*` | Technical agent catalog, provider profiles, file-backed workspaces, Microsoft Agent Framework runtime adapter, workspace tools, MCP capabilities, execution runs, artifacts, UI components, and voice capture/synthesis services. |
 | `CanDoItAll.Components.*` | Shared Razor UI primitives, charts, Mermaid diagrams, canvas controls, overlay windows, WebGL workbench runtime, facade, and sandbox projects. |
 | `src/plugins/*` and `CanDoItAll.Plugins.Abstractions` | Bundled plugin contracts and implementations for Docker, Gmail, Office 365, and shared email workflow payloads. |
-| `CanDoItAll.Mcp.*` | Agent-facing sidecars for code analytics, components, dotnet watch, Mermaid, SSH operations, and local runtime helpers. Processes and ProjectStructure MCPs are not active; use HTTP APIs for those surfaces. |
 | `CanDoItAll.Migrations.*` | Provider-specific EF Core migrations for SQLite and PostgreSQL. |
-| `tests/*` | Unit, integration, component, Playwright, support, and MCP-focused tests. |
-| `tools/*` | Local manager, dotnet-watch tray, MCP harness, RPI validation artifacts, scenario seeding tools, and install/dev scripts. |
+| `tests/*` | Unit, integration, component, Playwright, and support tests. MCP-focused tests live in the sibling `CanDoItAll.Mcp` repo. |
+| `tools/*` | Local manager, RPI validation artifacts, scenario seeding tools, and install/dev scripts. MCP companion tools live in the sibling `CanDoItAll.Mcp` repo. |
 
 Each tracked `.csproj` directory under `src`, `tests`, and `tools` has a local `README.md` with the project purpose, references, and validation notes.
 
@@ -203,7 +202,7 @@ Current API and MCP notes:
 - [Project Structure MCP transition note](docs/project-structure-mcp-setup.md)
 - [DotNetWatch persistent backend notes](docs/mcp-dotnetwatch-persistent-backend-benefits.md)
 
-For full local MCP resetup, use `tools\Reinstall-CanDoItAllMcps.ps1`; it includes skill sync unless `-SkipSkillSync` is supplied.
+For full local MCP resetup, use `tools\Reinstall-CanDoItAllMcps.ps1`; it builds from the sibling `CanDoItAll.Mcp` repo by default and includes skill sync unless `-SkipSkillSync` is supplied.
 
 ## Styling
 

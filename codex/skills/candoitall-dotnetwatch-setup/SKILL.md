@@ -5,7 +5,7 @@ description: Use when Codex needs to install, reinstall, repair, or validate the
 
 # CanDoItAll DotNetWatch Setup
 
-Use one shared `candoitall_dotnetwatch` MCP per machine. It is anchored to the CanDoItAll repo and can start projects from sibling repos. Do not create extra repo-specific dotnetwatch MCP servers when the shared backend can manage the target project.
+Use one shared `candoitall_dotnetwatch` MCP per machine. Runtime settings, installs, and skills are anchored to the CanDoItAll repo; MCP source is built from the sibling `CanDoItAll.Mcp` repo. The shared backend can start projects from sibling repos. Do not create extra repo-specific dotnetwatch MCP servers when the shared backend can manage the target project.
 
 ## Goal
 
@@ -23,11 +23,12 @@ Use one shared `candoitall_dotnetwatch` MCP per machine. It is anchored to the C
 2. If setup is missing, stale, or inconsistent, run:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp
 ```
 
 3. Validate the result:
-   - shared `candoitall_dotnetwatch` entry points at `tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`
+   - shared `candoitall_dotnetwatch` entry points at the wrapper in the sibling `CanDoItAll.Mcp` repo
+   - the wrapper args include both the CanDoItAll workspace root and the MCP repo root
    - `%USERPROFILE%\.codex\skills` contains repo-managed skills
    - tray startup shortcut exists
    - tray desktop shortcut exists

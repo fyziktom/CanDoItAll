@@ -1,0 +1,10 @@
+Command: dotnet test C:\repositories\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj -c Release --no-build --filter "FullyQualifiedName~RepositoryMcpConfig_UsesWrapperLauncher|FullyQualifiedName~WrapperPrepareOnly_ProducesShadowManifestAndDllPath"
+Invariant ID: SB02-RESETUP-ROOT-SEPARATION
+Test name: RepositoryMcpConfig_UsesWrapperLauncher
+Test name: WrapperPrepareOnly_ProducesShadowManifestAndDllPath
+--- output ---
+Testovací běh pro C:\repositories\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\bin\Release\net10.0\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 8 s - CanDoItAll.Mcp.DotNetWatch.IntegrationTests.dll (net10.0)
+ExitCode: 0

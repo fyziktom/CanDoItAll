@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$RepoRoot = "",
+    [string]$McpRepoRoot = "",
     [string]$UserConfigPath = "",
     [string]$ShadowConfiguration = "Release",
     [switch]$SkipUserConfig,
@@ -58,10 +59,44 @@ function Remove-DirectoryRobust {
 
     for ($attempt = 1; $attempt -le 6; $attempt++) {
         try {
-            Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+            Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue |
+                ForEach-Object {
+                    try {
+                        $_.Attributes = [System.IO.FileAttributes]::Normal
+                    }
+                    catch {
+                    }
+                }
+
+            $deletePath = if ($Path.StartsWith("\\?\", [System.StringComparison]::Ordinal)) {
+                $Path
+            }
+            elseif ([System.IO.Path]::IsPathRooted($Path) -and $Path.Length -gt 2 -and $Path[1] -eq ':') {
+                "\\?\$Path"
+            }
+            else {
+                $Path
+            }
+
+            [System.IO.Directory]::Delete($deletePath, $true)
             return
         }
+        catch [System.IO.DirectoryNotFoundException] {
+            if (-not (Test-Path -LiteralPath $Path)) {
+                return
+            }
+
+            if ($attempt -eq 6) {
+                throw
+            }
+
+            Start-Sleep -Milliseconds (250 * $attempt)
+        }
         catch {
+            if (-not (Test-Path -LiteralPath $Path)) {
+                return
+            }
+
             if ($attempt -eq 6) {
                 throw
             }
@@ -329,13 +364,22 @@ function Update-VsCodeMcpConfig {
         [Parameter(Mandatory = $true)]
         [string]$WorkspaceFolderToken,
         [Parameter(Mandatory = $true)]
+        [string]$McpRepoRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$DotNetWatchWrapperPath,
+        [Parameter(Mandatory = $true)]
         [string]$ComponentsCommandPath,
         [Parameter(Mandatory = $true)]
-        [string]$CodeAnalyticsCommandPath
+        [string]$CodeAnalyticsCommandPath,
+        [Parameter(Mandatory = $true)]
+        [string]$MermaidCommandPath
     )
 
+    $escapedMcpRepoRoot = $McpRepoRoot.Replace("\", "\\")
+    $escapedDotNetWatchWrapperPath = $DotNetWatchWrapperPath.Replace("\", "\\")
     $escapedComponentsCommandPath = $ComponentsCommandPath.Replace("\", "\\")
     $escapedCodeAnalyticsCommandPath = $CodeAnalyticsCommandPath.Replace("\", "\\")
+    $escapedMermaidCommandPath = $MermaidCommandPath.Replace("\", "\\")
     $json = @"
 {
   "servers": {
@@ -347,9 +391,11 @@ function Update-VsCodeMcpConfig {
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "$WorkspaceFolderToken\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+        "$escapedDotNetWatchWrapperPath",
         "-RepoRoot",
         "$WorkspaceFolderToken",
+        "-McpRepoRoot",
+        "$escapedMcpRepoRoot",
         "-Configuration",
         "$ShadowConfiguration",
         "-SettingsPath",
@@ -384,6 +430,15 @@ function Update-VsCodeMcpConfig {
       ],
       "cwd": "$WorkspaceFolderToken"
     },
+    "candoitall_mermaid": {
+      "type": "stdio",
+      "command": "$WorkspaceFolderToken\\$escapedMermaidCommandPath",
+      "args": [
+        "--settings",
+        "$WorkspaceFolderToken\\CanDoItAll.Mcp.Mermaid.settings.json"
+      ],
+      "cwd": "$WorkspaceFolderToken"
+    },
     "playwright": {
       "type": "stdio",
       "command": "npx",
@@ -410,11 +465,17 @@ function Update-CodexConfig {
         [Parameter(Mandatory = $true)]
         [string]$Path,
         [Parameter(Mandatory = $true)]
+        [string]$McpRepoRoot,
+        [Parameter(Mandatory = $true)]
+        [string]$DotNetWatchWrapperPath,
+        [Parameter(Mandatory = $true)]
         [string]$SshOpsEntrypoint,
         [Parameter(Mandatory = $true)]
         [string]$ComponentsEntrypoint,
         [Parameter(Mandatory = $true)]
         [string]$CodeAnalyticsEntrypoint,
+        [Parameter(Mandatory = $true)]
+        [string]$MermaidEntrypoint,
         [Parameter(Mandatory = $true)]
         [string]$SharpToolsEntrypoint,
         [Parameter(Mandatory = $true)]
@@ -429,9 +490,12 @@ function Update-CodexConfig {
     }
 
     $escapedRepoRoot = $RepoRoot.Replace("\", "\\")
+    $escapedMcpRepoRoot = $McpRepoRoot.Replace("\", "\\")
+    $escapedDotNetWatchWrapperPath = $DotNetWatchWrapperPath.Replace("\", "\\")
     $escapedSshOpsEntrypoint = $SshOpsEntrypoint.Replace("\", "\\")
     $escapedComponentsEntrypoint = $ComponentsEntrypoint.Replace("\", "\\")
     $escapedCodeAnalyticsEntrypoint = $CodeAnalyticsEntrypoint.Replace("\", "\\")
+    $escapedMermaidEntrypoint = $MermaidEntrypoint.Replace("\", "\\")
     $escapedSharpToolsEntrypoint = $SharpToolsEntrypoint.Replace("\", "\\")
     $escapedSharpToolsWorkingDirectory = $SharpToolsWorkingDirectory.Replace("\", "\\")
     $escapedSharpToolsLogDirectory = $SharpToolsLogDirectory.Replace("\", "\\")
@@ -445,9 +509,11 @@ args = [
   "-ExecutionPolicy",
   "Bypass",
   "-File",
-  "$escapedRepoRoot\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+  "$escapedDotNetWatchWrapperPath",
   "-RepoRoot",
   "$escapedRepoRoot",
+  "-McpRepoRoot",
+  "$escapedMcpRepoRoot",
   "-Configuration",
   "$ShadowConfiguration",
   "-SettingsPath",
@@ -497,6 +563,19 @@ tool_timeout_sec = 1800
 enabled = true
 "@
 
+    $mermaidSection = @"
+[mcp_servers.candoitall_mermaid]
+command = "$escapedMermaidEntrypoint"
+cwd = "$escapedRepoRoot"
+args = [
+  "--settings",
+  "$escapedRepoRoot\\CanDoItAll.Mcp.Mermaid.settings.json"
+]
+startup_timeout_sec = 45
+tool_timeout_sec = 1800
+enabled = true
+"@
+
     $sharpToolsSection = @"
 [mcp_servers.sharptools]
 # Backup only. Keep disabled unless CanDoItAll CodeAnalytics has a real capability gap
@@ -519,6 +598,7 @@ enabled = false
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_sshops" -SectionContent $sshOpsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_components" -SectionContent $componentsSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_codeanalytics" -SectionContent $codeAnalyticsSection
+    Set-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_mermaid" -SectionContent $mermaidSection
     Set-TomlSection -Path $Path -SectionName "mcp_servers.sharptools" -SectionContent $sharpToolsSection
     Remove-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_projectstructure"
     Remove-TomlSection -Path $Path -SectionName "mcp_servers.candoitall_processes"
@@ -612,23 +692,36 @@ if ([string]::IsNullOrWhiteSpace($RepoRoot)) {
     $RepoRoot = Resolve-AbsolutePath (Join-Path $PSScriptRoot "..")
 }
 
+$RepoRoot = Resolve-AbsolutePath $RepoRoot
+
+if ([string]::IsNullOrWhiteSpace($McpRepoRoot)) {
+    $McpRepoRoot = Resolve-AbsolutePath (Join-Path (Split-Path -Parent $RepoRoot) "CanDoItAll.Mcp")
+}
+
 if ([string]::IsNullOrWhiteSpace($UserConfigPath)) {
     $UserConfigPath = Join-Path $env:USERPROFILE ".codex\config.toml"
 }
 
-$RepoRoot = Resolve-AbsolutePath $RepoRoot
+$McpRepoRoot = Resolve-AbsolutePath $McpRepoRoot
 $UserConfigPath = Resolve-AbsolutePath $UserConfigPath
 
-$dotNetWatchWrapperPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1")
+if (-not (Test-Path -LiteralPath (Join-Path $McpRepoRoot "CanDoItAll.Mcp.slnx"))) {
+    throw "MCP repository root '$McpRepoRoot' does not contain CanDoItAll.Mcp.slnx."
+}
+
+$mcpSolutionPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "CanDoItAll.Mcp.slnx")
+$dotNetWatchWrapperPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1")
 $dotNetWatchSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.DotNetWatch.settings.json")
-$componentsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj")
+$componentsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.Components\CanDoItAll.Mcp.Components.csproj")
 $componentsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Components.settings.json")
-$codeAnalyticsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj")
+$codeAnalyticsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.CodeAnalytics\CanDoItAll.Mcp.CodeAnalytics.csproj")
 $codeAnalyticsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.CodeAnalytics.settings.json")
-$sshOpsProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj")
+$mermaidProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.Mermaid\CanDoItAll.Mcp.Mermaid.csproj")
+$mermaidSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.Mermaid.settings.json")
+$sshOpsProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "src\CanDoItAll.Mcp.SshOps\CanDoItAll.Mcp.SshOps.csproj")
 $sshOpsSettingsPath = Resolve-AbsolutePath (Join-Path $RepoRoot "CanDoItAll.Mcp.SshOps.settings.json")
 $managerProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj")
-$trayProjectPath = Resolve-AbsolutePath (Join-Path $RepoRoot "tools\CanDoItAll.Mcp.DotNetWatch.Tray\CanDoItAll.Mcp.DotNetWatch.Tray.csproj")
+$trayProjectPath = Resolve-AbsolutePath (Join-Path $McpRepoRoot "tools\CanDoItAll.Mcp.DotNetWatch.Tray\CanDoItAll.Mcp.DotNetWatch.Tray.csproj")
 $repoSkillRoot = Resolve-AbsolutePath (Join-Path $RepoRoot "codex\skills")
 $userSkillRoot = Resolve-AbsolutePath (Join-Path $env:USERPROFILE ".codex\skills")
 $repoParentRoot = Split-Path -Parent $RepoRoot
@@ -638,6 +731,7 @@ $sharpToolsLogDirectory = Resolve-AbsolutePath (Join-Path $repoParentRoot "codex
 $installRoot = Resolve-AbsolutePath (Join-Path $RepoRoot ".artifacts\mcp-installs")
 $componentsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.Components\current")
 $codeAnalyticsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.CodeAnalytics\current")
+$mermaidInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.Mermaid\current")
 $sshOpsInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.SshOps\current")
 $managerInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Manager\current")
 $trayInstallRoot = Resolve-AbsolutePath (Join-Path $installRoot "CanDoItAll.Mcp.DotNetWatch.Tray\current")
@@ -652,6 +746,8 @@ $installOwnedCompanionProcessNeedles = @(
     "CanDoItAll.Mcp.Components.dll",
     "CanDoItAll.Mcp.CodeAnalytics.exe",
     "CanDoItAll.Mcp.CodeAnalytics.dll",
+    "CanDoItAll.Mcp.Mermaid.exe",
+    "CanDoItAll.Mcp.Mermaid.dll",
     "CanDoItAll.Mcp.SshOps.exe",
     "CanDoItAll.Mcp.SshOps.dll",
     "CanDoItAll.Manager.exe",
@@ -659,8 +755,6 @@ $installOwnedCompanionProcessNeedles = @(
     "CanDoItAll.Mcp.DotNetWatch.Tray.exe",
     "CanDoItAll.Mcp.DotNetWatch.Tray.dll"
 )
-
-New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
 
 Write-Status "Stopping install-owned companion processes before publish"
 Stop-MatchingProcesses -Needles $installOwnedCompanionProcessNeedles
@@ -677,6 +771,13 @@ if (-not $SkipProcessReset.IsPresent) {
     Cleanup-WorkspaceBackendCatalog -CatalogDirectory $globalBackendCatalogDirectory -WorkspaceRoot $RepoRoot -SettingsPath $dotNetWatchSettingsPath
 }
 
+Write-Status "Removing historical MCP install artifacts"
+Remove-DirectoryRobust -Path $installRoot
+New-Item -ItemType Directory -Force -Path $installRoot | Out-Null
+
+Write-Status "Removing historical DotNetWatch shadow artifacts"
+Remove-DirectoryRobust -Path (Split-Path -Parent $shadowManifestPath)
+
 Write-Status "Preparing shadow artifact for CanDoItAll.Mcp.DotNetWatch ($ShadowConfiguration)"
 Invoke-CheckedCommand -FilePath "powershell" -Arguments @(
     "-NoProfile",
@@ -686,6 +787,8 @@ Invoke-CheckedCommand -FilePath "powershell" -Arguments @(
     $dotNetWatchWrapperPath,
     "-RepoRoot",
     $RepoRoot,
+    "-McpRepoRoot",
+    $McpRepoRoot,
     "-Configuration",
     $ShadowConfiguration,
     "-SettingsPath",
@@ -700,6 +803,7 @@ if (-not (Test-Path -LiteralPath $shadowManifestPath)) {
 
 Publish-ReleaseArtifact -ProjectPath $componentsProjectPath -OutputPath $componentsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $codeAnalyticsProjectPath -OutputPath $codeAnalyticsInstallRoot
+Publish-ReleaseArtifact -ProjectPath $mermaidProjectPath -OutputPath $mermaidInstallRoot
 Publish-ReleaseArtifact -ProjectPath $sshOpsProjectPath -OutputPath $sshOpsInstallRoot
 Publish-ReleaseArtifact -ProjectPath $managerProjectPath -OutputPath $managerInstallRoot
 Publish-ReleaseArtifact -ProjectPath $trayProjectPath -OutputPath $trayInstallRoot
@@ -709,6 +813,8 @@ $componentsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $componentsInstal
 $componentsWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $componentsEntrypoint
 $codeAnalyticsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $codeAnalyticsInstallRoot -AssemblyName "CanDoItAll.Mcp.CodeAnalytics"
 $codeAnalyticsWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $codeAnalyticsEntrypoint
+$mermaidEntrypoint = Get-PreferredEntrypoint -DirectoryPath $mermaidInstallRoot -AssemblyName "CanDoItAll.Mcp.Mermaid"
+$mermaidWorkspaceEntrypoint = Get-RelativePathPortable -BasePath $RepoRoot -TargetPath $mermaidEntrypoint
 $sshOpsEntrypoint = Get-PreferredEntrypoint -DirectoryPath $sshOpsInstallRoot -AssemblyName "CanDoItAll.Mcp.SshOps"
 $managerEntrypoint = Get-PreferredEntrypoint -DirectoryPath $managerInstallRoot -AssemblyName "CanDoItAll.Manager"
 $trayEntrypoint = Get-PreferredEntrypoint -DirectoryPath $trayInstallRoot -AssemblyName "CanDoItAll.Mcp.DotNetWatch.Tray"
@@ -745,9 +851,12 @@ if (-not $SkipSkillSync.IsPresent) {
 $installManifest = @{
     updatedUtc = [DateTimeOffset]::UtcNow.ToString("O")
     repoRoot = $RepoRoot
+    mcpRepoRoot = $McpRepoRoot
+    mcpSolutionPath = $mcpSolutionPath
     dotNetWatch = @{
         mode = "wrapper-shadow"
         configuration = $ShadowConfiguration
+        mcpRepoRoot = $McpRepoRoot
         wrapperPath = $dotNetWatchWrapperPath
         settingsPath = $dotNetWatchSettingsPath
         shadowManifestPath = $shadowManifestPath
@@ -764,6 +873,12 @@ $installManifest = @{
         settingsPath = $codeAnalyticsSettingsPath
         installRoot = $codeAnalyticsInstallRoot
         entrypointPath = $codeAnalyticsEntrypoint
+    }
+    mermaid = @{
+        configuration = "Release"
+        settingsPath = $mermaidSettingsPath
+        installRoot = $mermaidInstallRoot
+        entrypointPath = $mermaidEntrypoint
     }
     sshOps = @{
         configuration = "Release"
@@ -799,18 +914,19 @@ Write-Status "Wrote install manifest to $manifestPath"
 
 if (-not $SkipVsCodeConfig.IsPresent) {
     Write-Status "Updating VS Code MCP config"
-    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -ComponentsCommandPath $componentsWorkspaceEntrypoint -CodeAnalyticsCommandPath $codeAnalyticsWorkspaceEntrypoint
+    Update-VsCodeMcpConfig -Path $vscodeMcpPath -WorkspaceFolderToken '${workspaceFolder}' -McpRepoRoot $McpRepoRoot -DotNetWatchWrapperPath $dotNetWatchWrapperPath -ComponentsCommandPath $componentsWorkspaceEntrypoint -CodeAnalyticsCommandPath $codeAnalyticsWorkspaceEntrypoint -MermaidCommandPath $mermaidWorkspaceEntrypoint
 }
 
 if (-not $SkipUserConfig.IsPresent) {
     Write-Status "Updating Codex config"
-    Update-CodexConfig -Path $UserConfigPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory
+    Update-CodexConfig -Path $UserConfigPath -McpRepoRoot $McpRepoRoot -DotNetWatchWrapperPath $dotNetWatchWrapperPath -SshOpsEntrypoint $sshOpsEntrypoint -ComponentsEntrypoint $componentsEntrypoint -CodeAnalyticsEntrypoint $codeAnalyticsEntrypoint -MermaidEntrypoint $mermaidEntrypoint -SharpToolsEntrypoint $sharpToolsEntrypoint -SharpToolsWorkingDirectory $sharpToolsWorkingDirectory -SharpToolsLogDirectory $sharpToolsLogDirectory
 }
 
 Write-Status "Resetup completed."
 Write-Status "DotNetWatch shadow DLL: $($shadowManifest.shadowDllPath)"
 Write-Status "Components entrypoint: $componentsEntrypoint"
 Write-Status "CodeAnalytics entrypoint: $codeAnalyticsEntrypoint"
+Write-Status "Mermaid entrypoint: $mermaidEntrypoint"
 Write-Status "SshOps entrypoint: $sshOpsEntrypoint"
 Write-Status "Manager entrypoint: $managerEntrypoint"
 Write-Status "Tray entrypoint: $trayEntrypoint"

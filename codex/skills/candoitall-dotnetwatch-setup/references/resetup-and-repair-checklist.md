@@ -7,13 +7,13 @@ Use this when the shared backend is missing, stale, duplicated, or the machine w
 Run from the CanDoItAll repo root:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\Reinstall-CanDoItAllMcps.ps1 -McpRepoRoot ..\CanDoItAll.Mcp
 ```
 
 That script is the supported machine repair path. It:
 
-- prepares the current shadow host through `Start-CanDoItAllDotNetWatchMcp.ps1`
-- republishes the managed MCP companions into `.artifacts\mcp-installs`
+- prepares the current shadow host through the sibling `CanDoItAll.Mcp` wrapper
+- republishes the managed MCP companions from the sibling `CanDoItAll.Mcp` repo into `.artifacts\mcp-installs`
 - syncs repo-managed skills into `%USERPROFILE%\.codex\skills`
 - updates `CanDoItAll\.vscode\mcp.json`
 - updates `%USERPROFILE%\.codex\config.toml`
@@ -50,6 +50,7 @@ When that happens:
 ## Supported script parameters
 
 - `-RepoRoot <path>` when CanDoItAll is not in the current directory
+- `-McpRepoRoot <path>` when the MCP repo is not the sibling `CanDoItAll.Mcp` directory
 - `-UserConfigPath <path>` when Codex config lives outside `%USERPROFILE%\.codex\config.toml`
 - `-ShadowConfiguration Release|Debug` when testing the wrapper host configuration
 - `-SkipProcessReset` skips the broader watch/backend reset, but the script may still stop published companion executables that would otherwise lock the install folders

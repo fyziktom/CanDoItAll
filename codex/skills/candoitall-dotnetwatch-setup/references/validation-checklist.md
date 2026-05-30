@@ -4,7 +4,8 @@ Run these checks after resetup or repo onboarding.
 
 ## Machine checks
 
-- `%USERPROFILE%\.codex\config.toml` has a `candoitall_dotnetwatch` section that points at `tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`
+- `%USERPROFILE%\.codex\config.toml` has a `candoitall_dotnetwatch` section that points at the sibling `CanDoItAll.Mcp` wrapper `tools\CanDoItAll.Mcp.DotNetWatch\Start-CanDoItAllDotNetWatchMcp.ps1`
+- the `candoitall_dotnetwatch` args include `-RepoRoot` for the main CanDoItAll workspace and `-McpRepoRoot` for the sibling MCP repo
 - the global config includes the intended `-Configuration` argument
 - `CanDoItAll\.vscode\mcp.json` points at the same wrapper-backed command
 - `%USERPROFILE%\.codex\skills\candoitall-dotnetwatch-setup\SKILL.md` exists

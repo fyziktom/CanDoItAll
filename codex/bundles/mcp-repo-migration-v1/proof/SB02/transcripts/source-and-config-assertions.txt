@@ -1,0 +1,6 @@
+Command: PowerShell assertions for resetup root separation, generated config, manifest, and DotNetWatch settings test paths
+Invariant ID: SB02-RESETUP-ROOT-SEPARATION
+Invariant ID: SB02-ARTIFACT-CLEANUP
+--- output ---
+SB02 source/config assertion passed: resetup separates RepoRoot and McpRepoRoot, generated manifest keeps skill source in main repo, MCP config points at the sibling wrapper, DotNetWatch settings reference MCP tests in the sibling repo, and Mermaid is installed/configured from the MCP repo.
+ExitCode: 0

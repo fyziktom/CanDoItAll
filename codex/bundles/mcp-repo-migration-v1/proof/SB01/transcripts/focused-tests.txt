@@ -1,0 +1,24 @@
+Command: dotnet test focused MCP test projects -c Release --no-build
+Invariant ID: SB01-MCP-SOLUTION-BOUNDARY
+Test name: CanDoItAll.Mcp.Components.Tests
+Test name: CanDoItAll.Mcp.DotNetWatch.Tests
+Test name: CanDoItAll.Mcp.Mermaid.Tests
+Test name: CanDoItAll.Mcp.SshOps.Tests
+--- output ---
+Testovací běh pro C:\repositories\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.Components.Tests\bin\Release\net10.0\CanDoItAll.Mcp.Components.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    22, Přeskočeno:     0, Celkem:    22, Doba trvání: 8 s - CanDoItAll.Mcp.Components.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.DotNetWatch.Tests\bin\Release\net10.0\CanDoItAll.Mcp.DotNetWatch.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    47, Přeskočeno:     0, Celkem:    47, Doba trvání: 621 ms - CanDoItAll.Mcp.DotNetWatch.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.Mermaid.Tests\bin\Release\net10.0\CanDoItAll.Mcp.Mermaid.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 70 ms - CanDoItAll.Mcp.Mermaid.Tests.dll (net10.0)
+Testovací běh pro C:\repositories\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.SshOps.Tests\bin\Release\net10.0\CanDoItAll.Mcp.SshOps.Tests.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 10 s - CanDoItAll.Mcp.SshOps.Tests.dll (net10.0)
+ExitCode: 0
