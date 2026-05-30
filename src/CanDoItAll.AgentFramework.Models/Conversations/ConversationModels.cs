@@ -249,6 +249,10 @@ public sealed record AgentRunMetric(
     int ToolCalls)
 {
     public Guid ExecutionRunId { get; init; }
+
+    public int CachedInputTokens { get; init; }
+
+    public decimal CostUsd { get; init; }
 }
 
 public sealed record ExecutionArtifactRecord(

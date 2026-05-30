@@ -99,7 +99,9 @@ public sealed class ProviderProfileEditorModel
     public bool SupportsBackgroundResponses { get; set; }
     public string ConfigurationJson { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
+    public bool IsPrivateProvider { get; set; }
     public List<string> SuggestedModels { get; set; } = [];
+    public List<ProviderModelTokenPriceEditorModel> ModelPrices { get; set; } = [];
 
     public static ProviderProfileEditorModel FromDefinition(ProviderProfile definition)
     {
@@ -120,7 +122,9 @@ public sealed class ProviderProfileEditorModel
             SupportsBackgroundResponses = definition.SupportsBackgroundResponses,
             ConfigurationJson = definition.ConfigurationJson,
             Notes = definition.Notes,
-            SuggestedModels = definition.SuggestedModels.ToList()
+            IsPrivateProvider = definition.IsPrivateProvider,
+            SuggestedModels = definition.SuggestedModels.ToList(),
+            ModelPrices = ProviderPricingDefaults.ToEditorModels(definition.ModelPrices)
         };
     }
 }

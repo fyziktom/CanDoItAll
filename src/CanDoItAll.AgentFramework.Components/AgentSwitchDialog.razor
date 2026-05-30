@@ -61,6 +61,7 @@
 
                         <AgentSelectionCard Agent="@agent"
                                             IsSelected="@isSelected"
+                                            IsPrivateProvider="@PrivateAgentIds.Contains(agent.Id)"
                                             Compact="true"
                                             CenterContent="true"
                                             ShowFavorite="true"
@@ -92,6 +93,9 @@
 
     [Parameter]
     public Guid? SelectedAgentId { get; set; }
+
+    [Parameter]
+    public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
 
     [Parameter]
     public Func<AgentDefinition, Task<AgentDefinition>>? FavoriteToggled { get; set; }

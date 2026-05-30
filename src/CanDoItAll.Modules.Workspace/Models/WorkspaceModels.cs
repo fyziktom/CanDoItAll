@@ -7,6 +7,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Workspace;
 
+using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using ProviderModelTokenPriceEditorModel = CanDoItAll.AgentFramework.Models.ProviderModelTokenPriceEditorModel;
+using ProviderPricingDefaults = CanDoItAll.AgentFramework.Models.ProviderPricingDefaults;
+using ProviderPricingMetadata = CanDoItAll.AgentFramework.Models.ProviderPricingMetadata;
+
 public sealed class WorkspaceSettings
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -107,6 +112,7 @@ public sealed record ProviderProfileSummary(
     string BaseUrl,
     string DefaultModel,
     bool IsEnabled,
+    bool IsPrivateProvider,
     string? LastHealthStatus,
     DateTimeOffset? LastHealthCheckAtUtc);
 
@@ -133,6 +139,10 @@ public sealed class ProviderProfileEditorModel
     public bool SupportsVision { get; set; }
 
     public ConnectorConfigState Configuration { get; set; } = new();
+
+    public bool IsPrivateProvider { get; set; }
+
+    public List<ProviderModelTokenPriceEditorModel> ModelPrices { get; set; } = [];
 }
 
 public sealed record ProviderHealthResult(bool Success, string Message);
@@ -215,15 +225,19 @@ public sealed partial class WorkspaceService(
             .Select(profile =>
             {
                 var providerPlugin = providerRegistry.Resolve(profile);
+                var connectorPluginKey = providerPlugin?.Manifest.PluginKey ?? profile.ConnectorPluginKey;
+                var pricingMetadata = ProviderPricingMetadata.Read(profile.ExtraSettingsJson);
+                var pricingKind = ResolveAgentFrameworkProviderKind(connectorPluginKey);
                 return new ProviderProfileSummary(
                 profile.Id,
                 profile.Name,
                 profile.ProviderKind,
-                providerPlugin?.Manifest.PluginKey ?? profile.ConnectorPluginKey,
+                connectorPluginKey,
                 providerPlugin?.Manifest.DisplayName ?? profile.ConnectorPluginKey,
                 profile.BaseUrl,
                 profile.DefaultModel,
                 profile.IsEnabled,
+                ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, pricingMetadata.IsPrivateProvider),
                 profile.LastHealthStatus,
                 profile.LastHealthCheckAtUtc);
             })
@@ -246,11 +260,19 @@ public sealed partial class WorkspaceService(
             return NewProvider();
         }
 
+        var connectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey;
+        var pricingKind = ResolveAgentFrameworkProviderKind(connectorPluginKey);
+        var pricingMetadata = ProviderPricingMetadata.Read(provider.ExtraSettingsJson);
+        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
+            pricingKind,
+            provider.DefaultModel,
+            pricingMetadata.ModelPrices);
+
         return new ProviderProfileEditorModel
         {
             Id = provider.Id,
             Name = provider.Name,
-            ConnectorPluginKey = providerRegistry.Resolve(provider)?.Manifest.PluginKey ?? provider.ConnectorPluginKey,
+            ConnectorPluginKey = connectorPluginKey,
             ConfigSchemaVersion = provider.ConfigSchemaVersion,
             ApiKeySecretId = provider.ApiKeySecretId,
             IsEnabled = provider.IsEnabled,
@@ -258,7 +280,11 @@ public sealed partial class WorkspaceService(
             SupportsToolCalling = provider.SupportsToolCalling,
             SupportsStructuredOutput = provider.SupportsStructuredOutput,
             SupportsVision = provider.SupportsVision,
-            Configuration = BuildProviderConfiguration(provider)
+            Configuration = BuildProviderConfiguration(provider),
+            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(
+                pricingKind,
+                pricingMetadata.IsPrivateProvider),
+            ModelPrices = ProviderPricingDefaults.ToEditorModels(modelPrices)
         };
     }
 
@@ -298,6 +324,17 @@ public sealed partial class WorkspaceService(
             return Result<Guid>.Failure(Error.Validation("Provider timeout must be at least five seconds."));
         }
 
+        var defaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
+        var pricingKind = ResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey);
+        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
+            pricingKind,
+            defaultModel,
+            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
+        if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var pricingValidationMessage))
+        {
+            return Result<Guid>.Failure(Error.Validation(pricingValidationMessage));
+        }
+
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var entity = model.Id.HasValue
             ? await dbContext.Set<ProviderProfile>().FirstOrDefaultAsync(item => item.Id == model.Id.Value, cancellationToken)
@@ -315,7 +352,7 @@ public sealed partial class WorkspaceService(
         entity.ConfigSchemaVersion = configSchemaVersion;
         entity.BaseUrl = configuredBaseUrl.Trim().TrimEnd('/');
         entity.ApiKeySecretId = model.ApiKeySecretId;
-        entity.DefaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
+        entity.DefaultModel = defaultModel;
         entity.TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds);
         entity.IsEnabled = model.IsEnabled;
         var capabilityDefaults = WorkspaceProviderCapabilityDefaults.Resolve(providerPlugin.Manifest.PluginKey);
@@ -324,7 +361,10 @@ public sealed partial class WorkspaceService(
         entity.SupportsStructuredOutput = capabilityDefaults.SupportsStructuredOutput;
         entity.SupportsVision = string.Equals(providerPlugin.Manifest.PluginKey, OpenAiProviderAdapter.PluginKey, StringComparison.OrdinalIgnoreCase) &&
                                 model.SupportsVision;
-        entity.ExtraSettingsJson = model.Configuration.ToJson();
+        entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
+            model.Configuration.ToJson(),
+            ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, model.IsPrivateProvider),
+            modelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(
@@ -378,7 +418,11 @@ public sealed partial class WorkspaceService(
         IsEnabled = true,
         SupportsStreaming = true,
         SupportsToolCalling = true,
-        SupportsStructuredOutput = true
+        SupportsStructuredOutput = true,
+        IsPrivateProvider = false,
+        ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
+            AgentFrameworkProviderKind.OpenAi,
+            OpenAiProviderAdapter.DefaultModel)
     };
 
     private static string ResolveDefaultModel(ProviderProfileEditorModel model, string pluginKey)
@@ -442,6 +486,17 @@ public sealed partial class WorkspaceService(
         configuration.SetNumber(ProviderConnectorFieldKeys.TimeoutSeconds, provider.TimeoutSeconds);
 
         return configuration;
+    }
+
+    private static AgentFrameworkProviderKind ResolveAgentFrameworkProviderKind(string? connectorPluginKey)
+    {
+        return connectorPluginKey?.Trim() switch
+        {
+            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            _ => AgentFrameworkProviderKind.Ollama
+        };
     }
 }
 

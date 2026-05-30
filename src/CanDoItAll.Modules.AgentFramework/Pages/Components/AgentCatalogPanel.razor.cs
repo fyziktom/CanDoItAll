@@ -38,6 +38,7 @@ public partial class AgentCatalogPanel
 
     private IReadOnlyList<AgentDefinition> agents = [];
     private IReadOnlyList<AgentTeamDefinition> teams = [];
+    private IReadOnlyDictionary<Guid, bool> privateProviderById = new Dictionary<Guid, bool>();
     private readonly HashSet<string> expandedTreeNodeIds = [TeamRootTreeNodeId];
     private string agentSearch = string.Empty;
     private bool hasLoaded;
@@ -184,9 +185,13 @@ public partial class AgentCatalogPanel
             var agentsTask = InitialAgents is null
                 ? WorkspaceService.ListAgentsAsync(includeTemplates: false)
                 : Task.FromResult(InitialAgents);
+            var providersTask = InitialProviders is null
+                ? WorkspaceService.ListProvidersAsync()
+                : Task.FromResult(InitialProviders);
             var teamsTask = WorkspaceService.ListAgentTeamsAsync();
 
             agents = (await agentsTask).ToList();
+            privateProviderById = BuildPrivateProviderMap(await providersTask);
             teams = (await teamsTask).ToList();
             ExpandTeamNodes();
 
@@ -404,7 +409,8 @@ public partial class AgentCatalogPanel
                 new Dictionary<string, object?>
                 {
                     [nameof(AgentTeamMembersDialog.Team)] = team,
-                    [nameof(AgentTeamMembersDialog.Agents)] = agents
+                    [nameof(AgentTeamMembersDialog.Agents)] = agents,
+                    [nameof(AgentTeamMembersDialog.PrivateAgentIds)] = ResolvePrivateAgentIds()
                 },
                 new DialogOptions
                 {
@@ -464,8 +470,10 @@ public partial class AgentCatalogPanel
     private async Task ReloadCatalogAsync()
     {
         var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        var providersTask = WorkspaceService.ListProvidersAsync();
         var teamsTask = WorkspaceService.ListAgentTeamsAsync();
         agents = (await agentsTask).ToList();
+        privateProviderById = BuildPrivateProviderMap(await providersTask);
         teams = (await teamsTask).ToList();
         if (selectedTeamId.HasValue &&
             teams.All(item => item.Id != selectedTeamId.Value))
@@ -489,6 +497,28 @@ public partial class AgentCatalogPanel
     {
         var team = SelectedTeam;
         return team is null || team.AgentIds.Contains(agent.Id);
+    }
+
+    private bool UsesPrivateProvider(AgentDefinition agent)
+    {
+        return agent.ProviderProfileId.HasValue &&
+               privateProviderById.TryGetValue(agent.ProviderProfileId.Value, out var isPrivateProvider) &&
+               isPrivateProvider;
+    }
+
+    private IReadOnlyCollection<Guid> ResolvePrivateAgentIds()
+    {
+        return agents
+            .Where(UsesPrivateProvider)
+            .Select(agent => agent.Id)
+            .ToHashSet();
+    }
+
+    private static IReadOnlyDictionary<Guid, bool> BuildPrivateProviderMap(IReadOnlyList<ProviderProfile> providers)
+    {
+        return providers.ToDictionary(
+            provider => provider.Id,
+            provider => provider.IsPrivateProvider);
     }
 
     private bool MatchesAgentSearch(AgentDefinition agent)

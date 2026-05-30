@@ -22,6 +22,15 @@ public sealed class ProviderProfileService : IProviderProfileService
     {
         ArgumentNullException.ThrowIfNull(model);
 
+        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
+            model.Kind,
+            model.DefaultModel,
+            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
+        if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var validationMessage))
+        {
+            throw new InvalidOperationException(validationMessage);
+        }
+
         var profile = new ProviderProfile(
             Id: model.Id ?? Guid.NewGuid(),
             Name: NormalizeText(model.Name),
@@ -40,7 +49,11 @@ public sealed class ProviderProfileService : IProviderProfileService
             Notes: NormalizeText(model.Notes),
             HealthStatus: NormalizeHealthStatus(current?.HealthStatus),
             LastCheckedAtUtc: current?.LastCheckedAtUtc,
-            SuggestedModels: NormalizeSuggestedModels(model.SuggestedModels));
+            SuggestedModels: NormalizeSuggestedModels(model.SuggestedModels))
+        {
+            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(model.Kind, model.IsPrivateProvider),
+            ModelPrices = modelPrices
+        };
 
         return NormalizeImportedProfile(profile);
     }
@@ -79,6 +92,15 @@ public sealed class ProviderProfileService : IProviderProfileService
             normalizedBackgroundResponses = false;
         }
 
+        var metadata = ProviderPricingMetadata.Read(provider.ConfigurationJson);
+        var configuredPrices = provider.ModelPrices.Count > 0
+            ? provider.ModelPrices
+            : metadata.ModelPrices;
+        var normalizedModelPrices = ProviderPricingDefaults.NormalizeModelPrices(
+            normalizedKind,
+            provider.DefaultModel,
+            configuredPrices);
+
         return provider with
         {
             Name = NormalizeText(provider.Name),
@@ -93,7 +115,11 @@ public sealed class ProviderProfileService : IProviderProfileService
             ConfigurationJson = NormalizeConfigurationJson(provider.ConfigurationJson),
             Notes = NormalizeText(provider.Notes),
             HealthStatus = NormalizeHealthStatus(provider.HealthStatus),
-            SuggestedModels = NormalizeSuggestedModels(provider.SuggestedModels)
+            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(
+                normalizedKind,
+                metadata.IsPrivateProvider ?? provider.IsPrivateProvider),
+            SuggestedModels = NormalizeSuggestedModels(provider.SuggestedModels),
+            ModelPrices = normalizedModelPrices
         };
     }
 

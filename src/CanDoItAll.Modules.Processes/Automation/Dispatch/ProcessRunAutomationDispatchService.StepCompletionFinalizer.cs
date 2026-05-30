@@ -577,6 +577,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (completionResult.IsSuccess)
         {
+            await TrySyncProcessRunActualCostAsync(candidate.Run.Id, cancellationToken);
             return;
         }
 

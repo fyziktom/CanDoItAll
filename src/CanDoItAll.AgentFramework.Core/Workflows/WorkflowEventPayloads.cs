@@ -20,7 +20,8 @@ public static class WorkflowEventPayloads
         string reference = "",
         int? originalInlineCharacters = null,
         bool? inlineTruncated = null,
-        int? maxInlinePayloadCharacters = null)
+        int? maxInlinePayloadCharacters = null,
+        WorkflowUsageMetrics? usage = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
 
@@ -40,7 +41,10 @@ public static class WorkflowEventPayloads
             boundedInlineJson,
             originalInlineCharacters ?? (string.IsNullOrEmpty(originalInlineJson) ? null : originalInlineJson.Length),
             inlineTruncated ?? originalInlineJson.Length > inlineLimit || redactedInlineJson.Length > inlineLimit,
-            boundedReference);
+            boundedReference)
+        {
+            Usage = usage
+        };
 
         return JsonSerializer.Serialize(envelope, JsonOptions);
     }

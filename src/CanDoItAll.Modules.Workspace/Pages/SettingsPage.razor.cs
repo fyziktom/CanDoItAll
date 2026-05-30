@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.Workspace.Pages;
 
+using AgentFrameworkProviderKind = CanDoItAll.AgentFramework.Models.ProviderKind;
+using ProviderPricingDefaults = CanDoItAll.AgentFramework.Models.ProviderPricingDefaults;
+
 public partial class SettingsPage
 {
     [SupplyParameterFromQuery(Name = "tab")]
@@ -354,6 +357,8 @@ public partial class SettingsPage
             ? OpenAiProviderAdapter.PluginKey
             : connectorPluginKey.Trim();
         var defaults = WorkspaceProviderCapabilityDefaults.Resolve(normalizedPluginKey);
+        var configuration = BuildDefaultProviderConfiguration(normalizedPluginKey);
+        var pricingKind = ResolveAgentFrameworkProviderKind(normalizedPluginKey);
         return new ProviderProfileEditorModel
         {
             ConnectorPluginKey = normalizedPluginKey,
@@ -363,7 +368,11 @@ public partial class SettingsPage
             SupportsToolCalling = defaults.SupportsToolCalling,
             SupportsStructuredOutput = defaults.SupportsStructuredOutput,
             SupportsVision = defaults.SupportsVision,
-            Configuration = BuildDefaultProviderConfiguration(normalizedPluginKey)
+            Configuration = configuration,
+            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, null),
+            ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
+                pricingKind,
+                configuration.GetText(ProviderConnectorFieldKeys.DefaultModel))
         };
     }
 
@@ -393,6 +402,7 @@ public partial class SettingsPage
 
         mergedConfiguration.KeepOnly(manifest.ConfigurationSchema.Fields.Select(field => field.Key));
         providerModel.Configuration = mergedConfiguration;
+        NormalizeProviderPricingForCurrentPlugin(manifest.PluginKey, resetCapabilities);
 
         if (!resetCapabilities)
         {
@@ -404,6 +414,27 @@ public partial class SettingsPage
         providerModel.SupportsToolCalling = defaults.SupportsToolCalling;
         providerModel.SupportsStructuredOutput = defaults.SupportsStructuredOutput;
         providerModel.SupportsVision = defaults.SupportsVision;
+    }
+
+    private void NormalizeProviderPricingForCurrentPlugin(string pluginKey, bool resetPricing)
+    {
+        var pricingKind = ResolveAgentFrameworkProviderKind(pluginKey);
+        var defaultModel = providerModel.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
+        if (resetPricing || providerModel.ModelPrices.Count == 0)
+        {
+            providerModel.ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(pricingKind, defaultModel);
+            providerModel.IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(pricingKind, null);
+            return;
+        }
+
+        var normalizedPrices = ProviderPricingDefaults.NormalizeModelPrices(
+            pricingKind,
+            defaultModel,
+            ProviderPricingDefaults.FromEditorModels(providerModel.ModelPrices));
+        providerModel.ModelPrices = ProviderPricingDefaults.ToEditorModels(normalizedPrices);
+        providerModel.IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(
+            pricingKind,
+            providerModel.IsPrivateProvider);
     }
 
     private static ConnectorConfigState BuildDefaultProviderConfiguration(string pluginKey)
@@ -442,6 +473,17 @@ public partial class SettingsPage
             ProviderConnectorFieldKeys.BaseUrl => "provider-base-url-input",
             ProviderConnectorFieldKeys.DefaultModel => "provider-default-model-input",
             _ => $"provider-config-{field.Key}"
+        };
+    }
+
+    private static AgentFrameworkProviderKind ResolveAgentFrameworkProviderKind(string? connectorPluginKey)
+    {
+        return connectorPluginKey?.Trim() switch
+        {
+            ScenarioHarnessProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            ProcessMockProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
+            _ => AgentFrameworkProviderKind.Ollama
         };
     }
 }

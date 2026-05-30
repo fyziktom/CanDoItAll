@@ -215,6 +215,7 @@ public sealed class MafWorkflowCompiler(
             CancellationToken cancellationToken)
         {
             var progressObserver = WorkflowNodeExecutionProgressScope.Current;
+            WorkflowUsageMetrics? usage = null;
             await RecordProgressAsync(
                 progressObserver,
                 definition,
@@ -231,7 +232,8 @@ public sealed class MafWorkflowCompiler(
                     node,
                     WorkflowNodeExecutionProgressState.Completed,
                     cancellationToken,
-                    payloadJson: output.PayloadJson);
+                    payloadJson: output.PayloadJson,
+                    usage: usage);
                 return output;
             }
             catch (WorkflowExternalRequestPendingException)
@@ -290,6 +292,7 @@ public sealed class MafWorkflowCompiler(
                         throw new InvalidOperationException($"LLM workflow node '{node.Id}' returned result for node '{result.NodeId}'.");
                     }
 
+                    usage = result.Usage;
                     return new WorkflowNodeInput(result.PayloadJson);
                 }
 
@@ -341,7 +344,8 @@ public sealed class MafWorkflowCompiler(
         WorkflowNodeExecutionProgressState state,
         CancellationToken cancellationToken,
         string payloadJson = "",
-        string errorMessage = "")
+        string errorMessage = "",
+        WorkflowUsageMetrics? usage = null)
     {
         return observer is null
             ? ValueTask.CompletedTask
@@ -356,7 +360,8 @@ public sealed class MafWorkflowCompiler(
                 {
                     ExecutorId = node.Settings.ExecutorId,
                     PayloadJson = payloadJson,
-                    ErrorMessage = errorMessage
+                    ErrorMessage = errorMessage,
+                    Usage = usage
                 },
                 cancellationToken);
     }

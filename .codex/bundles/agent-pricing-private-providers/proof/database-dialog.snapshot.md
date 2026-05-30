@@ -1,0 +1,50 @@
+- dialog "Database profiles" [ref=e889] [box=12,86,908,748]:
+  - banner [ref=e890] [box=13,87,906,109]:
+    - generic [ref=e891] [box=33,103,866,76]:
+      - generic [ref=e892] [box=33,103,677,76]:
+        - generic [ref=e893] [box=33,103,66,16]: Startup
+        - heading "Database profiles" [level=2] [ref=e895] [box=33,123,149,28]
+        - paragraph [ref=e896] [box=33,155,677,24]: Continue with the resolved runtime database or activate another saved PostgreSQL profile for the next restart.
+      - button "Close" [ref=e898] [box=807,103,92,42]:
+        - generic [ref=e899] [box=820,114,20,20]: close
+        - generic [ref=e900] [box=848,112,38,24]: Close
+  - generic [ref=e902] [box=33,216,866,522]:
+    - generic [ref=e903] [box=33,216,628,242]:
+      - generic [ref=e904] [box=50,233,594,44]:
+        - generic [ref=e905] [box=50,233,231,44]:
+          - paragraph [ref=e906] [box=50,233,212,16]: Current runtime profile
+          - paragraph [ref=e907] [box=50,253,231,24]: Configured in-memory override
+        - generic [ref=e908] [box=379,233,265,26]:
+          - generic [ref=e909] [box=379,233,83,26]: In-memory
+          - generic [ref=e910] [box=469,233,83,26]: In-memory
+          - generic [ref=e911] [box=560,233,84,26]: Config lock
+      - generic [ref=e912] [box=50,289,594,124]:
+        - generic [ref=e913] [box=50,289,277,58]:
+          - generic [ref=e914] [box=50,289,237,58]:
+            - paragraph [ref=e915] [box=50,289,132,16]: Runtime target
+            - paragraph [ref=e916] [box=50,309,237,38]: agent-pricing-private-validation
+          - button "Copy active database target" [ref=e917] [box=295,289,32,38]:
+            - generic [ref=e918] [box=301,298,20,20]: content_copy
+            - generic [ref=e919] [box=311,307,1,1]: content copy
+        - generic [ref=e921] [box=50,355,594,58]:
+          - generic [ref=e922] [box=50,355,554,58]:
+            - paragraph [ref=e923] [box=50,355,138,16]: Workspace root
+            - paragraph [ref=e924] [box=50,375,554,38]: C:\repositories\CanDoItAll\.artifacts\agent-pricing-private-validation\workspace
+          - button "Copy active database workspace root" [ref=e925] [box=612,355,32,38]:
+            - generic [ref=e926] [box=618,364,20,20]: content_copy
+            - generic [ref=e927] [box=627,373,1,1]: content copy
+      - paragraph [ref=e929] [box=50,425,594,16]: "Selection source: Explicit startup override"
+    - generic [ref=e930] [box=33,474,866,74]: Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+    - generic [ref=e931] [box=33,564,714,174]:
+      - paragraph [ref=e932] [box=54,597,672,16]: No saved profiles
+      - heading "Create the first PostgreSQL profile" [level=3] [ref=e933] [box=54,621,672,28]
+      - paragraph [ref=e934] [box=54,657,672,48]: Saved profiles appear here after they are persisted through the control plane or the Data Sources settings tab.
+  - contentinfo [ref=e935] [box=13,758,906,75]:
+    - generic [ref=e936] [box=33,775,866,42]:
+      - generic [ref=e937] [box=33,775,276,42]:
+        - button "Continue" [ref=e938] [box=33,775,98,42]:
+          - generic [ref=e939] [box=50,784,64,24]: Continue
+        - button "Open Data Sources" [ref=e940] [box=139,775,170,42]:
+          - generic [ref=e941] [box=156,784,136,24]: Open Data Sources
+      - button "Running now" [disabled] [ref=e943] [box=772,775,127,42]:
+        - generic [ref=e944] [box=789,784,93,24]: Running now

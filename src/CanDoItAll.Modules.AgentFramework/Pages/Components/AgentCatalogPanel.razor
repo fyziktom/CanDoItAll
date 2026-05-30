@@ -122,6 +122,7 @@
                         {
                             <AgentSelectionCard Agent="@agent"
                                                 IsSelected="@(selectedAgentId == agent.Id)"
+                                                IsPrivateProvider="@UsesPrivateProvider(agent)"
                                                 SelectedLabel="Selected"
                                                 ShowChatHistory="true"
                                                 ShowDetailsTooltip="true"

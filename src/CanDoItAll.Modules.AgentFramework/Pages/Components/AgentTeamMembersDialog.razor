@@ -27,6 +27,7 @@
                 {
                     <AgentSelectionCard Agent="@agent"
                                         IsSelected="@selectedAgentIds.Contains(agent.Id)"
+                                        IsPrivateProvider="@PrivateAgentIds.Contains(agent.Id)"
                                         SelectedLabel="In team"
                                         Compact="true"
                                         CenterContent="true"
@@ -59,6 +60,9 @@
 
     [Parameter]
     public IReadOnlyList<AgentDefinition> Agents { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyCollection<Guid> PrivateAgentIds { get; set; } = [];
 
     [CascadingParameter]
     public DialogReference? DialogReference { get; set; }

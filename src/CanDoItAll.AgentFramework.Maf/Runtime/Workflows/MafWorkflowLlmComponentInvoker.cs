@@ -22,7 +22,8 @@ public sealed class MafWorkflowLlmComponentInvoker(
         ArgumentNullException.ThrowIfNull(input);
 
         var provider = await ResolveProviderAsync(component, cancellationToken);
-        var agent = CreateAgent(component, provider);
+        var model = ResolveEffectiveModel(component, provider);
+        var agent = CreateAgent(component, provider, model);
         var now = DateTimeOffset.UtcNow;
         var session = new ChatSessionRecord(
             Id: Guid.NewGuid(),
@@ -53,10 +54,30 @@ public sealed class MafWorkflowLlmComponentInvoker(
             ValidateJsonPayload(payload, node, component);
         }
 
+        var usage = ProviderPricingCalculator.TryCalculate(
+            provider.Name,
+            model,
+            response.InputTokens,
+            0,
+            response.OutputTokens,
+            provider.ModelPrices,
+            out var cost)
+                ? new WorkflowUsageMetrics(
+                    provider.Name,
+                    model,
+                    response.InputTokens,
+                    0,
+                    response.OutputTokens,
+                    cost.TotalUsd)
+                : null;
+
         return new WorkflowNodeExecutionResult(
             node.Id,
             payload,
-            component.ResultShape);
+            component.ResultShape)
+        {
+            Usage = usage
+        };
     }
 
     private async Task<ProviderProfile> ResolveProviderAsync(
@@ -105,7 +126,10 @@ public sealed class MafWorkflowLlmComponentInvoker(
         => string.Equals(provider.DefaultModel, model, StringComparison.OrdinalIgnoreCase)
            || provider.SuggestedModels.Any(item => string.Equals(item, model, StringComparison.OrdinalIgnoreCase));
 
-    private static AgentDefinition CreateAgent(LlmCallComponent component, ProviderProfile provider)
+    private static AgentDefinition CreateAgent(
+        LlmCallComponent component,
+        ProviderProfile provider,
+        string model)
     {
         var now = DateTimeOffset.UtcNow;
         return new AgentDefinition(
@@ -116,7 +140,7 @@ public sealed class MafWorkflowLlmComponentInvoker(
             Instructions: component.Instructions,
             Status: AgentLifecycleStatus.Active,
             ProviderProfileId: provider.Id,
-            Model: component.Model,
+            Model: model,
             Workload: AgentWorkloadKind.General,
             ChatHistoryMode: AgentChatHistoryMode.FrameworkManaged,
             Temperature: component.ModelSettings.Temperature ?? 0.2,
@@ -139,6 +163,15 @@ public sealed class MafWorkflowLlmComponentInvoker(
             Tags: ["workflow", "llm-component"],
             CreatedAtUtc: now,
             UpdatedAtUtc: now);
+    }
+
+    private static string ResolveEffectiveModel(
+        LlmCallComponent component,
+        ProviderProfile provider)
+    {
+        return string.IsNullOrWhiteSpace(component.Model)
+            ? provider.DefaultModel
+            : component.Model.Trim();
     }
 
     private static string BuildPrompt(

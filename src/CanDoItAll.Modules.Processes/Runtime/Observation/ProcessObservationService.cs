@@ -671,6 +671,12 @@ internal sealed class ProcessObservationService(
         IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries,
         IReadOnlyList<AgentRunMetric> metrics)
     {
+        var observedActualCost = observedRuns.Sum(item => item.ActualCost);
+        var liveMetricCost = ProviderPricingCalculator.SumKnownCosts(metrics);
+        var actualCost = liveMetricCost > 0m
+            ? Math.Max(observedActualCost, liveMetricCost)
+            : observedActualCost;
+
         return new ProcessLiveStats(
             observedRuns.Count,
             observedRuns.Count(item => item.Status == ProcessRunStatus.Active),
@@ -685,7 +691,7 @@ internal sealed class ProcessObservationService(
             ClampToInt(metrics.Sum(item => (long)item.OutputTokens)),
             ClampToInt(metrics.Sum(item => (long)item.ToolCalls)),
             observedRuns.Sum(item => item.EstimatedCost),
-            observedRuns.Sum(item => item.ActualCost));
+            actualCost);
     }
 
     private static IReadOnlyList<ProcessLiveMetricPoint> BuildLiveMetricPoints(

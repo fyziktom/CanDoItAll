@@ -22,6 +22,8 @@ public sealed record WorkflowNodeExecutionProgress(
     public string PayloadJson { get; init; } = string.Empty;
 
     public string ErrorMessage { get; init; } = string.Empty;
+
+    public WorkflowUsageMetrics? Usage { get; init; }
 }
 
 public interface IWorkflowNodeExecutionProgressObserver

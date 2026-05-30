@@ -528,7 +528,17 @@ public partial class ProjectStructurePage
 
         try
         {
-            var agents = await AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+            var agentsTask = AgentWorkspaceService.ListAgentsAsync(includeTemplates: false);
+            var providersTask = AgentWorkspaceService.ListProvidersAsync();
+            var agents = await agentsTask;
+            var privateProviderIds = (await providersTask)
+                .Where(provider => provider.IsPrivateProvider)
+                .Select(provider => provider.Id)
+                .ToHashSet();
+            var privateAgentIds = agents
+                .Where(agent => agent.ProviderProfileId.HasValue && privateProviderIds.Contains(agent.ProviderProfileId.Value))
+                .Select(agent => agent.Id)
+                .ToHashSet();
             await RefreshProcessStartAgentMetadataAsync(agents);
             var selectedAgentId = role.Candidates
                 .FirstOrDefault(candidate => candidate.IsSelected && candidate.TechnicalAgentId.HasValue)
@@ -539,6 +549,7 @@ public partial class ProjectStructurePage
                 {
                     [nameof(AgentSwitchDialog.Agents)] = agents,
                     [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId,
+                    [nameof(AgentSwitchDialog.PrivateAgentIds)] = privateAgentIds,
                     [nameof(AgentSwitchDialog.FavoriteToggled)] =
                         (Func<AgentDefinition, Task<AgentDefinition>>)ToggleProcessStartAgentFavoriteAsync
                 },

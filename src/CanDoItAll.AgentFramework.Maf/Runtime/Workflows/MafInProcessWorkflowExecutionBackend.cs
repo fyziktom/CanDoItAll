@@ -585,7 +585,8 @@ public sealed class MafInProcessWorkflowExecutionBackend : IWorkflowExecutionBac
                     reference: payloadResult.Reference,
                     originalInlineCharacters: payloadResult.OriginalPayloadCharacters,
                     inlineTruncated: payloadResult.InlineTruncated,
-                    maxInlinePayloadCharacters: payloadResult.MaxInlinePayloadCharacters),
+                    maxInlinePayloadCharacters: payloadResult.MaxInlinePayloadCharacters,
+                    usage: progress.Usage),
                 progress.OccurredAtUtc));
             AddArtifact(payloadResult.Artifact);
 

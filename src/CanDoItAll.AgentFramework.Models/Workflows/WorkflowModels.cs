@@ -689,7 +689,11 @@ public sealed record WorkflowEventPayloadEnvelope(
     string InlineJson,
     int? InlineCharacters,
     bool InlineTruncated,
-    string Reference);
+    string Reference)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowUsageMetrics? Usage { get; init; }
+}
 
 public sealed record WorkflowExternalRequestRecord(
     WorkflowExternalRequestId Id,
@@ -737,4 +741,8 @@ public sealed record WorkflowNodeInput(string PayloadJson);
 public sealed record WorkflowNodeExecutionResult(
     WorkflowNodeId NodeId,
     string PayloadJson,
-    WorkflowValueShape ResultShape);
+    WorkflowValueShape ResultShape)
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WorkflowUsageMetrics? Usage { get; init; }
+}

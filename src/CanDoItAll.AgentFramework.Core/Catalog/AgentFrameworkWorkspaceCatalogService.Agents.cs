@@ -63,6 +63,10 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
             EnsureUniqueTemplateKey(catalog.Agents, id, normalizedTemplateKey, "Agent save");
             var normalizedModel = NormalizeAgentModelForSave(model.Model);
+            EnsureManualModelOverrideHasPricing(
+                model.ProviderProfileId,
+                normalizedModel,
+                catalog.Providers.Select(providerProfileService.NormalizeImportedProfile).ToList());
 
             var definition = new AgentDefinition(
                 Id: id,
@@ -113,6 +117,31 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
 
     private static string NormalizeAgentModelForSave(string? model)
         => string.IsNullOrWhiteSpace(model) ? string.Empty : model.Trim();
+
+    private static void EnsureManualModelOverrideHasPricing(
+        Guid? providerProfileId,
+        string normalizedModel,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        if (!providerProfileId.HasValue || string.IsNullOrWhiteSpace(normalizedModel))
+        {
+            return;
+        }
+
+        var provider = providers.FirstOrDefault(item => item.Id == providerProfileId.Value);
+        if (provider is null)
+        {
+            return;
+        }
+
+        if (ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, normalizedModel, out _))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Agent model override '{normalizedModel}' for provider '{provider.Name}' requires a model price row on the provider profile.");
+    }
 
     public async Task DeleteAgentAsync(Guid agentId, CancellationToken cancellationToken = default)
     {

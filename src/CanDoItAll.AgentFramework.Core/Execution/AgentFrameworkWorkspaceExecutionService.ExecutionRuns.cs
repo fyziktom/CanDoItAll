@@ -205,21 +205,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         CreatedAtUtc: DateTimeOffset.UtcNow,
                         TokenEstimate: totalOutputTokens);
 
-                var metric = new AgentRunMetric(
-                    Id: Guid.NewGuid(),
-                    AgentId: agent.Id,
-                    ChatSessionId: run.ChatSessionId,
-                    CreatedAtUtc: DateTimeOffset.UtcNow,
-                    Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
-                    ProviderName: provider.Name,
-                    Model: ResolveModel(agent, provider),
-                    DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
-                    InputTokens: totalInputTokens,
-                    OutputTokens: totalOutputTokens,
-                    ToolCalls: totalToolCalls)
-                {
-                    ExecutionRunId = run.Id
-                };
+                var metric = PriceMetric(
+                    new AgentRunMetric(
+                        Id: Guid.NewGuid(),
+                        AgentId: agent.Id,
+                        ChatSessionId: run.ChatSessionId,
+                        CreatedAtUtc: DateTimeOffset.UtcNow,
+                        Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
+                        ProviderName: provider.Name,
+                        Model: ResolveModel(agent, provider),
+                        DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                        InputTokens: totalInputTokens,
+                        OutputTokens: totalOutputTokens,
+                        ToolCalls: totalToolCalls)
+                    {
+                        ExecutionRunId = run.Id
+                    },
+                    provider);
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -291,21 +293,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (Exception exception)
         {
-            var failureMetric = new AgentRunMetric(
-                Id: Guid.NewGuid(),
-                AgentId: agent.Id,
-                ChatSessionId: run.ChatSessionId,
-                CreatedAtUtc: DateTimeOffset.UtcNow,
-                Outcome: RunOutcome.Failed,
-                ProviderName: provider.Name,
-                Model: ResolveModel(agent, provider),
-                DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
-                InputTokens: 0,
-                OutputTokens: 0,
-                ToolCalls: 0)
-            {
-                ExecutionRunId = run.Id
-            };
+            var failureMetric = PriceMetric(
+                new AgentRunMetric(
+                    Id: Guid.NewGuid(),
+                    AgentId: agent.Id,
+                    ChatSessionId: run.ChatSessionId,
+                    CreatedAtUtc: DateTimeOffset.UtcNow,
+                    Outcome: RunOutcome.Failed,
+                    ProviderName: provider.Name,
+                    Model: ResolveModel(agent, provider),
+                    DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                    InputTokens: 0,
+                    OutputTokens: 0,
+                    ToolCalls: 0)
+                {
+                    ExecutionRunId = run.Id
+                },
+                provider);
 
             var failedRun = run with
             {
@@ -660,21 +664,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         CreatedAtUtc: DateTimeOffset.UtcNow,
                         TokenEstimate: totalOutputTokens);
 
-                var metric = new AgentRunMetric(
-                    Id: Guid.NewGuid(),
-                    AgentId: agent.Id,
-                    ChatSessionId: run.ChatSessionId,
-                    CreatedAtUtc: DateTimeOffset.UtcNow,
-                    Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
-                    ProviderName: provider.Name,
-                    Model: ResolveModel(agent, provider),
-                    DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
-                    InputTokens: totalInputTokens + (userMessage?.TokenEstimate ?? EstimateTokens(prompt)),
-                    OutputTokens: totalOutputTokens,
-                    ToolCalls: totalToolCalls)
-                {
-                    ExecutionRunId = run.Id
-                };
+                var metric = PriceMetric(
+                    new AgentRunMetric(
+                        Id: Guid.NewGuid(),
+                        AgentId: agent.Id,
+                        ChatSessionId: run.ChatSessionId,
+                        CreatedAtUtc: DateTimeOffset.UtcNow,
+                        Outcome: runtimeResponse.PendingApprovals.Count > 0 ? RunOutcome.Cancelled : RunOutcome.Succeeded,
+                        ProviderName: provider.Name,
+                        Model: ResolveModel(agent, provider),
+                        DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                        InputTokens: totalInputTokens + (userMessage?.TokenEstimate ?? EstimateTokens(prompt)),
+                        OutputTokens: totalOutputTokens,
+                        ToolCalls: totalToolCalls)
+                    {
+                        ExecutionRunId = run.Id
+                    },
+                    provider);
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -746,21 +752,23 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         }
         catch (Exception exception)
         {
-            var failureMetric = new AgentRunMetric(
-                Id: Guid.NewGuid(),
-                AgentId: agent.Id,
-                ChatSessionId: run.ChatSessionId,
-                CreatedAtUtc: DateTimeOffset.UtcNow,
-                Outcome: RunOutcome.Failed,
-                ProviderName: provider.Name,
-                Model: ResolveModel(agent, provider),
-                DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
-                InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
-                OutputTokens: 0,
-                ToolCalls: 0)
-            {
-                ExecutionRunId = run.Id
-            };
+            var failureMetric = PriceMetric(
+                new AgentRunMetric(
+                    Id: Guid.NewGuid(),
+                    AgentId: agent.Id,
+                    ChatSessionId: run.ChatSessionId,
+                    CreatedAtUtc: DateTimeOffset.UtcNow,
+                    Outcome: RunOutcome.Failed,
+                    ProviderName: provider.Name,
+                    Model: ResolveModel(agent, provider),
+                    DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
+                    InputTokens: userMessage?.TokenEstimate ?? EstimateTokens(prompt),
+                    OutputTokens: 0,
+                    ToolCalls: 0)
+                {
+                    ExecutionRunId = run.Id
+                },
+                provider);
 
             var failedRun = run with
             {
@@ -841,6 +849,15 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 "OPENAI_API_KEY",
                 resolution.ApiKey);
         }
+    }
+
+    private static AgentRunMetric PriceMetric(
+        AgentRunMetric metric,
+        ProviderProfile provider)
+    {
+        return ProviderPricingCalculator.TryCalculate(metric, provider, out var cost)
+            ? metric with { CostUsd = cost.TotalUsd }
+            : metric;
     }
 
     private static ExecutionRunRecord UpdateRunFromResponse(

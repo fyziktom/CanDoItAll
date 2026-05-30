@@ -536,6 +536,19 @@ public sealed class InMemoryWorkflowCatalogService :
             ];
         }
 
+        var effectiveModel = string.IsNullOrWhiteSpace(component.Model)
+            ? provider.DefaultModel
+            : component.Model.Trim();
+        if (!ProviderPricingDefaults.TryFindPrice(provider.ModelPrices, effectiveModel, out _))
+        {
+            return
+            [
+                new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidProviderModel,
+                    $"LLM Call Component '{component.Id}' model '{effectiveModel}' requires a model price row on provider '{provider.Name}'.")
+            ];
+        }
+
         return [];
     }
 

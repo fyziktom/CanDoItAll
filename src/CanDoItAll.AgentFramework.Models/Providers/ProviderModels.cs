@@ -103,7 +103,12 @@ public sealed record ProviderProfile(
     string HealthStatus,
     DateTimeOffset? LastCheckedAtUtc,
     IReadOnlyList<string> SuggestedModels,
-    ProviderProfilePurpose Purpose = ProviderProfilePurpose.Chat);
+    ProviderProfilePurpose Purpose = ProviderProfilePurpose.Chat)
+{
+    public bool IsPrivateProvider { get; init; }
+
+    public IReadOnlyList<ProviderModelTokenPrice> ModelPrices { get; init; } = [];
+}
 
 public sealed record ProviderHealthResult(
     bool Success,

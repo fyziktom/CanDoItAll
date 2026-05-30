@@ -1,0 +1,125 @@
+@using CanDoItAll.AgentFramework.Models
+@using CanDoItAll.Components.BaseLib
+
+<FormSection Title="Model pricing" Description="Configure input, cached input, and output prices in USD per one million tokens.">
+    <Stack GapScale="LayoutGap.Medium">
+        <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+            <label class="cda-inline-option">
+                <InputCheckbox @bind-Value="Model.IsPrivateProvider"
+                               disabled="@PrivateProviderLocked"
+                               data-testid="provider-private-input" />
+                Private provider
+            </label>
+        </Grid>
+
+        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
+            @for (var index = 0; index < Model.ModelPrices.Count; index++)
+            {
+                var price = Model.ModelPrices[index];
+                <div>
+                    <label class="cda-field-label">Model</label>
+                    <InputText @bind-Value="price.Model"
+                               class="cda-input"
+                               data-testid="@($"provider-pricing-model-{index}")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Input</label>
+                    <InputNumber @bind-Value="price.InputPerMillionTokensUsd"
+                                 class="cda-input"
+                                 data-testid="@($"provider-pricing-input-{index}")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Cached input</label>
+                    <InputNumber @bind-Value="price.CachedInputPerMillionTokensUsd"
+                                 class="cda-input"
+                                 data-testid="@($"provider-pricing-cached-{index}")" />
+                </div>
+                <div>
+                    <label class="cda-field-label">Output</label>
+                    <Cluster Gap="LayoutGap.Small">
+                        <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
+                                     class="cda-input"
+                                     data-testid="@($"provider-pricing-output-{index}")" />
+                        <Button Text="Remove"
+                                ButtonStyle="ButtonStyle.Light"
+                                Size="ButtonSize.Small"
+                                Click="@(() => RemovePriceRow(price))" />
+                    </Cluster>
+                </div>
+            }
+        </Grid>
+
+        <Cluster Gap="LayoutGap.Small">
+            <Button Text="Add model price"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="AddPriceRow" />
+            <Button Text="Reset defaults"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="ResetDefaults" />
+        </Cluster>
+    </Stack>
+</FormSection>
+
+@code {
+    [Parameter]
+    public required CanDoItAll.Modules.Workspace.ProviderProfileEditorModel Model { get; set; }
+
+    private CanDoItAll.AgentFramework.Models.ProviderKind PricingKind => ResolvePricingKind(Model.ConnectorPluginKey);
+
+    private bool PrivateProviderLocked => ProviderPricingDefaults.IsPrivateProvider(PricingKind);
+
+    protected override void OnParametersSet()
+    {
+        if (Model.ModelPrices.Count == 0)
+        {
+            ResetDefaults();
+        }
+
+        if (PrivateProviderLocked)
+        {
+            Model.IsPrivateProvider = true;
+        }
+    }
+
+    private void AddPriceRow()
+    {
+        var defaultPrice = ProviderPricingDefaults
+            .CreateDefaultPrices(PricingKind, ResolveDefaultModel())
+            .First();
+        Model.ModelPrices.Add(new ProviderModelTokenPriceEditorModel
+        {
+            InputPerMillionTokensUsd = defaultPrice.InputPerMillionTokensUsd,
+            CachedInputPerMillionTokensUsd = defaultPrice.CachedInputPerMillionTokensUsd,
+            OutputPerMillionTokensUsd = defaultPrice.OutputPerMillionTokensUsd
+        });
+    }
+
+    private void RemovePriceRow(ProviderModelTokenPriceEditorModel price)
+    {
+        Model.ModelPrices.Remove(price);
+    }
+
+    private void ResetDefaults()
+    {
+        Model.ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(PricingKind, ResolveDefaultModel());
+        Model.IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(PricingKind, null);
+    }
+
+    private string ResolveDefaultModel()
+    {
+        return Model.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
+    }
+
+    private static CanDoItAll.AgentFramework.Models.ProviderKind ResolvePricingKind(string? connectorPluginKey)
+    {
+        return connectorPluginKey?.Trim() switch
+        {
+            ScenarioHarnessProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            ProcessMockProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            OpenAiProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
+            _ => CanDoItAll.AgentFramework.Models.ProviderKind.Ollama
+        };
+    }
+}

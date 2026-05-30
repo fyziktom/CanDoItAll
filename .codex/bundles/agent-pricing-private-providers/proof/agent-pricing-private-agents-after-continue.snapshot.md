@@ -1,0 +1,129 @@
+- main [ref=e857] [box=12,8,893,4803]:
+  - group [ref=e858] [box=12,8,893,46]:
+    - generic "Workspace navigation" [ref=e859] [cursor=pointer] [box=29,21,859,20]
+  - generic [ref=e860] [box=12,62,893,76]:
+    - generic [ref=e864] [box=16,62,885,30]:
+      - button "Dashboard" [ref=e866] [box=25,67,85,20]:
+        - generic [ref=e867] [box=25,69,59,16]: Dashboard
+        - generic [ref=e869] [box=90,67,20,20]: push_pin
+      - button "Agents" [ref=e871] [box=134,69,38,16]:
+        - generic [ref=e872] [box=134,69,38,16]: Agents
+    - generic [ref=e874] [box=12,112,893,26]:
+      - generic [ref=e875] [box=420,112,202,26]:
+        - generic [ref=e876] [box=431,118,136,13]: Delivery Workspace
+        - generic [ref=e877] [box=572,117,38,16]: Agents
+      - generic [ref=e878] [box=630,112,117,26]: Interactive Server
+      - generic [ref=e879] [box=755,112,86,26]: Live items 0
+      - generic [ref=e880] [box=849,112,56,26]: Tabs 2
+  - generic [ref=e945] [box=29,163,859,4631]:
+    - generic [ref=e947] [box=29,163,844,102]:
+      - generic [ref=e948] [box=29,163,659,58]:
+        - generic [ref=e949] [box=29,163,659,28]:
+          - paragraph [ref=e950] [box=29,168,119,13]: AgentFramework
+          - heading "Integrated technical agent runtime" [level=1] [ref=e951] [box=158,163,269,28]
+        - generic [ref=e952] [box=29,199,659,22]:
+          - generic [ref=e955] [box=29,199,127,22]: 22 technical agents
+          - generic [ref=e958] [box=164,199,84,22]: 4 providers
+          - generic [ref=e961] [box=255,199,129,22]: 22 bound resources
+          - generic [ref=e964] [box=393,199,100,22]: 55 capabilities
+          - generic [ref=e967] [box=500,199,91,22]: 0 active runs
+          - generic [ref=e970] [box=599,199,89,22]: 0 failed runs
+      - generic [ref=e971] [box=29,229,193,36]:
+        - button "Show AgentFramework shell help" [ref=e973] [cursor=pointer] [box=29,239,17,17]:
+          - generic [ref=e974] [box=35,242,4,10]: "?"
+        - button "Feed defaults" [ref=e976] [box=54,229,36,36]:
+          - generic [ref=e977] [box=62,237,20,20]: sync
+          - generic [ref=e978] [box=71,247,1,1]: cloud sync
+        - button "Open CRM / HR agents" [ref=e980] [box=98,229,36,36]:
+          - generic [ref=e981] [box=106,237,20,20]: groups
+          - generic [ref=e982] [box=115,247,1,1]: groups
+        - button "Open workflows" [ref=e984] [box=142,229,36,36]:
+          - generic [ref=e985] [box=150,237,20,20]: account_tree
+          - generic [ref=e986] [box=159,247,1,1]: flow
+        - button "Open processes" [ref=e988] [box=186,229,36,36]:
+          - generic [ref=e989] [box=194,237,20,20]: account_tree
+          - generic [ref=e990] [box=203,247,1,1]: flow
+    - generic [ref=e994] [box=29,279,844,92]:
+      - button "Overview" [ref=e995] [box=29,279,99,42]
+      - button "Agents22" [ref=e996] [box=136,279,122,42]
+      - button "Providers4" [ref=e997] [box=266,279,131,42]
+      - button "Voice" [ref=e998] [box=405,279,72,42]
+      - button "Chat" [ref=e999] [box=485,279,67,42]
+      - button "Capabilities55" [ref=e1000] [box=560,279,154,42]
+      - button "Governance0" [ref=e1001] [box=722,279,149,42]
+      - button "Scenarios" [ref=e1002] [box=29,329,101,42]
+      - button "Diagnostics0" [ref=e1003] [box=138,329,147,42]
+    - generic [ref=e1005] [box=29,385,844,4409]:
+      - generic [ref=e1007] [box=29,385,828,44]:
+        - generic [ref=e1008] [box=29,385,149,44]:
+          - paragraph [ref=e1009] [box=29,385,149,16]: Technical agents
+          - heading "Agent cards" [level=2] [ref=e1010] [box=29,401,149,28]
+        - generic [ref=e1011] [box=194,386,662,42]:
+          - generic [ref=e1012] [box=194,394,114,26]: 22 of 22 agent(s)
+          - button "New team" [ref=e1013] [box=317,386,126,42]:
+            - generic [ref=e1014] [box=330,397,20,20]: groups
+            - generic [ref=e1015] [box=358,395,72,24]: New team
+          - button "New agent" [ref=e1016] [box=451,386,131,42]:
+            - generic [ref=e1017] [box=464,397,20,20]: add
+            - generic [ref=e1018] [box=492,395,77,24]: New agent
+          - search [ref=e1019] [box=589,386,268,42]:
+            - textbox "Search agents" [ref=e1020] [box=589,386,196,42]
+            - button "Reset" [ref=e1021] [box=793,386,64,42]
+      - generic [ref=e1023] [box=29,460,844,4334]:
+        - generic [ref=e1024] [box=29,460,844,1489]:
+          - generic [ref=e1025] [box=46,477,810,74]:
+            - generic [ref=e1026] [box=46,477,810,40]
+            - generic [ref=e1029] [box=46,525,810,26]: "5"
+          - generic [ref=e1030] [box=46,565,810,42]:
+            - button "New" [ref=e1031] [box=46,565,86,42]
+            - button "Edit" [disabled] [ref=e1034] [box=138,565,81,42]
+            - button "Members" [disabled] [ref=e1037] [box=225,565,121,42]
+            - button "Delete" [disabled] [ref=e1040] [box=351,565,100,42]
+          - tree "Agent teams and members" [ref=e1044] [box=46,621,810,1310]:
+            - treeitem "All agents 22" [selected] [ref=e1045] [box=46,621,810,42]
+            - treeitem "Collapse Teams Teams 5" [expanded] [ref=e1053] [box=46,667,810,1264]
+        - generic [ref=e1266] [box=29,1964,844,2830]:
+          - article [ref=e1267] [box=29,1964,273,346]:
+            - button "Select .NET Application Developer" [ref=e1268] [cursor=pointer] [box=30,1965,271,344]
+          - article [ref=e1291] [box=314,1964,273,346]:
+            - button "Select .NET QA Review Lead" [ref=e1292] [cursor=pointer] [box=315,1965,271,344]
+          - article [ref=e1315] [box=600,1964,273,346]:
+            - button "Select .NET Solution Architect" [ref=e1316] [cursor=pointer] [box=601,1965,271,344]
+          - article [ref=e1339] [box=29,2323,273,362]:
+            - button "Select Blazor Application Developer" [ref=e1340] [cursor=pointer] [box=30,2324,271,360]
+          - article [ref=e1363] [box=314,2323,273,362]:
+            - button "Select Business Strategist" [ref=e1364] [cursor=pointer] [box=315,2324,271,360]
+          - article [ref=e1386] [box=600,2323,273,362]:
+            - button "Select Code Review Lead" [ref=e1387] [cursor=pointer] [box=601,2324,271,360]
+          - article [ref=e1409] [box=29,2697,273,318]:
+            - button "Select Delivery Manager" [ref=e1410] [cursor=pointer] [box=30,2698,271,316]
+          - article [ref=e1433] [box=314,2697,273,318]:
+            - button "Select Delivery QA Observer" [ref=e1434] [cursor=pointer] [box=315,2698,271,316]
+          - article [ref=e1456] [box=600,2697,273,318]:
+            - button "Select Financial Strategist" [ref=e1457] [cursor=pointer] [box=601,2698,271,316]
+          - article [ref=e1479] [box=29,3027,273,374]:
+            - button "Select HR Staffing Manager" [ref=e1480] [cursor=pointer] [box=30,3028,271,372]
+          - article [ref=e1503] [box=314,3027,273,374]:
+            - button "Select JavaScript Application Developer" [ref=e1504] [cursor=pointer] [box=315,3028,271,372]
+          - article [ref=e1526] [box=600,3027,273,374]:
+            - button "Select JavaScript QA Review Lead" [ref=e1527] [cursor=pointer] [box=601,3028,271,372]
+          - article [ref=e1549] [box=29,3413,273,374]:
+            - button "Select JavaScript Solution Architect" [ref=e1550] [cursor=pointer] [box=30,3414,271,372]
+          - article [ref=e1572] [box=314,3413,273,374]:
+            - button "Select Mail Triage Analyst" [ref=e1573] [cursor=pointer] [box=315,3414,271,372]
+          - article [ref=e1595] [box=600,3413,273,374]:
+            - button "Select Marketing Specialist" [ref=e1596] [cursor=pointer] [box=601,3414,271,372]
+          - article [ref=e1618] [box=29,3798,273,358]:
+            - button "Select Portfolio Architect" [ref=e1619] [cursor=pointer] [box=30,3799,271,356]
+          - article [ref=e1641] [box=314,3798,273,358]:
+            - button "Select Programming Workspace Analyst" [ref=e1642] [cursor=pointer] [box=315,3799,271,356]
+          - article [ref=e1664] [box=600,3798,273,358]:
+            - button "Select Release Readiness Manager" [ref=e1665] [cursor=pointer] [box=601,3799,271,356]
+          - article [ref=e1687] [box=29,4169,273,326]:
+            - button "Select Research Deep Dive Analyst" [ref=e1688] [cursor=pointer] [box=30,4170,271,324]
+          - article [ref=e1710] [box=314,4169,273,326]:
+            - button "Select Security Reviewer" [ref=e1711] [cursor=pointer] [box=315,4170,271,324]
+          - article [ref=e1733] [box=600,4169,273,326]:
+            - button "Select Spreadsheet Analyst" [ref=e1734] [cursor=pointer] [box=601,4170,271,324]
+          - article [ref=e1756] [box=29,4507,273,287]:
+            - button "Select UI Review Lead" [ref=e1757] [cursor=pointer] [box=30,4508,271,285]

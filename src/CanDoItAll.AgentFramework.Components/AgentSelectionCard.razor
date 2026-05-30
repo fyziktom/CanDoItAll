@@ -39,6 +39,10 @@
                         {
                             <StatusBadge Tone="info" Text="@AgentWorkloadDisplay.ResolveLabel(Agent.Workload)" />
                         }
+                        @if (IsPrivateProvider)
+                        {
+                            <StatusBadge Tone="warning" Text="Private" data-testid="agent-private-provider-badge" />
+                        }
                         @if (ShowChatHistory)
                         {
                             <StatusBadge Tone="neutral" Text="@Agent.ChatHistoryMode.ToString()" />
@@ -155,6 +159,9 @@
 
     [Parameter]
     public bool ShowDetailsTooltip { get; set; }
+
+    [Parameter]
+    public bool IsPrivateProvider { get; set; }
 
     [Parameter]
     public string SelectedLabel { get; set; } = "Current agent";

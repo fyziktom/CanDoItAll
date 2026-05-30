@@ -32,6 +32,7 @@ public partial class AgentChatPanel : IAsyncDisposable
     public NotificationService NotificationService { get; set; } = default!;
 
     private IReadOnlyList<AgentDefinition> agents = [];
+    private IReadOnlyCollection<Guid> privateAgentIds = [];
     private ChatAgentWorkspaceSnapshot? workspace;
     private IReadOnlyList<ExecutionLogEntry> executionLog = [];
     private IReadOnlyList<AgentRunMetric> metrics = [];
@@ -351,6 +352,7 @@ public partial class AgentChatPanel : IAsyncDisposable
                 {
                     [nameof(AgentSwitchDialog.Agents)] = agents,
                     [nameof(AgentSwitchDialog.SelectedAgentId)] = selectedAgentId,
+                    [nameof(AgentSwitchDialog.PrivateAgentIds)] = privateAgentIds,
                     [nameof(AgentSwitchDialog.FavoriteToggled)] =
                         (Func<AgentDefinition, Task<AgentDefinition>>)ToggleAgentFavoriteAsync
                 },
@@ -388,7 +390,17 @@ public partial class AgentChatPanel : IAsyncDisposable
 
     private async Task RefreshAgentCatalogAsync()
     {
-        agents = await WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        var agentsTask = WorkspaceService.ListAgentsAsync(includeTemplates: false);
+        var providersTask = WorkspaceService.ListProvidersAsync();
+        agents = await agentsTask;
+        var privateProviderIds = (await providersTask)
+            .Where(provider => provider.IsPrivateProvider)
+            .Select(provider => provider.Id)
+            .ToHashSet();
+        privateAgentIds = agents
+            .Where(agent => agent.ProviderProfileId.HasValue && privateProviderIds.Contains(agent.ProviderProfileId.Value))
+            .Select(agent => agent.Id)
+            .ToHashSet();
         if (selectedAgentId is { } currentAgentId)
         {
             selectedAgent = agents.FirstOrDefault(item => item.Id == currentAgentId);

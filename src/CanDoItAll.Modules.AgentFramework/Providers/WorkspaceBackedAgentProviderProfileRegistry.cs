@@ -155,13 +155,25 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
         entity.SupportsStructuredOutput = featureMatrix.SupportsStructuredOutput;
         entity.SupportsVision = !string.IsNullOrWhiteSpace(model.ConfigurationJson) &&
                                 model.ConfigurationJson.Contains("vision", StringComparison.OrdinalIgnoreCase);
-        entity.ExtraSettingsJson = AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
-            model.ConfigurationJson,
-            providerAdapter.Manifest.PluginKey,
-            configSchemaVersion,
-            secretRecordId,
-            timeoutSeconds,
-            selectedTransport);
+        var modelPrices = ProviderPricingDefaults.NormalizeModelPrices(
+            capabilityProfile.Kind,
+            entity.DefaultModel,
+            ProviderPricingDefaults.FromEditorModels(model.ModelPrices));
+        if (!ProviderPricingDefaults.TryValidateModelPrices(modelPrices, out var pricingValidationMessage))
+        {
+            throw new InvalidOperationException(pricingValidationMessage);
+        }
+
+        entity.ExtraSettingsJson = ProviderPricingMetadata.Write(
+            AgentFrameworkProviderMetadata.BuildExtraSettingsJson(
+                model.ConfigurationJson,
+                providerAdapter.Manifest.PluginKey,
+                configSchemaVersion,
+                secretRecordId,
+                timeoutSeconds,
+                selectedTransport),
+            ProviderPricingDefaults.ResolveIsPrivateProvider(capabilityProfile.Kind, model.IsPrivateProvider),
+            modelPrices);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await UpsertCatalogProvidersAsync([MapToAgentFrameworkProvider(entity)], cancellationToken);
@@ -388,7 +400,13 @@ internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
                 "gemma3-12b-128k:latest",
                 "deepseek-r1:8b-32k",
                 "phi4-16k"
-            ]);
+            ])
+        {
+            IsPrivateProvider = true,
+            ModelPrices = ProviderPricingDefaults.CreateDefaultPrices(
+                AgentFrameworkProviderKind.Ollama,
+                ManagedSeedProviderFallbacks.FallbackModel)
+        };
     }
 
     private static string ResolveDefaultModel(

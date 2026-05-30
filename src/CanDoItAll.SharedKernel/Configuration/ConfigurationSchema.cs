@@ -147,7 +147,30 @@ public class ConfigurationState
 
         try
         {
-            var parsed = JsonSerializer.Deserialize<Dictionary<string, string>>(json, SerializerOptions);
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return new ConfigurationState();
+            }
+
+            var parsed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                var value = property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString(),
+                    JsonValueKind.Number => property.Value.GetRawText(),
+                    JsonValueKind.True => bool.TrueString,
+                    JsonValueKind.False => bool.FalseString,
+                    _ => null
+                };
+
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    parsed[property.Name] = value;
+                }
+            }
+
             return new ConfigurationState(parsed);
         }
         catch (JsonException)
