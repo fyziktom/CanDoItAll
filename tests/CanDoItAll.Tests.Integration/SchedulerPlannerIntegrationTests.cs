@@ -685,7 +685,7 @@ public sealed class SchedulerPlannerIntegrationTests
     }
 
     [Fact]
-    public async Task Office365_mark_processed_executor_requires_approval_before_external_effect()
+    public async Task Office365_mark_processed_executor_runs_unattended_as_processed_marker()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("scheduler-planner-office365-policy");
         var profile = testEnvironment.CreatePostgreSqlProfile("primary");
@@ -702,8 +702,9 @@ public sealed class SchedulerPlannerIntegrationTests
         Assert.True(executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData));
         Assert.True(executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.UsesNetwork));
         Assert.True(executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.UsesSecrets));
+        Assert.True(executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker));
         Assert.Equal(
-            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect,
+            WorkflowExecutorApprovalRequirement.NotRequired,
             executor.PermissionPolicy.ApprovalRequirement);
     }
 

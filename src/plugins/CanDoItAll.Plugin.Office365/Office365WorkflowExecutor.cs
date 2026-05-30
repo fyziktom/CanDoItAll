@@ -464,8 +464,9 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.WritesExternalData |
             WorkflowExecutorCapabilityFlags.UsesNetwork |
             WorkflowExecutorCapabilityFlags.UsesSecrets |
+            WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+            WorkflowExecutorApprovalRequirement.NotRequired),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Office365 category mutation without changing Microsoft Graph.")
     };
 

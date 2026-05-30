@@ -155,6 +155,37 @@ public sealed class PluginManifestTests
     }
 
     [Fact]
+    public void PluginManifest_validator_allows_unattended_idempotent_external_marker()
+    {
+        var descriptor = CreateDescriptor(
+            workflowExecutors:
+            [
+                CreateExecutor(
+                    "sample.mark-processed",
+                    "settings.renderer") with
+                {
+                    PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                        WorkflowExecutorCapabilityFlags.WritesExternalData |
+                        WorkflowExecutorCapabilityFlags.UsesNetwork |
+                        WorkflowExecutorCapabilityFlags.UsesSecrets |
+                        WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+                        WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
+                        WorkflowExecutorApprovalRequirement.NotRequired),
+                    DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Fake marker mode")
+                }
+            ],
+            connections: [CreateConnection("api")],
+            capabilities:
+                PluginCapabilityKind.WorkflowExecutor |
+                PluginCapabilityKind.HttpClient |
+                PluginCapabilityKind.SecretReference);
+
+        var result = PluginManifestValidator.Validate(descriptor);
+
+        Assert.True(result.Succeeded, string.Join(Environment.NewLine, result.Issues.Select(issue => issue.Message)));
+    }
+
+    [Fact]
     public void PluginManifest_validator_rejects_duplicate_catalog_ids_and_unsupported_capabilities()
     {
         var unsupportedCapability = (PluginCapabilityKind)(1 << 20);

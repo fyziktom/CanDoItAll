@@ -1,0 +1,52 @@
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:477:    IdempotentExternalMarker = 1 << 9
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:491:    public bool RequiresApproval => ApprovalRequirement != WorkflowExecutorApprovalRequirement.NotRequired;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:495:        WorkflowExecutorApprovalRequirement.NotRequired);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:40:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:53:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:70:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:86:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:116:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:129:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:146:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\BuiltInWorkflowExecutorDescriptors.cs:162:            WorkflowExecutorApprovalRequirement.NotRequired),
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:141:                        WorkflowExecutorApprovalRequirement.NotRequired)
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:158:    public void PluginManifest_validator_allows_unattended_idempotent_external_marker()
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:171:                        WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+tests\CanDoItAll.Tests.Unit\PluginManifestTests.cs:173:                        WorkflowExecutorApprovalRequirement.NotRequired),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:688:    public async Task Office365_mark_processed_executor_runs_unattended_as_processed_marker()
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:705:        Assert.True(executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker));
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:707:            WorkflowExecutorApprovalRequirement.NotRequired,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:992:                    WorkflowExecutorApprovalRequirement.NotRequired),
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1008:                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1010:                    WorkflowExecutorApprovalRequirement.NotRequired),
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1027:                    WorkflowExecutorApprovalRequirement.NotRequired),
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1044:                    WorkflowExecutorApprovalRequirement.NotRequired),
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1060:                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1062:                    WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:222:                executor.PermissionPolicy.ApprovalRequirement == WorkflowExecutorApprovalRequirement.NotRequired &&
+src\CanDoItAll.Plugins.Abstractions\PluginManifestValidation.cs:223:                !requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker))
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:45:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:228:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:433:public sealed class Office365MarkProcessedWorkflowExecutor(
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:456:        JsonSerializer.Serialize(new Office365MarkProcessedWorkflowExecutorSettings(), JsonOptions),
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:467:            WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:469:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Office365\Office365WorkflowExecutor.cs:478:        var settings = JsonSerializer.Deserialize<Office365MarkProcessedWorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
+src\plugins\CanDoItAll.Plugin.Office365\Office365PluginServiceCollectionExtensions.cs:25:            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, Office365MarkProcessedWorkflowExecutor>());
+src\plugins\CanDoItAll.Plugin.Office365\Office365PluginModels.cs:77:public sealed record Office365MarkProcessedWorkflowExecutorSettings
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:49:                    WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:68:                    WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:86:                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+src\plugins\CanDoItAll.Plugin.Office365\Office365BundledPlugin.cs:88:                    WorkflowExecutorApprovalRequirement.NotRequired),
+src\CanDoItAll.Modules.Plugins\Pages\PluginsPageHelpers.cs:198:            WorkflowExecutorApprovalRequirement.NotRequired => "success",
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:46:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:194:public sealed class GmailMarkProcessedWorkflowExecutor(
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:217:        JsonSerializer.Serialize(new GmailMarkProcessedWorkflowExecutorSettings(), JsonOptions),
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:228:            WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:230:            WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Gmail\GmailWorkflowExecutor.cs:239:        var settings = JsonSerializer.Deserialize<GmailMarkProcessedWorkflowExecutorSettings>(context.SettingsJson, JsonOptions)
+src\plugins\CanDoItAll.Plugin.Gmail\GmailPluginServiceCollectionExtensions.cs:24:            services.TryAddEnumerable(ServiceDescriptor.Scoped<IWorkflowExecutor, GmailMarkProcessedWorkflowExecutor>());
+src\plugins\CanDoItAll.Plugin.Gmail\GmailPluginModels.cs:14:public sealed record GmailMarkProcessedWorkflowExecutorSettings
+src\plugins\CanDoItAll.Plugin.Gmail\GmailBundledPlugin.cs:45:                    WorkflowExecutorApprovalRequirement.NotRequired),
+src\plugins\CanDoItAll.Plugin.Gmail\GmailBundledPlugin.cs:63:                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
+src\plugins\CanDoItAll.Plugin.Gmail\GmailBundledPlugin.cs:65:                    WorkflowExecutorApprovalRequirement.NotRequired),

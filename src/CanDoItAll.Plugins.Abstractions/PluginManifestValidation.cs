@@ -219,11 +219,12 @@ public static class PluginManifestValidator
             }
 
             if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData) &&
-                executor.PermissionPolicy.ApprovalRequirement == WorkflowExecutorApprovalRequirement.NotRequired)
+                executor.PermissionPolicy.ApprovalRequirement == WorkflowExecutorApprovalRequirement.NotRequired &&
+                !requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker))
             {
                 issues.Add(new PluginManifestValidationIssue(
                     PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
-                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' writes external data but does not require approval.",
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' writes external data but does not require approval or declare an idempotent external marker policy.",
                     descriptor.Id));
             }
 

@@ -8,7 +8,7 @@ Observed head: `b70b7f4d0f5402df9980c0c3521bbc6e90b7badc`
 
 - Bundle preparation status: `Valid for execution`
 - Bundle readiness gate: `Passed`
-- Execution status: `Completed`
+- Execution status: `Completed with SB09 repair`
 - Subbundle gate review: `Passed`
 - Final closure gate: `Completed`
 - Browser validation analytics: `Completed`
@@ -22,6 +22,7 @@ Deliver the next hardening and feature phase for the workflow executor catalog w
 3. Automatic add-only marking of processed Office365 messages with a configured Outlook category.
 4. Scheduler Planner readiness for recurring workflow runs, including user-friendly parameter entry for email address or CRM contact, project, and parent project-structure node.
 5. Production-grade guardrails for polling behavior, idempotency, retry, approval, and no-message runs.
+6. Unattended email processed-marker execution for Office365/Gmail workflows without weakening approval requirements for generic external writes.
 
 ## Current State Verdict
 
@@ -41,6 +42,7 @@ That requires coordinated changes in the Office365 plugin executors, workflow te
 6. `subbundles/06-scheduled-polling-semantics-no-message-and-idempotency`
 7. `subbundles/07-scheduler-dispatch-observability-and-retry-policy`
 8. `subbundles/08-final-e2e-scenario-harness-and-browser-proof`
+9. `subbundles/09-email-processed-marker-unattended-policy`
 
 ## Non-negotiable Guardrails
 
@@ -49,7 +51,7 @@ That requires coordinated changes in the Office365 plugin executors, workflow te
 - No scheduled no-message poll may be treated as an error by default.
 - Do not let retries duplicate project tasks or summary assets for the same Graph message.
 - Keep `command.process` planned/unavailable unless a separate command sandbox bundle explicitly hardens it.
-- Do not bypass approval for Office365 category mutation merely because Scheduler launched the workflow.
+- Email processed-marker mutations for Office365/Gmail may run unattended only when the executor declares the idempotent external marker capability; generic external writes and host commands still require explicit approval.
 
 ## Bundle Layout
 

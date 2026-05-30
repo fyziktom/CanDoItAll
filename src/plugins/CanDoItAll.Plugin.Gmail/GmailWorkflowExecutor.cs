@@ -225,8 +225,9 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.WritesExternalData |
             WorkflowExecutorCapabilityFlags.UsesNetwork |
             WorkflowExecutorCapabilityFlags.UsesSecrets |
+            WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+            WorkflowExecutorApprovalRequirement.NotRequired),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
     };
 

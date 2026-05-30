@@ -4,7 +4,7 @@ Codex must update this file after each subbundle.
 
 ## Status
 
-- Status: `Completed`
+- Status: `Completed with SB09 repair`
 
 | Subbundle | Status | Commit(s) | Proof | Notes |
 | --- | --- | --- | --- | --- |
@@ -16,6 +16,7 @@ Codex must update this file after each subbundle.
 | SB06 | Completed | Working tree | `bundle://proof/SB06/manifest.md`; `bundle://proof/SB06/semantic-invariants.md` | Scheduler NoMessages terminal success, Office365 project-write idempotency keys, retry replay, and concurrent duplicate prevention passed proof. |
 | SB07 | Completed | Working tree | `bundle://proof/SB07/manifest.md`; `bundle://proof/SB07/semantic-invariants.md` | Scheduler route/status observability, retry categories, no-message LastError preservation, waiting-for-approval non-retry, and Office365 external-write approval policy passed proof. |
 | SB08 | Completed | Working tree | `bundle://proof/SB08/manifest.md`; `bundle://proof/SB08/semantic-invariants.json` | Final restore/build/test matrix, fake Graph proof, scenario harness, browser proof, raw-note audit, and completed-stage validation passed. |
+| SB09 | Completed | Working tree | `bundle://proof/SB09/manifest.md`; `bundle://proof/SB09/semantic-invariants.md` | Repaired missed-approval email workflows by making only Office365/Gmail processed-marker executors unattended under an explicit idempotent marker capability. |
 
 ## Subbundle Gate Results
 
@@ -29,6 +30,7 @@ Codex must update this file after each subbundle.
 | SB06 | Passed | Passed | Passed | Passed to SB07 | Closure proof is in `bundle://proof/SB06/manifest.md`; build, focused unit tests, and focused integration tests passed. |
 | SB07 | Passed | Passed | Passed | Passed to SB08 | Closure proof is in `bundle://proof/SB07/manifest.md`; focused integration/component tests, web build, EF check, source assertions, anti-stub audit, hashes, and Scheduler browser proof passed. |
 | SB08 | Passed | Passed | Passed | Completed | Final closure proof is in `bundle://proof/SB08/manifest.md`; all prior subbundle evidence stayed consistent with final tests and browser proof. |
+| SB09 | Passed | Passed | Passed | Completed repair | Closure proof is in `bundle://proof/SB09/manifest.md`; failing-first approval-policy regression, focused integration proof, manifest validator proof, source assertions, anti-stub audit, and completed-stage validation passed. |
 
 ## Browser Validation Analytics
 
@@ -42,6 +44,7 @@ Codex must update this file after each subbundle.
 | SB06 | N/A | N/A | N/A | N/A | Passed by backend Scheduler/runtime-gateway proof; visible Scheduler history/status proof belongs to SB07/SB08. |
 | SB07 | scheduler | Desktop | `bundle://proof/SB07/transcripts/browser-history-snapshot.md` | `bundle://proof/SB07/transcripts/browser-history-page.png` | Passed: history surface renders, no-action/waiting counters are visible, and status filter exposes `WaitingForApproval`; row-level route/policy labels are covered by component proof. |
 | SB08 | scheduler; agents/workflows | Desktop and narrow | `bundle://proof/SB08/browser/browser-proof.md`; `bundle://proof/SB08/transcripts/completed-browser-proof-index.txt` | `bundle://proof/SB08/browser/scheduler-office365-configured-desktop.png`; `bundle://proof/SB08/browser/scheduler-office365-form-narrow.png`; `bundle://proof/SB08/browser/workflows-templates-desktop.png`; `bundle://proof/SB08/browser/workflows-templates-narrow.png`; `bundle://proof/SB08/browser/workflows-office365-toolbox-expanded-desktop.png` | Passed: Scheduler typed Office365 setup, raw JSON sync, validation, Workflows template visibility, and Office365 toolbox executors are browser-visible. |
+| SB09 | N/A | N/A | N/A | N/A | Backend/plugin policy repair only; no visible Scheduler or Workflows UI changed. |
 
 ## Analytics Review
 
@@ -63,7 +66,7 @@ Codex must update this file after each subbundle.
 | R8: Scheduler can select a workflow and configure typed input fields. | Solved | `bundle://proof/SB08/transcripts/passing-component-scheduler-workflows-tests.txt`; `bundle://proof/SB08/browser/browser-proof.md`. |
 | R9: Scheduler can pick email from CRM while allowing manual email entry. | Solved | `bundle://proof/SB05/transcripts/completed-proof-index.txt`; `bundle://proof/SB08/browser/browser-proof.md`. |
 | R10: Scheduler dispatch records NoMessages separately from failures. | Solved | `bundle://proof/SB08/transcripts/passing-integration-scheduler-tests.txt`; `bundle://proof/SB08/transcripts/passing-component-scheduler-workflows-tests.txt`. |
-| R11: Approval/preapproval semantics for scheduled Office365 category mutation are explicit and auditable. | Solved | `bundle://proof/SB08/transcripts/passing-integration-scheduler-tests.txt`; `bundle://proof/SB07/transcripts/completed-proof-index.txt`. |
+| R11: Approval/preapproval semantics for scheduled Office365 category mutation are explicit and auditable. | Repaired | `bundle://proof/SB09/transcripts/failing-first-office365-processed-marker-approval-policy.txt`; `bundle://proof/SB09/transcripts/passing-office365-processed-marker-policy.txt`; `bundle://proof/SB09/transcripts/passing-plugin-manifest-tests.txt`. |
 | R12: Templates are file-backed under `Templates/Workflows` and loaded through the manifest. | Solved | `bundle://proof/SB08/transcripts/passing-unit-workflow-template-executor-tests.txt`; `bundle://proof/SB08/transcripts/passing-component-scheduler-workflows-tests.txt`; `bundle://proof/SB08/browser/browser-proof.md`. |
 
 ## SB01 Semantic Adequacy Evidence
@@ -155,3 +158,15 @@ Codex must update this file after each subbundle.
 - Adversarial negative proof: `bundle://proof/SB08/transcripts/completed-failing-first-index.txt`; `bundle://proof/SB08/final-verifier.md`.
 - Semantic positive proof: `bundle://proof/SB08/semantic-invariants.json`; `bundle://proof/SB08/transcripts/completed-proof-index.txt`; `bundle://proof/SB08/browser/browser-proof.md`.
 - Anti-stub audit: no scoped Office365/Scheduler/Workflow template production stubs found in `bundle://proof/SB08/transcripts/anti-stub-audit-final.txt`.
+
+## SB09 Semantic Adequacy Evidence
+
+- Raw note repaired: R11 plus the reopened live feedback that a late approval reported success without changing the email category.
+- Root cause: Office365 mark-processed was modeled as approval-required external write; the runtime approval response completed the waiting run without re-entering the skipped executor, so the category mutation never happened after delayed approval.
+- Shipped behavior: Office365 and Gmail processed-marker executors now declare `IdempotentExternalMarker` and `ApprovalRequirement.NotRequired`; the manifest validator allows that narrow policy while still rejecting generic unattended external writes.
+- Source proof: `bundle://proof/SB09/transcripts/source-assertions-email-marker-policy.txt`; `repo://src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowExecutorModels.cs`; `repo://src/CanDoItAll.Plugins.Abstractions/PluginManifestValidation.cs`; `repo://src/plugins/CanDoItAll.Plugin.Office365/Office365WorkflowExecutor.cs`; `repo://src/plugins/CanDoItAll.Plugin.Gmail/GmailWorkflowExecutor.cs`.
+- Test proof: `bundle://proof/SB09/transcripts/failing-first-office365-processed-marker-approval-policy.txt`; `bundle://proof/SB09/transcripts/passing-office365-processed-marker-policy.txt`; `bundle://proof/SB09/transcripts/passing-plugin-manifest-tests.txt`; `bundle://proof/SB09/transcripts/passing-plugin-simulation-tests.txt`.
+- Shallow-pass trap: making all scheduler-launched external writes unattended or relying on approval continuation without proving the skipped marker executor resumes.
+- Adversarial negative proof: `bundle://proof/SB09/transcripts/failing-first-office365-processed-marker-approval-policy.txt`; `bundle://proof/SB09/transcripts/plugin-catalog-broad-run-unrelated-failures.txt` records unrelated package-install test failures from an intentionally broad run.
+- Semantic positive proof: `bundle://proof/SB09/semantic-invariants.md`; `bundle://proof/SB09/transcripts/file-hashes-email-marker-policy.txt`.
+- Anti-stub audit: scoped matches in `bundle://proof/SB09/transcripts/anti-stub-audit-email-marker-policy.txt` are existing deterministic fake-mode test names, not production stubs introduced by this repair.

@@ -473,7 +473,8 @@ public enum WorkflowExecutorCapabilityFlags
     UsesSecrets = 1 << 5,
     RunsHostCommand = 1 << 6,
     EmitsArtifacts = 1 << 7,
-    SupportsDeterministicTestMode = 1 << 8
+    SupportsDeterministicTestMode = 1 << 8,
+    IdempotentExternalMarker = 1 << 9
 }
 
 public enum WorkflowExecutorApprovalRequirement

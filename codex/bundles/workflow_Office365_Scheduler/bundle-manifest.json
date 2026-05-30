@@ -12,7 +12,8 @@
     "05-scheduler-crm-email-project-node-picker-ux",
     "06-scheduled-polling-semantics-no-message-and-idempotency",
     "07-scheduler-dispatch-observability-and-retry-policy",
-    "08-final-e2e-scenario-harness-and-browser-proof"
+    "08-final-e2e-scenario-harness-and-browser-proof",
+    "09-email-processed-marker-unattended-policy"
   ],
   "requiredProof": [
     "restore",
@@ -21,6 +22,7 @@
     "integration tests",
     "component tests",
     "browser proof for Scheduler and Workflows UI",
-    "fake Office365 Graph scenario harness"
+    "fake Office365 Graph scenario harness",
+    "email processed-marker unattended policy regression"
   ]
 }

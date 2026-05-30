@@ -1005,8 +1005,9 @@ public sealed class PluginCatalogIntegrationTests
                     WorkflowExecutorCapabilityFlags.WritesExternalData |
                     WorkflowExecutorCapabilityFlags.UsesNetwork |
                     WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+                    WorkflowExecutorApprovalRequirement.NotRequired),
                 ReadSimulationTemplate(typeof(GmailPluginConstants), "GmailWorkflowSimulationTemplates", "MarkProcessed")),
             "sourceLabelRemoved"
         ];
@@ -1056,8 +1057,9 @@ public sealed class PluginCatalogIntegrationTests
                     WorkflowExecutorCapabilityFlags.WritesExternalData |
                     WorkflowExecutorCapabilityFlags.UsesNetwork |
                     WorkflowExecutorCapabilityFlags.UsesSecrets |
+                    WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
-                    WorkflowExecutorApprovalRequirement.RequiredForExternalEffect),
+                    WorkflowExecutorApprovalRequirement.NotRequired),
                 ReadSimulationTemplate(typeof(Office365PluginConstants), "Office365WorkflowSimulationTemplates", "MarkProcessed")),
             "processedCategoryCreated"
         ];
