@@ -4,7 +4,7 @@
 
 Most shared primitives live in:
 
-- `C:\repositories\CanDoItAll\src\CanDoItAll.Components\Primitives\ComponentPrimitives.cs`
+- `C:\repositories\CanDoItAll\src\CanDoItAll.AppComponents\Primitives\ComponentPrimitives.cs`
 
 ## Helper extensions
 

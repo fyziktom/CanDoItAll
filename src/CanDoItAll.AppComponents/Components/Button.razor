@@ -1,0 +1,146 @@
+@namespace CanDoItAll.AppComponents
+@{
+    var iconName = ResolveIconName(Icon);
+}
+
+<button type="button"
+        @attributes='AdditionalAttributes.WithClass(ResolveButtonCssClass())'
+        disabled="@IsDisabled"
+        @onclick="OnClickAsync"
+        >
+    @if (IsBusy)
+    {
+        <span class="cda-button__spinner"></span>
+    }
+    else if (iconName is not null)
+    {
+        <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
+    }
+    else if (!string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="rz-icon-fallback" title="@($"Unknown icon token: {Icon}")" aria-hidden="true">@Icon</span>
+    }
+    @if (!string.IsNullOrWhiteSpace(Text))
+    {
+        <span class="rz-button-text">@Text</span>
+    }
+    @if (string.IsNullOrWhiteSpace(Text) && !string.IsNullOrWhiteSpace(Icon))
+    {
+        <span class="sr-only">@ResolveIconLabel(Icon)</span>
+    }
+</button>
+
+@code {
+    [Parameter]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? Icon { get; set; }
+
+    [Parameter]
+    public ButtonStyle ButtonStyle { get; set; } = ButtonStyle.Primary;
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Medium;
+
+    [Parameter]
+    public Variant Variant { get; set; } = Variant.Filled;
+
+    [Parameter]
+    public Shade Shade { get; set; } = Shade.Default;
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    [Parameter]
+    public EventCallback Click { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    private bool IsDisabled => Disabled || IsBusy;
+
+    private async Task OnClickAsync()
+    {
+        if (!IsDisabled)
+        {
+            await Click.InvokeAsync();
+        }
+    }
+
+    private static string? ResolveIconName(string? iconToken)
+    {
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
+        {
+            return iconName;
+        }
+
+        return null;
+    }
+
+    private static string ResolveIconLabel(string? iconToken)
+    {
+        if (string.IsNullOrWhiteSpace(iconToken))
+        {
+            return "action";
+        }
+
+        return iconToken
+            .Replace('_', ' ')
+            .Replace('-', ' ');
+    }
+
+    private string ResolveButtonCssClass()
+    {
+        return $"rz-button cda-button {ResolveSizeCssClass()} {ResolveVariantCssClass()} {ResolveToneCssClass()}";
+    }
+
+    private string ResolveStyleCss()
+    {
+        return ButtonStyle switch
+        {
+            ButtonStyle.Light => "cda-button--tone-light",
+            ButtonStyle.Secondary => "cda-button--tone-secondary",
+            ButtonStyle.Success => "cda-button--tone-success",
+            ButtonStyle.Info => "cda-button--tone-info",
+            ButtonStyle.Warning => "cda-button--tone-warning",
+            ButtonStyle.Danger => "cda-button--tone-danger",
+            ButtonStyle.Dark => "cda-button--tone-dark",
+            ButtonStyle.Base => "cda-button--tone-base",
+            _ => "cda-button--tone-primary"
+        };
+    }
+
+    private string ResolveSizeCssClass()
+    {
+        return Size switch
+        {
+            ButtonSize.Small => "cda-button--size-sm",
+            ButtonSize.Large => "cda-button--size-lg",
+            _ => "cda-button--size-md"
+        };
+    }
+
+    private string ResolveVariantCssClass()
+    {
+        return Variant switch
+        {
+            Variant.Outlined => "cda-button--outlined",
+            Variant.Text => "cda-button--text",
+            _ => "cda-button--filled"
+        };
+    }
+
+    private string ResolveToneCssClass()
+    {
+        return ResolveStyleCss();
+    }
+}
+
+
+
+
+

@@ -1,0 +1,220 @@
+@namespace CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.SharedKernel
+
+<div class="cda-tab-strip @(Compact ? string.Empty : "cda-tab-strip--standard")">
+    <Split Breakpoint="LayoutBreakpoint.Xl"
+           Gap="LayoutGap.Small"
+           AlignItems="AlignItems.Center"
+           JustifyContent="JustifyContent.SpaceBetween"
+           Class="cda-tab-strip__main-row"
+           data-testid="app-tab-strip-main-row">
+        <Cluster Gap="LayoutGap.XSmall"
+                 Class="cda-tab-strip__tabs min-w-0">
+            @foreach (var tab in InlineTabs)
+            {
+                @RenderTab(tab)
+            }
+        </Cluster>
+
+        <Cluster Gap="LayoutGap.XSmall"
+                 Wrap="FlexWrap.NoWrap"
+                 Class="cda-tab-strip__controls flex-shrink-0"
+                 data-testid="app-tab-strip-controls">
+            @if (Items.Count > InlineTabLimit || RecentTabs.Count > 0)
+            {
+                <input @bind="searchText"
+                       @bind:event="oninput"
+                       placeholder="Search tabs"
+                       class="cda-tab-search" />
+            }
+
+            @if (OverflowTabs.Count > 0)
+            {
+                <details class="group cda-tab-menu">
+                    <summary class="cda-tab-menu__summary">
+                        +@OverflowTabs.Count
+                    </summary>
+                    <div class="cda-tab-menu__panel cda-tab-menu__panel--wide">
+                        <div class="cda-tab-menu__list">
+                            @foreach (var tab in OverflowTabs)
+                            {
+                                <button type="button"
+                                        class="cda-tab-menu__item"
+                                        @onclick="() => Activate.InvokeAsync(tab.TabId)">
+                                    <span class="min-w-0">
+                                        <span class="block truncate font-semibold text-slate-900">@tab.Title</span>
+                                        <span class="block truncate text-xs text-slate-500">@tab.TabGroup / @tab.Route</span>
+                                    </span>
+                                    @if (tab.IsSleeping)
+                                    {
+                                        <span class="cda-tab-menu__badge" aria-hidden="true"><Icon Name="bedtime" /></span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </details>
+            }
+
+            @if (RecentTabs.Count > 0)
+            {
+                <details class="group cda-tab-menu">
+                    <summary class="cda-tab-menu__summary">
+                        Reopen
+                    </summary>
+                    <div class="cda-tab-menu__panel cda-tab-menu__panel--compact">
+                        <div class="cda-tab-menu__list">
+                            @foreach (var recent in FilteredRecentTabs)
+                            {
+                                <button type="button"
+                                        class="cda-tab-menu__item"
+                                        title="Reopen recent tab"
+                                        @onclick="() => ReopenRecent.InvokeAsync(recent.TabId)">
+                                    <span class="min-w-0">
+                                        <span class="block truncate font-semibold text-slate-900">@recent.Title</span>
+                                        <span class="block truncate text-xs text-slate-500">@recent.TabGroup / @recent.Route</span>
+                                    </span>
+                                    <span class="text-slate-500" aria-hidden="true"><Icon Name="restore" /></span>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </details>
+            }
+        </Cluster>
+    </Split>
+
+    @if (ShowActiveSummary && ActiveTab is not null)
+    {
+        <div class="cda-tab-summary">
+            <Cluster Gap="LayoutGap.XSmall" Class="min-w-0">
+                <p class="text-xs font-semibold text-slate-900">@ActiveTab.Title</p>
+                <span class="cda-tab-summary-chip">@ActiveTab.TabGroup</span>
+                @if (!string.IsNullOrWhiteSpace(ActiveTab.ProjectName))
+                {
+                    <span class="cda-tab-summary-chip cda-tab-summary-chip--info">@ActiveTab.ProjectName</span>
+                }
+                <span class="truncate text-[10px] text-slate-400">@ActiveTab.Route</span>
+            </Cluster>
+
+            <Cluster Wrap="FlexWrap.NoWrap"
+                     Gap="LayoutGap.XSmall"
+                     Class="flex-shrink-0">
+                <button type="button"
+                        class="cda-tab-summary-action"
+                        title="Close other tabs"
+                        @onclick="() => CloseOthers.InvokeAsync(ActiveTab.TabId)">
+                    Close others
+                </button>
+                <button type="button"
+                        class="cda-tab-summary-action"
+                        title="Close tabs to the right"
+                        @onclick="() => CloseRight.InvokeAsync(ActiveTab.TabId)">
+                    Close right
+                </button>
+            </Cluster>
+        </div>
+    }
+</div>
+
+@code {
+    private const int InlineTabLimit = 6;
+    private string searchText = string.Empty;
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> Items { get; set; } = [];
+
+    [Parameter]
+    public IReadOnlyList<WorkbenchTabState> RecentTabs { get; set; } = [];
+
+    [Parameter]
+    public string? ActiveTabId { get; set; }
+
+    [Parameter]
+    public bool ShowActiveSummary { get; set; } = true;
+
+    [Parameter]
+    public bool Compact { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Activate { get; set; }
+
+    [Parameter]
+    public EventCallback<string> Close { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveLeft { get; set; }
+
+    [Parameter]
+    public EventCallback<string> MoveRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> TogglePin { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ToggleSleep { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseOthers { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseRight { get; set; }
+
+    [Parameter]
+    public EventCallback<string> CloseBackground { get; set; }
+
+    [Parameter]
+    public EventCallback<string> ReopenRecent { get; set; }
+
+    private WorkbenchTabState? ActiveTab => Items.FirstOrDefault(tab => string.Equals(tab.TabId, ActiveTabId, StringComparison.Ordinal));
+
+    private IReadOnlyList<WorkbenchTabState> FilteredTabs
+        => string.IsNullOrWhiteSpace(searchText)
+            ? Items
+            : Items.Where(tab =>
+                    tab.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    tab.Route.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(tab.ProjectName, searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+    private IReadOnlyList<WorkbenchTabState> InlineTabs => FilteredTabs.Take(InlineTabLimit).ToList();
+
+    private IReadOnlyList<WorkbenchTabState> OverflowTabs => FilteredTabs.Skip(InlineTabLimit).ToList();
+
+    private IReadOnlyList<WorkbenchTabState> FilteredRecentTabs
+        => string.IsNullOrWhiteSpace(searchText)
+            ? RecentTabs
+            : RecentTabs.Where(tab =>
+                    tab.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    tab.Route.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+    private RenderFragment RenderTab(WorkbenchTabState tab) => @<div class="group/tab cda-inline-tab @(IsActive(tab) ? "cda-inline-tab--active" : "cda-inline-tab--inactive")">
+        <button type="button" class="inline-flex min-w-0 items-center gap-1.5 text-left" @onclick="() => Activate.InvokeAsync(tab.TabId)">
+            <span class="max-w-[9rem] truncate font-medium">@tab.Title</span>
+            @if (tab.IsDirty)
+            {
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+            }
+            @if (tab.IsPinned)
+            {
+                <span class="text-sky-400" aria-hidden="true"><Icon Name="push_pin" /></span>
+            }
+        </button>
+
+        <div class="cda-inline-tab__actions group-hover/tab:inline-flex @(IsActive(tab) ? "cda-inline-tab__actions--active" : string.Empty)">
+            <button type="button" class="cda-inline-tab__action" title="Move left" @onclick="() => MoveLeft.InvokeAsync(tab.TabId)"><Icon Name="chevron_left" /><span class="sr-only">Move left</span></button>
+            <button type="button" class="cda-inline-tab__action" title="Move right" @onclick="() => MoveRight.InvokeAsync(tab.TabId)"><Icon Name="chevron_right" /><span class="sr-only">Move right</span></button>
+            <button type="button" class="cda-inline-tab__action" title="Pin tab" @onclick="() => TogglePin.InvokeAsync(tab.TabId)"><Icon Name="push_pin" /><span class="sr-only">Pin tab</span></button>
+            <button type="button" class="cda-inline-tab__action" title="Sleep/wake" @onclick="() => ToggleSleep.InvokeAsync(tab.TabId)"><Icon Name="bedtime" /><span class="sr-only">Sleep or wake tab</span></button>
+            @if (tab.CanClose)
+            {
+                <button type="button" class="cda-inline-tab__action" title="Close tab" @onclick="() => Close.InvokeAsync(tab.TabId)"><Icon Name="close" /><span class="sr-only">Close tab</span></button>
+            }
+        </div>
+    </div>;
+
+    private bool IsActive(WorkbenchTabState tab)
+        => string.Equals(tab.TabId, ActiveTabId, StringComparison.Ordinal);
+}

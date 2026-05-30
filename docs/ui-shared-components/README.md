@@ -11,7 +11,7 @@ CanDoItAll shared UI is split across two repositories. Reusable component librar
 | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid` | Typed Mermaid diagram component and vendored Mermaid assets. |
 | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib` | Floating overlay/window components used by workbench surfaces. |
 | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib` | WebGL workbench concept runtime and typed scene contracts. |
-| `C:\repositories\CanDoItAll\src\CanDoItAll.Components` | Compatibility/facade package for app shell, tab strip, tuning boundary, and package references to core component libraries. |
+| `C:\repositories\CanDoItAll\src\CanDoItAll.AppComponents` | Compatibility/facade package for app shell, tab strip, tuning boundary, and package references to core component libraries. |
 | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox` | Preview and regression host for shared components. |
 | `C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox` | WebGL process workbench sandbox. |
 
@@ -21,7 +21,7 @@ The web host registers BaseLib through `AddCanDoItAllBaseLib()` and loads module
 
 - BaseLib is the primary shared UI library for product modules.
 - CanvasLib, OverlayLib, and WebGlLib are specialized libraries, not general-purpose replacements for BaseLib.
-- `CanDoItAll.Components` is a facade/compatibility layer and app-shell surface. Do not put every new shared component there by default.
+- `CanDoItAll.AppComponents` is a facade/compatibility layer and app-shell surface. Do not put every new shared component there by default.
 - Shared Tailwind output is owned by the components repo and emitted to `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.BaseLib\wwwroot\css\output.css`.
 - Main app-specific Tailwind output is owned by this repo and emitted to `src/CanDoItAll.Web/wwwroot/css/output.css`.
 - Component packages are versioned together at `0.1.0` and restored from `ExternalPackages` through `NuGet.config`.

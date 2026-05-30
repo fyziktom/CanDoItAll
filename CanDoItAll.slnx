@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/CanDoItAll.Components/CanDoItAll.Components.csproj" />
+    <Project Path="src/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj" />
     <Project Path="src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj" />
     <Project Path="src/CanDoItAll.Composition/CanDoItAll.Composition.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Components/CanDoItAll.AgentFramework.Components.csproj" />

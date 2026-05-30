@@ -1,5 +1,5 @@
 using Bunit;
-using CanDoItAll.Components;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;

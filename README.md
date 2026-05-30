@@ -159,7 +159,7 @@ powershell -ExecutionPolicy Bypass -File tests\CanDoItAll.Tests.Playwright\bin\D
 | `CanDoItAll.Web`, `CanDoItAll.Composition`, `CanDoItAll.Infrastructure`, `CanDoItAll.SharedKernel` | Host, composition, data/control-plane/storage/readiness, shared primitives. |
 | `CanDoItAll.Modules.*` | Product modules for projects, processes, workbench, workspace, prompts, resources, validation, automation, CRM/HR, AgentFramework, activity, collaboration, security, test lab, Scheduler Planner, Plugins, and Cognitive Memory. |
 | `CanDoItAll.AgentFramework.*` | Technical agent catalog, provider profiles, file-backed workspaces, Microsoft Agent Framework runtime adapter, workspace tools, MCP capabilities, execution runs, artifacts, UI components, and voice capture/synthesis services. |
-| `CanDoItAll.Components.*` | Shared Razor UI primitives, charts, Mermaid diagrams, canvas controls, overlay windows, WebGL workbench runtime, facade, and sandbox projects. |
+| `CanDoItAll.AppComponents`, `CanDoItAll.Components.*` | App-shell facade in this repo plus shared Razor UI primitives, charts, Mermaid diagrams, canvas controls, overlay windows, WebGL workbench runtime, and sandbox projects from the components package family. |
 | `src/plugins/*` and `CanDoItAll.Plugins.Abstractions` | Bundled plugin contracts and implementations for Docker, Gmail, Office 365, and shared email workflow payloads. |
 | `CanDoItAll.Migrations.*` | Provider-specific EF Core migrations for SQLite and PostgreSQL. |
 | `tests/*` | Unit, integration, component, Playwright, and support tests. MCP-focused tests live in the sibling `CanDoItAll.Mcp` repo. |

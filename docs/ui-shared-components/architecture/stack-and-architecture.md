@@ -11,7 +11,7 @@
 | Mermaid diagrams | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Mermaid` |
 | Overlay windows | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.OverlayLib` |
 | WebGL workbench runtime | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.WebGlLib` |
-| Facade and app shell | `C:\repositories\CanDoItAll\src\CanDoItAll.Components` |
+| Facade and app shell | `C:\repositories\CanDoItAll\src\CanDoItAll.AppComponents` |
 | Component sandbox | `C:\repositories\CanDoItAll.Components\src\CanDoItAll.Components.Sandbox` |
 | WebGL sandbox | `C:\repositories\CanDoItAll\src\CanDoItAll.Components.WebGlSandbox` |
 | Target framework | `net10.0` |
@@ -52,7 +52,7 @@ Most product modules should start here before adding local component markup.
 
 ### Facade And Sandboxes
 
-`CanDoItAll.Components` is a facade/app-shell layer. Its project file intentionally removes broad historical `Components/**` content and includes only app shell, tab strip, and tuning boundary assets plus references to component libraries.
+`CanDoItAll.AppComponents` is a facade/app-shell layer. Its project file intentionally removes broad historical `Components/**` content and includes only app shell, tab strip, and tuning boundary assets plus references to component libraries.
 
 `CanDoItAll.Components.Sandbox` and `CanDoItAll.Components.WebGlSandbox` are preview and validation hosts. Do not move catalog/demo-only assets into runtime libraries. The general component sandbox lives in the components repo; the WebGL process sandbox remains in the main repo while it depends on process modules.
 

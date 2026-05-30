@@ -20,7 +20,7 @@ Project references:
 
 - `../CanDoItAll.Tests.Support/CanDoItAll.Tests.Support.csproj`
 - `../../src/CanDoItAll.Web/CanDoItAll.Web.csproj`
-- `../../src/CanDoItAll.Components/CanDoItAll.Components.csproj`
+- `../../src/CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj`
 - `../../src/CanDoItAll.Components.WebGlSandbox/CanDoItAll.Components.WebGlSandbox.csproj`
 - `../../src/CanDoItAll.Modules.Collaboration/CanDoItAll.Modules.Collaboration.csproj`
 - `../../src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`

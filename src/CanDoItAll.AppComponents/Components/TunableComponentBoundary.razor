@@ -1,0 +1,60 @@
+@namespace CanDoItAll.AppComponents
+@inject TuningCoordinator TuningCoordinator
+
+<div class="cda-tunable-boundary">
+    @if (IsEnabled)
+    {
+        <button type="button"
+                class="cda-tunable-boundary__button"
+                title="@($"Tune {ComponentName}")"
+                aria-label="@($"Tune {ComponentName}")"
+                @onclick="OpenRequested">
+            <span class="material-icons cda-tunable-boundary__icon" aria-hidden="true">tune</span>
+        </button>
+    }
+
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public bool IsEnabled { get; set; }
+
+    [Parameter, EditorRequired]
+    public string CapsuleKey { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired]
+    public string ComponentName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string? ContextSummary { get; set; }
+
+    [Parameter]
+    public string? Route { get; set; }
+
+    [Parameter]
+    public Guid? ProjectId { get; set; }
+
+    [Parameter]
+    public string? TabId { get; set; }
+
+    [Parameter]
+    public string? SelectionId { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback<TuningBoundaryRequest> Requested { get; set; }
+
+    private async Task OpenRequested()
+    {
+        var request = new TuningBoundaryRequest(CapsuleKey, ComponentName, ContextSummary, Route, ProjectId, TabId, SelectionId);
+        TuningCoordinator.Open(request);
+
+        if (Requested.HasDelegate)
+        {
+            await Requested.InvokeAsync(request);
+        }
+    }
+}

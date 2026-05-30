@@ -1,0 +1,174 @@
+@namespace CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+@typeparam TItem
+
+<CascadingValue Value="this" IsFixed="true">
+    <div style="display:none">
+        @if (Columns is not null)
+        {
+            @Columns
+        }
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+    </div>
+</CascadingValue>
+
+<div @attributes='AdditionalAttributes.WithClass("rz-data-grid overflow-x-auto")'>
+    <table class="min-w-full border-collapse text-sm">
+        <thead>
+            <tr class="border-b border-slate-200 text-left text-slate-600">
+                @foreach (var column in columns)
+                {
+                    <th class="px-3 py-2 font-semibold">@column.HeaderText</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in VisibleItems)
+            {
+                <tr class="border-b border-slate-100 hover:bg-slate-50"
+                    @onclick="() => OnRowSelectAsync(item)">
+                    @foreach (var column in columns)
+                    {
+                        <td class="px-3 py-2 align-top">@column.RenderCell(item)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @if (AllowPaging && TotalPages > 1)
+    {
+        <Cluster AlignItems="AlignItems.Center"
+                 JustifyContent="JustifyContent.End"
+                 Gap="LayoutGap.Small"
+                 Wrap="FlexWrap.NoWrap"
+                 Class="mt-3 text-xs text-slate-600">
+            <button type="button"
+                    class="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
+                    disabled="@(currentPage == 0)"
+                    @onclick="PreviousPageAsync">Prev</button>
+            <span>Page @(currentPage + 1) of @TotalPages</span>
+            <button type="button"
+                    class="rounded border border-slate-300 px-2 py-1 disabled:opacity-40"
+                    disabled="@(currentPage >= TotalPages - 1)"
+                    @onclick="NextPageAsync">Next</button>
+        </Cluster>
+    }
+</div>
+
+@code {
+    private readonly List<DataGridColumn<TItem>> columns = [];
+    private int currentPage;
+
+    [Parameter]
+    public IEnumerable<TItem>? Data { get; set; }
+
+    [Parameter]
+    public EventCallback<TItem> RowSelect { get; set; }
+
+    [Parameter]
+    public bool AllowPaging { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 10;
+
+    [Parameter]
+    public RenderFragment? Columns { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    internal void RegisterColumn(DataGridColumn<TItem> column)
+    {
+        if (!columns.Contains(column))
+        {
+            columns.Add(column);
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    internal void UnregisterColumn(DataGridColumn<TItem> column)
+    {
+        if (columns.Remove(column))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IReadOnlyList<TItem> DataList => Data?.ToList() ?? [];
+
+    private IEnumerable<TItem> VisibleItems
+    {
+        get
+        {
+            if (!AllowPaging)
+            {
+                return DataList;
+            }
+
+            var effectivePageSize = Math.Max(1, PageSize);
+            var skip = currentPage * effectivePageSize;
+            return DataList.Skip(skip).Take(effectivePageSize);
+        }
+    }
+
+    private int TotalPages
+    {
+        get
+        {
+            if (!AllowPaging)
+            {
+                return 1;
+            }
+
+            var effectivePageSize = Math.Max(1, PageSize);
+            return Math.Max(1, (int)Math.Ceiling(DataList.Count / (double)effectivePageSize));
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (AllowPaging && currentPage >= TotalPages)
+        {
+            currentPage = Math.Max(0, TotalPages - 1);
+        }
+
+        if (!AllowPaging)
+        {
+            currentPage = 0;
+        }
+    }
+
+    private async Task OnRowSelectAsync(TItem item)
+    {
+        await RowSelect.InvokeAsync(item);
+    }
+
+    private Task PreviousPageAsync()
+    {
+        if (currentPage > 0)
+        {
+            currentPage--;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task NextPageAsync()
+    {
+        if (currentPage < TotalPages - 1)
+        {
+            currentPage++;
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+

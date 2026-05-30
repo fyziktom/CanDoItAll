@@ -1,0 +1,129 @@
+@namespace CanDoItAll.AppComponents
+@using CanDoItAll.Components.BaseLib
+<CascadingValue Value="this" IsFixed="true">
+    <div style="display:none">
+        @if (TabItems is not null)
+        {
+            @TabItems
+        }
+        @if (ChildContent is not null)
+        {
+            @ChildContent
+        }
+    </div>
+</CascadingValue>
+
+@if (items.Count > 0)
+{
+    <div @attributes='AdditionalAttributes.WithClass("rz-tabs")'>
+        <Cluster Gap="LayoutGap.Small"
+                 Class="rz-tabs-nav mb-3 border-b border-slate-200 pb-2">
+            @for (var index = 0; index < items.Count; index++)
+            {
+                var tabIndex = index;
+                var tab = items[tabIndex];
+                var isActive = tabIndex == EffectiveSelectedIndex;
+                var iconName = ResolveIconName(tab.Icon);
+                <button type="button"
+                        class="rounded-md px-3 py-1.5 text-sm font-medium @(isActive ? "bg-indigo-100 text-indigo-900" : "bg-slate-100 text-slate-700")"
+                        @onclick="() => SelectTabAsync(tabIndex)">
+                    @if (iconName is not null)
+                    {
+                        <span class="rz-icon cda-material-icon material-icons" aria-hidden="true">@iconName</span>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(tab.Icon))
+                    {
+                        <span class="rz-icon-fallback" title="@($"Unknown icon token: {tab.Icon}")" aria-hidden="true">@tab.Icon</span>
+                    }
+                    @tab.Text
+                </button>
+            }
+        </Cluster>
+
+        @if (RenderMode == TabRenderMode.Client)
+        {
+            @for (var index = 0; index < items.Count; index++)
+            {
+                var tabIndex = index;
+                var tab = items[tabIndex];
+                <div class="rz-tab-panel @(index == EffectiveSelectedIndex ? string.Empty : "hidden")">
+                    @tab.ChildContent
+                </div>
+            }
+        }
+        else
+        {
+            <div class="rz-tab-panel">
+                @items[EffectiveSelectedIndex].ChildContent
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private readonly List<TabsItem> items = [];
+
+    [Parameter]
+    public int SelectedIndex { get; set; }
+
+    [Parameter]
+    public EventCallback<int> SelectedIndexChanged { get; set; }
+
+    [Parameter]
+    public TabRenderMode RenderMode { get; set; } = TabRenderMode.Server;
+
+    [Parameter]
+    public RenderFragment? TabItems { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
+    internal void RegisterItem(TabsItem item)
+    {
+        if (!items.Contains(item))
+        {
+            items.Add(item);
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    internal void UnregisterItem(TabsItem item)
+    {
+        if (items.Remove(item))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private int EffectiveSelectedIndex
+    {
+        get
+        {
+            if (items.Count == 0)
+            {
+                return 0;
+            }
+
+            return Math.Clamp(SelectedIndex, 0, items.Count - 1);
+        }
+    }
+
+    private async Task SelectTabAsync(int index)
+    {
+        SelectedIndex = Math.Clamp(index, 0, Math.Max(items.Count - 1, 0));
+        await SelectedIndexChanged.InvokeAsync(SelectedIndex);
+    }
+
+    private static string? ResolveIconName(string? iconToken)
+    {
+        if (MaterialIconCatalog.TryResolveIconName(iconToken, out var iconName))
+        {
+            return iconName;
+        }
+
+        return null;
+    }
+}

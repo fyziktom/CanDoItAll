@@ -18,7 +18,7 @@ dotnet build src/CanDoItAll.Web/CanDoItAll.Web.csproj
 
 Project references:
 
-- `../CanDoItAll.Components/CanDoItAll.Components.csproj`
+- `../CanDoItAll.AppComponents/CanDoItAll.AppComponents.csproj`
 - `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
 - `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
 - `../CanDoItAll.Composition/CanDoItAll.Composition.csproj`

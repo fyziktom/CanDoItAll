@@ -1,4 +1,4 @@
-using CanDoItAll.Components;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Web.Composition;

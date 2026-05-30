@@ -88,7 +88,7 @@ System_Boundary(system, "CanDoItAll") {
     Container(modules, "CanDoItAll.Modules.*", ".NET libraries", "Feature modules for projects, processes, workbench, workspace, prompts, resources, validation, automation, CRM/HR, and AgentFramework.")
     Container(api, "CanDoItAll HTTP APIs", "Minimal APIs", "Projects, project-structure, processes, agents, and API-access endpoints hosted by CanDoItAll.Web.")
     Container(agentFramework, "CanDoItAll.AgentFramework.*", ".NET libraries", "Agent catalog, file sandbox workspace, provider registry, MAF runtime integration, tools, MCP capabilities, execution runs, and artifacts.")
-    Container(components, "CanDoItAll.Components.*", "Razor class libraries", "Base UI primitives, canvas controls, overlay windows, WebGL workbench experiments, and facade/sandbox projects.")
+    Container(components, "CanDoItAll.AppComponents and CanDoItAll.Components.*", "Razor class libraries", "App shell facade plus Base UI primitives, canvas controls, overlay windows, WebGL workbench experiments, and sandbox projects.")
     Container(mcpServers, "CanDoItAll.Mcp repo", ".NET console MCP servers", "Selected agent-facing sidecars for components, code analytics, dotnet watch, Mermaid, SSH ops, and local runtime helpers.")
     ContainerDb(appDb, "AppDbContext profile", "PostgreSQL", "Application state for modules and runtime records.")
     ContainerDb(controlPlane, "Control-plane files", "JSON and protected local files", "Database profiles, active profile metadata, DataProtection keys, and profile storage roots.")
@@ -353,7 +353,7 @@ This separation lets the selected app database change without losing machine-lev
 | `CanDoItAll.Modules.AgentFramework` | Current-profile AgentFramework facade, CRM/HR AI-party bridge, provider runtime gateway, catalog warmup and repair. |
 | `CanDoItAll.AgentFramework.Core` | Agent catalog services, execution service, workspace tools, command/file/artifact policies, execution audit trail. |
 | `CanDoItAll.AgentFramework.Maf` | Microsoft Agent Framework integration, provider transport, capability composition, MCP integration, tool execution wrappers. |
-| `CanDoItAll.Components.*` | Shared UI primitives, canvas, overlays, WebGL workbench experiments, facade/sandbox projects. |
+| `CanDoItAll.AppComponents`, `CanDoItAll.Components.*` | App shell facade, shared UI primitives, canvas, overlays, WebGL workbench experiments, and sandbox projects. |
 | Sibling `CanDoItAll.Mcp` repo | Selected local sidecars for development diagnostics, code analytics, components, Mermaid, SSH, and local runtime helpers. |
 
 ## API And MCP Boundaries

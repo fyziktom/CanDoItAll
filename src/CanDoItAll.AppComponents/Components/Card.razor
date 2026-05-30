@@ -1,0 +1,16 @@
+@namespace CanDoItAll.AppComponents
+<div @attributes='AdditionalAttributes.WithClass("rz-card rounded-xl border border-slate-200 bg-white p-4 shadow-sm")'>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+}
+
+
+
+

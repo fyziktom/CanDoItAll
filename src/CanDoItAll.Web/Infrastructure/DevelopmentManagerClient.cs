@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using CanDoItAll.Components;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.SharedKernel;
 using Microsoft.Extensions.Options;

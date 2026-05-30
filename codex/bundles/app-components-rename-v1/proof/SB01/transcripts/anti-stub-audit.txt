@@ -1,0 +1,8 @@
+Command: rg anti-stub audit for TODO, NotImplemented, fixture-specific branches, and old facade project names in changed production/test sources
+Exit code: 0
+Raw rg exit code: 1
+Invariant ID: SB01-PROJECT-IDENTITY
+Invariant ID: SB01-CONSUMER-REFERENCES
+Invariant ID: SB01-SIBLING-BOUNDARY
+
+No TODO, NotImplemented, fixture-specific rename branch, or old facade project-name stubs found in changed production/test sources.

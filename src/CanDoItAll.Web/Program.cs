@@ -1,4 +1,4 @@
-using CanDoItAll.Components;
+using CanDoItAll.AppComponents;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.Charts;
 using CanDoItAll.Components.Mermaid.Infrastructure;
