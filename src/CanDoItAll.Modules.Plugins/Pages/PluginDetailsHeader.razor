@@ -1,0 +1,69 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using Microsoft.AspNetCore.Components
+
+<Split Gap="LayoutGap.Medium" AlignItems="AlignItems.Start">
+    <Stack GapScale="LayoutGap.Tiny">
+        <Cluster Gap="LayoutGap.Small">
+            @PluginsPageHelpers.RenderPluginIcon(Plugin.Icon, "h-8 w-8")
+            <span class="cda-eyebrow">@PluginsPageHelpers.ResolveIconLabel(Plugin.Icon)</span>
+        </Cluster>
+        <Cluster Gap="LayoutGap.Small">
+            <StatusBadge Tone="@PluginsPageHelpers.ResolveAvailabilityTone(Plugin)" Text="@Plugin.Availability.ToString()" />
+            <StatusBadge Tone="@PluginsPageHelpers.ResolveInstallationTone(Plugin)" Text="@Plugin.InstallationState.ToString()" />
+            <StatusBadge Tone="neutral" Text="@Plugin.SourceKind.ToString()" />
+        </Cluster>
+        <h2 class="cda-title-xl">@Plugin.DisplayName</h2>
+        <p class="cda-body-muted">@Plugin.Description</p>
+    </Stack>
+
+    <Cluster Gap="LayoutGap.Tiny" Class="shrink-0">
+        @if (!Plugin.IsInstalled)
+        {
+            <Button Text="Install and enable"
+                    Icon="download"
+                    ButtonStyle="ButtonStyle.Primary"
+                    Size="ButtonSize.Small"
+                    IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.InstallAction)"
+                    Click="@(() => OnInstall(Plugin))" />
+        }
+        else if (Plugin.IsEnabled)
+        {
+            <Button Text="Disable"
+                    Icon="block"
+                    ButtonStyle="ButtonStyle.Warning"
+                    Variant="Variant.Outlined"
+                    Size="ButtonSize.Small"
+                    IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.DisableAction)"
+                    Click="@(() => OnDisable(Plugin))" />
+        }
+        else
+        {
+            <Button Text="Enable"
+                    Icon="play_arrow"
+                    ButtonStyle="ButtonStyle.Success"
+                    Size="ButtonSize.Small"
+                    IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.EnableAction)"
+                    Click="@(() => OnEnable(Plugin))" />
+        }
+    </Cluster>
+</Split>
+
+@code {
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, Task> OnInstall { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, Task> OnEnable { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, Task> OnDisable { get; set; } = default!;
+}

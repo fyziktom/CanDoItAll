@@ -1,0 +1,174 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using CanDoItAll.SharedKernel.Configuration
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@inject NavigationManager Navigation
+
+@if (Settings.ConnectionDescriptors.Count == 0)
+{
+    <EmptyState Eyebrow="Settings"
+                Title="No connection settings"
+                Description="This plugin does not expose configurable connection descriptors." />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Large">
+        @foreach (var connectionDescriptor in Settings.ConnectionDescriptors)
+        {
+            var editor = ResolveConnectionEditor(Plugin.PluginId, Settings, connectionDescriptor);
+            <FormSection Title="@connectionDescriptor.DisplayName"
+                         Description="@connectionDescriptor.Description">
+                <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                    <div>
+                        <label class="cda-field-label">Connection name</label>
+                        <input class="cda-input"
+                               value="@editor.DisplayName"
+                               data-testid="@PluginsPageHelpers.BuildConnectionNameTestId(Plugin.PluginId, connectionDescriptor)"
+                               @onchange="@((ChangeEventArgs args) => HandleDisplayNameChanged(editor, args))" />
+                    </div>
+                    <div>
+                        <label class="cda-field-label">State</label>
+                        <label class="cda-inline-option">
+                            <input type="checkbox"
+                                   checked="@editor.IsEnabled"
+                                   data-testid="@PluginsPageHelpers.BuildConnectionEnabledTestId(Plugin.PluginId, connectionDescriptor)"
+                                   @onchange="@((ChangeEventArgs args) => HandleEnabledChanged(editor, args))" />
+                            Enabled
+                        </label>
+                    </div>
+                </Grid>
+
+                @if (connectionDescriptor.SettingsSchema.Fields.Count == 0)
+                {
+                    <p class="cda-body-muted">This connection does not define additional settings.</p>
+                }
+                else
+                {
+                    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+                        @foreach (var field in connectionDescriptor.SettingsSchema.Fields)
+                        {
+                            var fieldValue = editor.State.GetText(field.Key);
+                            <div>
+                                <label class="cda-field-label">
+                                    @field.Label
+                                    @if (field.IsRequired)
+                                    {
+                                        <span class="ml-1 text-xs font-medium text-[var(--cda-danger)]">Required</span>
+                                    }
+                                </label>
+
+                                @switch (field.FieldType)
+                                {
+                                    case ConfigurationFieldType.Boolean:
+                                        <label class="cda-inline-option">
+                                            <input type="checkbox"
+                                                   checked="@editor.State.GetBoolean(field.Key)"
+                                                   data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
+                                                   @onchange="@((ChangeEventArgs args) => HandleBooleanSettingChanged(editor, field.Key, args))" />
+                                            @field.HelpText
+                                        </label>
+                                        break;
+                                    case ConfigurationFieldType.Json:
+                                    case ConfigurationFieldType.MultilineText:
+                                        <textarea class="cda-input cda-input--textarea min-h-24"
+                                                  data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
+                                                  @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))">@fieldValue</textarea>
+                                        break;
+                                    case ConfigurationFieldType.Select:
+                                        <select class="cda-input"
+                                                value="@fieldValue"
+                                                data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
+                                                @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))">
+                                            <option value="">Select value</option>
+                                            @foreach (var option in field.Options)
+                                            {
+                                                <option value="@option.Value">@option.Label</option>
+                                            }
+                                        </select>
+                                        break;
+                                    default:
+                                        <input class="cda-input"
+                                               type="@PluginsPageHelpers.ResolveInputType(field)"
+                                               value="@fieldValue"
+                                               placeholder="@(PluginsPageHelpers.ResolveFieldPlaceholder(Settings, field, Navigation.ToAbsoluteUri("/api/plugins/oauth/callback").ToString()))"
+                                               data-testid="@PluginsPageHelpers.BuildConnectionFieldTestId(Plugin.PluginId, connectionDescriptor, field)"
+                                               @onchange="@((ChangeEventArgs args) => HandleSettingChanged(editor, field.Key, args))" />
+                                        break;
+                                }
+
+                                @if (field.FieldType != ConfigurationFieldType.Boolean && !string.IsNullOrWhiteSpace(field.HelpText))
+                                {
+                                    <p class="cda-body-muted mt-2">@field.HelpText</p>
+                                }
+
+                                @foreach (var issue in PluginsPageHelpers.ResolveValidationIssues(editor, field))
+                                {
+                                    <p class="workflow-canvas-error">@issue.Message</p>
+                                }
+                            </div>
+                        }
+                    </Grid>
+                }
+
+                <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.End">
+                    <Button Text="Save settings"
+                            Icon="save"
+                            ButtonStyle="ButtonStyle.Primary"
+                            Size="ButtonSize.Small"
+                            data-testid="@PluginsPageHelpers.BuildConnectionSaveTestId(Plugin.PluginId, connectionDescriptor)"
+                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.ConnectionSaveBusyKey(connectionDescriptor))"
+                            Click="@(() => OnSaveConnectionSettings(Plugin, Settings, connectionDescriptor))" />
+                </Cluster>
+            </FormSection>
+        }
+    </Stack>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public PluginSettingsDetail Settings { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, PluginSettingsDetail, PluginConnectionDescriptor, PluginConnectionEditorState> ResolveConnectionEditor { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Action<PluginConnectionEditorState, string?> OnDisplayNameChanged { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Action<PluginConnectionEditorState, bool> OnEnabledChanged { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Action<PluginConnectionEditorState, string, string?> OnSettingChanged { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginSettingsDetail, PluginConnectionDescriptor, Task> OnSaveConnectionSettings { get; set; } = default!;
+
+    private void HandleDisplayNameChanged(PluginConnectionEditorState editor, ChangeEventArgs args)
+    {
+        OnDisplayNameChanged(editor, args.Value?.ToString());
+    }
+
+    private void HandleEnabledChanged(PluginConnectionEditorState editor, ChangeEventArgs args)
+    {
+        OnEnabledChanged(editor, PluginsPageHelpers.ResolveCheckboxValue(args));
+    }
+
+    private void HandleBooleanSettingChanged(PluginConnectionEditorState editor, string key, ChangeEventArgs args)
+    {
+        OnSettingChanged(editor, key, PluginsPageHelpers.ResolveCheckboxValue(args) ? bool.TrueString : bool.FalseString);
+    }
+
+    private void HandleSettingChanged(PluginConnectionEditorState editor, string key, ChangeEventArgs args)
+    {
+        OnSettingChanged(editor, key, args.Value?.ToString());
+    }
+}

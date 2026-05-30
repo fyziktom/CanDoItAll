@@ -188,16 +188,21 @@ public sealed class PluginManifestTests
                 new PluginSettingsRendererDescriptor(new PluginRendererKey("settings.renderer"), "Settings", "SampleSettingsRenderer", PluginRendererTrustLevel.Bundled)
             ]),
             connections: [CreateConnection("api")],
-            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer | PluginCapabilityKind.SecretReference);
+            capabilities: PluginCapabilityKind.WorkflowExecutor | PluginCapabilityKind.SettingsRenderer | PluginCapabilityKind.SecretReference) with
+        {
+            Tags = [PluginDescriptorTags.Email, PluginDescriptorTags.Workflow]
+        };
 
         var json = JsonSerializer.Serialize(descriptor, JsonOptions);
         var roundTrip = JsonSerializer.Deserialize<PluginDescriptor>(json, JsonOptions);
 
         Assert.Contains("\"id\":\"sample.plugin\"", json, StringComparison.Ordinal);
         Assert.Contains("\"packageId\":\"sample.package\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"tags\":[\"email\",\"workflow\"]", json, StringComparison.Ordinal);
         Assert.NotNull(roundTrip);
         Assert.Equal(descriptor.Id, roundTrip.Id);
         Assert.Equal(descriptor.Package!.PackageId, roundTrip.Package!.PackageId);
+        Assert.Equal(descriptor.Tags, roundTrip.Tags);
         Assert.Equal(descriptor.WorkflowExecutors[0].ExecutorId, roundTrip.WorkflowExecutors[0].ExecutorId);
         Assert.Equal(descriptor.Settings.Renderers[0].RendererKey, roundTrip.Settings.Renderers[0].RendererKey);
         Assert.Equal(descriptor.Connections[0].Key, roundTrip.Connections[0].Key);

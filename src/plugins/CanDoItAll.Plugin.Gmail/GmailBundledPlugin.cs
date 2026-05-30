@@ -96,7 +96,10 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                 ["include_granted_scopes"] = "true"
             }
         },
-        GmailPluginConstants.Icon);
+        GmailPluginConstants.Icon)
+    {
+        Tags = [PluginDescriptorTags.Email, PluginDescriptorTags.OAuth, PluginDescriptorTags.Workflow]
+    };
 
     public void ConfigurePluginServices(IPluginServiceRegistry services)
     {

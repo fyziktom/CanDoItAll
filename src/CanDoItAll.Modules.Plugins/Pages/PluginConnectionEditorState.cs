@@ -4,7 +4,7 @@ using CanDoItAll.SharedKernel.Configuration;
 
 namespace CanDoItAll.Modules.Plugins.Pages;
 
-internal sealed class PluginConnectionEditorState
+public sealed class PluginConnectionEditorState
 {
     private PluginConnectionEditorState(
         PluginConnectionId? connectionId,

@@ -1,0 +1,90 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using CanDoItAll.SharedKernel.Configuration
+@using Microsoft.AspNetCore.Components
+
+@if (!Settings.ConnectionDescriptors.Any(item => item.AuthKind == PluginConnectionAuthKind.OAuth2))
+{
+    <EmptyState Eyebrow="Connections"
+                Title="No OAuth connections"
+                Description="This plugin does not expose OAuth-based connections." />
+}
+else
+{
+    <Stack GapScale="LayoutGap.Medium">
+        @foreach (var connectionDescriptor in Settings.ConnectionDescriptors.Where(item => item.AuthKind == PluginConnectionAuthKind.OAuth2))
+        {
+            var connection = PluginsPageHelpers.ResolveConnection(Settings, connectionDescriptor);
+            var editor = ResolveConnectionEditor(Plugin.PluginId, Settings, connectionDescriptor);
+            var oauthStatus = ResolveOAuthStatus(Plugin.PluginId, connection?.Id, connectionDescriptor.Key);
+            var canStartOAuth = PluginsPageHelpers.CanStartOAuth(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator);
+            <div class="grid gap-3 rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <Stack GapScale="LayoutGap.Tiny">
+                    <Cluster Gap="LayoutGap.Small">
+                        <StatusBadge Tone="@PluginsPageHelpers.ResolveOAuthTone(oauthStatus?.Status)" Text="@(oauthStatus?.Status.ToString() ?? "NotConnected")" />
+                        <StatusBadge Tone="neutral" Text="@connectionDescriptor.Key.Value" />
+                    </Cluster>
+                    <span class="text-sm font-medium text-[var(--cda-text)]">@connectionDescriptor.DisplayName</span>
+                    <span class="text-sm text-[var(--cda-text-muted)]">@connectionDescriptor.Description</span>
+                    @if (oauthStatus is not null && oauthStatus.GrantedScopes.Count > 0)
+                    {
+                        <span class="text-xs text-[var(--cda-text-muted)]">@string.Join(", ", oauthStatus.GrantedScopes)</span>
+                    }
+                    @if (oauthStatus is not null && !string.IsNullOrWhiteSpace(oauthStatus.LastErrorDescription))
+                    {
+                        <span class="text-sm text-[var(--cda-danger)]">@oauthStatus.LastErrorDescription</span>
+                    }
+                    @if (!canStartOAuth)
+                    {
+                        <span class="text-sm text-[var(--cda-warning)]">@PluginsPageHelpers.ResolveOAuthActionHint(Plugin, Settings, connectionDescriptor, editor, ConnectionSettingsValidator)</span>
+                    }
+                </Stack>
+                <Cluster Gap="LayoutGap.Tiny" Class="self-start">
+                    <Button Text="@PluginsPageHelpers.ResolveOAuthActionText(oauthStatus?.Status)"
+                            Icon="login"
+                            ButtonStyle="ButtonStyle.Primary"
+                            Size="ButtonSize.Small"
+                            data-testid="@PluginsPageHelpers.BuildOAuthLoginTestId(Plugin.PluginId, connectionDescriptor)"
+                            Disabled="@(!canStartOAuth)"
+                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "login"))"
+                            Click="@(() => OnStartOAuth(Plugin, Settings, connectionDescriptor))" />
+                    <Button Text="Disconnect"
+                            Icon="link_off"
+                            ButtonStyle="ButtonStyle.Warning"
+                            Variant="Variant.Outlined"
+                            Size="ButtonSize.Small"
+                            Disabled="@(connection is null || oauthStatus?.Status != PluginOAuthConnectionStatusKind.Connected)"
+                            IsBusy="@IsBusy(Plugin.PluginId, PluginsPageHelpers.OAuthBusyKey(connectionDescriptor, "disconnect"))"
+                            Click="@(() => OnDisconnectOAuth(Plugin, connection))" />
+                </Cluster>
+            </div>
+        }
+    </Stack>
+}
+
+@code {
+    private static readonly ConfigurationSchemaValidator ConnectionSettingsValidator = new();
+
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public PluginSettingsDetail Settings { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, PluginSettingsDetail, PluginConnectionDescriptor, PluginConnectionEditorState> ResolveConnectionEditor { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, PluginConnectionId?, PluginConnectionKey, PluginOAuthConnectionStatusItem?> ResolveOAuthStatus { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginSettingsDetail, PluginConnectionDescriptor, Task> OnStartOAuth { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginConnectionItem?, Task> OnDisconnectOAuth { get; set; } = default!;
+}

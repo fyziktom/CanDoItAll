@@ -39,6 +39,23 @@ public sealed class PluginsPageTests
     }
 
     [Fact]
+    public async Task Plugins_page_groups_plugins_by_descriptor_tags()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/plugins");
+        var cut = harness.Context.RenderComponent<PluginsPage>();
+
+        cut.WaitForElement("[data-testid='plugins-tree-tag-email']");
+        var emailGroup = cut.Find("[data-testid='plugins-tree-tag-children-email']");
+
+        Assert.Contains("Gmail", emailGroup.TextContent, StringComparison.Ordinal);
+        Assert.Contains("Office365 Mail", emailGroup.TextContent, StringComparison.Ordinal);
+        Assert.Contains("email", cut.Find("[data-testid='plugins-tree-tag-email']").TextContent, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Plugins_page_shows_empty_executor_state_for_plugins_without_workflow_executors()
     {
         await using var harness = await ComponentTestHarness.CreateAsync(services =>
@@ -332,6 +349,9 @@ public sealed class PluginsPageTests
             [],
             PluginSettingsDescriptor.Empty,
             [],
-            Icon: UiIconDescriptor.MaterialIcon("extension", "Executor empty plugin"));
+            Icon: UiIconDescriptor.MaterialIcon("extension", "Executor empty plugin"))
+        {
+            Tags = ["test"]
+        };
     }
 }

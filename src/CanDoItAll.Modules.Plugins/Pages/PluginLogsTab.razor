@@ -1,0 +1,50 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using Microsoft.AspNetCore.Components
+
+<Stack GapScale="LayoutGap.Medium">
+    <Cluster Gap="LayoutGap.Small" JustifyContent="JustifyContent.SpaceBetween">
+        <Cluster Gap="LayoutGap.Tiny">
+            <Button Text="Selected plugin"
+                    Icon="filter_alt"
+                    ButtonStyle="@(ShowAllPluginLogs ? ButtonStyle.Light : ButtonStyle.Primary)"
+                    Size="ButtonSize.Small"
+                    data-testid="plugins-logs-selected-filter"
+                    Click="@(() => OnSetLogScope(false))" />
+            <Button Text="All plugins"
+                    Icon="public"
+                    ButtonStyle="@(ShowAllPluginLogs ? ButtonStyle.Primary : ButtonStyle.Light)"
+                    Size="ButtonSize.Small"
+                    data-testid="plugins-logs-all-filter"
+                    Click="@(() => OnSetLogScope(true))" />
+        </Cluster>
+        <StatusBadge Tone="info" Text="@(ShowAllPluginLogs ? "All plugins" : Plugin.DisplayName)" />
+    </Cluster>
+
+    <Grid Gap="LayoutGap.Large" ColumnsMd="2">
+        <FormSection Title="Installation logs" Description="Package and plugin lifecycle records, newest first.">
+            @PluginsPageHelpers.RenderLogList(InstallationLogs, "installation")
+        </FormSection>
+        <FormSection Title="Runtime logs" Description="Plugin executor and runtime event records, newest first.">
+            @PluginsPageHelpers.RenderLogList(RuntimeLogs, "runtime")
+        </FormSection>
+    </Grid>
+</Stack>
+
+@code {
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PluginLogItem> InstallationLogs { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PluginLogItem> RuntimeLogs { get; set; } = [];
+
+    [Parameter]
+    public bool ShowAllPluginLogs { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<bool, Task> OnSetLogScope { get; set; } = default!;
+}

@@ -121,7 +121,10 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                 [PromptParameter] = ConsentPrompt
             }
         },
-        Office365PluginConstants.Icon);
+        Office365PluginConstants.Icon)
+    {
+        Tags = [PluginDescriptorTags.Email, PluginDescriptorTags.OAuth, PluginDescriptorTags.Workflow]
+    };
 
     public void ConfigurePluginServices(IPluginServiceRegistry services)
     {

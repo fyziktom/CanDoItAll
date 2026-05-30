@@ -51,7 +51,19 @@ public sealed record PluginDescriptor(
     IReadOnlyList<PluginConnectionDescriptor> Connections,
     PluginPackageDescriptor? Package = null,
     PluginOAuth2Descriptor? OAuth2 = null,
-    UiIconDescriptor? Icon = null);
+    UiIconDescriptor? Icon = null)
+{
+    public IReadOnlyList<string> Tags { get; init; } = [];
+}
+
+public static class PluginDescriptorTags
+{
+    public const string Docker = "docker";
+    public const string Email = "email";
+    public const string HostCommand = "host-command";
+    public const string OAuth = "oauth";
+    public const string Workflow = "workflow";
+}
 
 public sealed record PluginWorkflowExecutorDescriptor(
     WorkflowExecutorId ExecutorId,

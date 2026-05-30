@@ -9,6 +9,13 @@ namespace CanDoItAll.Modules.Plugins.Pages;
 
 internal static class PluginsPageHelpers
 {
+    public const string InstallAction = "install";
+    public const string EnableAction = "enable";
+    public const string DisableAction = "disable";
+    public const string PackageInstallAction = "package-install";
+    public const string PackageUploadAction = "package-upload";
+    public const string RestartAction = "restart";
+
     public static bool ResolveCheckboxValue(ChangeEventArgs args)
         => args.Value is bool value && value;
 
@@ -332,7 +339,7 @@ internal static class PluginsPageHelpers
             _ => icon.Value
         };
 
-    private static string NormalizeTestId(string value)
+    public static string NormalizeTestId(string value)
     {
         var chars = value
             .Trim()

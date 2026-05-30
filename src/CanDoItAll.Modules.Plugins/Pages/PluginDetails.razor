@@ -1,0 +1,136 @@
+@using CanDoItAll.Components.BaseLib
+@using CanDoItAll.Components.Common
+@using CanDoItAll.Modules.Plugins
+@using CanDoItAll.Plugins.Abstractions
+@using Microsoft.AspNetCore.Components
+
+@if (Settings is null)
+{
+    <Alert AlertStyle="AlertStyle.Warning">
+        Plugin settings could not be loaded for @Plugin.PluginId.
+    </Alert>
+}
+else
+{
+    <Tabs SelectedIndex="@EffectiveSelectedTabIndex"
+          SelectedIndexChanged="SelectedTabIndexChanged"
+          Variant="TabsVariant.WorkspaceSecondary"
+          OverflowMode="TabsOverflowMode.Wrap"
+          AriaLabel="Plugin detail sections">
+        <TabItems>
+            <TabsItem Text="Main info" Icon="info" data-testid="plugins-tab-main" />
+
+            <TabsItem Text="Executors" Icon="account_tree" BadgeText="@PluginsPageHelpers.ResolveExecutorBadge(Plugin)" data-testid="plugins-tab-executors" />
+
+            <TabsItem Text="Settings" Icon="tune" BadgeText="@PluginsPageHelpers.ResolveSettingsBadge(Settings)" data-testid="plugins-tab-settings" />
+
+            <TabsItem Text="Connections" Icon="link" BadgeText="@Settings.Connections.Count.ToString()" data-testid="plugins-tab-connections" />
+
+            <TabsItem Text="Logs" Icon="receipt_long" BadgeText="@((InstallationLogs.Count + RuntimeLogs.Count).ToString())" data-testid="plugins-tab-logs" />
+
+            <TabsItem Text="Grants" Icon="verified_user" BadgeText="@Settings.Grants.Count.ToString()" data-testid="plugins-tab-grants" />
+        </TabItems>
+    </Tabs>
+
+    <div class="mt-4">
+        @switch (EffectiveSelectedTabIndex)
+        {
+            case 0:
+                <PluginMainInfoTab Plugin="@Plugin" />
+                break;
+            case 1:
+                <PluginExecutorsTab Plugin="@Plugin" />
+                break;
+            case 2:
+                <PluginSettingsTab Plugin="@Plugin"
+                                   Settings="@Settings"
+                                   ResolveConnectionEditor="@ResolveConnectionEditor"
+                                   IsBusy="@IsBusy"
+                                   OnDisplayNameChanged="@OnDisplayNameChanged"
+                                   OnEnabledChanged="@OnEnabledChanged"
+                                   OnSettingChanged="@OnSettingChanged"
+                                   OnSaveConnectionSettings="@OnSaveConnectionSettings" />
+                break;
+            case 3:
+                <PluginConnectionsTab Plugin="@Plugin"
+                                      Settings="@Settings"
+                                      ResolveConnectionEditor="@ResolveConnectionEditor"
+                                      ResolveOAuthStatus="@ResolveOAuthStatus"
+                                      IsBusy="@IsBusy"
+                                      OnStartOAuth="@OnStartOAuth"
+                                      OnDisconnectOAuth="@OnDisconnectOAuth" />
+                break;
+            case 4:
+                <PluginLogsTab Plugin="@Plugin"
+                               InstallationLogs="@InstallationLogs"
+                               RuntimeLogs="@RuntimeLogs"
+                               ShowAllPluginLogs="@ShowAllPluginLogs"
+                               OnSetLogScope="@OnSetLogScope" />
+                break;
+            case 5:
+                <PluginGrantsTab Plugin="@Plugin"
+                                 Settings="@Settings"
+                                 IsBusy="@IsBusy"
+                                 OnUpdateGrant="@OnUpdateGrant" />
+                break;
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public PluginCatalogItem Plugin { get; set; } = default!;
+
+    [Parameter]
+    public PluginSettingsDetail? Settings { get; set; }
+
+    [Parameter]
+    public int SelectedTabIndex { get; set; }
+
+    [Parameter]
+    public EventCallback<int> SelectedTabIndexChanged { get; set; }
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PluginLogItem> InstallationLogs { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IReadOnlyList<PluginLogItem> RuntimeLogs { get; set; } = [];
+
+    [Parameter]
+    public bool ShowAllPluginLogs { get; set; }
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, PluginSettingsDetail, PluginConnectionDescriptor, PluginConnectionEditorState> ResolveConnectionEditor { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, PluginConnectionId?, PluginConnectionKey, PluginOAuthConnectionStatusItem?> ResolveOAuthStatus { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginId, string, bool> IsBusy { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Action<PluginConnectionEditorState, string?> OnDisplayNameChanged { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Action<PluginConnectionEditorState, bool> OnEnabledChanged { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Action<PluginConnectionEditorState, string, string?> OnSettingChanged { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginSettingsDetail, PluginConnectionDescriptor, Task> OnSaveConnectionSettings { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginSettingsDetail, PluginConnectionDescriptor, Task> OnStartOAuth { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginConnectionItem?, Task> OnDisconnectOAuth { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<bool, Task> OnSetLogScope { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public Func<PluginCatalogItem, PluginCapabilityGrantItem, PluginGrantState, Task> OnUpdateGrant { get; set; } = default!;
+
+    private int EffectiveSelectedTabIndex => Math.Clamp(SelectedTabIndex, 0, 5);
+}
