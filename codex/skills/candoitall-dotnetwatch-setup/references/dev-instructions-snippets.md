@@ -17,7 +17,7 @@ Start this repo by calling `candoitall_app_start` with the repo's absolute `proj
 ## Repair rule
 
 ```markdown
-If the shared `candoitall_dotnetwatch` MCP is missing or stale, use the `candoitall-dotnetwatch-setup` skill and rerun `tools\Reinstall-CanDoItAllMcps.ps1` from the CanDoItAll repo. Do not create another repo-specific dotnetwatch MCP.
+If the shared `candoitall_dotnetwatch` MCP is missing or stale, use the `candoitall-dotnetwatch-setup` skill and rerun `tools\Reinstall-CanDoItAllMcps.ps1` from the CanDoItAll repo. The script builds MCP source from the sibling `CanDoItAll.Mcp` repo and syncs skills from the main repo. Do not create another repo-specific dotnetwatch MCP.
 ```
 
 ## UI loop rule

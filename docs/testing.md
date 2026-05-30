@@ -30,10 +30,10 @@ Current quarantines:
 ```powershell
 dotnet test tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj --configuration Release --no-build --filter "Category!=Quarantined" /m:1
 dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration Release --no-build --filter "Category=LiveProcess" /m:1
-dotnet test tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj --configuration Release --no-build --filter "Category!=Quarantined" /m:1
+dotnet test ..\CanDoItAll.Mcp\tests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests\CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj --configuration Release --no-build --filter "Category!=Quarantined" /m:1
 ```
 
-Playwright hosts and MCP stdio tests infer the active build configuration from the test output path. Set `CANDOITALL_TEST_CONFIGURATION` only when running from a non-standard output layout. The DotNetWatch integration assembly is categorized as `LiveProcess` and `LongRunning`, so `Category!=Quarantined` is its stable extended gate.
+Playwright hosts and MCP stdio tests infer the active build configuration from the test output path. Set `CANDOITALL_TEST_CONFIGURATION` only when running from a non-standard output layout. MCP tests live in the sibling `CanDoItAll.Mcp` repo; the DotNetWatch integration assembly uses this repo for workspace settings and runtime state. The DotNetWatch integration assembly is categorized as `LiveProcess` and `LongRunning`, so `Category!=Quarantined` is its stable extended gate.
 
 ## Full Suite
 

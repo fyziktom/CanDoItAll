@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Test project for the corresponding CanDoItAll runtime, module, component, MCP, or integration behavior.
+Test project for the corresponding CanDoItAll runtime, module, component, or integration behavior. MCP-specific tests live in the sibling `CanDoItAll.Mcp` repository.
 
 ## Project Type
 
@@ -27,7 +27,6 @@ Project references:
 - `../../src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
 - `../../src/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj`
 - `../../src/CanDoItAll.Modules.Factory/CanDoItAll.Modules.Factory.csproj`
-- `../../src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj`
 - `../../tools/CanDoItAll.Manager/CanDoItAll.Manager.csproj`
 
 Framework references:

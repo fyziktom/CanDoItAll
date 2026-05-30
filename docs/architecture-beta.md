@@ -4,7 +4,7 @@ This page describes the current CanDoItAll architecture as of 2026-05-09. It is 
 
 ## Current Shape
 
-CanDoItAll is a local-first .NET 10 Blazor Web App. The web host composes product modules, infrastructure, shared components, control-plane database profiles, HTTP APIs, selected MCP-facing developer sidecars, and an AgentFramework-backed AI execution runtime.
+CanDoItAll is a local-first .NET 10 Blazor Web App. The web host composes product modules, infrastructure, shared components, control-plane database profiles, HTTP APIs, selected MCP-facing developer sidecars, and an AgentFramework-backed AI execution runtime. MCP sidecar source lives in the sibling `CanDoItAll.Mcp` repository; this repo owns their workspace settings and installed artifacts.
 
 The important architecture rule is simple: product semantics live in modules and shared services. HTTP APIs and MCP tools expose those semantics to agents and external automation; they must not become competing implementations. Process, project-structure, and agent automation now uses the web-hosted API control plane. The old Processes and ProjectStructure MCP servers are suppressed in the current repo state.
 
@@ -89,7 +89,7 @@ System_Boundary(system, "CanDoItAll") {
     Container(api, "CanDoItAll HTTP APIs", "Minimal APIs", "Projects, project-structure, processes, agents, and API-access endpoints hosted by CanDoItAll.Web.")
     Container(agentFramework, "CanDoItAll.AgentFramework.*", ".NET libraries", "Agent catalog, file sandbox workspace, provider registry, MAF runtime integration, tools, MCP capabilities, execution runs, and artifacts.")
     Container(components, "CanDoItAll.Components.*", "Razor class libraries", "Base UI primitives, canvas controls, overlay windows, WebGL workbench experiments, and facade/sandbox projects.")
-    Container(mcpServers, "CanDoItAll.Mcp.*", ".NET console MCP servers", "Selected agent-facing sidecars for components, code analytics, dotnet watch, Mermaid, SSH ops, and local runtime helpers.")
+    Container(mcpServers, "CanDoItAll.Mcp repo", ".NET console MCP servers", "Selected agent-facing sidecars for components, code analytics, dotnet watch, Mermaid, SSH ops, and local runtime helpers.")
     ContainerDb(appDb, "AppDbContext profile", "PostgreSQL", "Application state for modules and runtime records.")
     ContainerDb(controlPlane, "Control-plane files", "JSON and protected local files", "Database profiles, active profile metadata, DataProtection keys, and profile storage roots.")
     ContainerDb(workspaceFiles, "Agent workspace files", "JSON and artifacts", "Organization-scoped AgentFramework catalog, chats, execution slices, outputs, receipts, and artifacts.")
@@ -354,7 +354,7 @@ This separation lets the selected app database change without losing machine-lev
 | `CanDoItAll.AgentFramework.Core` | Agent catalog services, execution service, workspace tools, command/file/artifact policies, execution audit trail. |
 | `CanDoItAll.AgentFramework.Maf` | Microsoft Agent Framework integration, provider transport, capability composition, MCP integration, tool execution wrappers. |
 | `CanDoItAll.Components.*` | Shared UI primitives, canvas, overlays, WebGL workbench experiments, facade/sandbox projects. |
-| `CanDoItAll.Mcp.*` | Selected local sidecars for development diagnostics, code analytics, components, Mermaid, SSH, and local runtime helpers. |
+| Sibling `CanDoItAll.Mcp` repo | Selected local sidecars for development diagnostics, code analytics, components, Mermaid, SSH, and local runtime helpers. |
 
 ## API And MCP Boundaries
 
@@ -362,7 +362,7 @@ The current automation boundary is split deliberately:
 
 - HTTP API: `/api/projects`, `/api/project-structure`, `/api/processes`, `/api/agents`, and `/api/access` are the current process, project-structure, project, and agent control surfaces.
 - Repo-managed skills: `candoitall-api-project-structure`, `candoitall-api-processes`, and `candoitall-api-agents` explain how agents should use those APIs.
-- Selected MCP sidecars: `CanDoItAll.Mcp.DotNetWatch`, `CanDoItAll.Mcp.CodeAnalytics`, `CanDoItAll.Mcp.Components`, `CanDoItAll.Mcp.Mermaid`, `CanDoItAll.Mcp.SshOps`, and local runtime helpers remain thin adapters for development and inspection.
+- Selected MCP sidecars: `CanDoItAll.Mcp.DotNetWatch`, `CanDoItAll.Mcp.CodeAnalytics`, `CanDoItAll.Mcp.Components`, `CanDoItAll.Mcp.Mermaid`, `CanDoItAll.Mcp.SshOps`, and local runtime helpers remain thin adapters for development and inspection. Their source and tests live in the sibling `CanDoItAll.Mcp` repo.
 - Suppressed MCPs: `CanDoItAll.Mcp.Processes` and `CanDoItAll.Mcp.ProjectStructure` are not active in the current repo state. Do not reinstall or call `candoitall_processes` or `candoitall_projectstructure`; use the HTTP API replacements.
 
 The canonical rule is that API endpoints and MCP tools call application services or specialized libraries. They should not fork process, project, storage, or AgentFramework behavior.

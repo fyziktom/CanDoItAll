@@ -8,9 +8,11 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
+        "C:\\repositories\\CanDoItAll.Mcp\\tools\\CanDoItAll.Mcp.DotNetWatch\\Start-CanDoItAllDotNetWatchMcp.ps1",
         "-RepoRoot",
         "${workspaceFolder}",
+        "-McpRepoRoot",
+        "C:\\repositories\\CanDoItAll.Mcp",
         "-Configuration",
         "Release",
         "-SettingsPath",
@@ -42,6 +44,15 @@
       "args": [
         "--settings",
         "${workspaceFolder}\\CanDoItAll.Mcp.CodeAnalytics.settings.json"
+      ],
+      "cwd": "${workspaceFolder}"
+    },
+    "candoitall_mermaid": {
+      "type": "stdio",
+      "command": "${workspaceFolder}\\.artifacts\\mcp-installs\\CanDoItAll.Mcp.Mermaid\\current\\CanDoItAll.Mcp.Mermaid.exe",
+      "args": [
+        "--settings",
+        "${workspaceFolder}\\CanDoItAll.Mcp.Mermaid.settings.json"
       ],
       "cwd": "${workspaceFolder}"
     },

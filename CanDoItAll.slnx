@@ -11,13 +11,6 @@
     <Project Path="src/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.Core/CanDoItAll.Mcp.Core.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.Components/CanDoItAll.Mcp.Components.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.CodeAnalytics/CanDoItAll.Mcp.CodeAnalytics.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.DotNetWatch/CanDoItAll.Mcp.DotNetWatch.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.LocalRuntime/CanDoItAll.Mcp.LocalRuntime.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.Mermaid/CanDoItAll.Mcp.Mermaid.csproj" />
-    <Project Path="src/CanDoItAll.Mcp.SshOps/CanDoItAll.Mcp.SshOps.csproj" />
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />
     <Project Path="src/CanDoItAll.Modules.Activity/CanDoItAll.Modules.Activity.csproj" />
     <Project Path="src/CanDoItAll.Modules.AgentFramework/CanDoItAll.Modules.AgentFramework.csproj" />
@@ -47,10 +40,6 @@
     <Project Path="src/CanDoItAll.Web/CanDoItAll.Web.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/CanDoItAll.Mcp.Components.Tests/CanDoItAll.Mcp.Components.Tests.csproj" />
-    <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests/CanDoItAll.Mcp.DotNetWatch.IntegrationTests.csproj" />
-    <Project Path="tests/CanDoItAll.Mcp.DotNetWatch.Tests/CanDoItAll.Mcp.DotNetWatch.Tests.csproj" />
-    <Project Path="tests/CanDoItAll.Mcp.Mermaid.Tests/CanDoItAll.Mcp.Mermaid.Tests.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj" />
     <Project Path="tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj" />
@@ -59,7 +48,6 @@
   </Folder>
   <Folder Name="/tools/">
     <Project Path="tools/CanDoItAll.Manager/CanDoItAll.Manager.csproj" />
-    <Project Path="tools/CanDoItAll.Mcp.DotNetWatch.Tray/CanDoItAll.Mcp.DotNetWatch.Tray.csproj" />
     <Project Path="tools/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj" />
   </Folder>
 </Solution>
