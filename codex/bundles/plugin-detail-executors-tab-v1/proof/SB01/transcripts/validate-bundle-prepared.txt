@@ -1,0 +1,5 @@
+Command: python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/plugin-detail-executors-tab-v1 --profile feedback --stage prepared --repo-root .
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\plugin-detail-executors-tab-v1
+ExitCode: 0
+Invariant ID: SB01-DYNAMIC-DESCRIPTOR
+Invariant ID: SB01-NO-EXECUTOR-EMPTY-STATE

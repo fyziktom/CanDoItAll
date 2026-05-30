@@ -1,0 +1,4 @@
+Command: git show HEAD:src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor | rg 'plugins-tab-executors'
+ExitCode: 1
+Invariant ID: SB01-DYNAMIC-DESCRIPTOR
+Invariant ID: SB01-NO-EXECUTOR-EMPTY-STATE

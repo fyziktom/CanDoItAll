@@ -1,0 +1,6 @@
+Command: verify changed production files do not hard-code plugin executor rows and do not contain TODO or NotImplemented stubs
+No hard-coded plugin-specific executor names found in changed production UI files.
+No TODO or NotImplemented production stubs found in changed production UI files.
+ExitCode: 0
+Invariant ID: SB01-DYNAMIC-DESCRIPTOR
+Invariant ID: SB01-NO-EXECUTOR-EMPTY-STATE

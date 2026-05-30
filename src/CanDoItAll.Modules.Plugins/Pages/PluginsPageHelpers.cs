@@ -182,8 +182,31 @@ internal static class PluginsPageHelpers
             .Count(descriptor => descriptor.SettingsSchema.Fields.Count > 0)
             .ToString();
 
+    public static string ResolveExecutorBadge(PluginCatalogItem plugin)
+        => plugin.Descriptor.WorkflowExecutors.Count.ToString();
+
+    public static string ResolveExecutorApprovalTone(WorkflowExecutorApprovalRequirement requirement)
+        => requirement switch
+        {
+            WorkflowExecutorApprovalRequirement.NotRequired => "success",
+            WorkflowExecutorApprovalRequirement.RequiredForExternalEffect => "warning",
+            WorkflowExecutorApprovalRequirement.AlwaysRequired => "danger",
+            _ => "neutral"
+        };
+
+    public static string ResolveExecutorPolicySummary(PluginWorkflowExecutorDescriptor executor)
+        => $"Timeout {executor.DefaultPolicy.TimeoutSeconds}s, retries {executor.DefaultPolicy.MaxRetryAttempts}";
+
+    public static string ResolveExecutorSettingsSummary(PluginWorkflowExecutorDescriptor executor)
+        => executor.SettingsSchema.Fields.Count == 0
+            ? "No settings"
+            : $"{executor.SettingsSchema.Fields.Count} setting(s)";
+
     public static string BuildPluginListTestId(PluginCatalogItem plugin)
         => $"plugins-list-item-{NormalizeTestId(plugin.PluginId.Value)}";
+
+    public static string BuildExecutorRowTestId(PluginId pluginId, PluginWorkflowExecutorDescriptor executor)
+        => $"plugin-executor-{NormalizeTestId(pluginId.Value)}-{NormalizeTestId(executor.ExecutorId.Value)}";
 
     public static string BuildPackageInstallTestId(PluginPackageCatalogItem package)
         => $"plugin-package-install-{NormalizeTestId(package.PackageId.Value)}";

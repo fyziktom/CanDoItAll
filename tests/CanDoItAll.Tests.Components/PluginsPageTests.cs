@@ -3,6 +3,7 @@ using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
 using Bunit;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Modules.Plugins.Pages;
 using CanDoItAll.Plugins.Abstractions;
@@ -15,6 +16,50 @@ namespace CanDoItAll.Tests.Components;
 
 public sealed class PluginsPageTests
 {
+    [Fact]
+    public async Task Plugins_page_shows_workflow_executors_from_plugin_descriptor()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/plugins");
+        var cut = harness.Context.RenderComponent<PluginsPage>();
+
+        cut.WaitForElement("[data-testid='plugins-list-item-office365-mail']");
+        cut.Find("[data-testid='plugins-list-item-office365-mail']").Click();
+        cut.Find("[data-testid='plugins-tab-executors']").Click();
+        cut.WaitForElement("[data-testid='plugin-executor-office365-mail-office365-messages-by-category']");
+
+        Assert.Contains("Loaded from plugin descriptor", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.DownloadByCategoryExecutorId.Value, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.DownloadByAddressExecutorId.Value, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(Office365PluginConstants.MarkProcessedExecutorId.Value, cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Downloads a bounded batch of Microsoft Graph mail messages that have the selected Outlook category.", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Adds the processed Outlook category to a Microsoft 365 message and optionally removes the source category.", cut.Markup, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Plugins_page_shows_empty_executor_state_for_plugins_without_workflow_executors()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync(services =>
+        {
+            services.AddSingleton<ICanDoItAllPlugin, NoWorkflowExecutorPlugin>();
+        });
+        var navigation = harness.Context.Services.GetRequiredService<NavigationManager>();
+
+        navigation.NavigateTo("/plugins");
+        var cut = harness.Context.RenderComponent<PluginsPage>();
+
+        cut.WaitForElement("[data-testid='plugins-list-item-ui-executor-empty']");
+        cut.Find("[data-testid='plugins-list-item-ui-executor-empty']").Click();
+        cut.Find("[data-testid='plugins-tab-executors']").Click();
+        cut.WaitForElement("[data-testid='plugins-executors-empty']");
+
+        Assert.Contains("No workflow executors", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("This plugin does not expose workflow executor descriptors.", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("plugin-executor-ui-executor-empty", cut.Markup, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Plugins_page_lists_plugins_and_saves_connection_settings()
     {
@@ -271,4 +316,22 @@ public sealed class PluginsPageTests
     private sealed record PluginPackagePathOverrides(
         string CatalogRootPath,
         IReadOnlyDictionary<string, string?> ConfigurationOverrides);
+
+    private sealed class NoWorkflowExecutorPlugin : ICanDoItAllPlugin
+    {
+        public PluginDescriptor Descriptor { get; } = new(
+            new PluginId("ui.executor.empty"),
+            "Executor empty plugin",
+            "Plugin without workflow executors for UI tests.",
+            "1.0.0",
+            "CanDoItAll",
+            PluginSourceKind.Bundled,
+            PluginTrustLevel.Bundled,
+            "1.0.0",
+            PluginCapabilityKind.None,
+            [],
+            PluginSettingsDescriptor.Empty,
+            [],
+            Icon: UiIconDescriptor.MaterialIcon("extension", "Executor empty plugin"));
+    }
 }

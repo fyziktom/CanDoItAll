@@ -1,0 +1,13 @@
+Command: rg -n 'selectedPlugin\.Descriptor\.WorkflowExecutors|plugins-tab-executors|BuildExecutorRowTestId|ResolveExecutorBadge' src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor src/CanDoItAll.Modules.Plugins/Pages/PluginsPageHelpers.cs tests/CanDoItAll.Tests.Components/PluginsPageTests.cs
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPageHelpers.cs:185:    public static string ResolveExecutorBadge(PluginCatalogItem plugin)
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPageHelpers.cs:208:    public static string BuildExecutorRowTestId(PluginId pluginId, PluginWorkflowExecutorDescriptor executor)
+tests/CanDoItAll.Tests.Components/PluginsPageTests.cs:30:        cut.Find("[data-testid='plugins-tab-executors']").Click();
+tests/CanDoItAll.Tests.Components/PluginsPageTests.cs:55:        cut.Find("[data-testid='plugins-tab-executors']").Click();
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor:230:                                <TabsItem Text="Executors" Icon="account_tree" BadgeText="@PluginsPageHelpers.ResolveExecutorBadge(selectedPlugin)" data-testid="plugins-tab-executors">
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor:231:                                    @if (selectedPlugin.Descriptor.WorkflowExecutors.Count == 0)
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor:243:                                                <StatusBadge Tone="info" Text="@($"{selectedPlugin.Descriptor.WorkflowExecutors.Count} executor(s)")" />
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor:248:                                                @foreach (var executor in selectedPlugin.Descriptor.WorkflowExecutors.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+src/CanDoItAll.Modules.Plugins/Pages/PluginsPage.razor:251:                                                         data-testid="@PluginsPageHelpers.BuildExecutorRowTestId(selectedPlugin.PluginId, executor)">
+ExitCode: 0
+Invariant ID: SB01-DYNAMIC-DESCRIPTOR
+Invariant ID: SB01-NO-EXECUTOR-EMPTY-STATE

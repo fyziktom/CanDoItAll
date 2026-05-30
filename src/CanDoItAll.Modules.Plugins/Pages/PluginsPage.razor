@@ -227,6 +227,58 @@
                                     </Stack>
                                 </TabsItem>
 
+                                <TabsItem Text="Executors" Icon="account_tree" BadgeText="@PluginsPageHelpers.ResolveExecutorBadge(selectedPlugin)" data-testid="plugins-tab-executors">
+                                    @if (selectedPlugin.Descriptor.WorkflowExecutors.Count == 0)
+                                    {
+                                        <div data-testid="plugins-executors-empty">
+                                            <EmptyState Eyebrow="Workflow executors"
+                                                        Title="No workflow executors"
+                                                        Description="This plugin does not expose workflow executor descriptors." />
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <Stack GapScale="LayoutGap.Medium">
+                                            <Cluster Gap="LayoutGap.Tiny">
+                                                <StatusBadge Tone="info" Text="@($"{selectedPlugin.Descriptor.WorkflowExecutors.Count} executor(s)")" />
+                                                <StatusBadge Tone="neutral" Text="Loaded from plugin descriptor" />
+                                            </Cluster>
+
+                                            <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
+                                                @foreach (var executor in selectedPlugin.Descriptor.WorkflowExecutors.OrderBy(item => item.Name, StringComparer.OrdinalIgnoreCase))
+                                                {
+                                                    <div class="rounded-lg border border-[var(--cda-border-subtle)] bg-[var(--cda-surface-muted)] p-3"
+                                                         data-testid="@PluginsPageHelpers.BuildExecutorRowTestId(selectedPlugin.PluginId, executor)">
+                                                        <Stack GapScale="LayoutGap.Small">
+                                                            <Cluster Gap="LayoutGap.Tiny">
+                                                                <StatusBadge Tone="info" Text="@executor.Category.ToString()" />
+                                                                <StatusBadge Tone="@PluginsPageHelpers.ResolveExecutorApprovalTone(executor.PermissionPolicy.ApprovalRequirement)"
+                                                                             Text="@executor.PermissionPolicy.ApprovalRequirement.ToString()" />
+                                                            </Cluster>
+
+                                                            <Stack GapScale="LayoutGap.Tiny">
+                                                                <span class="text-sm font-semibold text-[var(--cda-text)]">@executor.Name</span>
+                                                                <span class="break-all text-xs text-[var(--cda-text-muted)]">@executor.ExecutorId.Value</span>
+                                                            </Stack>
+
+                                                            <p class="text-sm text-[var(--cda-text-muted)]">@executor.Description</p>
+
+                                                            <Cluster Gap="LayoutGap.Tiny">
+                                                                <StatusBadge Tone="neutral" Text="@PluginsPageHelpers.ResolveExecutorPolicySummary(executor)" />
+                                                                <StatusBadge Tone="neutral" Text="@PluginsPageHelpers.ResolveExecutorSettingsSummary(executor)" />
+                                                                @if (executor.DeterministicTestMode.IsSupported)
+                                                                {
+                                                                    <StatusBadge Tone="success" Text="Preview simulation" />
+                                                                }
+                                                            </Cluster>
+                                                        </Stack>
+                                                    </div>
+                                                }
+                                            </Grid>
+                                        </Stack>
+                                    }
+                                </TabsItem>
+
                                 <TabsItem Text="Settings" Icon="tune" BadgeText="@PluginsPageHelpers.ResolveSettingsBadge(selectedSettings)" data-testid="plugins-tab-settings">
                                     @if (selectedSettings.ConnectionDescriptors.Count == 0)
                                     {
