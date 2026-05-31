@@ -243,7 +243,16 @@
             </CanvasWorkbench>
         </Canvas>
         <Inspector>
-            <Stack GapScale="LayoutGap.Medium" data-testid="workflow-canvas-inspector">
+            <Tabs SelectedIndex="@workflowInspectorTabIndex"
+                  SelectedIndexChanged="HandleWorkflowInspectorTabChanged"
+                  RenderMode="TabRenderMode.Server"
+                  Variant="TabsVariant.WorkspaceSecondary"
+                  OverflowMode="TabsOverflowMode.Scroll"
+                  AriaLabel="Workflow editor inspector sections"
+                  data-testid="workflow-canvas-inspector">
+                <TabsItem Text="Definition"
+                          Icon="settings"
+                          data-testid="workflow-canvas-tab-definition">
                 <div class="workflow-canvas-panel">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Definition" />
                     <label class="workflow-canvas-field">
@@ -275,7 +284,11 @@
                         </select>
                     </label>
                 </div>
+                </TabsItem>
 
+                <TabsItem Text="Node setup"
+                          Icon="account_tree"
+                          data-testid="workflow-canvas-tab-node">
                 @if (SelectedNode is null)
                 {
                     <EmptyState Eyebrow="No node selected"
@@ -906,7 +919,11 @@
                                 data-testid="workflow-canvas-remove-node" />
                     </div>
                 }
+                </TabsItem>
 
+                <TabsItem Text="Routes"
+                          Icon="alt_route"
+                          data-testid="workflow-canvas-tab-routes">
                 <div class="workflow-canvas-panel" data-testid="workflow-canvas-edge-editor">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Edges" />
                     @if (editingEdgeId is not null)
@@ -1087,7 +1104,11 @@
                         }
                     </Stack>
                 </div>
+                </TabsItem>
 
+                <TabsItem Text="Preview"
+                          Icon="play_circle"
+                          data-testid="workflow-canvas-tab-preview">
                 <div class="workflow-canvas-panel" data-testid="workflow-canvas-validation-panel">
                     <TextBlock TextStyle="TextStyle.Eyebrow" Value="Validation and preview" />
                     @if (!string.IsNullOrWhiteSpace(errorMessage))
@@ -1134,7 +1155,8 @@
                         </div>
                     }
                 </div>
-            </Stack>
+                </TabsItem>
+            </Tabs>
         </Inspector>
     </CanvasWorkbenchStage>
 </SurfaceCard>

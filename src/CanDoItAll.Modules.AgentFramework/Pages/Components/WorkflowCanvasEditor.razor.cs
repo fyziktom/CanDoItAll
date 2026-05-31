@@ -123,6 +123,7 @@ public partial class WorkflowCanvasEditor
     private bool isBusy;
     private bool isTesting;
     private bool isLoadingSecrets;
+    private int workflowInspectorTabIndex;
 
     private WorkflowCanvasNodeDraft? SelectedNode
         => string.IsNullOrWhiteSpace(selectedNodeId)
@@ -251,6 +252,12 @@ public partial class WorkflowCanvasEditor
     private Task HandleComponentsWindowStateChangedAsync(CanvasWorkbenchWindowState state)
     {
         componentsWindowState = CanvasWorkbenchWindowState.Normalize(state);
+        return Task.CompletedTask;
+    }
+
+    private Task HandleWorkflowInspectorTabChanged(int index)
+    {
+        workflowInspectorTabIndex = index;
         return Task.CompletedTask;
     }
 

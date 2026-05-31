@@ -16,7 +16,11 @@
         </Split>
 
         <Grid Gap="LayoutGap.Medium"
-              ColumnsMd="3">
+              ColumnsMd="5">
+            <FormField Text="Title">
+                <InputText @bind-Value="Model.Title"
+                           class="cda-input" />
+            </FormField>
             <FormField Text="Artifact kind">
                 <InputSelect @bind-Value="Model.ArtifactKind"
                              class="cda-input">
@@ -44,24 +48,17 @@
                     }
                 </InputSelect>
             </FormField>
-        </Grid>
-
-        <Grid Gap="LayoutGap.Medium"
-              ColumnsMd="2">
-            <FormField Text="Title">
-                <InputText @bind-Value="Model.Title"
-                           class="cda-input" />
-            </FormField>
             <FormField Text="Retention days">
                 <InputNumber @bind-Value="Model.RetentionDays"
                              class="cda-input" />
             </FormField>
+            <FormField Text="Requirement">
+                <label class="inline-flex items-center gap-2 text-sm text-slate-700">
+                    <InputCheckbox @bind-Value="Model.IsRequired" />
+                    Required
+                </label>
+            </FormField>
         </Grid>
-
-        <label class="inline-flex items-center gap-2 text-sm text-slate-700">
-            <InputCheckbox @bind-Value="Model.IsRequired" />
-            Artifact is required
-        </label>
 
         <Grid Gap="LayoutGap.Medium"
               ColumnsMd="3">
@@ -101,15 +98,17 @@
             }
         </Grid>
 
-        <FormField Text="Allowed future usage summary">
-            <InputTextArea @bind-Value="Model.AllowedFutureUsageSummary"
-                           class="cda-input cda-input--textarea min-h-24" />
-        </FormField>
-
-        <FormField Text="Validation requirement summary">
-            <InputTextArea @bind-Value="Model.ValidationRequirementSummary"
-                           class="cda-input cda-input--textarea min-h-24" />
-        </FormField>
+        <Grid Gap="LayoutGap.Medium"
+              ColumnsMd="2">
+            <FormField Text="Allowed future usage summary">
+                <InputTextArea @bind-Value="Model.AllowedFutureUsageSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+            <FormField Text="Validation requirement summary">
+                <InputTextArea @bind-Value="Model.ValidationRequirementSummary"
+                               class="cda-input cda-input--textarea min-h-24" />
+            </FormField>
+        </Grid>
     </Stack>
 </PanelCard>
 
