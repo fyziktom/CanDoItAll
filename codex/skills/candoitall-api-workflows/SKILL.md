@@ -31,8 +31,45 @@ Use this skill when a task needs workflow authoring, lifecycle control, runtime 
 - Observe runs: `GET /api/workflows/runs`, `GET /api/workflows/runs/page`, `GET /api/workflows/runs/{runId}`, `GET /api/workflows/runs/{runId}/detail`.
 - Cancel runs: `POST /api/workflows/runs/{runId}/cancel`.
 - Events and artifacts: `GET /api/workflows/runs/{runId}/events`, `GET /api/workflows/runs/{runId}/events/page`, `GET /api/workflows/runs/{runId}/artifacts`.
+- Artifact content: `GET /api/workflows/runs/{runId}/artifacts/{artifactId}/content`.
 - Human or external input: `GET /api/workflows/runs/{runId}/pending-requests`, `POST /api/workflows/external-requests/{requestId}/response`.
 - Analytics: `GET /api/workflows/analytics`.
+
+## Runtime DTOs
+
+`WorkflowRunStartApiRequest` fields:
+
+- `workflowId`
+- `versionId`
+- `inputJson`
+- `requestedBackend`
+- `sourceProcessRunId`
+- `sourceProcessAssignmentId`
+
+Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run is part of a governed process step.
+
+`WorkflowRunListApiQuery` fields:
+
+- `workflowId`
+- `state`
+- `backend`
+- `search`
+- `take`
+- `pageIndex`
+- `pageSize`
+
+`WorkflowEventListApiQuery` fields:
+
+- `pageIndex`
+- `pageSize`
+
+`WorkflowAnalyticsApiQuery` fields:
+
+- `workflowId`
+- `state`
+- `backend`
+- `search`
+- `take`
 
 ## Operating Rules
 
@@ -50,3 +87,51 @@ Use this skill when a task needs workflow authoring, lifecycle control, runtime 
 - After saving, importing, or changing lifecycle status, read back the specific definition id and version id.
 - After starting, cancelling, or responding to a run, read back the run detail plus events.
 - For artifacts, verify both the artifact metadata and the referenced storage path when content matters.
+
+## Source Route Appendix
+
+<!-- api-docs-skills-parity:routes:start -->
+
+Workflows API route appendix. Generated from Minimal API registrations; rerun `.codex/tmp/api-docs-skills-gap-map/update-skill-route-appendices.mjs` when routes change.
+
+| Method | Route |
+| --- | --- |
+| `GET` | `/api/workflows/analytics` |
+| `GET` | `/api/workflows/components` |
+| `POST` | `/api/workflows/components` |
+| `DELETE` | `/api/workflows/components/{componentId:guid}` |
+| `GET` | `/api/workflows/components/{componentId:guid}` |
+| `GET` | `/api/workflows/definitions` |
+| `POST` | `/api/workflows/definitions` |
+| `DELETE` | `/api/workflows/definitions/{workflowId:guid}` |
+| `GET` | `/api/workflows/definitions/{workflowId:guid}` |
+| `POST` | `/api/workflows/definitions/{workflowId:guid}/archive` |
+| `GET` | `/api/workflows/definitions/{workflowId:guid}/export` |
+| `POST` | `/api/workflows/definitions/{workflowId:guid}/publish` |
+| `POST` | `/api/workflows/definitions/{workflowId:guid}/runs/start` |
+| `POST` | `/api/workflows/definitions/{workflowId:guid}/suspend` |
+| `POST` | `/api/workflows/definitions/{workflowId:guid}/validate` |
+| `GET` | `/api/workflows/definitions/{workflowId:guid}/versions/{versionId:guid}` |
+| `POST` | `/api/workflows/definitions/import` |
+| `GET` | `/api/workflows/executor-catalog` |
+| `POST` | `/api/workflows/external-requests/{requestId:guid}/response` |
+| `GET` | `/api/workflows/provider-options` |
+| `GET` | `/api/workflows/runs` |
+| `GET` | `/api/workflows/runs/{runId:guid}` |
+| `GET` | `/api/workflows/runs/{runId:guid}/artifacts` |
+| `GET` | `/api/workflows/runs/{runId:guid}/artifacts/{artifactId:guid}/content` |
+| `POST` | `/api/workflows/runs/{runId:guid}/cancel` |
+| `GET` | `/api/workflows/runs/{runId:guid}/detail` |
+| `GET` | `/api/workflows/runs/{runId:guid}/events` |
+| `GET` | `/api/workflows/runs/{runId:guid}/events/page` |
+| `GET` | `/api/workflows/runs/{runId:guid}/checkpoints` |
+| `GET` | `/api/workflows/runs/{runId:guid}/pending-requests` |
+| `GET` | `/api/workflows/runs/page` |
+| `POST` | `/api/workflows/runs/start` |
+| `GET` | `/api/workflows/runtime-backends` |
+| `GET` | `/api/workflows/settings` |
+| `POST` | `/api/workflows/settings` |
+| `POST` | `/api/workflows/test-runs` |
+| `POST` | `/api/workflows/validate` |
+
+<!-- api-docs-skills-parity:routes:end -->

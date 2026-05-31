@@ -1,0 +1,78 @@
+# Agent Runtime Tool Surface
+
+This page defines the boundary between internal MAF tools and the HTTP control-plane APIs.
+
+The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered in `MafAgentRuntime.ProcessTools.cs` or `MafAgentRuntime.ProjectStructureTools.cs` and classified by `AgentToolInvocationPolicy`.
+
+## Process Tools
+
+Source:
+
+- `src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
+- `src/CanDoItAll.Web/Api/ProcessesApi.cs`
+
+Current direct runtime tools: 23.
+
+| Capability | Direct tools |
+| --- | --- |
+| Definition authoring | `processes_definitions_list`, `processes_definition_editor_get`, `processes_definition_save`, `processes_definition_role_add`, `processes_definition_publish`, `processes_definition_delete`, `processes_definition_export`, `processes_definition_import` |
+| Run operations | `processes_runs_list`, `processes_run_detail_get`, `processes_analytics_get`, `processes_run_start`, `processes_step_transition`, `processes_assignment_resolve`, `processes_artifact_record` |
+| Option catalogs | `processes_party_options_list`, `processes_executor_options_list` |
+| Template pack | `processes_templates_list`, `processes_template_get`, `processes_template_mermaid_get`, `processes_template_import`, `processes_template_baseline_scenarios_list`, `processes_template_live_run_profiles_list` |
+
+The following process HTTP operations are HTTP-only until typed runtime tools are deliberately added with policy and approval coverage:
+
+- Launch plans and candidate-selection endpoints.
+- Manager directives.
+- Direct messages.
+- Escalation assign, resolve, reopen, and rework operations.
+- Operator approval operations.
+- Step-scoped artifact and assignment list/detail endpoints.
+- Artifact detail endpoints.
+- Template detail, envelope, baseline-scenario, and live-profile HTTP routes beyond the direct template tools listed above.
+- Stop/rerun/recovery-style run operations that are exposed only through HTTP.
+
+## Project Structure Tools
+
+Source:
+
+- `src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProjectStructureTools.cs`
+- `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
+- `src/CanDoItAll.Web/ProjectStructureAgentApi.cs`
+
+Current direct runtime tools: 28.
+
+| Capability | Direct tools |
+| --- | --- |
+| Project hierarchy | `project_structure_projects_list`, `project_structure_project_create`, `project_structure_project_update`, `project_structure_hierarchy_get`, `project_structure_subproject_link`, `project_structure_nodes_to_new_subproject` |
+| Structure read/write | `project_structure_read`, `project_structure_node_catalog`, `project_structure_node_create`, `project_structure_node_update`, `project_structure_node_move`, `project_structure_node_recompose`, `project_structure_node_reparent` |
+| Planning support | `project_structure_checklist`, `project_structure_dependencies_query`, `project_structure_dependency_link`, `project_structure_dependency_unlink`, `project_structure_approval_request`, `project_structure_knowledge_query`, `project_structure_analytics_query` |
+| Assets and imports | `project_structure_asset_create`, `project_structure_asset_get`, `project_structure_asset_create_revision`, `project_structure_import` |
+| Leases | `project_structure_project_lease_acquire`, `project_structure_repo_branch_lease_acquire`, `project_structure_lease_get`, `project_structure_lease_release` |
+
+The following project-structure HTTP operations are HTTP-only until typed runtime tools are deliberately added with policy and approval coverage:
+
+- Node type-only changes through `/type`.
+- Node metadata-only, status, progress, marker, and priority bulk/single update routes.
+- Multi-node reparent and move-descendants routes not covered by the current direct move/reparent tools.
+- Node command execution.
+- Node process-definition and process-start operations.
+- Node workflow-add-options, workflow-definition, workflow-start, and workflow-status operations.
+- Node delete operation.
+- Generic project links and unlink routes outside dependency-specific tools.
+- Asset content download route.
+- Lease renew route.
+
+## Adding A Direct Tool
+
+Adding a direct tool is a runtime/security change, not documentation cleanup. The minimum implementation set is:
+
+- Tool descriptor registration in the relevant MAF tool builder.
+- Strongly typed request/response shape or reuse of an existing strongly typed model.
+- Service-layer call through the owning module boundary.
+- `AgentToolInvocationPolicy` constant and classification.
+- Approval requirement review for mutation, destructive, launch, process, workflow, filesystem, or external side-effect operations.
+- Unit or integration coverage that proves descriptor availability, policy behavior, and the intended service call.
+
+If that set is not implemented, document the operation as HTTP-only and direct agents to the relevant API skill.

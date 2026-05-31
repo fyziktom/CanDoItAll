@@ -1,5 +1,7 @@
 # Agent runtime hardening verification
 
+> Historical proof record. This file captures the April 27, 2026 runtime-hardening verification run and is not the current API/docs/skills parity source of truth. For current parity repair planning and closure evidence, use `codex/bundles/api-docs-skills-parity-v1/`.
+
 Captured: 2026-04-27T10:52:21-04:00
 
 Working directory: `C:\repositories\CanDoItAll`

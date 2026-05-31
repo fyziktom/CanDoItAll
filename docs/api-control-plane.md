@@ -1,6 +1,6 @@
 # API Control Plane
 
-The current project, process, and agent automation path is the CanDoItAll web-hosted HTTP API. The old Processes and ProjectStructure MCP servers are suppressed; use the API and the repo-managed `candoitall-api-*` skills for those surfaces.
+The current project, process, workflow, cognitive-memory, and agent automation path is the CanDoItAll web-hosted HTTP API. The old Processes and ProjectStructure MCP servers are suppressed; use the API and the repo-managed `candoitall-api-*` skills for those surfaces.
 
 ## Host And Discovery
 
@@ -82,11 +82,29 @@ Use `/api/agents` for AgentFramework catalog, provider, capability, chat, and ex
 
 Validate execution by reading run detail, artifacts, tool receipts, checkpoints, and metrics. A single status field is not enough for process-critical work.
 
+Provider behavior is part of this surface. Current provider profiles include private-provider flags, per-model token prices, tags, native hosted tool support, local MCP support, image generation support, structured output support, and reasoning-effort policy for OpenAI-like Responses models. See [Provider capability and pricing](provider-capability-and-pricing.md).
+
+### Workflows
+
+Use `/api/workflows` for workflow settings, executor catalog, definitions, versions, components, test runs, runtime runs, external requests, artifacts, checkpoints, events, and analytics.
+
+Runtime runs can be started through `/api/workflows/runs/start` or from a definition version. `WorkflowRunStartApiRequest` supports `workflowId`, `versionId`, `inputJson`, `requestedBackend`, `sourceProcessRunId`, and `sourceProcessAssignmentId`. The source-process fields are important when workflow activity is part of a process run.
+
 ### Cognitive Memory
 
 Use `/api/cognitive-memory` for project-scoped source ingestion, consolidation, review, recall, probing, self-regulation, learning proposals, cross-project promotion, and distributed memory jobs. Start with [Cognitive Memory API](cognitive-memory/operations/api.md) for the current route list and [Cognitive Memory stage assessment](cognitive-memory/current-state/stage-assessment.md) before treating a behavior as beta-ready.
 
 Important operating rule: Qdrant/RAG is a rebuildable projection. Durable memory facts, source evidence, claims, review decisions, traces, and proposals live in the active `AppDbContext` profile.
+
+New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitive-memory` routes remain available for compatibility.
+
+### Plugins And Projects
+
+`/api/projects` and `/api/plugins` are documented here as control-plane route families, but they do not currently have dedicated repo-managed API skills. Use OpenAPI plus the owning source files until a dedicated skill is justified.
+
+### Internal Agent Tools
+
+The internal MAF tool surface is narrower than the HTTP API. Do not assume every HTTP route is callable as a direct tool. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for direct process/project-structure tools and HTTP-only operations.
 
 ## Development Workflow
 
@@ -97,6 +115,8 @@ Important operating rule: Qdrant/RAG is a rebuildable projection. Durable memory
    - [Project Structure API skill](../codex/skills/candoitall-api-project-structure/SKILL.md)
    - [Processes API skill](../codex/skills/candoitall-api-processes/SKILL.md)
    - [Agents API skill](../codex/skills/candoitall-api-agents/SKILL.md)
+   - [Workflows API skill](../codex/skills/candoitall-api-workflows/SKILL.md)
+   - [Cognitive Memory API skill](../codex/skills/candoitall-api-cognitive-memory/SKILL.md)
 5. Make the smallest focused API call.
 6. Read back the changed resource or run evidence route.
 

@@ -75,11 +75,30 @@ Before dispatching or staffing an agent, evaluate required role capabilities wit
 
 Runtime policy backs this matrix. `DefaultAgentToolInvocationPolicy` denies unknown tools and known tools without a registered policy classification, while process tools enforce `AgentProcessAccessMetadata` read/write scope.
 
+The internal MAF process tool surface currently exposes 23 direct tools. The HTTP API exposes 58 process routes. Launch plans, manager directives, direct messages, escalations, operator approvals, step-scoped artifact/assignment list/detail routes, artifact detail routes, and stop/rerun/recovery-style run operations are HTTP-only unless a typed tool is deliberately added with policy and approval coverage.
+
 ## Filtering Rules
 
 - Use `definitionId`, `projectId`, `status`, `operatingMode`, `search`, and `take` on run lists.
-- Use `stepRunId`, `stepDefinitionId`, `artifactId`, `artifactExpectationId`, `artifactKind`, `roleRequirementId`, `partyId`, `agentId`, `executionState`, `search`, `take`, and include flags on run detail routes.
+- Use `stepRunId`, `stepDefinitionId`, `roleRequirementId`, `partyId`, `artifactId`, `artifactExpectationId`, `agentId`, `workflowRunId`, `workflowDefinitionId`, `workflowVersionId`, `stepStatus`, `artifactKind`, `executionState`, `workflowState`, `search`, `take`, and include flags on run detail routes.
 - For artifact review, prefer `/runs/{runId}/steps/{stepRunId}/artifacts` over full run detail.
+
+Run detail include flags:
+
+- `includeDecisions`
+- `includeArtifacts`
+- `includeOutboxRecords`
+- `includeAssignments`
+- `includeWorkBriefs`
+- `includeConformanceObservations`
+- `includeDirectMessages`
+- `includeExecutionRuns`
+- `includeWorkflowRuns`
+- `includeEscalations`
+- `includeOperatorApprovals`
+- `includeAttemptTimeline`
+
+Artifact record requests can include `externalReferenceKey` and `projectionLineage`; preserve those fields when the artifact is mirrored into project structure or Cognitive Memory projection state.
 
 ## API Examples
 
@@ -257,3 +276,72 @@ Check `stepRuns[].blockReasonCode`, `stepRuns[].recoveryOptions`, `stepRuns[].ne
 - After recording artifacts or assignments, query the step-scoped route.
 - For templates, use `/detail` when compatibility notes or sidecar files matter.
 - For docs-only updates, run `git diff --check` and source assertions for the named fields. For runtime behavior changes, add focused integration tests around `ProcessesService` and `ProcessesApi`.
+
+## Source Route Appendix
+
+<!-- api-docs-skills-parity:routes:start -->
+
+Processes API route appendix. Generated from Minimal API registrations; rerun `.codex/tmp/api-docs-skills-gap-map/update-skill-route-appendices.mjs` when routes change.
+
+| Method | Route |
+| --- | --- |
+| `GET` | `/api/processes/analytics` |
+| `POST` | `/api/processes/artifacts` |
+| `POST` | `/api/processes/assignments/resolve` |
+| `GET` | `/api/processes/definitions` |
+| `POST` | `/api/processes/definitions` |
+| `DELETE` | `/api/processes/definitions/{definitionId:guid}` |
+| `GET` | `/api/processes/definitions/{definitionId:guid}` |
+| `GET` | `/api/processes/definitions/{definitionId:guid}/export` |
+| `POST` | `/api/processes/definitions/{definitionId:guid}/publish` |
+| `POST` | `/api/processes/definitions/import` |
+| `POST` | `/api/processes/direct-messages` |
+| `GET` | `/api/processes/executor-options` |
+| `GET` | `/api/processes/launch-plans` |
+| `POST` | `/api/processes/launch-plans` |
+| `GET` | `/api/processes/launch-plans/{launchPlanId:guid}` |
+| `POST` | `/api/processes/launch-plans/{launchPlanId:guid}/hr-match` |
+| `POST` | `/api/processes/launch-plans/{launchPlanId:guid}/provision` |
+| `POST` | `/api/processes/launch-plans/{launchPlanId:guid}/submit-approval` |
+| `POST` | `/api/processes/launch-plans/approval-decisions` |
+| `POST` | `/api/processes/launch-plans/candidate-selections` |
+| `POST` | `/api/processes/launch-plans/execute` |
+| `GET` | `/api/processes/manager-agent-options` |
+| `GET` | `/api/processes/party-options/{projectId:guid}` |
+| `GET` | `/api/processes/runs` |
+| `GET` | `/api/processes/runs/{runId:guid}` |
+| `GET` | `/api/processes/runs/{runId:guid}/artifacts` |
+| `GET` | `/api/processes/runs/{runId:guid}/artifacts/{artifactId:guid}` |
+| `GET` | `/api/processes/runs/{runId:guid}/assignments` |
+| `POST` | `/api/processes/runs/{runId:guid}/assignments/resolve` |
+| `POST` | `/api/processes/runs/{runId:guid}/direct-messages` |
+| `GET` | `/api/processes/runs/{runId:guid}/escalations` |
+| `POST` | `/api/processes/runs/{runId:guid}/escalations` |
+| `POST` | `/api/processes/runs/{runId:guid}/escalations/{escalationId:guid}/assign` |
+| `POST` | `/api/processes/runs/{runId:guid}/escalations/{escalationId:guid}/reopen` |
+| `POST` | `/api/processes/runs/{runId:guid}/escalations/{escalationId:guid}/resolve` |
+| `POST` | `/api/processes/runs/{runId:guid}/escalations/{escalationId:guid}/rework` |
+| `POST` | `/api/processes/runs/{runId:guid}/manager-directives` |
+| `POST` | `/api/processes/runs/{runId:guid}/operator-approvals/decisions` |
+| `GET` | `/api/processes/runs/{runId:guid}/steps` |
+| `GET` | `/api/processes/runs/{runId:guid}/steps/{stepRunId:guid}` |
+| `GET` | `/api/processes/runs/{runId:guid}/steps/{stepRunId:guid}/artifacts` |
+| `POST` | `/api/processes/runs/{runId:guid}/steps/{stepRunId:guid}/artifacts` |
+| `GET` | `/api/processes/runs/{runId:guid}/steps/{stepRunId:guid}/assignments` |
+| `POST` | `/api/processes/runs/{runId:guid}/steps/{stepRunId:guid}/rerun-agent` |
+| `POST` | `/api/processes/runs/{runId:guid}/steps/{stepRunId:guid}/transition` |
+| `POST` | `/api/processes/runs/manager-directives` |
+| `POST` | `/api/processes/runs/start` |
+| `POST` | `/api/processes/runs/stop` |
+| `POST` | `/api/processes/steps/rerun-agent` |
+| `POST` | `/api/processes/steps/transition` |
+| `GET` | `/api/processes/templates` |
+| `GET` | `/api/processes/templates/{processKey}` |
+| `GET` | `/api/processes/templates/{processKey}/detail` |
+| `GET` | `/api/processes/templates/{processKey}/envelope` |
+| `POST` | `/api/processes/templates/{processKey}/import` |
+| `GET` | `/api/processes/templates/{processKey}/mermaid` |
+| `GET` | `/api/processes/templates/baseline-scenarios` |
+| `GET` | `/api/processes/templates/live-run-profiles` |
+
+<!-- api-docs-skills-parity:routes:end -->

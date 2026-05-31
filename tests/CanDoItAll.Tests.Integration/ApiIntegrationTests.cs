@@ -537,6 +537,7 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/agents/teams/{teamId}/members", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/artifacts", out _));
         Assert.True(paths.TryGetProperty("/api/agents/{agentId}/execution-runs/{executionRunId}/log", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/contract", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/status", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/selection", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/database/profiles", out _));
@@ -554,6 +555,9 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/snapshot", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/sources/ingest", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/consolidation/runs", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/projections/rebuild", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/automation/run", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/retention/cleanup", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/recall", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/review-items/{reviewItemId}/decisions", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/probes/sessions", out _));
@@ -570,6 +574,12 @@ public sealed class ApiIntegrationTests
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/claim", out _));
         Assert.True(paths.TryGetProperty("/api/cognitive-memory/distributed/jobs/{jobId}/results", out _));
+
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/v1/contract", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/v1/status", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/v1/projections/rebuild", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/v1/automation/run", out _));
+        Assert.True(paths.TryGetProperty("/api/cognitive-memory/v1/retention/cleanup", out _));
     }
 
     [Fact]

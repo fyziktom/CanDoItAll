@@ -16,6 +16,7 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 ## Catalog And Configuration
 
 - Agents: `GET /api/agents`, `GET /api/agents/bootstrap`, `GET /api/agents/{agentId}`, `POST /api/agents`, `DELETE /api/agents/{agentId}`, clone, convert-to-template, export, and import routes.
+- Teams: `GET /api/agents/teams`, `GET /api/agents/teams/{teamId}`, `POST /api/agents/teams`, `PUT /api/agents/teams/{teamId}`, `DELETE /api/agents/teams/{teamId}`, `GET /api/agents/teams/{teamId}/agents`, `PUT /api/agents/teams/{teamId}/members`.
 - Providers: `/api/agents/providers`, `/providers/{providerId}/editor`, create/delete/test/test-chat, and Ollama modelfile routes.
 - Capabilities: `/api/agents/capabilities`, `/capabilities/{capabilityId}/editor`, create/delete, and per-agent capability verification.
 - Memory: `/api/agents/{agentId}/memory`, `POST /api/agents/memory`, and delete memory routes.
@@ -33,9 +34,109 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 - For debugging, query run detail first, then fetch artifacts/checkpoints/receipts/log only for the run under review.
 - Use provider test routes before assigning a provider to production-like agents.
 - Use capability verification before assuming a tool or skill is usable by an agent.
+- Provider profiles include `isPrivateProvider`, `modelPrices`, and `tags`. Provider capabilities include structured output, hosted tools, hosted/local MCP, image generation, vision, compaction, native code/file/web search, and approval support.
+- For OpenAI-like Responses models beginning with `gpt-5`, `o1`, `o3`, or `o4`, temperature is omitted and `modelParameters.reasoningEffort` can be set to `none`, `low`, `medium`, `high`, or `extraHigh`.
+
+## Execution DTOs
+
+`AgentExecutionRunStartApiRequest` fields:
+
+- `prompt`
+- `chatSessionId`
+- `context`
+- `autoApprovePendingToolCalls`
+- `structuredOutput`
+
+`AgentExecutionRunApiQuery` fields:
+
+- `agentId`
+- `chatSessionId`
+- `correlationId`
+- `sourceKind`
+- `sourceId`
+- `take`
+- `processRunId`
+- `processStepId`
+- `schedulerRunId`
+- `messageId`
+- `state`
+- `outcome`
+- `approvalStatus`
+- `createdFromUtc`
+- `createdToUtc`
+- `updatedFromUtc`
+- `updatedToUtc`
 
 ## Validation
 
 - For created/updated agents, read back the agent editor/detail.
 - For execution, verify run state, artifacts, receipts, and metrics instead of relying on a single status field.
 - For provider changes, run provider health/test-chat when credentials and model availability are relevant.
+
+## Source Route Appendix
+
+<!-- api-docs-skills-parity:routes:start -->
+
+Agents API route appendix. Generated from Minimal API registrations; rerun `.codex/tmp/api-docs-skills-gap-map/update-skill-route-appendices.mjs` when routes change.
+
+| Method | Route |
+| --- | --- |
+| `GET` | `/api/agents` |
+| `POST` | `/api/agents` |
+| `DELETE` | `/api/agents/{agentId:guid}` |
+| `GET` | `/api/agents/{agentId:guid}` |
+| `POST` | `/api/agents/{agentId:guid}/capabilities/{capabilityId:guid}/verify` |
+| `POST` | `/api/agents/{agentId:guid}/clone` |
+| `POST` | `/api/agents/{agentId:guid}/convert-to-template` |
+| `GET` | `/api/agents/{agentId:guid}/execution-log` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs` |
+| `POST` | `/api/agents/{agentId:guid}/execution-runs` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}/approvals` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}/artifacts` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}/checkpoints` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}/log` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}/metrics` |
+| `GET` | `/api/agents/{agentId:guid}/execution-runs/{executionRunId:guid}/tool-receipts` |
+| `GET` | `/api/agents/{agentId:guid}/export` |
+| `POST` | `/api/agents/{agentId:guid}/chat` |
+| `GET` | `/api/agents/{agentId:guid}/chat-sessions` |
+| `POST` | `/api/agents/{agentId:guid}/chat-sessions` |
+| `POST` | `/api/agents/{agentId:guid}/chat-sessions/{chatSessionId:guid}/rename` |
+| `GET` | `/api/agents/{agentId:guid}/chat-workspace` |
+| `GET` | `/api/agents/{agentId:guid}/memory` |
+| `GET` | `/api/agents/{agentId:guid}/metrics` |
+| `GET` | `/api/agents/{agentId:guid}/runtime-snapshot` |
+| `GET` | `/api/agents/bootstrap` |
+| `GET` | `/api/agents/capabilities` |
+| `POST` | `/api/agents/capabilities` |
+| `DELETE` | `/api/agents/capabilities/{capabilityId:guid}` |
+| `GET` | `/api/agents/capabilities/{capabilityId:guid}/editor` |
+| `GET` | `/api/agents/execution-runs` |
+| `POST` | `/api/agents/execution-runs` |
+| `GET` | `/api/agents/execution-runs/{executionRunId:guid}` |
+| `GET` | `/api/agents/execution-runs/{executionRunId:guid}/artifacts` |
+| `GET` | `/api/agents/execution-runs/{executionRunId:guid}/checkpoints` |
+| `POST` | `/api/agents/execution-runs/{executionRunId:guid}/pending-approvals` |
+| `GET` | `/api/agents/execution-runs/{executionRunId:guid}/tool-receipts` |
+| `POST` | `/api/agents/import` |
+| `POST` | `/api/agents/memory` |
+| `DELETE` | `/api/agents/memory/{memoryId:guid}` |
+| `GET` | `/api/agents/providers` |
+| `POST` | `/api/agents/providers` |
+| `DELETE` | `/api/agents/providers/{providerId:guid}` |
+| `GET` | `/api/agents/providers/{providerId:guid}/editor` |
+| `POST` | `/api/agents/providers/{providerId:guid}/ollama-modelfile` |
+| `POST` | `/api/agents/providers/{providerId:guid}/test` |
+| `POST` | `/api/agents/providers/{providerId:guid}/test-chat` |
+| `GET` | `/api/agents/teams` |
+| `POST` | `/api/agents/teams` |
+| `DELETE` | `/api/agents/teams/{teamId:guid}` |
+| `GET` | `/api/agents/teams/{teamId:guid}` |
+| `PUT` | `/api/agents/teams/{teamId:guid}` |
+| `GET` | `/api/agents/teams/{teamId:guid}/agents` |
+| `GET` | `/api/agents/teams/{teamId:guid}/editor` |
+| `POST` | `/api/agents/teams/{teamId:guid}/members` |
+| `PUT` | `/api/agents/teams/{teamId:guid}/members` |
+
+<!-- api-docs-skills-parity:routes:end -->

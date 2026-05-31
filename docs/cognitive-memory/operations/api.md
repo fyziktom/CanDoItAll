@@ -5,7 +5,7 @@ The Cognitive Memory HTTP API is hosted by `CanDoItAll.Web` under two route surf
 - legacy compatibility: `/api/cognitive-memory`
 - additive v1 aliases: `/api/cognitive-memory/v1`
 
-Both surfaces map the same operational behavior. The legacy routes remain for existing callers; new callers should prefer the v1 base path and inspect `GET /contract` before automation. The current implementation maps 35 routes per surface across grouped files named `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
+Both surfaces map the same operational behavior. The legacy routes remain for existing callers; new callers should prefer the v1 base path and inspect `GET /contract` before automation. The current implementation maps 38 routes per surface across grouped files named `src/CanDoItAll.Web/Api/CognitiveMemoryApi*.cs`.
 
 ## Contract And Status
 
@@ -22,6 +22,9 @@ The contract version is currently `v1`. Endpoint names are distinct between the 
 | --- | --- | --- | --- |
 | `GET` | `/api/cognitive-memory/database/selection` | `/api/cognitive-memory/v1/database/selection` | Returns active profile selection. |
 | `GET` | `/api/cognitive-memory/database/profiles` | `/api/cognitive-memory/v1/database/profiles` | Lists configured database profiles. |
+| `GET` | `/api/cognitive-memory/database/transfer/sources/{targetProfileId}` | `/api/cognitive-memory/v1/database/transfer/sources/{targetProfileId}` | Lists transfer source profiles for the target profile. |
+| `POST` | `/api/cognitive-memory/database/transfer/preview` | `/api/cognitive-memory/v1/database/transfer/preview` | Previews database-profile transfer impact. |
+| `POST` | `/api/cognitive-memory/database/transfer` | `/api/cognitive-memory/v1/database/transfer` | Executes a database-profile transfer. |
 | `POST` | `/api/cognitive-memory/database/profiles/postgresql` | `/api/cognitive-memory/v1/database/profiles/postgresql` | Creates a PostgreSQL database profile and optionally switches to it. |
 | `POST` | `/api/cognitive-memory/database/switch/{profileId}` | `/api/cognitive-memory/v1/database/switch/{profileId}` | Switches the active profile. |
 
@@ -33,6 +36,8 @@ The contract version is currently `v1`. Endpoint names are distinct between the 
 | `PUT` | `/api/cognitive-memory/settings` | `/api/cognitive-memory/v1/settings` | Updates settings and model access policy. |
 
 The model execution profile settings describe role-specific model preferences such as SourceIngestion, Consolidation, EpistemicDrive, Probe, and ProfessorReview. Do not assume these settings mean every role is already implemented as a live chat-model call. Current consolidation fact extraction is deterministic and source-backed.
+
+`CognitiveMemorySettingsApiRequest` carries `isEnabled`, `scheduleMode`, `nightlyLocalTime`, `idleMinutes`, `scheduledLocalTimes`, `autoIngestProjectStructure`, `autoIngestProcessRuntime`, `autoConsolidateAfterIngestion`, `modelAccessMode`, `defaultProviderProfileId`, `defaultAgentId`, `allowedProviderProfileIds`, `modelExecutionProfiles`, and `actorId`.
 
 ## Ingestion
 
@@ -69,6 +74,12 @@ Supported external extraction paths include text-like files, `.docx`, `.pptx`, `
 `/projections/rebuild` rebuilds projection state from relational memory and is also exposed from the Cognitive Memory settings tab. The rebuild path reconstructs projection payloads from memory records, claims, evidence anchors, source links, context frames, entity ids, and context-boundary policies. It can also project missing durable records when `projectMissingRecords` is true and the request or configured defaults provide `collectionName`, `projectionProfileId`, `embeddingProfileId`, `targetProviderName`, `projectionStoreKind`, and `vectorDimensions`. Qdrant/RAG remains a projection target, not authoritative memory. Provider failures leave rows failed and rebuildable.
 
 `/retention/cleanup` defaults to dry-run. It can delete old recall traces, rejected/duplicate consolidation candidates, closed probe sessions, and completed/rejected/expired distributed jobs. It does not delete canonical memory records, source manifests, source items, claims, evidence anchors, or projection state; see [retention cleanup](retention-cleanup.md).
+
+Request DTO checkpoints:
+
+- `CognitiveMemoryProjectionRebuildApiRequest`: `projectId`, `take`, `actorId`, `collectionName`, `projectMissingRecords`, `projectionProfileId`, `embeddingProfileId`, `targetProviderName`, `projectionStoreKind`, `vectorDimensions`.
+- `CognitiveMemoryAutomationRunApiRequest`: `projectId`, `triggerKind`, `actorId`, `take`, `cycleId`, `maxCycles`, `continueUntilIdle`, `policy`.
+- `CognitiveMemoryRetentionCleanupApiRequest`: `projectId`, `deleteBeforeUtc`, `dryRun`, `scopes`, `actorId`. `dryRun` defaults to true.
 
 ## Probing And Self-Regulation
 

@@ -12,6 +12,27 @@ This runbook covers process runs that use AgentFramework-backed steps and need h
 4. Check dead-lettered automation dispatch records. Treat them as failed automation evidence until the underlying error is understood.
 5. Use the attempt timeline to reconstruct execution runs, approvals, outbox dispatch, recovery decisions, rework packets, and manual reruns.
 
+## API Read Model
+
+Use `GET /api/processes/runs/{runId}/detail` as the canonical operator read route. `ProcessRunDetailApiQuery` supports focused filters by step run, step definition, role requirement, party, artifact, artifact expectation, agent, workflow run, workflow definition, workflow version, step status, artifact kind, execution state, workflow state, search text, and take count.
+
+The detail query also has explicit include switches:
+
+- `includeDecisions`
+- `includeArtifacts`
+- `includeOutboxRecords`
+- `includeAssignments`
+- `includeWorkBriefs`
+- `includeConformanceObservations`
+- `includeDirectMessages`
+- `includeExecutionRuns`
+- `includeWorkflowRuns`
+- `includeEscalations`
+- `includeOperatorApprovals`
+- `includeAttemptTimeline`
+
+Use `GET /api/processes/runs` for list views. `ProcessRunListApiQuery` supports `definitionId`, `projectId`, `status`, `operatingMode`, `search`, and `take`.
+
 ## Escalations
 
 Blocked, failed, refused, and waiting-approval transitions create durable escalation journal entries. Each escalation records kind, severity, status, owner, due date, source run/step, reason, resolution, and correlation id.
@@ -25,6 +46,16 @@ Manual rework creates a typed rework packet and queues a governed agent rerun. T
 ## Approvals
 
 Execution tool approvals continue the paused AgentFramework run. The operator note is recorded in the process journal and decision ledger. "Changes requested" is represented as an explicit rejection plus the operator note because the execution continuation API supports approve/reject decisions.
+
+## Artifacts And Projection Lineage
+
+When recording operator or agent evidence through `POST /api/processes/runs/{runId}/artifacts`, include the current run or step context and preserve external references. `ProcessArtifactRecordApiRequest` supports `externalReferenceKey` and `projectionLineage`; use those fields when a process artifact is mirrored into project structure or Cognitive Memory projection state.
+
+Do not accept baseline scenarios or seeded artifacts as live-run evidence. For live UI-driven work, read `/api/processes/templates/live-run-profiles` and enforce the returned `freshRunPolicy` before dispatching agents or recording closure evidence.
+
+## Direct Agent Tools Versus HTTP
+
+Internal process agents have a smaller direct tool surface than the HTTP API. Direct tools cover definition authoring, run read/detail/start, step transition, assignment resolution, artifact record, option catalogs, and template pack reads/imports. Launch plans, manager directives, direct messages, escalations, operator approvals, and several template/detail routes are HTTP-only until typed tools are added. See [Agent runtime tool surface](agent-runtime-tool-surface.md).
 
 ## Secrets
 
