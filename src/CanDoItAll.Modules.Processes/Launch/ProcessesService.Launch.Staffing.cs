@@ -1061,27 +1061,34 @@ public sealed partial class ProcessesService
             {
                 if (agentHasDirectBlazorIdentity)
                 {
-                    score += 160m;
+                    score += 190m;
                 }
-                else if (agentHasDirectDotNetIdentity ||
-                         agentMentionsBlazor ||
-                         agentMentionsDotNet)
+
+                if (agentHasDirectDotNetIdentity)
                 {
-                    score += 80m;
+                    score += 180m;
+                }
+
+                if (!agentHasDirectBlazorIdentity &&
+                    !agentHasDirectDotNetIdentity &&
+                    (agentMentionsBlazor ||
+                     agentMentionsDotNet))
+                {
+                    score += 90m;
                 }
 
                 if (agentHasDirectJavaScriptIdentity &&
                     !agentHasDirectDotNetIdentity &&
                     !agentHasDirectBlazorIdentity)
                 {
-                    score -= 90m;
+                    score -= 190m;
                 }
             }
             else if (workMentionsDotNet)
             {
                 if (agentHasDirectDotNetIdentity)
                 {
-                    score += 120m;
+                    score += 160m;
                 }
                 else if (agentMentionsDotNet)
                 {
@@ -1091,7 +1098,7 @@ public sealed partial class ProcessesService
                 if (agentHasDirectJavaScriptIdentity &&
                     !agentHasDirectDotNetIdentity)
                 {
-                    score -= 70m;
+                    score -= 120m;
                 }
 
                 if (selectedWorkIsNonBlazorDotNet &&

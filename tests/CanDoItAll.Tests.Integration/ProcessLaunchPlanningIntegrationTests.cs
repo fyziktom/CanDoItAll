@@ -1189,6 +1189,103 @@ public sealed class ProcessLaunchPlanningIntegrationTests
     }
 
     [Fact]
+    public async Task Software_delivery_launch_plan_recommends_dotnet_qa_for_blazor_static_pwa_context()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Software delivery QA launch proof {suffix}",
+            objective: "Deliver and validate a Blazor WebAssembly PWA with .NET build proof and browser proof.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Validate Blazor WebAssembly PWA delivery",
+                "Quality",
+                "Deliver a Blazor WebAssembly PWA under C:\\programovani\\dotnet-demo\\output. Use static hosting with no backend, local storage, app manifest and service worker behavior, browser runtime proof, dotnet build and test validation, and keyboard controls.",
+                null,
+                ObjectSubtype: "task"));
+        foreach (var dependencyTemplateKey in new[]
+                 {
+                     "dotnet-solution-setup",
+                     "dotnet-feature-function-implementation",
+                     "dotnet-development-slice",
+                     "dotnet-architecture-design-review",
+                     "dotnet-runtime-command-writeback",
+                     "dotnet-ui-screenshot-writeback"
+                 })
+        {
+            await ImportAndPublishTemplateAsync(
+                processesService,
+                projectionService,
+                dependencyTemplateKey,
+                projectId);
+        }
+
+        var definitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "software-delivery",
+            projectId,
+            $"Software delivery QA launch proof {suffix}");
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = definitionId,
+            ProjectId = projectId,
+            LaunchName = $"Software delivery QA launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var selectedQa = GetSelectedCandidate(details!, "QA lead");
+        var dotnetQa = GetCandidate(details, "QA lead", ".NET QA Review Lead");
+        var javascriptQa = GetCandidate(details, "QA lead", "JavaScript QA Review Lead");
+
+        Assert.Equal(".NET QA Review Lead", selectedQa.DisplayName);
+        Assert.True(
+            dotnetQa.Score > javascriptQa.Score,
+            $".NET QA score {dotnetQa.Score} should outrank JavaScript QA score {javascriptQa.Score} for Blazor/.NET validation work.");
+
+        var matchResult = await processesService.MatchLaunchPlanWithHrManagerAsync(
+            launchResult.Value,
+            agentTeamId: null,
+            requestedBy: "integration-tests");
+        Assert.True(matchResult.IsSuccess, string.Join(" | ", matchResult.Errors.Select(error => error.Message)));
+
+        var matchedDetails = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(matchedDetails);
+        var matchedDotnetQa = GetCandidate(matchedDetails!, "QA lead", ".NET QA Review Lead");
+        var matchedJavascriptQa = GetCandidate(matchedDetails, "QA lead", "JavaScript QA Review Lead");
+
+        Assert.True(matchedDotnetQa.IsRecommended);
+        Assert.False(matchedJavascriptQa.IsRecommended);
+        Assert.True(
+            matchedDotnetQa.Score > matchedJavascriptQa.Score,
+            $".NET QA score {matchedDotnetQa.Score} should stay ahead of JavaScript QA score {matchedJavascriptQa.Score} after HR matching.");
+    }
+
+    [Fact]
     public async Task StartRunAsync_direct_static_client_web_context_prefers_javascript_developer_for_implementation_role()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -2356,6 +2453,22 @@ public sealed class ProcessLaunchPlanningIntegrationTests
     {
         var role = Assert.Single(details.Roles, item => string.Equals(item.DisplayName, roleName, StringComparison.Ordinal));
         return Assert.Single(role.Candidates, item => string.Equals(item.DisplayName, candidateName, StringComparison.Ordinal));
+    }
+
+    private static async Task<Guid> ImportAndPublishTemplateAsync(
+        ProcessesService processesService,
+        ProcessTemplateProjectionService projectionService,
+        string processKey,
+        Guid projectId,
+        string? definitionName = null)
+    {
+        var importResult = await processesService.ImportAsync(
+            projectionService.GetProjectedEnvelope(processKey, projectId, definitionName));
+        Assert.True(importResult.IsSuccess, string.Join(" | ", importResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(importResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+        return importResult.Value;
     }
 
     private sealed record LaunchPlanningDefinitionFixture(
