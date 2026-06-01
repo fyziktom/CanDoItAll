@@ -128,12 +128,16 @@ public sealed class ProcessTemplateGovernanceTests
             definition,
             "capture-ui-screenshots",
             ".NET UI screenshot project-structure writeback");
+        AssertWritebackStep(definition, "post-release-learning");
+        AssertWritebackStep(definition, "post-release-learning-after-repair");
 
         var intakeStep = GetStep(definition, "feature-intake");
         Assert.Contains("backend-only/API/service", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Blazor Server/SSR", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Blazor WebAssembly", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Blazor WASM PWA", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
+        AssertPostReleaseLearningWritebackContract(GetStep(definition, "post-release-learning"));
+        AssertPostReleaseLearningWritebackContract(GetStep(definition, "post-release-learning-after-repair"));
 
         var architectureDefinition = projectionService.GetProjectedEnvelope("dotnet-architecture-design-review").Definition;
         Assert.All(architectureDefinition.Steps, step => Assert.False(AllowsProductMutation(step)));
@@ -549,6 +553,18 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.Contains(ProcessStepOperation.ExecuteExternalAction, step.AllowedOperations);
         Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
         Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+    }
+
+    private static void AssertPostReleaseLearningWritebackContract(ProcessStepImportExportModel step)
+    {
+        var artifactExpectation = Assert.Single(step.ArtifactExpectations);
+        var contractText = string.Join(
+            " ",
+            step.EvidenceContractSummary,
+            artifactExpectation.ValidationRequirementSummary);
+
+        Assert.Contains("project_structure_node_create", contractText, StringComparison.Ordinal);
+        Assert.Contains("decision node id", contractText, StringComparison.OrdinalIgnoreCase);
     }
 
     private static void AssertSubprocessStep(

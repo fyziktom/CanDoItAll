@@ -103,10 +103,10 @@ Architecture, implementation, validation, runtime command writeback, screenshot 
 
 ### 13. Capture first-pass post-release learning (`post-release-learning`)
 - Step kind: End
-- Operation target scope: ExternalProductTargetReadOnly
+- Operation target scope: ExternalActionControlled
 - Depends on: execute-release-rollout
 - Outputs: Post-release learning review with corrective actions and simulation updates.
-- Evidence: Timeline, contributing factors, missing controls, and next corrective actions.
+- Evidence: Timeline, contributing factors, missing controls, next corrective actions, and a project_structure_node_create receipt for the learning decision when a project-structure target is present.
 
 ### 14. Perform security review after repair (`security-review-after-repair`)
 - Step kind: Approval
@@ -154,7 +154,7 @@ Architecture, implementation, validation, runtime command writeback, screenshot 
 
 ### 20. Capture repaired-release learning (`post-release-learning-after-repair`)
 - Step kind: End
-- Operation target scope: ExternalProductTargetReadOnly
+- Operation target scope: ExternalActionControlled
 - Depends on: execute-release-rollout-after-repair
 - Outputs: Post-release learning review with corrective actions and simulation updates.
-- Evidence: Timeline, contributing factors, missing controls, and next corrective actions.
+- Evidence: Timeline, contributing factors, missing controls, next corrective actions, and a project_structure_node_create receipt for the learning decision when a project-structure target is present.

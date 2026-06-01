@@ -1423,7 +1423,7 @@
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Rollout outcome, telemetry record, support observations, and any release incident notes.",
       "OutputContractSummary": "Post-release learning review with corrective actions and simulation updates.",
-      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
+      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, next corrective actions, and a project_structure_node_create receipt for the learning decision when a project-structure target is present.",
       "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
       "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
       "TargetLeadHours": 6,
@@ -1474,7 +1474,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 730,
           "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
-          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
+          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects, and include the project_structure_node_create decision node id or an explicit no-project-structure-target reason."
         }
       ],
       "ArtifactInputs": [],
@@ -1489,9 +1489,10 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
       "Order": 13,
@@ -2084,7 +2085,7 @@
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Rollout outcome, telemetry record, support observations, and any release incident notes.",
       "OutputContractSummary": "Post-release learning review with corrective actions and simulation updates.",
-      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
+      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, next corrective actions, and a project_structure_node_create receipt for the learning decision when a project-structure target is present.",
       "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
       "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
       "TargetLeadHours": 6,
@@ -2135,7 +2136,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 730,
           "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
-          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
+          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects, and include the project_structure_node_create decision node id or an explicit no-project-structure-target reason."
         }
       ],
       "ArtifactInputs": [],
@@ -2150,9 +2151,10 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalActionControlled"
     }
   ],
   "DocPath": "processes/software-delivery/definition.md",
