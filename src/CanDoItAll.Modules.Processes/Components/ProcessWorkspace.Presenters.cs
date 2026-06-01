@@ -8,5 +8,7 @@ public partial class ProcessWorkspace
 
     private ProcessWorkspaceRunsTabPresenter RunsTabPresenter => new(this);
 
+    private ProcessWorkspaceGraphsTabPresenter GraphsTabPresenter => new(this);
+
     private ProcessWorkspaceAnalyticsTabPresenter AnalyticsTabPresenter => new(this);
 }

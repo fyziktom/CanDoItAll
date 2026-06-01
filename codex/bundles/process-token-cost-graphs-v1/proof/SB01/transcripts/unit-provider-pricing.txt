@@ -1,0 +1,15 @@
+Command: dotnet vstest .codex\tmp\tests-unit-withdeps\CanDoItAll.Tests.Unit.dll --TestCaseFilter:"FullyQualifiedName~ProviderPricingTests"
+Working directory: C:\repositories\CanDoItAll
+Run label: 2026-06-01 SB01 unit pricing proof
+Exit code: 0
+
+Result summary:
+- Test file matched: CanDoItAll.Tests.Unit.dll
+- Failed: 0
+- Passed: 5
+- Skipped: 0
+- Total: 5
+
+Relevant invariant coverage:
+- SB01-I01 cached input tokens are priced when persisted metric cost is not already stored.
+- SB01-I04 unknown/fallback pricing behavior remains explicit through the existing ProviderPricingTests suite.

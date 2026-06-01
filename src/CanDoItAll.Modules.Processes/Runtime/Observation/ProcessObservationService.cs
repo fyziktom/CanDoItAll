@@ -81,7 +81,7 @@ internal sealed class ProcessObservationService(
         var cacheKey = new ProcessObservationCacheKey(
             ProcessObservationCacheKind.LiveSnapshot,
             normalizedQuery.ProjectId,
-            DefinitionId: null,
+            normalizedQuery.ProcessDefinitionId,
             normalizedQuery.ProcessRunId,
             StepRunId: null,
             ProcessObservationDefinitionSetKey.From([]),
@@ -356,8 +356,13 @@ internal sealed class ProcessObservationService(
             definitionId: null,
             query.ProjectId,
             cancellationToken);
+        var historyStartUtc = ResolveHistoryWindowStartUtc(observedAtUtc, query.HistoryWindow);
         var observedRuns = allRuns
-            .Where(run => ShouldIncludeLiveRun(run, query.ProcessRunId))
+            .Where(run => ShouldIncludeLiveRun(
+                run,
+                query.ProcessRunId,
+                query.ProcessDefinitionId,
+                historyStartUtc))
             .ToList();
         var observedRunIds = observedRuns
             .Select(item => item.Id)
@@ -366,7 +371,6 @@ internal sealed class ProcessObservationService(
             observedRuns,
             cancellationToken);
         var activeRunSummariesByRunId = activeRunSummaries.ToDictionary(item => item.RunId);
-        var historyStartUtc = observedAtUtc.Subtract(ResolveHistoryWindowSpan(query.HistoryWindow));
         var liveEscalationsByRunId = await escalationService.ListForRunsAsync(observedRunIds, cancellationToken);
         var escalationCards = BuildLiveEscalationCards(
             observedRuns,
@@ -379,7 +383,9 @@ internal sealed class ProcessObservationService(
             query.ProcessRunId);
         HashSet<Guid> processRunIdsForHistory = query.ProcessRunId.HasValue
             ? [query.ProcessRunId.Value]
-            : allRuns.Select(item => item.Id).ToHashSet();
+            : query.ProcessDefinitionId.HasValue
+                ? observedRuns.Select(item => item.Id).ToHashSet()
+                : allRuns.Select(item => item.Id).ToHashSet();
         var executionRuns = await LoadLiveExecutionRunsAsync(
             processRunIdsForHistory,
             query.HistoryWindow,
@@ -688,6 +694,7 @@ internal sealed class ProcessObservationService(
             activeRunSummaries.Sum(item => item.DeadLetteredOutboxCount),
             metrics.Sum(item => item.DurationMs),
             ClampToInt(metrics.Sum(item => (long)item.InputTokens)),
+            ClampToInt(metrics.Sum(item => (long)item.CachedInputTokens)),
             ClampToInt(metrics.Sum(item => (long)item.OutputTokens)),
             ClampToInt(metrics.Sum(item => (long)item.ToolCalls)),
             observedRuns.Sum(item => item.EstimatedCost),
@@ -715,6 +722,7 @@ internal sealed class ProcessObservationService(
             }
 
             accumulator.InputTokens += metric.InputTokens;
+            accumulator.CachedInputTokens += metric.CachedInputTokens;
             accumulator.OutputTokens += metric.OutputTokens;
             accumulator.DurationMs += metric.DurationMs;
             accumulator.ToolCalls += metric.ToolCalls;
@@ -725,6 +733,7 @@ internal sealed class ProcessObservationService(
             .Select(item => new ProcessLiveMetricPoint(
                 item.Key,
                 ClampToInt(item.Value.InputTokens),
+                ClampToInt(item.Value.CachedInputTokens),
                 ClampToInt(item.Value.OutputTokens),
                 item.Value.DurationMs,
                 ClampToInt(item.Value.ToolCalls)))
@@ -924,11 +933,26 @@ internal sealed class ProcessObservationService(
 
     private static bool ShouldIncludeLiveRun(
         ProcessRunListItem run,
-        Guid? processRunId)
+        Guid? processRunId,
+        Guid? processDefinitionId,
+        DateTimeOffset historyStartUtc)
     {
-        return processRunId.HasValue
-            ? run.Id == processRunId.Value
-            : IsLiveObservedRunStatus(run.Status);
+        if (processRunId.HasValue)
+        {
+            return run.Id == processRunId.Value;
+        }
+
+        if (processDefinitionId.HasValue && run.ProcessDefinitionId != processDefinitionId.Value)
+        {
+            return false;
+        }
+
+        if (IsLiveObservedRunStatus(run.Status))
+        {
+            return true;
+        }
+
+        return IsLiveRunEventStatus(run.Status) && run.UpdatedAtUtc >= historyStartUtc;
     }
 
     private static bool IsLiveObservedRunStatus(ProcessRunStatus status)
@@ -1046,8 +1070,23 @@ internal sealed class ProcessObservationService(
             ProcessLiveHistoryWindow.OneDay => TimeSpan.FromDays(1),
             ProcessLiveHistoryWindow.SevenDays => TimeSpan.FromDays(7),
             ProcessLiveHistoryWindow.ThirtyDays => TimeSpan.FromDays(30),
+            ProcessLiveHistoryWindow.ThreeMonths => TimeSpan.FromDays(90),
+            ProcessLiveHistoryWindow.OneYear => TimeSpan.FromDays(365),
+            ProcessLiveHistoryWindow.All => TimeSpan.MaxValue,
             _ => TimeSpan.FromHours(1)
         };
+    }
+
+    private static DateTimeOffset ResolveHistoryWindowStartUtc(
+        DateTimeOffset observedAtUtc,
+        ProcessLiveHistoryWindow historyWindow)
+    {
+        if (historyWindow == ProcessLiveHistoryWindow.All)
+        {
+            return DateTimeOffset.MinValue;
+        }
+
+        return observedAtUtc.Subtract(ResolveHistoryWindowSpan(historyWindow));
     }
 
     private static TimeSpan ResolveMetricBucketSpan(ProcessLiveHistoryWindow historyWindow)
@@ -1057,6 +1096,9 @@ internal sealed class ProcessObservationService(
             ProcessLiveHistoryWindow.OneDay => TimeSpan.FromHours(1),
             ProcessLiveHistoryWindow.SevenDays => TimeSpan.FromHours(6),
             ProcessLiveHistoryWindow.ThirtyDays => TimeSpan.FromDays(1),
+            ProcessLiveHistoryWindow.ThreeMonths => TimeSpan.FromDays(1),
+            ProcessLiveHistoryWindow.OneYear => TimeSpan.FromDays(7),
+            ProcessLiveHistoryWindow.All => TimeSpan.FromDays(30),
             _ => TimeSpan.FromMinutes(5)
         };
     }
@@ -1068,6 +1110,9 @@ internal sealed class ProcessObservationService(
             ProcessLiveHistoryWindow.OneDay => 1000,
             ProcessLiveHistoryWindow.SevenDays => 2500,
             ProcessLiveHistoryWindow.ThirtyDays => 5000,
+            ProcessLiveHistoryWindow.ThreeMonths => 10_000,
+            ProcessLiveHistoryWindow.OneYear => 20_000,
+            ProcessLiveHistoryWindow.All => 50_000,
             _ => 500
         };
     }
@@ -1079,6 +1124,9 @@ internal sealed class ProcessObservationService(
             ProcessLiveHistoryWindow.OneDay => 180,
             ProcessLiveHistoryWindow.SevenDays => 240,
             ProcessLiveHistoryWindow.ThirtyDays => 300,
+            ProcessLiveHistoryWindow.ThreeMonths => 750,
+            ProcessLiveHistoryWindow.OneYear => 1_500,
+            ProcessLiveHistoryWindow.All => 3_000,
             _ => 120
         };
     }
@@ -1139,6 +1187,8 @@ internal sealed class ProcessObservationService(
     private sealed class LiveMetricAccumulator
     {
         public long InputTokens { get; set; }
+
+        public long CachedInputTokens { get; set; }
 
         public long OutputTokens { get; set; }
 

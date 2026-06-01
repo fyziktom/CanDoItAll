@@ -119,7 +119,8 @@ public sealed record ProcessLiveObservationQuery(
     Guid? ProjectId,
     ProcessLiveHistoryWindow HistoryWindow = ProcessLiveHistoryWindow.LiveHour,
     Guid? ProcessRunId = null,
-    bool ForceRefresh = false);
+    bool ForceRefresh = false,
+    Guid? ProcessDefinitionId = null);
 
 public sealed record ProcessRunObservationQuery(
     Guid RunId,
@@ -305,12 +306,14 @@ public sealed record ProcessLiveStats(
     int DeadLetteredOutboxCount,
     long DurationMs,
     int InputTokens,
+    int CachedInputTokens,
     int OutputTokens,
     int ToolCalls,
     decimal EstimatedCost,
     decimal ActualCost)
 {
     public static ProcessLiveStats Empty { get; } = new(
+        0,
         0,
         0,
         0,
@@ -332,6 +335,7 @@ public sealed record ProcessLiveStats(
 public sealed record ProcessLiveMetricPoint(
     DateTimeOffset TimestampUtc,
     int InputTokens,
+    int CachedInputTokens,
     int OutputTokens,
     long DurationMs,
     int ToolCalls)
@@ -426,7 +430,10 @@ public enum ProcessLiveHistoryWindow
     LiveHour,
     OneDay,
     SevenDays,
-    ThirtyDays
+    ThirtyDays,
+    ThreeMonths,
+    OneYear,
+    All
 }
 
 public enum ProcessObservationFreshness

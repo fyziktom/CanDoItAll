@@ -44,6 +44,7 @@ public partial class ProcessWorkspace
         detailTab = DetailTabRuns;
         selectedCanvasNodeId = null;
         ResetRuntimeCanvasState();
+        ResetSelectedRunGraphData();
         await LoadRunDetailsAsync();
         RefreshCanvasSurface();
         UpdateRuntimeRefreshLoop();
@@ -55,6 +56,7 @@ public partial class ProcessWorkspace
         detailTab = DetailTabRuns;
         selectedCanvasNodeId = null;
         ResetRuntimeCanvasState();
+        ResetSelectedRunGraphData();
 
         var descriptor = new ProcessObservationDialogDescriptor(
             ProcessObservationDialogKind.RunSteps,

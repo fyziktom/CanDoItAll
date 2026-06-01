@@ -143,6 +143,55 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
     }
 
     [Fact]
+    public async Task ExecuteRunAsync_persists_provider_usage_without_prompt_double_counting()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-provider-usage-metrics");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialCachedInputTokens = 3,
+                    ContinuationCachedInputTokens = 2
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+        var session = await workspaceService.GetOrCreateChatSessionAsync(agent.Id);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Complete the process step after the approval is automatically granted.",
+                session.Id,
+                CreateProcessStepContext(),
+                AutoApprovePendingToolCalls: true,
+                StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Completed, detail.Run.State);
+
+        var metric = Assert.Single(detail.Metrics);
+        Assert.Equal(12, metric.InputTokens);
+        Assert.Equal(5, metric.CachedInputTokens);
+        Assert.Equal(24, metric.OutputTokens);
+        Assert.Equal(1, metric.ToolCalls);
+        Assert.Equal(result.ExecutionRunId, metric.ExecutionRunId);
+    }
+
+    [Fact]
     public async Task ExecuteRunAsync_fails_governed_run_when_structured_output_is_invalid()
     {
         await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-invalid-structured-output");
@@ -699,6 +748,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
 
         public string InitialResponseText { get; init; } = "Pending approval.";
 
+        public int InitialCachedInputTokens { get; init; }
+
         public IReadOnlyList<PendingToolApprovalRecord> InitialPendingApprovals { get; init; } =
         [
             new PendingToolApprovalRecord(
@@ -724,6 +775,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 HumanReadableSummaryMarkdown = "Completed."
             },
             AgentOutputJson.SerializerOptions);
+
+        public int ContinuationCachedInputTokens { get; init; }
 
         public IReadOnlyList<AgentFinalizerInvocation> ContinuationFinalizerInvocations { get; init; } = [];
 
@@ -782,6 +835,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 SerializedSessionStateJson: """{"state":"pending"}""",
                 PendingApprovals: InitialPendingApprovals)
             {
+                CachedInputTokens = InitialCachedInputTokens,
                 FinalizerInvocations = InitialFinalizerInvocations,
                 ToolInvocationTraces = InitialToolInvocationTraces.Count == 0
                     ? CreateFinalizerToolInvocationTraces(InitialFinalizerInvocations)
@@ -818,6 +872,7 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 SerializedSessionStateJson: null,
                 PendingApprovals: [])
             {
+                CachedInputTokens = ContinuationCachedInputTokens,
                 FinalizerInvocations = ContinuationFinalizerInvocations,
                 ToolInvocationTraces = ContinuationToolInvocationTraces.Count == 0
                     ? CreateFinalizerToolInvocationTraces(ContinuationFinalizerInvocations)

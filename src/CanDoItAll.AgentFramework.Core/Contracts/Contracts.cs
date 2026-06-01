@@ -113,6 +113,8 @@ public sealed record AgentRuntimeResponse(
     string? SerializedSessionStateJson,
     IReadOnlyList<PendingToolApprovalRecord> PendingApprovals)
 {
+    public int CachedInputTokens { get; init; }
+
     public IReadOnlyList<AgentFinalizerInvocation> FinalizerInvocations { get; init; } = [];
 
     public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];

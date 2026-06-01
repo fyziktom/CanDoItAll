@@ -164,6 +164,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
+                var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
                 var totalToolCalls = runtimeResponse.ToolCalls;
 
@@ -186,6 +187,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeSession = continuation.Session;
                     runtimeResponse = continuation.Response;
                     totalInputTokens = continuation.TotalInputTokens;
+                    totalCachedInputTokens = continuation.TotalCachedInputTokens;
                     totalOutputTokens = continuation.TotalOutputTokens;
                     totalToolCalls = continuation.TotalToolCalls;
                 }
@@ -219,6 +221,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         OutputTokens: totalOutputTokens,
                         ToolCalls: totalToolCalls)
                     {
+                        CachedInputTokens = totalCachedInputTokens,
                         ExecutionRunId = run.Id
                     },
                     provider);
@@ -623,6 +626,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions));
 
                 var totalInputTokens = runtimeResponse.InputTokens;
+                var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
                 var totalOutputTokens = runtimeResponse.OutputTokens;
                 var totalToolCalls = runtimeResponse.ToolCalls;
 
@@ -645,6 +649,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     runtimeSession = continuation.Session;
                     runtimeResponse = continuation.Response;
                     totalInputTokens = continuation.TotalInputTokens;
+                    totalCachedInputTokens = continuation.TotalCachedInputTokens;
                     totalOutputTokens = continuation.TotalOutputTokens;
                     totalToolCalls = continuation.TotalToolCalls;
                 }
@@ -674,10 +679,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ProviderName: provider.Name,
                         Model: ResolveModel(agent, provider),
                         DurationMs: Math.Max(1, (long)(DateTimeOffset.UtcNow - startedAt).TotalMilliseconds),
-                        InputTokens: totalInputTokens + (userMessage?.TokenEstimate ?? EstimateTokens(prompt)),
+                        InputTokens: totalInputTokens,
                         OutputTokens: totalOutputTokens,
                         ToolCalls: totalToolCalls)
                     {
+                        CachedInputTokens = totalCachedInputTokens,
                         ExecutionRunId = run.Id
                     },
                     provider);

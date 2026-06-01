@@ -1,0 +1,17 @@
+Command: dotnet vstest .codex\tmp\tests-integration-withdeps\CanDoItAll.Tests.Integration.dll --TestCaseFilter:"FullyQualifiedName~AgentFrameworkExecutionRunTrackingIntegrationTests.ExecuteRunAsync_persists_provider_usage_without_prompt_double_counting"
+Working directory: C:\repositories\CanDoItAll
+Run label: 2026-06-01 SB01 execution-run tracking proof
+Exit code: 0
+
+Result summary:
+- Test file matched: CanDoItAll.Tests.Integration.dll
+- Failed: 0
+- Passed: 1
+- Skipped: 0
+- Total: 1
+
+Relevant invariant coverage:
+- SB01-I01 provider reported input tokens are persisted without adding the local prompt estimate.
+- SB01-I02 provider reported output tokens are persisted.
+- SB01-I03 provider reported cached input tokens are aggregated and persisted.
+- SB01-I05 continuation tool-call accounting remains intact.

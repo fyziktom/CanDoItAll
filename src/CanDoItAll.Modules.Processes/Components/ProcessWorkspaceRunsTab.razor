@@ -137,6 +137,49 @@
                 }
             </TabsItem>
 
+            <TabsItem Text="Graphs">
+                @if (Presenter.SelectedRun is null)
+                {
+                    <EmptyState Eyebrow="No run selected"
+                                Title="Choose a run from Activity first"
+                                Description="Run graphs are scoped to one durable process run." />
+                }
+                else if (!string.IsNullOrWhiteSpace(Presenter.SelectedRunGraphsError))
+                {
+                    <EmptyState Eyebrow="Graphs unavailable"
+                                Title="Run graph data could not be loaded"
+                                Description="@Presenter.SelectedRunGraphsError" />
+                }
+                else if (Presenter.SelectedRunGraphsLoading)
+                {
+                    <LoadingState Title="Loading run graphs"
+                                  Description="Collecting metrics for the selected process run." />
+                }
+                else
+                {
+                    <Stack GapScale="LayoutGap.Medium"
+                           data-testid="processes-selected-run-graphs-tab">
+                        <Cluster Gap="LayoutGap.Small"
+                                 JustifyContent="JustifyContent.End">
+                            <Button Text="Refresh"
+                                    Icon="refresh"
+                                    ButtonStyle="ButtonStyle.Light"
+                                    Size="ButtonSize.Small"
+                                    Disabled="@Presenter.SelectedRunGraphsLoading"
+                                    IsBusy="@Presenter.SelectedRunGraphsLoading"
+                                    Click="Presenter.RefreshSelectedRunGraphsAsync"
+                                    data-testid="processes-run-graphs-refresh-button" />
+                        </Cluster>
+                        <ProcessObservationGraphsPanel Snapshot="@Presenter.SelectedRunGraphsSnapshot"
+                                                       TestId="processes-run-graphs-panel"
+                                                       EmptyEyebrow="Run graphs"
+                                                       EmptyTitle="No run graph data"
+                                                       EmptyDescription="No runtime metrics matched the selected process run."
+                                                       CostDescription="Selected process run." />
+                    </Stack>
+                }
+            </TabsItem>
+
             <TabsItem Text="Coordination">
                 @if (Presenter.SelectedRun is null)
                 {
@@ -170,14 +213,19 @@
 </Stack>
 
 @code {
+    private const int SelectedRunGraphsTabIndex = 4;
+
     private int selectedRunViewIndex = 1;
 
     [Parameter, EditorRequired]
     public ProcessWorkspace.ProcessWorkspaceRunsTabPresenter Presenter { get; set; } = default!;
 
-    private Task HandleSelectedRunViewChanged(int index)
+    private async Task HandleSelectedRunViewChanged(int index)
     {
         selectedRunViewIndex = index;
-        return Task.CompletedTask;
+        if (index == SelectedRunGraphsTabIndex)
+        {
+            await Presenter.EnsureSelectedRunGraphsLoadedAsync();
+        }
     }
 }

@@ -532,8 +532,8 @@
                 return [];
             }
 
-            return
-            [
+            var series = new List<CdaChartSeries>
+            {
                 new()
                 {
                     Name = "Input tokens",
@@ -552,7 +552,22 @@
                         .Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.OutputTokens))
                         .ToArray()
                 }
-            ];
+            };
+
+            if (MetricPoints.Any(item => item.CachedInputTokens > 0))
+            {
+                series.Add(new CdaChartSeries
+                {
+                    Name = "Cached input tokens",
+                    Type = CdaChartType.Line,
+                    Color = "#d97706",
+                    Points = MetricPoints
+                        .Select(item => new CdaChartPoint(item.TimestampUtc.UtcDateTime, item.CachedInputTokens))
+                        .ToArray()
+                });
+            }
+
+            return series;
         }
     }
 
@@ -2869,6 +2884,9 @@ Reply with the next concrete action or remaining blocker. Do not treat this mess
             ProcessLiveHistoryWindow.OneDay => "1 day",
             ProcessLiveHistoryWindow.SevenDays => "7 days",
             ProcessLiveHistoryWindow.ThirtyDays => "30 days",
+            ProcessLiveHistoryWindow.ThreeMonths => "3 months",
+            ProcessLiveHistoryWindow.OneYear => "1 year",
+            ProcessLiveHistoryWindow.All => "All",
             _ => "Live 1h"
         };
     }

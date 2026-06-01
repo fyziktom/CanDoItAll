@@ -74,6 +74,12 @@ public partial class ProcessWorkspace
 
         public ProcessRunListItem? SelectedRun => workspace.SelectedRun;
 
+        public bool SelectedRunGraphsLoading => workspace.selectedRunGraphsLoading;
+
+        public string SelectedRunGraphsError => workspace.selectedRunGraphsError;
+
+        public ProcessLiveObservationSnapshot? SelectedRunGraphsSnapshot => workspace.selectedRunGraphsSnapshot;
+
         public IReadOnlyList<ProcessLaunchPlanListItem> LaunchPlans => workspace.launchPlans;
 
         public IReadOnlyList<AgentTeamDefinition> AgentTeams => workspace.agentTeams;
@@ -420,6 +426,16 @@ public partial class ProcessWorkspace
         public Task SelectRunAsync(Guid runId)
         {
             return workspace.SelectRunAsync(runId);
+        }
+
+        public Task EnsureSelectedRunGraphsLoadedAsync()
+        {
+            return workspace.EnsureSelectedRunGraphsLoadedAsync(forceRefresh: false);
+        }
+
+        public Task RefreshSelectedRunGraphsAsync()
+        {
+            return workspace.EnsureSelectedRunGraphsLoadedAsync(forceRefresh: true);
         }
 
         public Task OpenRunStepsDialogAsync(Guid runId)

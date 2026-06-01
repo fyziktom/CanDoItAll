@@ -465,13 +465,14 @@ public sealed partial class MafAgentRuntime(
 
                 return new AgentRuntimeResponse(
                     ResponseText: ResolveResponseText(response, pendingApprovals),
-                    InputTokens: (int)(response.Usage?.InputTokenCount ?? 0),
-                    OutputTokens: (int)(response.Usage?.OutputTokenCount ?? 0),
+                    InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
+                    OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
                     ToolCalls: CountToolCalls(response),
                     RuntimeSessionKey: ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey),
                     SerializedSessionStateJson: serializedSessionJson,
                     PendingApprovals: pendingApprovals)
                 {
+                    CachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount),
                     FinalizerInvocations = snapshotFinalizerInvocations(),
                     ToolInvocationTraces = snapshotToolInvocationTraces()
                 };
@@ -672,6 +673,18 @@ public sealed partial class MafAgentRuntime(
             FinalizerInvocations = finalizerInvocations,
             ToolInvocationTraces = toolInvocationTraces
         };
+    }
+
+    private static int ClampTokenCount(long? tokenCount)
+    {
+        if (!tokenCount.HasValue || tokenCount.Value <= 0)
+        {
+            return 0;
+        }
+
+        return tokenCount.Value > int.MaxValue
+            ? int.MaxValue
+            : (int)tokenCount.Value;
     }
 
     private static async Task<string?> TrySerializeRuntimeSessionAsync(

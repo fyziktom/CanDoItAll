@@ -185,7 +185,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             .ToList();
     }
 
-    private async Task<(ChatSessionRecord Session, AgentRuntimeResponse Response, int TotalInputTokens, int TotalOutputTokens, int TotalToolCalls)> ContinueAutoApprovedRunAsync(
+    private async Task<(ChatSessionRecord Session, AgentRuntimeResponse Response, int TotalInputTokens, int TotalCachedInputTokens, int TotalOutputTokens, int TotalToolCalls)> ContinueAutoApprovedRunAsync(
         ExecutionRunRecord run,
         AgentDefinition agent,
         ProviderProfile provider,
@@ -202,6 +202,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         var currentSession = session;
         var currentResponse = initialResponse;
         var totalInputTokens = initialResponse.InputTokens;
+        var totalCachedInputTokens = initialResponse.CachedInputTokens;
         var totalOutputTokens = initialResponse.OutputTokens;
         var totalToolCalls = initialResponse.ToolCalls;
 
@@ -243,11 +244,12 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                 executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
 
             totalInputTokens += currentResponse.InputTokens;
+            totalCachedInputTokens += currentResponse.CachedInputTokens;
             totalOutputTokens += currentResponse.OutputTokens;
             totalToolCalls += currentResponse.ToolCalls;
         }
 
-        return (currentSession, currentResponse, totalInputTokens, totalOutputTokens, totalToolCalls);
+        return (currentSession, currentResponse, totalInputTokens, totalCachedInputTokens, totalOutputTokens, totalToolCalls);
     }
 
     private static bool ShouldAutoApprovePendingToolCalls(AgentDefinition agent, ChatSessionRecord session)

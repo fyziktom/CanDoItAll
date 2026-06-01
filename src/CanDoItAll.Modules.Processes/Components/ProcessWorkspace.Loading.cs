@@ -80,6 +80,7 @@ public partial class ProcessWorkspace
             ResetDefinitionCanvasState();
             ResetRuntimeCanvasState();
             ResetAnalyticsPaneData();
+            ResetGraphPaneData();
         }
 
         selectedProcessId = nextSelectedProcessId;
@@ -341,6 +342,7 @@ public partial class ProcessWorkspace
         {
             selectedCanvasNodeId = null;
             ResetRuntimeCanvasState();
+            ResetSelectedRunGraphData();
         }
 
         selectedRunId = nextSelectedRunId;
@@ -593,6 +595,7 @@ public partial class ProcessWorkspace
         invariantDiagnostics = [];
         selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
         directMessageThreads = [];
+        ResetSelectedRunGraphData();
         selectedAssignmentId = null;
         artifactStepRunId = null;
         operatorReworkStepRunId = null;

@@ -1,0 +1,9 @@
+Command: dotnet build tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-restore -m:1 /p:BuildInParallel=false /p:OutDir=.codex\tmp\tests-components-withdeps\ -v minimal
+Working directory: C:\repositories\CanDoItAll
+Run label: 2026-06-01 SB03 component build proof
+Exit code: 0
+
+Result summary:
+- Component test assembly built successfully.
+- Errors: 0
+- Warnings: existing EF Core assembly conflict warnings in transitive project references.

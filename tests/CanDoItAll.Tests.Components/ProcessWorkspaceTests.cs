@@ -4,10 +4,12 @@ using System.Text.Json;
 using Bunit;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Activity;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Components.Web;
 
 namespace CanDoItAll.Tests.Components;
@@ -68,10 +70,110 @@ public sealed class ProcessWorkspaceTests
         Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "workflowOptionsLoaded"));
         Assert.Equal(projectId, GetPrivateFieldValue<Guid?>(cut.Instance, "partyOptionsLoadedProjectId"));
 
+        await ActivateGraphsTabAsync(cut);
+
+        Assert.False(GetPrivateFieldValue<bool>(cut.Instance, "processGraphsLoadRequested"));
+        Assert.Null(GetPrivateFieldValue<ProcessLiveObservationSnapshot>(cut.Instance, "processGraphsSnapshot"));
+
+        cut.Find("[data-testid='processes-process-graphs-load-button']").Click();
+        cut.WaitForAssertion(() =>
+        {
+            Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "processGraphsLoadRequested"));
+            Assert.NotNull(GetPrivateFieldValue<ProcessLiveObservationSnapshot>(cut.Instance, "processGraphsSnapshot"));
+        });
+
         await ActivateAnalyticsTabAsync(cut);
 
         Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "analyticsLoaded"));
         Assert.True(GetPrivateFieldValue<bool>(cut.Instance, "improvementsLoaded"));
+    }
+
+    [Fact]
+    public async Task Live_observation_includes_completed_priced_runs_in_one_day_history()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var observationService = harness.Context.Services.GetRequiredService<IProcessObservationService>();
+        var projectId = await CreateProjectAsync(projectsService, "Live observation priced history project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Completed priced history run",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test live observation price history."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        await MarkRunCompletedWithCostAsync(harness, runResult.Value, 1.23m);
+
+        var snapshot = await observationService.GetLiveSnapshotAsync(
+            new ProcessLiveObservationQuery(
+                projectId,
+                ProcessLiveHistoryWindow.OneDay,
+                ForceRefresh: true));
+        var runCard = Assert.Single(snapshot.Runs, run => run.RunId == runResult.Value);
+
+        Assert.Equal(ProcessRunStatus.Completed, runCard.Status);
+        Assert.Equal(1.23m, runCard.ActualCost);
+        Assert.Equal(1.23m, snapshot.Stats.ActualCost);
+    }
+
+    [Fact]
+    public async Task Run_graph_tab_loads_only_when_selected_for_the_selected_run()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Run graph lazy load project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Run graph lazy load proof",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test run graph lazy loading."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+
+        await ActivateRunsTabAsync(cut);
+        await SelectRunAsync(cut, runResult.Value);
+
+        Assert.Null(GetPrivateFieldValue<ProcessLiveObservationSnapshot>(cut.Instance, "selectedRunGraphsSnapshot"));
+
+        await ActivateRunGraphsTabAsync(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(runResult.Value, GetPrivateFieldValue<Guid?>(cut.Instance, "selectedRunGraphsLoadedRunId"));
+            Assert.NotNull(GetPrivateFieldValue<ProcessLiveObservationSnapshot>(cut.Instance, "selectedRunGraphsSnapshot"));
+        });
     }
 
     [Fact]
@@ -1995,12 +2097,28 @@ public sealed class ProcessWorkspaceTests
 
         await cut.InvokeAsync(async () =>
         {
+            var task = method!.Invoke(cut.Instance, [5]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+    }
+
+    private static async Task ActivateGraphsTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var method = typeof(ProcessWorkspace).GetMethod("HandleDetailTabChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
             var task = method!.Invoke(cut.Instance, [4]) as Task;
             Assert.NotNull(task);
             await task!;
         });
 
         cut.Render();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-process-graphs-tab']")));
     }
 
     private static async Task ActivateRunControlTabAsync(IRenderedComponent<ProcessWorkspace> cut)
@@ -2018,6 +2136,38 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-operator-control-section']")));
+    }
+
+    private static async Task ActivateRunGraphsTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var runsTab = cut.FindComponent<ProcessWorkspaceRunsTab>();
+        var method = typeof(ProcessWorkspaceRunsTab).GetMethod("HandleSelectedRunViewChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(runsTab.Instance, [4]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-selected-run-graphs-tab']")));
+    }
+
+    private static async Task SelectRunAsync(IRenderedComponent<ProcessWorkspace> cut, Guid runId)
+    {
+        var method = typeof(ProcessWorkspace).GetMethod("SelectRunAsync", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(cut.Instance, [runId]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
     }
 
     private static void WaitForEditorDefinition(IRenderedComponent<ProcessWorkspace> cut, ProcessDefinitionEditorModel expected)
@@ -2175,6 +2325,23 @@ public sealed class ProcessWorkspaceTests
 
         Assert.True(result.IsSuccess);
         return result.Value;
+    }
+
+    private static async Task MarkRunCompletedWithCostAsync(
+        ComponentTestHarness harness,
+        Guid runId,
+        decimal actualCost)
+    {
+        var dbContextFactory = harness.Context.Services.GetRequiredService<IDbContextFactory<AppDbContext>>();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runId);
+
+        run.Status = ProcessRunStatus.Completed;
+        run.ActualCost = actualCost;
+        run.UpdatedAtUtc = DateTimeOffset.UtcNow;
+        run.CompletedAtUtc = run.UpdatedAtUtc;
+
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task<ProcessDefinitionEditorModel> WaitForPersistedEditorAsync(

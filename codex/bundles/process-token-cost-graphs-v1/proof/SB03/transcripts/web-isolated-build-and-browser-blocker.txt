@@ -1,0 +1,22 @@
+Commands:
+1. dotnet build src\CanDoItAll.Web\CanDoItAll.Web.csproj --no-restore -m:1 /p:BuildInParallel=false /p:OutDir=.codex\tmp\web-5034\ -v minimal
+2. dotnet .codex\tmp\web-5034\CanDoItAll.Web.dll --urls http://localhost:5034
+
+Working directory: C:\repositories\CanDoItAll
+Run label: 2026-06-01 SB03 browser host proof attempt
+
+Result summary:
+- Command 1 exit code: 0
+- Command 1 errors: 0
+- Command 1 warnings: existing EF Core assembly conflict warnings in transitive project references.
+- Command 2 exit code: non-zero during startup.
+
+Startup failure:
+
+```text
+System.InvalidOperationException: PostgreSQL profile 'Local PostgreSQL' has CanDoItAll tables but does not match the merged PostgreSQL baseline. Missing schema requirements: table AgentFramework_WorkflowCheckpoints, index IX_Processes_ArtifactRecords_ProcessRunId_ProjectionIdentityHa~. Refusing to record migration 20260528182412_InitialPostgreSqlBaseline automatically.
+```
+
+Notes:
+- An existing app on http://localhost:5032 was serving a stale build started before these changes.
+- I did not stop the existing app process or mutate the shared local PostgreSQL profile.

@@ -19,6 +19,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private const string DetailTabRoles = "roles";
     private const string DetailTabSteps = "steps";
     private const string DetailTabRuns = "runs";
+    private const string DetailTabGraphs = "graphs";
     private const string DetailTabAnalytics = "analytics";
     private const string DetailTabExchange = "exchange";
     private const string DetailTabManagerChat = "manager-chat";
@@ -34,9 +35,20 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
         new(DetailTabRoles, "Roles", Description: "Role-first staffing semantics and executor intent."),
         new(DetailTabSteps, "Steps", Description: "Typed workflow steps, bindings, artifacts, and authoring canvas."),
         new(DetailTabRuns, "Runs", Description: "Runtime state, assignments, work briefs, and evidence capture."),
+        new(DetailTabGraphs, "Graphs", Description: "Token, time, tool, and cost graphs for this process."),
         new(DetailTabAnalytics, "Analytics", Description: "Economics, conformance, capability gaps, and improvement signals."),
         new(DetailTabExchange, "Exchange", Description: "Import, export, and future executor-registry seam review."),
         new(DetailTabManagerChat, "Manager chat", Description: "Conversation with the responsible process manager agent.")
+    ];
+
+    private static readonly IReadOnlyList<ProcessLiveHistoryWindow> ProcessGraphWindows =
+    [
+        ProcessLiveHistoryWindow.OneDay,
+        ProcessLiveHistoryWindow.SevenDays,
+        ProcessLiveHistoryWindow.ThirtyDays,
+        ProcessLiveHistoryWindow.ThreeMonths,
+        ProcessLiveHistoryWindow.OneYear,
+        ProcessLiveHistoryWindow.All
     ];
 
     [Inject]
@@ -187,6 +199,17 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private Guid? analyticsLoadedProjectId;
     private bool improvementsLoaded;
     private Guid? improvementsLoadedProcessId;
+    private ProcessLiveHistoryWindow processGraphsWindow = ProcessLiveHistoryWindow.ThirtyDays;
+    private bool processGraphsLoadRequested;
+    private bool processGraphsLoading;
+    private string processGraphsError = string.Empty;
+    private Guid? processGraphsLoadedProcessId;
+    private ProcessLiveHistoryWindow? processGraphsLoadedWindow;
+    private ProcessLiveObservationSnapshot? processGraphsSnapshot;
+    private bool selectedRunGraphsLoading;
+    private string selectedRunGraphsError = string.Empty;
+    private Guid? selectedRunGraphsLoadedRunId;
+    private ProcessLiveObservationSnapshot? selectedRunGraphsSnapshot;
 
     private IReadOnlyList<ProcessDefinitionListItem> FilteredDefinitions => definitions
         .Where(definition =>
