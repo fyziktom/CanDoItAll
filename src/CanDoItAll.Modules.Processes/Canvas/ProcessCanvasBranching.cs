@@ -113,6 +113,13 @@ public static class ProcessCanvasBranching
         return string.Equals(outcome.Key, ErrorRouteKey, StringComparison.Ordinal);
     }
 
+    public static bool IsErrorOutcome(ProcessStepBranchOutcomeDefinition outcome)
+    {
+        ArgumentNullException.ThrowIfNull(outcome);
+
+        return string.Equals(outcome.Key, ErrorRouteKey, StringComparison.Ordinal);
+    }
+
     public static Guid? GetDefaultOutcomeId(ProcessStepEditorModel step)
     {
         ArgumentNullException.ThrowIfNull(step);

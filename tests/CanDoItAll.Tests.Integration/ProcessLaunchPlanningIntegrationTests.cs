@@ -1100,6 +1100,95 @@ public sealed class ProcessLaunchPlanningIntegrationTests
     }
 
     [Fact]
+    public async Task CreateLaunchPlanAsync_prefers_dotnet_qa_for_blazor_quality_review()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var suffix = DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff", System.Globalization.CultureInfo.InvariantCulture);
+        var projectId = await CreateProjectAsync(
+            projectsService,
+            $"Blazor QA launch proof {suffix}",
+            objective: "Review a Blazor WebAssembly PWA delivery with .NET validation and browser proof.");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Review Blazor WebAssembly PWA quality",
+                "Quality",
+                "Review a Blazor WebAssembly PWA under C:\\programovani\\dotnet-demo\\output. Validate dotnet build, runtime behavior, browser proof, manifest behavior, service worker behavior, and keyboard controls.",
+                null,
+                ObjectSubtype: "task"));
+        var definition = BuildGenericQaLaunchPlanningDefinition(projectId);
+        var saveResult = await processesService.SaveAsync(definition);
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = $"Blazor QA launch {suffix}",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Started from project structure.",
+            ProjectStructureContext = new ProcessProjectStructureContext
+            {
+                ProjectId = projectId,
+                NodeId = "process-node",
+                NodeTitle = "Delivery process",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            RequestedBy = "integration-tests"
+        });
+        Assert.True(launchResult.IsSuccess, string.Join(" | ", launchResult.Errors.Select(error => error.Message)));
+
+        var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(details);
+
+        var selectedQa = GetSelectedCandidate(details!, "QA lead");
+        var dotnetQa = GetCandidate(details, "QA lead", ".NET QA Review Lead");
+        var javascriptQa = GetCandidate(details, "QA lead", "JavaScript QA Review Lead");
+
+        Assert.Equal(".NET QA Review Lead", selectedQa.DisplayName);
+        Assert.True(dotnetQa.Score > javascriptQa.Score);
+
+        var matchResult = await processesService.MatchLaunchPlanWithHrManagerAsync(
+            launchResult.Value,
+            agentTeamId: null,
+            requestedBy: "integration-tests");
+        Assert.True(matchResult.IsSuccess, string.Join(" | ", matchResult.Errors.Select(error => error.Message)));
+
+        var matchedDetails = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(matchedDetails);
+        var matchedDotnetQa = GetCandidate(matchedDetails!, "QA lead", ".NET QA Review Lead");
+        var matchedJavascriptQa = GetCandidate(matchedDetails, "QA lead", "JavaScript QA Review Lead");
+
+        Assert.True(matchedDotnetQa.IsRecommended);
+        Assert.False(matchedJavascriptQa.IsRecommended);
+        Assert.True(matchedDotnetQa.Score > matchedJavascriptQa.Score);
+
+        var secondMatchResult = await processesService.MatchLaunchPlanWithHrManagerAsync(
+            launchResult.Value,
+            agentTeamId: null,
+            requestedBy: "integration-tests");
+        Assert.True(secondMatchResult.IsSuccess, string.Join(" | ", secondMatchResult.Errors.Select(error => error.Message)));
+
+        var matchedAgainDetails = await processesService.GetLaunchPlanAsync(launchResult.Value);
+        Assert.NotNull(matchedAgainDetails);
+        var matchedAgainDotnetQa = GetCandidate(matchedAgainDetails!, "QA lead", ".NET QA Review Lead");
+        var matchedAgainJavascriptQa = GetCandidate(matchedAgainDetails, "QA lead", "JavaScript QA Review Lead");
+
+        Assert.Equal(matchedDotnetQa.Score, matchedAgainDotnetQa.Score);
+        Assert.Equal(matchedJavascriptQa.Score, matchedAgainJavascriptQa.Score);
+    }
+
+    [Fact]
     public async Task StartRunAsync_direct_static_client_web_context_prefers_javascript_developer_for_implementation_role()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -1896,6 +1985,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Selected AI resource owns implementation.",
                     ExceptionPolicySummary = "Fail when project-structure context is ignored.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,
@@ -1904,6 +2001,76 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                         new ProcessStepRoleRequirementEditorModel
                         {
                             RoleRequirementId = leadEngineerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static ProcessDefinitionEditorModel BuildGenericQaLaunchPlanningDefinition(Guid projectId)
+    {
+        var qaRoleId = Guid.NewGuid();
+        var reviewStepId = Guid.NewGuid();
+
+        return new ProcessDefinitionEditorModel
+        {
+            ProjectId = projectId,
+            Name = "Generic quality launch planning proof process",
+            Summary = "Routes a generic QA role from the selected project-structure delivery context.",
+            ValueStatement = "Launch planning must staff quality review from the selected work stack.",
+            CustomerName = "Integration proof customer",
+            OwnerName = "Integration proof owner",
+            GovernancePolicySummary = "QA staffing remains generic and context-aware.",
+            ChangeSummary = "Project-structure quality review launch context integration proof.",
+            ConstitutionRuleSummary = "Do not route .NET or Blazor quality review to a JavaScript-only reviewer when .NET QA is available.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe for deterministic validation.",
+            Roles =
+            [
+                new ProcessRoleEditorModel
+                {
+                    Id = qaRoleId,
+                    Key = "qa-lead",
+                    DisplayName = "QA lead",
+                    Purpose = "Review delivered application quality and validation evidence.",
+                    StaffingIntent = "Select an AI quality reviewer with build, runtime, and browser validation capability for the selected app stack.",
+                    PreferredProjectAssignmentRole = ProjectPartyAssignmentRole.AiAgent,
+                    PreferredExecutorKind = "AI agent",
+                    DefaultAllocationPercent = 40
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel
+                {
+                    Id = reviewStepId,
+                    Key = "quality-review",
+                    Title = "Review delivered app quality",
+                    StepKind = ProcessStepKind.Review,
+                    InputContractSummary = "Project-structure work item and implementation evidence describe the requested app.",
+                    OutputContractSummary = "Quality disposition prepared with validation evidence.",
+                    EvidenceContractSummary = "Launch planning proof only.",
+                    DecisionRightsSummary = "Selected QA resource owns the quality disposition.",
+                    ExceptionPolicySummary = "Fail when project-structure stack context is ignored.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.ReadProcessContext,
+                        ProcessStepOperation.ReadProjectStructure,
+                        ProcessStepOperation.ReadUpstreamArtifacts,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly,
+                    TargetLeadHours = 1,
+                    CanvasX = 180,
+                    CanvasY = 180,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel
+                        {
+                            RoleRequirementId = qaRoleId,
                             ResponsibilityKind = ProcessResponsibilityKind.Responsible
                         }
                     ]
@@ -1970,6 +2137,13 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Selected architecture resource owns architecture guidance.",
                     ExceptionPolicySummary = "Fail when selected work stack is ignored.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.ReadProcessContext,
+                        ProcessStepOperation.ReadProjectStructure,
+                        ProcessStepOperation.ReadUpstreamArtifacts
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly,
                     TargetLeadHours = 1,
                     CanvasX = 180,
                     CanvasY = 180,
@@ -1993,6 +2167,14 @@ public sealed class ProcessLaunchPlanningIntegrationTests
                     EvidenceContractSummary = "Launch planning proof only.",
                     DecisionRightsSummary = "Selected AI resource owns implementation.",
                     ExceptionPolicySummary = "Fail when selected work stack is ignored.",
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.MutateProductTarget,
+                        ProcessStepOperation.RunValidation,
+                        ProcessStepOperation.CaptureRuntimeProof
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetMutable,
                     TargetLeadHours = 1,
                     CanvasX = 460,
                     CanvasY = 180,

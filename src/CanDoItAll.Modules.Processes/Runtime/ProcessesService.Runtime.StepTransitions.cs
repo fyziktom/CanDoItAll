@@ -88,7 +88,11 @@ public sealed partial class ProcessesService
                 now);
 
             transitionContext.Run.UpdatedAtUtc = now;
-        transitionContext.Run.Status = ProcessRunStatusResolver.Resolve(transitionContext.PersistedStepRuns, transitionContext.StepRun);
+            transitionContext.Run.Status = ProcessRunStatusResolver.Resolve(
+                transitionContext.PersistedStepRuns,
+                transitionContext.StepRun,
+                transitionContext.StepDependenciesByStepId,
+                transitionContext.BranchOutcomesByStepId);
             if (transitionContext.Run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled)
             {
                 transitionContext.Run.CompletedAtUtc = now;
@@ -386,42 +390,7 @@ public sealed partial class ProcessesService
     private static bool RequiresArtifactsForCompletedBranch(ProcessStepBranchOutcomeDefinition? selectedBranchOutcome)
     {
         return selectedBranchOutcome is null ||
-            !IsExceptionRoutingBranchOutcome(selectedBranchOutcome);
-    }
-
-    private static bool IsExceptionRoutingBranchOutcome(ProcessStepBranchOutcomeDefinition selectedBranchOutcome)
-    {
-        var token = NormalizeBranchDispositionToken(
-            $"{selectedBranchOutcome.Key} {selectedBranchOutcome.Title} {selectedBranchOutcome.Description}");
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return false;
-        }
-
-        return token.Contains("repair", StringComparison.Ordinal) ||
-               token.Contains("remediation", StringComparison.Ordinal) ||
-               token.Contains("remediate", StringComparison.Ordinal) ||
-               token.Contains("rework", StringComparison.Ordinal) ||
-               token.Contains("fixrequired", StringComparison.Ordinal) ||
-               token.Contains("fixesrequired", StringComparison.Ordinal) ||
-               token.Contains("changesrequired", StringComparison.Ordinal) ||
-               token.Contains("defect", StringComparison.Ordinal) ||
-               token.Contains("failedvalidation", StringComparison.Ordinal) ||
-               token.Contains("validationrejected", StringComparison.Ordinal) ||
-               token.Contains("qualityrejected", StringComparison.Ordinal) ||
-               token.Contains("unresolved", StringComparison.Ordinal) ||
-               token.Contains("escalation", StringComparison.Ordinal) ||
-               token.Contains("exception", StringComparison.Ordinal) ||
-               token.Contains("nogo", StringComparison.Ordinal) ||
-               token.Contains("blocked", StringComparison.Ordinal);
-    }
-
-    private static string NormalizeBranchDispositionToken(string value)
-    {
-        return new string(value
-            .Where(char.IsLetterOrDigit)
-            .Select(char.ToLowerInvariant)
-            .ToArray());
+            !ProcessBranchOutcomeRouting.IsExceptionRoutingBranchOutcome(selectedBranchOutcome);
     }
 
     private static Result ValidateRequiredArtifactsForCompletion(

@@ -488,6 +488,30 @@ public sealed class ProcessTemplateGovernanceTests
             artifact => artifact.TrustRequirement == ProcessArtifactTrustRequirement.ApprovalRequired);
     }
 
+    [Fact]
+    public async Task Dotnet_feature_template_keeps_validation_contract_planning_only_and_runtime_proof_on_validation_step()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var definition = projectionService.GetProjectedEnvelope("dotnet-feature-function-implementation").Definition;
+        var contractStep = GetStep(definition, "test-contract");
+        var validationStep = GetStep(definition, "targeted-validation");
+
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, contractStep.OperationTargetScope);
+        Assert.Contains(ProcessStepOperation.ReadProjectStructure, contractStep.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, contractStep.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.RunValidation, contractStep.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.LaunchRuntime, contractStep.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.CaptureRuntimeProof, contractStep.AllowedOperations);
+        Assert.Contains("Do not execute build, test, launch, or browser tools", contractStep.Notes, StringComparison.Ordinal);
+
+        Assert.Contains(ProcessStepOperation.RunValidation, validationStep.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.LaunchRuntime, validationStep.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.CaptureRuntimeProof, validationStep.AllowedOperations);
+    }
+
     private static bool AllowsProductMutation(ProcessStepImportExportModel step)
     {
         return step.AllowedOperations.Contains(ProcessStepOperation.MutateProductTarget) ||

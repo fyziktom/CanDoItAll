@@ -19,6 +19,7 @@ public sealed partial class ProcessesService
     private const string PlaywrightLocalMcpCapability = "playwright-local-mcp";
     private const string ArchitectureSourceRagCapability = "architecture-source-rag";
     private const int RoleSpecificContextItemCount = 4;
+    private const decimal MaxRawLaunchCandidateScore = 120m;
     private static readonly HashSet<string> RoleKeywordStopWords = new(StringComparer.OrdinalIgnoreCase)
     {
         "and",
@@ -192,19 +193,21 @@ public sealed partial class ProcessesService
                         candidate.MetadataJson,
                         teamScope,
                         candidate);
-                }
-
-                var selectedCandidate = roleCandidates
-                    .Where(item => item.CandidateKind != ProcessLaunchCandidateKind.Gap)
-                    .OrderByDescending(item => ScoreCandidateForHrManager(
+                    candidate.Score = ScoreCandidateForHrManager(
                         role,
                         roleRequirement,
-                        item,
+                        candidate,
                         requiredSkillIds,
                         skillNames,
                         aiFactsByPartyId,
                         launchContext,
-                        teamScope))
+                        teamScope);
+                    candidate.IsRecommended = false;
+                }
+
+                var selectedCandidate = roleCandidates
+                    .Where(item => item.CandidateKind != ProcessLaunchCandidateKind.Gap)
+                    .OrderByDescending(item => item.Score)
                     .ThenByDescending(item => item.IsRecommended)
                     .ThenBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
                     .FirstOrDefault();
@@ -223,6 +226,7 @@ public sealed partial class ProcessesService
                     continue;
                 }
 
+                selectedCandidate.IsRecommended = true;
                 if (role.SelectedCandidateId != selectedCandidate.Id ||
                     role.RequiresProvisioning != selectedCandidate.RequiresProvisioning ||
                     !role.IsResolved ||
@@ -519,7 +523,7 @@ public sealed partial class ProcessesService
         IReadOnlyDictionary<Guid, string> skillNames,
         IReadOnlyDictionary<Guid, AiAgentStaffingFactListItemModel> aiFactsByPartyId)
     {
-        var score = candidate.Score;
+        var score = ResolveCandidateRoleScoringBase(candidate);
         var keywords = BuildRoleMatchingKeywords(
             displayName,
             roleKey,
@@ -702,6 +706,9 @@ public sealed partial class ProcessesService
         var selectedWorkIsStaticClientWeb = !workMentionsBlazor &&
                                             !workMentionsDotNet &&
                                             MentionsStaticClientWebWork(workText);
+        var selectedWorkHasOnlyJavaScriptStack = workMentionsJavaScript &&
+                                                 !workMentionsBlazor &&
+                                                 !workMentionsDotNet;
         var selectedWorkIsJavaScript = ContextHasExclusiveStackSignal(
                                            additionalRoleContext,
                                            MentionsJavaScriptStack,
@@ -969,7 +976,7 @@ public sealed partial class ProcessesService
                 }
             }
 
-            if (workMentionsJavaScript || selectedWorkIsJavaScript)
+            if (selectedWorkIsJavaScript || selectedWorkHasOnlyJavaScriptStack)
             {
                 if (agentHasDirectJavaScriptIdentity)
                 {
@@ -1280,6 +1287,25 @@ public sealed partial class ProcessesService
         }
 
         return score;
+    }
+
+    private static decimal ResolveCandidateRoleScoringBase(ProcessLaunchCandidate candidate)
+    {
+        if (candidate.Score >= 0m && candidate.Score <= MaxRawLaunchCandidateScore)
+        {
+            return candidate.Score;
+        }
+
+        return candidate.CandidateKind switch
+        {
+            ProcessLaunchCandidateKind.ProjectAssignment => candidate.RequiresProvisioning ? 64m : 92m,
+            ProcessLaunchCandidateKind.AiResource when !candidate.RequiresProvisioning => 72m,
+            ProcessLaunchCandidateKind.AiResource => candidate.TechnicalAgentId.HasValue ? 58m : 54m,
+            ProcessLaunchCandidateKind.Workforce => candidate.RequiresProvisioning ? 52m : 60m,
+            ProcessLaunchCandidateKind.NewAiAgentProposal => candidate.RequiresProvisioning ? 48m : 72m,
+            ProcessLaunchCandidateKind.Workflow => 82m,
+            _ => 0m
+        };
     }
 
     private static IReadOnlyList<string?> TakeRoleSpecificContext(IReadOnlyList<string?> additionalRoleContext)
