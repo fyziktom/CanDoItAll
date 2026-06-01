@@ -1,0 +1,312 @@
+[
+  {
+    "id": "bd2bffbb-23d5-d152-82f6-e1d37908b169",
+    "name": "Local Ollama",
+    "kind": 2,
+    "baseUrl": "http://127.0.0.1:11434",
+    "apiKeyEnvironmentVariable": "",
+    "defaultModel": "llama3.1",
+    "transport": 1,
+    "isEnabled": true,
+    "supportsStreaming": true,
+    "supportsTools": true,
+    "preferFrameworkManagedChatHistory": true,
+    "supportsBackgroundResponses": false,
+    "configurationJson": "{\"history\":\"framework-managed\",\"local\":true,\"timeoutSeconds\":45}",
+    "notes": "Local Ollama provider for developer workstations running the standard Ollama API endpoint.",
+    "healthStatus": "Not checked",
+    "lastCheckedAtUtc": null,
+    "suggestedModels": [
+      "llama3.1",
+      "qwen3.5:9b",
+      "phi4-16k",
+      "mistral-nemo"
+    ],
+    "purpose": 0,
+    "isPrivateProvider": true,
+    "modelPrices": [
+      {
+        "model": "llama3.1",
+        "inputPerMillionTokensUsd": 0.1,
+        "cachedInputPerMillionTokensUsd": 0.02,
+        "outputPerMillionTokensUsd": 0.2
+      }
+    ],
+    "tags": [
+      "chat",
+      "local",
+      "ollama"
+    ]
+  },
+  {
+    "id": "036b360a-e3f4-8350-97ca-f88de60ba2bb",
+    "name": "OpenAI chat completions",
+    "kind": 0,
+    "baseUrl": "https://api.openai.com/v1",
+    "apiKeyEnvironmentVariable": "OPENAI_API_KEY",
+    "defaultModel": "gpt-5.4-mini",
+    "transport": 1,
+    "isEnabled": true,
+    "supportsStreaming": true,
+    "supportsTools": true,
+    "preferFrameworkManagedChatHistory": true,
+    "supportsBackgroundResponses": false,
+    "configurationJson": "{\"history\":\"framework-managed\"}",
+    "notes": "Chat-completions profile for local history, approvals, compaction, and workload-specific skill runs.",
+    "healthStatus": "Not checked",
+    "lastCheckedAtUtc": null,
+    "suggestedModels": [
+      "gpt-5.4-mini",
+      "gpt-5.4",
+      "gpt-4.1-mini",
+      "gpt-4.1"
+    ],
+    "purpose": 0,
+    "isPrivateProvider": false,
+    "modelPrices": [
+      {
+        "model": "gpt-5.4-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "chat-latest",
+        "inputPerMillionTokensUsd": 5.0,
+        "cachedInputPerMillionTokensUsd": 0.5,
+        "outputPerMillionTokensUsd": 30.0
+      },
+      {
+        "model": "gpt-5-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "gpt-5.3-codex",
+        "inputPerMillionTokensUsd": 1.75,
+        "cachedInputPerMillionTokensUsd": 0.175,
+        "outputPerMillionTokensUsd": 14.0
+      },
+      {
+        "model": "gpt-5.4",
+        "inputPerMillionTokensUsd": 2.5,
+        "cachedInputPerMillionTokensUsd": 0.25,
+        "outputPerMillionTokensUsd": 15.0
+      },
+      {
+        "model": "gpt-5.4-nano",
+        "inputPerMillionTokensUsd": 0.2,
+        "cachedInputPerMillionTokensUsd": 0.02,
+        "outputPerMillionTokensUsd": 1.25
+      },
+      {
+        "model": "gpt-5.5",
+        "inputPerMillionTokensUsd": 5.0,
+        "cachedInputPerMillionTokensUsd": 0.5,
+        "outputPerMillionTokensUsd": 30.0
+      }
+    ],
+    "tags": [
+      "chat",
+      "chat-completions",
+      "cloud",
+      "openai"
+    ]
+  },
+  {
+    "id": "2db76580-21a4-b156-81a7-68dc0ee7513c",
+    "name": "OpenAI default",
+    "kind": 0,
+    "baseUrl": "https://api.openai.com/v1",
+    "apiKeyEnvironmentVariable": "secret:86f781f1-1e76-4b45-9f1a-42b8cf13d8c7",
+    "defaultModel": "gpt-5.4-mini",
+    "transport": 0,
+    "isEnabled": true,
+    "supportsStreaming": true,
+    "supportsTools": true,
+    "preferFrameworkManagedChatHistory": false,
+    "supportsBackgroundResponses": true,
+    "configurationJson": "{\"history\":\"service-managed\",\"reasoningEffort\":\"medium\",\"modelParameters\":{\"reasoningEffort\":\"medium\"},\"apiKeyEnvironmentVariable\":\"OPENAI_API_KEY\",\"connectorPluginKey\":\"provider.openai\",\"configSchemaVersion\":\"1.0\",\"secretRecordId\":\"86f781f1-1e76-4b45-9f1a-42b8cf13d8c7\",\"providerTransport\":\"Responses\",\"timeoutSeconds\":600}",
+    "notes": "OpenAI provider",
+    "healthStatus": "OpenAI active",
+    "lastCheckedAtUtc": null,
+    "suggestedModels": [
+      "gpt-5.4-mini"
+    ],
+    "purpose": 0,
+    "isPrivateProvider": false,
+    "modelPrices": [
+      {
+        "model": "gpt-5.4-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "chat-latest",
+        "inputPerMillionTokensUsd": 5.0,
+        "cachedInputPerMillionTokensUsd": 0.5,
+        "outputPerMillionTokensUsd": 30.0
+      },
+      {
+        "model": "gpt-5-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "gpt-5.3-codex",
+        "inputPerMillionTokensUsd": 1.75,
+        "cachedInputPerMillionTokensUsd": 0.175,
+        "outputPerMillionTokensUsd": 14.0
+      },
+      {
+        "model": "gpt-5.4",
+        "inputPerMillionTokensUsd": 2.5,
+        "cachedInputPerMillionTokensUsd": 0.25,
+        "outputPerMillionTokensUsd": 15.0
+      },
+      {
+        "model": "gpt-5.4-nano",
+        "inputPerMillionTokensUsd": 0.2,
+        "cachedInputPerMillionTokensUsd": 0.02,
+        "outputPerMillionTokensUsd": 1.25
+      },
+      {
+        "model": "gpt-5.5",
+        "inputPerMillionTokensUsd": 5.0,
+        "cachedInputPerMillionTokensUsd": 0.5,
+        "outputPerMillionTokensUsd": 30.0
+      }
+    ],
+    "tags": [
+      "chat",
+      "cloud",
+      "openai",
+      "responses"
+    ]
+  },
+  {
+    "id": "8958fa61-4bd6-1451-8123-4e4e4fea2e26",
+    "name": "OpenAI image generation",
+    "kind": 0,
+    "baseUrl": "https://api.openai.com/v1",
+    "apiKeyEnvironmentVariable": "OPENAI_API_KEY",
+    "defaultModel": "gpt-image-1-mini",
+    "transport": 0,
+    "isEnabled": true,
+    "supportsStreaming": false,
+    "supportsTools": false,
+    "preferFrameworkManagedChatHistory": false,
+    "supportsBackgroundResponses": false,
+    "configurationJson": "{\"endpointFamily\":\"images\",\"defaultQuality\":\"low\",\"defaultSize\":\"1024x1024\",\"defaultOutputFormat\":\"png\"}",
+    "notes": "Image-generation profile for OpenAI Images API workflows. Defaulted to the lower-cost GPT Image 1 Mini model; runtime image tools should still require explicit agent permission.",
+    "healthStatus": "Not checked",
+    "lastCheckedAtUtc": null,
+    "suggestedModels": [
+      "gpt-image-1-mini",
+      "gpt-image-1",
+      "gpt-image-1.5"
+    ],
+    "purpose": 1,
+    "isPrivateProvider": false,
+    "modelPrices": [
+      {
+        "model": "gpt-image-1-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "chat-latest",
+        "inputPerMillionTokensUsd": 5.0,
+        "cachedInputPerMillionTokensUsd": 0.5,
+        "outputPerMillionTokensUsd": 30.0
+      },
+      {
+        "model": "gpt-5-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "gpt-5.3-codex",
+        "inputPerMillionTokensUsd": 1.75,
+        "cachedInputPerMillionTokensUsd": 0.175,
+        "outputPerMillionTokensUsd": 14.0
+      },
+      {
+        "model": "gpt-5.4",
+        "inputPerMillionTokensUsd": 2.5,
+        "cachedInputPerMillionTokensUsd": 0.25,
+        "outputPerMillionTokensUsd": 15.0
+      },
+      {
+        "model": "gpt-5.4-mini",
+        "inputPerMillionTokensUsd": 0.75,
+        "cachedInputPerMillionTokensUsd": 0.075,
+        "outputPerMillionTokensUsd": 4.5
+      },
+      {
+        "model": "gpt-5.4-nano",
+        "inputPerMillionTokensUsd": 0.2,
+        "cachedInputPerMillionTokensUsd": 0.02,
+        "outputPerMillionTokensUsd": 1.25
+      },
+      {
+        "model": "gpt-5.5",
+        "inputPerMillionTokensUsd": 5.0,
+        "cachedInputPerMillionTokensUsd": 0.5,
+        "outputPerMillionTokensUsd": 30.0
+      }
+    ],
+    "tags": [
+      "cloud",
+      "image",
+      "image-generation",
+      "openai"
+    ]
+  },
+  {
+    "id": "12e4c814-e822-0b58-9b9f-52577d7b374e",
+    "name": "Remote Ollama",
+    "kind": 2,
+    "baseUrl": "http://192.168.10.132:11434",
+    "apiKeyEnvironmentVariable": "",
+    "defaultModel": "gptoss32k:latest",
+    "transport": 1,
+    "isEnabled": true,
+    "supportsStreaming": true,
+    "supportsTools": true,
+    "preferFrameworkManagedChatHistory": true,
+    "supportsBackgroundResponses": false,
+    "configurationJson": "{\"history\":\"framework-managed\",\"fallback\":\"runtime-remote-ollama\",\"timeoutSeconds\":600}",
+    "notes": "Remote Ollama fallback provider kept available for seeded agents.",
+    "healthStatus": "Not checked",
+    "lastCheckedAtUtc": null,
+    "suggestedModels": [
+      "gptoss32k:latest",
+      "qwen3.5:9b",
+      "gemma3-12b-128k:latest",
+      "deepseek-r1:8b-32k",
+      "phi4-16k"
+    ],
+    "purpose": 0,
+    "isPrivateProvider": true,
+    "modelPrices": [
+      {
+        "model": "gptoss32k:latest",
+        "inputPerMillionTokensUsd": 0.1,
+        "cachedInputPerMillionTokensUsd": 0.02,
+        "outputPerMillionTokensUsd": 0.2
+      }
+    ],
+    "tags": [
+      "ollama",
+      "remote",
+      "fallback",
+      "chat"
+    ]
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "kind": 0,
+    "name": "MAF in-process workflow runtime",
+    "isDurable": false,
+    "supportsStreaming": true,
+    "supportsExternalRequests": true,
+    "supportsDashboardObservability": false,
+    "operationalNotes": "Use for local development, tests, previews, and approved short non-durable runs only.",
+    "availability": 0,
+    "isRegistered": true,
+    "isRunnable": true,
+    "availabilityReason": "Runtime backend is registered and runnable in this host."
+  },
+  {
+    "kind": 1,
+    "name": "MAF DurableTask workflow runtime",
+    "isDurable": true,
+    "supportsStreaming": true,
+    "supportsExternalRequests": true,
+    "supportsDashboardObservability": true,
+    "operationalNotes": "Preferred for production, long-running, distributed, or restart-resilient workflows.",
+    "availability": 1,
+    "isRegistered": false,
+    "isRunnable": false,
+    "availabilityReason": "Runtime backend 'DurableTask' is planned but not registered in this host."
+  },
+  {
+    "kind": 2,
+    "name": "MAF Azure Functions durable workflow hosting",
+    "isDurable": true,
+    "supportsStreaming": false,
+    "supportsExternalRequests": true,
+    "supportsDashboardObservability": true,
+    "operationalNotes": "Evaluate for generated HTTP, status/respond, and MCP tool triggers behind product authorization.",
+    "availability": 1,
+    "isRegistered": false,
+    "isRunnable": false,
+    "availabilityReason": "Runtime backend 'AzureFunctions' is planned but not registered in this host."
+  }
+]
