@@ -35,6 +35,18 @@
       "RelativePath": "processes/dotnet-development-slice"
     },
     {
+      "Key": "dotnet-architecture-design-review",
+      "RelativePath": "processes/dotnet-architecture-design-review"
+    },
+    {
+      "Key": "dotnet-runtime-command-writeback",
+      "RelativePath": "processes/dotnet-runtime-command-writeback"
+    },
+    {
+      "Key": "dotnet-ui-screenshot-writeback",
+      "RelativePath": "processes/dotnet-ui-screenshot-writeback"
+    },
+    {
       "Key": "app-page-screenshot",
       "RelativePath": "processes/app-page-screenshot"
     },

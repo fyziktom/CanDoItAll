@@ -97,6 +97,96 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
+    public async Task Dotnet_software_delivery_template_hardens_parent_permissions_and_writeback_subprocesses()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var definition = projectionService.GetProjectedEnvelope("software-delivery").Definition;
+        var mutableStepKeys = definition.Steps
+            .Where(AllowsProductMutation)
+            .Select(step => step.Key)
+            .OrderBy(stepKey => stepKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        Assert.Equal(["quality-repair"], mutableStepKeys);
+        AssertReadOnlyContractStep(definition, "feature-intake");
+        AssertSubprocessStep(
+            definition,
+            "architecture-review",
+            ".NET architecture design and review subprocess");
+        AssertSubprocessStep(
+            definition,
+            "implementation",
+            ".NET implementation slice with atomic validation");
+        AssertSubprocessStep(
+            definition,
+            "record-runtime-commands",
+            ".NET runtime command project-structure writeback");
+        AssertSubprocessStep(
+            definition,
+            "capture-ui-screenshots",
+            ".NET UI screenshot project-structure writeback");
+
+        var intakeStep = GetStep(definition, "feature-intake");
+        Assert.Contains("backend-only/API/service", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Blazor Server/SSR", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Blazor WebAssembly", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Blazor WASM PWA", intakeStep.Notes, StringComparison.OrdinalIgnoreCase);
+
+        var architectureDefinition = projectionService.GetProjectedEnvelope("dotnet-architecture-design-review").Definition;
+        Assert.All(architectureDefinition.Steps, step => Assert.False(AllowsProductMutation(step)));
+        var reviewStep = GetStep(architectureDefinition, "review-architecture-design");
+        var reviewContractText = string.Join(
+            " ",
+            reviewStep.Notes,
+            reviewStep.OutputContractSummary,
+            reviewStep.EvidenceContractSummary,
+            reviewStep.ArtifactExpectations.Single().ValidationRequirementSummary);
+
+        Assert.Contains("logic properly split", reviewContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("models", reviewContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("user stories", reviewContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("service functions", reviewContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("testable", reviewContractText, StringComparison.OrdinalIgnoreCase);
+
+        var runtimeDefinition = projectionService.GetProjectedEnvelope("dotnet-runtime-command-writeback").Definition;
+        Assert.All(runtimeDefinition.Steps, step => Assert.False(AllowsProductMutation(step)));
+        AssertWritebackStep(runtimeDefinition, "write-run-command-nodes");
+        var runtimeContractText = string.Join(
+            " ",
+            GetStep(runtimeDefinition, "resolve-dotnet-run-commands").Notes,
+            GetStep(runtimeDefinition, "write-run-command-nodes").Notes,
+            GetStep(runtimeDefinition, "runtime-command-handoff").EvidenceContractSummary);
+
+        Assert.Contains("Run command", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Run app", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Run tests", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("process run node", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+
+        var screenshotDefinition = projectionService.GetProjectedEnvelope("dotnet-ui-screenshot-writeback").Definition;
+        Assert.All(screenshotDefinition.Steps, step => Assert.False(AllowsProductMutation(step)));
+        AssertWritebackStep(screenshotDefinition, "store-ui-screenshots");
+        var screenshotContractText = string.Join(
+            " ",
+            GetStep(screenshotDefinition, "resolve-ui-screenshot-applicability").Notes,
+            GetStep(screenshotDefinition, "store-ui-screenshots").Notes,
+            GetStep(screenshotDefinition, "screenshot-handoff").EvidenceContractSummary);
+
+        Assert.Contains("Screenshots", screenshotContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("process run node", screenshotContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no-UI", screenshotContractText, StringComparison.OrdinalIgnoreCase);
+
+        var sliceDefinition = projectionService.GetProjectedEnvelope("dotnet-development-slice").Definition;
+        var sliceValidationStep = GetStep(sliceDefinition, "add-tests-and-proof");
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, sliceValidationStep.OperationTargetScope);
+        Assert.Contains(ProcessStepOperation.RunValidation, sliceValidationStep.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, sliceValidationStep.AllowedOperations);
+        Assert.Contains("route back to implementation", sliceValidationStep.Notes, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Blazor_wasm_pwa_baseline_SB05_INV_001_keeps_app_topic_generic_in_scenario_data()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -459,6 +549,18 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.Contains(ProcessStepOperation.ExecuteExternalAction, step.AllowedOperations);
         Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
         Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, step.AllowedOperations);
+    }
+
+    private static void AssertSubprocessStep(
+        ProcessDefinitionImportExportModel definition,
+        string stepKey,
+        string expectedSnapshotName)
+    {
+        var step = GetStep(definition, stepKey);
+
+        Assert.Equal(ProcessStepKind.Subprocess, step.StepKind);
+        Assert.Equal(expectedSnapshotName, step.SubprocessDefinitionSnapshotName);
+        AssertWritebackStep(definition, stepKey);
     }
 
     private static void AssertEscalationStep(ProcessDefinitionImportExportModel definition, string stepKey)

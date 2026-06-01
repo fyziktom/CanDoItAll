@@ -51,8 +51,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return providers
             .Where(item => item.IsEnabled && item.SupportsTools && item.Id != failedProviderId)
-            .OrderBy(item => item.Kind == ProviderKind.Ollama ? 0 : 1)
-            .ThenBy(item => item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ? 1 : 0)
+            .OrderBy(item => item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ? 0 : 1)
+            .ThenBy(item => item.Transport == ProviderTransportKind.Responses ? 0 : 1)
+            .ThenBy(item => item.Kind == ProviderKind.Ollama ? 1 : 0)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }

@@ -616,6 +616,59 @@ public sealed class AiAgentProfileIntegrationTests
     }
 
     [Fact]
+    public async Task Organization_catalog_repair_moves_crmhr_runtime_agents_to_openai_default()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var aiAgentService = scope.ServiceProvider.GetRequiredService<AiAgentService>();
+        var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+        var repairService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkOrganizationCatalogRepairService>();
+        var technicalAgentBridge = scope.ServiceProvider.GetRequiredService<IAiTechnicalAgentBridge>();
+        var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+        var providers = await workspaceService.ListProvidersAsync();
+        var openAiDefault = Assert.Single(
+            providers,
+            item => item.Kind == CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi &&
+                    string.Equals(item.Name, "OpenAI default", StringComparison.Ordinal));
+        var localOllama = Assert.Single(
+            providers,
+            item => item.Kind == CanDoItAll.AgentFramework.Models.ProviderKind.Ollama &&
+                    string.Equals(item.Name, "Local Ollama", StringComparison.Ordinal));
+
+        var partyId = await CreateAgentAsync(partyDirectoryService, "Product owner repair proof agent");
+        var saveResult = await aiAgentService.SaveAgentProfileAsync(new AiAgentProfileEditorModel
+        {
+            PartyId = partyId,
+            ProviderProfileId = localOllama.Id,
+            DefaultModel = "llama3.1",
+            ExecutionMode = AiExecutionMode.Remote,
+            ValidationStatus = AiValidationStatus.Approved,
+            Notes = "Regression proof for CRM-HR runtime agent provider repair.",
+            LastChangedBy = "integration-tests"
+        });
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var workspaceBeforeRepair = await aiAgentService.GetAgentWorkspaceAsync(partyId);
+        Assert.NotNull(workspaceBeforeRepair);
+        Assert.True(workspaceBeforeRepair!.TechnicalAgentId.HasValue);
+        Assert.Equal(localOllama.Id, workspaceBeforeRepair.Profile.ProviderProfileId);
+        Assert.Equal("llama3.1", workspaceBeforeRepair.Profile.DefaultModel);
+
+        await repairService.EnsureCurrentOrganizationCatalogAsync();
+
+        var technicalAgentAfterRepair = await workspaceService.GetAgentEditorAsync(workspaceBeforeRepair.TechnicalAgentId.Value);
+        var summaries = await technicalAgentBridge.GetDirectorySummariesAsync([partyId]);
+        var summary = Assert.Single(summaries);
+
+        Assert.Equal(openAiDefault.Id, technicalAgentAfterRepair.ProviderProfileId);
+        Assert.Equal(string.Empty, technicalAgentAfterRepair.Model);
+        Assert.Equal("OpenAI default", summary.Value.ProviderName);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, summary.Value.DefaultModel);
+    }
+
+    [Fact]
     public async Task ListAgentDirectoryAsync_reprojects_party_metadata_from_agentframework_catalog()
     {
         await using var application = await TestApplication.CreateAsync();

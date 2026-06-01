@@ -1,0 +1,431 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-ui-screenshot-writeback",
+  "DisplayName": ".NET UI screenshot project-structure writeback",
+  "Summary": "Captures UI screenshots when a .NET delivery target has browser-visible UI and stores accepted screenshots under a Screenshots parent node below the process run node.",
+  "ValueStatement": "Gives UI delivery runs durable visual proof while making backend-only/no-UI applicability explicit.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Delivery governance",
+  "InterfaceContractSummary": "Parent process supplies project structure context, upstream artifacts, current run identity, and target repository boundary; this subprocess returns durable managed artifacts and project-structure writeback receipts where applicable.",
+  "GovernanceNotes": "Every step declares explicit operations and target scope so role permissions remain bounded and product mutation cannot leak into planning, review, validation, screenshot, or writeback work.",
+  "ChangeSummary": "Adds .NET-specific delivery subprocess coverage for multi-team software delivery hardening.",
+  "GovernancePolicySummary": "No subprocess may silently change product files unless its step explicitly allows product target mutation.",
+  "ConstitutionRuleSummary": "Typed process artifacts, subprocess relationships, and project-structure nodes are the source of truth for delivery replay.",
+  "OperatingModeSummary": "Governed live execution inside a parent software-delivery run.",
+  "SimulationReadinessSummary": "Small enough for deterministic process projection and rich enough for live run validation.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [
+    "scope-boundary-packet",
+    "project-structure-context-brief",
+    "architecture-decision-record",
+    "implementation-change-set",
+    "test-evidence-pack",
+    "regression-evidence-pack",
+    "implementation-plan"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Share of UI deliveries with stored Screenshots node assets.",
+    "Number of no-UI targets with explicit no-screenshot evidence.",
+    "Screenshot storage failures caught before release approval."
+  ],
+  "Risks": [
+    "UI screenshots remain only in run artifacts and are not linked under the process run node.",
+    "Backend-only work wastes time launching browsers instead of recording no-UI evidence.",
+    "Blank or wrong-route screenshots are stored as accepted proof."
+  ],
+  "TailoringRules": [
+    "Blazor Server/SSR, Blazor WebAssembly, and Blazor WASM PWA require route-level screenshot candidates.",
+    "Backend-only API/service, worker, console, and library targets record no-UI evidence instead of browser screenshots.",
+    "Screenshots are stored under a Screenshots parent node below the current process run node, not under unrelated delivery blocks."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "screenshot-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Screenshot writeback manager",
+      "Purpose": "Resolve screenshot applicability and parent handoff.",
+      "StaffingIntent": "Manager-capable agent with project-structure context.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "screenshot-capture-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "UI screenshot capture agent",
+      "Purpose": "Start or reuse the app, capture browser proof, and write screenshot files.",
+      "StaffingIntent": "QA agent with runtime and browser screenshot capability.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 900,
+      "CanvasY": 40
+    },
+    {
+      "Key": "screenshot-review-storage-agent",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Screenshot review and storage agent",
+      "Purpose": "Inspect screenshots and store accepted image assets under Screenshots.",
+      "StaffingIntent": "QA agent with image inspection and project-structure write access.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "AiAgent",
+      "IsRequired": true,
+      "AllowsFallback": false,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 100,
+      "CanvasX": 1760,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "resolve-ui-screenshot-applicability",
+      "Title": "Resolve UI screenshot applicability",
+      "Subtitle": "UI routes or no-UI evidence",
+      "Notes": "Read the architecture handoff, runtime command nodes, QA evidence, and project structure to decide whether the .NET target has a visible UI. Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, MVC/Razor Pages, SPA-hosted .NET, and other browser surfaces require screenshot capture. Backend-only API/service, worker, console, and class library targets require explicit no-UI evidence. Identify the process run node and the Screenshots parent node target under it.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Architecture handoff, runtime command handoff, QA evidence, route nodes, and process run node context.",
+      "OutputContractSummary": "Screenshot applicability manifest with UI routes or explicit no-UI evidence.",
+      "EvidenceContractSummary": "App type, UI/no-UI decision, route list, viewport set, runtime command references, and Screenshots parent target.",
+      "DecisionRightsSummary": "Manager may block when UI applicability or route targets are ambiguous.",
+      "ExceptionPolicySummary": "Block on missing process run node, missing Run app command for UI targets, empty route list for UI targets, or contradictory app type evidence.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a manager-capable operator that can assess screenshot scope."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-target-manifest",
+          "TemplateKey": "project-structure-context-brief",
+          "Title": ".NET UI screenshot target manifest",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by screenshot capture, storage, QA, and release approval.",
+          "ValidationRequirementSummary": "Must include app type, UI/no-UI decision, process run node id, Screenshots parent target, base URL or no-UI reason, route list, viewport set, Run app node reference, and Run tests node reference."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/resolve-ui-screenshot-applicability.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "capture-ui-screenshots",
+      "Title": "Capture UI screenshots when required",
+      "Subtitle": "Current-run browser proof",
+      "Notes": "For UI targets, start or reuse the app using the recorded Run app node, navigate to each concrete route, capture screenshots, collect console messages, and write screenshot files as current-run managed artifacts. For no-UI targets, do not launch a browser; write an explicit no-UI screenshot receipt instead. Do not create project-structure nodes or image assets here; the storage step owns Screenshots writeback.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Screenshot target manifest and Run app command node reference.",
+      "OutputContractSummary": "Screenshot files and browser evidence for UI targets, or explicit no-UI receipt for non-UI targets.",
+      "EvidenceContractSummary": "Screenshots, route URLs, console state, runtime command references, cleanup receipt, or no-UI evidence.",
+      "DecisionRightsSummary": "Capture agent can block on failed app launch, fatal browser errors, or missing required routes.",
+      "ExceptionPolicySummary": "Do not substitute stale screenshots, chat-only claims, or screenshots from another process run.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "resolve-ui-screenshot-applicability",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-ui-screenshot-applicability",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-capture-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with runtime and browser screenshot capability."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-files",
+          "TemplateKey": "",
+          "Title": ".NET UI screenshot files",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by screenshot storage, QA, release, and future layout analysis.",
+          "ValidationRequirementSummary": "For UI targets, must include one readable screenshot per required route and viewport. For no-UI targets, must include explicit no-UI receipt and no browser-launch claim."
+        },
+        {
+          "Key": "ui-browser-evidence",
+          "TemplateKey": "",
+          "Title": ".NET UI browser evidence",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by QA and failure triage.",
+          "ValidationRequirementSummary": "For UI targets, must include actual URLs, viewport, wait condition, console messages, screenshot paths, runtime command reference, and cleanup receipt. For no-UI targets, must include no-UI rationale."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "ui-screenshot-target-manifest",
+          "SourceStepKey": "resolve-ui-screenshot-applicability"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/capture-ui-screenshots.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "LaunchRuntime",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "store-ui-screenshots",
+      "Title": "Store screenshots under process run node",
+      "Subtitle": "Screenshots project-structure parent",
+      "Notes": "Create or reuse a Screenshots parent node under the current process run node. For UI targets, inspect each screenshot, reject blank/error/wrong-route images, and create image asset nodes under Screenshots for accepted screenshots. For no-UI targets, record a no-UI screenshot receipt under Screenshots or as managed evidence so the parent release step can see that screenshot capture was intentionally not applicable. Do not mutate product files.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Screenshot files, browser evidence, and screenshot target manifest.",
+      "OutputContractSummary": "Screenshots parent node under process run node and image asset storage receipts for accepted screenshots.",
+      "EvidenceContractSummary": "Screenshots parent node id, image asset ids, inspection results, rejected images, and no-UI receipt when applicable.",
+      "DecisionRightsSummary": "Storage reviewer can reject unusable screenshots and request recapture instead of storing bad evidence.",
+      "ExceptionPolicySummary": "Artifact recovery: block when required Screenshots storage receipts are missing, invalid, or not materialized before branch routing. Block when Screenshots parent or required image assets cannot be written, or when UI screenshots are blank, wrong-route, or missing.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "screenshot-review-storage-agent",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "resolve-ui-screenshot-applicability",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "capture-ui-screenshots",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-review-storage-agent",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an agent with image review and project-structure asset write access."
+        },
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Manager reviews storage receipts and no-UI disposition."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "screenshots-node-storage-receipts",
+          "TemplateKey": "",
+          "Title": "Screenshots project-structure storage receipts",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent release approval, project inspection, and later visual review.",
+          "ValidationRequirementSummary": "Must include process run node id, Screenshots parent node id, one image asset node id per accepted screenshot, route and viewport metadata, sourceWorkspacePath, inspection results, rejected screenshot reasons, and no-UI receipt when applicable."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "ui-screenshot-target-manifest",
+          "SourceStepKey": "resolve-ui-screenshot-applicability"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-files",
+          "SourceStepKey": "capture-ui-screenshots"
+        },
+        {
+          "ArtifactExpectationKey": "ui-browser-evidence",
+          "SourceStepKey": "capture-ui-screenshots"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/store-ui-screenshots.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "CaptureRuntimeProof",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 3,
+      "Key": "screenshot-handoff",
+      "Title": "Hand off screenshot writeback evidence",
+      "Subtitle": "Parent-ready visual proof",
+      "Notes": "Summarize screenshot applicability, captured routes, Screenshots parent node id, accepted image asset node ids, rejected images, no-UI evidence, and unresolved blockers for parent release approval. This step writes managed process artifacts only.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Screenshot storage receipts and target manifest.",
+      "OutputContractSummary": "Parent-ready screenshot writeback handoff.",
+      "EvidenceContractSummary": "Applicability, node ids, asset ids, route evidence, no-UI status, and blockers.",
+      "DecisionRightsSummary": "Manager may close only when UI targets have stored screenshots or no-UI evidence is explicit.",
+      "ExceptionPolicySummary": "Do not close with missing Screenshots storage receipts for UI targets.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "store-ui-screenshots",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "store-ui-screenshots",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "screenshot-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager owns parent-ready screenshot handoff."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-writeback-handoff",
+          "TemplateKey": "",
+          "Title": ".NET UI screenshot writeback handoff",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent release approval, project structure inspection, and run analysis.",
+          "ValidationRequirementSummary": "Must reference UI/no-UI applicability, process run node id, Screenshots parent node id, accepted image asset node ids, route metadata, storage receipts, rejected screenshots, and unresolved blockers."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "screenshots-node-storage-receipts",
+          "SourceStepKey": "store-ui-screenshots"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-ui-screenshot-writeback/steps/screenshot-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ],
+  "DocPath": "processes/dotnet-ui-screenshot-writeback/definition.md"
+}

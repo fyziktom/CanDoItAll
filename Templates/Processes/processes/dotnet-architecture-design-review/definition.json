@@ -1,0 +1,473 @@
+{
+  "Kind": "process-template-definition",
+  "Key": "dotnet-architecture-design-review",
+  "DisplayName": ".NET architecture design and review subprocess",
+  "Summary": "Splits .NET architecture design from independent architecture review before implementation starts.",
+  "ValueStatement": "Improves maintainability and smaller-model reliability by forcing explicit app-type classification, design drafting, review challenge, and implementation-ready handoff.",
+  "CustomerName": "Software delivery process",
+  "OwnerName": "Architecture governance",
+  "InterfaceContractSummary": "Parent process supplies project structure context, upstream artifacts, current run identity, and target repository boundary; this subprocess returns durable managed artifacts and project-structure writeback receipts where applicable.",
+  "GovernanceNotes": "Every step declares explicit operations and target scope so role permissions remain bounded and product mutation cannot leak into planning, review, validation, screenshot, or writeback work.",
+  "ChangeSummary": "Adds .NET-specific delivery subprocess coverage for multi-team software delivery hardening.",
+  "GovernancePolicySummary": "No subprocess may silently change product files unless its step explicitly allows product target mutation.",
+  "ConstitutionRuleSummary": "Typed process artifacts, subprocess relationships, and project-structure nodes are the source of truth for delivery replay.",
+  "OperatingModeSummary": "Governed live execution inside a parent software-delivery run.",
+  "SimulationReadinessSummary": "Small enough for deterministic process projection and rich enough for live run validation.",
+  "Criticality": "High",
+  "AutonomyLevel": "Guarded",
+  "OperatingMode": "GovernedLive",
+  "SourceFrameworkKeys": [
+    "nist-ssdf",
+    "owasp-samm",
+    "slsa"
+  ],
+  "SharedRoleRefs": [
+    "delivery-manager",
+    "solution-architect",
+    "software-engineer",
+    "qa-lead"
+  ],
+  "SharedArtifactRefs": [
+    "scope-boundary-packet",
+    "project-structure-context-brief",
+    "architecture-decision-record",
+    "implementation-change-set",
+    "test-evidence-pack",
+    "regression-evidence-pack",
+    "implementation-plan"
+  ],
+  "SharedChecklistRefs": [],
+  "SharedValidationRefs": [],
+  "SharedPromptRefs": [],
+  "LocalRoleRefs": [],
+  "LocalArtifactRefs": [],
+  "LocalChecklistRefs": [],
+  "LocalValidationRefs": [],
+  "LocalPromptRefs": [],
+  "Metrics": [
+    "Share of architecture reviews that identify design fixes before implementation starts.",
+    "Number of implementation blocks caused by missing app type, product root, or testability notes.",
+    "Architecture review findings resolved before implementation slice launch."
+  ],
+  "Risks": [
+    "Design review becomes a rubber stamp instead of a challenge.",
+    "Architecture role starts coding despite read-only operation contracts.",
+    "App type is misclassified and downstream runtime or screenshot work is wrong."
+  ],
+  "TailoringRules": [
+    "Classify mixed solutions by each runnable project and call out the selected delivery target.",
+    "For backend-only API/service work, record no browser screenshot requirement but still define runtime and test commands.",
+    "For Blazor SSR, Blazor WebAssembly, and Blazor WASM PWA, identify route-level screenshot candidates for the screenshot subprocess."
+  ],
+  "RoleUsages": [
+    {
+      "Key": "delivery-manager",
+      "RoleResourceKey": "delivery-manager",
+      "DisplayName": "Architecture subprocess manager",
+      "Purpose": "Coordinate handoff between parent delivery and architecture roles.",
+      "StaffingIntent": "Manager-capable operator that can keep architecture work bounded.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Manager",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 50,
+      "CanvasX": 40,
+      "CanvasY": 40
+    },
+    {
+      "Key": "architecture-designer",
+      "RoleResourceKey": "solution-architect",
+      "DisplayName": ".NET architecture designer",
+      "Purpose": "Draft the .NET architecture without implementing code.",
+      "StaffingIntent": ".NET architect with UI/application/domain/infrastructure boundary experience.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Architect",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 80,
+      "CanvasX": 900,
+      "CanvasY": 40
+    },
+    {
+      "Key": "architecture-reviewer",
+      "RoleResourceKey": "solution-architect",
+      "DisplayName": ".NET architecture reviewer",
+      "Purpose": "Independently challenge the proposed architecture before implementation.",
+      "StaffingIntent": "Architect-capable reviewer who can identify design gaps and testability risks.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": true,
+      "DefaultAllocationPercent": 70,
+      "CanvasX": 1760,
+      "CanvasY": 40
+    },
+    {
+      "Key": "implementation-advisor",
+      "RoleResourceKey": "software-engineer",
+      "DisplayName": "Implementation advisor",
+      "Purpose": "Review buildability without taking over design authority.",
+      "StaffingIntent": ".NET engineer familiar with the target codebase.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "TeamMember",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 30,
+      "CanvasX": 2620,
+      "CanvasY": 40
+    },
+    {
+      "Key": "qa-reviewer",
+      "RoleResourceKey": "qa-lead",
+      "DisplayName": "Architecture testability reviewer",
+      "Purpose": "Challenge whether the design can be validated with focused tests and runtime proof.",
+      "StaffingIntent": "QA reviewer able to identify untestable or under-specified behavior.",
+      "PreferredExecutorKind": "agent",
+      "PreferredProjectAssignmentRole": "Reviewer",
+      "IsRequired": true,
+      "AllowsFallback": true,
+      "RequiresExplicitApproval": false,
+      "DefaultAllocationPercent": 30,
+      "CanvasX": 3480,
+      "CanvasY": 40
+    }
+  ],
+  "Steps": [
+    {
+      "Order": 0,
+      "Key": "classify-dotnet-application",
+      "Title": "Classify .NET application type and project boundary",
+      "Subtitle": "App archetype and source root",
+      "Notes": "Read the project structure, repository files, requested work, and upstream scope to classify the .NET target as backend-only API/service, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console app, class library, or mixed solution. Record product root, test root, runnable projects, UI routes if present, and any contradictions before design starts. Do not create, edit, build, test, or run product files in this step.",
+      "StepKind": "Start",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Scope packet, project-structure node, repository context, and requested .NET deliverable.",
+      "OutputContractSummary": "Typed .NET application classification with product root, test root, runtime surfaces, and UI/no-UI applicability.",
+      "EvidenceContractSummary": "Project context, app type, route/runtime inventory, contradictions, and assumptions.",
+      "DecisionRightsSummary": "Architecture designer can block when project root, app type, or source-of-truth ownership is contradictory.",
+      "ExceptionPolicySummary": "Block instead of guessing when the target app type or product root cannot be identified from current evidence.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 260,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [],
+      "RoleAssignments": [
+        {
+          "RoleKey": "architecture-designer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to an architect-capable reviewer with .NET application architecture experience."
+        },
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager reviews classification completeness without taking design authority."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "dotnet-application-classification",
+          "TemplateKey": "project-structure-context-brief",
+          "Title": ".NET application classification and project context",
+          "ArtifactKind": "Brief",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by design, implementation slice routing, runtime command writeback, screenshot applicability, QA, and release approval.",
+          "ValidationRequirementSummary": "Must identify backend-only, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console, library, or mixed app type; product root; test root; runnable projects; UI routes or no-UI rationale; and project-structure process run node context."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/classify-dotnet-application.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 1,
+      "Key": "draft-architecture-design",
+      "Title": "Draft .NET architecture design",
+      "Subtitle": "Boundaries, models, services, and tests",
+      "Notes": "Draft the implementation architecture from the classification and scope. Separate UI component orchestration from application/domain logic, name models and DTOs that cover the user stories, identify services and service functions needed to satisfy acceptance criteria, define persistence/integration boundaries, and outline test seams. Do not implement code or mutate product files.",
+      "StepKind": "Work",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Application classification, scope packet, user stories, and project structure context.",
+      "OutputContractSummary": "Reviewable .NET architecture design draft with boundaries, service model, data model, runtime assumptions, and test strategy.",
+      "EvidenceContractSummary": "Design options, selected approach, models, services, boundaries, test seams, and rejected alternatives.",
+      "DecisionRightsSummary": "Architecture designer proposes the path but cannot approve their own design review.",
+      "ExceptionPolicySummary": "Block when the design cannot cover all acceptance criteria without hidden scope expansion.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "classify-dotnet-application",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 1340,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "classify-dotnet-application",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "architecture-designer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture design remains with the architect role and must not become implementation work."
+        },
+        {
+          "RoleKey": "implementation-advisor",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Engineer reviews buildability without taking over architecture authority."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "dotnet-architecture-design",
+          "TemplateKey": "architecture-decision-record",
+          "Title": ".NET architecture design draft",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by architecture review and the implementation slice.",
+          "ValidationRequirementSummary": "Must describe UI/application/domain/infrastructure split, models and DTOs, services and functions needed for user stories, testability seams, app-type-specific runtime path, and rejected alternatives."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "dotnet-application-classification",
+          "SourceStepKey": "classify-dotnet-application"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/draft-architecture-design.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 2,
+      "Key": "review-architecture-design",
+      "Title": "Review .NET architecture design",
+      "Subtitle": "Independent design challenge",
+      "Notes": "Review the design before implementation. Ask explicitly: is logic properly split from Blazor/components/controllers; are models and DTOs well defined and complete for the user stories; do services expose the functions needed for acceptance criteria; are functions testable without full UI/runtime; are persistence, integration, security, and deployment boundaries clear; is runtime command and screenshot applicability known; and are risks or trade-offs recorded. Do not implement code or mutate product files.",
+      "StepKind": "Review",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Architecture draft, application classification, scope packet, and acceptance criteria.",
+      "OutputContractSummary": "Reviewed architecture decision with required fixes, approval rationale, or block reason.",
+      "EvidenceContractSummary": "Checklist answers, design risks, testability assessment, and go/no-go architecture recommendation.",
+      "DecisionRightsSummary": "Architecture reviewer can require redesign or approve implementation readiness; they cannot mutate product files.",
+      "ExceptionPolicySummary": "Artifact recovery: block when required architecture review findings are missing, invalid, or not materialized before routing back to redesign or approving implementation readiness. Block when design review identifies unowned boundaries, incomplete models, missing service functions, or untestable logic.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "architecture-reviewer",
+      "CanvasX": 2420,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "classify-dotnet-application",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "draft-architecture-design",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "architecture-reviewer",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture review must be performed by an architect-capable reviewer distinct from implementation execution."
+        },
+        {
+          "RoleKey": "qa-reviewer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "QA reviews testability and evidence expectations without changing product code."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "architecture-review-findings",
+          "TemplateKey": "architecture-decision-record",
+          "Title": ".NET architecture review findings",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by implementation, QA, and release governance.",
+          "ValidationRequirementSummary": "Must answer whether component/controller logic is split from services/domain logic, models cover the user stories, service functions cover acceptance criteria, functions are testable, and boundary risks are explicit."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "dotnet-application-classification",
+          "SourceStepKey": "classify-dotnet-application"
+        },
+        {
+          "ArtifactExpectationKey": "dotnet-architecture-design",
+          "SourceStepKey": "draft-architecture-design"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/review-architecture-design.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 3,
+      "Key": "architecture-handoff",
+      "Title": "Hand off reviewed .NET architecture",
+      "Subtitle": "Implementation-ready design packet",
+      "Notes": "Summarize the accepted architecture, application type, product root, test root, UI/no-UI applicability, runtime command expectations, and implementation slice start criteria. This step creates managed process artifacts only; no product files are changed.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Classification, design draft, and architecture review findings.",
+      "OutputContractSummary": "Parent-ready architecture handoff for .NET implementation slice routing.",
+      "EvidenceContractSummary": "Accepted design, unresolved risks, implementation start criteria, runtime command expectations, and UI screenshot applicability.",
+      "DecisionRightsSummary": "Delivery manager may close only when architecture review has a clear implementation-ready disposition.",
+      "ExceptionPolicySummary": "Do not close when design findings remain unresolved or contradictory.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 3500,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "classify-dotnet-application",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "review-architecture-design",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Delivery manager owns parent-process handoff coordination."
+        },
+        {
+          "RoleKey": "architecture-reviewer",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture reviewer confirms the handoff matches the review decision."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "architecture-design-review-handoff",
+          "TemplateKey": "architecture-decision-record",
+          "Title": ".NET architecture design and review handoff",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by parent implementation, QA, runtime-command, screenshot, and release steps.",
+          "ValidationRequirementSummary": "Must include approved architecture summary, app type, product root, test root, UI/no-UI applicability, service/model boundary, testability notes, and implementation slice start criteria."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "dotnet-application-classification",
+          "SourceStepKey": "classify-dotnet-application"
+        },
+        {
+          "ArtifactExpectationKey": "architecture-review-findings",
+          "SourceStepKey": "review-architecture-design"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/dotnet-architecture-design-review/steps/architecture-handoff.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    }
+  ],
+  "DocPath": "processes/dotnet-architecture-design-review/definition.md"
+}

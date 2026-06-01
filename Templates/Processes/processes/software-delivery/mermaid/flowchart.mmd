@@ -1,71 +1,22 @@
 flowchart LR
-%% process-key: software-delivery
-%% definition-doc: processes/software-delivery/definition.md
-    step_feature_intake(["Clarify scope and release boundary<br/><sub>feature-intake</sub><br/><i>Value framing and no-go constraints</i>"])
-    step_architecture_review["Review architecture and canonical-model impact<br/><sub>architecture-review</sub><br/><i>Cross-module and source-of-truth decision</i>"]
-    step_implementation["Implement bounded delivery change<br/><sub>implementation</sub><br/><i>Concrete delivery work</i>"]
-    step_peer_review["Complete peer review and integration readiness<br/><sub>peer-review</sub><br/><i>Design and implementation challenge</i>"]
-    step_qa_validation["Run QA validation and runtime or browser proof<br/><sub>qa-validation</sub><br/><i>Regression, UX, runtime, and quality evidence</i>"]
-    step_quality_repair["Repair validation findings<br/><sub>quality-repair</sub><br/><i>Focused rework from QA evidence</i>"]
-    step_qa_recheck["Re-run QA validation and runtime or browser proof after repair<br/><sub>qa-recheck</sub><br/><i>Repair verification</i>"]
-    step_security_review{"Perform security and data-handling review<br/><sub>security-review</sub><br/><i>Tenant data, secrets, and exception posture</i>"}
-    step_security_review_after_repair{"Perform security review after repair<br/><sub>security-review-after-repair</sub><br/><i>Tenant data, secrets, and exception posture</i>"}
-    step_release_approval{"Approve first-pass release readiness<br/><sub>release-approval</sub><br/><i>Go / no-go board decision</i>"}
-    step_release_approval_after_repair{"Approve repaired release readiness<br/><sub>release-approval-after-repair</sub><br/><i>Go / no-go board decision</i>"}
-    step_execute_release_rollout["Execute first-pass controlled release rollout<br/><sub>execute-release-rollout</sub><br/><i>Live execution and first-hour telemetry watch</i>"]
-    step_execute_release_rollout_after_repair["Execute repaired controlled release rollout<br/><sub>execute-release-rollout-after-repair</sub><br/><i>Live execution and first-hour telemetry watch</i>"]
-    step_post_release_learning(["Capture first-pass post-release learning<br/><sub>post-release-learning</sub><br/><i>Forensic replay and systemic follow-up</i>"])
-    step_post_release_learning_after_repair(["Capture repaired-release learning<br/><sub>post-release-learning-after-repair</sub><br/><i>Forensic replay and systemic follow-up</i>"])
-    step_repair_escalation{"Escalate unresolved repair findings<br/><sub>repair-escalation</sub><br/><i>No-go quality escalation</i>"}
-    step_feature_intake --> step_architecture_review
-    step_architecture_review --> step_implementation
-    step_implementation --> step_peer_review
-    step_peer_review --> step_qa_validation
-    step_qa_validation -- quality-accepted --> step_security_review
-    step_qa_validation -- repair-required --> step_quality_repair
-    step_quality_repair --> step_qa_recheck
-    step_qa_recheck -- quality-accepted --> step_security_review_after_repair
-    step_qa_recheck -- repair-escalation --> step_repair_escalation
-    step_implementation --> step_release_approval
-    step_qa_validation -- quality-accepted --> step_release_approval
-    step_security_review --> step_release_approval
-    step_release_approval --> step_execute_release_rollout
-    step_execute_release_rollout --> step_post_release_learning
-    step_implementation --> step_release_approval_after_repair
-    step_qa_recheck -- quality-accepted --> step_release_approval_after_repair
-    step_security_review_after_repair --> step_release_approval_after_repair
-    step_release_approval_after_repair --> step_execute_release_rollout_after_repair
-    step_execute_release_rollout_after_repair --> step_post_release_learning_after_repair
-%% step-doc: feature-intake => processes/software-delivery/steps/feature-intake.md
-%% step-artifact: feature-intake => scope-boundary-packet
-%% step-doc: architecture-review => processes/software-delivery/steps/architecture-review.md
-%% step-artifact: architecture-review => architecture-decision-record
-%% step-doc: implementation => processes/software-delivery/steps/implementation.md
-%% step-artifact: implementation => implementation-change-set
-%% step-artifact: implementation => rollback-plan
-%% step-doc: peer-review => processes/software-delivery/steps/peer-review.md
-%% step-artifact: peer-review => test-evidence-pack
-%% step-doc: qa-validation => processes/software-delivery/steps/qa-validation.md
-%% step-artifact: qa-validation => regression-evidence-pack
-%% step-doc: quality-repair => processes/software-delivery/steps/quality-repair.md
-%% step-artifact: quality-repair => implementation-change-set
-%% step-doc: qa-recheck => processes/software-delivery/steps/qa-recheck.md
-%% step-artifact: qa-recheck => regression-evidence-pack
-%% step-doc: security-review => processes/software-delivery/steps/security-review.md
-%% step-artifact: security-review => security-exception-assessment
-%% step-doc: security-review-after-repair => processes/software-delivery/steps/security-review.md
-%% step-artifact: security-review-after-repair => security-exception-assessment
-%% step-doc: release-approval => processes/software-delivery/steps/release-approval.md
-%% step-artifact: release-approval => release-approval-record
-%% step-doc: release-approval-after-repair => processes/software-delivery/steps/release-approval.md
-%% step-artifact: release-approval-after-repair => release-approval-record
-%% step-doc: execute-release-rollout => processes/software-delivery/steps/execute-release-rollout.md
-%% step-artifact: execute-release-rollout => release-readiness-report
-%% step-doc: execute-release-rollout-after-repair => processes/software-delivery/steps/execute-release-rollout.md
-%% step-artifact: execute-release-rollout-after-repair => release-readiness-report
-%% step-doc: post-release-learning => processes/software-delivery/steps/post-release-learning.md
-%% step-artifact: post-release-learning => retrospective-improvement-log
-%% step-doc: post-release-learning-after-repair => processes/software-delivery/steps/post-release-learning.md
-%% step-artifact: post-release-learning-after-repair => retrospective-improvement-log
-%% step-doc: repair-escalation => processes/software-delivery/steps/repair-escalation.md
-%% step-artifact: repair-escalation => release-approval-record
+    A[Clarify .NET scope] --> B[Architecture design/review subprocess]
+    B --> C[.NET implementation slice subprocess]
+    C --> D[Peer review]
+    D --> E{QA validation}
+    E -- quality accepted --> F[Security review]
+    E -- quality accepted --> G[Run command writeback]
+    G --> H[UI screenshot writeback]
+    F --> I[Release approval]
+    H --> I
+    I --> J[Release rollout]
+    J --> K[Post-release learning]
+    E -- repair required --> L[Repair findings]
+    L --> M{QA recheck}
+    M -- quality accepted --> N[Security review after repair]
+    M -- quality accepted --> O[Run command writeback after repair]
+    O --> P[UI screenshot writeback after repair]
+    N --> Q[Release approval after repair]
+    P --> Q
+    Q --> R[Repaired rollout]
+    R --> S[Repaired learning]
+    M -- repair escalation --> T[Repair escalation]

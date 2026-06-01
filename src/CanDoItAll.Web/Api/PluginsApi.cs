@@ -1,6 +1,8 @@
+using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Plugins;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Web.Api;
 
@@ -125,16 +127,26 @@ internal static class PluginsApi
                 string pluginId,
                 PluginInstallRequest request,
                 PluginCatalogService catalogService,
+                IServiceScopeFactory serviceScopeFactory,
                 CancellationToken cancellationToken) =>
-            await ToApiResultAsync(pluginId, id => catalogService.InstallAsync(id, request with { Actor = ApiActor }, cancellationToken)))
+            await ToApiResultAndRefreshWorkflowTemplatesAsync(
+                pluginId,
+                id => catalogService.InstallAsync(id, request with { Actor = ApiActor }, cancellationToken),
+                serviceScopeFactory,
+                cancellationToken))
             .WithName("InstallPlugin");
 
         plugins.MapPost("/{pluginId}/enable", async (
                 string pluginId,
                 PluginInstallationUpdateRequest request,
                 PluginCatalogService catalogService,
+                IServiceScopeFactory serviceScopeFactory,
                 CancellationToken cancellationToken) =>
-            await ToApiResultAsync(pluginId, id => catalogService.SetEnabledAsync(id, isEnabled: true, request with { Actor = ApiActor }, cancellationToken)))
+            await ToApiResultAndRefreshWorkflowTemplatesAsync(
+                pluginId,
+                id => catalogService.SetEnabledAsync(id, isEnabled: true, request with { Actor = ApiActor }, cancellationToken),
+                serviceScopeFactory,
+                cancellationToken))
             .WithName("EnablePlugin");
 
         plugins.MapPost("/{pluginId}/disable", async (
@@ -175,8 +187,13 @@ internal static class PluginsApi
                 string pluginId,
                 PluginGrantUpdateRequest request,
                 PluginSettingsService settingsService,
+                IServiceScopeFactory serviceScopeFactory,
                 CancellationToken cancellationToken) =>
-            await ToApiResultAsync(pluginId, id => settingsService.UpdateGrantAsync(id, request, ApiActor, cancellationToken)))
+            await ToApiResultAndRefreshWorkflowTemplatesAsync(
+                pluginId,
+                id => settingsService.UpdateGrantAsync(id, request, ApiActor, cancellationToken),
+                serviceScopeFactory,
+                cancellationToken))
             .WithName("UpdatePluginGrant");
 
         plugins.MapGet("/{pluginId}/connections", async (
@@ -289,6 +306,33 @@ internal static class PluginsApi
         }
 
         return ApiEndpointResults.FromResult(await action(id));
+    }
+
+    private static async Task<IResult> ToApiResultAndRefreshWorkflowTemplatesAsync<T>(
+        string pluginId,
+        Func<PluginId, Task<Result<T>>> action,
+        IServiceScopeFactory serviceScopeFactory,
+        CancellationToken cancellationToken)
+    {
+        PluginId id;
+        try
+        {
+            id = new PluginId(pluginId);
+        }
+        catch (ArgumentException exception)
+        {
+            return ApiEndpointResults.BadRequest(exception.Message, "plugins.plugin-id-invalid");
+        }
+
+        var result = await action(id);
+        if (result.IsSuccess)
+        {
+            await using var scope = serviceScopeFactory.CreateAsyncScope();
+            var workflowExampleCatalogSeedService = scope.ServiceProvider.GetRequiredService<WorkflowExampleCatalogSeedService>();
+            await workflowExampleCatalogSeedService.EnsureSeededAsync(cancellationToken);
+        }
+
+        return ApiEndpointResults.FromResult(result);
     }
 
     private static Result<PluginId?> ResolveOptionalPluginId(string? pluginId)

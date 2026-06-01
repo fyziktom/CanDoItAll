@@ -18130,6 +18130,115 @@ Ancestor path to the target work node:
             arguments[2]);
     }
 
+    [Fact]
+    public void TryResolveRecoverableProviderFailure_detects_structured_output_incompatible_provider()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var tryResolveProviderFailure = serviceType.GetMethod("TryResolveRecoverableProviderFailure", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("TryResolveRecoverableProviderFailure method was not found.");
+
+        var now = DateTimeOffset.UtcNow;
+        const string responseText = "Provider 'Local Ollama' using transport 'ChatCompletions' cannot enforce structured output contract 'process_step_outcome_result'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.";
+        var detail = new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                Guid.NewGuid(),
+                Guid.NewGuid(),
+                null,
+                "Scope run",
+                "process-step",
+                "step-scope",
+                "corr-scope",
+                "run-start",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                responseText,
+                "Local Ollama",
+                "llama3.1",
+                ExecutionState.Failed,
+                RunOutcome.Failed,
+                now,
+                now,
+                now,
+                now,
+                responseText,
+                BuildSerializedSessionStateWithMessages(
+                    ("assistant", [CreateTextContent(responseText)])
+                ),
+                []),
+            null,
+            [],
+            []);
+
+        object?[] arguments = [detail, responseText, null];
+
+        var detected = tryResolveProviderFailure.Invoke(null, arguments);
+
+        Assert.IsType<bool>(detected);
+        Assert.True((bool)detected);
+        Assert.Equal(
+            "The assigned provider cannot enforce the required structured output contract.",
+            arguments[2]);
+    }
+
+    [Fact]
+    public void OrderFallbackProviders_prefers_openai_responses_before_ollama_fallbacks()
+    {
+        var orderFallbackProviders = typeof(ProcessRunAutomationDispatchService).GetMethod(
+            "OrderFallbackProviders",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("OrderFallbackProviders method was not found.");
+        var failedProviderId = Guid.NewGuid();
+        var openAiProvider = CreateProviderProfile(
+            "OpenAI default",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        var remoteOllamaProvider = CreateProviderProfile(
+            "Remote Ollama",
+            ProviderKind.Ollama,
+            ProviderTransportKind.ChatCompletions,
+            "gptoss32k:latest");
+
+        var ordered = orderFallbackProviders.Invoke(
+            null,
+            [new[] { remoteOllamaProvider, openAiProvider }, failedProviderId]) as IReadOnlyList<ProviderProfile>;
+
+        Assert.NotNull(ordered);
+        Assert.Equal(openAiProvider.Id, ordered![0].Id);
+    }
+
+    private static ProviderProfile CreateProviderProfile(
+        string name,
+        ProviderKind kind,
+        ProviderTransportKind transport,
+        string defaultModel)
+    {
+        return new ProviderProfile(
+            Id: Guid.NewGuid(),
+            Name: name,
+            Kind: kind,
+            BaseUrl: kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
+                ? "https://api.openai.com/v1"
+                : "http://127.0.0.1:11434",
+            ApiKeyEnvironmentVariable: kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi
+                ? "OPENAI_API_KEY"
+                : string.Empty,
+            DefaultModel: defaultModel,
+            Transport: transport,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: transport != ProviderTransportKind.Responses,
+            SupportsBackgroundResponses: transport == ProviderTransportKind.Responses,
+            ConfigurationJson: "{}",
+            Notes: "Integration test provider.",
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: [defaultModel]);
+    }
+
     private static object CreateWorkflowImplementationDispatchCandidate()
     {
         return CreateDispatchCandidate(

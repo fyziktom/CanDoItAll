@@ -18,6 +18,8 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
     ICanDoItAllAgentWorkspaceFactory workspaceFactory,
     IProviderProfileService providerProfileService) : IAgentFrameworkOrganizationCatalogRepairService
 {
+    private const string CrmHrRuntimeAgentTemplateKeyPrefix = "crmhr-ai-resource-";
+
     private static readonly IReadOnlySet<string> ManagedSeedOpenAiProviderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "OpenAI default",
@@ -41,7 +43,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .ToListAsync(cancellationToken);
         if (aiPartyIds.Count == 0)
         {
-            await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+            await RepairOpenAiAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
@@ -51,14 +53,14 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             .ToListAsync(cancellationToken);
         if (CurrentWorkspaceAlreadyOwnsProjectedAgents(currentAgents, aiPartyIds, boundBindings))
         {
-            await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+            await RepairOpenAiAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
         var legacyScopeKeys = GetLegacyOrganizationScopeKeys();
         if (legacyScopeKeys.Count == 0)
         {
-            await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+            await RepairOpenAiAgentAssignmentsAsync(currentWorkspace, cancellationToken);
             return;
         }
 
@@ -126,10 +128,10 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
             }
         }
 
-        await RepairManagedSeedAgentAssignmentsAsync(currentWorkspace, cancellationToken);
+        await RepairOpenAiAgentAssignmentsAsync(currentWorkspace, cancellationToken);
     }
 
-    private async Task RepairManagedSeedAgentAssignmentsAsync(
+    private async Task RepairOpenAiAgentAssignmentsAsync(
         IAgentFrameworkWorkspaceService currentWorkspace,
         CancellationToken cancellationToken)
     {
@@ -161,7 +163,7 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
 
         var agents = await currentWorkspace.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var agentsNeedingRepair = agents
-            .Where(RequiresManagedSeedFallbackRepair)
+            .Where(RequiresOpenAiAssignmentRepair)
             .Where(agent =>
                 agent.ProviderProfileId != openAiProvider.Id ||
                 !string.IsNullOrWhiteSpace(agent.Model) ||
@@ -243,10 +245,19 @@ internal sealed class AgentFrameworkOrganizationCatalogRepairService(
                providers.FirstOrDefault(IsManagedSeedOpenAiProvider);
     }
 
-    private static bool RequiresManagedSeedFallbackRepair(
+    private static bool RequiresOpenAiAssignmentRepair(
         AgentDefinition agent)
     {
-        return ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent);
+        return ManagedSeedProviderFallbacks.IsManagedSeedAgent(agent) ||
+               IsCrmHrRuntimeAgent(agent);
+    }
+
+    private static bool IsCrmHrRuntimeAgent(
+        AgentDefinition agent)
+    {
+        return !agent.IsTemplate &&
+               (agent.TemplateKey.StartsWith(CrmHrRuntimeAgentTemplateKeyPrefix, StringComparison.OrdinalIgnoreCase) ||
+                AgentFrameworkCrmHrMetadata.ResolvePartyId(agent.ConfigurationJson, agent.Tags).HasValue);
     }
 
     private static bool IsManagedSeedOpenAiProvider(

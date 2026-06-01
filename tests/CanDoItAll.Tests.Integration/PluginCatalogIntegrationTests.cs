@@ -11,6 +11,8 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.Plugins;
+using CanDoItAll.Modules.Projects;
+using CanDoItAll.Modules.Workbench;
 using CanDoItAll.Plugins.Abstractions;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.SharedKernel.Configuration;
@@ -124,6 +126,47 @@ public sealed class PluginCatalogIntegrationTests
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/oauth/start", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/{pluginId}/connections/{connectionId}/oauth/disconnect", out _));
         Assert.True(paths.TryGetProperty("/api/plugins/oauth/callback", out _));
+    }
+
+    [Fact]
+    public async Task Plugin_grants_refresh_office365_workflow_templates_for_project_structure_add_options()
+    {
+        await using var host = await ApiTestHost.CreateAsync(
+            jwtEnabled: false,
+            services =>
+            {
+                services.Configure<WorkflowExampleCatalogSeedOptions>(options =>
+                {
+                    options.Enabled = true;
+                    options.SeedSampleWorkspaceFiles = false;
+                });
+            });
+
+        var installResponse = await host.Client.PostAsJsonAsync(
+            $"/api/plugins/{Office365PluginConstants.PluginId.Value}/install",
+            new PluginInstallRequest(Enable: true, Actor: "integration-test"));
+        var installBody = await installResponse.Content.ReadAsStringAsync();
+        Assert.True(installResponse.IsSuccessStatusCode, installBody);
+
+        await GrantAsync(host, Office365PluginConstants.PluginId, PluginCapabilityKind.WorkflowExecutor);
+        await GrantAsync(host, Office365PluginConstants.PluginId, PluginCapabilityKind.OAuth2);
+
+        var definitions = await ReadWorkflowDefinitionsAsync(host);
+        var office365Summary = Assert.Single(
+            definitions,
+            item => string.Equals(item.Name, "Example: Office365 Category Email Summary To Project", StringComparison.Ordinal));
+        Assert.Equal(WorkflowLifecycleStatus.Active, office365Summary.Status);
+
+        var projectId = await CreateProjectAsync(host, "Office365 workflow summary target");
+        var optionsResponse = await host.Client.PostAsJsonAsync(
+            $"/api/project-structure/projects/{projectId:D}/nodes/project:{projectId:D}/workflow-add-options",
+            new ProjectStructureWorkflowAddOptionsInput());
+        var optionsBody = await optionsResponse.Content.ReadAsStringAsync();
+        Assert.True(optionsResponse.IsSuccessStatusCode, optionsBody);
+        var options = JsonSerializer.Deserialize<ProjectStructureWorkflowAddOptionsResult>(optionsBody, JsonOptions)!;
+
+        var workflowOption = Assert.Single(options.Workflows, item => item.WorkflowId == office365Summary.Id);
+        Assert.True(workflowOption.IsSelectable, workflowOption.DisabledReason);
     }
 
     [Fact]
@@ -1636,6 +1679,39 @@ public sealed class PluginCatalogIntegrationTests
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, body);
         return JsonSerializer.Deserialize<IReadOnlyList<WorkflowExecutorDescriptor>>(body, JsonOptions)!;
+    }
+
+    private static async Task<IReadOnlyList<WorkflowCatalogItem>> ReadWorkflowDefinitionsAsync(ApiTestHost host)
+    {
+        var response = await host.Client.GetAsync("/api/workflows/definitions");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, body);
+        return JsonSerializer.Deserialize<IReadOnlyList<WorkflowCatalogItem>>(body, JsonOptions)!;
+    }
+
+    private static async Task<Guid> CreateProjectAsync(ApiTestHost host, string name)
+    {
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var result = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = name,
+            Description = "Project used to verify default Office365 workflow add options.",
+            Objective = "Expose the Office365 category summary workflow from project structure.",
+            CurrentPhase = "Execution",
+            Phases =
+            [
+                new ProjectPhaseEditorModel
+                {
+                    Name = "Execution",
+                    Goal = "Validate workflow availability.",
+                    Status = ProjectPhaseStatus.Active
+                }
+            ]
+        });
+
+        Assert.True(result.IsSuccess, FormatErrors(result.Errors));
+        return result.Value;
     }
 
     private sealed class StaticPluginCatalogSource(IReadOnlyList<PluginDescriptor> descriptors) : IPluginCatalogSource

@@ -4,6 +4,8 @@ Start from current process context and project-structure tools before relying on
 
 For result-recording or writeback steps, write the required evidence index and result summary as managed process artifacts with workspace tools. Then use the project-structure tools requested by the step, such as `project_structure_node_create` for the final verdict and `project_structure_asset_create` for screenshot or evidence assets. Include concrete ids, target node ids, artifact paths, app URLs, build/test results, and blocker status. If a required writeback tool is unavailable or denied, return Blocked with the exact failed tool name instead of pretending the project structure was updated.
 
+For runtime command writeback steps, create or reuse a `Run command` parent node under the current process run node. Add explicit child nodes named `Run app` and `Run tests` with command, working directory, source evidence, applicability, and cleanup notes. If the target has no runnable app command, still create `Run app` with the not-applicable reason instead of omitting the node.
+
 Do not implement product code, scaffold applications, or run broad validation unless the current step explicitly assigns that work to this role. Implementation belongs to the implementation agent, validation belongs to the QA role, and this role owns coordination, evidence consolidation, and explicit process disposition.
 
 When the process has a project-structure-defined output root, keep that root authoritative. Do not relocate the deliverable into a run artifact folder. Managed artifact folders are for evidence, summaries, and handoff copies unless the process says they are the product.

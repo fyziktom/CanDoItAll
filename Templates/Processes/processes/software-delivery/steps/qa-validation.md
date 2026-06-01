@@ -1,47 +1,9 @@
 # Run QA validation and runtime or browser proof
 
-**Process:** `software-delivery` / Multi-team software delivery and release governance  
-**Step key:** `qa-validation`  
-**Step kind:** Review  
-**Target lead hours:** 10
+Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.
 
-## Summary
-Regression, UX, runtime, and quality evidence
-
-## Notes
-Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. Treat validation warnings, zero-test successful commands, entrypoint/runtime mismatches, and stale or unreferenced artifact evidence as release-blocking proof gaps unless this process explicitly accepts them. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.
-
-## Contracts
-- Input contract: Peer-reviewed change set, changed-surface inventory, release-scope assumptions, and direct inspection of inherited implementation artifact paths.
-- Output contract: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, explicit residual quality risk, and browser-workflow artifacts when a visible browser workflow is in scope.
-- Evidence contract: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, stat/read evidence for the exact implementation artifacts under review, and current-run process-visible browser artifacts when a visible browser workflow is in scope. Browser-workflow evidence includes screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes.
-
-## Governance
-- Decision rights: QA lead may block release progression when evidence is too thin for the risk profile.
-- Exception policy: Do not let schedule pressure replace proof with verbal confidence.
-- Requires approval: False
-- Requires decision record: False
-
-## Dependencies
-- implementation
-- peer-review
-
-## Role assignments
-- `qa-lead` / QA lead => Responsible; required=True; fallback-order=0; rebind=QA ownership may move across qualified reviewers without collapsing the gate.
-- `lead-engineer` / Lead engineer => Reviewer; required=True; fallback-order=0; rebind=Implementation owner reviews failures and fixes before release approval.
-
-## Artifact expectations
-- `regression-evidence-pack` -> `regression-evidence-pack` / Regression evidence pack | kind=Evidence | trust=ReviewRequired | sensitivity=Internal | validation=Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks. When a visible browser workflow is in scope, missing, empty, detached, stale, or chat-only browser proof routes to `repair-required`.
-
-## Artifact inputs
-- From step `implementation` expectation `implementation-change-set`
-- From step `peer-review` expectation `peer-review-note`
-
-## Branch outcomes
-- No explicit branch outcomes.
-
-## Checklists
-- `qa-evidence-checklist`
-
-## Prompts
-- `prompt-qa-risk-review`
+## Contract
+- Inputs: Peer-reviewed change set, changed-surface inventory, and release-scope assumptions.
+- Outputs: Targeted QA result with runtime/API/browser evidence as applicable, regressions, warning and executed-test counts, shipped entrypoint/runtime consistency, residual quality risk, and an explicit accepted or repair-required branch. Browser-workflow quality acceptance requires process-visible screenshot, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, launch and cleanup receipts, and acceptance-state assertion.
+- Evidence: Regression logs, warning-free validation output unless explicitly accepted, nonzero executed-test proof when tests are expected, shipped entrypoint plus referenced-runtime inspection, stale or unreferenced artifact assessment, runtime/API/browser proof as applicable, screenshots for UI surfaces, defect notes, and current-run process-visible browser artifacts when a visible browser workflow is in scope.
+- Operation target scope: `ExternalProductTargetReadOnly`

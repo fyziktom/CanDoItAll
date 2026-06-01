@@ -1682,6 +1682,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return true;
         }
 
+        if ((normalizedText.Contains("cannot enforce structured output contract", StringComparison.OrdinalIgnoreCase) ||
+             normalizedText.Contains("cannot enforce structured-output contract", StringComparison.OrdinalIgnoreCase)) &&
+            (normalizedText.Contains("Choose a structured-output capable", StringComparison.OrdinalIgnoreCase) ||
+             normalizedText.Contains("structured-output capable OpenAI", StringComparison.OrdinalIgnoreCase)))
+        {
+            failureSummary = "The assigned provider cannot enforce the required structured output contract.";
+            return true;
+        }
+
         if (Regex.IsMatch(
                 normalizedText,
                 @"Response status code does not indicate success:\s*5\d\d\b",

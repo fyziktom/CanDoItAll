@@ -39,6 +39,7 @@ public sealed class ProcessRuntimeOperatorReadModelTests {
         Assert.Equal(ProcessEscalationStatus.Open, escalation.Status);
         Assert.Equal(ProcessEscalationSourceKind.Journal, escalation.SourceKind);
         Assert.Equal(stepRun.Id, escalation.StepRunId);
+        Assert.Equal("Escalation lifecycle read model agent", escalation.Owner);
 
         var assignResult = await escalationService.AssignAsync(
             new ProcessEscalationAssignmentRequest

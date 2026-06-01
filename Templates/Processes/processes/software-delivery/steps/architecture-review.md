@@ -1,48 +1,9 @@
-# Review architecture and canonical-model impact
+# Run .NET architecture design and review subprocess
 
-**Process:** `software-delivery` / Multi-team software delivery and release governance  
-**Step key:** `architecture-review`  
-**Step kind:** Review  
-**Target lead hours:** 12
+Launch and observe the .NET architecture design and review subprocess. The child process must classify the app type, draft architecture, independently review the design, and return implementation-ready architecture evidence. This parent step coordinates the subprocess and must not perform product mutation or implementation work.
 
-## Summary
-Cross-module and source-of-truth decision
-
-## Notes
-Validate application, workspace, data, integration, and operational boundaries before implementation starts.
-
-## Contracts
-- Input contract: Scope packet, touched modules, data-flow map, and integration concerns.
-- Output contract: Approved architecture path with explicit trade-offs and rejected alternatives.
-- Evidence contract: Architecture notes, canonical-model decision, and source-of-truth rationale.
-
-## Governance
-- Decision rights: Architecture authority recommends the path; delivery manager remains accountable for choosing the approved option.
-- Exception policy: Do not continue while source-of-truth ownership or migration responsibility remains ambiguous.
-- Requires approval: False
-- Requires decision record: True
-
-## Dependencies
-- feature-intake
-
-## Role assignments
-- `solution-architect` / Solution architect => Responsible; required=True; fallback-order=0; rebind=Architecture authority may be reassigned between vetted humans or approved architecture agents.
-- `lead-engineer` / Lead engineer => Reviewer; required=True; fallback-order=0; rebind=Implementation owner must confirm the design is buildable before approval.
-
-## Artifact expectations
-- `architecture-decision-record` -> `architecture-decision-record` / Architecture decision record | kind=Decision | trust=ReviewRequired | sensitivity=Internal | validation=Must capture selected option, rejected options, source-of-truth choice, and migration ownership.
-
-## Artifact inputs
-- From step `feature-intake` expectation `scope-boundary-packet`
-
-## Branch outcomes
-- No explicit branch outcomes.
-
-## Checklists
-- `architecture-gate-checklist`
-
-## Validations
-- `validate-architecture-boundaries`
-
-## Prompts
-- `prompt-architecture-review`
+## Contract
+- Inputs: Scope packet, project-structure context, requested .NET deliverable, and acceptance criteria.
+- Outputs: Observed child architecture run with app-type classification, reviewed design decision, implementation-ready handoff, and unresolved architecture risks.
+- Evidence: Child run status, .NET app classification, architecture decision, review findings, implementation start criteria, and UI/no-UI applicability.
+- Operation target scope: `ExternalActionControlled`

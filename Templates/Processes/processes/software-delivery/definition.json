@@ -2,14 +2,14 @@
   "Kind": "process-template-definition",
   "Key": "software-delivery",
   "DisplayName": "Multi-team software delivery and release governance",
-  "Summary": "Universal delivery template for planned software change with explicit intake, architecture, implementation, QA, security, release, deployment, and retrospective governance aligned to the current process-module graph model.",
-  "ValueStatement": "Delivers customer-visible or internal software change through a controllable sequence that keeps scope, evidence, dependencies, artifact inputs, and release authority explicit.",
+  "Summary": ".NET-focused multi-team delivery template for planned software change with explicit app-type classification, architecture design and review, subprocess-backed implementation, QA, runtime command writeback, UI screenshot writeback, security, release, deployment, and retrospective governance.",
+  "ValueStatement": "Delivers .NET application changes through typed, observable subprocesses that keep architecture, implementation, validation, runtime commands, screenshots, release authority, and project-structure evidence explicit.",
   "CustomerName": "Delivery requester",
   "OwnerName": "Delivery governance board",
-  "InterfaceContractSummary": "Planned delivery can cross application, data, integration, operations, and release-management boundaries, so the process keeps boundary decisions, validation, and release gates explicit.",
-  "GovernanceNotes": "No role or approval decision may be collapsed into an implicit chat or tribal handoff; every trust-sensitive transition needs explicit accountability, evidence, dependency mapping, and artifact-input traceability.",
-  "ChangeSummary": "Refreshed for the current process architecture with explicit quality-disposition routing so validation findings move to governed repair work instead of stranding the run.",
-  "GovernancePolicySummary": "Release readiness requires architecture proof, QA evidence, security posture, rollback readiness, and explicit residual-risk ownership.",
+  "InterfaceContractSummary": "The process targets .NET software delivery first: backend-only/API/service, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console, library, or mixed solution. JavaScript-specific delivery should use a separate process rather than hidden branching here.",
+  "GovernanceNotes": "Architecture, implementation, validation, runtime command writeback, screenshot writeback, security, and release gates have explicit operation contracts. Architects and QA reviewers do not mutate product files; implementation and repair remain the only product-mutable lanes.",
+  "ChangeSummary": "Hardens multi-team software delivery for .NET by routing architecture design/review, implementation, runtime command writeback, and UI screenshot writeback through subprocesses with explicit permissions.",
+  "GovernancePolicySummary": "Release readiness requires reviewed .NET architecture, implementation evidence, QA evidence, security posture, Run command nodes, UI screenshot or no-UI evidence, rollback readiness, and explicit residual-risk ownership.",
   "ConstitutionRuleSummary": "Role contracts, decision rights, and source-of-truth ownership outlive the specific person or agent assigned at runtime.",
   "OperatingModeSummary": "Governed live execution is allowed only after explicit quality acceptance, security review, and release gates succeed.",
   "SimulationReadinessSummary": "This template is intentionally rich enough for simulation, canvas authoring, analytics, and large-screen browser walkthroughs.",
@@ -40,7 +40,9 @@
     "regression-evidence-pack",
     "security-exception-assessment",
     "release-approval-record",
-    "retrospective-improvement-log"
+    "retrospective-improvement-log",
+    "test-evidence-pack",
+    "implementation-plan"
   ],
   "SharedChecklistRefs": [
     "intake-completeness-checklist",
@@ -198,17 +200,17 @@
     {
       "Order": 0,
       "Key": "feature-intake",
-      "Title": "Clarify scope and release boundary",
-      "Subtitle": "Value framing and no-go constraints",
-      "Notes": "Capture the requested outcome, user or operational impact, target delivery window, known dependencies, and explicit exclusions before delivery commits. If the request, project structure, or selected work node already identifies a concrete deliverable and target boundary, do not block this first step only because optional governance details are missing; record assumptions, exclusions, not-applicable entries, unresolved follow-up questions, and validation hooks for later modeled steps. Explicit project-structure requirements are source-of-truth constraints and must not be downgraded to optional, excluded, or follow-up work unless the project structure itself says so or an accepted decision record narrows scope.",
+      "Title": "Clarify .NET scope and app type boundary",
+      "Subtitle": ".NET delivery contract and no-go constraints",
+      "Notes": "Capture the requested outcome, user or operational impact, target delivery window, known dependencies, explicit exclusions, and .NET delivery target. Classify or request classification evidence for backend-only/API/service, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console, library, or mixed solution. Preserve explicit project-structure requirements as source-of-truth constraints; they must not be downgraded to optional, excluded, or follow-up work unless the project structure or an accepted decision record says so.",
       "StepKind": "Start",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": false,
       "InputContractSummary": "Requested change, impact notes, target delivery window, and stakeholder-facing constraints.",
-      "OutputContractSummary": "Decision-ready scope packet with acceptance boundary, dependency map, assumptions, exclusions, and non-blocking follow-up questions.",
-      "EvidenceContractSummary": "Intake notes, acceptance criteria, known exclusions, assumptions, and unresolved dependency register.",
+      "OutputContractSummary": "Decision-ready .NET scope packet with acceptance boundary, app-type hypothesis, dependency map, assumptions, exclusions, and validation hooks.",
+      "EvidenceContractSummary": "Intake notes, acceptance criteria, .NET app-type hypothesis, product root hints, UI/no-UI hints, run/test command hints, known exclusions, assumptions, and unresolved dependency register.",
       "DecisionRightsSummary": "Product owner can refine the ask but cannot waive architecture, data, or release-governance requirements.",
       "ExceptionPolicySummary": "Escalate immediately when timeline pressure conflicts with data-safety or release constraints.",
       "TargetLeadHours": 8,
@@ -247,7 +249,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable during architecture review, implementation planning, and future scope-drift analysis.",
-          "ValidationRequirementSummary": "Must capture no-go constraints, user or operational impact, and acceptance boundary in typed form. Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work unless the project structure itself says the item is optional or deferred."
+          "ValidationRequirementSummary": "Must capture no-go constraints, user or operational impact, acceptance boundary, .NET app-type hypothesis, product root hints, UI/no-UI hints, and run/test command hints. Must preserve explicit project-structure source-of-truth requirements without downgrading them to optional, excluded, non-acceptance, or follow-up work unless the project structure itself says the item is optional or deferred."
         }
       ],
       "ArtifactInputs": [],
@@ -273,20 +275,20 @@
     {
       "Order": 1,
       "Key": "architecture-review",
-      "Title": "Review architecture and canonical-model impact",
-      "Subtitle": "Cross-module and source-of-truth decision",
-      "Notes": "Validate application, workspace, data, integration, and operational boundaries before implementation starts.",
-      "StepKind": "Review",
+      "Title": "Run .NET architecture design and review subprocess",
+      "Subtitle": "Design, challenge, and app-type routing",
+      "Notes": "Launch and observe the .NET architecture design and review subprocess. The child process must classify the app type, draft architecture, independently review the design, and return implementation-ready architecture evidence. This parent step coordinates the subprocess and must not perform product mutation or implementation work.",
+      "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Scope packet, touched modules, data-flow map, and integration concerns.",
-      "OutputContractSummary": "Approved architecture path with explicit trade-offs and rejected alternatives.",
-      "EvidenceContractSummary": "Architecture notes, canonical-model decision, and source-of-truth rationale.",
-      "DecisionRightsSummary": "Architecture authority recommends the path; delivery manager remains accountable for choosing the approved option.",
-      "ExceptionPolicySummary": "Do not continue while source-of-truth ownership or migration responsibility remains ambiguous.",
-      "TargetLeadHours": 12,
+      "InputContractSummary": "Scope packet, project-structure context, requested .NET deliverable, and acceptance criteria.",
+      "OutputContractSummary": "Observed child architecture run with app-type classification, reviewed design decision, implementation-ready handoff, and unresolved architecture risks.",
+      "EvidenceContractSummary": "Child run status, .NET app classification, architecture decision, review findings, implementation start criteria, and UI/no-UI applicability.",
+      "DecisionRightsSummary": "Delivery manager coordinates the child run; architecture authority remains inside the subprocess review and cannot mutate product files.",
+      "ExceptionPolicySummary": "Block when the child architecture subprocess blocks, fails, or returns missing app type, design review, or implementation-ready handoff evidence.",
+      "TargetLeadHours": 14,
       "DependsOnStepKey": "feature-intake",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
@@ -302,18 +304,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "solution-architect",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Architecture authority may be reassigned between vetted humans or approved architecture agents."
+          "RebindPolicySummary": "Delivery manager launches and observes the architecture subprocess without taking architecture authority."
         },
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "solution-architect",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Implementation owner must confirm the design is buildable before approval."
+          "RebindPolicySummary": "Architecture role reviews subprocess evidence without implementing code."
         }
       ],
       "ArtifactExpectations": [
@@ -326,8 +328,10 @@
           "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
-          "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, and release decisions that must stay aligned to the same project node and working directory.",
-          "ValidationRequirementSummary": "Must capture the originating project-structure node, resolved working directory, touched modules or routes, dependency boundaries, and downstream artifact expectations."
+          "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, security, runtime command writeback, screenshot writeback, and release decisions.",
+          "ValidationRequirementSummary": "Must map to child app classification evidence and capture process run node, product root, test root, .NET app type, UI/no-UI applicability, runtime surfaces, and downstream artifact expectations.",
+          "SubprocessChildStepKey": "classify-dotnet-application",
+          "SubprocessChildArtifactTitle": ".NET application classification and project context"
         },
         {
           "Key": "architecture-decision-record",
@@ -338,8 +342,10 @@
           "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 730,
-          "AllowedFutureUsageSummary": "Reusable for implementation, review, and later forensic replay.",
-          "ValidationRequirementSummary": "Must capture selected option, rejected options, source-of-truth choice, and migration ownership."
+          "AllowedFutureUsageSummary": "Reusable for implementation, review, QA, runtime command writeback, screenshot writeback, and later forensic replay.",
+          "ValidationRequirementSummary": "Must map to the reviewed child architecture handoff and include selected option, rejected options, source-of-truth choice, service/model/component boundaries, testability notes, and migration ownership.",
+          "SubprocessChildStepKey": "architecture-handoff",
+          "SubprocessChildArtifactTitle": ".NET architecture design and review handoff"
         }
       ],
       "ArtifactInputs": [
@@ -366,26 +372,28 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "WriteManagedProcessArtifacts",
-        "EscalateOrDecide"
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalActionControlled",
+      "SubprocessProcessKey": "dotnet-architecture-design-review",
+      "SubprocessDefinitionSnapshotName": ".NET architecture design and review subprocess"
     },
     {
       "Order": 2,
       "Key": "implementation",
-      "Title": "Implement bounded delivery change",
-      "Subtitle": "Concrete delivery work",
-      "Notes": "Implement the bounded change directly from approved project-structure context and upstream artifacts. Preserve explicit source-of-truth constraints such as platform, stack, runtime target, output location, exclusions, and acceptance criteria; block instead of narrowing, switching, or deferring a required behavior without a decision record.",
-      "StepKind": "Work",
+      "Title": "Run .NET implementation slice subprocess",
+      "Subtitle": "Observed implementation and validation slice",
+      "Notes": "Launch and observe the .NET implementation slice subprocess for the approved scope and architecture. The child implementation slice owns solution setup, feature/function implementation, tests, and targeted proof. This parent step records child-run evidence and does not mutate product files directly.",
+      "StepKind": "Subprocess",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Approved architecture path, scope packet, unresolved technical questions, and implementation-slice start criteria.",
-      "OutputContractSummary": "Reviewable implementation change set that satisfies the current project-structure source of truth, with blockers and rollout checklist inputs visible from the parent process.",
-      "EvidenceContractSummary": "Changed or created deliverables, validation outputs, output-placement notes, migration steps when applicable, and touched-surface inventory.",
-      "DecisionRightsSummary": "Parent delivery manager owns sequencing and escalation, while the selected implementation role owns the concrete changes.",
-      "ExceptionPolicySummary": "Do not complete the implementation step if any explicit project-structure requirement is omitted, deferred, stack-switched, or unverifiable without an accepted decision record. Artifact recovery: block when missing artifact materialization, invalid required artifact evidence, or process-visible proof gaps are detected.",
+      "InputContractSummary": "Approved .NET architecture path, app classification, scope packet, unresolved technical questions, and implementation-slice start criteria.",
+      "OutputContractSummary": "Observed child implementation slice with reviewable change set, test evidence, blockers, rollout inputs, and parent-ready handoff.",
+      "EvidenceContractSummary": "Child run status, change-set projection, validation outputs, output-placement notes, migration steps when applicable, touched-surface inventory, and blockers.",
+      "DecisionRightsSummary": "Parent delivery manager owns subprocess sequencing and escalation; implementation changes remain inside child implementation roles.",
+      "ExceptionPolicySummary": "Block when the child implementation slice blocks, fails, omits required project-structure requirements, or returns missing change-set, test, or handoff evidence.",
       "TargetLeadHours": 36,
       "DependsOnStepKey": "architecture-review",
       "DependsOnBranchOutcomeKey": "",
@@ -406,18 +414,18 @@
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "lead-engineer",
+          "RoleKey": "delivery-manager",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Engineering ownership moves between qualified engineers without changing the role contract."
+          "RebindPolicySummary": "Delivery manager launches and observes child implementation without editing product code."
         },
         {
-          "RoleKey": "product-owner",
+          "RoleKey": "lead-engineer",
           "ResponsibilityKind": "Reviewer",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Value owner reviews only acceptance drift, not technical implementation details."
+          "RebindPolicySummary": "Engineering role reviews child implementation evidence and owns follow-up repair when assigned."
         }
       ],
       "ArtifactExpectations": [
@@ -430,8 +438,10 @@
           "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
-          "AllowedFutureUsageSummary": "Reusable for peer review, release approval, and later defect forensics.",
-          "ValidationRequirementSummary": "Must list changed or created product files, output target, validation proof tied to acceptance criteria, and confirmation that explicit project-structure requirements were not dropped or deferred."
+          "AllowedFutureUsageSummary": "Reusable for peer review, QA, runtime command writeback, screenshot writeback, release approval, and later defect forensics.",
+          "ValidationRequirementSummary": "Must point to the observed .NET implementation slice child run and include changed files, behavioral intent, validation proof tied to acceptance criteria, and confirmation that explicit project-structure requirements were not dropped or deferred.",
+          "SubprocessChildStepKey": "implement-code-change",
+          "SubprocessChildArtifactTitle": "Slice implementation change set"
         },
         {
           "Key": "migration-rollout-preparation-checklist",
@@ -443,7 +453,9 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release rehearsal and rollback planning.",
-          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish or output-placement steps, and rollback or removal steps."
+          "ValidationRequirementSummary": "Must name data changes or none, operational preconditions, publish/output-placement steps, rollback/removal steps, and child-run evidence used to derive them.",
+          "SubprocessChildStepKey": "slice-handoff",
+          "SubprocessChildArtifactTitle": "Implementation slice handoff packet"
         }
       ],
       "ArtifactInputs": [
@@ -478,11 +490,12 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
-        "RunValidation",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalActionControlled",
+      "SubprocessProcessKey": "dotnet-development-slice",
+      "SubprocessDefinitionSnapshotName": ".NET implementation slice with atomic validation"
     },
     {
       "Order": 3,
@@ -586,7 +599,7 @@
       "Key": "qa-validation",
       "Title": "Run QA validation and runtime or browser proof",
       "Subtitle": "Regression, UX, runtime, and quality evidence",
-      "Notes": "Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060 before selecting quality-accepted.",
+      "Notes": "Execute targeted regression, runtime/API/browser proof as applicable, and defect triage against the reviewed implementation package. When project structure, scope, or implementation evidence identifies a visible browser workflow, capture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -646,7 +659,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for release approval, incident review, and later regression comparison.",
-          "ValidationRequirementSummary": "Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks. When the current project structure, scope packet, or implementation evidence identifies a visible browser workflow, the pack must include current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-required."
+          "ValidationRequirementSummary": "Must name changed flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks. When the current project structure, scope packet, or implementation evidence identifies a visible browser workflow, the pack must include current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-required."
         }
       ],
       "ArtifactInputs": [
@@ -806,7 +819,7 @@
       "Key": "qa-recheck",
       "Title": "Re-run QA validation and runtime or browser proof after repair",
       "Subtitle": "Repair verification",
-      "Notes": "Re-run targeted runtime/API/browser validation as applicable against the repaired package and select an explicit accepted or unresolved-repair branch. When project structure, original QA findings, or repair evidence identifies a visible browser workflow, recapture current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060 before selecting quality-accepted.",
+      "Notes": "Re-run targeted runtime/API/browser validation as applicable against the repaired package and select an explicit accepted or unresolved-repair branch. When project structure, original QA findings, or repair evidence identifies a visible browser workflow, recapture current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/` before selecting quality-accepted.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -866,7 +879,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable for post-repair security review, release approval, and later regression comparison.",
-          "ValidationRequirementSummary": "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks after the repair pass. When the current project structure, original QA findings, or repair evidence identifies a visible browser workflow, the pack must include fresh current-run process-visible browser artifacts under \u0060artifacts/process-runs/\u003Crun-id\u003E/browser/\u0060: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-escalation."
+          "ValidationRequirementSummary": "Must name repaired flows, assertion depth, warning counts, executed-test counts when tests are expected, shipped entrypoint and referenced runtime files or commands, runtime/API/browser evidence as applicable, screenshots for UI surfaces, stale/unreferenced artifact findings, and unresolved risks after the repair pass. When the current project structure, original QA findings, or repair evidence identifies a visible browser workflow, the pack must include fresh current-run process-visible browser artifacts under `artifacts/process-runs/<run-id>/browser/`: screenshot image, browser_snapshot or browser_evaluate state output, browser_console_messages output showing no active JavaScript/runtime errors, actual URL or entrypoint, launch and cleanup receipts, and an acceptance-state assertion mapped to the project-structure notes. Missing, empty, detached, stale, or chat-only browser proof must route to repair-escalation."
         }
       ],
       "ArtifactInputs": [
@@ -936,7 +949,7 @@
       "DependsOnStepKey": "qa-validation",
       "DependsOnBranchOutcomeKey": "quality-accepted",
       "DecisionRoleKey": "",
-      "CanvasX": 5660,
+      "CanvasX": 6740,
       "CanvasY": 0,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -1021,6 +1034,467 @@
     },
     {
       "Order": 8,
+      "Key": "record-runtime-commands",
+      "Title": "Record .NET run commands under process run node",
+      "Subtitle": "Run command, Run app, Run tests",
+      "Notes": "Launch and observe the .NET runtime command writeback subprocess after first-pass QA acceptance. It must create or reuse Run command under the current process run node and child nodes Run app and Run tests. This step coordinates subprocess evidence only and does not mutate product files.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-runtime-command-writeback",
+      "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
+      "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready writeback evidence.",
+      "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
+      "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
+      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 6740,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "qa-validation",
+          "DependsOnBranchOutcomeKey": "quality-accepted"
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a role-compatible operator that can observe the subprocess and record parent evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "runtime-command-writeback",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET Run command writeback",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
+          "ValidationRequirementSummary": "Must point to child step runtime-command-handoff, include child artifact .NET runtime command handoff, current process run node context, write receipts, and unresolved blockers.",
+          "SubprocessChildStepKey": "runtime-command-handoff",
+          "SubprocessChildArtifactTitle": ".NET runtime command handoff"
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "regression-evidence-pack",
+          "SourceStepKey": "qa-validation"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/record-runtime-commands.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 9,
+      "Key": "capture-ui-screenshots",
+      "Title": "Capture and store .NET UI screenshots",
+      "Subtitle": "Screenshots under process run node",
+      "Notes": "Launch and observe the .NET UI screenshot writeback subprocess after runtime command nodes exist. UI targets must capture screenshots and store accepted image assets under a Screenshots parent node below the current process run node. Backend-only or no-UI targets must produce explicit no-UI evidence.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
+      "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
+      "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
+      "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
+      "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
+      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 7820,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "qa-validation",
+          "DependsOnBranchOutcomeKey": "quality-accepted"
+        },
+        {
+          "DependsOnStepKey": "record-runtime-commands",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "qa-lead",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Rebind only to a role-compatible operator that can observe the subprocess and record parent evidence."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "ui-screenshot-writeback",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET UI screenshot writeback",
+          "ArtifactKind": "Evidence",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
+          "ValidationRequirementSummary": "Must point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
+          "SubprocessChildStepKey": "screenshot-handoff",
+          "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/capture-ui-screenshots.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 10,
+      "Key": "release-approval",
+      "Title": "Approve first-pass release readiness",
+      "Subtitle": "Go / no-go board decision",
+      "Notes": "Approve or reject release using first-pass QA proof, shipped entrypoint/runtime consistency, security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required.",
+      "StepKind": "Approval",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": true,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "QA evidence that names the shipped entrypoint and referenced runtime, security outcome, Run command nodes, UI screenshot or no-UI evidence, rollback/removal plan, support ownership, and declared release boundary.",
+      "OutputContractSummary": "Approved or rejected release readiness with accountable rationale and boundary-applicable conditions only.",
+      "EvidenceContractSummary": "Approval note, residual risk register, rollback/removal ownership record, declared-boundary confirmation, Run command node references, Screenshots parent/image asset or no-UI evidence, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.",
+      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
+      "ExceptionPolicySummary": "Reject release when security review, Run command nodes, UI screenshot/no-UI evidence, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete.",
+      "TargetLeadHours": 3,
+      "DependsOnStepKey": "",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 8900,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "implementation",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "architecture-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "qa-validation",
+          "DependsOnBranchOutcomeKey": "quality-accepted"
+        },
+        {
+          "DependsOnStepKey": "security-review",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "record-runtime-commands",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "capture-ui-screenshots",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Approver",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release approval belongs to the accountable delivery manager role, not to whichever person attended a meeting."
+        },
+        {
+          "RoleKey": "release-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Operational release owner reviews rollback and support readiness before the board decision."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "release-approval-record",
+          "TemplateKey": "release-approval-record",
+          "Title": "Release approval record",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "HumanApproved",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 1095,
+          "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
+          "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback or removal trigger, declared release boundary, and any boundary-applicable release timing conditions."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "migration-rollout-preparation-checklist",
+          "SourceStepKey": "implementation"
+        },
+        {
+          "ArtifactExpectationKey": "regression-evidence-pack",
+          "SourceStepKey": "qa-validation"
+        },
+        {
+          "ArtifactExpectationKey": "security-exception-assessment",
+          "SourceStepKey": "security-review"
+        },
+        {
+          "ArtifactExpectationKey": "runtime-command-writeback",
+          "SourceStepKey": "record-runtime-commands"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-writeback",
+          "SourceStepKey": "capture-ui-screenshots"
+        },
+        {
+          "ArtifactExpectationKey": "project-structure-context-brief",
+          "SourceStepKey": "architecture-review"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [
+        "release-go-live-checklist"
+      ],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/release-approval.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "EscalateOrDecide"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 11,
+      "Key": "execute-release-rollout",
+      "Title": "Execute first-pass controlled release rollout",
+      "Subtitle": "Boundary-scoped release execution and watch",
+      "Notes": "Deploy, publish, export, or hand off the approved deliverable inside the declared release boundary while rollback, removal, or recovery readiness remains explicit. Use live telemetry only when the boundary includes a live service or production host.",
+      "StepKind": "Delivery",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Approved release record, delivery package or artifact root, rollback or removal plan, declared release boundary, and applicable watch points.",
+      "OutputContractSummary": "Executed rollout, publish, export, or handoff with explicit boundary outcome, rollback/removal status, and watch notes where applicable.",
+      "EvidenceContractSummary": "Operator notes, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable entries for out-of-boundary production controls, and any rollback, removal, or release halt.",
+      "DecisionRightsSummary": "Release manager may execute only inside the approved boundary, window, and rollback-trigger limits.",
+      "ExceptionPolicySummary": "Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.",
+      "TargetLeadHours": 4,
+      "DependsOnStepKey": "release-approval",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 9980,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "release-approval",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "release-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Execution ownership remains with the release-manager role until rollout completes or fails."
+        },
+        {
+          "RoleKey": "lead-engineer",
+          "ResponsibilityKind": "Backup",
+          "IsRequired": false,
+          "FallbackOrder": 1,
+          "RebindPolicySummary": "Implementation owner stays available for rapid corrective interpretation during rollout."
+        },
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Governance owner reviews telemetry and escalation timing during the release window."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "deployment-watch-log",
+          "TemplateKey": "release-readiness-report",
+          "Title": "Deployment, handoff, and watch log",
+          "ArtifactKind": "Transcript",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable for incident replay and release retrospectives.",
+          "ValidationRequirementSummary": "Must capture release timing, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable out-of-boundary controls, and any halt, rollback, or removal decision."
+        }
+      ],
+      "ArtifactInputs": [
+        {
+          "ArtifactExpectationKey": "release-approval-record",
+          "SourceStepKey": "release-approval"
+        }
+      ],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/execute-release-rollout.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
+      ],
+      "OperationTargetScope": "ExternalActionControlled"
+    },
+    {
+      "Order": 12,
+      "Key": "post-release-learning",
+      "Title": "Capture first-pass post-release learning",
+      "Subtitle": "Forensic replay and systemic follow-up",
+      "Notes": "Turn the release outcome into explicit learning about design, QA, operations, and process behavior.",
+      "StepKind": "End",
+      "AllowsManualSkip": false,
+      "AllowsSafeRefusal": false,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": true,
+      "InputContractSummary": "Rollout outcome, telemetry record, support observations, and any release incident notes.",
+      "OutputContractSummary": "Post-release learning review with corrective actions and simulation updates.",
+      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
+      "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
+      "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
+      "TargetLeadHours": 6,
+      "DependsOnStepKey": "execute-release-rollout",
+      "DependsOnBranchOutcomeKey": "",
+      "DecisionRoleKey": "",
+      "CanvasX": 11060,
+      "CanvasY": 0,
+      "BranchCanvasX": 0,
+      "BranchCanvasY": 0,
+      "Dependencies": [
+        {
+          "DependsOnStepKey": "execute-release-rollout",
+          "DependsOnBranchOutcomeKey": ""
+        }
+      ],
+      "RoleAssignments": [
+        {
+          "RoleKey": "delivery-manager",
+          "ResponsibilityKind": "Responsible",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Follow-up ownership remains explicit until corrective actions have accountable owners."
+        },
+        {
+          "RoleKey": "solution-architect",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Architecture role reviews systemic design findings rather than only local defects."
+        },
+        {
+          "RoleKey": "release-manager",
+          "ResponsibilityKind": "Reviewer",
+          "IsRequired": true,
+          "FallbackOrder": 0,
+          "RebindPolicySummary": "Release role reviews telemetry and rollback-control lessons."
+        }
+      ],
+      "ArtifactExpectations": [
+        {
+          "Key": "post-release-learning-log",
+          "TemplateKey": "retrospective-improvement-log",
+          "Title": "Post-release learning review",
+          "ArtifactKind": "Decision",
+          "IsRequired": true,
+          "TrustRequirement": "ReviewRequired",
+          "SensitivityLevel": "Internal",
+          "RetentionDays": 730,
+          "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
+          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
+        }
+      ],
+      "ArtifactInputs": [],
+      "BranchOutcomes": [],
+      "ChecklistRefs": [],
+      "ValidationRefs": [],
+      "PromptRefs": [],
+      "DocRefs": [
+        "processes/software-delivery/steps/post-release-learning.md"
+      ],
+      "AllowedOperations": [
+        "ReadProcessContext",
+        "ReadProjectStructure",
+        "ReadUpstreamArtifacts",
+        "WriteManagedProcessArtifacts"
+      ],
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
+    },
+    {
+      "Order": 13,
       "Key": "security-review-after-repair",
       "Title": "Perform security review after repair",
       "Subtitle": "Sensitive data, secrets, and exception posture",
@@ -1039,7 +1513,7 @@
       "DependsOnStepKey": "qa-recheck",
       "DependsOnBranchOutcomeKey": "quality-accepted",
       "DecisionRoleKey": "",
-      "CanvasX": 7820,
+      "CanvasX": 8900,
       "CanvasY": 2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -1119,30 +1593,36 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
-      "Order": 9,
-      "Key": "release-approval",
-      "Title": "Approve first-pass release readiness",
-      "Subtitle": "Go / no-go board decision",
-      "Notes": "Approve or reject release using first-pass QA proof, shipped entrypoint/runtime consistency, security posture, rollback readiness, support coverage, and the declared release boundary. Conditions must apply to the approved boundary; out-of-boundary production hardening belongs in future recommendations unless explicitly required.",
-      "StepKind": "Approval",
+      "Order": 14,
+      "Key": "record-runtime-commands-after-repair",
+      "Title": "Record repaired .NET run commands under process run node",
+      "Subtitle": "Run command, Run app, Run tests",
+      "Notes": "Launch and observe runtime command writeback after repaired QA acceptance. Refresh or confirm Run command, Run app, and Run tests nodes under the current process run node using repaired evidence.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-runtime-command-writeback",
+      "SubprocessDefinitionSnapshotName": ".NET runtime command project-structure writeback",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
-      "RequiresApproval": true,
-      "RequiresDecisionRecord": true,
-      "InputContractSummary": "QA evidence that names the shipped entrypoint and referenced runtime, security outcome, rollback or removal plan, support ownership, and declared release boundary.",
-      "OutputContractSummary": "Approved or rejected release readiness with accountable rationale and boundary-applicable conditions only.",
-      "EvidenceContractSummary": "Approval note, residual risk register, rollback or removal ownership record, declared-boundary confirmation, and confirmation that QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.",
-      "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
-      "ExceptionPolicySummary": "Reject release when security review, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete. Do not reject solely for public deployment, CI, production telemetry, or broad-host controls that the boundary does not require.",
-      "TargetLeadHours": 3,
+      "RequiresApproval": false,
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
+      "OutputContractSummary": "Observed .NET runtime command project-structure writeback child run with parent-ready writeback evidence.",
+      "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
+      "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
+      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "TargetLeadHours": 2,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 6740,
-      "CanvasY": 0,
+      "CanvasX": 8900,
+      "CanvasY": 2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
+        {
+          "DependsOnStepKey": "quality-repair",
+          "DependsOnBranchOutcomeKey": ""
+        },
         {
           "DependsOnStepKey": "implementation",
           "DependsOnBranchOutcomeKey": ""
@@ -1152,151 +1632,39 @@
           "DependsOnBranchOutcomeKey": ""
         },
         {
-          "DependsOnStepKey": "qa-validation",
+          "DependsOnStepKey": "qa-recheck",
           "DependsOnBranchOutcomeKey": "quality-accepted"
-        },
-        {
-          "DependsOnStepKey": "security-review",
-          "DependsOnBranchOutcomeKey": ""
         }
       ],
       "RoleAssignments": [
         {
           "RoleKey": "delivery-manager",
-          "ResponsibilityKind": "Approver",
-          "IsRequired": true,
-          "FallbackOrder": 0,
-          "RebindPolicySummary": "Release approval belongs to the accountable delivery manager role, not to whichever person attended a meeting."
-        },
-        {
-          "RoleKey": "release-manager",
-          "ResponsibilityKind": "Reviewer",
-          "IsRequired": true,
-          "FallbackOrder": 0,
-          "RebindPolicySummary": "Operational release owner reviews rollback and support readiness before the board decision."
-        }
-      ],
-      "ArtifactExpectations": [
-        {
-          "Key": "release-approval-record",
-          "TemplateKey": "release-approval-record",
-          "Title": "Release approval record",
-          "ArtifactKind": "Decision",
-          "IsRequired": true,
-          "TrustRequirement": "HumanApproved",
-          "SensitivityLevel": "Internal",
-          "RetentionDays": 1095,
-          "AllowedFutureUsageSummary": "Reusable for audit, release replay, and governance tuning.",
-          "ValidationRequirementSummary": "Must name the approver, residual risk owner, rollback or removal trigger, declared release boundary, and any boundary-applicable release timing conditions."
-        }
-      ],
-      "ArtifactInputs": [
-        {
-          "ArtifactExpectationKey": "migration-rollout-preparation-checklist",
-          "SourceStepKey": "implementation"
-        },
-        {
-          "ArtifactExpectationKey": "regression-evidence-pack",
-          "SourceStepKey": "qa-validation"
-        },
-        {
-          "ArtifactExpectationKey": "security-exception-assessment",
-          "SourceStepKey": "security-review"
-        },
-        {
-          "ArtifactExpectationKey": "project-structure-context-brief",
-          "SourceStepKey": "architecture-review"
-        }
-      ],
-      "BranchOutcomes": [],
-      "ChecklistRefs": [
-        "release-go-live-checklist"
-      ],
-      "ValidationRefs": [],
-      "PromptRefs": [],
-      "DocRefs": [
-        "processes/software-delivery/steps/release-approval.md"
-      ],
-      "AllowedOperations": [
-        "ReadProcessContext",
-        "ReadProjectStructure",
-        "ReadUpstreamArtifacts",
-        "WriteManagedProcessArtifacts",
-        "EscalateOrDecide"
-      ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
-    },
-    {
-      "Order": 10,
-      "Key": "execute-release-rollout",
-      "Title": "Execute first-pass controlled release rollout",
-      "Subtitle": "Boundary-scoped release execution and watch",
-      "Notes": "Deploy, publish, export, or hand off the approved deliverable inside the declared release boundary while rollback, removal, or recovery readiness remains explicit. Use live telemetry only when the boundary includes a live service or production host.",
-      "StepKind": "Delivery",
-      "AllowsManualSkip": false,
-      "AllowsSafeRefusal": false,
-      "RequiresApproval": false,
-      "RequiresDecisionRecord": false,
-      "InputContractSummary": "Approved release record, delivery package or artifact root, rollback or removal plan, declared release boundary, and applicable watch points.",
-      "OutputContractSummary": "Executed rollout, publish, export, or handoff with explicit boundary outcome, rollback/removal status, and watch notes where applicable.",
-      "EvidenceContractSummary": "Operator notes, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable entries for out-of-boundary production controls, and any rollback, removal, or release halt.",
-      "DecisionRightsSummary": "Release manager may execute only inside the approved boundary, window, and rollback-trigger limits.",
-      "ExceptionPolicySummary": "Trigger halt, rollback, removal, or no-go immediately when applicable telemetry, artifact integrity, user impact, data impact, or operational constraints breach the approved threshold. Do not block for missing public deployment, CI, or production telemetry when the approved boundary is a package or output-folder handoff.",
-      "TargetLeadHours": 4,
-      "DependsOnStepKey": "release-approval",
-      "DependsOnBranchOutcomeKey": "",
-      "DecisionRoleKey": "",
-      "CanvasX": 7820,
-      "CanvasY": 0,
-      "BranchCanvasX": 0,
-      "BranchCanvasY": 0,
-      "Dependencies": [
-        {
-          "DependsOnStepKey": "release-approval",
-          "DependsOnBranchOutcomeKey": ""
-        }
-      ],
-      "RoleAssignments": [
-        {
-          "RoleKey": "release-manager",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Execution ownership remains with the release-manager role until rollout completes or fails."
-        },
-        {
-          "RoleKey": "lead-engineer",
-          "ResponsibilityKind": "Backup",
-          "IsRequired": false,
-          "FallbackOrder": 1,
-          "RebindPolicySummary": "Implementation owner stays available for rapid corrective interpretation during rollout."
-        },
-        {
-          "RoleKey": "delivery-manager",
-          "ResponsibilityKind": "Reviewer",
-          "IsRequired": true,
-          "FallbackOrder": 0,
-          "RebindPolicySummary": "Governance owner reviews telemetry and escalation timing during the release window."
+          "RebindPolicySummary": "Rebind only to a role-compatible operator that can observe the subprocess and record parent evidence."
         }
       ],
       "ArtifactExpectations": [
         {
-          "Key": "deployment-watch-log",
-          "TemplateKey": "release-readiness-report",
-          "Title": "Deployment, handoff, and watch log",
-          "ArtifactKind": "Transcript",
+          "Key": "runtime-command-writeback-after-repair",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET Run command writeback after repair",
+          "ArtifactKind": "Evidence",
           "IsRequired": true,
           "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
-          "AllowedFutureUsageSummary": "Reusable for incident replay and release retrospectives.",
-          "ValidationRequirementSummary": "Must capture release timing, artifact placement or deployment receipt, applicable telemetry or smoke checkpoints, not-applicable out-of-boundary controls, and any halt, rollback, or removal decision."
+          "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
+          "ValidationRequirementSummary": "Must point to child step runtime-command-handoff, include child artifact .NET runtime command handoff, current process run node context, write receipts, and unresolved blockers.",
+          "SubprocessChildStepKey": "runtime-command-handoff",
+          "SubprocessChildArtifactTitle": ".NET runtime command handoff"
         }
       ],
       "ArtifactInputs": [
         {
-          "ArtifactExpectationKey": "release-approval-record",
-          "SourceStepKey": "release-approval"
+          "ArtifactExpectationKey": "repaired-regression-evidence-pack",
+          "SourceStepKey": "qa-recheck"
         }
       ],
       "BranchOutcomes": [],
@@ -1304,7 +1672,7 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
-        "processes/software-delivery/steps/execute-release-rollout.md"
+        "processes/software-delivery/steps/record-runtime-commands-after-repair.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",
@@ -1316,70 +1684,64 @@
       "OperationTargetScope": "ExternalActionControlled"
     },
     {
-      "Order": 11,
-      "Key": "post-release-learning",
-      "Title": "Capture first-pass post-release learning",
-      "Subtitle": "Forensic replay and systemic follow-up",
-      "Notes": "Turn the release outcome into explicit learning about design, QA, operations, and process behavior.",
-      "StepKind": "End",
+      "Order": 15,
+      "Key": "capture-ui-screenshots-after-repair",
+      "Title": "Capture and store repaired .NET UI screenshots",
+      "Subtitle": "Screenshots under process run node",
+      "Notes": "Launch and observe UI screenshot writeback after repaired runtime command nodes exist. UI targets must store repaired screenshots under Screenshots below the process run node; no-UI targets must carry explicit no-UI evidence.",
+      "StepKind": "Subprocess",
+      "SubprocessProcessKey": "dotnet-ui-screenshot-writeback",
+      "SubprocessDefinitionSnapshotName": ".NET UI screenshot project-structure writeback",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
-      "RequiresDecisionRecord": true,
-      "InputContractSummary": "Rollout outcome, telemetry record, support observations, and any release incident notes.",
-      "OutputContractSummary": "Post-release learning review with corrective actions and simulation updates.",
-      "EvidenceContractSummary": "Timeline, contributing factors, missing controls, and next corrective actions.",
-      "DecisionRightsSummary": "Delivery manager owns follow-up assignment while architecture and release roles retain responsibility for their own control gaps.",
-      "ExceptionPolicySummary": "Do not close the process while critical corrective actions remain unnamed or unowned.",
-      "TargetLeadHours": 6,
-      "DependsOnStepKey": "execute-release-rollout",
+      "RequiresDecisionRecord": false,
+      "InputContractSummary": "Accepted QA evidence, architecture handoff, implementation evidence, and process run node context.",
+      "OutputContractSummary": "Observed .NET UI screenshot project-structure writeback child run with parent-ready writeback evidence.",
+      "EvidenceContractSummary": "Child run status, managed artifacts, project-structure receipts, node ids, and blockers.",
+      "DecisionRightsSummary": "Parent role coordinates subprocess completion and cannot mutate product files.",
+      "ExceptionPolicySummary": "Block when the child subprocess blocks, fails, or returns missing required evidence.",
+      "TargetLeadHours": 2,
+      "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 8900,
-      "CanvasY": 0,
+      "CanvasX": 9980,
+      "CanvasY": 2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
       "Dependencies": [
         {
-          "DependsOnStepKey": "execute-release-rollout",
+          "DependsOnStepKey": "qa-recheck",
+          "DependsOnBranchOutcomeKey": "quality-accepted"
+        },
+        {
+          "DependsOnStepKey": "record-runtime-commands-after-repair",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
       "RoleAssignments": [
         {
-          "RoleKey": "delivery-manager",
+          "RoleKey": "qa-lead",
           "ResponsibilityKind": "Responsible",
           "IsRequired": true,
           "FallbackOrder": 0,
-          "RebindPolicySummary": "Follow-up ownership remains explicit until corrective actions have accountable owners."
-        },
-        {
-          "RoleKey": "solution-architect",
-          "ResponsibilityKind": "Reviewer",
-          "IsRequired": true,
-          "FallbackOrder": 0,
-          "RebindPolicySummary": "Architecture role reviews systemic design findings rather than only local defects."
-        },
-        {
-          "RoleKey": "release-manager",
-          "ResponsibilityKind": "Reviewer",
-          "IsRequired": true,
-          "FallbackOrder": 0,
-          "RebindPolicySummary": "Release role reviews telemetry and rollback-control lessons."
+          "RebindPolicySummary": "Rebind only to a role-compatible operator that can observe the subprocess and record parent evidence."
         }
       ],
       "ArtifactExpectations": [
         {
-          "Key": "post-release-learning-log",
-          "TemplateKey": "retrospective-improvement-log",
-          "Title": "Post-release learning review",
-          "ArtifactKind": "Decision",
+          "Key": "ui-screenshot-writeback-after-repair",
+          "TemplateKey": "implementation-plan",
+          "Title": ".NET UI screenshot writeback after repair",
+          "ArtifactKind": "Evidence",
           "IsRequired": true,
           "TrustRequirement": "ReviewRequired",
           "SensitivityLevel": "Internal",
-          "RetentionDays": 730,
-          "AllowedFutureUsageSummary": "Reusable for process improvement and future simulation baselines.",
-          "ValidationRequirementSummary": "Must capture orchestration-quality observations, not only technical defects."
+          "RetentionDays": 365,
+          "AllowedFutureUsageSummary": "Reusable by release approval and process-run replay.",
+          "ValidationRequirementSummary": "Must point to child step screenshot-handoff, include child artifact .NET UI screenshot writeback handoff, current process run node context, Screenshots parent node, accepted image asset or no-UI receipts, write receipts, and unresolved blockers.",
+          "SubprocessChildStepKey": "screenshot-handoff",
+          "SubprocessChildArtifactTitle": ".NET UI screenshot writeback handoff"
         }
       ],
       "ArtifactInputs": [],
@@ -1388,18 +1750,19 @@
       "ValidationRefs": [],
       "PromptRefs": [],
       "DocRefs": [
-        "processes/software-delivery/steps/post-release-learning.md"
+        "processes/software-delivery/steps/capture-ui-screenshots-after-repair.md"
       ],
       "AllowedOperations": [
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "WriteManagedProcessArtifacts"
+        "WriteManagedProcessArtifacts",
+        "ExecuteExternalAction"
       ],
-      "OperationTargetScope": "ExternalProductTargetReadOnly"
+      "OperationTargetScope": "ExternalActionControlled"
     },
     {
-      "Order": 12,
+      "Order": 16,
       "Key": "repair-escalation",
       "Title": "Escalate unresolved repair findings",
       "Subtitle": "No-go quality escalation",
@@ -1418,8 +1781,8 @@
       "DependsOnStepKey": "qa-recheck",
       "DependsOnBranchOutcomeKey": "repair-escalation",
       "DecisionRoleKey": "delivery-manager",
-      "CanvasX": 7820,
-      "CanvasY": 3120,
+      "CanvasX": 8900,
+      "CanvasY": 4160,
       "BranchCanvasX": 8261,
       "BranchCanvasY": 3120,
       "Dependencies": [
@@ -1496,7 +1859,7 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
-      "Order": 13,
+      "Order": 17,
       "Key": "release-approval-after-repair",
       "Title": "Approve repaired release readiness",
       "Subtitle": "Go / no-go board decision",
@@ -1506,16 +1869,16 @@
       "AllowsSafeRefusal": false,
       "RequiresApproval": true,
       "RequiresDecisionRecord": true,
-      "InputContractSummary": "Repaired QA evidence that names the shipped entrypoint and referenced runtime, post-repair security outcome, rollback or removal plan, support ownership, and declared release boundary.",
+      "InputContractSummary": "Repaired QA evidence that names the shipped entrypoint and referenced runtime, post-repair security outcome, Run command nodes, UI screenshot or no-UI evidence, rollback/removal plan, support ownership, and declared release boundary.",
       "OutputContractSummary": "Approved or rejected repaired release readiness with accountable rationale and boundary-applicable conditions only.",
-      "EvidenceContractSummary": "Approval note, residual risk register, rollback or removal ownership record, declared-boundary confirmation, and confirmation that repaired QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.",
+      "EvidenceContractSummary": "Approval note, residual risk register, rollback/removal ownership record, declared-boundary confirmation, repaired Run command node references, Screenshots parent/image asset or no-UI evidence, and confirmation that repaired QA proof matches the actual shipped entrypoint rather than stale or unreferenced artifacts.",
       "DecisionRightsSummary": "Delivery manager owns the decision and cannot waive missing proof or missing rollback readiness silently.",
-      "ExceptionPolicySummary": "Reject release when security review, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete. Do not reject solely for public deployment, CI, production telemetry, or broad-host controls that the boundary does not require.",
+      "ExceptionPolicySummary": "Reject release when post-repair security review, Run command nodes, UI screenshot/no-UI evidence, rollback/removal ownership, support readiness, or proof required by the declared release boundary remains incomplete.",
       "TargetLeadHours": 3,
       "DependsOnStepKey": "",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 8900,
+      "CanvasX": 11060,
       "CanvasY": 2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -1534,6 +1897,14 @@
         },
         {
           "DependsOnStepKey": "security-review-after-repair",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "record-runtime-commands-after-repair",
+          "DependsOnBranchOutcomeKey": ""
+        },
+        {
+          "DependsOnStepKey": "capture-ui-screenshots-after-repair",
           "DependsOnBranchOutcomeKey": ""
         }
       ],
@@ -1581,6 +1952,14 @@
           "SourceStepKey": "security-review-after-repair"
         },
         {
+          "ArtifactExpectationKey": "runtime-command-writeback-after-repair",
+          "SourceStepKey": "record-runtime-commands-after-repair"
+        },
+        {
+          "ArtifactExpectationKey": "ui-screenshot-writeback-after-repair",
+          "SourceStepKey": "capture-ui-screenshots-after-repair"
+        },
+        {
           "ArtifactExpectationKey": "project-structure-context-brief",
           "SourceStepKey": "architecture-review"
         }
@@ -1604,7 +1983,7 @@
       "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
-      "Order": 14,
+      "Order": 18,
       "Key": "execute-release-rollout-after-repair",
       "Title": "Execute repaired controlled release rollout",
       "Subtitle": "Boundary-scoped release execution and watch",
@@ -1623,7 +2002,7 @@
       "DependsOnStepKey": "release-approval-after-repair",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 9980,
+      "CanvasX": 12140,
       "CanvasY": 2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -1693,7 +2072,7 @@
       "OperationTargetScope": "ExternalActionControlled"
     },
     {
-      "Order": 15,
+      "Order": 19,
       "Key": "post-release-learning-after-repair",
       "Title": "Capture repaired-release learning",
       "Subtitle": "Forensic replay and systemic follow-up",
@@ -1712,7 +2091,7 @@
       "DependsOnStepKey": "execute-release-rollout-after-repair",
       "DependsOnBranchOutcomeKey": "",
       "DecisionRoleKey": "",
-      "CanvasX": 11060,
+      "CanvasX": 13220,
       "CanvasY": 2080,
       "BranchCanvasX": 0,
       "BranchCanvasY": 0,
@@ -1843,7 +2222,7 @@
         "Work closely with platform engineer, release approver, and software engineer.",
         "Provide QA with data-risk hotspots requiring targeted validation.",
         "Coordinate with service owner on maintenance-window and support implications.",
-        "Document exactly what \u0027successful migration\u0027 means operationally."
+        "Document exactly what 'successful migration' means operationally."
       ],
       "AntiPatterns": [
         "Treating rollback as a theoretical possibility instead of a rehearsed path.",

@@ -809,7 +809,7 @@ internal static class ProcessEscalationJournal
             ProcessEscalationStatus.Open,
             ResolveTitle(status),
             Normalize(reason),
-            Owner: string.Empty,
+            ResolveTransitionOwner(stepRun),
             Resolution: string.Empty,
             ReworkPacketId: null,
             SourceExecutionRunId: string.Empty,
@@ -1054,6 +1054,12 @@ internal static class ProcessEscalationJournal
             ProcessEscalationKind.OperatorRequestedRework => "Operator requested rework",
             _ => "Blocked step needs operator review"
         };
+    }
+
+    private static string ResolveTransitionOwner(
+        ProcessStepRun stepRun)
+    {
+        return Normalize(stepRun.CurrentExecutorName);
     }
 
     private static string ResolveStateTitle(ProcessEscalationStatus status, string title)

@@ -310,7 +310,7 @@ public sealed class ProcessSubprocessIntegrationTests
     }
 
     [Fact]
-    public async Task Default_templates_import_nested_subprocess_references_and_generic_software_delivery_implementation()
+    public async Task Default_templates_import_nested_subprocess_references_and_dotnet_software_delivery_subprocesses()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -353,6 +353,21 @@ public sealed class ProcessSubprocessIntegrationTests
             projectionService,
             "dotnet-development-slice",
             projectId);
+        var architectureDefinitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-architecture-design-review",
+            projectId);
+        var runtimeCommandDefinitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-runtime-command-writeback",
+            projectId);
+        var screenshotDefinitionId = await ImportAndPublishTemplateAsync(
+            processesService,
+            projectionService,
+            "dotnet-ui-screenshot-writeback",
+            projectId);
         var softwareDeliveryDefinitionId = await ImportAndPublishTemplateAsync(
             processesService,
             projectionService,
@@ -363,8 +378,11 @@ public sealed class ProcessSubprocessIntegrationTests
         var sliceSubprocessStep = await LoadPublishedStepAsync(dbContext, sliceDefinitionId, "prepare-solution-skeleton");
         var sliceFeatureSubprocessStep = await LoadPublishedStepAsync(dbContext, sliceDefinitionId, "implement-code-change");
         var softwareDeliveryFeatureIntakeStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "feature-intake");
+        var softwareDeliveryArchitectureStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "architecture-review");
         var softwareDeliveryImplementationStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "implementation");
         var softwareDeliveryQaStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "qa-validation");
+        var softwareDeliveryRuntimeCommandStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "record-runtime-commands");
+        var softwareDeliveryScreenshotStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "capture-ui-screenshots");
         var softwareDeliveryReleaseApprovalStep = await LoadPublishedStepAsync(dbContext, softwareDeliveryDefinitionId, "release-approval");
         var featureIntakeArtifact = await dbContext.Set<ProcessArtifactExpectation>()
             .AsNoTracking()
@@ -376,6 +394,16 @@ public sealed class ProcessSubprocessIntegrationTests
             .SingleAsync(item =>
                 item.StepDefinitionId == softwareDeliveryQaStep.Id &&
                 item.Title == "Regression evidence pack");
+        var runtimeCommandArtifact = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .SingleAsync(item =>
+                item.StepDefinitionId == softwareDeliveryRuntimeCommandStep.Id &&
+                item.Title == ".NET Run command writeback");
+        var screenshotArtifact = await dbContext.Set<ProcessArtifactExpectation>()
+            .AsNoTracking()
+            .SingleAsync(item =>
+                item.StepDefinitionId == softwareDeliveryScreenshotStep.Id &&
+                item.Title == ".NET UI screenshot writeback");
 
         Assert.Equal(ProcessStepKind.Subprocess, sliceSubprocessStep.StepKind);
         Assert.Equal(setupDefinitionId, sliceSubprocessStep.SubprocessDefinitionId);
@@ -383,15 +411,24 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(ProcessStepKind.Subprocess, sliceFeatureSubprocessStep.StepKind);
         Assert.Equal(featureImplementationDefinitionId, sliceFeatureSubprocessStep.SubprocessDefinitionId);
         Assert.Equal(".NET feature/function implementation subprocess", sliceFeatureSubprocessStep.SubprocessDefinitionSnapshotName);
-        Assert.Equal(ProcessStepKind.Work, softwareDeliveryImplementationStep.StepKind);
-        Assert.Null(softwareDeliveryImplementationStep.SubprocessDefinitionId);
-        Assert.Equal(string.Empty, softwareDeliveryImplementationStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(ProcessStepKind.Subprocess, softwareDeliveryArchitectureStep.StepKind);
+        Assert.Equal(architectureDefinitionId, softwareDeliveryArchitectureStep.SubprocessDefinitionId);
+        Assert.Equal(".NET architecture design and review subprocess", softwareDeliveryArchitectureStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(ProcessStepKind.Subprocess, softwareDeliveryImplementationStep.StepKind);
+        Assert.Equal(sliceDefinitionId, softwareDeliveryImplementationStep.SubprocessDefinitionId);
+        Assert.Equal(".NET implementation slice with atomic validation", softwareDeliveryImplementationStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(ProcessStepKind.Subprocess, softwareDeliveryRuntimeCommandStep.StepKind);
+        Assert.Equal(runtimeCommandDefinitionId, softwareDeliveryRuntimeCommandStep.SubprocessDefinitionId);
+        Assert.Equal(".NET runtime command project-structure writeback", softwareDeliveryRuntimeCommandStep.SubprocessDefinitionSnapshotName);
+        Assert.Equal(ProcessStepKind.Subprocess, softwareDeliveryScreenshotStep.StepKind);
+        Assert.Equal(screenshotDefinitionId, softwareDeliveryScreenshotStep.SubprocessDefinitionId);
+        Assert.Equal(".NET UI screenshot project-structure writeback", softwareDeliveryScreenshotStep.SubprocessDefinitionSnapshotName);
         Assert.Contains(
-            "project-structure",
+            "child implementation slice",
             softwareDeliveryImplementationStep.Notes,
             StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
-            "output location",
+            "does not mutate product files",
             softwareDeliveryImplementationStep.Notes,
             StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
@@ -415,7 +452,25 @@ public sealed class ProcessSubprocessIntegrationTests
             qaEvidenceArtifact.ValidationRequirementSummary,
             StringComparison.OrdinalIgnoreCase);
         Assert.Contains(
+            "Run command",
+            runtimeCommandArtifact.Title,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(runtimeCommandArtifact.SubprocessChildArtifactExpectationId);
+        Assert.Contains(
+            "Screenshots",
+            screenshotArtifact.ValidationRequirementSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(screenshotArtifact.SubprocessChildArtifactExpectationId);
+        Assert.Contains(
             "shipped entrypoint and referenced runtime",
+            softwareDeliveryReleaseApprovalStep.InputContractSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "Run command nodes",
+            softwareDeliveryReleaseApprovalStep.InputContractSummary,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "UI screenshot or no-UI evidence",
             softwareDeliveryReleaseApprovalStep.InputContractSummary,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -593,7 +648,9 @@ public sealed class ProcessSubprocessIntegrationTests
         var importResult = await processesService.ImportAsync(envelope);
 
         Assert.True(importResult.IsSuccess, ToErrorMessage(importResult.Errors));
-        Assert.True((await processesService.PublishAsync(importResult.Value)).IsSuccess);
+        var publishResult = await processesService.PublishAsync(importResult.Value);
+
+        Assert.True(publishResult.IsSuccess, ToErrorMessage(publishResult.Errors));
         return importResult.Value;
     }
 

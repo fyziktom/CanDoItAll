@@ -10,7 +10,8 @@ Rules:
 - Use `objectType` `ImageAsset`, object subtype `screenshot`, a precise title, and notes that include the route, viewport, source artifact path, and review result.
 - Prefer `sourceWorkspacePath` for captured screenshots that already exist in the managed workspace, with `sourceFileName` and `sourceContentType` set explicitly. Do not block just because `workspace_read_file` refuses binary image text reads.
 - Use a direct media payload only when the image bytes are already available from an image-generation tool or another binary-capable source.
-- Attach each image asset under the delivery block or the matching page-route node named by the step.
+- When the step names a process run node, create or reuse a `Screenshots` parent node under that process run node and attach each accepted image asset under `Screenshots`.
+- Use the delivery block or matching page-route node only when the step does not provide a process run node target.
 - When storage catalog tools are available, use them only for supporting receipts or review manifests. The project-structure image asset is the canonical output.
 - Do not generate redesigned layouts or mockups in this role. Layout generation belongs to the image-generation workflow agent.
 

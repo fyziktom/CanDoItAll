@@ -432,19 +432,19 @@
     {
       "Order": 4,
       "Key": "add-tests-and-proof",
-      "Title": "Add tests and targeted proof",
-      "Subtitle": "Validation before handoff",
-      "Notes": "Add or update tests and run the smallest reliable validation command that proves the slice behavior.",
+      "Title": "Validate tests and targeted proof",
+      "Subtitle": "Read-only validation before handoff",
+      "Notes": "Review the child implementation run, test additions, and validation evidence, then run the smallest reliable validation command needed to prove the slice behavior. Do not add, edit, or repair product tests in this step; missing or inadequate tests must route back to implementation repair instead of being silently fixed by QA.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
       "RequiresApproval": false,
       "RequiresDecisionRecord": true,
       "InputContractSummary": "Implementation change set and slice architecture decision.",
-      "OutputContractSummary": "Test and validation evidence tied to the implemented behavior.",
-      "EvidenceContractSummary": "Test files, commands, exit codes, warnings, and browser proof when UI is touched.",
-      "DecisionRightsSummary": "Validation owner can require focused rework when proof does not match acceptance criteria.",
-      "ExceptionPolicySummary": "Block on missing tests, failing build, validation that is too broad to diagnose failures, or artifact recovery when required validation evidence is missing or invalid before branch routing.",
+      "OutputContractSummary": "Test and validation evidence review tied to the implemented behavior, with explicit repair direction when evidence is inadequate.",
+      "EvidenceContractSummary": "Commands, exit codes, warnings, executed tests, browser/runtime proof when UI is touched, and explicit assessment of whether child-run tests satisfy acceptance criteria.",
+      "DecisionRightsSummary": "Validation owner can require focused implementation rework when proof or tests do not match acceptance criteria, but cannot mutate product files.",
+      "ExceptionPolicySummary": "Block on missing tests, failing build, validation that is too broad to diagnose failures, or artifact recovery when required validation evidence is missing or invalid before branch routing; route test changes back to implementation.",
       "TargetLeadHours": 6,
       "DependsOnStepKey": "implement-code-change",
       "DependsOnBranchOutcomeKey": "",
@@ -479,7 +479,7 @@
           "SensitivityLevel": "Internal",
           "RetentionDays": 365,
           "AllowedFutureUsageSummary": "Reusable by parent QA and release approval.",
-          "ValidationRequirementSummary": "Must include command, exit code, and proof tied to acceptance criteria."
+          "ValidationRequirementSummary": "Must include command, exit code, proof tied to acceptance criteria, and review of child-run test coverage. If tests are missing or inadequate, the artifact must route repair to implementation instead of recording QA-authored product changes."
         }
       ],
       "ArtifactInputs": [
@@ -499,11 +499,11 @@
         "ReadProcessContext",
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
-        "MutateProductTarget",
         "RunValidation",
+        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
-      "OperationTargetScope": "ExternalProductTargetMutable"
+      "OperationTargetScope": "ExternalProductTargetReadOnly"
     },
     {
       "Order": 5,

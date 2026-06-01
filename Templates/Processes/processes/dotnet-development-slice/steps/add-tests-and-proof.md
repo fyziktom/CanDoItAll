@@ -1,3 +1,3 @@
-# Add tests and targeted proof
+# Validate tests and targeted proof
 
-Add or update tests and run the smallest reliable validation command that proves the slice behavior.
+Review child-run tests and run targeted validation without mutating product files. Missing or inadequate tests must route back to implementation repair; QA does not add or edit product tests in this step.
