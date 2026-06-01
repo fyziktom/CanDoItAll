@@ -1827,7 +1827,7 @@ public sealed class AgentToolInvocationPolicyTests
     }
 
     [Fact]
-    public async Task EvaluateAsync_SB02_INV_003_denies_runtime_launch_without_launch_runtime_operation()
+    public async Task EvaluateAsync_SB02_INV_003_allows_bounded_dotnet_run_with_run_validation_operation()
     {
         var policy = new DefaultAgentToolInvocationPolicy();
         var context = CreateContext(
@@ -1837,6 +1837,39 @@ public sealed class AgentToolInvocationPolicyTests
             autoApprovalAllowed: true,
             approvalWrapperAvailable: false,
             processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["keepAlive"] = "False",
+                ["lifetimeScope"] = "ExecutionRun"
+            },
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_003_denies_kept_alive_runtime_launch_without_launch_runtime_operation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            "workspace_dotnet_run",
+            ToolInvocationClassification.Validation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            arguments: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["keepAlive"] = "True",
+                ["lifetimeScope"] = "ExecutionRun"
+            },
             processStepAllowedOperations:
             [
                 "ReadProcessContext",

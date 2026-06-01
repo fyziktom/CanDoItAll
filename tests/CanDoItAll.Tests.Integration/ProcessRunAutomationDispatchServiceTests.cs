@@ -18183,7 +18183,7 @@ Ancestor path to the target work node:
     }
 
     [Fact]
-    public void OrderFallbackProviders_prefers_openai_responses_before_ollama_fallbacks()
+    public void OrderFallbackProviders_excludes_ollama_from_process_recovery_fallbacks()
     {
         var orderFallbackProviders = typeof(ProcessRunAutomationDispatchService).GetMethod(
             "OrderFallbackProviders",
@@ -18207,6 +18207,7 @@ Ancestor path to the target work node:
 
         Assert.NotNull(ordered);
         Assert.Equal(openAiProvider.Id, ordered![0].Id);
+        Assert.DoesNotContain(ordered, provider => provider.Kind == ProviderKind.Ollama);
     }
 
     private static ProviderProfile CreateProviderProfile(

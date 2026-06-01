@@ -1,9 +1,9 @@
 {
   "packKey": "candoitall-agent-template-pack",
   "name": "CanDoItAll default agent template pack",
-  "version": "2026-05-agent-template-teams-v12",
+  "version": "2026-06-agent-template-teams-v14",
   "seedMarker": "Managed agent template team seed",
-  "seedVersion": "2026-05-agent-template-teams-v12",
+  "seedVersion": "2026-06-agent-template-teams-v14",
   "teams": [
     {
       "key": "delivery-platform",

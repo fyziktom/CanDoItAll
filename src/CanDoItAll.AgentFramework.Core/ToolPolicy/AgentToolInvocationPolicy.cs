@@ -441,7 +441,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
 
         if (string.Equals(context.ToolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase))
         {
-            return [OperationRequirement.Any(OperationLaunchRuntime)];
+            return [ResolveDotnetRunOperationRequirement(context)];
         }
 
         if (BrowserProofTools.Contains(context.ToolName) ||
@@ -517,6 +517,34 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         return normalizedPaths.Any(path => IsAllowedExternalRunManagedPath(path) && !IsManagedOutputPath(path))
             ? OperationRequirement.Any(OperationWriteManagedProcessArtifacts)
             : OperationRequirement.Any(OperationMutateProductTarget);
+    }
+
+    private static OperationRequirement ResolveDotnetRunOperationRequirement(ToolInvocationPolicyContext context)
+    {
+        var keepAlive = context.RedactedArguments.TryGetValue("keepAlive", out var keepAliveValue) &&
+                        IsTruthyToolArgument(keepAliveValue);
+        var processRunLifetime = context.RedactedArguments.TryGetValue("lifetimeScope", out var lifetimeScope) &&
+                                 string.Equals(lifetimeScope, "ProcessRun", StringComparison.OrdinalIgnoreCase);
+
+        return keepAlive || processRunLifetime
+            ? OperationRequirement.Any(OperationLaunchRuntime)
+            : OperationRequirement.Any(OperationRunValidation, OperationLaunchRuntime);
+    }
+
+    private static bool IsTruthyToolArgument(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.Trim().Trim('`', '"', '\'') switch
+        {
+            "1" => true,
+            var text when string.Equals(text, "true", StringComparison.OrdinalIgnoreCase) => true,
+            var text when string.Equals(text, "yes", StringComparison.OrdinalIgnoreCase) => true,
+            _ => false
+        };
     }
 
     private static OperationRequirement ResolveWorkspaceScriptRequirement(ToolInvocationPolicyContext context)

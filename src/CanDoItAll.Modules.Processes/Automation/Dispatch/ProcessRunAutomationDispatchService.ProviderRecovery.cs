@@ -50,10 +50,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid failedProviderId)
     {
         return providers
-            .Where(item => item.IsEnabled && item.SupportsTools && item.Id != failedProviderId)
+            .Where(item =>
+                item.IsEnabled &&
+                item.SupportsTools &&
+                item.Id != failedProviderId &&
+                item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi)
             .OrderBy(item => item.Kind is ProviderKind.OpenAi or ProviderKind.AzureOpenAi ? 0 : 1)
             .ThenBy(item => item.Transport == ProviderTransportKind.Responses ? 0 : 1)
-            .ThenBy(item => item.Kind == ProviderKind.Ollama ? 1 : 0)
             .ThenBy(item => item.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
