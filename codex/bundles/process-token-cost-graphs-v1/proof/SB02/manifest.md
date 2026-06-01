@@ -1,7 +1,7 @@
 # SB02 Proof Manifest
 
 - Subbundle: `02-02-history-analytics-data`
-- Status: `Implemented; browser screenshot blocked by local database baseline`
+- Status: `Implemented; browser screenshot captured with disposable PostgreSQL profile`
 - Owned requirements: R004, R007, R008 and data support for R005/R006
 - Owned raw notes: N001, N005, N006, N007, N008
 - Semantic invariant contract: `bundle://proof/SB02/semantic-invariants.md`
@@ -21,7 +21,8 @@
 - Component history/scope proof: `bundle://proof/SB02/transcripts/component-history-and-scope-tests.txt`
 - Source assertions: `bundle://proof/SB02/transcripts/source-assertions.txt`
 - Anti-stub audit: `bundle://proof/SB02/transcripts/anti-stub-audit.txt`
-- Browser blocker: `bundle://proof/SB02/browser/browser-validation-blocker.md`
+- Browser proof: `bundle://proof/SB02/browser/live-processes-one-day-graphs.png`
+- Historical browser blocker: `bundle://proof/SB02/browser/browser-validation-blocker.md`
 
 ## Failing-First And Passing Proof
 
@@ -30,8 +31,8 @@
 
 ## Browser Or Host Proof
 
-- Updated web app startup was attempted from isolated build output and blocked by local PostgreSQL baseline mismatch.
-- Browser screenshot for `/processes/live` remains blocked; see `bundle://proof/SB02/browser/browser-validation-blocker.md`.
+- Updated web app was hosted on `http://localhost:5034` with disposable PostgreSQL database `candoitall_codex_graphs_20260601`.
+- `/processes/live` was set to `1 day`, opened to `Graphs`, and rendered context/time/cost charts for the observed run; see `bundle://proof/SB02/browser/live-processes-one-day-graphs.png`.
 
 ## Anti-Stub Audit
 

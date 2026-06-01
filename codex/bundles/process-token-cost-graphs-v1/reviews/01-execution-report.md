@@ -2,51 +2,52 @@
 
 ## Status
 
-- Execution state: `Implemented; browser validation blocked by local PostgreSQL baseline`
+- Execution state: `Implemented; browser validated with disposable PostgreSQL profile`
 
 ## Outcome Check
 
 - Requested outcome: accurate provider token/cached-token/cost accounting plus lazy process and run graph tabs.
-- Current closure decision: `Code and targeted tests pass; real browser screenshot proof is blocked by local database baseline mismatch.`
-- Evidence still missing: updated-route browser screenshots and final completed-stage validator pass.
+- Current closure decision: `Code, targeted tests, completed-stage validator, and real browser screenshot proof pass.`
+- Evidence still missing: `None for requested scope; default local PostgreSQL profile still needs baseline repair outside this feature.`
 
 ## Commands
 
 - SB01 accounting builds and tests: `bundle://proof/SB01/transcripts/build-accounting-projects.txt`, `bundle://proof/SB01/transcripts/unit-provider-pricing.txt`, `bundle://proof/SB01/transcripts/integration-execution-tracking.txt`.
 - SB02 processes module build and history component proof: `bundle://proof/SB02/transcripts/processes-module-build.txt`, `bundle://proof/SB02/transcripts/component-history-and-scope-tests.txt`.
 - SB03 component build and lazy graph proof: `bundle://proof/SB03/transcripts/component-build.txt`, `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`.
-- Updated web host build and browser blocker: `bundle://proof/SB03/transcripts/web-isolated-build-and-browser-blocker.txt`.
+- Updated web host build and initial browser blocker: `bundle://proof/SB03/transcripts/web-isolated-build-and-browser-blocker.txt`.
+- Browser rerun used disposable PostgreSQL database `candoitall_codex_graphs_20260601` on `http://localhost:5034`.
 
 ## Browser Artifacts
 
-- `bundle://proof/SB02/browser/browser-validation-blocker.md`
-- `bundle://proof/SB03/browser/browser-validation-blocker.md`
-- `bundle://proof/SB03/browser/stale-server-processes-desktop.png`
-- `bundle://proof/SB03/browser/stale-server-startup-dialog-snapshot.md`
-- `bundle://proof/SB03/browser/stale-server-after-continue-snapshot.md`
-- `bundle://proof/SB03/browser/stale-server-main-depth8.md`
+- `bundle://proof/SB02/browser/live-processes-one-day-graphs.png`
+- `bundle://proof/SB03/browser/codex-process-graphs-before-load.png`
+- `bundle://proof/SB03/browser/codex-process-graphs-loaded-empty.png`
+- `bundle://proof/SB03/browser/process-wide-graphs-loaded.png`
+- `bundle://proof/SB03/browser/process-selected-run-graphs.png`
+- Historical blocker artifacts retained for audit: `bundle://proof/SB02/browser/browser-validation-blocker.md`, `bundle://proof/SB03/browser/browser-validation-blocker.md`, `bundle://proof/SB03/browser/stale-server-processes-desktop.png`.
 
 ## Subbundle Gate Results
 
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
 | `01-01-token-usage-cost-accounting` | `Passed by prepared bundle review` | `Passed by manifest and targeted tests` | `SB02/SB03 consume persisted metrics` | `Passed` | Critical accounting foundation proved by unit and integration tests. |
-| `02-02-history-analytics-data` | `Passed after SB01 tests` | `Passed for code/test proof; browser blocked` | `SB03 consumes scoped observation query` | `Passed with browser blocker` | Completed priced runs and scoped graph data proved by component tests. |
-| `03-03-process-workspace-graph-tabs` | `Passed after SB02 tests` | `Passed for code/test proof; browser blocked` | `Final UI route browser proof blocked` | `Passed with browser blocker` | Lazy process and run graph tabs proved by component tests. |
+| `02-02-history-analytics-data` | `Passed after SB01 tests` | `Passed with code/test and browser proof` | `SB03 consumes scoped observation query` | `Passed` | Completed priced runs, scoped graph data, and one-day Live Processes cost graph proved. |
+| `03-03-process-workspace-graph-tabs` | `Passed after SB02 tests` | `Passed with code/test and browser proof` | `Final UI route browser proof captured` | `Passed` | Lazy process and run graph tabs proved by component tests and screenshots. |
 
 ## Browser Validation Analytics
 
 | Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
-| `02-02-history-analytics-data` | `processes live route` | `1600x900` | `Fresh updated host blocked before route load by PostgreSQL baseline mismatch` | `bundle://proof/SB02/browser/browser-validation-blocker.md` | `Blocked` |
-| `03-03-process-workspace-graph-tabs` | `processes route` | `1600x900` | `Existing host loaded stale build; isolated updated host blocked before route load by PostgreSQL baseline mismatch` | `bundle://proof/SB03/browser/browser-validation-blocker.md` | `Blocked` |
+| `02-02-history-analytics-data` | `/processes/live` | `1600x900` | `Range set to 1 day; Graphs tab rendered 1 observed run, 3.2K context, and Process cost chart` | `bundle://proof/SB02/browser/live-processes-one-day-graphs.png` | `Passed` |
+| `03-03-process-workspace-graph-tabs` | `/processes` | `1600x900` | `Process Graphs tab first showed explicit load button, then rendered all-runs charts for 1 run after click` | `bundle://proof/SB03/browser/codex-process-graphs-before-load.png`, `bundle://proof/SB03/browser/process-wide-graphs-loaded.png` | `Passed` |
+| `03-03-process-workspace-graph-tabs` | `/processes` | `1600x900` | `Selected run Graphs tab loaded only after nested tab selection and rendered selected-run charts` | `bundle://proof/SB03/browser/process-selected-run-graphs.png` | `Passed` |
 
 ## Analytics Review
 
-- Backend and component evidence is strong enough for the accounting, history inclusion, scoped query, and lazy-load behaviors.
-- Browser evidence is not strong enough to visually close the UI route because the updated web host cannot start against the current local PostgreSQL profile.
-- The stale existing host was intentionally not used as proof for the updated UI.
-- Subbundle progression proceeded because component tests directly proved the requested lazy-load and scoped graph behavior, but final visual proof should be rerun after database baseline repair or a disposable database profile is available.
+- Backend, component, and browser evidence is strong enough for the accounting, history inclusion, scoped query, lazy-load behavior, and chart rendering surfaces.
+- The default local PostgreSQL profile still has a baseline mismatch; browser validation used a disposable PostgreSQL database to avoid mutating that profile.
+- The stale existing host remains intentionally excluded from proof for the updated UI.
 
 ## SB01 Semantic Adequacy Evidence
 
@@ -89,14 +90,14 @@
 | `N002` | `Solved by code/test proof` | `bundle://proof/SB01/transcripts/integration-execution-tracking.txt` |
 | `N003` | `Solved by code/test proof` | `bundle://proof/SB01/transcripts/integration-execution-tracking.txt`, `bundle://proof/SB01/transcripts/unit-provider-pricing.txt` |
 | `N004` | `Solved by code/test proof` | `bundle://proof/SB01/semantic-invariants.md` |
-| `N005` | `Solved by code/test proof; browser blocked` | `bundle://proof/SB02/transcripts/component-history-and-scope-tests.txt`, `bundle://proof/SB02/browser/browser-validation-blocker.md` |
-| `N006` | `Solved by code/test proof; browser blocked` | `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`, `bundle://proof/SB03/browser/browser-validation-blocker.md` |
-| `N007` | `Solved by code/test proof; browser blocked` | `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`, `bundle://proof/SB03/browser/browser-validation-blocker.md` |
-| `N008` | `Solved by code/test proof; browser blocked` | `bundle://proof/SB02/transcripts/component-history-and-scope-tests.txt`, `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt` |
-| `N009` | `Solved by code/test proof; browser blocked` | `bundle://proof/SB03/transcripts/source-assertions.txt`, `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt` |
+| `N005` | `Solved by code/test/browser proof` | `bundle://proof/SB02/transcripts/component-history-and-scope-tests.txt`, `bundle://proof/SB02/browser/live-processes-one-day-graphs.png` |
+| `N006` | `Solved by code/test/browser proof` | `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`, `bundle://proof/SB03/browser/process-wide-graphs-loaded.png` |
+| `N007` | `Solved by code/test/browser proof` | `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`, `bundle://proof/SB03/browser/process-selected-run-graphs.png` |
+| `N008` | `Solved by code/test/browser proof` | `bundle://proof/SB02/transcripts/component-history-and-scope-tests.txt`, `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`, `bundle://proof/SB02/browser/live-processes-one-day-graphs.png` |
+| `N009` | `Solved by code/test/browser proof` | `bundle://proof/SB03/transcripts/source-assertions.txt`, `bundle://proof/SB03/transcripts/component-lazy-graph-tests.txt`, `bundle://proof/SB03/browser/codex-process-graphs-before-load.png` |
 
 ## Residual Risks
 
-- Real browser visual proof is blocked until the local PostgreSQL profile matches the merged baseline or a disposable profile is available.
+- The default local PostgreSQL profile still fails the merged baseline check; the validated host used disposable database `candoitall_codex_graphs_20260601`.
 - Existing EF Core assembly conflict warnings remain unrelated to this change.
-- The already-running local app was stale during validation and was not stopped.
+- The seeded browser run failed because Cognitive Memory context requires a project scope; that failure was useful for history/cost graph proof and is unrelated to graph rendering.

@@ -1,7 +1,7 @@
 # SB03 Proof Manifest
 
 - Subbundle: `03-03-process-workspace-graph-tabs`
-- Status: `Implemented; browser screenshot blocked by local database baseline`
+- Status: `Implemented; browser screenshots captured with disposable PostgreSQL profile`
 - Owned requirements: R005, R006, R007, R008
 - Owned raw notes: N006, N007, N008, N009
 - Semantic invariant contract: `bundle://proof/SB03/semantic-invariants.md`
@@ -30,7 +30,8 @@
 - Source assertions: `bundle://proof/SB03/transcripts/source-assertions.txt`
 - Anti-stub audit: `bundle://proof/SB03/transcripts/anti-stub-audit.txt`
 - Browser host attempt: `bundle://proof/SB03/transcripts/web-isolated-build-and-browser-blocker.txt`
-- Browser blocker: `bundle://proof/SB03/browser/browser-validation-blocker.md`
+- Browser proof: `bundle://proof/SB03/browser/codex-process-graphs-before-load.png`, `bundle://proof/SB03/browser/process-wide-graphs-loaded.png`, `bundle://proof/SB03/browser/process-selected-run-graphs.png`
+- Historical browser blocker: `bundle://proof/SB03/browser/browser-validation-blocker.md`
 
 ## Failing-First And Passing Proof
 
@@ -41,9 +42,9 @@
 
 ## Browser Or Host Proof
 
-- Updated web app compiled from isolated output with zero errors.
-- Updated browser route could not be hosted because the local PostgreSQL baseline check refused startup.
-- Browser screenshot proof is blocked; see `bundle://proof/SB03/browser/browser-validation-blocker.md`.
+- Updated web app was hosted on `http://localhost:5034` with disposable PostgreSQL database `candoitall_codex_graphs_20260601`.
+- Process-wide `Graphs` tab first showed the explicit all-runs load button and default one-month range; after clicking the button it rendered all-runs graphs for one run.
+- Selected-run `Graphs` tab loaded after nested tab selection and rendered the selected-run graph panel.
 
 ## Anti-Stub Audit
 

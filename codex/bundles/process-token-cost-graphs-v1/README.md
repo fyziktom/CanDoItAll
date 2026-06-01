@@ -43,7 +43,7 @@ This bundle is a coordination and execution package for `process-token-cost-grap
 ## Validation Summary
 
 - Bundle preparation status: `Prepared`
-- Execution status: `Implemented; browser validation blocked by local PostgreSQL baseline`
+- Execution status: `Implemented; browser validated with disposable PostgreSQL profile`
 - Subbundle gate review: `SB01-SB03 implemented with targeted test proof`
 - Final closure gate: `Completed-stage validator passed`
-- Browser validation analytics: `Blocked for updated routes; see proof/SB02 and proof/SB03 browser blocker notes`
+- Browser validation analytics: `Passed on 2026-06-01 against localhost:5034 disposable PostgreSQL database; default local profile still has baseline mismatch`
