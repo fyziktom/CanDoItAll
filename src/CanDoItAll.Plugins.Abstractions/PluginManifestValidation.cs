@@ -228,6 +228,34 @@ public static class PluginManifestValidator
                     descriptor.Id));
             }
 
+            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData) &&
+                !executor.SideEffects.WritesExternalState)
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' writes external data but does not declare an external-write side-effect contract.",
+                    descriptor.Id));
+            }
+
+            if (executor.SideEffects.WritesExternalState &&
+                !requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData))
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' declares external-write side effects but does not require the WritesExternalData capability.",
+                    descriptor.Id));
+            }
+
+            if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker) &&
+                (executor.SideEffects.ExternalMutationKind != WorkflowExecutorExternalMutationKind.ProcessedMarker ||
+                 !executor.SideEffects.AllowsIdempotentRetry))
+            {
+                issues.Add(new PluginManifestValidationIssue(
+                    PluginManifestValidationIssueCode.InconsistentPermissionPolicy,
+                    $"Plugin '{descriptor.Id}' workflow executor '{executor.ExecutorId}' declares an idempotent external marker capability but does not expose a retry-safe processed-marker side-effect contract.",
+                    descriptor.Id));
+            }
+
             if (requiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.RunsHostCommand) &&
                 executor.PermissionPolicy.ApprovalRequirement != WorkflowExecutorApprovalRequirement.AlwaysRequired)
             {

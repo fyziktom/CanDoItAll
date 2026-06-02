@@ -185,6 +185,30 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
             }
         }
 
+        foreach (var observation in document.ProviderUsageObservations.Where(item => item.ExecutionRunId.HasValue))
+        {
+            if (observation.AgentId.HasValue && !agentIds.Contains(observation.AgentId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"Provider usage observation '{observation.Id:N}' references missing agent '{observation.AgentId.Value:N}'.");
+            }
+
+            if (!runIds.Contains(observation.ExecutionRunId.Value))
+            {
+                throw new InvalidOperationException(
+                    $"Provider usage observation '{observation.Id:N}' references missing execution run '{observation.ExecutionRunId.Value:N}'.");
+            }
+        }
+
+        foreach (var observation in document.ProviderUsageObservations.Where(item => item.ChatSessionId.HasValue))
+        {
+            if (!sessionIds.Contains(observation.ChatSessionId!.Value))
+            {
+                throw new InvalidOperationException(
+                    $"Provider usage observation '{observation.Id:N}' references missing chat session '{observation.ChatSessionId.Value:N}'.");
+            }
+        }
+
         foreach (var memoryRecord in document.Memory)
         {
             if (agentIds.Contains(memoryRecord.AgentId))
@@ -243,6 +267,11 @@ internal static class SandboxWorkspaceDocumentInvariantValidator
         EnsureAllRunsExist(document.ExecutionArtifacts.Select(item => (item.ExecutionRunId, $"Execution artifact '{item.Id:N}'")), runIds);
         EnsureAllRunsExist(document.ExecutionWorkflowCheckpoints.Select(item => (item.ExecutionRunId, $"Execution checkpoint '{item.Id:N}'")), runIds);
         EnsureAllRunsExist(document.ToolExecutionReceipts.Select(item => (item.ExecutionRunId, $"Tool execution receipt '{item.Id:N}'")), runIds);
+        EnsureAllRunsExist(
+            document.ProviderUsageObservations
+                .Where(item => item.ExecutionRunId.HasValue)
+                .Select(item => (item.ExecutionRunId!.Value, $"Provider usage observation '{item.Id:N}'")),
+            runIds);
     }
 
     private static void EnsureAllRunsExist(

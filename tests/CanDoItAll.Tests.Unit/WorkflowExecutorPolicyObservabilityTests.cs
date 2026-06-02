@@ -124,6 +124,109 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
     }
 
     [Fact]
+    public void PluginPolicy_validator_rejects_non_idempotent_external_write_retry_policy()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.unsafe-retry") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.WritesExternalData,
+                WorkflowExecutorApprovalRequirement.NotRequired),
+            SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalWrite(
+                WorkflowExecutorExternalMutationKind.None,
+                requiresCommitIdempotencyKey: true,
+                allowsIdempotentRetry: false,
+                "$.externalSideEffectReceipt.idempotencyKey",
+                "test-receipt/v1")
+        };
+        var executor = new RecordingPluginExecutor(descriptor);
+        var node = CreateNode(
+            descriptor.Id,
+            "{}",
+            WorkflowExecutorExecutionPolicy.Default with
+            {
+                MaxRetryAttempts = 1
+            });
+        var validator = new WorkflowDefinitionValidator(new WorkflowExecutorCatalog([executor]));
+
+        var result = validator.Validate(CreateDefinition(node), []);
+
+        Assert.Contains(result.Issues, issue =>
+            issue.Code == WorkflowValidationIssueCode.InvalidExecutionPolicy &&
+            issue.Message.Contains("writes external state", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task PluginPolicy_invoker_rejects_non_idempotent_external_write_retry_before_execution()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.unsafe-retry-invoker") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.WritesExternalData,
+                WorkflowExecutorApprovalRequirement.NotRequired),
+            SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalWrite(
+                WorkflowExecutorExternalMutationKind.None,
+                requiresCommitIdempotencyKey: true,
+                allowsIdempotentRetry: false,
+                "$.externalSideEffectReceipt.idempotencyKey",
+                "test-receipt/v1")
+        };
+        var executor = new RecordingPluginExecutor(descriptor);
+        var invoker = new WorkflowExecutorInvoker(new WorkflowExecutorCatalog([executor]), [executor]);
+        var node = CreateNode(
+            descriptor.Id,
+            "{}",
+            WorkflowExecutorExecutionPolicy.Default with
+            {
+                MaxRetryAttempts = 1
+            });
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            invoker.ExecuteAsync(
+                CreateDefinition(node),
+                node,
+                new WorkflowNodeInput("{}")).AsTask());
+
+        Assert.Contains("writes external state", exception.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(0, executor.InvocationCount);
+    }
+
+    [Fact]
+    public async Task PluginPolicy_invoker_allows_retry_for_idempotent_processed_marker_contract()
+    {
+        var descriptor = CreatePluginDescriptor("plugin.policy.safe-marker-retry") with
+        {
+            PermissionPolicy = new WorkflowExecutorPermissionPolicy(
+                WorkflowExecutorCapabilityFlags.WritesExternalData | WorkflowExecutorCapabilityFlags.IdempotentExternalMarker,
+                WorkflowExecutorApprovalRequirement.NotRequired),
+            SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+                "$.externalSideEffectReceipt.idempotencyKey",
+                "test-receipt/v1")
+        };
+        var executor = new RecordingPluginExecutor(descriptor)
+        {
+            FailuresBeforeSuccess = 1,
+            OutputPayloadJson = """{"status":"processed"}"""
+        };
+        var invoker = new WorkflowExecutorInvoker(new WorkflowExecutorCatalog([executor]), [executor]);
+        var node = CreateNode(
+            descriptor.Id,
+            "{}",
+            WorkflowExecutorExecutionPolicy.Default with
+            {
+                MaxRetryAttempts = 1,
+                RetryDelayMilliseconds = 1
+            });
+
+        var result = await invoker.ExecuteAsync(
+            CreateDefinition(node),
+            node,
+            new WorkflowNodeInput("{}"));
+
+        Assert.Equal("""{"status":"processed"}""", result.PayloadJson);
+        Assert.Equal(2, executor.InvocationCount);
+    }
+
+    [Fact]
     public async Task PluginPolicy_invoker_rejects_approval_required_executor_without_gate()
     {
         var descriptor = CreatePluginDescriptor("plugin.policy.approval") with
@@ -246,7 +349,10 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
             Source = WorkflowExecutorSourceDescriptor.BundledPlugin("sample.plugin", "1.0.0")
         };
 
-    private static WorkflowNode CreateNode(WorkflowExecutorId executorId, string settingsJson)
+    private static WorkflowNode CreateNode(
+        WorkflowExecutorId executorId,
+        string settingsJson,
+        WorkflowExecutorExecutionPolicy? policy = null)
         => new(
             new WorkflowNodeId("plugin-node"),
             WorkflowNodeKind.Executor,
@@ -263,12 +369,17 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
             {
                 ExecutorId = executorId,
                 ExecutorSettingsJson = settingsJson,
-                ExecutionPolicy = WorkflowExecutorExecutionPolicy.Default
+                ExecutionPolicy = policy ?? WorkflowExecutorExecutionPolicy.Default
             });
 
     private static WorkflowDefinition CreateDefinition(WorkflowExecutorId executorId, string settingsJson)
     {
         var node = CreateNode(executorId, settingsJson);
+        return CreateDefinition(node);
+    }
+
+    private static WorkflowDefinition CreateDefinition(WorkflowNode node)
+    {
         return new WorkflowDefinition(
             WorkflowId.New(),
             WorkflowVersionId.New(),
@@ -294,6 +405,8 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
 
         public Exception? Failure { get; init; }
 
+        public int FailuresBeforeSuccess { get; init; }
+
         public int InvocationCount { get; private set; }
 
         public ValueTask<WorkflowNodeExecutionResult> ExecuteAsync(
@@ -302,6 +415,11 @@ public sealed class WorkflowExecutorPolicyObservabilityTests
             CancellationToken cancellationToken = default)
         {
             InvocationCount++;
+            if (InvocationCount <= FailuresBeforeSuccess)
+            {
+                throw new InvalidOperationException("Transient executor failure for retry-policy test.");
+            }
+
             if (Failure is not null)
             {
                 throw Failure;

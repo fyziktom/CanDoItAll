@@ -2023,10 +2023,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .Select(item => item.Id)
                 .ToHashSet()
                 ?? [];
+            var sourceProcessRunIds = sourceStepRuns?
+                .Select(item => item.ProcessRunId)
+                .ToHashSet()
+                ?? [];
             var matchingArtifacts = existingArtifacts
                 .Where(item =>
-                    item.StepRunId.HasValue &&
-                    sourceStepRunIds.Contains(item.StepRunId.Value) &&
+                    IsCurrentRunUpstreamArtifactInput(item, sourceStepRunIds, sourceProcessRunIds) &&
                     SatisfiesExpectedArtifactInput(item, artifactExpectation))
                 .OrderByDescending(item => item.CreatedAtUtc)
                 .Take(3)
@@ -2051,6 +2054,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return resolvedInputs;
+    }
+
+    internal static bool IsCurrentRunUpstreamArtifactInput(
+        ProcessArtifactRecord artifact,
+        IReadOnlySet<Guid> sourceStepRunIds,
+        IReadOnlySet<Guid> sourceProcessRunIds)
+    {
+        if (!artifact.StepRunId.HasValue ||
+            !sourceStepRunIds.Contains(artifact.StepRunId.Value) ||
+            !sourceProcessRunIds.Contains(artifact.ProcessRunId))
+        {
+            return false;
+        }
+
+        return ProcessArtifactLineageValidator
+            .ValidateManagedStorageBoundary(artifact, artifact.ProcessRunId)
+            .IsCurrentRun;
     }
 
     private static string BuildArtifactInputSummary(IReadOnlyList<DispatchArtifactInput> artifactInputs)

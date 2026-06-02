@@ -932,28 +932,6 @@ public partial class AgentDetailsDialog
         };
     }
 
-    private static string ResolveProofTone(CapabilityProofStatus status)
-    {
-        return status switch
-        {
-            CapabilityProofStatus.Verified => "success",
-            CapabilityProofStatus.PendingReview => "warning",
-            CapabilityProofStatus.Failed => "danger",
-            _ => "neutral"
-        };
-    }
-
-    private static string ResolveProofLabel(CapabilityProofStatus status)
-    {
-        return status switch
-        {
-            CapabilityProofStatus.Verified => "Verified",
-            CapabilityProofStatus.PendingReview => "Pending review",
-            CapabilityProofStatus.Failed => "Failed",
-            _ => "Not run"
-        };
-    }
-
     private static string ResolveEndpointSummary(CapabilityCatalogItem capability)
     {
         return string.IsNullOrWhiteSpace(capability.EndpointOrPath)

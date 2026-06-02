@@ -44,6 +44,7 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.UsesSecrets |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
             WorkflowExecutorApprovalRequirement.NotRequired),
+        SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Gmail messages without calling Gmail.")
     };
 
@@ -123,13 +124,21 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
         GmailWorkflowExecutorSettings settings,
         PluginConnectionId connectionId,
         PluginEmailMessageBatch batch)
-        => new()
+    {
+        var selectedMessageId = batch.Messages.FirstOrDefault()?.Id ?? string.Empty;
+        return new JsonObject
         {
             ["connectionId"] = connectionId.ToString(),
             ["sourceLabel"] = settings.Label,
             ["processedLabel"] = settings.ProcessedLabel,
-            ["messageIds"] = JsonSerializer.SerializeToNode(batch.Messages.Select(message => message.Id).ToArray(), JsonOptions)
+            ["messageIds"] = JsonSerializer.SerializeToNode(batch.Messages.Select(message => message.Id).ToArray(), JsonOptions),
+            ["selectedMessageId"] = selectedMessageId,
+            ["idempotencyKey"] = CreateGmailIdempotencyKey(selectedMessageId),
+            ["idempotencyKeys"] = JsonSerializer.SerializeToNode(
+                batch.Messages.Select(message => CreateGmailIdempotencyKey(message.Id)).ToArray(),
+                JsonOptions)
         };
+    }
 
     private static JsonObject CreateRunContext(
         JsonObject workflowInput,
@@ -168,6 +177,11 @@ public sealed class GmailDownloadByLabelWorkflowExecutor(
             target[propertyName] = value.DeepClone();
         }
     }
+
+    private static string CreateGmailIdempotencyKey(string messageId)
+        => string.IsNullOrWhiteSpace(messageId)
+            ? string.Empty
+            : $"{EmailWorkflowSideEffectConstants.GmailIdempotencyPrefix}{messageId.Trim()}";
 
     private WorkflowExecutorAvailabilityDescriptor ResolveAvailability()
     {
@@ -228,6 +242,9 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
             WorkflowExecutorApprovalRequirement.NotRequired),
+        SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+            "$.externalSideEffectReceipt.idempotencyKey",
+            EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
     };
 
@@ -284,8 +301,15 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
             ["sourceLabel"] = result.SourceLabel,
             ["processedLabel"] = result.ProcessedLabel,
             ["sourceLabelRemoved"] = result.SourceLabelRemoved,
-            ["processedLabelAdded"] = result.ProcessedLabelAdded
+            ["processedLabelAdded"] = result.ProcessedLabelAdded,
+            ["sideEffectMode"] = EmailWorkflowSideEffectConstants.CommitMode,
+            ["dryRun"] = false
         };
+        var receipt = CreateProcessedMarkerReceipt(result);
+        payload["committed"] = receipt["mutationApplied"]?.GetValue<bool>() ?? false;
+        payload["idempotencyRecord"] = CreateIdempotencyRecord(result.Provider, result.MessageId);
+        payload["processedMarker"] = CreateProcessedMarkerRecord(result);
+        payload["externalSideEffectReceipt"] = receipt;
 
         if (TryParseObject(input.PayloadJson, out var workflowInput))
         {
@@ -294,6 +318,53 @@ public sealed class GmailMarkProcessedWorkflowExecutor(
 
         return payload.ToJsonString(JsonOptions);
     }
+
+    private static JsonObject CreateProcessedMarkerReceipt(GmailMessageLabelMutationResult result)
+        => new()
+        {
+            ["schemaVersion"] = EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema,
+            ["provider"] = result.Provider,
+            ["operation"] = EmailWorkflowSideEffectConstants.Operation,
+            ["mode"] = EmailWorkflowSideEffectConstants.CommitMode,
+            ["dryRun"] = false,
+            ["committed"] = result.SourceLabelRemoved || result.ProcessedLabelAdded,
+            ["mutationApplied"] = result.SourceLabelRemoved || result.ProcessedLabelAdded,
+            ["idempotencyKey"] = CreateGmailIdempotencyKey(result.MessageId),
+            ["messageId"] = result.MessageId,
+            ["sourceMarkerName"] = result.SourceLabel,
+            ["processedMarkerName"] = result.ProcessedLabel,
+            ["sourceMarkerRemoved"] = result.SourceLabelRemoved,
+            ["processedMarkerAdded"] = result.ProcessedLabelAdded,
+            ["retrySafe"] = true
+        };
+
+    private static JsonObject CreateIdempotencyRecord(
+        string provider,
+        string messageId)
+        => new()
+        {
+            ["provider"] = provider,
+            ["operation"] = EmailWorkflowSideEffectConstants.Operation,
+            ["key"] = CreateGmailIdempotencyKey(messageId),
+            ["messageId"] = messageId,
+            ["retrySafe"] = true
+        };
+
+    private static JsonObject CreateProcessedMarkerRecord(GmailMessageLabelMutationResult result)
+        => new()
+        {
+            ["provider"] = result.Provider,
+            ["messageId"] = result.MessageId,
+            ["sourceMarkerName"] = result.SourceLabel,
+            ["processedMarkerName"] = result.ProcessedLabel,
+            ["sourceMarkerRemoved"] = result.SourceLabelRemoved,
+            ["processedMarkerAdded"] = result.ProcessedLabelAdded
+        };
+
+    private static string CreateGmailIdempotencyKey(string messageId)
+        => string.IsNullOrWhiteSpace(messageId)
+            ? string.Empty
+            : $"{EmailWorkflowSideEffectConstants.GmailIdempotencyPrefix}{messageId.Trim()}";
 
     private static bool TryParseObject(
         string json,
@@ -364,6 +435,11 @@ internal static class GmailWorkflowSimulationTemplates
             "processedLabel": "simulated-preview-processed",
             "messageIds": [
               "simulated-gmail-message-1"
+            ],
+            "selectedMessageId": "simulated-gmail-message-1",
+            "idempotencyKey": "gmail:simulated-gmail-message-1",
+            "idempotencyKeys": [
+              "gmail:simulated-gmail-message-1"
             ]
           },
           "projectId": "{{inputPath:$.projectId}}",
@@ -377,6 +453,11 @@ internal static class GmailWorkflowSimulationTemplates
               "processedLabel": "simulated-preview-processed",
               "messageIds": [
                 "simulated-gmail-message-1"
+              ],
+              "selectedMessageId": "simulated-gmail-message-1",
+              "idempotencyKey": "gmail:simulated-gmail-message-1",
+              "idempotencyKeys": [
+                "gmail:simulated-gmail-message-1"
               ]
             }
           },
@@ -401,6 +482,40 @@ internal static class GmailWorkflowSimulationTemplates
           "processedLabel": "simulated-preview-processed",
           "sourceLabelRemoved": true,
           "processedLabelAdded": true,
+          "sideEffectMode": "Preview",
+          "dryRun": true,
+          "committed": false,
+          "idempotencyRecord": {
+            "provider": "gmail",
+            "operation": "processed-marker",
+            "key": "gmail:simulated-gmail-message-1",
+            "messageId": "simulated-gmail-message-1",
+            "retrySafe": true
+          },
+          "processedMarker": {
+            "provider": "gmail",
+            "messageId": "simulated-gmail-message-1",
+            "sourceMarkerName": "simulated-preview-label",
+            "processedMarkerName": "simulated-preview-processed",
+            "sourceMarkerRemoved": true,
+            "processedMarkerAdded": true
+          },
+          "externalSideEffectReceipt": {
+            "schemaVersion": "workflow-email-processed-marker/v1",
+            "provider": "gmail",
+            "operation": "processed-marker",
+            "mode": "Preview",
+            "dryRun": true,
+            "committed": false,
+            "mutationApplied": false,
+            "idempotencyKey": "gmail:simulated-gmail-message-1",
+            "messageId": "simulated-gmail-message-1",
+            "sourceMarkerName": "simulated-preview-label",
+            "processedMarkerName": "simulated-preview-processed",
+            "sourceMarkerRemoved": true,
+            "processedMarkerAdded": true,
+            "retrySafe": true
+          },
           "inputPayload": "{{inputPayload}}",
           "simulation": {
             "nodeId": "{{node.id}}",

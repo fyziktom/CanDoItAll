@@ -53,6 +53,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return invalidEvidenceFileSummary;
         }
 
+        var invalidBrowserProofRecordSummary = ResolveInvalidBrowserProofRecordSummary(
+            candidate,
+            detail,
+            outputsByToolName);
+        if (!string.IsNullOrWhiteSpace(invalidBrowserProofRecordSummary))
+        {
+            return invalidBrowserProofRecordSummary;
+        }
+
         var consoleEvidenceSummary = ResolveInvalidBrowserConsoleEvidenceSummary(
             detail,
             browserWorkingDirectory,
@@ -94,6 +103,55 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (ContainsRuntimeErrorBrowserProof(snapshotText))
             {
                 return "browser proof captured an application runtime error instead of the requested application";
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static string ResolveInvalidBrowserProofRecordSummary(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
+    {
+        var proofRecords = ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
+            .Where(item => ProcessBrowserProofValidator.IsPotentialProofRecordPath(item.Path))
+            .ToList();
+        if (proofRecords.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var context = new ProcessBrowserProofValidationContext(
+            ProcessRunId: candidate.Run.Id,
+            ProcessStepRunId: candidate.StepRun.Id,
+            ExecutionRunId: detail.Run.Id,
+            ProjectId: candidate.Run.ProjectId,
+            ExecutionStartedAtUtc: detail.Run.StartedAtUtc,
+            RuntimeHostUrl: string.Empty,
+            DatabaseProfileId: string.Empty,
+            DatabaseProfileFingerprint: string.Empty,
+            SuccessfulBrowserOutputPaths: outputsByToolName
+                .SelectMany(item => item.Value)
+                .Select(WorkspaceScopeDescriptor.NormalizeRelativePath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase),
+            SuccessfulBrowserToolNames: ResolveSuccessfulToolNames(detail)
+                .Where(toolName => ToolContractCatalog.BrowserToolNames.Contains(toolName, StringComparer.OrdinalIgnoreCase))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase),
+            RequiresRepresentativeInteraction: RequiresRepresentativeBrowserInteractionProof(candidate),
+            RequiresCleanupReceipt: RequiresRuntimeCleanupReceipt(candidate));
+
+        foreach (var proofRecord in proofRecords)
+        {
+            if (!ProcessBrowserProofValidator.TryParse(proofRecord.Content, out var record, out var parseDiagnostic))
+            {
+                return parseDiagnostic;
+            }
+
+            var result = ProcessBrowserProofValidator.Validate(record, context);
+            if (!result.IsValid)
+            {
+                return result.Diagnostic;
             }
         }
 
@@ -204,6 +262,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return CandidateRequiredEvidenceTextContains(candidate, ContainsNaturalBrowserConsoleEvidenceSignal) ||
                CandidateHasDeclaredBrowserEvidencePath(candidate, "browser_console_messages");
+    }
+
+    private static bool RequiresRuntimeCleanupReceipt(DispatchCandidate candidate)
+    {
+        return CandidateRequiredEvidenceTextContains(
+            candidate,
+            static text => text.Contains("cleanup receipt", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool CandidateRequiredEvidenceTextContains(

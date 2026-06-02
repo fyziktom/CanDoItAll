@@ -1,0 +1,66 @@
+- main [ref=e106] [box=12,-564,893,2724]:
+  - group [ref=e107] [box=12,-564,893,46]:
+    - generic "Workspace navigation" [ref=e108] [cursor=pointer] [box=29,-551,859,20]
+  - generic [ref=e109] [box=12,-510,893,76]:
+    - generic [ref=e113] [box=16,-510,885,30]:
+      - button "Dashboard" [ref=e115] [box=25,-505,85,20]:
+        - generic [ref=e116] [box=25,-503,59,16]: Dashboard
+        - generic [ref=e118] [box=90,-505,20,20]: push_pin
+      - button "Workflows" [ref=e120] [box=134,-503,58,16]:
+        - generic [ref=e121] [box=134,-503,58,16]: Workflows
+    - generic [ref=e123] [box=12,-460,893,26]:
+      - generic [ref=e124] [box=400,-460,222,26]:
+        - generic [ref=e125] [box=411,-454,136,13]: Delivery Workspace
+        - generic [ref=e126] [box=553,-455,58,16]: Workflows
+      - generic [ref=e127] [box=630,-460,117,26]: Interactive Server
+      - generic [ref=e128] [box=755,-460,86,26]: Live items 0
+      - generic [ref=e129] [box=849,-460,56,26]: Tabs 2
+  - generic [ref=e194] [box=29,-409,859,2552]:
+    - generic [ref=e196] [box=29,-409,844,102]:
+      - generic [ref=e197] [box=29,-409,548,58]:
+        - generic [ref=e198] [box=29,-409,548,28]:
+          - paragraph [ref=e199] [box=29,-404,119,13]: AgentFramework
+          - heading "Workflows" [level=1] [ref=e200] [box=158,-409,83,28]
+        - generic [ref=e201] [box=29,-373,548,22]:
+          - generic [ref=e204] [box=29,-373,96,22]: 27 definitions
+          - generic [ref=e207] [box=133,-373,132,22]: 33 LLM components
+          - generic [ref=e210] [box=274,-373,56,22]: 0 runs
+          - generic [ref=e213] [box=337,-373,109,22]: 0 pending input
+          - generic [ref=e216] [box=455,-373,123,22]: InProcess backend
+      - generic [ref=e217] [box=29,-343,124,36]:
+        - button "Refresh" [ref=e219] [box=29,-343,36,36]:
+          - generic [ref=e220] [box=37,-335,20,20]: refresh
+          - generic [ref=e221] [box=47,-325,1,1]: refresh
+        - button "Create starter" [ref=e223] [box=73,-343,36,36]:
+          - generic [ref=e224] [box=81,-335,20,20]: add
+          - generic [ref=e225] [box=91,-325,1,1]: add
+        - button "Open agents" [ref=e227] [box=117,-343,36,36]:
+          - generic [ref=e228] [box=125,-335,20,20]: support_agent
+          - generic [ref=e229] [box=135,-325,1,1]: support agent
+    - generic [ref=e231] [box=29,-293,844,2436]:
+      - tablist "Workflow workspace tabs" [ref=e232] [box=29,-293,844,101]:
+        - tab "Dashboard" [ref=e233] [box=33,-293,139,46]:
+          - generic [ref=e234] [box=50,-280,20,20]: dashboard
+          - generic [ref=e235] [box=78,-282,77,24]: Dashboard
+        - tab "Workflows 27" [ref=e236] [box=180,-293,174,46]:
+          - generic [ref=e237] [box=197,-280,20,20]: list_alt
+          - generic [ref=e238] [box=225,-282,74,24]: Workflows
+          - generic [ref=e239] [box=307,-279,31,19]: "27"
+        - tab "Editor" [selected] [ref=e240] [box=362,-292,104,46]:
+          - generic [ref=e241] [box=379,-279,20,20]: edit_square
+          - generic [ref=e242] [box=407,-281,42,24]: Editor
+        - tab "Templates 33" [ref=e277] [box=474,-293,172,46]:
+          - generic [ref=e244] [box=491,-280,20,20]: content_copy
+          - generic [ref=e245] [box=519,-282,71,24]: Templates
+          - generic [ref=e246] [box=598,-279,31,19]: "33"
+        - tab "History 0" [ref=e247] [box=654,-293,144,46]:
+          - generic [ref=e248] [box=671,-280,20,20]: history
+          - generic [ref=e249] [box=699,-282,50,24]: History
+          - generic [ref=e250] [box=757,-279,24,19]: "0"
+        - tab "Analytics" [ref=e251] [box=33,-238,125,46]:
+          - generic [ref=e252] [box=50,-225,20,20]: query_stats
+          - generic [ref=e253] [box=78,-227,63,24]: Analytics
+      - tabpanel "Editor" [ref=e278] [box=29,-193,844,2336]:
+        - generic [ref=e281] [box=67,-155,768,2260]:
+          - generic [ref=e282] [box=67,-155,768,994]
+          - complementary [ref=e550] [box=67,859,768,1246]

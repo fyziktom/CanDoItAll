@@ -105,6 +105,42 @@ public sealed class ProviderPricingTests
     }
 
     [Fact]
+    public void Usage_summary_counts_only_observed_usage_as_known_actual_cost()
+    {
+        var provider = CreateProvider(
+            "Provider A",
+            [new ProviderModelTokenPrice("model-a", 1.00m, 0.10m, 4.00m)]);
+        var observed = CreateUsageObservation(
+            ProviderUsageObservationStatus.Observed,
+            inputTokens: 1_000_000,
+            cachedInputTokens: 250_000,
+            outputTokens: 500_000);
+        var estimated = CreateUsageObservation(
+            ProviderUsageObservationStatus.EstimatedFromMetric,
+            inputTokens: 1_000_000,
+            cachedInputTokens: 0,
+            outputTokens: 500_000);
+        var unknown = CreateUsageObservation(
+            ProviderUsageObservationStatus.MissingAfterProviderActivity,
+            inputTokens: 0,
+            cachedInputTokens: 0,
+            outputTokens: 0);
+
+        var summary = ProviderPricingCalculator.SummarizeUsage([observed, estimated, unknown], [provider]);
+
+        Assert.Equal(3, summary.ObservationCount);
+        Assert.Equal(1, summary.KnownObservationCount);
+        Assert.Equal(2, summary.UnknownObservationCount);
+        Assert.Equal(1_000_000, summary.InputTokens);
+        Assert.Equal(250_000, summary.CachedInputTokens);
+        Assert.Equal(500_000, summary.OutputTokens);
+        Assert.Equal(1_500_000, summary.TotalTokens);
+        Assert.Equal(2.775m, summary.KnownCostUsd);
+        Assert.False(ProviderPricingCalculator.TryResolveObservationCost(estimated, [provider], out _));
+        Assert.False(ProviderPricingCalculator.TryResolveObservationCost(unknown, [provider], out _));
+    }
+
+    [Fact]
     public void Pricing_metadata_round_trips_without_breaking_flat_configuration_state()
     {
         var json = ProviderPricingMetadata.Write(
@@ -123,5 +159,55 @@ public sealed class ProviderPricingTests
         Assert.Single(metadata.ModelPrices);
         Assert.Equal("https://api.openai.com/v1/models", flatConfiguration.GetText("baseUrl"));
         Assert.Equal("gpt-5.4-mini", flatConfiguration.GetText("defaultModel"));
+    }
+
+    private static ProviderProfile CreateProvider(
+        string name,
+        IReadOnlyList<ProviderModelTokenPrice> prices)
+    {
+        return new ProviderProfile(
+            Id: Guid.NewGuid(),
+            Name: name,
+            Kind: ProviderKind.OpenAi,
+            BaseUrl: "https://api.example.test/v1",
+            ApiKeyEnvironmentVariable: "TEST_API_KEY",
+            DefaultModel: "model-a",
+            Transport: ProviderTransportKind.Responses,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: true,
+            ConfigurationJson: "{}",
+            Notes: string.Empty,
+            HealthStatus: "ok",
+            LastCheckedAtUtc: null,
+            SuggestedModels: [])
+        {
+            ModelPrices = prices
+        };
+    }
+
+    private static ProviderUsageObservation CreateUsageObservation(
+        ProviderUsageObservationStatus status,
+        int inputTokens,
+        int cachedInputTokens,
+        int outputTokens)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: "Provider A",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "model-a",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: status,
+            InputTokens: inputTokens,
+            CachedInputTokens: cachedInputTokens,
+            OutputTokens: outputTokens,
+            ReasoningTokens: 0,
+            TotalTokens: inputTokens + outputTokens,
+            ToolCallCount: 0);
     }
 }

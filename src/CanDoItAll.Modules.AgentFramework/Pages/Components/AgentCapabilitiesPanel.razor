@@ -144,8 +144,11 @@
                                     <Stack GapScale="LayoutGap.Small">
                                         <Cluster Gap="LayoutGap.XSmall" Wrap="FlexWrap.Wrap">
                                             <StatusBadge Tone="info" Text="@ResolveCapabilityKindLabel(capability.Kind)" />
-                                            <StatusBadge Tone="@ResolveProofTone(capability.ProofStatus)"
-                                                         Text="@ResolveProofLabel(capability.ProofStatus)" />
+                                            @{
+                                                var proofBadge = CapabilityProofDisplayAdapter.BuildBadge(capability.ProofStatus);
+                                            }
+                                            <StatusBadge Tone="@proofBadge.Tone"
+                                                         Text="@proofBadge.Text" />
                                             <StatusBadge Tone="@(isAttached ? "success" : "neutral")"
                                                          Text="@(isAttached ? "Attached" : "Available")" />
                                         </Cluster>

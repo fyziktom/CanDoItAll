@@ -189,6 +189,121 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         Assert.Equal(24, metric.OutputTokens);
         Assert.Equal(1, metric.ToolCalls);
         Assert.Equal(result.ExecutionRunId, metric.ExecutionRunId);
+
+        var usage = Assert.Single(detail.UsageObservations);
+        Assert.Equal(ProviderUsageObservationStatus.ObservedFromMetric, usage.UsageStatus);
+        Assert.Equal(ProviderUsageSourcePhases.AgentRuntime, usage.SourcePhase);
+        Assert.Equal(12, usage.InputTokens);
+        Assert.Equal(5, usage.CachedInputTokens);
+        Assert.Equal(24, usage.OutputTokens);
+        Assert.Equal(36, usage.TotalTokens);
+        Assert.Equal("run-001", usage.ProcessRunId);
+        Assert.Equal("step-001", usage.ProcessStepId);
+        Assert.Equal(result.ExecutionRunId, usage.ExecutionRunId);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_preserves_usage_when_runtime_fails_after_provider_call()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-runtime-failure-usage");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    ThrowUsageExceptionOnRun = true,
+                    InitialPendingApprovals = [],
+                    InitialUsageObservations =
+                    [
+                        CreateUsageObservation(ProviderUsageSourcePhases.AgentRuntime, 31, 4, 9)
+                    ]
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var runtime = scope.ServiceProvider.GetRequiredService<StructuredOutputApprovalRuntime>();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        await Assert.ThrowsAsync<AgentRunFailedException>(() =>
+            workspaceService.ExecuteRunAsync(
+                new ExecutionRunRequest(
+                    agent.Id,
+                    "Fail after provider usage is available.",
+                    ChatSessionId: null,
+                    Context: CreateProcessStepContext())));
+
+        var executionRunId = Assert.Single(runtime.ObservedExecutionRunIds);
+        var failedDetail = await executionRunStore.GetExecutionRunDetailAsync(executionRunId);
+
+        Assert.NotNull(failedDetail);
+        Assert.Equal(ExecutionState.Failed, failedDetail.Run.State);
+        var usage = Assert.Single(failedDetail.UsageObservations);
+        Assert.Equal(ProviderUsageObservationStatus.Observed, usage.UsageStatus);
+        Assert.Equal(31, usage.InputTokens);
+        Assert.Equal(4, usage.CachedInputTokens);
+        Assert.Equal(9, usage.OutputTokens);
+        Assert.Equal(executionRunId, usage.ExecutionRunId);
+        Assert.Equal("run-001", usage.ProcessRunId);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_links_structured_output_repair_usage_to_execution_run()
+    {
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-repair-usage");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialResponseText = "not machine json",
+                    InitialPendingApprovals = []
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                services.RemoveAll<IAgentOutputRepairService>();
+                services.AddSingleton<IAgentOutputRepairService>(new UsageReportingRepairService());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Repair invalid structured output.",
+                ChatSessionId: null,
+                Context: CreateProcessStepContext(),
+                StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Completed, detail.Run.State);
+        Assert.Contains(detail.UsageObservations, item => item.SourcePhase == ProviderUsageSourcePhases.AgentRuntime);
+        var repairUsage = Assert.Single(detail.UsageObservations, item => item.SourcePhase == ProviderUsageSourcePhases.StructuredOutputRepair);
+        Assert.Equal(ProviderUsageObservationStatus.Observed, repairUsage.UsageStatus);
+        Assert.Equal(3, repairUsage.InputTokens);
+        Assert.Equal(1, repairUsage.CachedInputTokens);
+        Assert.Equal(2, repairUsage.OutputTokens);
+        Assert.Equal(result.ExecutionRunId, repairUsage.ExecutionRunId);
+        Assert.Equal("run-001", repairUsage.ProcessRunId);
     }
 
     [Fact]
@@ -236,6 +351,11 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         Assert.NotNull(failedDetail);
         Assert.Equal(ExecutionState.Failed, failedDetail.Run.State);
         Assert.Equal(RunOutcome.Failed, failedDetail.Run.Outcome);
+        var usage = Assert.Single(failedDetail.UsageObservations);
+        Assert.Equal(ProviderUsageObservationStatus.ObservedFromMetric, usage.UsageStatus);
+        Assert.Equal(7, usage.InputTokens);
+        Assert.Equal(11, usage.OutputTokens);
+        Assert.Equal(executionRunId, usage.ExecutionRunId);
         Assert.Contains(
             failedDetail.ExecutionLog,
             entry => entry.Phase == "Output validation" &&
@@ -288,6 +408,69 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             entry => entry.Phase == "Finalizer validation" &&
                      entry.Message.Contains("Shadow finalizer tool", StringComparison.Ordinal) &&
                      entry.Message.Contains("matched structured output", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_records_finalizer_short_circuit_usage_when_metrics_are_zero()
+    {
+        var outcome = CreateCompletedOutcome("The finalizer short-circuit has no metric tokens but still records provider activity.");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-agentframework-finalizer-short-circuit-usage");
+        var profile = testEnvironment.CreatePostgreSqlProfile("primary");
+        await using var provider = await TestApplicationBootstrap.BuildServiceProviderAsync(
+            profile,
+            "CanDoItAll.Tests",
+            TestSchemaBootstrapModules.Full,
+            configureServices: services =>
+            {
+                services.RemoveAll<IAgentRuntime>();
+                services.AddSingleton(new StructuredOutputApprovalRuntime
+                {
+                    InitialResponseText = SerializeOutcome(outcome),
+                    InitialPendingApprovals = [],
+                    InitialInputTokens = 0,
+                    InitialOutputTokens = 0,
+                    InitialFinalizerInvocations = [CreateFinalizerInvocation(outcome)],
+                    InitialUsageObservations =
+                    [
+                        CreateUsageObservation(
+                            ProviderUsageSourcePhases.FinalizerShortCircuit,
+                            0,
+                            0,
+                            0,
+                            ProviderUsageObservationStatus.MissingAfterProviderActivity)
+                    ]
+                });
+                services.AddSingleton<IAgentRuntime>(serviceProvider => serviceProvider.GetRequiredService<StructuredOutputApprovalRuntime>());
+                UseDirectWorkspaceService(services);
+            });
+
+        await using var scope = provider.CreateAsyncScope();
+        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+        var executionRunStore = scope.ServiceProvider.GetRequiredService<ISandboxWorkspaceExecutionRunStore>();
+        var agent = (await workspaceService.ListAgentsAsync(includeTemplates: false))
+            .First(item => item.ProviderProfileId.HasValue);
+
+        var result = await workspaceService.ExecuteRunAsync(
+            new ExecutionRunRequest(
+                agent.Id,
+                "Complete through a finalizer short-circuit with unavailable usage.",
+                ChatSessionId: null,
+                Context: CreateProcessStepContext(),
+                AutoApprovePendingToolCalls: false,
+                StructuredOutput: AgentStructuredOutputContracts.ProcessStepOutcomeResult));
+        var detail = await executionRunStore.GetExecutionRunDetailAsync(result.ExecutionRunId);
+
+        Assert.NotNull(detail);
+        Assert.Equal(ExecutionState.Completed, detail.Run.State);
+        var metric = Assert.Single(detail.Metrics);
+        Assert.Equal(0, metric.InputTokens);
+        Assert.Equal(0, metric.OutputTokens);
+        var usage = Assert.Single(detail.UsageObservations);
+        Assert.Equal(ProviderUsageObservationStatus.MissingAfterProviderActivity, usage.UsageStatus);
+        Assert.Equal(ProviderUsageSourcePhases.FinalizerShortCircuit, usage.SourcePhase);
+        Assert.Equal(result.ExecutionRunId, usage.ExecutionRunId);
+        Assert.Equal("run-001", usage.ProcessRunId);
+        Assert.Equal("step-001", usage.ProcessStepId);
     }
 
     [Fact]
@@ -578,6 +761,30 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         };
     }
 
+    private static ProviderUsageObservation CreateUsageObservation(
+        string sourcePhase,
+        int inputTokens,
+        int cachedInputTokens,
+        int outputTokens,
+        ProviderUsageObservationStatus status = ProviderUsageObservationStatus.Observed)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: "OpenAI default",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "gpt-5.4-mini",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: sourcePhase,
+            UsageStatus: status,
+            InputTokens: inputTokens,
+            CachedInputTokens: cachedInputTokens,
+            OutputTokens: outputTokens,
+            ReasoningTokens: 0,
+            TotalTokens: inputTokens + outputTokens,
+            ToolCallCount: 0);
+    }
+
     private static AgentFinalizerInvocation CreateFinalizerInvocation(ProcessStepOutcomeResult outcome)
     {
         return new AgentFinalizerInvocation(
@@ -748,6 +955,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
 
         public string InitialResponseText { get; init; } = "Pending approval.";
 
+        public int InitialInputTokens { get; init; } = 7;
+
+        public int InitialOutputTokens { get; init; } = 11;
+
         public int InitialCachedInputTokens { get; init; }
 
         public IReadOnlyList<PendingToolApprovalRecord> InitialPendingApprovals { get; init; } =
@@ -764,6 +975,10 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
         public IReadOnlyList<AgentFinalizerInvocation> InitialFinalizerInvocations { get; init; } = [];
 
         public IReadOnlyList<AgentToolInvocationTrace> InitialToolInvocationTraces { get; init; } = [];
+
+        public IReadOnlyList<ProviderUsageObservation> InitialUsageObservations { get; init; } = [];
+
+        public bool ThrowUsageExceptionOnRun { get; init; }
 
         public string ContinuationResponseText { get; init; } = JsonSerializer.Serialize(
             new ProcessStepOutcomeResult
@@ -826,10 +1041,18 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
             }
 
             ObservedExecutionRunIds.Add(session.LatestExecutionRunId.Value);
+            if (ThrowUsageExceptionOnRun)
+            {
+                throw new AgentRuntimeUsageException(
+                    "Fake runtime failed after provider usage.",
+                    new InvalidOperationException("Fake provider failure."),
+                    InitialUsageObservations);
+            }
+
             return Task.FromResult(new AgentRuntimeResponse(
                 ResponseText: InitialResponseText,
-                InputTokens: 7,
-                OutputTokens: 11,
+                InputTokens: InitialInputTokens,
+                OutputTokens: InitialOutputTokens,
                 ToolCalls: InitialPendingApprovals.Count,
                 RuntimeSessionKey: "runtime-session-key",
                 SerializedSessionStateJson: """{"state":"pending"}""",
@@ -839,7 +1062,8 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                 FinalizerInvocations = InitialFinalizerInvocations,
                 ToolInvocationTraces = InitialToolInvocationTraces.Count == 0
                     ? CreateFinalizerToolInvocationTraces(InitialFinalizerInvocations)
-                    : InitialToolInvocationTraces
+                    : InitialToolInvocationTraces,
+                UsageObservations = InitialUsageObservations
             });
         }
 
@@ -894,6 +1118,25 @@ public sealed class AgentFrameworkExecutionRunTrackingIntegrationTests
                     Succeeded: true,
                     FailureMessage: string.Empty))
                 .ToList();
+        }
+    }
+
+    private sealed class UsageReportingRepairService : IAgentOutputRepairService
+    {
+        public Task<AgentOutputRepairAttemptResult> TryRepairAsync(
+            AgentOutputRepairRequest repairRequest,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new AgentOutputRepairAttemptResult
+            {
+                Succeeded = true,
+                RepairedRawOutput = SerializeOutcome(CreateCompletedOutcome("The repair service produced valid machine output.")),
+                RemainingErrors = [],
+                UsageObservations =
+                [
+                    CreateUsageObservation(ProviderUsageSourcePhases.StructuredOutputRepair, 3, 1, 2)
+                ]
+            });
         }
     }
 }

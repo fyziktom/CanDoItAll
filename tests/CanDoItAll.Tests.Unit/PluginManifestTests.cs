@@ -171,6 +171,9 @@ public sealed class PluginManifestTests
                         WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
                         WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                         WorkflowExecutorApprovalRequirement.NotRequired),
+                    SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+                        "$.externalSideEffectReceipt.idempotencyKey",
+                        "test-receipt/v1"),
                     DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Fake marker mode")
                 }
             ],

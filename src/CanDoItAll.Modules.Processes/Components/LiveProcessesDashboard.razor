@@ -117,9 +117,9 @@
                                      Value="@FormatDuration(TimeSpan.FromMilliseconds(CurrentStats.DurationMs))"
                                      TooltipText="Total observed runtime duration." />
                         <CompactStat Label="cost"
-                                     Value="@FormatMoney(CurrentStats.ActualCost)"
-                                     TooltipText="Actual cost observed in the current live process projection."
-                                     Tone="danger" />
+                                     Value="@CurrentCostDisplay.Value"
+                                     TooltipText="@CurrentCostDisplay.TooltipText"
+                                     Tone="@CurrentCostDisplay.Tone" />
                     </CompactStatStrip>
                 </div>
 
@@ -477,6 +477,9 @@
 
     private ProcessLiveStats CurrentStats => snapshot?.Stats ?? ProcessLiveStats.Empty;
 
+    private ProcessUsageCostDisplay CurrentCostDisplay
+        => ProcessUsageDisplayAdapter.BuildCostDisplay(CurrentStats, CultureInfo.CurrentCulture);
+
     private IReadOnlyList<ProcessLiveProcessOption> ProcessOptions => snapshot?.ProcessOptions ?? [];
 
     private IReadOnlyList<ProcessLiveMetricPoint> MetricPoints => snapshot?.MetricPoints ?? [];
@@ -616,9 +619,10 @@
                 return [];
             }
 
-            return
-            [
-                new()
+            var series = new List<CdaChartSeries>();
+            if (ProcessUsageDisplayAdapter.ShouldShowPreciseActualCost(CurrentStats))
+            {
+                series.Add(new CdaChartSeries
                 {
                     Name = "Actual",
                     Type = CdaChartType.Bar,
@@ -626,17 +630,20 @@
                     Points = runs
                         .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.ActualCost))
                         .ToArray()
-                },
-                new()
-                {
-                    Name = "Estimated",
-                    Type = CdaChartType.Bar,
-                    Color = "#dc2626",
-                    Points = runs
-                        .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.EstimatedCost))
-                        .ToArray()
-                }
-            ];
+                });
+            }
+
+            series.Add(new CdaChartSeries
+            {
+                Name = "Estimated",
+                Type = CdaChartType.Bar,
+                Color = "#dc2626",
+                Points = runs
+                    .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.EstimatedCost))
+                    .ToArray()
+            });
+
+            return series;
         }
     }
 
@@ -795,8 +802,8 @@
             }
 
             <div class="live-processes-card__footer">
-                <StatusBadge Tone="neutral"
-                             Text="@FormatMoney(run.ActualCost)" />
+                <StatusBadge Tone="@ProcessUsageDisplayAdapter.BuildRunCostTone(CurrentStats)"
+                             Text="@ProcessUsageDisplayAdapter.BuildRunCostText(CurrentStats, run, CultureInfo.CurrentCulture)" />
                 <StatusBadge Tone="info"
                              Text="@($"{run.CompletedStepCount}/{run.TotalStepCount} steps")" />
                 @if (run.DeadLetteredOutboxCount > 0)
@@ -985,7 +992,7 @@
                       EmptyText="No runtime metrics in the selected window." />
 
             <CdaChart Title="Process cost"
-                      Description="Visible process cards, sorted by current attention."
+                      Description="@CurrentCostDisplay.ChartDescription"
                       Series="@MoneySeries"
                       Options="@MoneyChartOptions"
                       Height="320"

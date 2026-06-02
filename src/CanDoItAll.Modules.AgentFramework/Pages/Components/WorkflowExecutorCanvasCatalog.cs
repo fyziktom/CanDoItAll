@@ -158,20 +158,7 @@ public static class WorkflowExecutorCanvasCatalog
 
     public static string BuildExecutorSummary(WorkflowExecutorDescriptor descriptor)
     {
-        var badges = new List<string>
-        {
-            descriptor.CanExecute ? "Available" : descriptor.Availability.Kind.ToString()
-        };
-        if (descriptor.PermissionPolicy.RequiresApproval)
-        {
-            badges.Add("Approval required");
-        }
-
-        if (descriptor.DeterministicTestMode.IsSupported)
-        {
-            badges.Add("Deterministic preview");
-        }
-
+        var badges = WorkflowExecutorDisplayAdapter.BuildSummaryBadges(descriptor);
         return $"{descriptor.Description} {string.Join(" · ", badges)}.";
     }
 

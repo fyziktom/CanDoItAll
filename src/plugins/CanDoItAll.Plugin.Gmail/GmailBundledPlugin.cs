@@ -43,6 +43,7 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                     WorkflowExecutorCapabilityFlags.UsesSecrets |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                     WorkflowExecutorApprovalRequirement.NotRequired),
+                SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
                 DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Gmail messages without calling Gmail.")
             },
             new PluginWorkflowExecutorDescriptor(
@@ -63,6 +64,9 @@ internal sealed class GmailBundledPlugin : IBundledPlugin
                     WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                     WorkflowExecutorApprovalRequirement.NotRequired),
+                SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+                    "$.externalSideEffectReceipt.idempotencyKey",
+                    EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
                 DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Gmail label mutation without changing Gmail.")
             }
         ],

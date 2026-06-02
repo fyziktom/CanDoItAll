@@ -58,7 +58,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var requiredToolNames = new List<string>();
         if (HasProjectStructureContext(candidate))
         {
-            requiredToolNames.Add("project_structure_read");
+            requiredToolNames.Add(AgentToolInvocationPolicyMetadata.ProjectStructureRead);
         }
 
         if (RequiresGovernedInspection(candidate.StepRun))
@@ -69,26 +69,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (IsDotNetSolutionSetupScaffoldMutationStep(candidate))
         {
             requiredToolNames.AddRange(ImplementationProofToolNames);
-            requiredToolNames.Add("workspace_create_directory");
-            requiredToolNames.Add("workspace_dotnet_new");
+            requiredToolNames.Add(ToolContractCatalog.WorkspaceCreateDirectory);
+            requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetNew);
         }
         else if (RequiresConcreteImplementationProof(candidate))
         {
             requiredToolNames.AddRange(ImplementationProofToolNames);
-            requiredToolNames.Add("workspace_write_file");
+            requiredToolNames.Add(ToolContractCatalog.WorkspaceWriteFile);
 
             var requiresDotNetValidation = ImplementationContractMentionsDotNet(candidate);
             if (requiresDotNetValidation &&
                 ContainsRunnableApplicationContractSignal(candidate))
             {
-                requiredToolNames.Add("workspace_dotnet_build");
-                requiredToolNames.Add("workspace_dotnet_run");
+                requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetBuild);
+                requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetRun);
             }
 
             if (requiresDotNetValidation &&
                 ImplementationContractMentionsTests(candidate))
             {
-                requiredToolNames.Add("workspace_dotnet_test");
+                requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetTest);
             }
         }
 
@@ -98,27 +98,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (!ImplementationContractMentionsDotNet(candidate, additionalGroundingText) &&
                 ImplementationContractMentionsJavaScript(candidate, additionalGroundingText))
             {
-                requiredToolNames.Add("workspace_pwsh_run_script");
+                requiredToolNames.Add(ToolContractCatalog.WorkspacePowerShellRunScript);
             }
         }
 
         if (RequiresDurableTextArtifactWrite(candidate))
         {
-            requiredToolNames.Add("workspace_write_file");
+            requiredToolNames.Add(ToolContractCatalog.WorkspaceWriteFile);
         }
 
         if (RequiresProjectStructureWriteback(candidate))
         {
-            requiredToolNames.Add("project_structure_node_create");
+            requiredToolNames.Add(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate);
             if (RequiresProjectStructureAssetWriteback(candidate))
             {
-                requiredToolNames.Add("project_structure_asset_create");
+                requiredToolNames.Add(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate);
             }
         }
 
         if (RequiresRuntimeCleanupCommand(candidate))
         {
-            requiredToolNames.Add("workspace_pwsh_run_script");
+            requiredToolNames.Add(ToolContractCatalog.WorkspacePowerShellRunScript);
         }
 
         return requiredToolNames;

@@ -118,6 +118,22 @@ public sealed record AgentRuntimeResponse(
     public IReadOnlyList<AgentFinalizerInvocation> FinalizerInvocations { get; init; } = [];
 
     public IReadOnlyList<AgentToolInvocationTrace> ToolInvocationTraces { get; init; } = [];
+
+    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+}
+
+public sealed class AgentRuntimeUsageException : Exception
+{
+    public AgentRuntimeUsageException(
+        string message,
+        Exception innerException,
+        IReadOnlyList<ProviderUsageObservation> usageObservations)
+        : base(message, innerException)
+    {
+        UsageObservations = usageObservations;
+    }
+
+    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; }
 }
 
 public interface IAgentRuntime

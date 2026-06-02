@@ -223,6 +223,14 @@ public sealed class WorkflowDefinitionValidator : IWorkflowDefinitionValidator
                     $"Workflow executor node '{node.Id}' has an invalid timeout or retry policy.",
                     node.Id));
             }
+            else if (descriptor is not null &&
+                     !WorkflowExecutorSideEffectPolicy.IsRetryPolicySafe(descriptor, policy))
+            {
+                issues.Add(new WorkflowValidationIssue(
+                    WorkflowValidationIssueCode.InvalidExecutionPolicy,
+                    WorkflowExecutorSideEffectPolicy.CreateUnsafeRetryPolicyMessage(descriptor, policy, node.Id),
+                    node.Id));
+            }
 
             var settingsJson = string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson)
                 ? descriptor?.DefaultSettingsJson ?? string.Empty

@@ -179,6 +179,7 @@ public sealed class WorkflowExecutorInvoker(
 
         var policy = node.Settings.ExecutionPolicy ?? descriptor.DefaultPolicy;
         WorkflowExecutorPolicyLimits.ThrowIfInvalid(policy, node.Id, executorId);
+        WorkflowExecutorSideEffectPolicy.ThrowIfUnsafeRetryPolicy(descriptor, policy, node.Id);
         var settingsJson = string.IsNullOrWhiteSpace(node.Settings.ExecutorSettingsJson)
             ? descriptor.DefaultSettingsJson
             : node.Settings.ExecutorSettingsJson;
@@ -222,7 +223,7 @@ public sealed class WorkflowExecutorInvoker(
                 var result = await executor.ExecuteAsync(context, input, timeoutSource.Token);
                 if (result.NodeId != node.Id)
                 {
-                        throw new InvalidOperationException($"Workflow executor '{executorId}' returned result for node '{result.NodeId}' while executing node '{node.Id}'.");
+                    throw new InvalidOperationException($"Workflow executor '{executorId}' returned result for node '{result.NodeId}' while executing node '{node.Id}'.");
                 }
 
                 WorkflowExecutorPayloadPolicy.ThrowIfPluginPayloadTooLarge(descriptor, node.Id, result.PayloadJson);
@@ -454,4 +455,34 @@ public static class WorkflowExecutorPolicyLimits
             $"TimeoutSeconds must be {MinTimeoutSeconds}-{MaxTimeoutSeconds}, MaxRetryAttempts must be {MinRetryAttempts}-{MaxRetryAttempts}, " +
             $"and RetryDelayMilliseconds must be {MinRetryDelayMilliseconds}-{MaxRetryDelayMilliseconds}.");
     }
+}
+
+public static class WorkflowExecutorSideEffectPolicy
+{
+    public static bool IsRetryPolicySafe(
+        WorkflowExecutorDescriptor descriptor,
+        WorkflowExecutorExecutionPolicy policy)
+        => policy.MaxRetryAttempts == 0 ||
+           !descriptor.SideEffects.WritesExternalState ||
+           descriptor.SideEffects.AllowsIdempotentRetry ||
+           descriptor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker);
+
+    public static void ThrowIfUnsafeRetryPolicy(
+        WorkflowExecutorDescriptor descriptor,
+        WorkflowExecutorExecutionPolicy policy,
+        WorkflowNodeId nodeId)
+    {
+        if (IsRetryPolicySafe(descriptor, policy))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(CreateUnsafeRetryPolicyMessage(descriptor, policy, nodeId));
+    }
+
+    public static string CreateUnsafeRetryPolicyMessage(
+        WorkflowExecutorDescriptor descriptor,
+        WorkflowExecutorExecutionPolicy policy,
+        WorkflowNodeId nodeId)
+        => $"Workflow executor '{descriptor.Id}' on node '{nodeId}' writes external state and cannot use MaxRetryAttempts={policy.MaxRetryAttempts} without an idempotent retry-safe side-effect contract.";
 }

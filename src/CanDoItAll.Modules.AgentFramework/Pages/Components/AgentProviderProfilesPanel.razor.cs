@@ -248,10 +248,7 @@ public partial class AgentProviderProfilesPanel
             return "Provider is not loaded in the current catalog snapshot.";
         }
 
-        var checkedAt = provider.LastCheckedAtUtc.HasValue
-            ? $" Last checked {provider.LastCheckedAtUtc.Value.LocalDateTime:g}."
-            : string.Empty;
-        return $"{provider.Kind} / {provider.Transport} / {provider.HealthStatus}.{checkedAt}";
+        return ProviderProfileDisplayAdapter.BuildStatusText(provider);
     }
 
     private static IReadOnlyList<string> ParseLines(string value)

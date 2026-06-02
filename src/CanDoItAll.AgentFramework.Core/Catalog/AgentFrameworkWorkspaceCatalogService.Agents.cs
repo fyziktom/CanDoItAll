@@ -293,6 +293,9 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     .Concat(imported.Metrics)
                     .OrderByDescending(item => item.CreatedAtUtc)
                     .ToList(),
+                ProviderUsageObservations = prunedDocument.ProviderUsageObservations
+                    .OrderByDescending(item => item.CreatedAtUtc)
+                    .ToList(),
                 ExecutionApprovals = prunedDocument.ExecutionApprovals
                     .Concat(imported.Approvals)
                     .OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc)
@@ -347,6 +350,12 @@ internal sealed partial class AgentFrameworkWorkspaceCatalogService
                     item.AgentId != agentId
                     && (!item.ChatSessionId.HasValue || !sessionIdsToDelete.Contains(item.ChatSessionId.Value))
                     && (item.ExecutionRunId == Guid.Empty || !runIdsToDelete.Contains(item.ExecutionRunId)))
+                .ToList(),
+            ProviderUsageObservations = document.ProviderUsageObservations
+                .Where(item =>
+                    item.AgentId != agentId
+                    && (!item.ChatSessionId.HasValue || !sessionIdsToDelete.Contains(item.ChatSessionId.Value))
+                    && (!item.ExecutionRunId.HasValue || !runIdsToDelete.Contains(item.ExecutionRunId.Value)))
                 .ToList(),
             ExecutionApprovals = document.ExecutionApprovals
                 .Where(item => !runIdsToDelete.Contains(item.ExecutionRunId))

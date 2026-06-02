@@ -397,20 +397,40 @@
 
                             @if (descriptor is not null)
                             {
+                                var availabilityBadge = WorkflowExecutorDisplayAdapter.BuildAvailabilityBadge(descriptor);
+                                var sideEffectBadge = WorkflowExecutorDisplayAdapter.BuildSideEffectBadge(descriptor);
+                                var retryBadge = WorkflowExecutorDisplayAdapter.BuildRetrySafetyBadge(descriptor, policy);
                                 <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-executor-summary">
-                                    <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
-                                                 Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
-                                    <StatusBadge Tone="@(descriptor.CanExecute ? "success" : "warning")"
-                                                 Text="@descriptor.Availability.Kind.ToString()" />
-                                    @if (descriptor.PermissionPolicy.RequiresApproval)
-                                    {
-                                        <StatusBadge Tone="warning" Text="Approval required" />
-                                    }
-                                    @if (descriptor.DeterministicTestMode.IsSupported)
-                                    {
-                                        <StatusBadge Tone="success" Text="Deterministic preview" />
-                                    }
-                                    <span>@descriptor.Description</span>
+                                    <div class="workflow-canvas-executor-summary__badges">
+                                        <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
+                                                     Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
+                                        <StatusBadge Tone="@availabilityBadge.Tone"
+                                                     Text="@availabilityBadge.Text" />
+                                        <StatusBadge Tone="@sideEffectBadge.Tone"
+                                                     Text="@sideEffectBadge.Text" />
+                                        @if (descriptor.PermissionPolicy.RequiresApproval)
+                                        {
+                                            <StatusBadge Tone="warning" Text="Approval required" />
+                                        }
+                                        @if (descriptor.DeterministicTestMode.IsSupported)
+                                        {
+                                            <StatusBadge Tone="success" Text="Deterministic preview" />
+                                        }
+                                        @if (retryBadge is not null)
+                                        {
+                                            <StatusBadge Tone="@retryBadge.Tone"
+                                                         Text="@retryBadge.Text" />
+                                        }
+                                    </div>
+                                    <div class="workflow-canvas-executor-summary__details">
+                                        <span>@descriptor.Description</span>
+                                        <span data-testid="workflow-canvas-executor-availability">@WorkflowExecutorDisplayAdapter.BuildAvailabilityDescription(descriptor)</span>
+                                        <span data-testid="workflow-canvas-executor-side-effects">@WorkflowExecutorDisplayAdapter.BuildSideEffectDescription(descriptor)</span>
+                                        @if (retryBadge is not null)
+                                        {
+                                            <span data-testid="workflow-canvas-executor-retry-safety">@WorkflowExecutorDisplayAdapter.BuildRetrySafetyDescription(descriptor, policy)</span>
+                                        }
+                                    </div>
                                 </div>
                             }
 
@@ -1381,20 +1401,40 @@
 
                             @if (descriptor is not null)
                             {
+                                var availabilityBadge = WorkflowExecutorDisplayAdapter.BuildAvailabilityBadge(descriptor);
+                                var sideEffectBadge = WorkflowExecutorDisplayAdapter.BuildSideEffectBadge(descriptor);
+                                var retryBadge = WorkflowExecutorDisplayAdapter.BuildRetrySafetyBadge(descriptor, policy);
                                 <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-executor-summary">
-                                    <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
-                                                 Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
-                                    <StatusBadge Tone="@(descriptor.CanExecute ? "success" : "warning")"
-                                                 Text="@descriptor.Availability.Kind.ToString()" />
-                                    @if (descriptor.PermissionPolicy.RequiresApproval)
-                                    {
-                                        <StatusBadge Tone="warning" Text="Approval required" />
-                                    }
-                                    @if (descriptor.DeterministicTestMode.IsSupported)
-                                    {
-                                        <StatusBadge Tone="success" Text="Deterministic preview" />
-                                    }
-                                    <span>@descriptor.Description</span>
+                                    <div class="workflow-canvas-executor-summary__badges">
+                                        <StatusBadge Tone="@WorkflowExecutorCanvasCatalog.ResolveTone(descriptor.Category)"
+                                                     Text="@WorkflowExecutorCanvasCatalog.ResolveCategoryLabel(descriptor.Category)" />
+                                        <StatusBadge Tone="@availabilityBadge.Tone"
+                                                     Text="@availabilityBadge.Text" />
+                                        <StatusBadge Tone="@sideEffectBadge.Tone"
+                                                     Text="@sideEffectBadge.Text" />
+                                        @if (descriptor.PermissionPolicy.RequiresApproval)
+                                        {
+                                            <StatusBadge Tone="warning" Text="Approval required" />
+                                        }
+                                        @if (descriptor.DeterministicTestMode.IsSupported)
+                                        {
+                                            <StatusBadge Tone="success" Text="Deterministic preview" />
+                                        }
+                                        @if (retryBadge is not null)
+                                        {
+                                            <StatusBadge Tone="@retryBadge.Tone"
+                                                         Text="@retryBadge.Text" />
+                                        }
+                                    </div>
+                                    <div class="workflow-canvas-executor-summary__details">
+                                        <span>@descriptor.Description</span>
+                                        <span>@WorkflowExecutorDisplayAdapter.BuildAvailabilityDescription(descriptor)</span>
+                                        <span>@WorkflowExecutorDisplayAdapter.BuildSideEffectDescription(descriptor)</span>
+                                        @if (retryBadge is not null)
+                                        {
+                                            <span>@WorkflowExecutorDisplayAdapter.BuildRetrySafetyDescription(descriptor, policy)</span>
+                                        }
+                                    </div>
                                 </div>
                             }
                         </section>

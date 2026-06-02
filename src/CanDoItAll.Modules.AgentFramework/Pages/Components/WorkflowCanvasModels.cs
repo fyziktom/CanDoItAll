@@ -909,11 +909,28 @@ internal static class WorkflowCanvasDefinitionMapper
 
         if (executor is not null)
         {
+            var availabilityBadge = WorkflowExecutorDisplayAdapter.BuildAvailabilityBadge(executor);
+            var sideEffectBadge = WorkflowExecutorDisplayAdapter.BuildSideEffectBadge(executor);
             chips.Add(new CanvasWorkbenchChip
             {
-                Text = executor.CanExecute ? executor.Name : $"{executor.Name} {executor.Availability.Kind.ToString().ToLowerInvariant()}",
-                Tone = executor.CanExecute ? "accent" : "warning"
+                Text = executor.CanExecute ? executor.Name : $"{executor.Name} {availabilityBadge.Text.ToLowerInvariant()}",
+                Tone = executor.CanExecute ? "accent" : availabilityBadge.Tone
             });
+            chips.Add(new CanvasWorkbenchChip
+            {
+                Text = sideEffectBadge.Text,
+                Tone = sideEffectBadge.Tone
+            });
+            if (WorkflowExecutorDisplayAdapter.BuildRetrySafetyBadge(
+                    executor,
+                    node.ExecutionPolicy ?? executor.DefaultPolicy) is { } retryBadge)
+            {
+                chips.Add(new CanvasWorkbenchChip
+                {
+                    Text = retryBadge.Text,
+                    Tone = retryBadge.Tone
+                });
+            }
         }
 
         if (node.Kind == WorkflowNodeKind.HumanInput && node.ExternalRequestKind.HasValue)

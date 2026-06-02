@@ -310,7 +310,8 @@ public sealed record ProcessLiveStats(
     int OutputTokens,
     int ToolCalls,
     decimal EstimatedCost,
-    decimal ActualCost)
+    decimal ActualCost,
+    ProviderUsageSummary ProviderUsage)
 {
     public static ProcessLiveStats Empty { get; } = new(
         0,
@@ -327,7 +328,8 @@ public sealed record ProcessLiveStats(
         0,
         0,
         0m,
-        0m);
+        0m,
+        new ProviderUsageSummary(0, 0, 0, 0, 0, 0, 0, 0, 0m));
 
     public int TotalTokens => InputTokens + OutputTokens;
 }

@@ -29,10 +29,13 @@ Use this skill when a task needs project, hierarchy, project-structure, dependen
 
 The internal MAF project-structure tool surface currently exposes 28 direct tools. The HTTP API exposes 51 project-structure routes. Node type-only changes, metadata/status/progress/marker/priority bulk and single update routes, node command execution, node process/workflow operations, node delete, generic link/unlink routes, asset content download, and lease renew are HTTP-only unless a typed runtime tool is deliberately added with policy and approval coverage.
 
+When a process or agent asks for `project_structure_node_create`, `project_structure_asset_create`, or another direct project-structure tool and that tool is unavailable, use the HTTP API skill for the equivalent governed action. Do not reinstall or infer a removed ProjectStructure MCP server.
+
 ## Operating Rules
 
 - Prefer focused endpoints over fetching or sending entire graphs.
 - Acquire a project lease before mutating shared project structure. Use repo-branch leases for branch-wide coordination.
+- Preserve current-run lineage in nodes and assets that mirror process evidence: process run id, step run id, execution run id, workflow run id, source artifact path, source content hash, route/viewport for screenshots, and storage receipt ids when present.
 - For typed project blocks, keep `objectType` as `ProjectBlock` and use lowercase `objectSubtype` values such as `feature`, `architecture`, `implementation`, `testing`, `delivery`, `research`, `risk`, `deployment`, `operations`, `repos`, or `dockers`.
 - Mermaid diagrams are `File` asset nodes with `objectSubtype` `mermaid`; put Mermaid source in notes or asset content.
 - Other generated files should also be `File` nodes with an appropriate subtype, not invented project block enum names.

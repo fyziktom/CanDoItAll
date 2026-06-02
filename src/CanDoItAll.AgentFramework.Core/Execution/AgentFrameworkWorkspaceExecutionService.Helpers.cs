@@ -17,7 +17,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ExecutionRunRecord? Run = null,
         ChatSessionRecord? Session = null,
         IReadOnlyList<ExecutionApprovalRecord>? RunApprovals = null,
-        AgentRunMetric? Metric = null);
+        AgentRunMetric? Metric = null,
+        IReadOnlyList<ProviderUsageObservation>? UsageObservations = null);
 
     private Task<SandboxWorkspaceExecutionState> UpdateExecutionStateAsync(
         Func<SandboxWorkspaceExecutionState, SandboxWorkspaceExecutionState> update,
@@ -63,6 +64,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     updatedSession,
                     InsertExecutionLogEntry(currentDetail.ExecutionLog, entry),
                     currentDetail.Metrics,
+                    currentDetail.UsageObservations,
                     currentDetail.Approvals,
                     currentDetail.Artifacts,
                     currentDetail.Checkpoints,
@@ -113,6 +115,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     mutation.Metric is null
                         ? currentDetail?.Metrics ?? []
                         : InsertMetric(currentDetail?.Metrics ?? [], mutation.Metric),
+                    mutation.UsageObservations is null
+                        ? currentDetail?.UsageObservations ?? []
+                        : InsertUsageObservations(currentDetail?.UsageObservations ?? [], mutation.UsageObservations),
                     mutation.RunApprovals ?? currentDetail?.Approvals ?? [],
                     currentDetail?.Artifacts ?? [],
                     currentDetail?.Checkpoints ?? [],
@@ -137,7 +142,10 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     mutation.RunApprovals),
             Metrics = mutation.Metric is null
                 ? executionState.Metrics
-                : InsertMetric(executionState.Metrics, mutation.Metric)
+                : InsertMetric(executionState.Metrics, mutation.Metric),
+            ProviderUsageObservations = mutation.UsageObservations is null
+                ? executionState.ProviderUsageObservations
+                : InsertUsageObservations(executionState.ProviderUsageObservations, mutation.UsageObservations)
         }, cancellationToken);
     }
 
@@ -170,6 +178,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             session,
             executionState.ExecutionLog.Where(item => item.ExecutionRunId == executionRunId).ToList(),
             executionState.Metrics.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+            executionState.ProviderUsageObservations.Where(item => item.ExecutionRunId == executionRunId).ToList(),
             executionState.ExecutionApprovals.Where(item => item.ExecutionRunId == executionRunId).ToList(),
             executionState.ExecutionArtifacts.Where(item => item.ExecutionRunId == executionRunId).ToList(),
             executionState.ExecutionWorkflowCheckpoints.Where(item => item.ExecutionRunId == executionRunId).ToList(),
@@ -181,6 +190,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         ChatSessionRecord? session,
         IReadOnlyList<ExecutionLogEntry> executionLog,
         IReadOnlyList<AgentRunMetric> metrics,
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
         IReadOnlyList<ExecutionApprovalRecord> approvals,
         IReadOnlyList<ExecutionArtifactRecord> artifacts,
         IReadOnlyList<ExecutionWorkflowCheckpointRecord> checkpoints,
@@ -192,6 +202,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             ExecutionLog: executionLog.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Metrics: metrics.OrderByDescending(item => item.CreatedAtUtc).ToList())
         {
+            UsageObservations = usageObservations.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Approvals = approvals.OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc).ToList(),
             Artifacts = artifacts.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Checkpoints = checkpoints.OrderByDescending(item => item.CapturedAtUtc).ToList(),
@@ -579,6 +590,28 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             metric,
             item => item.Id == metric.Id,
             item => item.CreatedAtUtc);
+    }
+
+    private static IReadOnlyList<ProviderUsageObservation> InsertUsageObservations(
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
+        IReadOnlyList<ProviderUsageObservation> newObservations)
+    {
+        if (newObservations.Count == 0)
+        {
+            return usageObservations;
+        }
+
+        var result = usageObservations;
+        foreach (var observation in newObservations)
+        {
+            result = InsertOrReplaceDescending(
+                result,
+                observation,
+                item => item.Id == observation.Id,
+                item => item.CreatedAtUtc);
+        }
+
+        return result;
     }
 
     private static IReadOnlyList<T> InsertOrReplaceDescending<T>(

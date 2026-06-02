@@ -248,8 +248,16 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("$env:ASPNETCORE_ENVIRONMENT = 'Development'", script, StringComparison.Ordinal);
             Assert.Contains("$env:DOTNET_ENVIRONMENT = 'Development'", script, StringComparison.Ordinal);
             Assert.Contains("aspNetCoreEnvironment = $env:ASPNETCORE_ENVIRONMENT", script, StringComparison.Ordinal);
+            Assert.Contains("hostUrl = $probeUrl", script, StringComparison.Ordinal);
+            Assert.Contains("databaseProfileId = $env:CANDOITALL_DATABASE_PROFILE_ID", script, StringComparison.Ordinal);
+            Assert.Contains("databaseProfileFingerprint = $env:CANDOITALL_DATABASE_PROFILE_FINGERPRINT", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
             Assert.Contains("Stop-AppProcessTree $processTreeIds", script, StringComparison.Ordinal);
             Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupAttempted = $CleanupAttempted", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupProcessIds = @($CleanupProcessIds)", script, StringComparison.Ordinal);
+            Assert.Contains("Write-StartupReceipt $true \"Application started and $probeUrl returned success. Process tree was stopped after smoke validation.\" ($processTreeIds.Count -gt 0) $processTreeIds", script, StringComparison.Ordinal);
+            Assert.Contains("Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds", script, StringComparison.Ordinal);
             Assert.DoesNotContain("workflow", script, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("converter", script, StringComparison.OrdinalIgnoreCase);
         }
@@ -284,6 +292,8 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("$keepAlive = $true", script, StringComparison.Ordinal);
             Assert.Contains("The process tree is still running for follow-up browser proof", script, StringComparison.Ordinal);
             Assert.Contains("stopCommand", script, StringComparison.Ordinal);
+            Assert.Contains("stopCommand = if ($processTreeIds.Count -gt 0) { 'Stop-Process -Id ' + ($processTreeIds -join ',') + ' -Force' } else { '' }", script, StringComparison.Ordinal);
+            Assert.Contains("cleanupReceiptPath = $startupReceipt", script, StringComparison.Ordinal);
         }
         finally
         {

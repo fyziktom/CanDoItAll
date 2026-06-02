@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Passed. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -71,13 +71,13 @@ If resource/time constraints prevent all five full E2Es in one pass, run Tetris 
 
 ## Acceptance Checklist
 
-- [ ] Five scenario packets uploaded through project structure.
-- [ ] Five process runs executed or explicitly diagnosed.
-- [ ] Browser proof validates domain behavior for each scenario.
-- [ ] Usage summary exists for each scenario.
-- [ ] Genericity audit passes.
-- [ ] Runtime cleanup receipts exist.
-- [ ] SB08 proof manifest exists.
+- [x] Five scenario packets uploaded through project structure.
+- [x] Five process runs executed or explicitly diagnosed.
+- [x] Browser proof validates domain behavior for each scenario.
+- [x] Usage summary exists for each scenario.
+- [x] Genericity audit passes.
+- [x] Runtime cleanup receipts exist.
+- [x] SB08 proof manifest exists.
 
 ## Proof Required
 

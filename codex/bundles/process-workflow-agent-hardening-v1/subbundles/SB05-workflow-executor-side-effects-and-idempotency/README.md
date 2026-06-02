@@ -2,7 +2,9 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Completed. Classification: **Critical foundation**.
+
+SB05 passed with workflow executor side-effect descriptors, email preview/commit receipts, idempotent processed-marker contracts, unsafe retry rejection, duplicate-prevention tests, and proof artifacts under `proof/SB05/`.
 
 ## Objective
 
@@ -70,12 +72,12 @@ Do not implement a full scheduler refactor unless required for idempotency proof
 
 ## Acceptance Checklist
 
-- [ ] Executor side-effect classification exists.
-- [ ] Dry-run does not mutate external state.
-- [ ] Commit mutates only controlled test state.
-- [ ] Idempotency prevents duplicate processing.
-- [ ] Unavailable executor diagnostics are visible.
-- [ ] SB05 proof manifest exists.
+- [x] Executor side-effect classification exists.
+- [x] Dry-run does not mutate external state.
+- [x] Commit mutates only controlled test state.
+- [x] Idempotency prevents duplicate processing.
+- [x] Unavailable executor diagnostics are visible.
+- [x] SB05 proof manifest exists.
 
 ## Proof Required
 

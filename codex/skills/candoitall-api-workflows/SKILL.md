@@ -81,6 +81,13 @@ Use `sourceProcessRunId` and `sourceProcessAssignmentId` when the workflow run i
 - After responding to a pending external request, read back `/runs/{runId}/detail` and `/events` to confirm the state transition.
 - Treat `DurableTask` and `AzureFunctions` backends as configured capabilities; do not silently fall back to `InProcess` when a requested backend is missing.
 
+## Executor Side-Effect Contracts
+
+- Executor catalog entries expose `WorkflowExecutorSideEffectDescriptor`. Treat `None`, external read, external write, and idempotent processed-marker contracts as workflow governance data, not UI hints.
+- Email mark-processed executors must distinguish preview from commit with `sideEffectMode`, `dryRun`, `committed`, `idempotencyRecord`, `processedMarker`, and `externalSideEffectReceipt`.
+- Do not retry an external-write executor unless its side-effect contract is idempotent retry safe. Preserve `idempotencyKey` and provider-scoped key prefixes when reviewing workflow output or scheduler replay behavior.
+- For governed process workflow runs, preserve `sourceProcessRunId` and `sourceProcessAssignmentId` so workflow artifacts and side-effect receipts remain tied to the owning process run.
+
 ## Validation
 
 - Use Swagger/OpenAPI to confirm route shape before writing client code.

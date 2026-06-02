@@ -1,0 +1,55 @@
+{
+  "schema": "candoitall.sb08.multidomainProcessE2E.v1",
+  "runStamp": "20260602-013426",
+  "databaseName": "cditall_sb08_20260602013426",
+  "baseUrl": "http://127.0.0.1:5047",
+  "workspaceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\sb08-multidomain-e2e\\20260602-013426\\workspace",
+  "processTemplate": "blazor-app-delivery",
+  "scenarios": [
+    {
+      "ScenarioKey": "tetris-mini-game",
+      "Title": "Tetris Mini Game",
+      "RunId": "54923282-a686-409f-a8a1-59eeb1f5d932",
+      "ProjectId": "c1d0ddd0-c8b5-421d-89a4-dae1cf63b920",
+      "AppPath": "C:\\repositories\\CanDoItAll\\.artifacts\\sb08-multidomain-e2e\\20260602-013426\\apps\\tetris-mini-game",
+      "ScenarioUrl": "http://127.0.0.1:5201",
+      "ProofPath": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\tetris-mini-game"
+    },
+    {
+      "ScenarioKey": "expense-tracker-lite",
+      "Title": "Expense Tracker Lite",
+      "RunId": "23563b78-333e-485e-bb03-8cdea971a696",
+      "ProjectId": "f3b04b69-ad22-4e37-b2f6-6511d94eee4a",
+      "AppPath": "C:\\repositories\\CanDoItAll\\.artifacts\\sb08-multidomain-e2e\\20260602-013426\\apps\\expense-tracker-lite",
+      "ScenarioUrl": "http://127.0.0.1:5202",
+      "ProofPath": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\expense-tracker-lite"
+    },
+    {
+      "ScenarioKey": "plant-watering-planner",
+      "Title": "Plant Watering Planner",
+      "RunId": "6ecf7150-8810-49fa-ba25-572ec3d80611",
+      "ProjectId": "26dfbdab-3439-45cc-85be-d00ae9ff7fd2",
+      "AppPath": "C:\\repositories\\CanDoItAll\\.artifacts\\sb08-multidomain-e2e\\20260602-013426\\apps\\plant-watering-planner",
+      "ScenarioUrl": "http://127.0.0.1:5203",
+      "ProofPath": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\plant-watering-planner"
+    },
+    {
+      "ScenarioKey": "study-kanban-flashcards",
+      "Title": "Study Kanban Flashcards",
+      "RunId": "6f14d795-bfc2-4532-8a05-9910a42186b8",
+      "ProjectId": "c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "AppPath": "C:\\repositories\\CanDoItAll\\.artifacts\\sb08-multidomain-e2e\\20260602-013426\\apps\\study-kanban-flashcards",
+      "ScenarioUrl": "http://127.0.0.1:5204",
+      "ProofPath": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\study-kanban-flashcards"
+    },
+    {
+      "ScenarioKey": "recipe-pantry-planner",
+      "Title": "Recipe Pantry Planner",
+      "RunId": "d323bea1-7347-42d1-943b-8aef123c9722",
+      "ProjectId": "08ecd721-51b0-471d-a90b-3ed61a193fea",
+      "AppPath": "C:\\repositories\\CanDoItAll\\.artifacts\\sb08-multidomain-e2e\\20260602-013426\\apps\\recipe-pantry-planner",
+      "ScenarioUrl": "http://127.0.0.1:5205",
+      "ProofPath": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\recipe-pantry-planner"
+    }
+  ]
+}

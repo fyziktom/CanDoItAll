@@ -85,6 +85,9 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 .OrderByDescending(item => item.CreatedAtUtc)
                 .ToList())
         {
+            UsageObservations = (await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(layout.RunUsageRoot(executionRunId), cancellationToken))
+                .OrderByDescending(item => item.CreatedAtUtc)
+                .ToList(),
             Approvals = (await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionApprovalRecord>(layout.RunApprovalsRoot(executionRunId), cancellationToken))
                 .OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc)
                 .ToList(),
@@ -132,6 +135,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             normalizedDetail.ExecutionLog,
             previousDetail?.Metrics ?? [],
             normalizedDetail.Metrics,
+            previousDetail?.UsageObservations ?? [],
+            normalizedDetail.UsageObservations,
             previousDetail?.Approvals ?? [],
             normalizedDetail.Approvals,
             previousDetail?.Artifacts ?? [],
@@ -156,7 +161,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             CheckpointCount: currentIndex.CheckpointCount + normalizedDetail.Checkpoints.Count - (previousDetail?.Checkpoints.Count ?? 0),
             ReceiptCount: currentIndex.ReceiptCount + normalizedDetail.ToolReceipts.Count - (previousDetail?.ToolReceipts.Count ?? 0),
             ActiveRunCount: currentIndex.ActiveRunCount + CountIndexedActiveRuns(normalizedDetail.Run) - CountIndexedActiveRuns(previousDetail?.Run),
-            FailedRunCount: currentIndex.FailedRunCount + CountIndexedFailedRuns(normalizedDetail.Run) - CountIndexedFailedRuns(previousDetail?.Run));
+            FailedRunCount: currentIndex.FailedRunCount + CountIndexedFailedRuns(normalizedDetail.Run) - CountIndexedFailedRuns(previousDetail?.Run),
+            UsageObservationCount: currentIndex.UsageObservationCount + normalizedDetail.UsageObservations.Count - (previousDetail?.UsageObservations.Count ?? 0));
 
         if (changed || !File.Exists(layout.ExecutionIndexPath) || jsonStore.RequiresSave(currentIndex, nextIndex))
         {
@@ -188,6 +194,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         var logsByRun = GroupByRunId(executionState.ExecutionLog, item => item.ExecutionRunId);
         var previousMetricsByRun = GroupByRunId(previousState.Metrics, item => item.ExecutionRunId);
         var metricsByRun = GroupByRunId(executionState.Metrics, item => item.ExecutionRunId);
+        var previousUsageByRun = GroupByRunId(previousState.ProviderUsageObservations, item => item.ExecutionRunId ?? Guid.Empty);
+        var usageByRun = GroupByRunId(executionState.ProviderUsageObservations, item => item.ExecutionRunId ?? Guid.Empty);
         var previousApprovalsByRun = GroupByRunId(previousState.ExecutionApprovals, item => item.ExecutionRunId);
         var approvalsByRun = GroupByRunId(executionState.ExecutionApprovals, item => item.ExecutionRunId);
         var previousArtifactsByRun = GroupByRunId(previousState.ExecutionArtifacts, item => item.ExecutionRunId);
@@ -212,6 +220,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         AddChangedRunIds(changedRunIds, previousLogsByRun, logsByRun);
         AddChangedRunIds(changedRunIds, previousMetricsByRun, metricsByRun);
+        AddChangedRunIds(changedRunIds, previousUsageByRun, usageByRun);
         AddChangedRunIds(changedRunIds, previousApprovalsByRun, approvalsByRun);
         AddChangedRunIds(changedRunIds, previousArtifactsByRun, artifactsByRun);
         AddChangedRunIds(changedRunIds, previousCheckpointsByRun, checkpointsByRun);
@@ -239,6 +248,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 GetItemsForRun(logsByRun, runId),
                 GetItemsForRun(previousMetricsByRun, runId),
                 GetItemsForRun(metricsByRun, runId),
+                GetItemsForRun(previousUsageByRun, runId),
+                GetItemsForRun(usageByRun, runId),
                 GetItemsForRun(previousApprovalsByRun, runId),
                 GetItemsForRun(approvalsByRun, runId),
                 GetItemsForRun(previousArtifactsByRun, runId),
@@ -260,6 +271,12 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             layout.OrphanMetricsRoot,
             GetItemsForRun(previousMetricsByRun, Guid.Empty),
             metricsByRun.TryGetValue(Guid.Empty, out var orphanMetrics) ? orphanMetrics : [],
+            item => $"{item.Id:N}.json",
+            cancellationToken);
+        changed |= await jsonStore.PersistRecordDirectoryDiffAsync(
+            layout.OrphanUsageRoot,
+            GetItemsForRun(previousUsageByRun, Guid.Empty),
+            usageByRun.TryGetValue(Guid.Empty, out var orphanUsage) ? orphanUsage : [],
             item => $"{item.Id:N}.json",
             cancellationToken);
         changed |= await jsonStore.PersistRecordDirectoryDiffAsync(
@@ -295,7 +312,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             CheckpointCount: executionState.ExecutionWorkflowCheckpoints.Count,
             ReceiptCount: executionState.ToolExecutionReceipts.Count,
             ActiveRunCount: executionState.ExecutionRuns.Count(IsIndexedActiveRun),
-            FailedRunCount: executionState.ExecutionRuns.Count(IsIndexedFailedRun));
+            FailedRunCount: executionState.ExecutionRuns.Count(IsIndexedFailedRun),
+            UsageObservationCount: executionState.ProviderUsageObservations.Count);
 
         if (changed || currentIndex is null || jsonStore.RequiresSave(currentIndex, nextIndex))
         {
@@ -328,6 +346,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         var runs = new List<ExecutionRunRecord>();
         var executionLog = new List<ExecutionLogEntry>();
         var metrics = new List<AgentRunMetric>();
+        var usageObservations = new List<ProviderUsageObservation>();
         var approvals = new List<ExecutionApprovalRecord>();
         var artifacts = new List<ExecutionArtifactRecord>();
         var checkpoints = new List<ExecutionWorkflowCheckpointRecord>();
@@ -346,6 +365,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
                 runs.Add(run);
                 executionLog.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionLogEntry>(Path.Combine(runDirectory, "logs"), cancellationToken));
                 metrics.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<AgentRunMetric>(Path.Combine(runDirectory, "metrics"), cancellationToken));
+                usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(Path.Combine(runDirectory, "usage"), cancellationToken));
                 approvals.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionApprovalRecord>(Path.Combine(runDirectory, "approvals"), cancellationToken));
                 artifacts.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionArtifactRecord>(Path.Combine(runDirectory, "audit", "artifacts"), cancellationToken));
                 checkpoints.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionWorkflowCheckpointRecord>(Path.Combine(runDirectory, "workflow-checkpoints", "records"), cancellationToken));
@@ -355,6 +375,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         executionLog.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionLogEntry>(layout.OrphanLogsRoot, cancellationToken));
         metrics.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<AgentRunMetric>(layout.OrphanMetricsRoot, cancellationToken));
+        usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(layout.OrphanUsageRoot, cancellationToken));
         approvals.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionApprovalRecord>(layout.OrphanApprovalsRoot, cancellationToken));
         artifacts.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ExecutionArtifactRecord>(layout.OrphanArtifactsRoot, cancellationToken));
         receipts.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ToolExecutionReceiptRecord>(layout.OrphanReceiptsRoot, cancellationToken));
@@ -371,6 +392,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             Metrics: metrics)
         {
             ExecutionRuns = runs,
+            ProviderUsageObservations = usageObservations,
             ExecutionApprovals = approvals,
             ExecutionArtifacts = artifacts,
             ExecutionWorkflowCheckpoints = checkpoints,
@@ -385,6 +407,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
         IReadOnlyList<ExecutionLogEntry> executionLog,
         IReadOnlyList<AgentRunMetric> previousMetrics,
         IReadOnlyList<AgentRunMetric> metrics,
+        IReadOnlyList<ProviderUsageObservation> previousUsageObservations,
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
         IReadOnlyList<ExecutionApprovalRecord> previousApprovals,
         IReadOnlyList<ExecutionApprovalRecord> approvals,
         IReadOnlyList<ExecutionArtifactRecord> previousArtifacts,
@@ -413,6 +437,12 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             layout.RunMetricsRoot(run.Id),
             previousMetrics,
             metrics,
+            item => $"{item.Id:N}.json",
+            cancellationToken);
+        changed |= await jsonStore.PersistRecordDirectoryDiffAsync(
+            layout.RunUsageRoot(run.Id),
+            previousUsageObservations,
+            usageObservations,
             item => $"{item.Id:N}.json",
             cancellationToken);
         changed |= await jsonStore.PersistRecordDirectoryDiffAsync(
@@ -509,7 +539,8 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             CheckpointCount: CountRunScopedJsonFiles(runId => layout.RunWorkflowCheckpointsRoot(runId)),
             ReceiptCount: CountRunScopedJsonFiles(runId => layout.RunReceiptsRoot(runId)) + CountJsonFiles(layout.OrphanReceiptsRoot),
             ActiveRunCount: await CountRunFilesAsync(IsIndexedActiveRun, cancellationToken),
-            FailedRunCount: await CountRunFilesAsync(IsIndexedFailedRun, cancellationToken));
+            FailedRunCount: await CountRunFilesAsync(IsIndexedFailedRun, cancellationToken),
+            UsageObservationCount: CountRunScopedJsonFiles(runId => layout.RunUsageRoot(runId)) + CountJsonFiles(layout.OrphanUsageRoot));
     }
 
     private int CountRunFiles()
@@ -612,6 +643,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
             ExecutionLog: detail.ExecutionLog.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Metrics: detail.Metrics.OrderByDescending(item => item.CreatedAtUtc).ToList())
         {
+            UsageObservations = detail.UsageObservations.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Approvals = detail.Approvals.OrderByDescending(item => item.DecidedAtUtc ?? item.RequestedAtUtc).ToList(),
             Artifacts = detail.Artifacts.OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Checkpoints = detail.Checkpoints.OrderByDescending(item => item.CapturedAtUtc).ToList(),
@@ -659,6 +691,7 @@ internal sealed class FileSandboxWorkspaceExecutionSliceStore(
 
         EnsureRunScoped(detail.Run.Id, detail.ExecutionLog.Select(item => item.ExecutionRunId), "execution log entry");
         EnsureRunScoped(detail.Run.Id, detail.Metrics.Select(item => item.ExecutionRunId), "execution metric");
+        EnsureRunScoped(detail.Run.Id, detail.UsageObservations.Select(item => item.ExecutionRunId ?? Guid.Empty), "provider usage observation");
         EnsureRunScoped(detail.Run.Id, detail.Approvals.Select(item => item.ExecutionRunId), "execution approval");
         EnsureRunScoped(detail.Run.Id, detail.Artifacts.Select(item => item.ExecutionRunId), "execution artifact");
         EnsureRunScoped(detail.Run.Id, detail.Checkpoints.Select(item => item.ExecutionRunId), "execution checkpoint");
@@ -696,7 +729,8 @@ internal sealed record ExecutionStorageIndex(
     int CheckpointCount,
     int ReceiptCount,
     int ActiveRunCount,
-    int FailedRunCount);
+    int FailedRunCount,
+    int UsageObservationCount = 0);
 
 internal sealed record ExecutionChatIndex(
     string Version,

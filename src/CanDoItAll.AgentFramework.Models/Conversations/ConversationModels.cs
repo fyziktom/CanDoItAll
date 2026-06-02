@@ -446,6 +446,7 @@ public sealed record ExecutionRunDetail(
     public IReadOnlyList<ExecutionArtifactRecord> Artifacts { get; init; } = [];
     public IReadOnlyList<ExecutionWorkflowCheckpointRecord> Checkpoints { get; init; } = [];
     public IReadOnlyList<ToolExecutionReceiptRecord> ToolReceipts { get; init; } = [];
+    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
 }
 
 public sealed record ExecutionRunResult(

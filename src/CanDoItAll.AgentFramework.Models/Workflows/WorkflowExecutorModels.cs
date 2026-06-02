@@ -461,6 +461,86 @@ public sealed record WorkflowExecutorSimulationDescriptor(
     }
 }
 
+public enum WorkflowExecutorSideEffectKind
+{
+    None,
+    WorkspaceRead,
+    WorkspaceWrite,
+    ExternalRead,
+    ExternalWrite
+}
+
+public enum WorkflowExecutorExternalMutationKind
+{
+    None,
+    ProcessedMarker
+}
+
+public sealed record WorkflowExecutorSideEffectDescriptor(
+    WorkflowExecutorSideEffectKind Kind,
+    WorkflowExecutorExternalMutationKind ExternalMutationKind,
+    bool SupportsPreview,
+    bool SupportsDryRun,
+    bool SupportsCommit,
+    bool RequiresCommitIdempotencyKey,
+    bool AllowsIdempotentRetry,
+    string IdempotencyKeyJsonPath,
+    string ReceiptSchema)
+{
+    public bool WritesExternalState => Kind == WorkflowExecutorSideEffectKind.ExternalWrite;
+
+    public static WorkflowExecutorSideEffectDescriptor None { get; } = new(
+        WorkflowExecutorSideEffectKind.None,
+        WorkflowExecutorExternalMutationKind.None,
+        SupportsPreview: false,
+        SupportsDryRun: false,
+        SupportsCommit: false,
+        RequiresCommitIdempotencyKey: false,
+        AllowsIdempotentRetry: false,
+        IdempotencyKeyJsonPath: string.Empty,
+        ReceiptSchema: string.Empty);
+
+    public static WorkflowExecutorSideEffectDescriptor ExternalRead(
+        string receiptSchema = "")
+        => new(
+            WorkflowExecutorSideEffectKind.ExternalRead,
+            WorkflowExecutorExternalMutationKind.None,
+            SupportsPreview: true,
+            SupportsDryRun: true,
+            SupportsCommit: true,
+            RequiresCommitIdempotencyKey: false,
+            AllowsIdempotentRetry: true,
+            IdempotencyKeyJsonPath: string.Empty,
+            ReceiptSchema: string.IsNullOrWhiteSpace(receiptSchema) ? string.Empty : receiptSchema.Trim());
+
+    public static WorkflowExecutorSideEffectDescriptor ExternalWrite(
+        WorkflowExecutorExternalMutationKind mutationKind,
+        bool requiresCommitIdempotencyKey,
+        bool allowsIdempotentRetry,
+        string idempotencyKeyJsonPath,
+        string receiptSchema)
+        => new(
+            WorkflowExecutorSideEffectKind.ExternalWrite,
+            mutationKind,
+            SupportsPreview: true,
+            SupportsDryRun: true,
+            SupportsCommit: true,
+            requiresCommitIdempotencyKey,
+            allowsIdempotentRetry,
+            string.IsNullOrWhiteSpace(idempotencyKeyJsonPath) ? string.Empty : idempotencyKeyJsonPath.Trim(),
+            string.IsNullOrWhiteSpace(receiptSchema) ? string.Empty : receiptSchema.Trim());
+
+    public static WorkflowExecutorSideEffectDescriptor IdempotentProcessedMarker(
+        string idempotencyKeyJsonPath,
+        string receiptSchema)
+        => ExternalWrite(
+            WorkflowExecutorExternalMutationKind.ProcessedMarker,
+            requiresCommitIdempotencyKey: true,
+            allowsIdempotentRetry: true,
+            idempotencyKeyJsonPath,
+            receiptSchema);
+}
+
 [Flags]
 public enum WorkflowExecutorCapabilityFlags
 {
@@ -539,6 +619,8 @@ public sealed record WorkflowExecutorDescriptor(
     public WorkflowExecutorSimulationDescriptor Simulation { get; init; } = WorkflowExecutorSimulationDescriptor.None;
 
     public WorkflowExecutorPermissionPolicy PermissionPolicy { get; init; } = WorkflowExecutorPermissionPolicy.None;
+
+    public WorkflowExecutorSideEffectDescriptor SideEffects { get; init; } = WorkflowExecutorSideEffectDescriptor.None;
 
     public WorkflowExecutorDeterministicTestModeDescriptor DeterministicTestMode { get; init; } = WorkflowExecutorDeterministicTestModeDescriptor.None;
 

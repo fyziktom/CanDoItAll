@@ -1,0 +1,34 @@
+{
+  "scenario": "tetris-mini-game",
+  "url": "http://127.0.0.1:5201",
+  "finalState": {
+    "title": "Tetris Mini Game",
+    "url": "http://127.0.0.1:5201/",
+    "bodyText": "Tetris Mini Game\n\nPlay a compact falling-block board with keyboard and button controls. Best score is stored locally.\n\nClient-only\nBlazor WASM PWA\nScore\n0\nBest\n53\nStatus\nReady\nLeft\nRight\nRotate\nDrop\nRestart\n\nKeyboard: Arrow keys or W/A/S/D.",
+    "ready": "tetris-mini-game",
+    "appState": {
+      "score": 0,
+      "best": 53,
+      "active": {
+        "x": 4,
+        "y": 0,
+        "rotation": 0
+      },
+      "lockedCount": 0,
+      "boardCells": 160
+    }
+  },
+  "snapshot": {
+    "heading": "Tetris Mini Game",
+    "text": "Tetris Mini Game\n\nPlay a compact falling-block board with keyboard and button controls. Best score is stored locally.\n\nClient-only\nBlazor WASM PWA\nScore\n0\nBest\n53\nStatus\nReady\nLeft\nRight\nRotate\nDrop\nRestart\n\nKeyboard: Arrow keys or W/A/S/D.",
+    "activeElement": "H1",
+    "storageKeys": [
+      "sb08-tetris-mini-game:best"
+    ]
+  },
+  "assertions": "passed",
+  "screenshots": [
+    "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\tetris-mini-game\\screenshots\\tetris-mini-game-desktop.png",
+    "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\tetris-mini-game\\screenshots\\tetris-mini-game-mobile.png"
+  ]
+}

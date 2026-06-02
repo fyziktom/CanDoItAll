@@ -314,6 +314,7 @@ public sealed class AgentOutputRepairAttemptResult
     public required string RepairedRawOutput { get; init; }
     public required IReadOnlyList<AgentOutputValidationError> RemainingErrors { get; init; }
     public string FailureMessage { get; init; } = string.Empty;
+    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
 }
 
 public sealed class AgentOutputRepairResult<TOutput>

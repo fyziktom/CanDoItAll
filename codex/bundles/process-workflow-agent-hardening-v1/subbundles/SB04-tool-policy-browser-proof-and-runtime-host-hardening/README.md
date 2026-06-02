@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Implemented and validated. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -72,12 +72,12 @@ UI display work belongs to SB07 unless needed for proof capture. Broad skill/tem
 
 ## Acceptance Checklist
 
-- [ ] Tool policy mapping tests pass.
-- [ ] Browser proof validator rejects stale/copy-only proof.
-- [ ] Runtime host identity includes host URL and DB profile.
-- [ ] Cleanup receipts prevent build-lock regression.
-- [ ] Playwright proof path is documented.
-- [ ] SB04 proof manifest exists.
+- [x] Tool policy mapping tests pass.
+- [x] Browser proof validator rejects stale/copy-only proof.
+- [x] Runtime host identity includes host URL and DB profile.
+- [x] Cleanup receipts prevent build-lock regression.
+- [x] Playwright proof path is documented.
+- [x] SB04 proof manifest exists.
 
 ## Proof Required
 

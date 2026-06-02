@@ -1,0 +1,1471 @@
+{
+  "run": {
+    "id": "6f14d795-bfc2-4532-8a05-9910a42186b8",
+    "processDefinitionId": "4b3ecd66-63f6-4ba6-8db8-010b6d350c68",
+    "processDefinitionVersionId": "cb34b020-480e-452c-bc90-c1526148bab1",
+    "parentRunId": null,
+    "parentStepRunId": null,
+    "rootRunId": "6f14d795-bfc2-4532-8a05-9910a42186b8",
+    "hierarchyDepth": 0,
+    "projectId": "c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+    "name": "Blazor WASM PWA delivery / Study Kanban Flashcards / 20260602-013426",
+    "status": 3,
+    "operatingMode": 3,
+    "managerAgentId": null,
+    "managerAgentName": "Default process manager",
+    "completedStepCount": 4,
+    "totalStepCount": 8,
+    "blockedStepCount": 0,
+    "capabilityGapCount": 0,
+    "estimatedCost": 640,
+    "actualCost": 0,
+    "updatedAtUtc": "2026-06-02T01:37:52.867091-04:00"
+  },
+  "stepRuns": [
+    {
+      "id": "428a10e0-b4e7-496f-9c7e-0b5d9577e720",
+      "stepDefinitionId": "be78f4a0-0476-4dc6-9781-ba29a4068875",
+      "decisionRoleRequirementId": "dddb24a4-8560-41d0-93a4-ba8a4c0fc06e",
+      "sequence": 0,
+      "title": "Resolve Blazor delivery contract",
+      "stepKind": 0,
+      "status": 5,
+      "currentExecutorName": "Delivery Manager",
+      "decisionSummary": "Selected branch outcome: Default.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": "57e5c9d7-ffdc-452a-8b8d-e7dbc11afa20",
+      "selectedBranchOutcomeTitle": "Default",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "57e5c9d7-ffdc-452a-8b8d-e7dbc11afa20",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "e7972d49-73c2-4cfd-b30e-d71078313342",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "8df75035-22ed-4984-a4e7-1c7db5ccef61",
+      "dependencies": [],
+      "decisionRoleTitle": "Blazor delivery manager",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 0,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "a996b100-fcc8-4355-8241-0b9191faeb33",
+          "title": "Blazor delivery contract",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        3
+      ],
+      "operationTargetScope": 3,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "428a10e0-b4e7-496f-9c7e-0b5d9577e720",
+          "artifactExpectationId": "a996b100-fcc8-4355-8241-0b9191faeb33",
+          "artifactKind": 0,
+          "title": "Blazor delivery contract",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "d0564d78-9490-4f94-9351-aeca550a7b16",
+          "satisfiedByTitle": "Blazor delivery contract",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/428a10e0-b4e7-496f-9c7e-0b5d9577e720/contract.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Selected branch outcome: Default.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "e1a34d47-dd5d-4cac-a991-d6aef43ee92d",
+      "stepDefinitionId": "ded9a58c-e692-49cd-9c2e-3375a58bba1f",
+      "decisionRoleRequirementId": "02f04d87-4194-4999-8fa4-c27737493c86",
+      "sequence": 1,
+      "title": "Build Blazor application",
+      "stepKind": 1,
+      "status": 5,
+      "currentExecutorName": "Blazor Application Developer",
+      "decisionSummary": "Selected branch outcome: Default.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": "1808a703-530f-40e0-ae13-f69e5579201e",
+      "selectedBranchOutcomeTitle": "Default",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "1808a703-530f-40e0-ae13-f69e5579201e",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "38534ac7-4d59-41f3-a653-f78dc3eb42e7",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "c1fdc8a3-d719-4c7b-bb33-52f8227afcc9",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "be78f4a0-0476-4dc6-9781-ba29a4068875",
+          "dependsOnBranchOutcomeId": "57e5c9d7-ffdc-452a-8b8d-e7dbc11afa20"
+        }
+      ],
+      "decisionRoleTitle": "Blazor implementation engineer",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 1,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "ec00f5da-2332-45b5-9e1c-160838f731bb",
+          "title": "Implementation self-review summary",
+          "isRequired": true
+        },
+        {
+          "artifactExpectationId": "093b5b43-79a8-4de3-8df4-6709d2162cef",
+          "title": "Blazor implementation change set",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        6,
+        7
+      ],
+      "operationTargetScope": 4,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "e1a34d47-dd5d-4cac-a991-d6aef43ee92d",
+          "artifactExpectationId": "093b5b43-79a8-4de3-8df4-6709d2162cef",
+          "artifactKind": 3,
+          "title": "Blazor implementation change set",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "59580c01-6723-4cb5-99d7-bc9a1fccc03a",
+          "satisfiedByTitle": "Blazor implementation change set",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/e1a34d47-dd5d-4cac-a991-d6aef43ee92d/implementation-change-set.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        },
+        {
+          "stepRunId": "e1a34d47-dd5d-4cac-a991-d6aef43ee92d",
+          "artifactExpectationId": "ec00f5da-2332-45b5-9e1c-160838f731bb",
+          "artifactKind": 0,
+          "title": "Implementation self-review summary",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "912e42e5-6997-4e27-a1f1-ff54796390eb",
+          "satisfiedByTitle": "Implementation self-review summary",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/e1a34d47-dd5d-4cac-a991-d6aef43ee92d/implementation-self-review.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Selected branch outcome: Default.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "637d7809-fc42-499e-a716-c8c8d2369bd8",
+      "stepDefinitionId": "03b4604f-6ef1-4d0e-a506-ee532eaa8d65",
+      "decisionRoleRequirementId": "438a83ff-e999-4c3e-91ec-94220e77e854",
+      "sequence": 2,
+      "title": "Validate Blazor runtime and browser evidence",
+      "stepKind": 4,
+      "status": 5,
+      "currentExecutorName": ".NET QA Review Lead",
+      "decisionSummary": "Selected branch outcome: Quality accepted.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": "b699c5f4-16ba-4ab0-807c-35074b624bcc",
+      "selectedBranchOutcomeTitle": "Quality accepted",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "b699c5f4-16ba-4ab0-807c-35074b624bcc",
+          "title": "Quality accepted",
+          "description": "Build, tests, runtime, screenshots, console checks, and acceptance assertions are sufficient."
+        },
+        {
+          "id": "4fc96628-7e3f-4d25-bfa0-385d1eb5538f",
+          "title": "Repair required",
+          "description": "A reproducible defect, missing proof, or screenshot/console failure must be repaired before writeback."
+        },
+        {
+          "id": "603c3925-7ce0-4ed7-a060-f8b1b327df05",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "6f8317f9-cbcc-4902-8b85-e67df45f449c",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "860651f3-303c-4dbe-ae83-8886e52e19fd",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "ded9a58c-e692-49cd-9c2e-3375a58bba1f",
+          "dependsOnBranchOutcomeId": "1808a703-530f-40e0-ae13-f69e5579201e"
+        }
+      ],
+      "decisionRoleTitle": "Blazor QA and browser proof lead",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 1,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "bfffeefd-0580-4565-8053-cfa57c6b67e8",
+          "title": "Validation self-review summary",
+          "isRequired": true
+        },
+        {
+          "artifactExpectationId": "b83c15a9-8e1c-4352-91d6-b932883e40e6",
+          "title": "Blazor runtime evidence pack",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        2,
+        3,
+        6,
+        7,
+        8
+      ],
+      "operationTargetScope": 3,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "637d7809-fc42-499e-a716-c8c8d2369bd8",
+          "artifactExpectationId": "b83c15a9-8e1c-4352-91d6-b932883e40e6",
+          "artifactKind": 1,
+          "title": "Blazor runtime evidence pack",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "03ae2503-49e1-437b-8643-98b95fb0f5b2",
+          "satisfiedByTitle": "Blazor runtime evidence pack",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/637d7809-fc42-499e-a716-c8c8d2369bd8/browser-proof.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        },
+        {
+          "stepRunId": "637d7809-fc42-499e-a716-c8c8d2369bd8",
+          "artifactExpectationId": "bfffeefd-0580-4565-8053-cfa57c6b67e8",
+          "artifactKind": 0,
+          "title": "Validation self-review summary",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "3df2a253-7e31-4aab-b54f-2615ac4d1bf2",
+          "satisfiedByTitle": "Validation self-review summary",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/637d7809-fc42-499e-a716-c8c8d2369bd8/validation-self-review.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Selected branch outcome: Quality accepted.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "ec16cf24-5558-4b41-9aed-b7b301f596a9",
+      "stepDefinitionId": "a6e070cb-4c76-4e01-80f7-c1a1ac337bac",
+      "decisionRoleRequirementId": "02f04d87-4194-4999-8fa4-c27737493c86",
+      "sequence": 3,
+      "title": "Repair Blazor validation findings",
+      "stepKind": 1,
+      "status": 7,
+      "currentExecutorName": "Blazor Application Developer",
+      "decisionSummary": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": null,
+      "selectedBranchOutcomeTitle": "",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "9fd835ba-1d67-46ec-8896-b165e9a0a07a",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "c6dd4d3f-1e61-4501-bf75-c50500f6dc01",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "159aebc1-3b9e-4185-ae72-36304bad13d8",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "03b4604f-6ef1-4d0e-a506-ee532eaa8d65",
+          "dependsOnBranchOutcomeId": "4fc96628-7e3f-4d25-bfa0-385d1eb5538f"
+        }
+      ],
+      "decisionRoleTitle": "Blazor implementation engineer",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 1,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "63849b22-ac03-4ce5-b2fd-621524119907",
+          "title": "Blazor repair change set",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        2,
+        3,
+        5,
+        6,
+        7
+      ],
+      "operationTargetScope": 4,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "ec16cf24-5558-4b41-9aed-b7b301f596a9",
+          "artifactExpectationId": "63849b22-ac03-4ce5-b2fd-621524119907",
+          "artifactKind": 3,
+          "title": "Blazor repair change set",
+          "isRequired": true,
+          "status": 3,
+          "sourceKind": 0,
+          "processArtifactRecordId": null,
+          "satisfiedByTitle": "",
+          "managedStoragePath": "",
+          "diagnostic": "Artifact expectation was not required because this step was skipped.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "9af90f69-6415-48c5-a74c-7b03772c18e6",
+      "stepDefinitionId": "0f852f43-d805-4058-8c3f-77d4ce5e6006",
+      "decisionRoleRequirementId": "438a83ff-e999-4c3e-91ec-94220e77e854",
+      "sequence": 4,
+      "title": "Revalidate Blazor repair",
+      "stepKind": 4,
+      "status": 7,
+      "currentExecutorName": ".NET QA Review Lead",
+      "decisionSummary": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": null,
+      "selectedBranchOutcomeTitle": "",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "1f32ea28-23c5-496d-bb89-ea3383a53142",
+          "title": "Quality accepted after repair",
+          "description": "Fresh validation evidence is sufficient."
+        },
+        {
+          "id": "3fbed3ed-b120-42e9-b627-0e79b48e2fbb",
+          "title": "Repair escalation",
+          "description": "The same or new blocking issue remains and must be escalated."
+        },
+        {
+          "id": "6451fa6d-e175-49bb-82bb-608243a43088",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "fb0d5e17-8322-49fb-9fe0-0868caee8240",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "6ec190dd-8229-4469-b6c6-b724561783b5",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "a6e070cb-4c76-4e01-80f7-c1a1ac337bac",
+          "dependsOnBranchOutcomeId": "9fd835ba-1d67-46ec-8896-b165e9a0a07a"
+        }
+      ],
+      "decisionRoleTitle": "Blazor QA and browser proof lead",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 1,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "e4ec2e14-6348-41a8-ae8e-2b2bd0556896",
+          "title": "Repaired Blazor runtime evidence pack",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        2,
+        3,
+        6,
+        7,
+        8
+      ],
+      "operationTargetScope": 3,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "9af90f69-6415-48c5-a74c-7b03772c18e6",
+          "artifactExpectationId": "e4ec2e14-6348-41a8-ae8e-2b2bd0556896",
+          "artifactKind": 1,
+          "title": "Repaired Blazor runtime evidence pack",
+          "isRequired": true,
+          "status": 3,
+          "sourceKind": 0,
+          "processArtifactRecordId": null,
+          "satisfiedByTitle": "",
+          "managedStoragePath": "",
+          "diagnostic": "Artifact expectation was not required because this step was skipped.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "eacc95d6-2185-4e00-b82a-e43e0bc1606f",
+      "stepDefinitionId": "6632087b-9315-4d0f-ba24-d731c7a3df14",
+      "decisionRoleRequirementId": "dddb24a4-8560-41d0-93a4-ba8a4c0fc06e",
+      "sequence": 5,
+      "title": "Record Blazor results and evidence index",
+      "stepKind": 6,
+      "status": 5,
+      "currentExecutorName": "Delivery Manager",
+      "decisionSummary": "Selected branch outcome: Default.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": "3877735a-6065-4809-8e12-576019dcb45f",
+      "selectedBranchOutcomeTitle": "Default",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "3877735a-6065-4809-8e12-576019dcb45f",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "27d3599a-0fb4-49c4-925c-df3f69cddac9",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "3deacfbd-358f-476a-a48c-0b7f61aa1ef5",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "03b4604f-6ef1-4d0e-a506-ee532eaa8d65",
+          "dependsOnBranchOutcomeId": "b699c5f4-16ba-4ab0-807c-35074b624bcc"
+        }
+      ],
+      "decisionRoleTitle": "Blazor delivery manager",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 1,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "33395b81-090a-4da7-8c74-bb1dabc9e534",
+          "title": "Project-structure result writeback summary",
+          "isRequired": true
+        },
+        {
+          "artifactExpectationId": "ed0af170-b7a0-4f15-8901-77cfd59a30f7",
+          "title": "Run evidence index",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        2,
+        3,
+        9
+      ],
+      "operationTargetScope": 5,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "eacc95d6-2185-4e00-b82a-e43e0bc1606f",
+          "artifactExpectationId": "33395b81-090a-4da7-8c74-bb1dabc9e534",
+          "artifactKind": 0,
+          "title": "Project-structure result writeback summary",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "45d6159c-5d23-44ac-8298-7b1b741671d9",
+          "satisfiedByTitle": "Project-structure result writeback summary",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/eacc95d6-2185-4e00-b82a-e43e0bc1606f/project-structure-writeback-summary.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        },
+        {
+          "stepRunId": "eacc95d6-2185-4e00-b82a-e43e0bc1606f",
+          "artifactExpectationId": "ed0af170-b7a0-4f15-8901-77cfd59a30f7",
+          "artifactKind": 1,
+          "title": "Run evidence index",
+          "isRequired": true,
+          "status": 1,
+          "sourceKind": 1,
+          "processArtifactRecordId": "caf0087a-00a4-49d5-8096-ac24c1c25760",
+          "satisfiedByTitle": "Run evidence index",
+          "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/eacc95d6-2185-4e00-b82a-e43e0bc1606f/run-evidence-index.md",
+          "diagnostic": "Satisfied by a process artifact record.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Selected branch outcome: Default.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "441fb1cf-1936-443f-b2b5-4ef312a13850",
+      "stepDefinitionId": "562b7ee5-d415-4aaa-bf9c-558ecef4a89d",
+      "decisionRoleRequirementId": "dddb24a4-8560-41d0-93a4-ba8a4c0fc06e",
+      "sequence": 6,
+      "title": "Record repaired Blazor results and evidence index",
+      "stepKind": 6,
+      "status": 7,
+      "currentExecutorName": "Delivery Manager",
+      "decisionSummary": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": null,
+      "selectedBranchOutcomeTitle": "",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "cee0fd2e-cdbd-4dbe-bb46-4da76d28bde1",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "e0bd738c-b494-49c7-b20b-1cd25ac5751c",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "81782b7a-8970-471d-a748-e53792bcd564",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "0f852f43-d805-4058-8c3f-77d4ce5e6006",
+          "dependsOnBranchOutcomeId": "1f32ea28-23c5-496d-bb89-ea3383a53142"
+        }
+      ],
+      "decisionRoleTitle": "Blazor delivery manager",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 0,
+          "isRequired": true,
+          "assignmentCount": 1
+        },
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 1,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "82913fd8-5711-41a5-9278-c4a68e222581",
+          "title": "Repaired project-structure result writeback summary",
+          "isRequired": true
+        },
+        {
+          "artifactExpectationId": "c446b88d-1808-4fab-a312-8e076e9207d8",
+          "title": "Repaired run evidence index",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        1,
+        2,
+        3,
+        9
+      ],
+      "operationTargetScope": 5,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "441fb1cf-1936-443f-b2b5-4ef312a13850",
+          "artifactExpectationId": "82913fd8-5711-41a5-9278-c4a68e222581",
+          "artifactKind": 0,
+          "title": "Repaired project-structure result writeback summary",
+          "isRequired": true,
+          "status": 3,
+          "sourceKind": 0,
+          "processArtifactRecordId": null,
+          "satisfiedByTitle": "",
+          "managedStoragePath": "",
+          "diagnostic": "Artifact expectation was not required because this step was skipped.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        },
+        {
+          "stepRunId": "441fb1cf-1936-443f-b2b5-4ef312a13850",
+          "artifactExpectationId": "c446b88d-1808-4fab-a312-8e076e9207d8",
+          "artifactKind": 1,
+          "title": "Repaired run evidence index",
+          "isRequired": true,
+          "status": 3,
+          "sourceKind": 0,
+          "processArtifactRecordId": null,
+          "satisfiedByTitle": "",
+          "managedStoragePath": "",
+          "diagnostic": "Artifact expectation was not required because this step was skipped.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    },
+    {
+      "id": "6cef27d1-608c-49a6-962f-6a8af0c71f44",
+      "stepDefinitionId": "dcf73f95-252d-4874-9935-649803658626",
+      "decisionRoleRequirementId": "dddb24a4-8560-41d0-93a4-ba8a4c0fc06e",
+      "sequence": 7,
+      "title": "Escalate unresolved Blazor repair findings",
+      "stepKind": 3,
+      "status": 7,
+      "currentExecutorName": "Delivery Manager",
+      "decisionSummary": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+      "blockedReason": "",
+      "refusalReason": "",
+      "selectedBranchOutcomeId": null,
+      "selectedBranchOutcomeTitle": "",
+      "waitMinutes": 0,
+      "touchMinutes": 0,
+      "blockedMinutes": 0,
+      "reworkCount": 0,
+      "capabilityGapSeverity": 0,
+      "availableBranchOutcomes": [
+        {
+          "id": "510b7615-f666-464a-9486-a394a503ccb5",
+          "title": "Default",
+          "description": "Continue when no explicit branch outcome is selected."
+        },
+        {
+          "id": "98b6fcc1-69a3-4225-ad79-fef02fc1eca9",
+          "title": "Error",
+          "description": "Handle exceptions, failed validations, or explicit error escalation."
+        }
+      ],
+      "stepRunConcurrencyToken": "cdee05c4-043a-4fbc-bf53-8887f3710cff",
+      "dependencies": [
+        {
+          "dependsOnStepDefinitionId": "0f852f43-d805-4058-8c3f-77d4ce5e6006",
+          "dependsOnBranchOutcomeId": "3fbed3ed-b120-42e9-b627-0e79b48e2fbb"
+        },
+        {
+          "dependsOnStepDefinitionId": "a6e070cb-4c76-4e01-80f7-c1a1ac337bac",
+          "dependsOnBranchOutcomeId": "9fd835ba-1d67-46ec-8896-b165e9a0a07a"
+        }
+      ],
+      "decisionRoleTitle": "Blazor delivery manager",
+      "responsibilityPorts": [
+        {
+          "responsibilityKind": 1,
+          "isRequired": true,
+          "assignmentCount": 2
+        },
+        {
+          "responsibilityKind": 2,
+          "isRequired": true,
+          "assignmentCount": 1
+        }
+      ],
+      "artifactInputCount": 2,
+      "artifactOutputs": [
+        {
+          "artifactExpectationId": "532f0858-ef8f-48a4-a38f-b4e5031949f6",
+          "title": "Blazor repair escalation record",
+          "isRequired": true
+        }
+      ],
+      "allowedOperations": [
+        0,
+        2,
+        3,
+        11
+      ],
+      "operationTargetScope": 0,
+      "exceptionSummary": "",
+      "artifactExpectations": [
+        {
+          "stepRunId": "6cef27d1-608c-49a6-962f-6a8af0c71f44",
+          "artifactExpectationId": "532f0858-ef8f-48a4-a38f-b4e5031949f6",
+          "artifactKind": 2,
+          "title": "Blazor repair escalation record",
+          "isRequired": true,
+          "status": 3,
+          "sourceKind": 0,
+          "processArtifactRecordId": null,
+          "satisfiedByTitle": "",
+          "managedStoragePath": "",
+          "diagnostic": "Artifact expectation was not required because this step was skipped.",
+          "validationStatus": null,
+          "failureOwnership": -1,
+          "validationAttemptedPath": "",
+          "validationSuggestedAction": ""
+        }
+      ],
+      "blockReasonCode": 0,
+      "nextRecoveryAction": 0,
+      "recoveryOptions": [],
+      "health": {
+        "attemptCount": 0,
+        "latestAttemptStatus": "",
+        "latestAttemptTone": "neutral",
+        "pendingApprovalCount": 0,
+        "recoveryClassification": 0,
+        "actionableReason": "Skipped because upstream step 'Validate Blazor runtime and browser evidence' selected a different branch outcome.",
+        "canManualRerun": false,
+        "pendingOutboxCount": 0,
+        "deadLetteredOutboxCount": 0,
+        "attempts": [],
+        "nextRecoveryAction": 0,
+        "recoveryOptions": []
+      },
+      "subprocessRun": null
+    }
+  ],
+  "decisions": [
+    {
+      "id": "6199c49a-8ea2-402a-813c-cd794eac3ab6",
+      "decisionKind": 7,
+      "outcome": 5,
+      "title": "Record Blazor results and evidence index -> Completed / Default",
+      "reason": "SB08 run evidence index and project-structure writeback recorded.",
+      "branchOutcomeTitle": "Default",
+      "decidedBy": "process-automation-dispatch",
+      "createdAtUtc": "2026-06-02T01:37:52.867091-04:00"
+    },
+    {
+      "id": "6a366962-20de-4cef-b0ba-231e457b758a",
+      "decisionKind": 0,
+      "outcome": 6,
+      "title": "Record Blazor results and evidence index -> InProgress",
+      "reason": "SB08 current-run work started.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "SB08 result harness",
+      "createdAtUtc": "2026-06-02T01:37:52.633614-04:00"
+    },
+    {
+      "id": "8b916180-0f5f-4096-9235-de35a0ee9eb3",
+      "decisionKind": 7,
+      "outcome": 5,
+      "title": "Validate Blazor runtime and browser evidence -> Completed / Quality accepted",
+      "reason": "SB08 browser screenshot, console, interaction, and persistence assertions accepted.",
+      "branchOutcomeTitle": "Quality accepted",
+      "decidedBy": "process-automation-dispatch",
+      "createdAtUtc": "2026-06-02T01:37:52.540422-04:00"
+    },
+    {
+      "id": "1dd97b06-7586-416a-98ea-966cb0423a1a",
+      "decisionKind": 0,
+      "outcome": 6,
+      "title": "Validate Blazor runtime and browser evidence -> InProgress",
+      "reason": "SB08 current-run work started.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "SB08 validation harness",
+      "createdAtUtc": "2026-06-02T01:37:52.325893-04:00"
+    },
+    {
+      "id": "7005bc40-28a9-42d5-a5a3-3ec053af4ced",
+      "decisionKind": 7,
+      "outcome": 5,
+      "title": "Build Blazor application -> Completed / Default",
+      "reason": "SB08 generated Blazor WASM PWA app and build proof completed.",
+      "branchOutcomeTitle": "Default",
+      "decidedBy": "process-automation-dispatch",
+      "createdAtUtc": "2026-06-02T01:37:52.242988-04:00"
+    },
+    {
+      "id": "b0bd546d-9b0f-4a79-8b40-27047ac20340",
+      "decisionKind": 0,
+      "outcome": 6,
+      "title": "Build Blazor application -> InProgress",
+      "reason": "SB08 current-run work started.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "SB08 implementation harness",
+      "createdAtUtc": "2026-06-02T01:37:52.022113-04:00"
+    },
+    {
+      "id": "4136dcc2-bfd3-458c-82e5-840d63260894",
+      "decisionKind": 7,
+      "outcome": 5,
+      "title": "Resolve Blazor delivery contract -> Completed / Default",
+      "reason": "SB08 architecture and acceptance contract resolved from uploaded scenario packet.",
+      "branchOutcomeTitle": "Default",
+      "decidedBy": "process-automation-dispatch",
+      "createdAtUtc": "2026-06-02T01:37:51.926615-04:00"
+    },
+    {
+      "id": "05948e51-d7e1-4998-b380-ab0e4c4c6707",
+      "decisionKind": 0,
+      "outcome": 6,
+      "title": "Resolve Blazor delivery contract -> InProgress",
+      "reason": "SB08 current-run work started.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "SB08 contract harness",
+      "createdAtUtc": "2026-06-02T01:37:51.700719-04:00"
+    },
+    {
+      "id": "2cd0c45f-f2d5-4ca7-ae12-a63adefbf2f1",
+      "decisionKind": 0,
+      "outcome": 5,
+      "title": "Assignment for Blazor delivery manager",
+      "reason": "Projected from AgentFramework organization catalog.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "process-management",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "95b2cc8f-fbeb-4c73-9270-134df2c42f28",
+      "decisionKind": 0,
+      "outcome": 5,
+      "title": "Assignment for Blazor implementation engineer",
+      "reason": "Projected from AgentFramework organization catalog.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "process-management",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "b57c2e8e-aeef-4683-a2b8-7ef8264ef584",
+      "decisionKind": 0,
+      "outcome": 5,
+      "title": "Assignment for Blazor solution architect",
+      "reason": "Projected from AgentFramework organization catalog.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "process-management",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "cebe605f-a7af-4a0c-ba20-dcf4e1163d43",
+      "decisionKind": 0,
+      "outcome": 5,
+      "title": "Assignment for Blazor QA and browser proof lead",
+      "reason": "Projected from AgentFramework organization catalog.",
+      "branchOutcomeTitle": "",
+      "decidedBy": "process-management",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "caf0087a-00a4-49d5-8096-ac24c1c25760",
+      "stepRunId": "eacc95d6-2185-4e00-b82a-e43e0bc1606f",
+      "artifactExpectationId": "ed0af170-b7a0-4f15-8901-77cfd59a30f7",
+      "artifactKind": 1,
+      "title": "Run evidence index",
+      "trustStatus": 1,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/eacc95d6-2185-4e00-b82a-e43e0bc1606f/run-evidence-index.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|ed0af170-b7a0-4f15-8901-77cfd59a30f7|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#9722fe97c5c14663b91b2889",
+      "createdAtUtc": "2026-06-02T01:37:52.780935-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|ed0af170-b7a0-4f15-8901-77cfd59a30f7|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/eacc95d6-2185-4e00-b82a-e43e0bc1606f/run-evidence-index.md\",\"contentHash\":\"sha256:8cf8db1e2a9270c13e974367618e1cec2f362958677deb2ce117d59826f9cb76\",\"projectionIdentityHash\":\"sha256:9a25a3d4e2de7207b3f190d8e85183693bda1f9a91c068d738e47825062486cc\"}",
+      "projectionIdentityHash": "sha256:9a25a3d4e2de7207b3f190d8e85183693bda1f9a91c068d738e47825062486cc"
+    },
+    {
+      "id": "45d6159c-5d23-44ac-8298-7b1b741671d9",
+      "stepRunId": "eacc95d6-2185-4e00-b82a-e43e0bc1606f",
+      "artifactExpectationId": "33395b81-090a-4da7-8c74-bb1dabc9e534",
+      "artifactKind": 0,
+      "title": "Project-structure result writeback summary",
+      "trustStatus": 1,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/eacc95d6-2185-4e00-b82a-e43e0bc1606f/project-structure-writeback-summary.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|33395b81-090a-4da7-8c74-bb1dabc9e534|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#6120869322d35babf5037853",
+      "createdAtUtc": "2026-06-02T01:37:52.731613-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|33395b81-090a-4da7-8c74-bb1dabc9e534|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/eacc95d6-2185-4e00-b82a-e43e0bc1606f/project-structure-writeback-summary.md\",\"contentHash\":\"sha256:24bfb3c531f95c8c07e6e0a6242e5b189661cbfeab9a83ffbe8d24d98e09b4ea\",\"projectionIdentityHash\":\"sha256:bf5bf272e9d39692909cfb032504c24c449b4cc55e5b11295af0a5aa8ac6374f\"}",
+      "projectionIdentityHash": "sha256:bf5bf272e9d39692909cfb032504c24c449b4cc55e5b11295af0a5aa8ac6374f"
+    },
+    {
+      "id": "3df2a253-7e31-4aab-b54f-2615ac4d1bf2",
+      "stepRunId": "637d7809-fc42-499e-a716-c8c8d2369bd8",
+      "artifactExpectationId": "bfffeefd-0580-4565-8053-cfa57c6b67e8",
+      "artifactKind": 0,
+      "title": "Validation self-review summary",
+      "trustStatus": 2,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/637d7809-fc42-499e-a716-c8c8d2369bd8/validation-self-review.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|bfffeefd-0580-4565-8053-cfa57c6b67e8|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#6fb7afa97205e4756d3ceb34",
+      "createdAtUtc": "2026-06-02T01:37:52.462874-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|bfffeefd-0580-4565-8053-cfa57c6b67e8|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/637d7809-fc42-499e-a716-c8c8d2369bd8/validation-self-review.md\",\"contentHash\":\"sha256:af960807d3961bc08254b15709ff912dbb5f5bdcf4ee132c356be162c161075a\",\"projectionIdentityHash\":\"sha256:6f81bca5025aa576d2a96440b5f3916b6cc0396be892e45fd443b1b2bb222acd\"}",
+      "projectionIdentityHash": "sha256:6f81bca5025aa576d2a96440b5f3916b6cc0396be892e45fd443b1b2bb222acd"
+    },
+    {
+      "id": "03ae2503-49e1-437b-8643-98b95fb0f5b2",
+      "stepRunId": "637d7809-fc42-499e-a716-c8c8d2369bd8",
+      "artifactExpectationId": "b83c15a9-8e1c-4352-91d6-b932883e40e6",
+      "artifactKind": 1,
+      "title": "Blazor runtime evidence pack",
+      "trustStatus": 2,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/637d7809-fc42-499e-a716-c8c8d2369bd8/browser-proof.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|b83c15a9-8e1c-4352-91d6-b932883e40e6|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#62ef542a4977458d8a24ff55",
+      "createdAtUtc": "2026-06-02T01:37:52.414976-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|b83c15a9-8e1c-4352-91d6-b932883e40e6|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/637d7809-fc42-499e-a716-c8c8d2369bd8/browser-proof.md\",\"contentHash\":\"sha256:79fe451db1432ec2df5da54c2922e7f5f01bb199b994df008144e354343bbdd2\",\"projectionIdentityHash\":\"sha256:8e322b5fcee7c728311dad34d151cafb41e339c06328f74894ef93ea2607c1e7\"}",
+      "projectionIdentityHash": "sha256:8e322b5fcee7c728311dad34d151cafb41e339c06328f74894ef93ea2607c1e7"
+    },
+    {
+      "id": "912e42e5-6997-4e27-a1f1-ff54796390eb",
+      "stepRunId": "e1a34d47-dd5d-4cac-a991-d6aef43ee92d",
+      "artifactExpectationId": "ec00f5da-2332-45b5-9e1c-160838f731bb",
+      "artifactKind": 0,
+      "title": "Implementation self-review summary",
+      "trustStatus": 1,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/e1a34d47-dd5d-4cac-a991-d6aef43ee92d/implementation-self-review.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|ec00f5da-2332-45b5-9e1c-160838f731bb|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#bcc18200547eb62b1b74dd29",
+      "createdAtUtc": "2026-06-02T01:37:52.157151-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|ec00f5da-2332-45b5-9e1c-160838f731bb|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/e1a34d47-dd5d-4cac-a991-d6aef43ee92d/implementation-self-review.md\",\"contentHash\":\"sha256:6026bc6abb7ae8b2df059854cfdb75b0e421080d719da6b5c9096e36659ba7cc\",\"projectionIdentityHash\":\"sha256:23d501681cf2a28bb95d09a6edaaab4c332d149a9129531845c2398b99f917dd\"}",
+      "projectionIdentityHash": "sha256:23d501681cf2a28bb95d09a6edaaab4c332d149a9129531845c2398b99f917dd"
+    },
+    {
+      "id": "59580c01-6723-4cb5-99d7-bc9a1fccc03a",
+      "stepRunId": "e1a34d47-dd5d-4cac-a991-d6aef43ee92d",
+      "artifactExpectationId": "093b5b43-79a8-4de3-8df4-6709d2162cef",
+      "artifactKind": 3,
+      "title": "Blazor implementation change set",
+      "trustStatus": 1,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/e1a34d47-dd5d-4cac-a991-d6aef43ee92d/implementation-change-set.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|093b5b43-79a8-4de3-8df4-6709d2162cef|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#e947dd57e2202a1cee4fa9fe",
+      "createdAtUtc": "2026-06-02T01:37:52.116121-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|093b5b43-79a8-4de3-8df4-6709d2162cef|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/e1a34d47-dd5d-4cac-a991-d6aef43ee92d/implementation-change-set.md\",\"contentHash\":\"sha256:19d286d0e3d162989bdd3164ab8a4841ec746b26b358b9ace8c32aaf4e8eda0c\",\"projectionIdentityHash\":\"sha256:4b4b655067b5ca417675d17453e3051b71115135bdcde5ec9820d0d883b9721d\"}",
+      "projectionIdentityHash": "sha256:4b4b655067b5ca417675d17453e3051b71115135bdcde5ec9820d0d883b9721d"
+    },
+    {
+      "id": "d0564d78-9490-4f94-9351-aeca550a7b16",
+      "stepRunId": "428a10e0-b4e7-496f-9c7e-0b5d9577e720",
+      "artifactExpectationId": "a996b100-fcc8-4355-8241-0b9191faeb33",
+      "artifactKind": 0,
+      "title": "Blazor delivery contract",
+      "trustStatus": 1,
+      "sensitivityLevel": 1,
+      "provenanceSummary": "Recorded by SB08 harness for current run 6f14d795-bfc2-4532-8a05-9910a42186b8 from scenario study-kanban-flashcards.",
+      "allowedFutureUsageSummary": "Reusable current-run SB08 regression evidence for process workflow hardening audit.",
+      "managedStoragePath": "managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/428a10e0-b4e7-496f-9c7e-0b5d9577e720/contract.md",
+      "externalReferenceKey": "workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|a996b100-fcc8-4355-8241-0b9191faeb33|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42#0b99c173d8fc5945092422ec",
+      "createdAtUtc": "2026-06-02T01:37:51.809198-04:00",
+      "projectionLineageJson": "{\"sourceKind\":\"WorkspaceWrite\",\"sourceExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"projectedExecutionRunId\":\"000ed1b0-2581-426f-a3f8-246de44425d4\",\"sourceExternalReferenceKey\":\"workspace-written-artifact|000ed1b0-2581-426f-a3f8-246de44425d4|a996b100-fcc8-4355-8241-0b9191faeb33|managed-files/sb08/study-kanban-flashcards/6f14d795-bfc2-4532-8a05-9910a42186b8/428a10e0-b4e7-496f-9c7e-0b5d9577e720/contract.md\",\"contentHash\":\"sha256:e056303a6bd359f90b661956521cb66b6718ede8db00e68953fd8f2aace132cd\",\"projectionIdentityHash\":\"sha256:bcd93259dc3317f92e78e9a28a86f5b948c8a5c1a79d2f3b98029e8ea976ae6a\"}",
+      "projectionIdentityHash": "sha256:bcd93259dc3317f92e78e9a28a86f5b948c8a5c1a79d2f3b98029e8ea976ae6a"
+    }
+  ],
+  "outboxRecords": [
+    {
+      "id": "30fe48d9-f516-40be-8e23-e715ec27e180",
+      "stepRunId": null,
+      "commandKey": "start-run",
+      "status": 1,
+      "healthStatus": 3,
+      "attemptCount": 1,
+      "lastAttemptAtUtc": "2026-06-02T01:37:25.575772-04:00",
+      "nextAttemptAtUtc": null,
+      "leaseExpiresAtUtc": null,
+      "completedAtUtc": "2026-06-02T01:37:25.584722-04:00",
+      "lastError": "",
+      "trigger": "",
+      "updatedAtUtc": "2026-06-02T01:37:25.584722-04:00"
+    },
+    {
+      "id": "0d557655-45de-4a4a-887b-f46f20fb3ac3",
+      "stepRunId": null,
+      "commandKey": "dispatch-run-automation",
+      "status": 0,
+      "healthStatus": 0,
+      "attemptCount": 0,
+      "lastAttemptAtUtc": null,
+      "nextAttemptAtUtc": null,
+      "leaseExpiresAtUtc": null,
+      "completedAtUtc": null,
+      "lastError": "",
+      "trigger": "run-start",
+      "updatedAtUtc": "2026-06-02T01:37:25.559523-04:00"
+    }
+  ],
+  "assignments": [
+    {
+      "id": "aced887f-11eb-4d24-a108-061e030e591e",
+      "roleRequirementId": "438a83ff-e999-4c3e-91ec-94220e77e854",
+      "stepDefinitionId": null,
+      "partyId": "2d40a039-6638-48a9-8d50-2289a3801120",
+      "workflowDefinitionId": null,
+      "workflowVersionId": null,
+      "displayName": ".NET QA Review Lead",
+      "executorKind": "AI agent",
+      "bindingReason": "Projected from AgentFramework organization catalog.",
+      "sourceRegistryKey": "crmhr-ai-agent:2d40a039-6638-48a9-8d50-2289a3801120",
+      "snapshotSummary": "Quality owner for coverage depth, evidence quality, and release confidence. | Seniority: Senior QA or test leadership | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: quality-assurance, test-strategy, risk-based-testing",
+      "isFallback": false,
+      "isCapabilityGap": false,
+      "allowsDirectMessaging": true,
+      "roleDisplayName": "Blazor QA and browser proof lead"
+    },
+    {
+      "id": "2fffa2df-cfe9-41ee-b90e-07eac1ce02d5",
+      "roleRequirementId": "bd636792-6070-4a29-9604-255314a9453e",
+      "stepDefinitionId": null,
+      "partyId": "2cd6395c-3a04-4c5b-9015-529809890ec3",
+      "workflowDefinitionId": null,
+      "workflowVersionId": null,
+      "displayName": ".NET Solution Architect",
+      "executorKind": "AI agent",
+      "bindingReason": "Projected from AgentFramework organization catalog.",
+      "sourceRegistryKey": "crmhr-ai-agent:2cd6395c-3a04-4c5b-9015-529809890ec3",
+      "snapshotSummary": "Architecture authority for system boundaries, irreversible decisions, and cross-domain technical coherence. | Seniority: Principal or staff architecture | Min years primary discipline: 8 | Min years software delivery: 10 | Domain tags: architecture, integration, data-boundaries, operability",
+      "isFallback": false,
+      "isCapabilityGap": false,
+      "allowsDirectMessaging": true,
+      "roleDisplayName": "Blazor solution architect"
+    },
+    {
+      "id": "418cf9e8-23cb-4128-bc02-6325609ee136",
+      "roleRequirementId": "02f04d87-4194-4999-8fa4-c27737493c86",
+      "stepDefinitionId": null,
+      "partyId": "4ce11aa9-4499-4117-a53b-735708e5f4fe",
+      "workflowDefinitionId": null,
+      "workflowVersionId": null,
+      "displayName": "Blazor Application Developer",
+      "executorKind": "AI agent",
+      "bindingReason": "Projected from AgentFramework organization catalog.",
+      "sourceRegistryKey": "crmhr-ai-agent:4ce11aa9-4499-4117-a53b-735708e5f4fe",
+      "snapshotSummary": "Implementation owner for code, tests, migration notes, and executable delivery proof. | Seniority: Senior software engineer or technical lead | Min years primary discipline: 6 | Min years software delivery: 8 | Domain tags: software-delivery, implementation, migrations, reviewability",
+      "isFallback": false,
+      "isCapabilityGap": false,
+      "allowsDirectMessaging": true,
+      "roleDisplayName": "Blazor implementation engineer"
+    },
+    {
+      "id": "312652a6-c572-4cb5-ba44-bfbd3bb447da",
+      "roleRequirementId": "dddb24a4-8560-41d0-93a4-ba8a4c0fc06e",
+      "stepDefinitionId": null,
+      "partyId": "4881a117-9ab8-448c-9ba1-a694cad93941",
+      "workflowDefinitionId": null,
+      "workflowVersionId": null,
+      "displayName": "Delivery Manager",
+      "executorKind": "AI agent",
+      "bindingReason": "Projected from AgentFramework organization catalog.",
+      "sourceRegistryKey": "crmhr-ai-agent:4881a117-9ab8-448c-9ba1-a694cad93941",
+      "snapshotSummary": "Flow owner for sequencing, staffing realism, dependency control, and execution escalation. | Seniority: Senior delivery management | Min years primary discipline: 7 | Min years software delivery: 10 | Domain tags: delivery-governance, program-coordination, execution-risk",
+      "isFallback": false,
+      "isCapabilityGap": false,
+      "allowsDirectMessaging": true,
+      "roleDisplayName": "Blazor delivery manager"
+    }
+  ],
+  "workBriefs": [
+    {
+      "id": "2f4cc9ee-a013-4c24-828f-f4d16cb69baa",
+      "stepRunId": "eacc95d6-2185-4e00-b82a-e43e0bc1606f",
+      "title": "Record Blazor results and evidence index brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Record Blazor results and evidence index\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: Delivery Manager\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.\r\nInstructions: Write a compact run evidence index, agent self-review summary, output-root path, screenshot references, console status, build/test status, and final verdict back into project structure through APIs/tools. Before completing, use project_structure_asset_create for screenshot or evidence files that must become project assets, and use project_structure_node_create to attach the final verdict and evidence index to the target work item. Include concrete node ids, asset ids, and raw record pointers only where needed for selective follow-up. If these project-structure tool calls cannot be completed, return status Blocked with the failed tool names and do not select the Error branch as a completed outcome.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Project-structure result writeback summary; Run evidence index",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "36ef6b6a-6334-4a3c-a4e0-b695dede4c4b",
+      "stepRunId": "e1a34d47-dd5d-4cac-a991-d6aef43ee92d",
+      "title": "Build Blazor application brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Build Blazor application\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: Blazor Application Developer\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.\r\nInstructions: Create or update the requested Blazor solution and app using the project-structure declared mode, package choices, routes, features, and output folder. Scaffolding is only the first action for greenfield delivery, not a deliverable. For WASM PWA work, scaffold the Blazor WebAssembly PWA variant and verify manifest plus service-worker assets exist; a plain WASM scaffold is not sufficient. Replace starter content and implement the contract routes such as /, /game, and /scores when named. Implement every explicit project-structure acceptance criterion in this step and do not mark complete while product behavior, routes, tests, persistence, PWA/static-hosting assets, or publish/runtime proof are deferred to next actions. Do not ship placeholder behavior for named interactions: keyboard controls, route behavior, persistence behavior, and domain/game mechanics must change observable application state and be exercised in self-review. Use workspace file and command tools only inside the approved product root. Run dotnet restore before build-sensitive changes when dependencies changed. Run dotnet build after implementation, run dotnet test when tests exist or are created, and use workspace_dotnet_run HTTP startup proof for web apps. Do not mark complete if explicit acceptance criteria are omitted, if output is written outside the approved product root, or if project-structure constraints are narrowed without a decision record.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Blazor implementation change set; Implementation self-review summary",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "70ba30b1-41e1-4f11-9f5b-57ced47b698f",
+      "stepRunId": "ec16cf24-5558-4b41-9aed-b7b301f596a9",
+      "title": "Repair Blazor validation findings brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Repair Blazor validation findings\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: Blazor Application Developer\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.\r\nInstructions: Repair only findings produced by the validation step. Do not expand scope beyond project-structure acceptance criteria. If validation found scaffold-only delivery or deferred acceptance criteria, implement the missing requested product behavior in the approved product root instead of adding more evidence around the incomplete scaffold. Rerun the smallest relevant dotnet build/test checks needed to prove the repair before handoff. When runtime startup proof is invalidated by the repair, start the app once with workspace_dotnet_run HTTP startup proof and record the startup receipt; leave browser screenshots and console proof to the validation step. Do not mark complete while required behavior, routes, persistence, PWA/static-hosting assets, or tests remain deferred to next actions.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Blazor repair change set",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "7a5e30b6-fa38-4b9c-b382-0609223ebb0e",
+      "stepRunId": "637d7809-fc42-499e-a716-c8c8d2369bd8",
+      "title": "Validate Blazor runtime and browser evidence brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Validate Blazor runtime and browser evidence\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: .NET QA Review Lead\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, and assumptions. Project-structure writeback belongs to result-recording steps, not validation.\r\nInstructions: Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Use the authoritative product root from the delivery contract and implementation change set. Before reporting external-target access failure, call workspace_stat_path or workspace_read_file against the exact path and cite the failed receipt. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. For new app delivery, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable. Route scaffold-only delivery, deferred acceptance criteria, no-op handlers for named interactions, missing behavior, or missing proof to repair-required instead of Blocked unless a confirmed failed tool/policy receipt prevents validation. Project-structure evidence-node attachment is not part of this validation decision after managed validation artifacts are written; do not fail solely because project_structure_node_create or project-structure writeback cannot attach the evidence node, and do not call project_structure_node_create or project_structure_asset_create from this validation step. Do not use workspace_pwsh_run_script for cleanup or diagnostic helper scripts; record startup/cleanup receipts from workspace_dotnet_run, browser tools, and managed artifacts. This review step must select exactly one governed branch: quality-accepted only when all criteria and proof are satisfied, otherwise repair-required; do not complete with the Default branch.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Blazor runtime evidence pack; Validation self-review summary",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "a5826228-da62-4716-809e-9d49d963a78f",
+      "stepRunId": "6cef27d1-608c-49a6-962f-6a8af0c71f44",
+      "title": "Escalate unresolved Blazor repair findings brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Escalate unresolved Blazor repair findings\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: Delivery Manager\r\nInputs: Post-repair Blazor validation evidence, repair notes, and remaining product or proof-blocking findings.\r\nOutputs: Explicit no-go, scope reset, or replan decision with accountable owner and required next repair scope.\r\nEvidence: Escalation decision, unresolved defect/proof-gap list, failed URLs or APIs, screenshot/console references when available, and owner.\r\nInstructions: Capture unresolved post-repair findings and make the Blazor delivery no-go or replan decision explicit instead of silently closing the process.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Post-repair Blazor validation evidence, repair notes, and remaining product or proof-blocking findings.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Explicit no-go, scope reset, or replan decision with accountable owner and required next repair scope.",
+      "evidenceExpectationSummary": "Blazor repair escalation record",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "b5c646a6-f96d-4319-afa0-dfb8f87785bf",
+      "stepRunId": "428a10e0-b4e7-496f-9c7e-0b5d9577e720",
+      "title": "Resolve Blazor delivery contract brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Resolve Blazor delivery contract\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: Delivery Manager\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.\r\nInstructions: Read project structure and run prompt. Resolve Blazor mode (SSR, WASM, or WASM PWA), product root, requested external output root or current-run managed output root, run folder, acceptance criteria, routes/screens, backend/API expectations, exclusions, and required evidence writeback targets. Keep the app description generic and do not add sample-specific assumptions.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Blazor delivery contract",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "cde6cc61-2dad-4243-897f-3964cfb26735",
+      "stepRunId": "9af90f69-6415-48c5-a74c-7b03772c18e6",
+      "title": "Revalidate Blazor repair brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Revalidate Blazor repair\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: .NET QA Review Lead\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, and assumptions. Project-structure writeback belongs to result-recording steps, not validation.\r\nInstructions: Run validation against the delivered Blazor SSR, WASM, or WASM PWA app. Run dotnet restore, dotnet build, and dotnet test when a test project exists or was created. Start the app once from the approved product root and record the startup receipt. Use Playwright browser tools for every visible UI surface named by project structure or implementation evidence. Capture screenshot image paths, browser_snapshot or browser_evaluate state output, browser_console_messages output, actual URL or entrypoint, visible behavior assertions, and cleanup receipt. For new app delivery, include the matching API/backend proof as well. Missing, blank, detached, stale, or chat-only screenshots are not acceptable. Do not call project_structure_node_create or project_structure_asset_create from this validation step; result writeback belongs to the result-recording steps. Do not use workspace_pwsh_run_script for cleanup or diagnostic helper scripts; record startup/cleanup receipts from workspace_dotnet_run, browser tools, and managed artifacts.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Repaired Blazor runtime evidence pack",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    },
+    {
+      "id": "f08b3f6e-ead9-46a4-85da-26f63c54155d",
+      "stepRunId": "441fb1cf-1936-443f-b2b5-4ef312a13850",
+      "title": "Record repaired Blazor results and evidence index brief",
+      "workBriefText": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426: Record repaired Blazor results and evidence index\r\nCustomer value: Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.\r\nOwner: Delivery manager\r\nExecutor: Delivery Manager\r\nInputs: Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.\r\nOutputs: Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.\r\nEvidence: Record commands, files, URLs, screenshots, console messages, errors, assumptions, and project-structure writeback references as applicable.\r\nInstructions: Write a compact run evidence index, agent self-review summary, output-root path, screenshot references, console status, build/test status, and final verdict back into project structure through APIs/tools. Before completing, use project_structure_asset_create for screenshot or evidence files that must become project assets, and use project_structure_node_create to attach the final verdict and evidence index to the target work item. Include concrete node ids, asset ids, and raw record pointers only where needed for selective follow-up. If these project-structure tool calls cannot be completed, return status Blocked with the failed tool names and do not select the Error branch as a completed outcome.\r\nProject structure target: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject structure node: Study Kanban Flashcards request packet (custom:52d79e1849554ce7819f7673cbc8a7dc)\r\nProject id: c9a00f11-d6a9-40ce-8f3a-d5838e484b62",
+      "handoffSummary": "Use project-structure source-of-truth data, upstream process artifacts, and explicit run prompt constraints.",
+      "assignmentReason": "Projected from AgentFramework organization catalog.",
+      "expectedOutcome": "Produce the named artifacts with enough detail for downstream agents to act without reading the full raw transcript.",
+      "evidenceExpectationSummary": "Repaired project-structure result writeback summary; Repaired run evidence index",
+      "createdAtUtc": "2026-06-02T01:37:25.551128-04:00"
+    }
+  ],
+  "conformanceObservations": [],
+  "directMessageThreads": [],
+  "executionRuns": [],
+  "workflowRuns": [],
+  "escalations": [],
+  "operatorApprovals": [],
+  "attemptTimeline": [
+    {
+      "kind": 2,
+      "stepRunId": null,
+      "stepTitle": "",
+      "executionRunId": null,
+      "outboxRecordId": "30fe48d9-f516-40be-8e23-e715ec27e180",
+      "escalationId": null,
+      "title": "start-run",
+      "status": "Completed",
+      "statusTone": "mint",
+      "summary": "",
+      "providerName": "",
+      "model": "",
+      "proofSummary": "Attempts: 1",
+      "correlationId": "30fe48d9f51640be8e23e715ec27e180",
+      "occurredAtUtc": "2026-06-02T01:37:25.575772-04:00"
+    },
+    {
+      "kind": 2,
+      "stepRunId": null,
+      "stepTitle": "",
+      "executionRunId": null,
+      "outboxRecordId": "0d557655-45de-4a4a-887b-f46f20fb3ac3",
+      "escalationId": null,
+      "title": "dispatch-run-automation",
+      "status": "Pending",
+      "statusTone": "neutral",
+      "summary": "run-start",
+      "providerName": "",
+      "model": "",
+      "proofSummary": "Attempts: 0",
+      "correlationId": "0d55765545de4a4a887bf46f20fb3ac3",
+      "occurredAtUtc": "2026-06-02T01:37:25.559523-04:00"
+    }
+  ],
+  "health": {
+    "activeExecutionCount": 0,
+    "latestAttemptCount": 0,
+    "pendingApprovalCount": 0,
+    "blockedStepCount": 0,
+    "failedStepCount": 0,
+    "waitingApprovalStepCount": 0,
+    "missingArtifactCount": 0,
+    "pendingOutboxCount": 1,
+    "deadLetteredOutboxCount": 0,
+    "recoveryClassification": 0,
+    "actionableReason": "Selected branch outcome: Default.",
+    "invariantDiagnosticCount": 0,
+    "recommendedAction": 0
+  }
+}

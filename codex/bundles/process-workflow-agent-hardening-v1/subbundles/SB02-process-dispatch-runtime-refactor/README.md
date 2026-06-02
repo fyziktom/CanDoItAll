@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Completed. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -70,13 +70,13 @@ UI changes are limited to what is necessary for compile compatibility. Full UI d
 
 ## Acceptance Checklist
 
-- [ ] Characterization tests pass before and after extraction.
-- [ ] Stale run id artifact is rejected.
-- [ ] Current run artifact is accepted.
-- [ ] State transition behavior remains compatible.
-- [ ] Cancellation-token audit is documented.
-- [ ] Drift scanner shows no new unowned ids.
-- [ ] SB02 proof manifest exists.
+- [x] Characterization tests pass before and after extraction.
+- [x] Stale run id artifact is rejected.
+- [x] Current run artifact is accepted.
+- [x] State transition behavior remains compatible.
+- [x] Cancellation-token audit is documented.
+- [x] Drift scanner shows no new unowned ids.
+- [x] SB02 proof manifest exists.
 
 ## Proof Required
 

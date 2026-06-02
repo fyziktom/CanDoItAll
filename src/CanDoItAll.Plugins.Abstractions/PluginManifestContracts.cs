@@ -78,6 +78,8 @@ public sealed record PluginWorkflowExecutorDescriptor(
 {
     public WorkflowExecutorPermissionPolicy PermissionPolicy { get; init; } = WorkflowExecutorPermissionPolicy.None;
 
+    public WorkflowExecutorSideEffectDescriptor SideEffects { get; init; } = WorkflowExecutorSideEffectDescriptor.None;
+
     public WorkflowExecutorDeterministicTestModeDescriptor DeterministicTestMode { get; init; } = WorkflowExecutorDeterministicTestModeDescriptor.None;
 }
 

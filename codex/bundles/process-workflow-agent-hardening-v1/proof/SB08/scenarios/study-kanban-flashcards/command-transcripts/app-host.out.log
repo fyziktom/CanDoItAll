@@ -1,0 +1,5 @@
+Command: dotnet run --no-launch-profile --project C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\study-kanban-flashcards --urls http://127.0.0.1:5204
+WorkingDirectory: C:\repositories\CanDoItAll
+ProcessId: 42916
+StartedAtUtc: 2026-06-02T05:37:34.8059800Z
+Output redirection disabled for long-running host stability.

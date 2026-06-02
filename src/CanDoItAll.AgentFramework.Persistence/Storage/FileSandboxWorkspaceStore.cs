@@ -749,6 +749,13 @@ public sealed class FileSandboxWorkspaceStore : ISandboxWorkspaceStore, ISandbox
 
         ValidateAgentScoped(detail.ExecutionLog.Select(item => (item.Id, item.AgentId, item.ChatSessionId)), detail, knownAgentIds, "Execution log entry");
         ValidateAgentScoped(detail.Metrics.Select(item => (item.Id, item.AgentId, item.ChatSessionId)), detail, knownAgentIds, "Execution metric");
+        ValidateAgentScoped(
+            detail.UsageObservations
+                .Where(item => item.AgentId.HasValue)
+                .Select(item => (item.Id, item.AgentId!.Value, item.ChatSessionId)),
+            detail,
+            knownAgentIds,
+            "Provider usage observation");
     }
 
     private static void ValidateAgentScoped(

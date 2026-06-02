@@ -396,6 +396,15 @@ internal sealed class ProcessObservationService(
             query.HistoryWindow,
             cancellationToken);
         var metrics = ExtractLiveMetrics(executionRunDetails, historyStartUtc);
+        var usageObservations = ExtractLiveUsageObservations(executionRunDetails, historyStartUtc);
+        var legacyMetricsWithoutUsageObservations = ExtractLiveLegacyMetricsWithoutUsageObservations(
+            executionRunDetails,
+            historyStartUtc);
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var providerUsage = BuildProviderUsageSummary(
+            usageObservations,
+            legacyMetricsWithoutUsageObservations,
+            providers);
         var toolReceipts = ExtractLiveToolReceipts(executionRunDetails, historyStartUtc);
         var sourceMaxUpdatedAtUtc = ResolveLiveSourceMaxUpdatedAtUtc(
             observedRuns,
@@ -404,6 +413,7 @@ internal sealed class ProcessObservationService(
             runEventCards,
             executionRuns,
             metrics,
+            usageObservations,
             toolReceipts);
         var revision = ProcessObservationSnapshotRevision.Create(observedAtUtc, sourceMaxUpdatedAtUtc);
 
@@ -416,7 +426,7 @@ internal sealed class ProcessObservationService(
             escalationCards,
             runEventCards,
             BuildLiveAgentCards(activeRunSummaries),
-            BuildLiveStats(observedRuns, activeRunSummaries, metrics),
+            BuildLiveStats(observedRuns, activeRunSummaries, metrics, providerUsage),
             BuildLiveMetricPoints(metrics, query.HistoryWindow),
             BuildLiveToolUsage(toolReceipts),
             revision,
@@ -490,6 +500,33 @@ internal sealed class ProcessObservationService(
             .SelectMany(item => item.Metrics)
             .Where(item => item.CreatedAtUtc >= historyStartUtc)
             .OrderBy(item => item.CreatedAtUtc)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<ProviderUsageObservation> ExtractLiveUsageObservations(
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        DateTimeOffset historyStartUtc)
+    {
+        return executionRunDetails
+            .SelectMany(item => item.UsageObservations)
+            .Where(item => item.CreatedAtUtc >= historyStartUtc)
+            .GroupBy(ResolveUsageObservationKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(item => item.CreatedAtUtc)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<AgentRunMetric> ExtractLiveLegacyMetricsWithoutUsageObservations(
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        DateTimeOffset historyStartUtc)
+    {
+        return executionRunDetails
+            .Where(detail => detail.UsageObservations.Count == 0)
+            .SelectMany(detail => detail.Metrics)
+            .Where(metric => metric.CreatedAtUtc >= historyStartUtc)
+            .GroupBy(metric => metric.Id)
+            .Select(group => group.First())
+            .OrderBy(metric => metric.CreatedAtUtc)
             .ToArray();
     }
 
@@ -675,13 +712,13 @@ internal sealed class ProcessObservationService(
     private static ProcessLiveStats BuildLiveStats(
         IReadOnlyList<ProcessRunListItem> observedRuns,
         IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries,
-        IReadOnlyList<AgentRunMetric> metrics)
+        IReadOnlyList<AgentRunMetric> metrics,
+        ProviderUsageSummary providerUsage)
     {
         var observedActualCost = observedRuns.Sum(item => item.ActualCost);
         var liveMetricCost = ProviderPricingCalculator.SumKnownCosts(metrics);
-        var actualCost = liveMetricCost > 0m
-            ? Math.Max(observedActualCost, liveMetricCost)
-            : observedActualCost;
+        var liveUsageCost = providerUsage.KnownCostUsd;
+        var actualCost = Math.Max(observedActualCost, Math.Max(liveMetricCost, liveUsageCost));
 
         return new ProcessLiveStats(
             observedRuns.Count,
@@ -698,7 +735,36 @@ internal sealed class ProcessObservationService(
             ClampToInt(metrics.Sum(item => (long)item.OutputTokens)),
             ClampToInt(metrics.Sum(item => (long)item.ToolCalls)),
             observedRuns.Sum(item => item.EstimatedCost),
-            actualCost);
+            actualCost,
+            providerUsage);
+    }
+
+    private static ProviderUsageSummary BuildProviderUsageSummary(
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
+        IReadOnlyList<AgentRunMetric> legacyMetricsWithoutUsageObservations,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        var usageSummary = ProviderPricingCalculator.SummarizeUsage(usageObservations, providers);
+        var knownLegacyMetrics = legacyMetricsWithoutUsageObservations
+            .Where(metric => metric.CostUsd > 0m)
+            .ToArray();
+        var unknownLegacyMetrics = legacyMetricsWithoutUsageObservations
+            .Where(metric => metric.CostUsd <= 0m && HasProviderActivity(metric))
+            .ToArray();
+
+        return new ProviderUsageSummary(
+            usageSummary.ObservationCount + knownLegacyMetrics.Length + unknownLegacyMetrics.Length,
+            usageSummary.KnownObservationCount + knownLegacyMetrics.Length,
+            usageSummary.UnknownObservationCount + unknownLegacyMetrics.Length,
+            usageSummary.InputTokens + knownLegacyMetrics.Sum(metric => metric.InputTokens),
+            usageSummary.CachedInputTokens + knownLegacyMetrics.Sum(metric => metric.CachedInputTokens),
+            usageSummary.OutputTokens + knownLegacyMetrics.Sum(metric => metric.OutputTokens),
+            usageSummary.ReasoningTokens,
+            usageSummary.TotalTokens + knownLegacyMetrics.Sum(metric => Math.Max(0, metric.InputTokens) + Math.Max(0, metric.OutputTokens)),
+            decimal.Round(
+                usageSummary.KnownCostUsd + knownLegacyMetrics.Sum(metric => metric.CostUsd),
+                6,
+                MidpointRounding.AwayFromZero));
     }
 
     private static IReadOnlyList<ProcessLiveMetricPoint> BuildLiveMetricPoints(
@@ -888,6 +954,7 @@ internal sealed class ProcessObservationService(
         IReadOnlyList<ProcessLiveRunEventCard> runEventCards,
         IReadOnlyList<ExecutionRunRecord> executionRuns,
         IReadOnlyList<AgentRunMetric> metrics,
+        IReadOnlyList<ProviderUsageObservation> usageObservations,
         IReadOnlyList<ToolExecutionReceiptRecord> toolReceipts)
     {
         var candidates = new List<DateTimeOffset>();
@@ -897,6 +964,7 @@ internal sealed class ProcessObservationService(
         AddIfPresent(candidates, FindMax(runEventCards, item => item.OccurredAtUtc));
         AddIfPresent(candidates, FindMax(executionRuns, item => item.UpdatedAtUtc));
         AddIfPresent(candidates, FindMax(metrics, item => item.CreatedAtUtc));
+        AddIfPresent(candidates, FindMax(usageObservations, item => item.CreatedAtUtc));
         AddIfPresent(candidates, FindMax(toolReceipts, item => item.CompletedAtUtc));
 
         return candidates.Count == 0
@@ -929,6 +997,25 @@ internal sealed class ProcessObservationService(
         {
             values.Add(value.Value);
         }
+    }
+
+    private static bool HasProviderActivity(AgentRunMetric metric)
+    {
+        return metric.InputTokens > 0 ||
+               metric.OutputTokens > 0 ||
+               metric.CachedInputTokens > 0 ||
+               metric.ToolCalls > 0 ||
+               metric.DurationMs > 0;
+    }
+
+    private static string ResolveUsageObservationKey(ProviderUsageObservation observation)
+    {
+        if (!string.IsNullOrWhiteSpace(observation.ProviderResponseId))
+        {
+            return $"{observation.ProviderName}|{observation.Model}|{observation.ProviderResponseId}|{observation.SourcePhase}";
+        }
+
+        return observation.Id.ToString("N");
     }
 
     private static bool ShouldIncludeLiveRun(

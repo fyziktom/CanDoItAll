@@ -47,10 +47,38 @@ public sealed class WorkflowExecutorCanvasCatalogTests
         Assert.Contains(officeGroup.Children, item => item.ActionId == WorkflowExecutorCanvasCatalog.BuildCreateActionId(officeMark.Id));
     }
 
+    [Fact]
+    public void BuildCreateAction_includes_side_effect_and_retry_safety_metadata()
+    {
+        var executor = CreateExecutor(
+            "external.write",
+            "External write",
+            WorkflowExecutorSourceDescriptor.BuiltIn("1.0.0"),
+            WorkflowExecutorSideEffectDescriptor.ExternalWrite(
+                WorkflowExecutorExternalMutationKind.None,
+                requiresCommitIdempotencyKey: false,
+                allowsIdempotentRetry: false,
+                idempotencyKeyJsonPath: string.Empty,
+                receiptSchema: "{}"),
+            new WorkflowExecutorExecutionPolicy(
+                TimeoutSeconds: 30,
+                MaxRetryAttempts: 2,
+                RetryDelayMilliseconds: 250,
+                CaptureOutputArtifact: false));
+
+        var action = WorkflowExecutorCanvasCatalog.BuildCreateAction(executor);
+
+        Assert.Contains("Available", action.Description, StringComparison.Ordinal);
+        Assert.Contains("External write", action.Description, StringComparison.Ordinal);
+        Assert.Contains("Unsafe retries", action.Description, StringComparison.Ordinal);
+    }
+
     private static WorkflowExecutorDescriptor CreateExecutor(
         string id,
         string name,
-        WorkflowExecutorSourceDescriptor source)
+        WorkflowExecutorSourceDescriptor source,
+        WorkflowExecutorSideEffectDescriptor? sideEffects = null,
+        WorkflowExecutorExecutionPolicy? defaultPolicy = null)
         => new(
             new WorkflowExecutorId(id),
             name,
@@ -62,9 +90,10 @@ public sealed class WorkflowExecutorCanvasCatalogTests
             WorkflowValueShape.Text,
             "{}",
             "{}",
-            WorkflowExecutorExecutionPolicy.Default,
+            defaultPolicy ?? WorkflowExecutorExecutionPolicy.Default,
             IsImplemented: true)
         {
-            Source = source
+            Source = source,
+            SideEffects = sideEffects ?? WorkflowExecutorSideEffectDescriptor.None
         };
 }

@@ -1166,6 +1166,13 @@ public sealed class PluginCatalogIntegrationTests
                 name,
                 icon),
             PermissionPolicy = permissionPolicy,
+            SideEffects = permissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.WritesExternalData)
+                ? WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+                    "$.externalSideEffectReceipt.idempotencyKey",
+                    "workflow-email-processed-marker/v1")
+                : permissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.ReadsExternalData)
+                    ? WorkflowExecutorSideEffectDescriptor.ExternalRead("workflow-email-external-read/v1")
+                    : WorkflowExecutorSideEffectDescriptor.None,
             DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("SB06 fake-mode preview proof."),
             Simulation = simulation
         };

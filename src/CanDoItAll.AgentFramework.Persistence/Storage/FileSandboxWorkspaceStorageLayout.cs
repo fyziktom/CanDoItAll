@@ -40,6 +40,8 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
 
     public string RunMetricsRoot(Guid executionRunId) => Path.Combine(RunRoot(executionRunId), "metrics");
 
+    public string RunUsageRoot(Guid executionRunId) => Path.Combine(RunRoot(executionRunId), "usage");
+
     public string RunApprovalsRoot(Guid executionRunId) => Path.Combine(RunRoot(executionRunId), "approvals");
 
     public string RunArtifactsRoot(Guid executionRunId) => Path.Combine(RunRoot(executionRunId), "audit", "artifacts");
@@ -51,6 +53,8 @@ internal sealed class FileSandboxWorkspaceStorageLayout(string rootPath, Workspa
     public string OrphanLogsRoot => Path.Combine(ExecutionOrphansRoot, "logs");
 
     public string OrphanMetricsRoot => Path.Combine(ExecutionOrphansRoot, "metrics");
+
+    public string OrphanUsageRoot => Path.Combine(ExecutionOrphansRoot, "usage");
 
     public string OrphanApprovalsRoot => Path.Combine(ExecutionOrphansRoot, "approvals");
 

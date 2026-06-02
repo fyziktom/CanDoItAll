@@ -156,39 +156,39 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         RegexOptions.CultureInvariant);
     private static readonly HashSet<string> ExternalTargetManagedWorkspaceIsolationTools = new(StringComparer.OrdinalIgnoreCase)
     {
-        "workspace_list_files",
-        "workspace_search",
-        "workspace_read_file",
-        "workspace_stat_path",
-        "workspace_create_directory",
-        "workspace_write_file",
-        "workspace_append_file",
-        "workspace_copy_path",
-        "workspace_move_path",
-        "workspace_delete_path",
-        "workspace_dotnet_new",
-        "workspace_dotnet_restore",
-        "workspace_dotnet_build",
-        "workspace_dotnet_test",
-        "workspace_dotnet_run",
-        "workspace_pwsh_run_script",
-        "workspace_python_run_file",
-        "workspace_inspect_image"
+        ToolContractCatalog.WorkspaceListFiles,
+        ToolContractCatalog.WorkspaceSearch,
+        ToolContractCatalog.WorkspaceReadFile,
+        ToolContractCatalog.WorkspaceStatPath,
+        ToolContractCatalog.WorkspaceCreateDirectory,
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceCopyPath,
+        ToolContractCatalog.WorkspaceMovePath,
+        ToolContractCatalog.WorkspaceDeletePath,
+        ToolContractCatalog.WorkspaceDotNetNew,
+        ToolContractCatalog.WorkspaceDotNetRestore,
+        ToolContractCatalog.WorkspaceDotNetBuild,
+        ToolContractCatalog.WorkspaceDotNetTest,
+        ToolContractCatalog.WorkspaceDotNetRun,
+        ToolContractCatalog.WorkspacePowerShellRunScript,
+        ToolContractCatalog.WorkspacePythonRunFile,
+        ToolContractCatalog.WorkspaceInspectImage
     };
     private static readonly HashSet<string> BroadManagedWorkspaceDiscoveryTools = new(StringComparer.OrdinalIgnoreCase)
     {
-        "workspace_list_files",
-        "workspace_search"
+        ToolContractCatalog.WorkspaceListFiles,
+        ToolContractCatalog.WorkspaceSearch
     };
     private static readonly HashSet<string> ProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
-        "workspace_create_directory",
-        "workspace_write_file",
-        "workspace_append_file",
-        "workspace_copy_path",
-        "workspace_move_path",
-        "workspace_delete_path",
-        "workspace_dotnet_new"
+        ToolContractCatalog.WorkspaceCreateDirectory,
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceCopyPath,
+        ToolContractCatalog.WorkspaceMovePath,
+        ToolContractCatalog.WorkspaceDeletePath,
+        ToolContractCatalog.WorkspaceDotNetNew
     };
     private static readonly HashSet<string> WorkspaceScriptExecutionTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -197,11 +197,11 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     };
     private static readonly HashSet<string> DirectProductFileMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
-        "workspace_write_file",
-        "workspace_append_file",
-        "workspace_copy_path",
-        "workspace_move_path",
-        "workspace_delete_path"
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceCopyPath,
+        ToolContractCatalog.WorkspaceMovePath,
+        ToolContractCatalog.WorkspaceDeletePath
     };
     private static readonly string[] ManagedWorkspacePathArgumentFragments =
     [
@@ -258,19 +258,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "integration-map",
         "output"
     ];
-    private static readonly HashSet<string> BrowserProofTools = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "browser_console_messages",
-        "browser_evaluate",
-        "browser_network_requests",
-        "browser_snapshot",
-        "browser_take_screenshot"
-    };
+    private static readonly HashSet<string> BrowserProofTools = new(ToolContractCatalog.BrowserToolNames, StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> DotNetValidationTools = new(StringComparer.OrdinalIgnoreCase)
     {
-        "workspace_dotnet_restore",
-        "workspace_dotnet_build",
-        "workspace_dotnet_test"
+        ToolContractCatalog.WorkspaceDotNetRestore,
+        ToolContractCatalog.WorkspaceDotNetBuild,
+        ToolContractCatalog.WorkspaceDotNetTest
     };
     private static readonly HashSet<string> ProcessDefinitionMutationTools = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -283,15 +276,15 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
         AgentToolInvocationPolicyMetadata.ProcessesTemplateImport
     };
-    private const string OperationWriteManagedProcessArtifacts = "WriteManagedProcessArtifacts";
-    private const string OperationWriteExternalArtifactDestination = "WriteExternalArtifactDestination";
-    private const string OperationMutateProductTarget = "MutateProductTarget";
-    private const string OperationRunValidation = "RunValidation";
-    private const string OperationLaunchRuntime = "LaunchRuntime";
-    private const string OperationCaptureRuntimeProof = "CaptureRuntimeProof";
-    private const string OperationExecuteExternalAction = "ExecuteExternalAction";
-    private const string OperationRecoverArtifactsOnly = "RecoverArtifactsOnly";
-    private const string OperationEscalateOrDecide = "EscalateOrDecide";
+    private const string OperationWriteManagedProcessArtifacts = ProcessOperationContractNames.WriteManagedProcessArtifacts;
+    private const string OperationWriteExternalArtifactDestination = ProcessOperationContractNames.WriteExternalArtifactDestination;
+    private const string OperationMutateProductTarget = ProcessOperationContractNames.MutateProductTarget;
+    private const string OperationRunValidation = ProcessOperationContractNames.RunValidation;
+    private const string OperationLaunchRuntime = ProcessOperationContractNames.LaunchRuntime;
+    private const string OperationCaptureRuntimeProof = ProcessOperationContractNames.CaptureRuntimeProof;
+    private const string OperationExecuteExternalAction = ProcessOperationContractNames.ExecuteExternalAction;
+    private const string OperationRecoverArtifactsOnly = ProcessOperationContractNames.RecoverArtifactsOnly;
+    private const string OperationEscalateOrDecide = ProcessOperationContractNames.EscalateOrDecide;
 
     private readonly Dictionary<string, int> invocationCounts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> dotnetNewTemplatesByScaffoldRoot = new(StringComparer.OrdinalIgnoreCase);
@@ -439,7 +432,7 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return [OperationRequirement.Any(OperationRunValidation)];
         }
 
-        if (string.Equals(context.ToolName, "workspace_dotnet_run", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(context.ToolName, ToolContractCatalog.WorkspaceDotNetRun, StringComparison.OrdinalIgnoreCase))
         {
             return [ResolveDotnetRunOperationRequirement(context)];
         }
@@ -1912,19 +1905,19 @@ public static class AgentToolInvocationPolicyMetadata
     private static readonly IReadOnlyDictionary<string, AgentToolPolicyMetadata> RegisteredTools =
         new[]
         {
-            Mutation("workspace_dotnet_new"),
+            Mutation(ToolContractCatalog.WorkspaceDotNetNew),
             Mutation(WorkspacePowerShellRunScript),
             Mutation(WorkspacePythonRunFile),
-            Mutation("workspace_create_directory"),
-            Mutation("workspace_write_file"),
-            Mutation("workspace_append_file"),
-            Mutation("workspace_copy_path"),
-            Mutation("workspace_move_path"),
-            Mutation("workspace_delete_path"),
-            Validation("workspace_dotnet_restore"),
-            Validation("workspace_dotnet_build"),
-            Validation("workspace_dotnet_test"),
-            Validation("workspace_dotnet_run"),
+            Mutation(ToolContractCatalog.WorkspaceCreateDirectory),
+            Mutation(ToolContractCatalog.WorkspaceWriteFile),
+            Mutation(ToolContractCatalog.WorkspaceAppendFile),
+            Mutation(ToolContractCatalog.WorkspaceCopyPath),
+            Mutation(ToolContractCatalog.WorkspaceMovePath),
+            Mutation(ToolContractCatalog.WorkspaceDeletePath),
+            Validation(ToolContractCatalog.WorkspaceDotNetRestore),
+            Validation(ToolContractCatalog.WorkspaceDotNetBuild),
+            Validation(ToolContractCatalog.WorkspaceDotNetTest),
+            Validation(ToolContractCatalog.WorkspaceDotNetRun),
             Read(WorkspaceInspectImage),
             Read(LoadSkill),
             Read(ReadSkillResource),

@@ -37,6 +37,12 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 - Provider profiles include `isPrivateProvider`, `modelPrices`, and `tags`. Provider capabilities include structured output, hosted tools, hosted/local MCP, image generation, vision, compaction, native code/file/web search, and approval support.
 - For OpenAI-like Responses models beginning with `gpt-5`, `o1`, `o3`, or `o4`, temperature is omitted and `modelParameters.reasoningEffort` can be set to `none`, `low`, `medium`, `high`, or `extraHigh`.
 
+## Canonical Runtime Contracts
+
+- Process-driven agent runs should use the canonical structured output contract key for process-step outcomes and preserve `processRunId`, `processStepId`, `schedulerRunId`, and `messageId` filters when reviewing execution runs.
+- Provider usage is a ledger observation, not a chat estimate. Preserve `ProviderUsageObservationStatus`, `ProviderUsageSourcePhase`, token counts, pricing status, and execution/run identifiers when reviewing metrics or artifacts.
+- Tool receipts and runtime snapshots are current-run evidence. Do not treat stale prior-run receipts, copied artifacts, or provider test-chat output as proof for a governed process step.
+
 ## Execution DTOs
 
 `AgentExecutionRunStartApiRequest` fields:

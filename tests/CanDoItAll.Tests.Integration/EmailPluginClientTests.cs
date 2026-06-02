@@ -26,7 +26,14 @@ public sealed class EmailPluginClientTests
             executor => executor.ExecutorId == Office365PluginConstants.DownloadByAddressExecutorId &&
                         executor.Name == "Office365 unprocessed message by address" &&
                         executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.ReadsExternalData) &&
+                        executor.SideEffects.Kind == WorkflowExecutorSideEffectKind.ExternalRead &&
                         executor.DeterministicTestMode.IsSupported);
+        Assert.Contains(
+            plugin.Descriptor.WorkflowExecutors,
+            executor => executor.ExecutorId == Office365PluginConstants.MarkProcessedExecutorId &&
+                        executor.PermissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.IdempotentExternalMarker) &&
+                        executor.SideEffects.ExternalMutationKind == WorkflowExecutorExternalMutationKind.ProcessedMarker &&
+                        executor.SideEffects.AllowsIdempotentRetry);
         Assert.Contains(
             services,
             descriptor => descriptor.ServiceType == typeof(IWorkflowExecutor) &&
@@ -63,8 +70,14 @@ public sealed class EmailPluginClientTests
 
         using var document = JsonDocument.Parse(payload);
         var root = document.RootElement;
-        Assert.Equal(connectionId.ToString(), root.GetProperty("gmailProcessing").GetProperty("connectionId").GetString());
+        var processing = root.GetProperty("gmailProcessing");
+        Assert.Equal(connectionId.ToString(), processing.GetProperty("connectionId").GetString());
+        Assert.Equal("msg-1", processing.GetProperty("selectedMessageId").GetString());
+        Assert.Equal("gmail:msg-1", processing.GetProperty("idempotencyKey").GetString());
         Assert.Equal(connectionId.ToString(), root.GetProperty("runContext").GetProperty("gmailProcessing").GetProperty("connectionId").GetString());
+        Assert.Equal(
+            "gmail:msg-1",
+            root.GetProperty("runContext").GetProperty("gmailProcessing").GetProperty("idempotencyKey").GetString());
     }
 
     [Fact]
@@ -170,6 +183,62 @@ public sealed class EmailPluginClientTests
     }
 
     [Fact]
+    public void Gmail_mark_processed_payload_includes_commit_side_effect_receipts()
+    {
+        var payload = InvokeMarkProcessedPayloadFactory<GmailMarkProcessedWorkflowExecutor, GmailMessageLabelMutationResult>(
+            new WorkflowNodeInput("""{"runContext":{"gmailProcessing":{"idempotencyKey":"gmail:msg-1"}}}"""),
+            new GmailMessageLabelMutationResult(
+                "gmail",
+                "msg-1",
+                "CanDoItAllSummaryTest",
+                "CanDoItAllSummaryTestProcessed",
+                SourceLabelRemoved: true,
+                ProcessedLabelAdded: true));
+
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        var receipt = root.GetProperty("externalSideEffectReceipt");
+        Assert.Equal("Commit", root.GetProperty("sideEffectMode").GetString());
+        Assert.False(root.GetProperty("dryRun").GetBoolean());
+        Assert.True(root.GetProperty("committed").GetBoolean());
+        Assert.Equal("workflow-email-processed-marker/v1", receipt.GetProperty("schemaVersion").GetString());
+        Assert.Equal("gmail", receipt.GetProperty("provider").GetString());
+        Assert.Equal("gmail:msg-1", receipt.GetProperty("idempotencyKey").GetString());
+        Assert.True(receipt.GetProperty("mutationApplied").GetBoolean());
+        Assert.True(root.GetProperty("idempotencyRecord").GetProperty("retrySafe").GetBoolean());
+        Assert.Equal("CanDoItAllSummaryTestProcessed", root.GetProperty("processedMarker").GetProperty("processedMarkerName").GetString());
+    }
+
+    [Fact]
+    public void Office365_mark_processed_payload_includes_commit_side_effect_receipts()
+    {
+        var payload = InvokeMarkProcessedPayloadFactory<Office365MarkProcessedWorkflowExecutor, Office365MessageCategoryMutationResult>(
+            new WorkflowNodeInput("""{"runContext":{"office365Processing":{"idempotencyKey":"office365:graph-1"}}}"""),
+            new Office365MessageCategoryMutationResult(
+                "office365",
+                "graph-1",
+                "CanDoItAllSummaryTest",
+                "CanDoItAllSummaryTestProcessed",
+                SourceCategoryRemoved: true,
+                ProcessedCategoryAdded: true,
+                ProcessedCategoryCreated: false,
+                ["CanDoItAllSummaryTestProcessed"]));
+
+        using var document = JsonDocument.Parse(payload);
+        var root = document.RootElement;
+        var receipt = root.GetProperty("externalSideEffectReceipt");
+        Assert.Equal("Commit", root.GetProperty("sideEffectMode").GetString());
+        Assert.False(root.GetProperty("dryRun").GetBoolean());
+        Assert.True(root.GetProperty("committed").GetBoolean());
+        Assert.Equal("workflow-email-processed-marker/v1", receipt.GetProperty("schemaVersion").GetString());
+        Assert.Equal("office365", receipt.GetProperty("provider").GetString());
+        Assert.Equal("office365:graph-1", receipt.GetProperty("idempotencyKey").GetString());
+        Assert.True(receipt.GetProperty("mutationApplied").GetBoolean());
+        Assert.True(root.GetProperty("idempotencyRecord").GetProperty("retrySafe").GetBoolean());
+        Assert.Equal("CanDoItAllSummaryTestProcessed", root.GetProperty("processedMarker").GetProperty("processedMarkerName").GetString());
+    }
+
+    [Fact]
     public void Office365_address_filter_settings_resolve_scheduler_input_paths()
     {
         var settings = new Office365MessageAddressWorkflowExecutorSettings
@@ -272,6 +341,7 @@ public sealed class EmailPluginClientTests
     public async Task Gmail_client_marks_message_processed_by_moving_labels()
     {
         var createCalled = false;
+        var labelStateRead = false;
         var modifyCalled = false;
         var client = new GmailApiClient(new FakeHttpClientFactory(request =>
         {
@@ -299,6 +369,17 @@ public sealed class EmailPluginClientTests
                 return Json(new { id = "Label_Processed", name = "CanDoItAllSummaryTestProcessed" });
             }
 
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/gmail/v1/users/me/messages/msg-1?format=minimal")
+            {
+                labelStateRead = true;
+                return Json(new
+                {
+                    id = "msg-1",
+                    labelIds = new[] { "Label_1" }
+                });
+            }
+
             if (request.Method == HttpMethod.Post &&
                 pathAndQuery == "/gmail/v1/users/me/messages/msg-1/modify")
             {
@@ -322,7 +403,61 @@ public sealed class EmailPluginClientTests
         Assert.True(result.SourceLabelRemoved);
         Assert.True(result.ProcessedLabelAdded);
         Assert.True(createCalled);
+        Assert.True(labelStateRead);
         Assert.True(modifyCalled);
+    }
+
+    [Fact]
+    public async Task Gmail_client_skips_modify_when_message_already_has_processed_marker()
+    {
+        var modifyCalled = false;
+        var client = new GmailApiClient(new FakeHttpClientFactory(request =>
+        {
+            Assert.Equal("Bearer", request.Headers.Authorization?.Scheme);
+            Assert.Equal("gmail-token", request.Headers.Authorization?.Parameter);
+            var pathAndQuery = request.RequestUri!.PathAndQuery;
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/gmail/v1/users/me/labels")
+            {
+                return Json(new
+                {
+                    labels = new[]
+                    {
+                        new { id = "Label_1", name = "CanDoItAllSummaryTest" },
+                        new { id = "Label_Processed", name = "CanDoItAllSummaryTestProcessed" }
+                    }
+                });
+            }
+
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/gmail/v1/users/me/messages/msg-1?format=minimal")
+            {
+                return Json(new
+                {
+                    id = "msg-1",
+                    labelIds = new[] { "Label_Processed" }
+                });
+            }
+
+            if (request.Method == HttpMethod.Post &&
+                pathAndQuery == "/gmail/v1/users/me/messages/msg-1/modify")
+            {
+                modifyCalled = true;
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+
+        var result = await client.MarkMessageProcessedAsync(
+            "gmail-token",
+            "msg-1",
+            "CanDoItAllSummaryTest",
+            "CanDoItAllSummaryTestProcessed");
+
+        Assert.Equal("msg-1", result.MessageId);
+        Assert.False(result.SourceLabelRemoved);
+        Assert.False(result.ProcessedLabelAdded);
+        Assert.False(modifyCalled);
     }
 
     [Fact]
@@ -696,6 +831,58 @@ public sealed class EmailPluginClientTests
         Assert.True(patchCalled);
     }
 
+    [Fact]
+    public async Task Office365_client_skips_patch_when_message_already_has_processed_category()
+    {
+        var patchCalled = false;
+        var client = new Office365GraphClient(new FakeHttpClientFactory(request =>
+        {
+            var pathAndQuery = request.RequestUri!.PathAndQuery;
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/v1.0/me/outlook/masterCategories?$select=displayName,color")
+            {
+                return Json(new
+                {
+                    value = new[]
+                    {
+                        new { displayName = "CanDoItAllSummaryTestProcessed", color = "preset1" }
+                    }
+                });
+            }
+
+            if (request.Method == HttpMethod.Get &&
+                pathAndQuery == "/v1.0/me/messages/graph-1?$select=id,categories")
+            {
+                return Json(new
+                {
+                    id = "graph-1",
+                    categories = new[] { "Existing", "CanDoItAllSummaryTestProcessed" }
+                });
+            }
+
+            if (request.Method == HttpMethod.Patch &&
+                pathAndQuery == "/v1.0/me/messages/graph-1")
+            {
+                patchCalled = true;
+            }
+
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        }));
+
+        var result = await client.MarkMessageProcessedAsync(
+            "graph-token",
+            "graph-1",
+            "CanDoItAllSummaryTest",
+            "CanDoItAllSummaryTestProcessed");
+
+        Assert.Equal("graph-1", result.MessageId);
+        Assert.False(result.SourceCategoryRemoved);
+        Assert.False(result.ProcessedCategoryAdded);
+        Assert.False(result.ProcessedCategoryCreated);
+        Assert.Contains("CanDoItAllSummaryTestProcessed", result.Categories);
+        Assert.False(patchCalled);
+    }
+
     private static HttpResponseMessage Json(object payload, HttpStatusCode statusCode = HttpStatusCode.OK)
         => new(statusCode)
         {
@@ -772,6 +959,15 @@ public sealed class EmailPluginClientTests
                 BindingFlags.NonPublic | BindingFlags.Static)
             ?.Invoke(null, [input, settings, connectionId, batch])
             ?? throw new InvalidOperationException($"Could not invoke payload factory for {typeof(TExecutor).Name}."));
+
+    private static string InvokeMarkProcessedPayloadFactory<TExecutor, TResult>(
+        WorkflowNodeInput input,
+        TResult result)
+        => (string)(typeof(TExecutor).GetMethod(
+                "CreatePayload",
+                BindingFlags.NonPublic | BindingFlags.Static)
+            ?.Invoke(null, [input, result])
+            ?? throw new InvalidOperationException($"Could not invoke mark-processed payload factory for {typeof(TExecutor).Name}."));
 
     private sealed class FakeHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> handler) : IHttpClientFactory
     {

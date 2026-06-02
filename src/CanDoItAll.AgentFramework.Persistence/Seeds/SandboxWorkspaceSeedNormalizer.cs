@@ -63,6 +63,7 @@ internal static class SandboxWorkspaceSeedNormalizer
             ChatSessions = NormalizeChatSessions(executionState.ChatSessions, latestRunBySessionId),
             ExecutionLog = (executionState.ExecutionLog ?? []).OrderByDescending(item => item.CreatedAtUtc).ToList(),
             Metrics = (executionState.Metrics ?? []).OrderByDescending(item => item.CreatedAtUtc).ToList(),
+            ProviderUsageObservations = (executionState.ProviderUsageObservations ?? []).OrderByDescending(item => item.CreatedAtUtc).ToList(),
             ExecutionRuns = normalizedRuns,
             ExecutionApprovals = NormalizeExecutionApprovals(executionState.ExecutionApprovals),
             ExecutionArtifacts = NormalizeExecutionArtifacts(executionState.ExecutionArtifacts),

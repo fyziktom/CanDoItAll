@@ -1,0 +1,9 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|workspace_destroy_everything|Tetris" src\CanDoItAll.AgentFramework.Models\Contracts src\CanDoItAll.AgentFramework.Core\ToolPolicy src\CanDoItAll.Modules.Processes\Definitions src\CanDoItAll.Modules.Processes\Automation\Dispatch
+Cwd: C:\repositories\CanDoItAll
+StartedUtc: 2026-06-02T00:40:36.7791293Z
+--- output ---
+No matches.
+--- result ---
+RawRgExitCode: 1
+ExitCode: 0
+FinishedUtc: 2026-06-02T00:40:36.8732108Z

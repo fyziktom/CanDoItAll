@@ -40,41 +40,88 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
-        var metricCosts = new Dictionary<Guid, decimal>();
+        var executionRunDetails = new List<ExecutionRunDetail>(executionRuns.Count);
         foreach (var executionRun in executionRuns)
         {
-            var detail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken);
+            executionRunDetails.Add(await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+        }
+
+        var actualCost = ResolveProcessRunActualCost(executionRunDetails, providers);
+        if (!actualCost.HasValue)
+        {
+            return;
+        }
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var processRun = await dbContext.Set<ProcessRun>()
+            .FirstOrDefaultAsync(item => item.Id == processRunId, cancellationToken);
+        if (processRun is null || processRun.ActualCost == actualCost.Value)
+        {
+            return;
+        }
+
+        processRun.ActualCost = actualCost.Value;
+        processRun.UpdatedAtUtc = clock.GetUtcNow();
+        processRun.ConcurrencyToken = Guid.NewGuid();
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    internal static decimal? ResolveProcessRunActualCost(
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        var usageCosts = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+        var legacyMetricCosts = new Dictionary<Guid, decimal>();
+        foreach (var detail in executionRunDetails)
+        {
+            if (detail.UsageObservations.Count > 0)
+            {
+                foreach (var observation in detail.UsageObservations)
+                {
+                    var usageKey = ResolveUsageCostKey(observation);
+                    if (usageCosts.ContainsKey(usageKey))
+                    {
+                        continue;
+                    }
+
+                    if (ProviderPricingCalculator.TryResolveObservationCost(observation, providers, out var costUsd))
+                    {
+                        usageCosts[usageKey] = costUsd;
+                    }
+                }
+
+                continue;
+            }
+
             foreach (var metric in detail.Metrics)
             {
-                if (metricCosts.ContainsKey(metric.Id))
+                if (legacyMetricCosts.ContainsKey(metric.Id))
                 {
                     continue;
                 }
 
                 if (ProviderPricingCalculator.TryResolveMetricCost(metric, providers, out var costUsd))
                 {
-                    metricCosts[metric.Id] = costUsd;
+                    legacyMetricCosts[metric.Id] = costUsd;
                 }
             }
         }
 
-        if (metricCosts.Count == 0)
+        if (usageCosts.Count == 0 && legacyMetricCosts.Count == 0)
         {
-            return;
+            return null;
         }
 
-        var actualCost = decimal.Round(metricCosts.Values.Sum(), 6, MidpointRounding.AwayFromZero);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var processRun = await dbContext.Set<ProcessRun>()
-            .FirstOrDefaultAsync(item => item.Id == processRunId, cancellationToken);
-        if (processRun is null || processRun.ActualCost == actualCost)
+        return decimal.Round(usageCosts.Values.Sum() + legacyMetricCosts.Values.Sum(), 6, MidpointRounding.AwayFromZero);
+    }
+
+    private static string ResolveUsageCostKey(ProviderUsageObservation observation)
+    {
+        if (!string.IsNullOrWhiteSpace(observation.ProviderResponseId))
         {
-            return;
+            return $"{observation.ProviderName}|{observation.Model}|{observation.ProviderResponseId}|{observation.SourcePhase}";
         }
 
-        processRun.ActualCost = actualCost;
-        processRun.UpdatedAtUtc = clock.GetUtcNow();
-        processRun.ConcurrencyToken = Guid.NewGuid();
-        await dbContext.SaveChangesAsync(cancellationToken);
+        return observation.Id.ToString("N");
     }
 }

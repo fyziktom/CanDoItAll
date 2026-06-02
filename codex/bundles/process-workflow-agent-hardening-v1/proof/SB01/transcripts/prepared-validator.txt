@@ -1,0 +1,8 @@
+Command: python scripts\validate_bundle.py --stage prepared
+Cwd: C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1
+StartedUtc: 2026-06-02T00:42:52.0111786Z
+--- output ---
+PASS: bundle structure validated for stage 'prepared' at C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1
+--- result ---
+ExitCode: 0
+FinishedUtc: 2026-06-02T00:42:52.2480295Z

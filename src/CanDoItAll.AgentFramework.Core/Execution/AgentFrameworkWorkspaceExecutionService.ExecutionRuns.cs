@@ -143,6 +143,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
             cancellationToken);
 
         var startedAt = DateTimeOffset.UtcNow;
+        AgentRuntimeResponse? lastRuntimeResponse = null;
         try
         {
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
@@ -162,6 +163,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     suppressApprovalRequirements: approved && ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: structuredOutput,
                     executionOptions: CreateRuntimeExecutionOptions(run, structuredOutput, handoffOptions));
+                lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
@@ -186,6 +188,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
                     runtimeSession = continuation.Session;
                     runtimeResponse = continuation.Response;
+                    lastRuntimeResponse = runtimeResponse;
                     totalInputTokens = continuation.TotalInputTokens;
                     totalCachedInputTokens = continuation.TotalCachedInputTokens;
                     totalOutputTokens = continuation.TotalOutputTokens;
@@ -197,6 +200,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     structuredOutput,
                     runtimeResponse,
                     cancellationToken);
+                lastRuntimeResponse = runtimeResponse;
 
                 var assistantMessage = session is null
                     ? null
@@ -225,6 +229,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ExecutionRunId = run.Id
                     },
                     provider);
+                var usageObservations = BuildUsageObservations(run, agent, provider, metric, runtimeResponse);
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -256,7 +261,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Run: updatedRun,
                             Session: updatedSession,
                             RunApprovals: approvalUpdate.RunApprovals,
-                            Metric: metric),
+                            Metric: metric,
+                            UsageObservations: usageObservations),
                         cancellationToken);
                 }
                 else
@@ -265,7 +271,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         new ExecutionStateMutation(
                             Run: updatedRun,
                             RunApprovals: approvalUpdate.RunApprovals,
-                            Metric: metric),
+                            Metric: metric,
+                            UsageObservations: usageObservations),
                         cancellationToken);
                 }
 
@@ -313,6 +320,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ExecutionRunId = run.Id
                 },
                 provider);
+            var failureUsageObservations = lastRuntimeResponse is null
+                ? BuildFailureUsageObservations(run, agent, provider, failureMetric, exception)
+                : BuildRuntimeResponseUsageObservations(run, agent, provider, failureMetric, lastRuntimeResponse);
 
             var failedRun = run with
             {
@@ -332,18 +342,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     failedRun.UpdatedAtUtc,
                     failedRun.Id);
                 await PersistExecutionMutationAsync(
-                    new ExecutionStateMutation(
-                        Run: failedRun,
-                        Session: updatedSession,
-                        Metric: failureMetric),
-                    cancellationToken);
+                        new ExecutionStateMutation(
+                            Run: failedRun,
+                            Session: updatedSession,
+                            Metric: failureMetric,
+                            UsageObservations: failureUsageObservations),
+                        cancellationToken);
             }
             else
             {
                 await PersistExecutionMutationAsync(
                     new ExecutionStateMutation(
                         Run: failedRun,
-                        Metric: failureMetric),
+                        Metric: failureMetric,
+                        UsageObservations: failureUsageObservations),
                     cancellationToken);
             }
             AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
@@ -605,6 +617,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
         await AppendProcessCooperationLogAsync(run, agent.Id, run.ChatSessionId, cancellationToken);
 
         var startedAt = DateTimeOffset.UtcNow;
+        AgentRuntimeResponse? lastRuntimeResponse = null;
         try
         {
             var runtimeSession = ChatSessionRuntimeCompatibilityAdapter.CreateRuntimeSession(run, agent.Id, session);
@@ -624,6 +637,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     suppressApprovalRequirements: ShouldAutoApprovePendingToolCalls(agent, runtimeSession),
                     structuredOutput: request.StructuredOutput,
                     executionOptions: CreateRuntimeExecutionOptions(run, request.StructuredOutput, handoffOptions));
+                lastRuntimeResponse = runtimeResponse;
 
                 var totalInputTokens = runtimeResponse.InputTokens;
                 var totalCachedInputTokens = runtimeResponse.CachedInputTokens;
@@ -648,6 +662,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
 
                     runtimeSession = continuation.Session;
                     runtimeResponse = continuation.Response;
+                    lastRuntimeResponse = runtimeResponse;
                     totalInputTokens = continuation.TotalInputTokens;
                     totalCachedInputTokens = continuation.TotalCachedInputTokens;
                     totalOutputTokens = continuation.TotalOutputTokens;
@@ -659,6 +674,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     request.StructuredOutput,
                     runtimeResponse,
                     cancellationToken);
+                lastRuntimeResponse = runtimeResponse;
 
                 var assistantMessage = session is null
                     ? null
@@ -687,6 +703,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         ExecutionRunId = run.Id
                     },
                     provider);
+                var usageObservations = BuildUsageObservations(run, agent, provider, metric, runtimeResponse);
 
                 var updatedRun = UpdateRunFromResponse(
                     run,
@@ -718,7 +735,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                             Run: updatedRun,
                             Session: updatedSession,
                             RunApprovals: approvalUpdate.RunApprovals,
-                            Metric: metric),
+                            Metric: metric,
+                            UsageObservations: usageObservations),
                         cancellationToken);
                 }
                 else
@@ -727,7 +745,8 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                         new ExecutionStateMutation(
                             Run: updatedRun,
                             RunApprovals: approvalUpdate.RunApprovals,
-                            Metric: metric),
+                            Metric: metric,
+                            UsageObservations: usageObservations),
                         cancellationToken);
                 }
 
@@ -775,6 +794,9 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     ExecutionRunId = run.Id
                 },
                 provider);
+            var failureUsageObservations = lastRuntimeResponse is null
+                ? BuildFailureUsageObservations(run, agent, provider, failureMetric, exception)
+                : BuildRuntimeResponseUsageObservations(run, agent, provider, failureMetric, lastRuntimeResponse);
 
             var failedRun = run with
             {
@@ -793,18 +815,20 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     failedRun.UpdatedAtUtc,
                     failedRun.Id);
                 await PersistExecutionMutationAsync(
-                    new ExecutionStateMutation(
-                        Run: failedRun,
-                        Session: updatedSession,
-                        Metric: failureMetric),
-                    cancellationToken);
+                        new ExecutionStateMutation(
+                            Run: failedRun,
+                            Session: updatedSession,
+                            Metric: failureMetric,
+                            UsageObservations: failureUsageObservations),
+                        cancellationToken);
             }
             else
             {
                 await PersistExecutionMutationAsync(
                     new ExecutionStateMutation(
                         Run: failedRun,
-                        Metric: failureMetric),
+                        Metric: failureMetric,
+                        UsageObservations: failureUsageObservations),
                     cancellationToken);
             }
             AgentFrameworkTelemetry.RecordRunOutcome(failedRun);
@@ -978,6 +1002,7 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     MaxAttempts = maxRepairAttempts
                 },
                 cancellationToken);
+            response = AppendRepairUsageObservations(response, repair);
 
             if (!repair.Succeeded || string.IsNullOrWhiteSpace(repair.RepairedRawOutput))
             {

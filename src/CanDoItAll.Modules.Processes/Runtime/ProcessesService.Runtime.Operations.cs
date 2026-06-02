@@ -222,7 +222,8 @@ public sealed partial class ProcessesService
 
     public async Task<Result<Guid>> RecordArtifactAsync(ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default)
     {
-        if (request.ProcessRunId == Guid.Empty || string.IsNullOrWhiteSpace(request.Title))
+        var title = request.Title?.Trim();
+        if (request.ProcessRunId == Guid.Empty || string.IsNullOrWhiteSpace(title))
         {
             return Result<Guid>.Failure(Error.Validation("Run and title are required for artifact records.", "processes.artifact.required"));
         }
@@ -236,9 +237,9 @@ public sealed partial class ProcessesService
         }
 
         var externalReferenceKey = BoundProcessArtifactText(
-            request.ExternalReferenceKey.Trim(),
+            (request.ExternalReferenceKey ?? string.Empty).Trim(),
             MaxProcessArtifactExternalReferenceKeyLength);
-        var managedStoragePath = request.ManagedStoragePath.Trim();
+        var managedStoragePath = (request.ManagedStoragePath ?? string.Empty).Trim();
         var projectionLineage = CloneProjectionLineage(request.ProjectionLineage);
         if (ShouldComputeManagedArtifactContentHash(projectionLineage) &&
             !string.IsNullOrWhiteSpace(managedStoragePath))
@@ -350,12 +351,12 @@ public sealed partial class ProcessesService
             StepRunId = request.StepRunId,
             ArtifactExpectationId = scopedArtifactExpectationId,
             ArtifactKind = request.ArtifactKind,
-            Title = BoundProcessArtifactText(request.Title.Trim(), MaxProcessArtifactTitleLength),
+            Title = BoundProcessArtifactText(title, MaxProcessArtifactTitleLength),
             TrustStatus = request.TrustStatus,
             SensitivityLevel = request.SensitivityLevel,
-            ProvenanceSummary = request.ProvenanceSummary.Trim(),
-            AllowedFutureUsageSummary = request.AllowedFutureUsageSummary.Trim(),
-            ReviewSummary = request.ReviewSummary.Trim(),
+            ProvenanceSummary = (request.ProvenanceSummary ?? string.Empty).Trim(),
+            AllowedFutureUsageSummary = (request.AllowedFutureUsageSummary ?? string.Empty).Trim(),
+            ReviewSummary = (request.ReviewSummary ?? string.Empty).Trim(),
             ManagedStoragePath = managedStoragePath,
             ExternalReferenceKey = externalReferenceKey,
             ProjectionLineageJson = ProcessArtifactIdentityService.SerializeNormalizedProjectionLineage(projectionLineage),

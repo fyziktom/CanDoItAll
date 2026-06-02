@@ -965,6 +965,10 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        workingDirectory = $workingDirectory");
         builder.AppendLine("        listenUrl = $listenUrl");
         builder.AppendLine("        probeUrl = $probeUrl");
+        builder.AppendLine("        hostUrl = $probeUrl");
+        builder.AppendLine("        databaseProfileId = $env:CANDOITALL_DATABASE_PROFILE_ID");
+        builder.AppendLine("        databaseProfileFingerprint = $env:CANDOITALL_DATABASE_PROFILE_FINGERPRINT");
+        builder.AppendLine("        databaseProfileKey = $env:CANDOITALL_DATABASE_PROFILE_KEY");
         builder.AppendLine("        appProcessId = if ($appProcess -ne $null) { $appProcess.Id } else { $null }");
         builder.AppendLine("        appProcessTreeIds = @($processTreeIds)");
         builder.AppendLine("        keepAlive = $keepAlive");
@@ -973,6 +977,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        dotnetEnvironment = $env:DOTNET_ENVIRONMENT");
         builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
         builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
+        builder.AppendLine("        cleanupReceiptPath = $startupReceipt");
         builder.AppendLine("        stdoutLog = $stdoutLog");
         builder.AppendLine("        stderrLog = $stderrLog");
         builder.AppendLine("        stdoutTail = Read-LogTail $stdoutLog");

@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Non-critical / dependent hardening**.
+Passed. Classification: **Non-critical / dependent hardening**. Proof recorded under `proof/SB07/`.
 
 ## Objective
 
@@ -68,12 +68,12 @@ Do not change runtime behavior in this subbundle except small DTO/display adapte
 
 ## Acceptance Checklist
 
-- [ ] UI compiles.
-- [ ] Component tests pass.
-- [ ] Playwright proof exists for changed routes.
-- [ ] Cost/proof/executor statuses are clear.
-- [ ] No new duplicated runtime policy in UI.
-- [ ] Execution report browser analytics rows are updated.
+- [x] UI compiles.
+- [x] Component tests pass.
+- [x] Playwright proof exists for changed routes.
+- [x] Cost/proof/executor statuses are clear.
+- [x] No new duplicated runtime policy in UI.
+- [x] Execution report browser analytics rows are updated.
 
 ## Proof Required
 

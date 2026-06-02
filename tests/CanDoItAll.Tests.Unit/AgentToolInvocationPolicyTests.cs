@@ -1883,6 +1883,61 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.Contains("LaunchRuntime", decision.Reason, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(ToolContractCatalog.BrowserNavigate)]
+    [InlineData(ToolContractCatalog.BrowserClick)]
+    [InlineData(ToolContractCatalog.BrowserPressKey)]
+    [InlineData(ToolContractCatalog.BrowserType)]
+    public async Task EvaluateAsync_SB04_INV_001_denies_browser_tools_without_capture_runtime_proof_operation(string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            toolName,
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("CaptureRuntimeProof", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(ToolContractCatalog.BrowserNavigate)]
+    [InlineData(ToolContractCatalog.BrowserClick)]
+    [InlineData(ToolContractCatalog.BrowserPressKey)]
+    [InlineData(ToolContractCatalog.BrowserType)]
+    public async Task EvaluateAsync_SB04_INV_002_allows_browser_tools_with_capture_runtime_proof_operation(string toolName)
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            toolName,
+            ToolInvocationClassification.Read,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processAllowsProductMutation: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "CaptureRuntimeProof"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Allow, decision.Kind);
+    }
+
     [Fact]
     public async Task EvaluateAsync_SB02_INV_004_allows_artifact_only_write_under_current_run_artifacts()
     {

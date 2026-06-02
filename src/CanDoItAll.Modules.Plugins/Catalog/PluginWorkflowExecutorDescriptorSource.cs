@@ -37,6 +37,7 @@ public sealed class PluginWorkflowExecutorDescriptorSource(
                 executor.SettingsSchema.Version,
                 "{}"),
             PermissionPolicy = executor.PermissionPolicy,
+            SideEffects = executor.SideEffects,
             DeterministicTestMode = executor.DeterministicTestMode
         };
 

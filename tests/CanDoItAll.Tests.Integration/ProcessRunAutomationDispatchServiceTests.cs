@@ -5874,6 +5874,56 @@ Requirements from project-level planning context:
     }
 
     [Fact]
+    public void BuildResolvedArtifactInputs_rejects_stale_process_run_artifact()
+    {
+        var fixture = CreateResolvedArtifactInputFixture();
+        var staleRunId = Guid.Parse("49fd0000-0000-0000-0000-000000000001");
+        var staleArtifact = CreateProcessArtifactRecord(
+            fixture.Expectation,
+            fixture.SourceStepRun,
+            staleRunId,
+            $"artifacts/process-runs/{staleRunId:D}/02-implementation-change-set.md");
+
+        var resolvedInputs = InvokeBuildResolvedArtifactInputs(fixture, [staleArtifact]);
+        var resolvedInput = Assert.Single(resolvedInputs);
+
+        Assert.Empty(resolvedInput.Artifacts);
+    }
+
+    [Fact]
+    public void BuildResolvedArtifactInputs_rejects_current_run_artifact_outside_managed_root()
+    {
+        var fixture = CreateResolvedArtifactInputFixture();
+        var wrongRootArtifact = CreateProcessArtifactRecord(
+            fixture.Expectation,
+            fixture.SourceStepRun,
+            fixture.ProcessRunId,
+            "src/GeneratedApp/App.razor");
+
+        var resolvedInputs = InvokeBuildResolvedArtifactInputs(fixture, [wrongRootArtifact]);
+        var resolvedInput = Assert.Single(resolvedInputs);
+
+        Assert.Empty(resolvedInput.Artifacts);
+    }
+
+    [Fact]
+    public void BuildResolvedArtifactInputs_accepts_current_run_managed_artifact()
+    {
+        var fixture = CreateResolvedArtifactInputFixture();
+        var currentArtifact = CreateProcessArtifactRecord(
+            fixture.Expectation,
+            fixture.SourceStepRun,
+            fixture.ProcessRunId,
+            $"artifacts/process-runs/{fixture.ProcessRunId:D}/02-implementation-change-set.md");
+
+        var resolvedInputs = InvokeBuildResolvedArtifactInputs(fixture, [currentArtifact]);
+        var resolvedInput = Assert.Single(resolvedInputs);
+        var artifact = Assert.Single(resolvedInput.Artifacts);
+
+        Assert.Equal(currentArtifact.ManagedStoragePath, artifact.ManagedStoragePath);
+    }
+
+    [Fact]
     public void BuildExecutionPrompt_treats_escalation_no_go_steps_as_completable_decisions()
     {
         var buildExecutionPrompt = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildExecutionPrompt", BindingFlags.NonPublic | BindingFlags.Static)
@@ -18210,6 +18260,58 @@ Ancestor path to the target work node:
         Assert.DoesNotContain(ordered, provider => provider.Kind == ProviderKind.Ollama);
     }
 
+    [Fact]
+    public void ResolveProcessRunActualCost_prefers_usage_ledger_over_legacy_metrics()
+    {
+        var provider = CreateProviderProfile(
+            "Provider A",
+            ProviderKind.OpenAi,
+            ProviderTransportKind.Responses,
+            "model-a") with
+        {
+            ModelPrices = [new ProviderModelTokenPrice("model-a", 1.00m, 0.10m, 4.00m)]
+        };
+        var agentId = Guid.NewGuid();
+        var usageRunId = Guid.NewGuid();
+        var legacyRunId = Guid.NewGuid();
+        var observedUsage = CreateCostUsageObservation(
+            usageRunId,
+            ProviderUsageObservationStatus.Observed,
+            ProviderUsageSourcePhases.AgentRuntime,
+            responseId: "resp-usage-001",
+            inputTokens: 1_000_000,
+            cachedInputTokens: 250_000,
+            outputTokens: 500_000);
+        var duplicateObservedUsage = observedUsage with
+        {
+            Id = Guid.NewGuid()
+        };
+        var unknownUsage = CreateCostUsageObservation(
+            usageRunId,
+            ProviderUsageObservationStatus.MissingAfterProviderActivity,
+            ProviderUsageSourcePhases.FinalizerShortCircuit,
+            responseId: "resp-unknown-001",
+            inputTokens: 0,
+            cachedInputTokens: 0,
+            outputTokens: 0);
+        var usageDetail = CreateCostedExecutionRunDetail(
+            usageRunId,
+            agentId,
+            [CreateCostMetric(usageRunId, agentId, costUsd: 50.00m)],
+            [observedUsage, duplicateObservedUsage, unknownUsage]);
+        var legacyDetail = CreateCostedExecutionRunDetail(
+            legacyRunId,
+            agentId,
+            [CreateCostMetric(legacyRunId, agentId, costUsd: 1.23m)],
+            []);
+
+        var actualCost = ProcessRunAutomationDispatchService.ResolveProcessRunActualCost(
+            [usageDetail, legacyDetail],
+            [provider]);
+
+        Assert.Equal(4.005m, actualCost);
+    }
+
     private static ProviderProfile CreateProviderProfile(
         string name,
         ProviderKind kind,
@@ -18240,6 +18342,102 @@ Ancestor path to the target work node:
             SuggestedModels: [defaultModel]);
     }
 
+    private static ExecutionRunDetail CreateCostedExecutionRunDetail(
+        Guid executionRunId,
+        Guid agentId,
+        IReadOnlyList<AgentRunMetric> metrics,
+        IReadOnlyList<ProviderUsageObservation> usageObservations)
+    {
+        var now = DateTimeOffset.UtcNow;
+        return new ExecutionRunDetail(
+            new ExecutionRunRecord(
+                executionRunId,
+                agentId,
+                null,
+                "Process cost run",
+                "process-step",
+                "step-001",
+                "corr-cost",
+                "cause-cost",
+                "process-automation-dispatch",
+                "system",
+                "{}",
+                "Prompt",
+                "Completed.",
+                "Provider A",
+                "model-a",
+                ExecutionState.Completed,
+                RunOutcome.Succeeded,
+                now,
+                now,
+                now,
+                now,
+                string.Empty,
+                null,
+                [],
+                ProcessRunId: "process-run-001",
+                ProcessStepId: "step-001"),
+            null,
+            [],
+            metrics)
+        {
+            UsageObservations = usageObservations
+        };
+    }
+
+    private static AgentRunMetric CreateCostMetric(
+        Guid executionRunId,
+        Guid agentId,
+        decimal costUsd)
+    {
+        return new AgentRunMetric(
+            Id: Guid.NewGuid(),
+            AgentId: agentId,
+            ChatSessionId: null,
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            Outcome: RunOutcome.Succeeded,
+            ProviderName: "Provider A",
+            Model: "model-a",
+            DurationMs: 100,
+            InputTokens: 1_000,
+            OutputTokens: 500,
+            ToolCalls: 0)
+        {
+            ExecutionRunId = executionRunId,
+            CostUsd = costUsd
+        };
+    }
+
+    private static ProviderUsageObservation CreateCostUsageObservation(
+        Guid executionRunId,
+        ProviderUsageObservationStatus status,
+        string sourcePhase,
+        string responseId,
+        int inputTokens,
+        int cachedInputTokens,
+        int outputTokens)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: "Provider A",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "model-a",
+            TransportKind: ProviderTransportKind.Responses,
+            SourcePhase: sourcePhase,
+            UsageStatus: status,
+            InputTokens: inputTokens,
+            CachedInputTokens: cachedInputTokens,
+            OutputTokens: outputTokens,
+            ReasoningTokens: 0,
+            TotalTokens: inputTokens + outputTokens,
+            ToolCallCount: 0)
+        {
+            ExecutionRunId = executionRunId,
+            ProviderResponseId = responseId
+        };
+    }
+
     private static object CreateWorkflowImplementationDispatchCandidate()
     {
         return CreateDispatchCandidate(
@@ -18247,6 +18445,91 @@ Ancestor path to the target work node:
             ProcessStepKind.Work,
             (ProcessArtifactKind.Deliverable, "Implementation change set", true, "Must be linked to tests, migration notes, and touched-surface inventory."),
             (ProcessArtifactKind.Checklist, "Migration and rollout preparation checklist", true, "Must name data changes, operational preconditions, and rollback steps."));
+    }
+
+    private sealed record ResolvedArtifactInputFixture(
+        Guid ProcessRunId,
+        ProcessStepArtifactInputDefinition ConfiguredInput,
+        ProcessArtifactExpectation Expectation,
+        ProcessStepDefinition SourceStepDefinition,
+        ProcessStepRun SourceStepRun);
+
+    private static ResolvedArtifactInputFixture CreateResolvedArtifactInputFixture()
+    {
+        var processRunId = Guid.NewGuid();
+        var sourceStepDefinition = new ProcessStepDefinition
+        {
+            Title = "Implement bounded delivery change"
+        };
+        var sourceStepRun = new ProcessStepRun
+        {
+            ProcessRunId = processRunId,
+            StepDefinitionId = sourceStepDefinition.Id,
+            Sequence = 1,
+            Title = sourceStepDefinition.Title,
+            Status = ProcessStepRunStatus.Completed
+        };
+        var expectation = new ProcessArtifactExpectation
+        {
+            StepDefinitionId = sourceStepDefinition.Id,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Implementation change set",
+            IsRequired = true,
+            ValidationRequirementSummary = "Must describe code changes and validation proof."
+        };
+        var configuredInput = new ProcessStepArtifactInputDefinition
+        {
+            ArtifactExpectationId = expectation.Id
+        };
+
+        return new(
+            processRunId,
+            configuredInput,
+            expectation,
+            sourceStepDefinition,
+            sourceStepRun);
+    }
+
+    private static ProcessArtifactRecord CreateProcessArtifactRecord(
+        ProcessArtifactExpectation expectation,
+        ProcessStepRun sourceStepRun,
+        Guid processRunId,
+        string managedStoragePath)
+    {
+        return new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = sourceStepRun.Id,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = expectation.ArtifactKind,
+            Title = expectation.Title,
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ReviewSummary = "Implementation artifact was produced.",
+            ProvenanceSummary = "workspace",
+            ManagedStoragePath = managedStoragePath,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static IReadOnlyList<ProcessRunAutomationDispatchService.DispatchArtifactInput> InvokeBuildResolvedArtifactInputs(
+        ResolvedArtifactInputFixture fixture,
+        IReadOnlyList<ProcessArtifactRecord> existingArtifacts)
+    {
+        var method = typeof(ProcessRunAutomationDispatchService).GetMethod("BuildResolvedArtifactInputs", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildResolvedArtifactInputs method was not found.");
+        var result = method.Invoke(
+            null,
+            [
+                new[] { fixture.ConfiguredInput },
+                new Dictionary<Guid, ProcessArtifactExpectation> { [fixture.Expectation.Id] = fixture.Expectation },
+                new Dictionary<Guid, ProcessStepDefinition> { [fixture.SourceStepDefinition.Id] = fixture.SourceStepDefinition },
+                new Dictionary<Guid, IReadOnlyList<ProcessStepRun>> { [fixture.SourceStepDefinition.Id] = [fixture.SourceStepRun] },
+                existingArtifacts
+            ]);
+
+        return (IReadOnlyList<ProcessRunAutomationDispatchService.DispatchArtifactInput>)(result
+            ?? throw new InvalidOperationException("BuildResolvedArtifactInputs did not return a result."));
     }
 
     private static object CreateCarriedImplementationProof(

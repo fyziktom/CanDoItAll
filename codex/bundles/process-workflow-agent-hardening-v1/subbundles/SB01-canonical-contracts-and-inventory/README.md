@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Completed. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -69,13 +69,13 @@ Do not attempt to fully refactor dispatch/UI in this subbundle. Only make low-ri
 
 ## Acceptance Checklist
 
-- [ ] Contract inventory exists.
-- [ ] Drift scanner exists.
-- [ ] Scanner has positive and negative tests.
-- [ ] Internal ids are behind descriptors/constants or listed as temporary exceptions.
-- [ ] Template ids are validated against descriptors.
-- [ ] SB01 proof manifest exists.
-- [ ] Downstream reopen triggers are documented.
+- [x] Contract inventory exists.
+- [x] Drift scanner exists.
+- [x] Scanner has positive and negative tests.
+- [x] Internal ids are behind descriptors/constants or listed as temporary exceptions.
+- [x] Template ids are validated against descriptors.
+- [x] SB01 proof manifest exists.
+- [x] Downstream reopen triggers are documented.
 
 ## Proof Required
 

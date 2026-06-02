@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Passed. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -77,13 +77,13 @@ No implementation except small fixes to proof/reporting or reopening earlier sub
 
 ## Acceptance Checklist
 
-- [ ] Completed-stage validation passes.
-- [ ] All critical proof manifests exist and paths resolve.
-- [ ] Red-team fake-proof checks pass.
-- [ ] Token accounting reconciliation is acceptable.
-- [ ] Workflow side effects are idempotent.
-- [ ] Five-scenario genericity audit passes.
-- [ ] Final release decision recorded.
+- [x] Completed-stage validation passes.
+- [x] All critical proof manifests exist and paths resolve.
+- [x] Red-team fake-proof checks pass.
+- [x] Token accounting reconciliation is acceptable.
+- [x] Workflow side effects are idempotent.
+- [x] Five-scenario genericity audit passes.
+- [x] Final release decision recorded.
 
 ## Proof Required
 

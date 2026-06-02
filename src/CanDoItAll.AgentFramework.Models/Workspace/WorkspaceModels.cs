@@ -16,6 +16,7 @@ public sealed record SandboxWorkspaceDocument(
     public IReadOnlyList<ExecutionArtifactRecord> ExecutionArtifacts { get; init; } = [];
     public IReadOnlyList<ExecutionWorkflowCheckpointRecord> ExecutionWorkflowCheckpoints { get; init; } = [];
     public IReadOnlyList<ToolExecutionReceiptRecord> ToolExecutionReceipts { get; init; } = [];
+    public IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations { get; init; } = [];
 
     public static SandboxWorkspaceDocument Empty { get; } = new(
         Version: "1.0",
@@ -52,7 +53,8 @@ public sealed record SandboxWorkspaceDocument(
             ExecutionApprovals = ExecutionApprovals,
             ExecutionArtifacts = ExecutionArtifacts,
             ExecutionWorkflowCheckpoints = ExecutionWorkflowCheckpoints,
-            ToolExecutionReceipts = ToolExecutionReceipts
+            ToolExecutionReceipts = ToolExecutionReceipts,
+            ProviderUsageObservations = ProviderUsageObservations
         };
     }
 
@@ -79,7 +81,8 @@ public sealed record SandboxWorkspaceDocument(
             ExecutionApprovals = executionState.ExecutionApprovals,
             ExecutionArtifacts = executionState.ExecutionArtifacts,
             ExecutionWorkflowCheckpoints = executionState.ExecutionWorkflowCheckpoints,
-            ToolExecutionReceipts = executionState.ToolExecutionReceipts
+            ToolExecutionReceipts = executionState.ToolExecutionReceipts,
+            ProviderUsageObservations = executionState.ProviderUsageObservations
         };
     }
 }
@@ -112,6 +115,7 @@ public sealed record SandboxWorkspaceExecutionState(
     public IReadOnlyList<ExecutionArtifactRecord> ExecutionArtifacts { get; init; } = [];
     public IReadOnlyList<ExecutionWorkflowCheckpointRecord> ExecutionWorkflowCheckpoints { get; init; } = [];
     public IReadOnlyList<ToolExecutionReceiptRecord> ToolExecutionReceipts { get; init; } = [];
+    public IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations { get; init; } = [];
 
     public static SandboxWorkspaceExecutionState Empty { get; } = new(
         Version: "1.0",

@@ -92,20 +92,20 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     ];
     private static readonly HashSet<string> NonCriticalWorkspaceProcessToolNames =
     [
-        "workspace_git_diff",
-        "workspace_git_status"
+        ToolContractCatalog.WorkspaceGitDiff,
+        ToolContractCatalog.WorkspaceGitStatus
     ];
     private static readonly HashSet<string> RequiredBrowserEvidenceToolNames =
     [
-        "browser_console_messages",
-        "browser_network_requests",
-        "browser_snapshot",
-        "browser_take_screenshot"
+        ToolContractCatalog.BrowserConsoleMessages,
+        ToolContractCatalog.BrowserNetworkRequests,
+        ToolContractCatalog.BrowserSnapshot,
+        ToolContractCatalog.BrowserTakeScreenshot
     ];
     private static readonly string[] GovernedInspectionToolNames =
     [
-        "workspace_stat_path",
-        "workspace_read_file"
+        ToolContractCatalog.WorkspaceStatPath,
+        ToolContractCatalog.WorkspaceReadFile
     ];
     private static readonly HashSet<string> ConcurrentAutomationSessionBusyMessages = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -114,39 +114,39 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     };
     private static readonly string[] ImplementationProofToolNames =
     [
-        "workspace_stat_path",
-        "workspace_read_file"
+        ToolContractCatalog.WorkspaceStatPath,
+        ToolContractCatalog.WorkspaceReadFile
     ];
     private static readonly HashSet<string> CurrentAttemptOnlyImplementationProofToolNames =
     [
-        "workspace_stat_path",
-        "workspace_read_file"
+        ToolContractCatalog.WorkspaceStatPath,
+        ToolContractCatalog.WorkspaceReadFile
     ];
     private static readonly HashSet<string> CurrentAttemptOnlyBrowserProofToolNames =
     [
-        "browser_console_messages",
-        "browser_snapshot",
-        "browser_take_screenshot"
+        ToolContractCatalog.BrowserConsoleMessages,
+        ToolContractCatalog.BrowserSnapshot,
+        ToolContractCatalog.BrowserTakeScreenshot
     ];
     private static readonly HashSet<string> ConcreteProductMutationToolNames =
     [
-        "workspace_write_file",
-        "workspace_append_file",
-        "workspace_move_path",
-        "workspace_delete_path",
-        "workspace_create_directory"
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceMovePath,
+        ToolContractCatalog.WorkspaceDeletePath,
+        ToolContractCatalog.WorkspaceCreateDirectory
     ];
     private static readonly HashSet<string> ConcreteProductSourceWriteToolNames =
     [
-        "workspace_write_file",
-        "workspace_append_file",
-        "workspace_move_path"
+        ToolContractCatalog.WorkspaceWriteFile,
+        ToolContractCatalog.WorkspaceAppendFile,
+        ToolContractCatalog.WorkspaceMovePath
     ];
     private static readonly string[] ImplicitBrowserProofToolNames =
     [
-        "browser_console_messages",
-        "browser_snapshot",
-        "browser_take_screenshot"
+        ToolContractCatalog.BrowserConsoleMessages,
+        ToolContractCatalog.BrowserSnapshot,
+        ToolContractCatalog.BrowserTakeScreenshot
     ];
     private static readonly HashSet<string> ArtifactTitleNoiseTokens = new(StringComparer.Ordinal)
     {

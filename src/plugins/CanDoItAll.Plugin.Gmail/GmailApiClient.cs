@@ -69,9 +69,23 @@ public sealed class GmailApiClient(IHttpClientFactory httpClientFactory)
 
         var sourceLabelId = await ResolveLabelIdAsync(client, sourceLabel.Trim(), cancellationToken);
         var processedLabelId = await ResolveOrCreateLabelIdAsync(client, processedLabel.Trim(), cancellationToken);
-        var request = new GmailModifyLabelsRequest(
-            [processedLabelId],
-            [sourceLabelId]);
+        var currentLabelIds = await GetMessageLabelIdsAsync(client, messageId.Trim(), cancellationToken);
+        var sourceLabelRemoved = currentLabelIds.Contains(sourceLabelId);
+        var processedLabelAdded = !currentLabelIds.Contains(processedLabelId);
+        if (!sourceLabelRemoved && !processedLabelAdded)
+        {
+            return new GmailMessageLabelMutationResult(
+                "gmail",
+                messageId.Trim(),
+                sourceLabel.Trim(),
+                processedLabel.Trim(),
+                SourceLabelRemoved: false,
+                ProcessedLabelAdded: false);
+        }
+
+        IReadOnlyList<string> addLabelIds = processedLabelAdded ? [processedLabelId] : [];
+        IReadOnlyList<string> removeLabelIds = sourceLabelRemoved ? [sourceLabelId] : [];
+        var request = new GmailModifyLabelsRequest(addLabelIds, removeLabelIds);
         var url = $"{GmailBaseUrl}/messages/{WebUtility.UrlEncode(messageId.Trim())}/modify";
         using var response = await client.PostAsJsonAsync(url, request, JsonOptions, cancellationToken);
         await EnsureSuccessAsync(response, "modify Gmail message labels", cancellationToken);
@@ -81,8 +95,8 @@ public sealed class GmailApiClient(IHttpClientFactory httpClientFactory)
             messageId.Trim(),
             sourceLabel.Trim(),
             processedLabel.Trim(),
-            SourceLabelRemoved: true,
-            ProcessedLabelAdded: true);
+            sourceLabelRemoved,
+            processedLabelAdded);
     }
 
     private static async Task<string> ResolveLabelIdAsync(
@@ -166,6 +180,21 @@ public sealed class GmailApiClient(IHttpClientFactory httpClientFactory)
             ExtractBodyText(message.Payload),
             message.LabelIds ?? [],
             string.Empty);
+    }
+
+    private static async Task<IReadOnlySet<string>> GetMessageLabelIdsAsync(
+        HttpClient client,
+        string messageId,
+        CancellationToken cancellationToken)
+    {
+        var url = $"{GmailBaseUrl}/messages/{WebUtility.UrlEncode(messageId)}?format=minimal";
+        using var response = await client.GetAsync(url, cancellationToken);
+        await EnsureSuccessAsync(response, "get Gmail message labels", cancellationToken);
+        var message = await response.Content.ReadFromJsonAsync<GmailMessageLabelResponse>(JsonOptions, cancellationToken)
+                      ?? throw new InvalidOperationException($"Gmail message '{messageId}' label response was empty.");
+        return new HashSet<string>(
+            message.LabelIds?.Where(labelId => !string.IsNullOrWhiteSpace(labelId)) ?? [],
+            StringComparer.OrdinalIgnoreCase);
     }
 
     private static string ExtractBodyText(GmailMessagePart? part)
@@ -271,6 +300,10 @@ public sealed class GmailApiClient(IHttpClientFactory httpClientFactory)
         string Snippet,
         IReadOnlyList<string>? LabelIds,
         GmailMessagePart? Payload);
+
+    private sealed record GmailMessageLabelResponse(
+        string Id,
+        IReadOnlyList<string>? LabelIds);
 
     private sealed record GmailMessagePart(
         string MimeType,

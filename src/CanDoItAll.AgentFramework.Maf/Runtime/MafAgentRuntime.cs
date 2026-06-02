@@ -362,11 +362,15 @@ public sealed partial class MafAgentRuntime(
                         }
 
                         var finalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                            provider,
+                            resolvedModel,
                             structuredOutput,
                             finalizerMode,
                             runtimeAgent,
                             runtimeSession,
                             runtimeSessionKey,
+                            updates,
+                            ProviderUsageSourcePhases.FinalizerShortCircuit,
                             progressCallback,
                             cancellationToken,
                             snapshotFinalizerInvocations,
@@ -378,11 +382,15 @@ public sealed partial class MafAgentRuntime(
                     }
 
                     var postStreamingFinalizerResponse = await TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+                        provider,
+                        resolvedModel,
                         structuredOutput,
                         finalizerMode,
                         runtimeAgent,
                         runtimeSession,
                         runtimeSessionKey,
+                        updates,
+                        ProviderUsageSourcePhases.FinalizerShortCircuit,
                         progressCallback,
                         cancellationToken,
                         snapshotFinalizerInvocations,
@@ -396,11 +404,15 @@ public sealed partial class MafAgentRuntime(
                 {
                     providerActivity?.SetTag("agentframework.required_finalizer_tool_name", exception.ToolName);
                     var finalizerResponse = await TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+                        provider,
+                        resolvedModel,
                         structuredOutput,
                         finalizerMode,
                         runtimeAgent,
                         runtimeSession,
                         runtimeSessionKey,
+                        updates,
+                        ProviderUsageSourcePhases.FinalizerShortCircuit,
                         progressCallback,
                         cancellationToken,
                         snapshotFinalizerInvocations,
@@ -417,12 +429,15 @@ public sealed partial class MafAgentRuntime(
                     AgentFrameworkTelemetry.RecordProviderError(provider, resolvedModel);
                     providerActivity?.SetStatus(ActivityStatusCode.Error, exception.Message);
                     var finalizerResponse = await TryCreateFinalizerResponseAfterProviderFailureAsync(
+                        provider,
+                        resolvedModel,
                         structuredOutput,
                         runtimeAgent,
                         runtimeSession,
                         runtimeSessionKey,
                         finalizerMode,
                         exception,
+                        updates,
                         progressCallback,
                         cancellationToken,
                         snapshotFinalizerInvocations,
@@ -432,7 +447,17 @@ public sealed partial class MafAgentRuntime(
                         return finalizerResponse;
                     }
 
-                    throw;
+                    throw new AgentRuntimeUsageException(
+                        "Provider runtime failed after provider activity. Usage was captured when available.",
+                        exception,
+                        CreateProviderUsageObservations(
+                            provider,
+                            resolvedModel,
+                            runtimeSession,
+                            runtimeSessionKey,
+                            updates,
+                            ProviderUsageSourcePhases.AgentRuntime,
+                            "Provider streaming failed before a successful runtime response."));
                 }
             }
 
@@ -474,7 +499,15 @@ public sealed partial class MafAgentRuntime(
                 {
                     CachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount),
                     FinalizerInvocations = snapshotFinalizerInvocations(),
-                    ToolInvocationTraces = snapshotToolInvocationTraces()
+                    ToolInvocationTraces = snapshotToolInvocationTraces(),
+                    UsageObservations = CreateProviderUsageObservations(
+                        provider,
+                        resolvedModel,
+                        runtimeSession,
+                        runtimeSessionKey,
+                        updates,
+                        ProviderUsageSourcePhases.AgentRuntime,
+                        "Microsoft Agent Framework returned a runtime response.")
                 };
             }
 
@@ -493,11 +526,15 @@ public sealed partial class MafAgentRuntime(
     }
 
     private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterEarlyFinalizerAsync(
+        ProviderProfile provider,
+        string model,
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         string? runtimeSessionKey,
+        IReadOnlyList<AgentResponseUpdate> updates,
+        string usageSourcePhase,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
@@ -511,7 +548,15 @@ public sealed partial class MafAgentRuntime(
             ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             finalizerInvocations,
-            toolInvocationTraces);
+            toolInvocationTraces,
+            CreateProviderUsageObservations(
+                provider,
+                model,
+                runtimeSession,
+                runtimeSessionKey,
+                updates,
+                usageSourcePhase,
+                "Required finalizer was captured before the provider emitted final assistant prose."));
         if (serializedResponse is null)
         {
             return null;
@@ -533,12 +578,15 @@ public sealed partial class MafAgentRuntime(
     }
 
     private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterProviderFailureAsync(
+        ProviderProfile provider,
+        string model,
         AgentStructuredOutputContract? structuredOutput,
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         string? runtimeSessionKey,
         AgentFinalizerMode finalizerMode,
         Exception exception,
+        IReadOnlyList<AgentResponseUpdate> updates,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
@@ -587,16 +635,28 @@ public sealed partial class MafAgentRuntime(
             PendingApprovals: [])
         {
             FinalizerInvocations = finalizerInvocations,
-            ToolInvocationTraces = toolInvocationTraces
+            ToolInvocationTraces = toolInvocationTraces,
+            UsageObservations = CreateProviderUsageObservations(
+                provider,
+                model,
+                runtimeSession,
+                runtimeSessionKey,
+                updates,
+                ProviderUsageSourcePhases.FinalizerRecovery,
+                "Provider streaming failed after a valid required finalizer was captured.")
         };
     }
 
     private static async Task<AgentRuntimeResponse?> TryCreateFinalizerResponseAfterRequiredFinalizerAsync(
+        ProviderProfile provider,
+        string model,
         AgentStructuredOutputContract? structuredOutput,
         AgentFinalizerMode finalizerMode,
         AIAgent runtimeAgent,
         AgentSession runtimeSession,
         string? runtimeSessionKey,
+        IReadOnlyList<AgentResponseUpdate> updates,
+        string usageSourcePhase,
         Func<ExecutionState, string, string, Task> progressCallback,
         CancellationToken cancellationToken,
         Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotFinalizerInvocations,
@@ -610,7 +670,15 @@ public sealed partial class MafAgentRuntime(
             ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
             serializedSessionStateJson: null,
             finalizerInvocations,
-            toolInvocationTraces);
+            toolInvocationTraces,
+            CreateProviderUsageObservations(
+                provider,
+                model,
+                runtimeSession,
+                runtimeSessionKey,
+                updates,
+                usageSourcePhase,
+                "Required finalizer short-circuited the provider response."));
         if (serializedResponse is null)
         {
             return null;
@@ -637,7 +705,8 @@ public sealed partial class MafAgentRuntime(
         string runtimeSessionKey,
         string? serializedSessionStateJson,
         IReadOnlyList<AgentFinalizerInvocation> finalizerInvocations,
-        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces)
+        IReadOnlyList<AgentToolInvocationTrace> toolInvocationTraces,
+        IReadOnlyList<ProviderUsageObservation> usageObservations)
     {
         if (finalizerMode != AgentFinalizerMode.Required ||
             !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
@@ -671,7 +740,104 @@ public sealed partial class MafAgentRuntime(
             PendingApprovals: [])
         {
             FinalizerInvocations = finalizerInvocations,
-            ToolInvocationTraces = toolInvocationTraces
+            ToolInvocationTraces = toolInvocationTraces,
+            UsageObservations = usageObservations
+        };
+    }
+
+    private static IReadOnlyList<ProviderUsageObservation> CreateProviderUsageObservations(
+        ProviderProfile provider,
+        string model,
+        AgentSession runtimeSession,
+        string? runtimeSessionKey,
+        IReadOnlyList<AgentResponseUpdate> updates,
+        string sourcePhase,
+        string diagnostic)
+    {
+        if (updates.Count == 0)
+        {
+            return
+            [
+                CreateMissingProviderUsageObservation(
+                    provider,
+                    model,
+                    ResolveRuntimeSessionKey(runtimeSession, runtimeSessionKey),
+                    sourcePhase,
+                    diagnostic)
+            ];
+        }
+
+        var response = updates.ToAgentResponse();
+        var inputTokens = ClampTokenCount(response.Usage?.InputTokenCount);
+        var cachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount);
+        var outputTokens = ClampTokenCount(response.Usage?.OutputTokenCount);
+        var runtimeKey = ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey);
+
+        return
+        [
+            new ProviderUsageObservation(
+                Id: Guid.NewGuid(),
+                CreatedAtUtc: DateTimeOffset.UtcNow,
+                ProviderName: provider.Name,
+                ProviderKind: provider.Kind,
+                Model: model,
+                TransportKind: provider.Transport,
+                SourcePhase: sourcePhase,
+                UsageStatus: response.Usage is null
+                    ? ProviderUsageObservationStatus.UsageUnavailable
+                    : ProviderUsageObservationStatus.Observed,
+                InputTokens: inputTokens,
+                CachedInputTokens: cachedInputTokens,
+                OutputTokens: outputTokens,
+                ReasoningTokens: 0,
+                TotalTokens: inputTokens + outputTokens,
+                ToolCallCount: CountToolCalls(response))
+            {
+                ProviderResponseId = response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
+                RuntimeSessionKey = runtimeKey,
+                RawUsageJson = response.Usage is null
+                    ? string.Empty
+                    : JsonSerializer.Serialize(response.Usage, SerializerOptions),
+                DiagnosticsJson = JsonSerializer.Serialize(
+                    new Dictionary<string, string>
+                    {
+                        ["diagnostic"] = diagnostic
+                    },
+                    SerializerOptions)
+            }
+        ];
+    }
+
+    private static ProviderUsageObservation CreateMissingProviderUsageObservation(
+        ProviderProfile provider,
+        string model,
+        string runtimeSessionKey,
+        string sourcePhase,
+        string diagnostic)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: provider.Name,
+            ProviderKind: provider.Kind,
+            Model: model,
+            TransportKind: provider.Transport,
+            SourcePhase: sourcePhase,
+            UsageStatus: ProviderUsageObservationStatus.MissingAfterProviderActivity,
+            InputTokens: 0,
+            CachedInputTokens: 0,
+            OutputTokens: 0,
+            ReasoningTokens: 0,
+            TotalTokens: 0,
+            ToolCallCount: 0)
+        {
+            RuntimeSessionKey = runtimeSessionKey,
+            DiagnosticsJson = JsonSerializer.Serialize(
+                new Dictionary<string, string>
+                {
+                    ["diagnostic"] = diagnostic
+                },
+                SerializerOptions)
         };
     }
 

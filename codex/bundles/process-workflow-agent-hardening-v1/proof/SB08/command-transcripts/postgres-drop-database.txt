@@ -1,0 +1,11 @@
+Command: docker exec candoitall-postgres psql -U candoitall -d postgres -c drop database if exists "cditall_sb08_20260602013426" with (force);
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+DROP DATABASE
+
+
+STDERR:
+NOTICE:  database "cditall_sb08_20260602013426" does not exist, skipping
+

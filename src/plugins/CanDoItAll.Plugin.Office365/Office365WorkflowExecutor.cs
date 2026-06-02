@@ -43,6 +43,7 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.UsesSecrets |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
             WorkflowExecutorApprovalRequirement.NotRequired),
+        SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
     };
 
@@ -127,7 +128,10 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
             ["connectionId"] = connectionId.ToString(),
             ["sourceCategory"] = settings.Category,
             ["processedCategory"] = settings.ProcessedCategory,
-            ["messageIds"] = JsonSerializer.SerializeToNode(batch.Messages.Select(message => message.Id).ToArray(), JsonOptions)
+            ["messageIds"] = JsonSerializer.SerializeToNode(batch.Messages.Select(message => message.Id).ToArray(), JsonOptions),
+            ["idempotencyKeys"] = JsonSerializer.SerializeToNode(
+                batch.Messages.Select(message => CreateOffice365IdempotencyKey(message.Id)).ToArray(),
+                JsonOptions)
         };
 
     private static JsonObject CreateRunContext(
@@ -167,6 +171,11 @@ public sealed class Office365DownloadByCategoryWorkflowExecutor(
             target[propertyName] = value.DeepClone();
         }
     }
+
+    private static string CreateOffice365IdempotencyKey(string messageId)
+        => string.IsNullOrWhiteSpace(messageId)
+            ? string.Empty
+            : $"{EmailWorkflowSideEffectConstants.Office365IdempotencyPrefix}{messageId.Trim()}";
 
     private WorkflowExecutorAvailabilityDescriptor ResolveAvailability()
     {
@@ -226,6 +235,7 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.UsesSecrets |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
             WorkflowExecutorApprovalRequirement.NotRequired),
+        SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
     };
 
@@ -364,9 +374,10 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
             ["processedCategory"] = settings.ProcessedCategory,
             ["messageIds"] = JsonSerializer.SerializeToNode(batch.Messages.Select(message => message.Id).ToArray(), JsonOptions),
             ["selectedMessageId"] = selectedMessageId,
-            ["idempotencyKey"] = string.IsNullOrWhiteSpace(selectedMessageId)
-                ? string.Empty
-                : $"office365:{selectedMessageId}"
+            ["idempotencyKey"] = CreateOffice365IdempotencyKey(selectedMessageId),
+            ["idempotencyKeys"] = JsonSerializer.SerializeToNode(
+                batch.Messages.Select(message => CreateOffice365IdempotencyKey(message.Id)).ToArray(),
+                JsonOptions)
         };
     }
 
@@ -407,6 +418,11 @@ public sealed class Office365DownloadByAddressWorkflowExecutor(
             target[propertyName] = value.DeepClone();
         }
     }
+
+    private static string CreateOffice365IdempotencyKey(string messageId)
+        => string.IsNullOrWhiteSpace(messageId)
+            ? string.Empty
+            : $"{EmailWorkflowSideEffectConstants.Office365IdempotencyPrefix}{messageId.Trim()}";
 
     private WorkflowExecutorAvailabilityDescriptor ResolveAvailability()
     {
@@ -467,6 +483,9 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
             WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
             WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
             WorkflowExecutorApprovalRequirement.NotRequired),
+        SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+            "$.externalSideEffectReceipt.idempotencyKey",
+            EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
         DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Office365 category mutation without changing Microsoft Graph.")
     };
 
@@ -537,8 +556,15 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
             ["sourceCategoryRemoved"] = result.SourceCategoryRemoved,
             ["processedCategoryAdded"] = result.ProcessedCategoryAdded,
             ["processedCategoryCreated"] = result.ProcessedCategoryCreated,
-            ["categories"] = JsonSerializer.SerializeToNode(result.Categories, JsonOptions)
+            ["categories"] = JsonSerializer.SerializeToNode(result.Categories, JsonOptions),
+            ["sideEffectMode"] = EmailWorkflowSideEffectConstants.CommitMode,
+            ["dryRun"] = false
         };
+        var receipt = CreateProcessedMarkerReceipt(result);
+        payload["committed"] = receipt["mutationApplied"]?.GetValue<bool>() ?? false;
+        payload["idempotencyRecord"] = CreateIdempotencyRecord(result.Provider, result.MessageId);
+        payload["processedMarker"] = CreateProcessedMarkerRecord(result);
+        payload["externalSideEffectReceipt"] = receipt;
 
         if (TryParseObject(input.PayloadJson, out var workflowInput))
         {
@@ -547,6 +573,55 @@ public sealed class Office365MarkProcessedWorkflowExecutor(
 
         return payload.ToJsonString(JsonOptions);
     }
+
+    private static JsonObject CreateProcessedMarkerReceipt(Office365MessageCategoryMutationResult result)
+        => new()
+        {
+            ["schemaVersion"] = EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema,
+            ["provider"] = result.Provider,
+            ["operation"] = EmailWorkflowSideEffectConstants.Operation,
+            ["mode"] = EmailWorkflowSideEffectConstants.CommitMode,
+            ["dryRun"] = false,
+            ["committed"] = result.SourceCategoryRemoved || result.ProcessedCategoryAdded || result.ProcessedCategoryCreated,
+            ["mutationApplied"] = result.SourceCategoryRemoved || result.ProcessedCategoryAdded || result.ProcessedCategoryCreated,
+            ["idempotencyKey"] = CreateOffice365IdempotencyKey(result.MessageId),
+            ["messageId"] = result.MessageId,
+            ["sourceMarkerName"] = result.SourceCategory,
+            ["processedMarkerName"] = result.ProcessedCategory,
+            ["sourceMarkerRemoved"] = result.SourceCategoryRemoved,
+            ["processedMarkerAdded"] = result.ProcessedCategoryAdded,
+            ["processedMarkerCreated"] = result.ProcessedCategoryCreated,
+            ["retrySafe"] = true
+        };
+
+    private static JsonObject CreateIdempotencyRecord(
+        string provider,
+        string messageId)
+        => new()
+        {
+            ["provider"] = provider,
+            ["operation"] = EmailWorkflowSideEffectConstants.Operation,
+            ["key"] = CreateOffice365IdempotencyKey(messageId),
+            ["messageId"] = messageId,
+            ["retrySafe"] = true
+        };
+
+    private static JsonObject CreateProcessedMarkerRecord(Office365MessageCategoryMutationResult result)
+        => new()
+        {
+            ["provider"] = result.Provider,
+            ["messageId"] = result.MessageId,
+            ["sourceMarkerName"] = result.SourceCategory,
+            ["processedMarkerName"] = result.ProcessedCategory,
+            ["sourceMarkerRemoved"] = result.SourceCategoryRemoved,
+            ["processedMarkerAdded"] = result.ProcessedCategoryAdded,
+            ["processedMarkerCreated"] = result.ProcessedCategoryCreated
+        };
+
+    private static string CreateOffice365IdempotencyKey(string messageId)
+        => string.IsNullOrWhiteSpace(messageId)
+            ? string.Empty
+            : $"{EmailWorkflowSideEffectConstants.Office365IdempotencyPrefix}{messageId.Trim()}";
 
     private static bool TryParseObject(
         string json,
@@ -617,6 +692,9 @@ internal static class Office365WorkflowSimulationTemplates
             "processedCategory": "simulated-preview-processed",
             "messageIds": [
               "simulated-office365-message-1"
+            ],
+            "idempotencyKeys": [
+              "office365:simulated-office365-message-1"
             ]
           },
           "projectId": "{{inputPath:$.projectId}}",
@@ -630,6 +708,9 @@ internal static class Office365WorkflowSimulationTemplates
               "processedCategory": "simulated-preview-processed",
               "messageIds": [
                 "simulated-office365-message-1"
+              ],
+              "idempotencyKeys": [
+                "office365:simulated-office365-message-1"
               ]
             }
           },
@@ -673,7 +754,10 @@ internal static class Office365WorkflowSimulationTemplates
               "simulated-office365-message-1"
             ],
             "selectedMessageId": "simulated-office365-message-1",
-            "idempotencyKey": "office365:simulated-office365-message-1"
+            "idempotencyKey": "office365:simulated-office365-message-1",
+            "idempotencyKeys": [
+              "office365:simulated-office365-message-1"
+            ]
           },
           "projectId": "{{inputPath:$.projectId}}",
           "nodeId": "{{inputPath:$.nodeId}}",
@@ -687,7 +771,10 @@ internal static class Office365WorkflowSimulationTemplates
                 "simulated-office365-message-1"
               ],
               "selectedMessageId": "simulated-office365-message-1",
-              "idempotencyKey": "office365:simulated-office365-message-1"
+              "idempotencyKey": "office365:simulated-office365-message-1",
+              "idempotencyKeys": [
+                "office365:simulated-office365-message-1"
+              ]
             }
           },
           "workflowInput": "{{inputPayload}}",
@@ -715,6 +802,42 @@ internal static class Office365WorkflowSimulationTemplates
           "categories": [
             "simulated-preview-processed"
           ],
+          "sideEffectMode": "Preview",
+          "dryRun": true,
+          "committed": false,
+          "idempotencyRecord": {
+            "provider": "office365",
+            "operation": "processed-marker",
+            "key": "office365:simulated-office365-message-1",
+            "messageId": "simulated-office365-message-1",
+            "retrySafe": true
+          },
+          "processedMarker": {
+            "provider": "office365",
+            "messageId": "simulated-office365-message-1",
+            "sourceMarkerName": "simulated-preview-category",
+            "processedMarkerName": "simulated-preview-processed",
+            "sourceMarkerRemoved": true,
+            "processedMarkerAdded": true,
+            "processedMarkerCreated": true
+          },
+          "externalSideEffectReceipt": {
+            "schemaVersion": "workflow-email-processed-marker/v1",
+            "provider": "office365",
+            "operation": "processed-marker",
+            "mode": "Preview",
+            "dryRun": true,
+            "committed": false,
+            "mutationApplied": false,
+            "idempotencyKey": "office365:simulated-office365-message-1",
+            "messageId": "simulated-office365-message-1",
+            "sourceMarkerName": "simulated-preview-category",
+            "processedMarkerName": "simulated-preview-processed",
+            "sourceMarkerRemoved": true,
+            "processedMarkerAdded": true,
+            "processedMarkerCreated": true,
+            "retrySafe": true
+          },
           "inputPayload": "{{inputPayload}}",
           "simulation": {
             "nodeId": "{{node.id}}",

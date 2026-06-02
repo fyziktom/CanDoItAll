@@ -83,8 +83,8 @@ internal static class ProviderProfileTreeNodeBuilder
             Id = BuildProviderNodeId(tag, provider.Id),
             Text = provider.Name,
             Icon = ResolveProviderIcon(provider),
-            Tooltip = $"{provider.Name}. {provider.Kind}, {provider.Transport}, {provider.DefaultModel}.",
-            BadgeText = provider.IsEnabled ? "enabled" : "disabled",
+            Tooltip = ProviderProfileDisplayAdapter.BuildTreeTooltip(provider),
+            BadgeText = ProviderProfileDisplayAdapter.BuildEnabledBadge(provider).Text,
             IsSelected = selectedProviderId == provider.Id,
             DataTestId = "providers-tree-provider"
         };

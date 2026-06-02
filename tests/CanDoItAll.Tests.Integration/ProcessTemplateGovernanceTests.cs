@@ -111,6 +111,8 @@ public sealed class ProcessTemplateGovernanceTests
             .ToArray();
 
         Assert.Equal(["quality-repair"], mutableStepKeys);
+        Assert.Contains("canonical ProcessStepOperation", definition.GovernanceNotes, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepTargetScope", definition.GovernanceNotes, StringComparison.Ordinal);
         AssertReadOnlyContractStep(definition, "feature-intake");
         AssertSubprocessStep(
             definition,

@@ -132,16 +132,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     recoveredForExecutionRunId);
             }
 
-            if (!IsCurrentRunArtifact(
-                    artifact,
-                    producerKind,
+            var lineageValidation = ProcessArtifactLineageValidator.ValidateCurrentRunArtifact(
+                artifact,
+                producerKind,
+                new ProcessArtifactLineageValidationContext(
                     processRunId,
                     stepRunId,
                     executionRunId,
                     workflowRunId,
                     subprocessRunId,
                     recoveryExecutionRunId,
-                    recoveredForExecutionRunId))
+                    recoveredForExecutionRunId));
+            if (!lineageValidation.IsCurrentRun)
             {
                 return CreateArtifactValidationResult(
                     processRunId,
@@ -152,7 +154,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     producerKind,
                     artifact,
                     artifact.ManagedStoragePath,
-                    "The candidate artifact is not bound to the current process run, step, execution run, or workflow run.",
+                    lineageValidation.Diagnostic,
                     "Recover using current-run evidence or block instead of carrying stale artifacts forward.",
                     executorKind,
                     executionRunId,

@@ -47,6 +47,7 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                     WorkflowExecutorCapabilityFlags.UsesSecrets |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                     WorkflowExecutorApprovalRequirement.NotRequired),
+                SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
                 DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
             },
             new PluginWorkflowExecutorDescriptor(
@@ -66,6 +67,7 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                     WorkflowExecutorCapabilityFlags.UsesSecrets |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                     WorkflowExecutorApprovalRequirement.NotRequired),
+                SideEffects = WorkflowExecutorSideEffectDescriptor.ExternalRead(EmailWorkflowSideEffectConstants.ExternalReadReceiptSchema),
                 DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview uses simulated Microsoft Graph messages without calling Office365.")
             },
             new PluginWorkflowExecutorDescriptor(
@@ -86,6 +88,9 @@ internal sealed class Office365BundledPlugin : IBundledPlugin
                     WorkflowExecutorCapabilityFlags.IdempotentExternalMarker |
                     WorkflowExecutorCapabilityFlags.SupportsDeterministicTestMode,
                     WorkflowExecutorApprovalRequirement.NotRequired),
+                SideEffects = WorkflowExecutorSideEffectDescriptor.IdempotentProcessedMarker(
+                    "$.externalSideEffectReceipt.idempotencyKey",
+                    EmailWorkflowSideEffectConstants.ProcessedMarkerReceiptSchema),
                 DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Run Preview simulates the Office365 category mutation without changing Microsoft Graph.")
             }
         ],

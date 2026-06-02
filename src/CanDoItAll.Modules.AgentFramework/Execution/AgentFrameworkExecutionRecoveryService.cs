@@ -69,6 +69,7 @@ internal sealed class AgentFrameworkExecutionRecoveryService(
                 AppendRestartRecoveryLog(detail.ExecutionLog, detail.Run, repairedAtUtc),
                 detail.Metrics)
             {
+                UsageObservations = detail.UsageObservations,
                 Approvals = detail.Approvals,
                 Artifacts = detail.Artifacts,
                 Checkpoints = detail.Checkpoints,

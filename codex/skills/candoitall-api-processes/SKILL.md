@@ -18,7 +18,7 @@ Use this skill when a task needs process authoring or runtime control through th
 ## Governance Fields You Must Preserve
 
 - Definition `contractMode`: `0` Compatibility, `1` Strict. Strict definitions reject text-inferred or missing risky operation contracts.
-- Step `allowedOperations`: include typed operations such as `ReadProcessContext`, `ReadProjectStructure`, `ReadUpstreamArtifacts`, `WriteManagedProcessArtifacts`, `WriteExternalArtifactDestination`, `MutateProductTarget`, `RunValidation`, `LaunchRuntime`, `CaptureRuntimeProof`, `ExecuteExternalAction`, `RecoverArtifactsOnly`, and `EscalateOrDecide`.
+- Step `allowedOperations`: use values source-aligned with `ProcessStepOperation`, such as `ReadProcessContext`, `ReadProjectStructure`, `ReadUpstreamArtifacts`, `WriteManagedProcessArtifacts`, `WriteExternalArtifactDestination`, `MutateProductTarget`, `RunValidation`, `LaunchRuntime`, `CaptureRuntimeProof`, `ExecuteExternalAction`, `RecoverArtifactsOnly`, and `EscalateOrDecide`.
 - Step `operationTargetScope`: use the narrowest accurate `ProcessStepTargetScope` value: `ManagedProcessArtifactsOnly`, `ManagedOutputProduct`, `ExternalArtifactDestination`, `ExternalProductTargetReadOnly`, `ExternalProductTargetMutable`, or `ExternalActionControlled`.
 - Artifact expectation workflow mapping: preserve `workflowOutputId`, `workflowOutputName`, and `workflowOutputKind` when a required process artifact is produced by a workflow executor.
 - Artifact expectation subprocess mapping: preserve `subprocessChildArtifactExpectationId` when a parent process required artifact maps to a child process artifact.
@@ -28,6 +28,8 @@ Use this skill when a task needs process authoring or runtime control through th
 - Required artifact expectations remain unsatisfied when status is `Missing`, `ProjectionFailed`, `ContentUnavailable`, `InvalidFormat`, `InsufficientEvidence`, `StaleOrWrongRun`, `WrongProducerMode`, `PlaceholderOnly`, or `ContentHashMismatch`.
 - Artifact records that come from automation, workflow, subprocess, or manual recovery must keep projection lineage fields such as `projectionLineage`, `projectionLineageJson`, `projectionIdentityHash`, `externalReferenceKey`, and managed storage path. Do not replace lineage with prose.
 - Live-run profile summaries expose typed `freshRunPolicy`. Preserve `requiresFreshRun`, seeded transition/artifact rejection, pre-dispatch checks, evidence checks, and project-structure writeback guidance when selecting or documenting a live run.
+- Runtime/browser proof is canonical evidence enforced by `ProcessBrowserProofValidator`. When a step uses `CaptureRuntimeProof`, preserve route, viewport, browser tool outputs, screenshot paths, browser state or snapshot output, console output, runtime host URL, database profile, and cleanup receipt fields rather than replacing them with a summary.
+- Provider usage evidence is canonical ledger data. Preserve `ProviderUsageObservationStatus`, `ProviderUsageSourcePhase`, known or missing usage status, token counts, pricing fields, and source execution identifiers when reviewing cost or analytics.
 
 ## Definition And Template Work
 

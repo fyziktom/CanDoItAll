@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Completed. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -72,12 +72,12 @@ Do not rewrite all agent personalities. Only update behaviorally relevant contra
 
 ## Acceptance Checklist
 
-- [ ] Agent instructions reference canonical contracts.
-- [ ] Skills reflect current HTTP API behavior.
-- [ ] Template governance tests pass.
-- [ ] Skill/API parity tests pass.
-- [ ] Active skill root hashes are recorded.
-- [ ] SB06 proof manifest exists.
+- [x] Agent instructions reference canonical contracts.
+- [x] Skills reflect current HTTP API behavior.
+- [x] Template governance tests pass.
+- [x] Skill/API parity tests pass.
+- [x] Active skill root hashes are recorded.
+- [x] SB06 proof manifest exists.
 
 ## Proof Required
 

@@ -7,7 +7,7 @@
   "CustomerName": "Delivery requester",
   "OwnerName": "Delivery governance board",
   "InterfaceContractSummary": "The process targets .NET software delivery first: backend-only/API/service, Blazor Server/SSR, Blazor WebAssembly, Blazor WASM PWA, worker, console, library, or mixed solution. JavaScript-specific delivery should use a separate process rather than hidden branching here.",
-  "GovernanceNotes": "Architecture, implementation, validation, runtime command writeback, screenshot writeback, security, and release gates have explicit operation contracts. Architects and QA reviewers do not mutate product files; implementation and repair remain the only product-mutable lanes.",
+  "GovernanceNotes": "Architecture, implementation, validation, runtime command writeback, screenshot writeback, security, and release gates have explicit operation contracts. `allowedOperations` and `operationTargetScope` must stay source-aligned with the canonical ProcessStepOperation and ProcessStepTargetScope catalogs. Architects and QA reviewers do not mutate product files; implementation and repair remain the only product-mutable lanes.",
   "ChangeSummary": "Hardens multi-team software delivery for .NET by routing architecture design/review, implementation, runtime command writeback, and UI screenshot writeback through subprocesses with explicit permissions.",
   "GovernancePolicySummary": "Release readiness requires reviewed .NET architecture, implementation evidence, QA evidence, security posture, Run command nodes, UI screenshot or no-UI evidence, rollback readiness, and explicit residual-risk ownership.",
   "ConstitutionRuleSummary": "Role contracts, decision rights, and source-of-truth ownership outlive the specific person or agent assigned at runtime.",

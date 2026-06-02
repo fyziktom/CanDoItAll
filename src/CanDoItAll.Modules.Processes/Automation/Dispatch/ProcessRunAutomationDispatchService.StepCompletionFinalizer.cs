@@ -1406,65 +1406,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath);
     }
 
-    private static bool IsCurrentRunArtifact(
-        ProcessArtifactRecord artifact,
-        ProcessArtifactProducerKind producerKind,
-        Guid processRunId,
-        Guid stepRunId,
-        Guid? executionRunId,
-        Guid? workflowRunId,
-        Guid? subprocessRunId,
-        Guid? recoveryExecutionRunId = null,
-        Guid? recoveredForExecutionRunId = null)
-    {
-        if (artifact.ProcessRunId != processRunId || artifact.StepRunId != stepRunId)
-        {
-            return false;
-        }
-
-        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
-        if (lineage is not null && (lineage.SourceKind != ProcessArtifactProjectionSourceKind.Unknown || IsManagerRecoveryLineage(lineage)))
-        {
-            return IsCurrentRunArtifact(
-                lineage,
-                producerKind,
-                executionRunId,
-                workflowRunId,
-                subprocessRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId);
-        }
-
-        var key = artifact.ExternalReferenceKey;
-        var provenance = artifact.ProvenanceSummary;
-        return producerKind switch
-        {
-            ProcessArtifactProducerKind.AgentExecutionArtifact or
-            ProcessArtifactProducerKind.WorkspaceWrite or
-            ProcessArtifactProducerKind.ExistingManagedFile or
-            ProcessArtifactProducerKind.AssistantResponse or
-            ProcessArtifactProducerKind.ProviderNativeBrowser => executionRunId.HasValue &&
-                ContainsGuidToken(key, executionRunId.Value) ||
-                executionRunId.HasValue &&
-                ContainsGuidToken(provenance, executionRunId.Value),
-            ProcessArtifactProducerKind.WorkflowRun or
-            ProcessArtifactProducerKind.WorkflowArtifact => workflowRunId.HasValue &&
-                ContainsGuidToken(key, workflowRunId.Value),
-            ProcessArtifactProducerKind.SubprocessArtifact => subprocessRunId.HasValue &&
-                ContainsGuidToken(key, subprocessRunId.Value),
-            ProcessArtifactProducerKind.ManagerRecovery => IsCurrentManagerRecoveryArtifact(
-                key,
-                provenance,
-                executionRunId,
-                recoveryExecutionRunId,
-                recoveredForExecutionRunId),
-            ProcessArtifactProducerKind.CompletedDecision or
-            ProcessArtifactProducerKind.ProcessMock or
-            ProcessArtifactProducerKind.Manual => true,
-            _ => string.IsNullOrWhiteSpace(key)
-        };
-    }
-
     private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactProjectionSourceKind sourceKind)
     {
         return sourceKind switch
@@ -1484,90 +1425,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         };
     }
 
-    private static bool IsCurrentRunArtifact(
-        ProcessArtifactProjectionLineage lineage,
-        ProcessArtifactProducerKind producerKind,
-        Guid? executionRunId,
-        Guid? workflowRunId,
-        Guid? subprocessRunId,
-        Guid? recoveryExecutionRunId,
-        Guid? recoveredForExecutionRunId)
-    {
-        if (producerKind == ProcessArtifactProducerKind.ManagerRecovery || IsManagerRecoveryLineage(lineage))
-        {
-            return IsCurrentManagerRecoveryArtifact(lineage, executionRunId, recoveryExecutionRunId, recoveredForExecutionRunId);
-        }
-
-        return producerKind switch
-        {
-            ProcessArtifactProducerKind.AgentExecutionArtifact or
-            ProcessArtifactProducerKind.WorkspaceWrite or
-            ProcessArtifactProducerKind.ExistingManagedFile or
-            ProcessArtifactProducerKind.AssistantResponse or
-            ProcessArtifactProducerKind.ProviderNativeBrowser => executionRunId.HasValue &&
-                lineage.SourceExecutionRunId == executionRunId.Value,
-            ProcessArtifactProducerKind.WorkflowRun or
-            ProcessArtifactProducerKind.WorkflowArtifact => workflowRunId.HasValue &&
-                lineage.WorkflowRunId == workflowRunId.Value,
-            ProcessArtifactProducerKind.SubprocessArtifact => subprocessRunId.HasValue &&
-                lineage.SubprocessRunId == subprocessRunId.Value,
-            ProcessArtifactProducerKind.CompletedDecision or
-            ProcessArtifactProducerKind.ProcessMock or
-            ProcessArtifactProducerKind.Manual => true,
-            _ => false
-        };
-    }
-
     private static bool IsManagerRecoveryLineage(ProcessArtifactProjectionLineage lineage)
     {
         return lineage.RecoveryExecutionRunId.HasValue && lineage.RecoveredForExecutionRunId.HasValue;
-    }
-
-    private static bool IsCurrentManagerRecoveryArtifact(
-        ProcessArtifactProjectionLineage lineage,
-        Guid? executionRunId,
-        Guid? recoveryExecutionRunId,
-        Guid? recoveredForExecutionRunId)
-    {
-        var effectiveRecoveryExecutionRunId = recoveryExecutionRunId ?? executionRunId;
-        return effectiveRecoveryExecutionRunId.HasValue &&
-               lineage.RecoveryExecutionRunId == effectiveRecoveryExecutionRunId.Value &&
-               recoveredForExecutionRunId.HasValue &&
-               lineage.RecoveredForExecutionRunId == recoveredForExecutionRunId.Value;
-    }
-
-    private static bool IsCurrentManagerRecoveryArtifact(
-        string key,
-        string provenance,
-        Guid? executionRunId,
-        Guid? recoveryExecutionRunId,
-        Guid? recoveredForExecutionRunId)
-    {
-        var effectiveRecoveryExecutionRunId = recoveryExecutionRunId ?? executionRunId;
-        if (!effectiveRecoveryExecutionRunId.HasValue)
-        {
-            return false;
-        }
-
-        if (!ContainsGuidToken(key, effectiveRecoveryExecutionRunId.Value) &&
-            !ContainsGuidToken(provenance, effectiveRecoveryExecutionRunId.Value))
-        {
-            return false;
-        }
-
-        if (!recoveredForExecutionRunId.HasValue)
-        {
-            return false;
-        }
-
-        return ContainsGuidToken(key, recoveredForExecutionRunId.Value) ||
-               ContainsGuidToken(provenance, recoveredForExecutionRunId.Value);
-    }
-
-    private static bool ContainsGuidToken(string? text, Guid value)
-    {
-        return !string.IsNullOrWhiteSpace(text) &&
-               text.Contains(value.ToString("D"), StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool MatchesDeclaredFormat(
@@ -1952,84 +1812,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsWrongRootArtifact(ProcessArtifactRecord artifact)
     {
-        if (string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
-        {
-            return false;
-        }
-
-        var normalizedPath = artifact.ManagedStoragePath.Replace('\\', '/').Trim().TrimStart('/');
-        if (StorageJson.TryParseReference(normalizedPath, out _))
-        {
-            return false;
-        }
-
-        if (normalizedPath.StartsWith("external-target/", StringComparison.OrdinalIgnoreCase))
-        {
-            var normalizedAlias = NormalizeExternalTargetAlias(normalizedPath);
-            return !IsExternalArtifactDestinationAlias(normalizedAlias);
-        }
-
-        if (string.Equals(normalizedPath, "output", StringComparison.OrdinalIgnoreCase) ||
-            normalizedPath.StartsWith("output/", StringComparison.OrdinalIgnoreCase)) {
-            return !IsCurrentRunManagedOutputArtifactPath(artifact.ProcessRunId, normalizedPath);
-        }
-
-        return normalizedPath.StartsWith("src/", StringComparison.OrdinalIgnoreCase) ||
-               normalizedPath.StartsWith("tests/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsCurrentRunManagedOutputArtifactPath(Guid processRunId, string normalizedPath) {
-        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (segments.Length < 3 ||
-            !string.Equals(segments[0], "output", StringComparison.OrdinalIgnoreCase)) {
-            return false;
-        }
-
-        return ContainsCurrentRunPathSegment(segments, "process-runs", processRunId.ToString("D")) ||
-               ContainsCurrentRunPathSegment(segments, "process-runs", processRunId.ToString("N")) ||
-               ContainsCurrentRunPathSegment(segments, "process-mock", ResolveProcessMockRunKey(processRunId));
-    }
-
-    private static bool ContainsCurrentRunPathSegment(
-        IReadOnlyList<string> segments,
-        string markerSegment,
-        string expectedValue) {
-        if (string.IsNullOrWhiteSpace(expectedValue)) {
-            return false;
-        }
-
-        for (var index = 0; index < segments.Count - 1; index++) {
-            if (string.Equals(segments[index], markerSegment, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(segments[index + 1], expectedValue, StringComparison.OrdinalIgnoreCase)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static string ResolveProcessMockRunKey(Guid processRunId) {
-        var normalized = processRunId.ToString("N").ToLowerInvariant();
-        return normalized.Length <= 16
-            ? normalized
-            : normalized[..16];
+        return !ProcessArtifactLineageValidator
+            .ValidateManagedStorageBoundary(artifact, artifact.ProcessRunId)
+            .IsCurrentRun;
     }
 
     private static bool RequiresProjectionLineage(ProcessArtifactRecord artifact)
     {
         return artifact.ArtifactKind is ProcessArtifactKind.Evidence or ProcessArtifactKind.Deliverable;
-    }
-
-    private static bool IsExternalArtifactDestinationAlias(string normalizedAlias)
-    {
-        var segments = normalizedAlias.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return segments.Any(segment =>
-            string.Equals(segment, "artifact", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "evidence", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "report", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(segment, "reports", StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool HasReadableTextArtifactContent(

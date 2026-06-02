@@ -1318,6 +1318,60 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task RecordArtifactAsync_normalizes_null_optional_text_fields()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Nullable process artifact fields project");
+        var managerRoleId = Guid.NewGuid();
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, managerRoleId));
+
+        Assert.True(saveResult.IsSuccess);
+        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "Nullable artifact field validation",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Verify optional artifact text fields are normalized."
+        });
+
+        Assert.True(runResult.IsSuccess);
+
+        var firstStep = Assert.Single(await processesService.ListStepRunsAsync(runResult.Value), item => item.Sequence == 0);
+        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runResult.Value,
+            StepRunId = firstStep.Id,
+            ArtifactKind = ProcessArtifactKind.Brief,
+            Title = "Nullable optional proof",
+            ProvenanceSummary = null!,
+            AllowedFutureUsageSummary = null!,
+            ReviewSummary = null!,
+            ManagedStoragePath = null!,
+            ExternalReferenceKey = null!
+        });
+
+        Assert.True(recordResult.IsSuccess);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var artifact = await dbContext.Set<ProcessArtifactRecord>()
+            .SingleAsync(item => item.Id == recordResult.Value);
+
+        Assert.Equal(string.Empty, artifact.ProvenanceSummary);
+        Assert.Equal(string.Empty, artifact.AllowedFutureUsageSummary);
+        Assert.Equal(string.Empty, artifact.ReviewSummary);
+        Assert.Equal(string.Empty, artifact.ManagedStoragePath);
+        Assert.Equal(string.Empty, artifact.ExternalReferenceKey);
+    }
+
+    [Fact]
     public async Task RecordArtifactAsync_returns_existing_record_for_duplicate_external_reference_key()
     {
         await using var application = await TestApplication.CreateAsync();

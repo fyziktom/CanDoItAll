@@ -134,6 +134,7 @@ public sealed class WorkflowExecutorTests
         Assert.Equal(WorkflowExecutorSettingsSchemaKind.JsonSchema, descriptor.SettingsSchema.Kind);
         Assert.Equal("{\"type\":\"object\"}", descriptor.SettingsSchema.SchemaJson);
         Assert.Equal(WorkflowExecutorPermissionPolicy.None, descriptor.PermissionPolicy);
+        Assert.Equal(WorkflowExecutorSideEffectDescriptor.None, descriptor.SideEffects);
         Assert.False(descriptor.DeterministicTestMode.IsSupported);
     }
 
@@ -760,6 +761,90 @@ public sealed class WorkflowExecutorTests
         Assert.Equal(WorkspaceScopeKind.Project, scope!.Kind);
         Assert.Equal(projectId.ToString("D"), scope.Key);
         Assert.Contains("Potřebujeme naprogramovat jednoduchou hru Tetris", runtime.LastPrompt, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}")
+        {
+            InputTokens = 0,
+            OutputTokens = 0,
+            UsageObservations =
+            [
+                CreateWorkflowUsageObservation(
+                    ProviderUsageObservationStatus.Observed,
+                    inputTokens: 1_000_000,
+                    cachedInputTokens: 250_000,
+                    outputTokens: 500_000)
+            ]
+        };
+        var provider = CreateProviderProfile("gpt-5-mini") with
+        {
+            ModelPrices = [new ProviderModelTokenPrice("gpt-5-mini", 1.00m, 0.10m, 4.00m)]
+        };
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.NotNull(result.Usage);
+        Assert.Equal(1_000_000, result.Usage!.InputTokens);
+        Assert.Equal(250_000, result.Usage.CachedInputTokens);
+        Assert.Equal(500_000, result.Usage.OutputTokens);
+        Assert.Equal(2.775m, result.Usage.CostUsd);
+        Assert.Equal(1, result.Usage.KnownObservationCount);
+        Assert.Equal(0, result.Usage.UnknownObservationCount);
+    }
+
+    [Fact]
+    public async Task MafWorkflowLlmComponentInvokerMarksUnavailableWorkflowUsageAsUnknown()
+    {
+        var runtime = new CapturingAgentRuntime("{\"ok\":true}")
+        {
+            InputTokens = 0,
+            OutputTokens = 0,
+            UsageObservations =
+            [
+                CreateWorkflowUsageObservation(
+                    ProviderUsageObservationStatus.UsageUnavailable,
+                    inputTokens: 0,
+                    cachedInputTokens: 0,
+                    outputTokens: 0)
+            ]
+        };
+        var provider = CreateProviderProfile("gpt-5-mini") with
+        {
+            ModelPrices = [new ProviderModelTokenPrice("gpt-5-mini", 1.00m, 0.10m, 4.00m)]
+        };
+        var invoker = new MafWorkflowLlmComponentInvoker(
+            runtime,
+            new TestProviderProfileRegistry([provider]),
+            new ProviderProfileService());
+        var component = CreateLlmComponent(JsonObjectShape, JsonPayloadShape);
+        var node = CreateLlmNode("summarize-office365", component.Id);
+        var definition = CreateDefinition([node], [], node.Id.Value);
+
+        var result = await invoker.ExecuteAsync(
+            definition,
+            node,
+            component,
+            new WorkflowNodeInput("{}"));
+
+        Assert.NotNull(result.Usage);
+        Assert.Equal(0m, result.Usage!.CostUsd);
+        Assert.Equal(0, result.Usage.KnownObservationCount);
+        Assert.Equal(1, result.Usage.UnknownObservationCount);
+        Assert.True(result.Usage.HasUnknownUsage);
     }
 
     [Fact]
@@ -1690,6 +1775,29 @@ public sealed class WorkflowExecutorTests
             SuggestedModels: [],
             Purpose: ProviderProfilePurpose.Chat);
 
+    private static ProviderUsageObservation CreateWorkflowUsageObservation(
+        ProviderUsageObservationStatus status,
+        int inputTokens,
+        int cachedInputTokens,
+        int outputTokens)
+    {
+        return new ProviderUsageObservation(
+            Id: Guid.NewGuid(),
+            CreatedAtUtc: DateTimeOffset.UtcNow,
+            ProviderName: "Workflow unit provider",
+            ProviderKind: ProviderKind.OpenAi,
+            Model: "gpt-5-mini",
+            TransportKind: ProviderTransportKind.ChatCompletions,
+            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+            UsageStatus: status,
+            InputTokens: inputTokens,
+            CachedInputTokens: cachedInputTokens,
+            OutputTokens: outputTokens,
+            ReasoningTokens: 0,
+            TotalTokens: inputTokens + outputTokens,
+            ToolCallCount: 0);
+    }
+
     private sealed class RecordingWorkflowExecutor : IWorkflowExecutor
     {
         public WorkflowExecutorDescriptor Descriptor => BuiltInWorkflowExecutorDescriptors.StorageFile;
@@ -1796,6 +1904,12 @@ public sealed class WorkflowExecutorTests
 
         public string LastPrompt { get; private set; } = string.Empty;
 
+        public int InputTokens { get; init; } = 12;
+
+        public int OutputTokens { get; init; } = 8;
+
+        public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+
         public Task<AgentRuntimeResponse> RunAsync(
             AgentDefinition agent,
             ProviderProfile provider,
@@ -1824,12 +1938,15 @@ public sealed class WorkflowExecutorTests
             LastExecutionOptions = executionOptions;
             return Task.FromResult(new AgentRuntimeResponse(
                 responseText,
-                InputTokens: 12,
-                OutputTokens: 8,
+                InputTokens,
+                OutputTokens,
                 ToolCalls: 0,
                 RuntimeSessionKey: string.Empty,
                 SerializedSessionStateJson: null,
-                PendingApprovals: []));
+                PendingApprovals: [])
+            {
+                UsageObservations = UsageObservations
+            });
         }
 
         public Task<AgentRuntimeResponse> RespondToPendingApprovalsAsync(

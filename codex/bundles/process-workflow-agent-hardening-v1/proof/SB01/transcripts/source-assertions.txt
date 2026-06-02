@@ -1,0 +1,130 @@
+Command group: SB01 source assertions
+Cwd: C:\repositories\CanDoItAll
+StartedUtc: 2026-06-02T00:40:24.3176081Z
+
+Command: rg -n "ProcessOperationContractNames|ProviderUsagePhaseContractNames|WorkflowJsonPathContractNames" src\CanDoItAll.AgentFramework.Models\Contracts\ProcessOperationContractNames.cs
+--- output ---
+3:public static class ProcessOperationContractNames
+62:public static class ProviderUsagePhaseContractNames
+90:public static class WorkflowJsonPathContractNames
+
+Command: rg -n "ToolContractCatalog|KnownToolNames|BrowserEvidenceToolNames|WorkspaceToolNames" src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch
+--- output ---
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:3:public static class ToolContractCatalog
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:46:    public static IReadOnlyList<string> WorkspaceToolNames { get; } =
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:93:    public static IReadOnlyList<string> BrowserEvidenceToolNames { get; } =
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:120:    public static IReadOnlyList<string> KnownToolNames { get; } =
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:122:        .. WorkspaceToolNames,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:182:        => Contains(KnownToolNames, toolName);
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ToolContractCatalog.cs:185:        => Contains(BrowserEvidenceToolNames, toolName);
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:159:        ToolContractCatalog.WorkspaceListFiles,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:160:        ToolContractCatalog.WorkspaceSearch,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:161:        ToolContractCatalog.WorkspaceReadFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:162:        ToolContractCatalog.WorkspaceStatPath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:163:        ToolContractCatalog.WorkspaceCreateDirectory,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:164:        ToolContractCatalog.WorkspaceWriteFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:165:        ToolContractCatalog.WorkspaceAppendFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:166:        ToolContractCatalog.WorkspaceCopyPath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:167:        ToolContractCatalog.WorkspaceMovePath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:168:        ToolContractCatalog.WorkspaceDeletePath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:169:        ToolContractCatalog.WorkspaceDotNetNew,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:170:        ToolContractCatalog.WorkspaceDotNetRestore,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:171:        ToolContractCatalog.WorkspaceDotNetBuild,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:172:        ToolContractCatalog.WorkspaceDotNetTest,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:173:        ToolContractCatalog.WorkspaceDotNetRun,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:174:        ToolContractCatalog.WorkspacePowerShellRunScript,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:175:        ToolContractCatalog.WorkspacePythonRunFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:176:        ToolContractCatalog.WorkspaceInspectImage
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:180:        ToolContractCatalog.WorkspaceListFiles,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:181:        ToolContractCatalog.WorkspaceSearch
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:185:        ToolContractCatalog.WorkspaceCreateDirectory,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:186:        ToolContractCatalog.WorkspaceWriteFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:187:        ToolContractCatalog.WorkspaceAppendFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:188:        ToolContractCatalog.WorkspaceCopyPath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:189:        ToolContractCatalog.WorkspaceMovePath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:190:        ToolContractCatalog.WorkspaceDeletePath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:191:        ToolContractCatalog.WorkspaceDotNetNew
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:200:        ToolContractCatalog.WorkspaceWriteFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:201:        ToolContractCatalog.WorkspaceAppendFile,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:202:        ToolContractCatalog.WorkspaceCopyPath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:203:        ToolContractCatalog.WorkspaceMovePath,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:204:        ToolContractCatalog.WorkspaceDeletePath
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:263:        ToolContractCatalog.BrowserConsoleMessages,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:264:        ToolContractCatalog.BrowserEvaluate,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:265:        ToolContractCatalog.BrowserNetworkRequests,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:266:        ToolContractCatalog.BrowserSnapshot,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:267:        ToolContractCatalog.BrowserTakeScreenshot
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:271:        ToolContractCatalog.WorkspaceDotNetRestore,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:272:        ToolContractCatalog.WorkspaceDotNetBuild,
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:273:        ToolContractCatalog.WorkspaceDotNetTest
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:442:        if (string.Equals(context.ToolName, ToolContractCatalog.WorkspaceDotNetRun, StringComparison.OrdinalIgnoreCase))
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1915:            Mutation(ToolContractCatalog.WorkspaceDotNetNew),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1918:            Mutation(ToolContractCatalog.WorkspaceCreateDirectory),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1919:            Mutation(ToolContractCatalog.WorkspaceWriteFile),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1920:            Mutation(ToolContractCatalog.WorkspaceAppendFile),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1921:            Mutation(ToolContractCatalog.WorkspaceCopyPath),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1922:            Mutation(ToolContractCatalog.WorkspaceMovePath),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1923:            Mutation(ToolContractCatalog.WorkspaceDeletePath),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1924:            Validation(ToolContractCatalog.WorkspaceDotNetRestore),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1925:            Validation(ToolContractCatalog.WorkspaceDotNetBuild),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1926:            Validation(ToolContractCatalog.WorkspaceDotNetTest),
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1927:            Validation(ToolContractCatalog.WorkspaceDotNetRun),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1374:               RequiredBrowserEvidenceToolNames.Contains(toolName);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:3536:        if (RequiredBrowserEvidenceToolNames.Contains(producedBy) ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:95:        ToolContractCatalog.WorkspaceGitDiff,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:96:        ToolContractCatalog.WorkspaceGitStatus
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:98:    private static readonly HashSet<string> RequiredBrowserEvidenceToolNames =
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:100:        ToolContractCatalog.BrowserConsoleMessages,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:101:        ToolContractCatalog.BrowserNetworkRequests,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:102:        ToolContractCatalog.BrowserSnapshot,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:103:        ToolContractCatalog.BrowserTakeScreenshot
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:107:        ToolContractCatalog.WorkspaceStatPath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:108:        ToolContractCatalog.WorkspaceReadFile
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:117:        ToolContractCatalog.WorkspaceStatPath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:118:        ToolContractCatalog.WorkspaceReadFile
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:122:        ToolContractCatalog.WorkspaceStatPath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:123:        ToolContractCatalog.WorkspaceReadFile
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:127:        ToolContractCatalog.BrowserConsoleMessages,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:128:        ToolContractCatalog.BrowserSnapshot,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:129:        ToolContractCatalog.BrowserTakeScreenshot
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:133:        ToolContractCatalog.WorkspaceWriteFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:134:        ToolContractCatalog.WorkspaceAppendFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:135:        ToolContractCatalog.WorkspaceMovePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:136:        ToolContractCatalog.WorkspaceDeletePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:137:        ToolContractCatalog.WorkspaceCreateDirectory
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:141:        ToolContractCatalog.WorkspaceWriteFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:142:        ToolContractCatalog.WorkspaceAppendFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:143:        ToolContractCatalog.WorkspaceMovePath
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:147:        ToolContractCatalog.BrowserConsoleMessages,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:148:        ToolContractCatalog.BrowserSnapshot,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:149:        ToolContractCatalog.BrowserTakeScreenshot
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:783:               RequiredBrowserEvidenceToolNames.Contains(normalizedToolName);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:72:            requiredToolNames.Add(ToolContractCatalog.WorkspaceCreateDirectory);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:73:            requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetNew);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:78:            requiredToolNames.Add(ToolContractCatalog.WorkspaceWriteFile);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:84:                requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetBuild);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:85:                requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetRun);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:91:                requiredToolNames.Add(ToolContractCatalog.WorkspaceDotNetTest);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:101:                requiredToolNames.Add(ToolContractCatalog.WorkspacePowerShellRunScript);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:107:            requiredToolNames.Add(ToolContractCatalog.WorkspaceWriteFile);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs:121:            requiredToolNames.Add(ToolContractCatalog.WorkspacePowerShellRunScript);
+
+Command: rg -n "ProcessContractCatalog|OperationDescriptors|FindUnknownOperationNames" src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs tests\CanDoItAll.Tests.Unit\ProcessContractDriftScannerTests.cs
+--- output ---
+tests\CanDoItAll.Tests.Unit\ProcessContractDriftScannerTests.cs:18:        Assert.Empty(ProcessContractCatalog.FindUnknownOperationNames(ProcessOperationContractNames.AllOperations));
+tests\CanDoItAll.Tests.Unit\ProcessContractDriftScannerTests.cs:114:            .Where(operation => !ProcessContractCatalog.IsKnownOperationName(operation))
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:11:public static class ProcessContractCatalog
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:13:    public static IReadOnlyList<ProcessOperationContractDescriptor> OperationDescriptors { get; } =
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:30:        OperationDescriptors.Select(descriptor => descriptor.Operation.ToString()).ToArray();
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:46:    public static IReadOnlyList<string> FindUnknownOperationNames(IEnumerable<string> values)
+
+Command: rg -n "Scanner_rejects_unowned_internal_tool_id|Scanner_accepts_classified_external_template_and_test_literals|Scoped_repository_contract_drift_scan_has_no_unowned_internal_ids|Process_template_operation_ids_are_known" tests\CanDoItAll.Tests.Unit\ProcessContractDriftScannerTests.cs
+--- output ---
+40:    public void Scanner_rejects_unowned_internal_tool_id()
+58:    public void Scanner_accepts_classified_external_template_and_test_literals()
+89:    public void Scoped_repository_contract_drift_scan_has_no_unowned_internal_ids()
+102:    public void Process_template_operation_ids_are_known()
+
+--- result ---
+ExitCode: 0
+FinishedUtc: 2026-06-02T00:40:24.7297641Z

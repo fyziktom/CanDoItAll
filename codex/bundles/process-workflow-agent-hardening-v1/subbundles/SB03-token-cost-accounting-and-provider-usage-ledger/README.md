@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation. Classification: **Critical foundation**.
+Completed. Classification: **Critical foundation**.
 
 ## Objective
 
@@ -75,15 +75,15 @@ If OpenAI billing export/API is unavailable locally, do not block. Instead, reco
 
 ## Acceptance Checklist
 
-- [ ] Provider usage observation schema exists.
-- [ ] Normal run usage is recorded.
-- [ ] Finalizer short-circuit usage is recorded or marked unknown with provider-activity diagnostic.
-- [ ] Failed-after-provider-call usage is recorded.
-- [ ] Structured-output repair usage is linked.
-- [ ] Background/continuation usage is cumulative or separately itemized.
-- [ ] Process actual cost aggregates usage ledger.
-- [ ] UI/API can report known/unknown token totals.
-- [ ] SB03 proof manifest exists.
+- [x] Provider usage observation schema exists.
+- [x] Normal run usage is recorded.
+- [x] Finalizer short-circuit usage is recorded or marked unknown with provider-activity diagnostic.
+- [x] Failed-after-provider-call usage is recorded.
+- [x] Structured-output repair usage is linked.
+- [x] Background/continuation usage is cumulative or separately itemized.
+- [x] Process actual cost aggregates usage ledger.
+- [x] UI/API can report known/unknown token totals.
+- [x] SB03 proof manifest exists.
 
 ## Proof Required
 

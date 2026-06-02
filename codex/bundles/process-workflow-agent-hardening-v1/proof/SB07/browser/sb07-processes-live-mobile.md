@@ -1,0 +1,69 @@
+- main [ref=e244] [box=8,8,374,828]:
+  - group [ref=e351] [box=8,8,374,46]:
+    - generic "Workspace navigation" [ref=e352] [cursor=pointer] [box=25,21,340,20]
+  - generic [ref=e245] [box=8,62,374,106]:
+    - generic [ref=e249] [box=12,62,366,30]:
+      - button "Dashboard" [ref=e251] [box=21,67,85,20]:
+        - generic [ref=e252] [box=21,69,59,16]: Dashboard
+        - generic [ref=e254] [box=86,67,20,20]: push_pin
+      - button "Workflows" [ref=e256] [box=130,69,58,16]:
+        - generic [ref=e257] [box=130,69,58,16]: Workflows
+      - button "Live Processes" [ref=e259] [box=212,69,77,16]:
+        - generic [ref=e260] [box=212,69,77,16]: Live Processes
+    - generic [ref=e262] [box=8,108,374,60]:
+      - generic [ref=e263] [box=16,108,241,26]:
+        - generic [ref=e264] [box=27,114,136,13]: Delivery Workspace
+        - generic [ref=e265] [box=169,113,77,16]: Live Processes
+      - generic [ref=e266] [box=265,108,117,26]: Interactive Server
+      - generic [ref=e267] [box=232,142,86,26]: Live items 0
+      - generic [ref=e268] [box=326,142,56,26]: Tabs 3
+  - generic [ref=e271] [box=8,176,374,660]:
+    - generic [ref=e274] [box=25,193,340,191]:
+      - generic [ref=e275] [box=25,193,340,52]:
+        - paragraph [ref=e276] [box=25,196,85,16]: Processes
+        - heading "Live Processes" [level=1] [ref=e277] [box=118,194,112,21]
+        - generic [ref=e280] [box=238,193,75,22]: 0 running
+        - generic [ref=e283] [box=25,223,75,22]: 0 blocked
+        - generic [ref=e286] [box=108,223,62,22]: 0 failed
+        - generic [ref=e289] [box=178,223,66,22]: Fresh 0s
+      - generic [ref=e290] [box=25,257,340,127]:
+        - combobox "History window" [ref=e291] [box=25,257,340,38]:
+          - option "Live 1h" [selected] [box=0,0,0,0]
+          - option "1 day" [box=0,0,0,0]
+          - option "7 days" [box=0,0,0,0]
+          - option "30 days" [box=0,0,0,0]
+        - combobox "Process filter" [ref=e292] [box=25,303,340,38]:
+          - option "All processes" [selected] [box=0,0,0,0]
+        - button "Refresh" [ref=e294] [box=25,348,36,36]:
+          - generic [ref=e295] [box=33,356,20,20]: refresh
+          - generic [ref=e296] [box=43,366,1,1]: refresh
+    - generic [ref=e298] [box=8,415,374,421]:
+      - generic [ref=e300] [box=8,415,374,52]:
+        - generic [ref=e303] [box=8,415,82,22]: 0 observed
+        - generic [ref=e306] [box=98,415,68,22]: 0 agents
+        - generic [ref=e309] [box=174,415,73,22]: 0 context
+        - generic [ref=e312] [box=255,415,80,22]: 0 tool calls
+        - generic [ref=e315] [box=8,445,62,22]: 0s time
+        - generic [ref=e318] [box=78,445,61,22]: $0 cost
+      - generic [ref=e319] [box=8,479,374,357]:
+        - tablist "Tabs" [ref=e320] [box=8,479,374,61]:
+          - tab "Activity 0" [ref=e321] [box=12,479,206,46]:
+            - generic [ref=e322] [box=29,492,80,20]: monitoring
+            - generic [ref=e323] [box=117,490,52,24]: Activity
+            - generic [ref=e324] [box=177,493,24,19]: "0"
+          - tab "Agents 0" [ref=e325] [box=226,479,143,46]:
+            - generic [ref=e326] [box=243,492,20,20]: smart_toy
+            - generic [ref=e327] [box=271,490,49,24]: Agents
+            - generic [ref=e328] [box=328,493,24,19]: "0"
+          - tab "Graphs" [active] [selected] [ref=e329] [box=377,480,112,46]:
+            - generic [ref=e330] [box=394,493,20,20]: bar_chart
+            - generic [ref=e331] [box=422,491,50,24]: Graphs
+          - tab "Tool analytics 0" [ref=e332] [box=497,479,188,46]:
+            - generic [ref=e333] [box=514,492,20,20]: analytics
+            - generic [ref=e334] [box=542,490,94,24]: Tool analytics
+            - generic [ref=e335] [box=644,493,24,19]: "0"
+        - tabpanel "Graphs" [ref=e343] [box=8,539,374,297]:
+          - generic [ref=e344] [box=25,556,325,263]:
+            - generic [ref=e346] [box=42,585,291,90]: No context metrics in the selected window.
+            - generic [ref=e348] [box=42,722,291,90]: No runtime metrics in the selected window.
+            - generic [ref=e350] [box=42,860,291,70]: No process cost data to chart.

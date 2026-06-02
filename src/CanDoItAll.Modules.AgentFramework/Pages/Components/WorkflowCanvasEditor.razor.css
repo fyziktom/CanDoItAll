@@ -49,8 +49,9 @@
 }
 
 .workflow-canvas-executor-summary {
-    display: flex;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
     gap: 0.65rem;
     border: 1px solid var(--workflow-canvas-panel-border);
     border-radius: 8px;
@@ -59,10 +60,27 @@
     background: #fff;
 }
 
-.workflow-canvas-executor-summary span {
+.workflow-canvas-executor-summary__badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.workflow-canvas-executor-summary__details {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.workflow-canvas-executor-summary__details span {
     color: var(--cda-color-text-muted, #64748b);
     font-size: 0.84rem;
     line-height: 1.45;
+    overflow-wrap: break-word;
+    white-space: normal;
 }
 
 .workflow-canvas-toolbox-catalog .cda-component-toolbox__body {

@@ -54,7 +54,50 @@ public sealed class MafWorkflowLlmComponentInvoker(
             ValidateJsonPayload(payload, node, component);
         }
 
-        var usage = ProviderPricingCalculator.TryCalculate(
+        var usage = CreateWorkflowUsageMetrics(provider, model, response);
+
+        return new WorkflowNodeExecutionResult(
+            node.Id,
+            payload,
+            component.ResultShape)
+        {
+            Usage = usage
+        };
+    }
+
+    private static WorkflowUsageMetrics? CreateWorkflowUsageMetrics(
+        ProviderProfile provider,
+        string model,
+        AgentRuntimeResponse response)
+    {
+        if (response.UsageObservations.Count > 0)
+        {
+            var observations = response.UsageObservations
+                .Select(observation => observation with
+                {
+                    ProviderName = string.IsNullOrWhiteSpace(observation.ProviderName)
+                        ? provider.Name
+                        : observation.ProviderName,
+                    Model = string.IsNullOrWhiteSpace(observation.Model)
+                        ? model
+                        : observation.Model
+                })
+                .ToList();
+            var summary = ProviderPricingCalculator.SummarizeUsage(observations, [provider]);
+            return new WorkflowUsageMetrics(
+                provider.Name,
+                model,
+                summary.InputTokens,
+                summary.CachedInputTokens,
+                summary.OutputTokens,
+                summary.KnownCostUsd)
+            {
+                KnownObservationCount = summary.KnownObservationCount,
+                UnknownObservationCount = summary.UnknownObservationCount
+            };
+        }
+
+        return ProviderPricingCalculator.TryCalculate(
             provider.Name,
             model,
             response.InputTokens,
@@ -70,14 +113,6 @@ public sealed class MafWorkflowLlmComponentInvoker(
                     response.OutputTokens,
                     cost.TotalUsd)
                 : null;
-
-        return new WorkflowNodeExecutionResult(
-            node.Id,
-            payload,
-            component.ResultShape)
-        {
-            Usage = usage
-        };
     }
 
     private async Task<ProviderProfile> ResolveProviderAsync(

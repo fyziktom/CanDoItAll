@@ -1,0 +1,133 @@
+SB07 git diff/status check
+
+Full git status follows; earlier SB01-SB06 files remain in the same working tree.
+
+## git status --short
+ M Templates/Agents/teams/delivery-platform/members/delivery-manager/instructions.md
+ M Templates/Agents/teams/dotnet-delivery/members/blazor-application-developer/instructions.md
+ M Templates/Agents/teams/dotnet-delivery/members/dotnet-application-developer/instructions.md
+ M Templates/Agents/teams/visual-automation-templates/members/screenshot-review-storage-agent/instructions.md
+ M Templates/Processes/processes/software-delivery/definition.json
+ M Templates/Processes/processes/software-delivery/definition.md
+ M codex/bundles/process-workflow-agent-hardening-v1/reviews/01-execution-report.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB01-canonical-contracts-and-inventory/README.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB02-process-dispatch-runtime-refactor/README.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB03-token-cost-accounting-and-provider-usage-ledger/README.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB04-tool-policy-browser-proof-and-runtime-host-hardening/README.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB05-workflow-executor-side-effects-and-idempotency/README.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB06-agent-skill-template-canonicalization-and-active-sync/README.md
+ M codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB07-ui-editor-and-observability-hardening/README.md
+ M codex/skills/candoitall-api-agents/SKILL.md
+ M codex/skills/candoitall-api-processes/SKILL.md
+ M codex/skills/candoitall-api-project-structure/SKILL.md
+ M codex/skills/candoitall-api-workflows/SKILL.md
+ M src/CanDoItAll.AgentFramework.Core/Catalog/AgentFrameworkWorkspaceCatalogService.Agents.cs
+ M src/CanDoItAll.AgentFramework.Core/Contracts/Contracts.cs
+ M src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs
+ M src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Helpers.cs
+ M src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs
+ M src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowDefinitionValidator.cs
+ M src/CanDoItAll.AgentFramework.Core/Workflows/WorkflowExecutorContracts.cs
+ M src/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandPlanBuilder.cs
+ M src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs
+ M src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowLlmComponentInvoker.cs
+ M src/CanDoItAll.AgentFramework.Models/Conversations/ConversationModels.cs
+ M src/CanDoItAll.AgentFramework.Models/OutputContracts/AgentOutputContracts.cs
+ M src/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs
+ M src/CanDoItAll.AgentFramework.Models/Workflows/WorkflowExecutorModels.cs
+ M src/CanDoItAll.AgentFramework.Models/Workspace/WorkspaceModels.cs
+ M src/CanDoItAll.AgentFramework.Persistence/Seeds/SandboxWorkspaceSeedNormalizer.cs
+ M src/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceExecutionSliceStore.cs
+ M src/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStorageLayout.cs
+ M src/CanDoItAll.AgentFramework.Persistence/Storage/FileSandboxWorkspaceStore.cs
+ M src/CanDoItAll.AgentFramework.Persistence/Validation/SandboxWorkspaceDocumentInvariantValidator.cs
+ M src/CanDoItAll.Modules.AgentFramework/Execution/AgentFrameworkExecutionRecoveryService.cs
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.css
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs
+ M src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs
+ M src/CanDoItAll.Modules.Plugins/Catalog/PluginWorkflowExecutorDescriptorSource.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.BrowserProof.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Costing.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.GovernedRules.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs
+ M src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor
+ M src/CanDoItAll.Modules.Processes/Components/ProcessObservationGraphsPanel.razor
+ M src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationModels.cs
+ M src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationService.cs
+ M src/CanDoItAll.Plugins.Abstractions/PluginManifestContracts.cs
+ M src/CanDoItAll.Plugins.Abstractions/PluginManifestValidation.cs
+ M src/plugins/CanDoItAll.Plugin.Email/EmailPluginModels.cs
+ M src/plugins/CanDoItAll.Plugin.Gmail/GmailApiClient.cs
+ M src/plugins/CanDoItAll.Plugin.Gmail/GmailBundledPlugin.cs
+ M src/plugins/CanDoItAll.Plugin.Gmail/GmailWorkflowExecutor.cs
+ M src/plugins/CanDoItAll.Plugin.Office365/Office365BundledPlugin.cs
+ M src/plugins/CanDoItAll.Plugin.Office365/Office365WorkflowExecutor.cs
+ M tests/CanDoItAll.Tests.Components/WorkflowExecutorCanvasCatalogTests.cs
+ M tests/CanDoItAll.Tests.Integration/AgentFrameworkExecutionRunTrackingIntegrationTests.cs
+ M tests/CanDoItAll.Tests.Integration/EmailPluginClientTests.cs
+ M tests/CanDoItAll.Tests.Integration/PluginCatalogIntegrationTests.cs
+ M tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+ M tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+ M tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs
+ M tests/CanDoItAll.Tests.Unit/ApiDocsSkillsParityTests.cs
+ M tests/CanDoItAll.Tests.Unit/PluginManifestTests.cs
+ M tests/CanDoItAll.Tests.Unit/ProviderPricingTests.cs
+ M tests/CanDoItAll.Tests.Unit/WorkflowExecutorPolicyObservabilityTests.cs
+ M tests/CanDoItAll.Tests.Unit/WorkflowExecutorTests.cs
+ M tests/CanDoItAll.Tests.Unit/WorkspaceCommandExecutionServiceTests.cs
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB01/
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB02/
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB03/
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB04/
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB05/
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB06/
+?? codex/bundles/process-workflow-agent-hardening-v1/proof/SB07/
+?? src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Usage.cs
+?? src/CanDoItAll.AgentFramework.Core/ToolPolicy/ToolContractCatalog.cs
+?? src/CanDoItAll.AgentFramework.Models/Contracts/
+?? src/CanDoItAll.AgentFramework.Models/Providers/ProviderUsageModels.cs
+?? src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFrameworkStatusDisplayAdapters.cs
+?? src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorDisplayAdapter.cs
+?? src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactLineageValidator.cs
+?? src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessBrowserProofValidator.cs
+?? src/CanDoItAll.Modules.Processes/Components/ProcessUsageDisplayAdapter.cs
+?? src/CanDoItAll.Modules.Processes/Definitions/ProcessContractCatalog.cs
+?? tests/CanDoItAll.Tests.Components/AgentFrameworkStatusDisplayAdapterTests.cs
+?? tests/CanDoItAll.Tests.Components/ProcessUsageDisplayAdapterTests.cs
+?? tests/CanDoItAll.Tests.Integration/ProcessBrowserProofValidatorTests.cs
+?? tests/CanDoItAll.Tests.Unit/ProcessContractDriftScannerTests.cs
+
+## SB07 scoped changed files
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorDisplayAdapter.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentFrameworkStatusDisplayAdapters.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.css
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasModels.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowExecutorCanvasCatalog.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentCapabilitiesPanel.razor.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentDetailsDialog.razor.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/AgentProviderProfilesPanel.razor.cs
+src/CanDoItAll.Modules.AgentFramework/Pages/Components/ProviderProfileTreeNodeBuilder.cs
+src/CanDoItAll.Modules.Processes/Components/ProcessUsageDisplayAdapter.cs
+src/CanDoItAll.Modules.Processes/Components/LiveProcessesDashboard.razor
+src/CanDoItAll.Modules.Processes/Components/ProcessObservationGraphsPanel.razor
+src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationModels.cs
+src/CanDoItAll.Modules.Processes/Runtime/Observation/ProcessObservationService.cs
+tests/CanDoItAll.Tests.Components/WorkflowExecutorCanvasCatalogTests.cs
+tests/CanDoItAll.Tests.Components/ProcessUsageDisplayAdapterTests.cs
+tests/CanDoItAll.Tests.Components/AgentFrameworkStatusDisplayAdapterTests.cs
+codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB07-ui-editor-and-observability-hardening/README.md
+codex/bundles/process-workflow-agent-hardening-v1/proof/SB07
+codex/bundles/process-workflow-agent-hardening-v1/reviews/01-execution-report.md

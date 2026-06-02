@@ -32,9 +32,9 @@
                          TooltipText="Tool calls included in this graph scope."
                          Tone="neutral" />
             <CompactStat Label="cost"
-                         Value="@Snapshot.Stats.ActualCost.ToString("C", CultureInfo.CurrentCulture)"
-                         TooltipText="@($"{Snapshot.Stats.EstimatedCost:C} estimated in scope")"
-                         Tone="danger" />
+                         Value="@CostDisplay.Value"
+                         TooltipText="@CostDisplay.TooltipText"
+                         Tone="@CostDisplay.Tone" />
         </CompactStatStrip>
 
         <Grid Gap="LayoutGap.Medium"
@@ -55,7 +55,7 @@
                       EmptyText="No runtime metrics in this graph scope." />
 
             <CdaChart Title="Process cost"
-                      Description="@CostDescription"
+                      Description="@CostChartDescription"
                       Series="@MoneySeries"
                       Options="@MoneyChartOptions"
                       Height="320"
@@ -134,6 +134,12 @@
     private IReadOnlyList<ProcessLiveMetricPoint> MetricPoints => Snapshot?.MetricPoints ?? [];
 
     private IReadOnlyList<ProcessLiveRunCard> Runs => Snapshot?.Runs ?? [];
+
+    private ProcessUsageCostDisplay CostDisplay
+        => ProcessUsageDisplayAdapter.BuildCostDisplay(Snapshot?.Stats ?? ProcessLiveStats.Empty, CultureInfo.CurrentCulture);
+
+    private string CostChartDescription
+        => Snapshot is null ? CostDescription : CostDisplay.ChartDescription;
 
     private IReadOnlyList<CdaChartSeries> ContextSeries
     {
@@ -228,9 +234,10 @@
                 return [];
             }
 
-            return
-            [
-                new()
+            var series = new List<CdaChartSeries>();
+            if (Snapshot is not null && ProcessUsageDisplayAdapter.ShouldShowPreciseActualCost(Snapshot.Stats))
+            {
+                series.Add(new CdaChartSeries
                 {
                     Name = "Actual",
                     Type = CdaChartType.Bar,
@@ -238,17 +245,20 @@
                     Points = runs
                         .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.ActualCost))
                         .ToArray()
-                },
-                new()
-                {
-                    Name = "Estimated",
-                    Type = CdaChartType.Bar,
-                    Color = "#dc2626",
-                    Points = runs
-                        .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.EstimatedCost))
-                        .ToArray()
-                }
-            ];
+                });
+            }
+
+            series.Add(new CdaChartSeries
+            {
+                Name = "Estimated",
+                Type = CdaChartType.Bar,
+                Color = "#dc2626",
+                Points = runs
+                    .Select(item => new CdaChartPoint(TrimLabel(item.RunName, 24), item.EstimatedCost))
+                    .ToArray()
+            });
+
+            return series;
         }
     }
 

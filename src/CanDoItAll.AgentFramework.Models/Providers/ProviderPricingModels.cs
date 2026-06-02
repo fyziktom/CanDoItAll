@@ -41,7 +41,14 @@ public sealed record WorkflowUsageMetrics(
     int InputTokens,
     int CachedInputTokens,
     int OutputTokens,
-    decimal CostUsd);
+    decimal CostUsd)
+{
+    public int KnownObservationCount { get; init; } = 1;
+
+    public int UnknownObservationCount { get; init; }
+
+    public bool HasUnknownUsage => UnknownObservationCount > 0;
+}
 
 public static class ProviderPricingDefaults
 {
@@ -426,10 +433,87 @@ public static class ProviderPricingCalculator
         return false;
     }
 
+    public static bool TryResolveObservationCost(
+        ProviderUsageObservation observation,
+        IEnumerable<ProviderProfile> providers,
+        out decimal costUsd)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+        ArgumentNullException.ThrowIfNull(providers);
+
+        if (!IsKnownUsageStatus(observation.UsageStatus))
+        {
+            costUsd = 0m;
+            return false;
+        }
+
+        if (observation.ProviderCostUsd is > 0m)
+        {
+            costUsd = observation.ProviderCostUsd.Value;
+            return true;
+        }
+
+        if (observation.CalculatedCostUsd is > 0m)
+        {
+            costUsd = observation.CalculatedCostUsd.Value;
+            return true;
+        }
+
+        var provider = providers.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, observation.ProviderName, StringComparison.OrdinalIgnoreCase));
+        if (provider is not null &&
+            TryCalculate(
+                provider.Name,
+                observation.Model,
+                observation.InputTokens,
+                observation.CachedInputTokens,
+                observation.OutputTokens,
+                provider.ModelPrices,
+                out var calculatedCost))
+        {
+            costUsd = calculatedCost.TotalUsd;
+            return true;
+        }
+
+        costUsd = 0m;
+        return false;
+    }
+
+    public static ProviderUsageSummary SummarizeUsage(
+        IEnumerable<ProviderUsageObservation> observations,
+        IEnumerable<ProviderProfile> providers)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        ArgumentNullException.ThrowIfNull(providers);
+
+        var items = observations.ToList();
+        var knownItems = items.Where(item => IsKnownUsageStatus(item.UsageStatus)).ToList();
+        var knownCost = knownItems
+            .Select(item => TryResolveObservationCost(item, providers, out var costUsd) ? costUsd : 0m)
+            .Sum();
+
+        return new ProviderUsageSummary(
+            ObservationCount: items.Count,
+            KnownObservationCount: knownItems.Count,
+            UnknownObservationCount: items.Count - knownItems.Count,
+            InputTokens: knownItems.Sum(item => item.InputTokens),
+            CachedInputTokens: knownItems.Sum(item => item.CachedInputTokens),
+            OutputTokens: knownItems.Sum(item => item.OutputTokens),
+            ReasoningTokens: knownItems.Sum(item => item.ReasoningTokens),
+            TotalTokens: knownItems.Sum(item => item.TotalTokens),
+            KnownCostUsd: decimal.Round(knownCost, 6, MidpointRounding.AwayFromZero));
+    }
+
     public static decimal SumKnownCosts(IEnumerable<AgentRunMetric> metrics)
     {
         ArgumentNullException.ThrowIfNull(metrics);
 
         return metrics.Sum(metric => metric.CostUsd);
+    }
+
+    public static bool IsKnownUsageStatus(ProviderUsageObservationStatus status)
+    {
+        return status is ProviderUsageObservationStatus.Observed
+            or ProviderUsageObservationStatus.ObservedFromMetric;
     }
 }
