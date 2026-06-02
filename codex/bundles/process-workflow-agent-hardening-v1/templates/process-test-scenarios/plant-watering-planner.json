@@ -1,0 +1,32 @@
+{
+  "schema": "candoitall.processTestScenario.v1",
+  "scenarioKey": "plant-watering-planner",
+  "title": "Plant Watering Planner",
+  "domain": "home gardening",
+  "inputPacket": {
+    "projectStructureUploadPath": "process-test-scenarios/plant-watering-planner/request.md",
+    "requestMarkdown": "# Plant Watering Planner\n\nBuild a local planner for house plants and watering schedules.\n\n## Requirements\n- Use a client-only static web app.\n- Allow adding a plant name, room/location, watering interval, and last watered date.\n- Show next watering date and overdue status.\n- Support marking a plant as watered today.\n- Persist data locally.\n- Do not use external calendar APIs.\n\n## Constraints\n- Keep the implementation generic and scoped to this scenario input.\n- Do not use hidden scenario-specific process instructions.\n- Keep comments in source code in English.\n"
+  },
+  "expectedProcess": {
+    "processTemplateHint": "software-delivery",
+    "mustUseGenericApplicationCreationPath": true,
+    "mustCaptureRuntimeProof": true,
+    "mustCaptureBrowserProof": true,
+    "mustCaptureProviderUsageSummary": true,
+    "mustCaptureCleanupReceipt": true
+  },
+  "browserProofChecklist": [
+    "Add a plant.",
+    "Next watering date appears.",
+    "Overdue/upcoming status is visible.",
+    "Mark watered updates last watered and next watering date.",
+    "Reload preserves plant list."
+  ],
+  "genericityAudit": [
+    "No production code branches on scenarioKey.",
+    "No agent/template instruction special-cases the scenario.",
+    "The scenario requirements come from project structure input.",
+    "Generated app behavior matches domain-specific browser checklist.",
+    "Process artifacts are bound to the current run."
+  ]
+}
