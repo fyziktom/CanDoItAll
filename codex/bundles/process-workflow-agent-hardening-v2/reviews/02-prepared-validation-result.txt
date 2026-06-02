@@ -1,0 +1,8 @@
+Command: python scripts/validate_bundle.py --stage prepared --root /mnt/data/candoitall-process-workflow-agent-hardening-followup-v2
+ExitCode: 0
+
+STDOUT:
+PASS: bundle validation succeeded for stage prepared
+
+
+STDERR:
