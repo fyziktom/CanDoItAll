@@ -25,6 +25,63 @@ public sealed record ProcessRunListItem(
     decimal ActualCost,
     DateTimeOffset UpdatedAtUtc);
 
+public enum ProcessRunEstimateSourceKind {
+    DefinitionFallback,
+    CompletedHistoricalActualCost,
+    IncompleteHistoricalActualCost,
+    HistoricalEstimatedCost,
+    MixedHistoricalEvidence
+}
+
+public sealed class ProcessRunEstimateRequest
+{
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid? ProcessDefinitionVersionId { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public Guid? LaunchPlanId { get; set; }
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
+}
+
+public sealed record ProcessRunEstimateResult(
+    decimal EstimatedCostUsd,
+    int EstimatedElapsedMinutes,
+    int EstimatedTouchMinutes,
+    ProcessRunEstimateSourceKind SourceKind,
+    string ConfidenceLabel,
+    string Summary,
+    int HistoricalRunCount,
+    int CompletedHistoricalRunCount,
+    int IncompleteHistoricalRunCount,
+    decimal DifficultyRatio)
+{
+    public string SourceLabel => SourceKind switch
+    {
+        ProcessRunEstimateSourceKind.CompletedHistoricalActualCost => "Completed actual",
+        ProcessRunEstimateSourceKind.IncompleteHistoricalActualCost => "Incomplete actual",
+        ProcessRunEstimateSourceKind.HistoricalEstimatedCost => "Historical estimate",
+        ProcessRunEstimateSourceKind.MixedHistoricalEvidence => "Mixed history",
+        _ => "Definition fallback"
+    };
+
+    public static ProcessRunEstimateResult Empty { get; } = new(
+        0m,
+        0,
+        0,
+        ProcessRunEstimateSourceKind.DefinitionFallback,
+        "none",
+        "No process estimate is available.",
+        0,
+        0,
+        0,
+        1m);
+}
+
 public enum ProcessArtifactExpectationSatisfactionStatus {
     Expected,
     Satisfied,
@@ -675,6 +732,8 @@ public sealed record ProcessLaunchPlanDetails(
     public string PlanningStatusBadgeText { get; init; } = string.Empty;
 
     public string StatusDetail { get; init; } = string.Empty;
+
+    public ProcessRunEstimateResult? Estimate { get; init; }
 }
 
 public sealed record ProcessAnalyticsSummary(

@@ -4,9 +4,9 @@
 @inject DialogService DialogService
 
 <ProjectStructureOverlayDialog AriaLabel="@Dialog.Title"
-                               Kicker="Process assignment"
-                               Title="Assign AI agents to process roles"
-                               Summary="Each role in this process requires an AI agent. You can use recommended agents or search the directory to find the best match."
+                               Kicker="@(Dialog.EstimateOnlyMode ? "Process estimate" : "Process assignment")"
+                               Title="@Dialog.Title"
+                               Summary="@Dialog.Copy"
                                FullScreen="true"
                                DialogClass="project-structure-assignment-modal"
                                BodyClass="project-structure-assignment-modal__body"
@@ -164,6 +164,36 @@
                          data-testid="project-structure-process-assignment-feedback">
                         @Dialog.Error
                     </div>
+                }
+
+                @if (Dialog.Estimate is { } estimate)
+                {
+                    <section class="project-structure-assignment-estimate"
+                             data-testid="project-structure-process-estimate-summary">
+                        <div class="project-structure-assignment-estimate__copy">
+                            <span>Preflight estimate</span>
+                            <strong>@FormatUsd(estimate.EstimatedCostUsd)</strong>
+                            <small>@estimate.Summary</small>
+                        </div>
+                        <dl class="project-structure-assignment-estimate__metrics">
+                            <div>
+                                <dt>Elapsed</dt>
+                                <dd>@FormatMinutes(estimate.EstimatedElapsedMinutes)</dd>
+                            </div>
+                            <div>
+                                <dt>Touch</dt>
+                                <dd>@FormatMinutes(estimate.EstimatedTouchMinutes)</dd>
+                            </div>
+                            <div>
+                                <dt>Confidence</dt>
+                                <dd>@estimate.ConfidenceLabel</dd>
+                            </div>
+                            <div>
+                                <dt>Source</dt>
+                                <dd>@estimate.SourceLabel</dd>
+                            </div>
+                        </dl>
+                    </section>
                 }
 
                 @if (IsSummaryMode)
@@ -480,6 +510,14 @@
 
     private bool HasError
         => !string.IsNullOrWhiteSpace(Dialog.Error);
+
+    private static string FormatMinutes(int minutes)
+        => minutes == 1
+            ? "1 min"
+            : $"{minutes:N0} min";
+
+    private static string FormatUsd(decimal amount)
+        => string.Concat("$", amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
 
     private ProjectStructureProcessStartRoleState? ActiveRole
         => selectedRoleId.HasValue

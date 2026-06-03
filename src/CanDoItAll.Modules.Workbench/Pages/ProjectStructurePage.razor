@@ -1444,6 +1444,12 @@ else
                     await OpenAddProcessDialogAsync(processLinkNode);
                 }
                 break;
+            case "estimate-process":
+                if (ResolveNode(nodeId) is { } processEstimateNode)
+                {
+                    await OpenEstimateProcessDialogAsync(processEstimateNode);
+                }
+                break;
             case "start-process":
             case "execute-process":
                 if (ResolveNode(nodeId) is { } processDefinitionNode)

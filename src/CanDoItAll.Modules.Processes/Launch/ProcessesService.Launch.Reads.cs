@@ -167,6 +167,18 @@ public sealed partial class ProcessesService
                     })
                     .ToList());
         var displayProjection = ProcessLaunchPlanDisplayProjector.Resolve(plan.Status, generatedRunStatus);
+        ProcessRunEstimateResult? estimate = null;
+        var estimateContextResult = await LoadRunEstimateContextAsync(
+            dbContext,
+            new ProcessRunEstimateRequest
+            {
+                LaunchPlanId = plan.Id
+            },
+            cancellationToken);
+        if (estimateContextResult.IsSuccess)
+        {
+            estimate = await EstimateRunAsync(dbContext, estimateContextResult.Value!, cancellationToken);
+        }
 
         return new ProcessLaunchPlanDetails(
             plan.Id,
@@ -240,7 +252,8 @@ public sealed partial class ProcessesService
             StatusBadgeText = displayProjection.StatusBadgeText,
             StatusTone = displayProjection.StatusTone,
             PlanningStatusBadgeText = displayProjection.PlanningStatusBadgeText,
-            StatusDetail = displayProjection.StatusDetail
+            StatusDetail = displayProjection.StatusDetail,
+            Estimate = estimate
         };
     }
 

@@ -1,90 +1,116 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.BaseLib
 
-<FormSection Title="Model pricing" Description="Configure input, cached input, and output prices in USD per one million tokens.">
-    <Stack GapScale="LayoutGap.Medium">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            <Cluster Gap="LayoutGap.Small">
-                <label class="cda-inline-option">
-                    <InputCheckbox @bind-Value="Model.IsPrivateProvider"
-                                   disabled="@PrivateProviderLocked"
-                                   data-testid="provider-private-input" />
-                    Private provider
-                </label>
-                <StatusBadge Tone="info" Text="@($"{Model.ModelPrices.Count} model(s)")" />
-            </Cluster>
-            <p class="cda-body-muted">Prices are USD per one million tokens.</p>
-        </div>
+<div class="provider-model-pricing-editor">
+    <FormSection Title="Model pricing" Description="Configure input, cached input, and output prices in USD per one million tokens.">
+        <div class="provider-pricing-layout">
+            <Stack Class="provider-pricing-main" GapScale="LayoutGap.Medium">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <Cluster Gap="LayoutGap.Small">
+                        <label class="cda-inline-option">
+                            <InputCheckbox @bind-Value="Model.IsPrivateProvider"
+                                           disabled="@PrivateProviderLocked"
+                                           data-testid="provider-private-input" />
+                            Private provider
+                        </label>
+                        <StatusBadge Tone="info" Text="@($"{Model.ModelPrices.Count} model(s)")" />
+                    </Cluster>
+                    <p class="cda-body-muted">Prices are USD per one million tokens.</p>
+                </div>
 
-        <div class="overflow-x-auto rounded-md border border-slate-200" data-testid="provider-pricing-table">
-            <table class="min-w-full border-collapse text-sm">
-                <thead>
-                    <tr class="border-b border-slate-200 text-left text-slate-600">
-                        <th class="px-3 py-2 font-semibold">Model</th>
-                        <th class="px-3 py-2 font-semibold">Input</th>
-                        <th class="px-3 py-2 font-semibold">Cached input</th>
-                        <th class="px-3 py-2 font-semibold">Output</th>
-                        <th class="px-3 py-2 font-semibold">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @for (var index = 0; index < Model.ModelPrices.Count; index++)
-                    {
-                        var price = Model.ModelPrices[index];
-                        <tr class="border-b border-slate-100 last:border-b-0"
-                            data-testid="@($"provider-pricing-row-{index}")">
-                            <td class="min-w-[14rem] px-3 py-2 align-top">
-                                <InputText @bind-Value="price.Model"
-                                           class="cda-input"
-                                           data-testid="@($"provider-pricing-model-{index}")" />
-                            </td>
-                            <td class="min-w-[10rem] px-3 py-2 align-top">
-                                <InputNumber @bind-Value="price.InputPerMillionTokensUsd"
-                                             class="cda-input"
-                                             data-testid="@($"provider-pricing-input-{index}")" />
-                            </td>
-                            <td class="min-w-[10rem] px-3 py-2 align-top">
-                                <InputNumber @bind-Value="price.CachedInputPerMillionTokensUsd"
-                                             class="cda-input"
-                                             data-testid="@($"provider-pricing-cached-{index}")" />
-                            </td>
-                            <td class="min-w-[10rem] px-3 py-2 align-top">
-                                <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
-                                             class="cda-input"
-                                             data-testid="@($"provider-pricing-output-{index}")" />
-                            </td>
-                            <td class="px-3 py-2 align-top">
-                                <Button Text="Remove"
-                                        ButtonStyle="ButtonStyle.Light"
-                                        Size="ButtonSize.Small"
-                                        Click="@(() => RemovePriceRow(price))" />
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                <div class="provider-pricing-table overflow-x-auto rounded-md border border-slate-200" data-testid="provider-pricing-table">
+                    <table class="min-w-full border-collapse text-sm">
+                        <thead>
+                            <tr class="border-b border-slate-200 text-left text-slate-600">
+                                <th class="px-3 py-2 font-semibold">Model</th>
+                                <th class="px-3 py-2 font-semibold">Input</th>
+                                <th class="px-3 py-2 font-semibold">Cached input</th>
+                                <th class="px-3 py-2 font-semibold">Output</th>
+                                <th class="px-3 py-2 font-semibold">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var index = 0; index < Model.ModelPrices.Count; index++)
+                            {
+                                var price = Model.ModelPrices[index];
+                                <tr class="border-b border-slate-100 last:border-b-0"
+                                    data-testid="@($"provider-pricing-row-{index}")">
+                                    <td class="min-w-[14rem] px-3 py-2 align-top">
+                                        <InputText @bind-Value="price.Model"
+                                                   class="cda-input"
+                                                   data-testid="@($"provider-pricing-model-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.InputPerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-input-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.CachedInputPerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-cached-{index}")" />
+                                    </td>
+                                    <td class="min-w-[10rem] px-3 py-2 align-top">
+                                        <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
+                                                     class="cda-input"
+                                                     data-testid="@($"provider-pricing-output-{index}")" />
+                                    </td>
+                                    <td class="px-3 py-2 align-top">
+                                        <Button Text="Remove"
+                                                ButtonStyle="ButtonStyle.Light"
+                                                Size="ButtonSize.Small"
+                                                Click="@(() => RemovePriceRow(price))" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
 
-        <Cluster Gap="LayoutGap.Small">
-            <Button Text="Load from provider"
-                    ButtonStyle="ButtonStyle.Info"
-                    Size="ButtonSize.Small"
-                    Disabled="@(!OnRefreshPrices.HasDelegate)"
-                    Click="RefreshPricesAsync"
-                    data-testid="provider-pricing-refresh-button" />
-            <Button Text="Add model price"
-                    ButtonStyle="ButtonStyle.Light"
-                    Size="ButtonSize.Small"
-                    Click="AddPriceRow"
-                    data-testid="provider-pricing-add-button" />
-            <Button Text="Reset defaults"
-                    ButtonStyle="ButtonStyle.Light"
-                    Size="ButtonSize.Small"
-                    Click="ResetDefaults"
-                    data-testid="provider-pricing-reset-button" />
-        </Cluster>
-    </Stack>
-</FormSection>
+                <Cluster Gap="LayoutGap.Small">
+                    <Button Text="Load from provider"
+                            ButtonStyle="ButtonStyle.Info"
+                            Size="ButtonSize.Small"
+                            Disabled="@(!OnRefreshPrices.HasDelegate)"
+                            Click="RefreshPricesAsync"
+                            data-testid="provider-pricing-refresh-button" />
+                    <Button Text="Add model price"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="AddPriceRow"
+                            data-testid="provider-pricing-add-button" />
+                    <Button Text="Reset defaults"
+                            ButtonStyle="ButtonStyle.Light"
+                            Size="ButtonSize.Small"
+                            Click="ResetDefaults"
+                            data-testid="provider-pricing-reset-button" />
+                </Cluster>
+            </Stack>
+
+            <aside class="provider-pricing-summary" data-testid="provider-pricing-summary">
+                <p class="cda-eyebrow">Pricing coverage</p>
+                <dl>
+                    <div>
+                        <dt>Mode</dt>
+                        <dd>@PricingModeText</dd>
+                    </div>
+                    <div>
+                        <dt>Configured models</dt>
+                        <dd>@ConfiguredModelCount</dd>
+                    </div>
+                    <div>
+                        <dt>Default model</dt>
+                        <dd>@ResolvedDefaultModelText</dd>
+                    </div>
+                    <div>
+                        <dt>Provider refresh</dt>
+                        <dd>@ProviderRefreshText</dd>
+                    </div>
+                </dl>
+            </aside>
+        </div>
+    </FormSection>
+</div>
 
 @code {
     [Parameter]
@@ -100,6 +126,14 @@
     public EventCallback OnRefreshPrices { get; set; }
 
     private bool PrivateProviderLocked => ProviderPricingDefaults.IsPrivateProvider(PricingKind);
+
+    private int ConfiguredModelCount => Model.ModelPrices.Count(price => !string.IsNullOrWhiteSpace(price.Model));
+
+    private string PricingModeText => Model.IsPrivateProvider ? "Manual/private" : "Provider catalog";
+
+    private string ProviderRefreshText => OnRefreshPrices.HasDelegate ? "Available" : "Manual only";
+
+    private string ResolvedDefaultModelText => string.IsNullOrWhiteSpace(ResolveDefaultModel()) ? "Not set" : ResolveDefaultModel();
 
     protected override void OnParametersSet()
     {

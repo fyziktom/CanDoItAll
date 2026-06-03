@@ -77,6 +77,7 @@ internal static class ProjectStructureMenuComposition
                 break;
             case ProjectObjectType.ProcessDefinition:
                 preferredActions.Add("start-process");
+                preferredActions.Add("estimate-process");
                 break;
             case ProjectObjectType.WorkflowDefinition:
                 preferredActions.Add("start-workflow");

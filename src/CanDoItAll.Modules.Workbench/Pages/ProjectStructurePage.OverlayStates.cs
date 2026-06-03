@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workspace;
 using CanDoItAll.SharedKernel;
@@ -228,14 +229,20 @@ public sealed record ProjectStructureProcessStartDialogState(
 {
     public string Title => Stage switch
     {
+        ProjectStructureProcessStartStage.Staffing when EstimateOnlyMode => $"Estimate and assign roles for {TargetNodeTitle}",
         ProjectStructureProcessStartStage.Staffing => $"Assign roles for {TargetNodeTitle}",
+        _ when EstimateOnlyMode => $"Estimate {NodeTitle}",
         _ => $"Start {NodeTitle}"
     };
 
     public string Copy => Stage switch
     {
+        ProjectStructureProcessStartStage.Staffing when EstimateOnlyMode =>
+            "The launch plan estimate is visible before execution. Review the estimate and assignments; the process only starts after the final Start action is confirmed.",
         ProjectStructureProcessStartStage.Staffing =>
             "Required process roles must be paired before the launch can continue. Select the resources manually or ask the HR manager to match them from CRM-HR and the AI agent directory.",
+        _ when EstimateOnlyMode =>
+            "This prepares a launch plan and estimate for the selected project node without approving, provisioning, or starting the process.",
         _ =>
             "This prepares a launch plan for the selected project node. You will review HR role assignments before anything is approved, provisioned, or started."
     };
@@ -255,6 +262,10 @@ public sealed record ProjectStructureProcessStartDialogState(
     public int RequiredGapCount => Roles.Count(item => item.HasBlockingGap);
 
     public bool CanStart => Stage != ProjectStructureProcessStartStage.Staffing || (RequiredGapCount == 0 && AssignmentsReviewed);
+
+    public bool EstimateOnlyMode { get; init; }
+
+    public ProcessRunEstimateResult? Estimate { get; init; }
 }
 
 public sealed record ProjectStructureQuickActionDialogState(

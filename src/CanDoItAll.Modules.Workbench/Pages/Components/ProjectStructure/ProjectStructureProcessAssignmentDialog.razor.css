@@ -317,6 +317,73 @@
     color: #9f1239;
 }
 
+.project-structure-assignment-estimate {
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid rgba(44, 129, 220, 0.22);
+    border-radius: 0.9rem;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(18rem, 1fr) minmax(28rem, 0.95fr);
+    margin-bottom: 1rem;
+    padding: 0.95rem 1rem;
+}
+
+.project-structure-assignment-estimate__copy {
+    display: grid;
+    gap: 0.24rem;
+    min-width: 0;
+}
+
+.project-structure-assignment-estimate__copy span,
+.project-structure-assignment-estimate__metrics dt {
+    color: #536988;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.project-structure-assignment-estimate__copy strong {
+    color: #17233d;
+    font-size: 1.4rem;
+    font-weight: 850;
+    line-height: 1.1;
+}
+
+.project-structure-assignment-estimate__copy small {
+    color: #617493;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.project-structure-assignment-estimate__metrics {
+    display: grid;
+    gap: 0.7rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    min-width: 0;
+}
+
+.project-structure-assignment-estimate__metrics div {
+    background: #f7fbff;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 0.75rem;
+    display: grid;
+    gap: 0.3rem;
+    min-width: 0;
+    padding: 0.7rem 0.75rem;
+}
+
+.project-structure-assignment-estimate__metrics dd {
+    color: #17233d;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
 .project-structure-assignment-card-grid {
     align-content: start;
     box-sizing: border-box;
@@ -871,6 +938,10 @@ button:disabled {
 @media (max-width: 1280px) {
     .project-structure-assignment-card-grid {
         grid-template-columns: repeat(3, minmax(13rem, 1fr));
+    }
+
+    .project-structure-assignment-estimate {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

@@ -96,15 +96,28 @@ public sealed class ProjectStructureActionCatalogAdapter
 
         if (node.ObjectType == ProjectObjectType.ProcessDefinition)
         {
-            actions.Insert(1, new CanvasWorkbenchAction
-            {
-                ActionId = "start-process",
-                Label = "Start",
-                MenuLabel = "Start",
-                Description = "Confirm and start this process with the selected project-structure node context.",
-                Icon = "play_arrow",
-                Tone = "mint"
-            });
+            actions.InsertRange(
+                1,
+                [
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "estimate-process",
+                        Label = "Estimate",
+                        MenuLabel = "Estimate",
+                        Description = "Prepare a launch plan and show the estimated process price and time without starting it.",
+                        Icon = "query_stats",
+                        Tone = "sky"
+                    },
+                    new CanvasWorkbenchAction
+                    {
+                        ActionId = "start-process",
+                        Label = "Start",
+                        MenuLabel = "Start",
+                        Description = "Confirm and start this process with the selected project-structure node context.",
+                        Icon = "play_arrow",
+                        Tone = "mint"
+                    }
+                ]);
         }
         else if (CanLinkExistingProcess(node))
         {

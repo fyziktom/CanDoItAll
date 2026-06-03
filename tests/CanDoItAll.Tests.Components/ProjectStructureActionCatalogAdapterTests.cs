@@ -246,6 +246,7 @@ public sealed class ProjectStructureActionCatalogAdapterTests
         var actions = adapter.BuildNodeContextActions(node);
 
         Assert.Contains(actions, action => action.ActionId == "start-process");
+        Assert.Contains(actions, action => action.ActionId == "estimate-process");
         Assert.DoesNotContain(actions, action => action.ActionId == "add-process");
     }
 

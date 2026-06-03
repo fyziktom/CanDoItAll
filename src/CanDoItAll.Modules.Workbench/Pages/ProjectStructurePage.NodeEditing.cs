@@ -59,6 +59,7 @@ public partial class ProjectStructurePage
 
         if (node.ObjectType == ProjectObjectType.ProcessDefinition)
         {
+            actions.Add(new ProjectStructureInspectorAction("estimate-process", "Estimate", "query_stats", "sky"));
             actions.Add(new ProjectStructureInspectorAction("start-process", "Start", "play_arrow", "mint"));
         }
         else if (CanLinkExistingProcess(node))
@@ -227,6 +228,9 @@ public partial class ProjectStructurePage
                 break;
             case "add-process":
                 await OpenAddProcessDialogAsync(node);
+                break;
+            case "estimate-process":
+                await OpenEstimateProcessDialogAsync(node);
                 break;
             case "start-process":
             case "execute-process":

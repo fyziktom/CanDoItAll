@@ -121,6 +121,16 @@ public partial class ProjectStructurePage
 
     private async Task OpenStartProcessDialogAsync(ProjectStructureNode node)
     {
+        await OpenProcessDialogAsync(node, estimateOnly: false);
+    }
+
+    private async Task OpenEstimateProcessDialogAsync(ProjectStructureNode node)
+    {
+        await OpenProcessDialogAsync(node, estimateOnly: true);
+    }
+
+    private async Task OpenProcessDialogAsync(ProjectStructureNode node, bool estimateOnly)
+    {
         var processDefinitionId = ResolveProcessDefinitionId(node);
         if (!processDefinitionId.HasValue)
         {
@@ -148,8 +158,16 @@ public partial class ProjectStructurePage
             ProjectStructureHrManagerName,
             DateTimeOffset.UtcNow,
             false,
-            string.Empty);
+            string.Empty)
+        {
+            EstimateOnlyMode = estimateOnly
+        };
         await InvokeAsync(StateHasChanged);
+
+        if (estimateOnly)
+        {
+            await ExecuteProcessStartAsync();
+        }
     }
 
     private void CloseProcessStartDialog()
@@ -1016,6 +1034,7 @@ public partial class ProjectStructurePage
                         .Select(candidate => MapProcessStartCandidateState(role, candidate))
                         .ToList()))
                 .ToList(),
+            Estimate = launchPlan.Estimate,
             Error = error
         };
     }

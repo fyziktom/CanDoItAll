@@ -58,6 +58,7 @@ public sealed partial class ProcessesService
             var now = clock.GetUtcNow();
             var runId = Guid.NewGuid();
             var managerSnapshot = ResolveRunManagerSnapshot(context);
+            var runEstimate = await EstimateRunAsync(dbContext, context, cancellationToken);
             run = new ProcessRun
             {
                 Id = runId,
@@ -86,7 +87,7 @@ public sealed partial class ProcessesService
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,
                 StartedAtUtc = now,
-                EstimatedCost = context.Steps.Sum(step => step.TargetLeadHours) * 40m
+                EstimatedCost = runEstimate.EstimatedCostUsd
             };
             await dbContext.Set<ProcessRun>().AddAsync(run, cancellationToken);
 

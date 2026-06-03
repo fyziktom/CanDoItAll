@@ -149,6 +149,90 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task StartRunAsync_uses_completed_historical_actual_cost_for_estimate()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Historical estimate completed project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var historicalRunId = await StartTestRunAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            "Historical completed estimate seed");
+        await MarkRunCostHistoryAsync(
+            dbContextFactory,
+            historicalRunId,
+            ProcessRunStatus.Completed,
+            actualCost: 1.25m,
+            estimatedCost: 240m,
+            completedStepCount: 2);
+
+        var newRunId = await StartTestRunAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            "Historical estimate verification");
+        var newRun = await processesService.GetRunAsync(newRunId);
+
+        Assert.NotNull(newRun);
+        Assert.InRange(newRun!.EstimatedCost, 1m, 2m);
+        Assert.True(newRun.EstimatedCost < 10m);
+    }
+
+    [Fact]
+    public async Task EstimateRunAsync_scales_incomplete_historical_actual_cost_without_trusting_it_as_completed()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "Historical estimate incomplete project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var historicalRunId = await StartTestRunAsync(
+            processesService,
+            saveResult.Value,
+            projectId,
+            "Historical incomplete estimate seed");
+        await MarkRunCostHistoryAsync(
+            dbContextFactory,
+            historicalRunId,
+            ProcessRunStatus.Active,
+            actualCost: 0.50m,
+            estimatedCost: 240m,
+            completedStepCount: 1);
+
+        var estimateResult = await processesService.EstimateRunAsync(
+            new ProcessRunEstimateRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId
+            });
+
+        AssertSuccess(estimateResult);
+        Assert.Equal(ProcessRunEstimateSourceKind.IncompleteHistoricalActualCost, estimateResult.Value!.SourceKind);
+        Assert.Equal(1, estimateResult.Value.IncompleteHistoricalRunCount);
+        Assert.Equal(0, estimateResult.Value.CompletedHistoricalRunCount);
+        Assert.True(estimateResult.Value.EstimatedCostUsd > 0.50m);
+        Assert.True(estimateResult.Value.EstimatedCostUsd < 5m);
+        Assert.Contains("incomplete actual", estimateResult.Value.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task SaveAsync_SB09_INV_001_persists_explicit_artifact_output_mappings()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -6140,6 +6224,51 @@ public sealed class ProcessesServiceIntegrationTests
 
         Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
         return runResult.Value;
+    }
+
+    private static async Task MarkRunCostHistoryAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid runId,
+        ProcessRunStatus status,
+        decimal actualCost,
+        decimal estimatedCost,
+        int completedStepCount)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var run = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == runId);
+        var now = DateTimeOffset.UtcNow;
+        run.Status = status;
+        run.ActualCost = actualCost;
+        run.EstimatedCost = estimatedCost;
+        run.StartedAtUtc = now.AddMinutes(-90);
+        run.CompletedAtUtc = status == ProcessRunStatus.Completed ? now : null;
+        run.UpdatedAtUtc = now;
+
+        var stepRuns = await dbContext.Set<ProcessStepRun>()
+            .Where(item => item.ProcessRunId == runId)
+            .OrderBy(item => item.Sequence)
+            .ToListAsync();
+        for (var index = 0; index < stepRuns.Count; index++)
+        {
+            var stepRun = stepRuns[index];
+            if (index < completedStepCount)
+            {
+                stepRun.Status = ProcessStepRunStatus.Completed;
+                stepRun.StartedAtUtc = now.AddMinutes(-80 + index * 10);
+                stepRun.CompletedAtUtc = now.AddMinutes(-70 + index * 10);
+                stepRun.TouchMinutes = 20;
+                continue;
+            }
+
+            stepRun.Status = status == ProcessRunStatus.Completed
+                ? ProcessStepRunStatus.Completed
+                : ProcessStepRunStatus.InProgress;
+            stepRun.StartedAtUtc = now.AddMinutes(-20);
+            stepRun.CompletedAtUtc = status == ProcessRunStatus.Completed ? now.AddMinutes(-10) : null;
+            stepRun.TouchMinutes = 10;
+        }
+
+        await dbContext.SaveChangesAsync();
     }
 
     private static async Task<DirectMessagingRunFixture> CreateDirectMessagingRunFixtureAsync(

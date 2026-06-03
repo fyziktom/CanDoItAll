@@ -710,6 +710,35 @@
                     </Stack>
                 </PanelCard>
 
+                @if (startDialog.Estimate is not null)
+                {
+                    var estimate = startDialog.Estimate;
+                    <PanelCard data-testid="project-structure-process-estimate-summary">
+                        <Stack GapScale="LayoutGap.Small">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <TextBlock TextStyle="TextStyle.Eyebrow" Value="Preflight estimate" />
+                                <Pill Tone="PillTone.Info"
+                                      Text="@estimate.ConfidenceLabel" />
+                                <Pill Tone="PillTone.Neutral"
+                                      Text="@estimate.SourceLabel" />
+                            </div>
+                            <Grid Columns="1"
+                                  ColumnsMd="3"
+                                  GapScale="LayoutGap.Small">
+                                <MetricCard Label="Estimated price"
+                                            Value="@FormatUsd(estimate.EstimatedCostUsd)" />
+                                <MetricCard Label="Elapsed time"
+                                            Value="@($"{estimate.EstimatedElapsedMinutes:N0} min")" />
+                                <MetricCard Label="Touch time"
+                                            Value="@($"{estimate.EstimatedTouchMinutes:N0} min")" />
+                            </Grid>
+                            <TextBlock TextStyle="TextStyle.Note"
+                                       Value="@estimate.Summary"
+                                       Class="cw-panel-copy" />
+                        </Stack>
+                    </PanelCard>
+                }
+
                 @if (!isStaffingStage)
                 {
                     <PanelCard>
@@ -1215,6 +1244,9 @@
         => action.ExecutionKind == ProjectStructureQuickActionExecutionKind.Edit
             ? "project-structure-quick-action-edit"
             : $"project-structure-quick-action-{NormalizeTestIdToken(action.ActionId)}";
+
+    private static string FormatUsd(decimal amount)
+        => string.Concat("$", amount.ToString("N2", System.Globalization.CultureInfo.InvariantCulture));
 
     private static string NormalizeTestIdToken(string value)
         => string.IsNullOrWhiteSpace(value)
