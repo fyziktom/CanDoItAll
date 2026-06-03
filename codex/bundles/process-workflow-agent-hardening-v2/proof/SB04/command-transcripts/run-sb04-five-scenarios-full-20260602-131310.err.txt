@@ -1,0 +1,7 @@
+[31;1mException: [0mC:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v2\scripts\run_sb04_real_process_e2e.ps1:169[0m
+[31;1m[0m[36;1mLine |[0m
+[31;1m[0m[36;1m[36;1m 169 | [0m         [36;1mthrow "Command failed with exit code $($process.ExitCode): $F[0m [0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCommand failed with exit code 1: dotnet test[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mtests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter[0m
+[31;1m[0m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1m[36;1m[31;1m[36;1m     | [31;1mFullyQualifiedName~Sb04GeneratedAppBrowserValidationTests.Generated_app_supports_desktop_and_mobile_browser_validation --no-restore. Transcript: C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v2\proof\SB04\scenarios\recipe-pantry-planner\command-transcripts\browser-validation-dotnet-test.txt[0m

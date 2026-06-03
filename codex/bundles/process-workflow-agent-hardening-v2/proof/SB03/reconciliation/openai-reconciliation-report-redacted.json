@@ -1,0 +1,58 @@
+{
+  "report_kind": "openai-usage-reconciliation",
+  "source": "Imported OpenAI usage export fixture plus live Responses usage smoke; provider identifiers redacted.",
+  "created_at_utc": "2026-06-02T00:00:00Z",
+  "matched_count": 1,
+  "unresolved_count": 3,
+  "entries": [
+    {
+      "provider_response_id": "resp_redacted_matched",
+      "provider_request_id": "req_redacted_1",
+      "source_phases": "agent-runtime",
+      "internal_total_tokens": 1261,
+      "external_total_tokens": 1261,
+      "token_delta": 0,
+      "internal_cost_usd": 0.006,
+      "external_cost_usd": 0.006,
+      "cost_delta_usd": 0.0,
+      "status": "Matched"
+    },
+    {
+      "provider_response_id": "resp_redacted_mismatch",
+      "provider_request_id": "req_redacted_2",
+      "source_phases": "agent-runtime",
+      "internal_total_tokens": 200,
+      "external_total_tokens": 250,
+      "token_delta": 50,
+      "internal_cost_usd": 0.002,
+      "external_cost_usd": 0.003,
+      "cost_delta_usd": 0.001,
+      "status": "TokenMismatch"
+    },
+    {
+      "provider_response_id": "resp_redacted_unknown",
+      "provider_request_id": "req_redacted_unknown",
+      "source_phases": "finalizer-short-circuit",
+      "internal_total_tokens": 0,
+      "external_total_tokens": 0,
+      "token_delta": 0,
+      "internal_cost_usd": null,
+      "external_cost_usd": null,
+      "cost_delta_usd": null,
+      "status": "UnknownInternalUsage"
+    },
+    {
+      "provider_response_id": "resp_redacted_external_only",
+      "provider_request_id": "req_redacted_3",
+      "source_phases": "",
+      "internal_total_tokens": 0,
+      "external_total_tokens": 15,
+      "token_delta": 15,
+      "internal_cost_usd": null,
+      "external_cost_usd": 0.001,
+      "cost_delta_usd": null,
+      "status": "ExternalOnly"
+    }
+  ],
+  "live_smoke_reference": "../live/openai-responses-live-smoke-redacted.json"
+}

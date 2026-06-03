@@ -311,6 +311,18 @@ public sealed partial class MafAgentRuntime(
         var announcedToolCalls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var guardedToolCallIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var repeatedToolInvocationGuard = new RepeatedToolInvocationGuard();
+        var streamedFinalizerRecorder = new StreamedFinalizerInvocationRecorder(structuredOutput, finalizerMode);
+        Func<IReadOnlyList<AgentToolInvocationTrace>> snapshotEffectiveToolInvocationTraces = () =>
+            CreateEffectiveToolInvocationTraces(
+                snapshotToolInvocationTraces(),
+                streamedFinalizerRecorder.SnapshotToolInvocationTraces());
+        Func<IReadOnlyList<AgentFinalizerInvocation>> snapshotEffectiveFinalizerInvocations = () =>
+            CreateEffectiveFinalizerInvocations(
+                structuredOutput,
+                finalizerMode,
+                snapshotFinalizerInvocations(),
+                snapshotToolInvocationTraces(),
+                streamedFinalizerRecorder.SnapshotFinalizerInvocations());
         var pollCount = 0;
         var resolvedModel = model;
 
@@ -358,6 +370,7 @@ public sealed partial class MafAgentRuntime(
                                 continue;
                             }
 
+                            streamedFinalizerRecorder.Record(toolCall);
                             await progressCallback(ExecutionState.WaitingOnTool, "Tool", DescribeToolInvocation(toolCall));
                         }
 
@@ -373,8 +386,8 @@ public sealed partial class MafAgentRuntime(
                             ProviderUsageSourcePhases.FinalizerShortCircuit,
                             progressCallback,
                             cancellationToken,
-                            snapshotFinalizerInvocations,
-                            snapshotToolInvocationTraces);
+                            snapshotEffectiveFinalizerInvocations,
+                            snapshotEffectiveToolInvocationTraces);
                         if (finalizerResponse is not null)
                         {
                             return finalizerResponse;
@@ -393,8 +406,8 @@ public sealed partial class MafAgentRuntime(
                         ProviderUsageSourcePhases.FinalizerShortCircuit,
                         progressCallback,
                         cancellationToken,
-                        snapshotFinalizerInvocations,
-                        snapshotToolInvocationTraces);
+                        snapshotEffectiveFinalizerInvocations,
+                        snapshotEffectiveToolInvocationTraces);
                     if (postStreamingFinalizerResponse is not null)
                     {
                         return postStreamingFinalizerResponse;
@@ -415,8 +428,8 @@ public sealed partial class MafAgentRuntime(
                         ProviderUsageSourcePhases.FinalizerShortCircuit,
                         progressCallback,
                         cancellationToken,
-                        snapshotFinalizerInvocations,
-                        snapshotToolInvocationTraces);
+                        snapshotEffectiveFinalizerInvocations,
+                        snapshotEffectiveToolInvocationTraces);
                     if (finalizerResponse is not null)
                     {
                         return finalizerResponse;
@@ -440,8 +453,8 @@ public sealed partial class MafAgentRuntime(
                         updates,
                         progressCallback,
                         cancellationToken,
-                        snapshotFinalizerInvocations,
-                        snapshotToolInvocationTraces);
+                        snapshotEffectiveFinalizerInvocations,
+                        snapshotEffectiveToolInvocationTraces);
                     if (finalizerResponse is not null)
                     {
                         return finalizerResponse;
@@ -498,8 +511,8 @@ public sealed partial class MafAgentRuntime(
                     PendingApprovals: pendingApprovals)
                 {
                     CachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount),
-                    FinalizerInvocations = snapshotFinalizerInvocations(),
-                    ToolInvocationTraces = snapshotToolInvocationTraces(),
+                    FinalizerInvocations = snapshotEffectiveFinalizerInvocations(),
+                    ToolInvocationTraces = snapshotEffectiveToolInvocationTraces(),
                     UsageObservations = CreateProviderUsageObservations(
                         provider,
                         resolvedModel,
@@ -522,6 +535,189 @@ public sealed partial class MafAgentRuntime(
                 forceOmitTemperature: forceOmitTemperature,
                 runtimeOptions);
             inputMessages = [];
+        }
+    }
+
+    private static IReadOnlyList<AgentFinalizerInvocation> CreateEffectiveFinalizerInvocations(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode,
+        IReadOnlyList<AgentFinalizerInvocation> capturedInvocations,
+        IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
+        IReadOnlyList<AgentFinalizerInvocation> streamedInvocations)
+    {
+        if (capturedInvocations.Count > 0 ||
+            streamedInvocations.Count == 0 ||
+            finalizerMode != AgentFinalizerMode.Required ||
+            !AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var policy))
+        {
+            return capturedInvocations;
+        }
+
+        if (capturedToolInvocationTraces.Any(trace =>
+                string.Equals(trace.ToolName, policy.ToolName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return capturedInvocations;
+        }
+
+        return streamedInvocations;
+    }
+
+    private static IReadOnlyList<AgentToolInvocationTrace> CreateEffectiveToolInvocationTraces(
+        IReadOnlyList<AgentToolInvocationTrace> capturedToolInvocationTraces,
+        IReadOnlyList<AgentToolInvocationTrace> streamedToolInvocationTraces)
+    {
+        if (streamedToolInvocationTraces.Count == 0)
+        {
+            return capturedToolInvocationTraces;
+        }
+
+        var capturedToolNames = capturedToolInvocationTraces
+            .Select(trace => trace.ToolName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingStreamedTraces = streamedToolInvocationTraces
+            .Where(trace => !capturedToolNames.Contains(trace.ToolName))
+            .ToList();
+        if (missingStreamedTraces.Count == 0)
+        {
+            return capturedToolInvocationTraces;
+        }
+
+        return capturedToolInvocationTraces
+            .Concat(missingStreamedTraces)
+            .OrderBy(trace => trace.Sequence)
+            .ToList();
+    }
+
+    private static AgentFinalizerInvocation? TryCreateStreamedFinalizerInvocation(
+        AgentFinalizerPolicy policy,
+        ToolCallContent toolCall,
+        int sequence)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+        ArgumentNullException.ThrowIfNull(toolCall);
+
+        if (!policy.IsRequired ||
+            !string.Equals(ResolveToolName(toolCall), policy.ToolName, StringComparison.OrdinalIgnoreCase) ||
+            toolCall is not FunctionCallContent functionCall ||
+            functionCall.Arguments is null)
+        {
+            return null;
+        }
+
+        var payload = functionCall.Arguments.Count == 1 &&
+                      functionCall.Arguments.TryGetValue("result", out var result)
+            ? result
+            : functionCall.Arguments;
+        var argumentsJson = SerializeStreamedFinalizerPayload(payload);
+        if (string.IsNullOrWhiteSpace(argumentsJson))
+        {
+            return null;
+        }
+
+        return new AgentFinalizerInvocation(
+            policy.ToolName,
+            argumentsJson,
+            sequence);
+    }
+
+    private static string SerializeStreamedFinalizerPayload(object? payload)
+    {
+        return payload switch
+        {
+            null => "null",
+            JsonElement jsonElement => SerializeStreamedFinalizerJsonElement(jsonElement),
+            string text when TryUseRawJsonObjectOrArray(text, out var rawJson) => rawJson,
+            string text => JsonSerializer.Serialize(text, AgentOutputJson.SerializerOptions),
+            _ => JsonSerializer.Serialize(payload, AgentOutputJson.SerializerOptions)
+        };
+    }
+
+    private static string SerializeStreamedFinalizerJsonElement(JsonElement jsonElement)
+    {
+        if (jsonElement.ValueKind == JsonValueKind.String &&
+            TryUseRawJsonObjectOrArray(jsonElement.GetString(), out var rawJson))
+        {
+            return rawJson;
+        }
+
+        return jsonElement.GetRawText();
+    }
+
+    private static bool TryUseRawJsonObjectOrArray(string? text, out string rawJson)
+    {
+        rawJson = string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var trimmed = text.Trim();
+        if ((trimmed.StartsWith('{') && trimmed.EndsWith('}')) ||
+            (trimmed.StartsWith('[') && trimmed.EndsWith(']')))
+        {
+            rawJson = trimmed;
+            return true;
+        }
+
+        return false;
+    }
+
+    private sealed class StreamedFinalizerInvocationRecorder(
+        AgentStructuredOutputContract? structuredOutput,
+        AgentFinalizerMode finalizerMode)
+    {
+        private readonly object gate = new();
+        private readonly AgentFinalizerPolicy? policy = finalizerMode == AgentFinalizerMode.Required &&
+                                                        AgentFinalizerPolicies.TryResolveForStructuredOutput(structuredOutput, out var resolvedPolicy)
+            ? resolvedPolicy
+            : null;
+        private readonly List<AgentFinalizerInvocation> finalizerInvocations = [];
+        private readonly List<AgentToolInvocationTrace> toolInvocationTraces = [];
+        private int nextSequence;
+
+        public void Record(ToolCallContent toolCall)
+        {
+            var sequence = Interlocked.Increment(ref nextSequence);
+            if (policy is null)
+            {
+                return;
+            }
+
+            var invocation = TryCreateStreamedFinalizerInvocation(policy, toolCall, sequence);
+            if (invocation is null)
+            {
+                return;
+            }
+
+            lock (gate)
+            {
+                finalizerInvocations.Add(invocation);
+                toolInvocationTraces.Add(new AgentToolInvocationTrace(
+                    policy.ToolName,
+                    ToolInvocationClassification.Read,
+                    sequence,
+                    DateTimeOffset.UtcNow,
+                    DateTimeOffset.UtcNow,
+                    Succeeded: true,
+                    FailureMessage: "Captured from a streamed required-finalizer tool call."));
+            }
+        }
+
+        public IReadOnlyList<AgentFinalizerInvocation> SnapshotFinalizerInvocations()
+        {
+            lock (gate)
+            {
+                return finalizerInvocations.ToList();
+            }
+        }
+
+        public IReadOnlyList<AgentToolInvocationTrace> SnapshotToolInvocationTraces()
+        {
+            lock (gate)
+            {
+                return toolInvocationTraces.ToList();
+            }
         }
     }
 
@@ -768,43 +964,36 @@ public sealed partial class MafAgentRuntime(
         }
 
         var response = updates.ToAgentResponse();
-        var inputTokens = ClampTokenCount(response.Usage?.InputTokenCount);
-        var cachedInputTokens = ClampTokenCount(response.Usage?.CachedInputTokenCount);
-        var outputTokens = ClampTokenCount(response.Usage?.OutputTokenCount);
         var runtimeKey = ResolveRuntimeSessionKey(runtimeSession, response, runtimeSessionKey);
+        var rawUsageJson = response.Usage is null
+            ? string.Empty
+            : JsonSerializer.Serialize(response.Usage, SerializerOptions);
 
         return
         [
-            new ProviderUsageObservation(
-                Id: Guid.NewGuid(),
-                CreatedAtUtc: DateTimeOffset.UtcNow,
-                ProviderName: provider.Name,
-                ProviderKind: provider.Kind,
+            DefaultProviderUsageNormalizer.Instance.Normalize(new ProviderUsageNormalizationRequest(
+                Provider: provider,
                 Model: model,
-                TransportKind: provider.Transport,
                 SourcePhase: sourcePhase,
                 UsageStatus: response.Usage is null
                     ? ProviderUsageObservationStatus.UsageUnavailable
                     : ProviderUsageObservationStatus.Observed,
-                InputTokens: inputTokens,
-                CachedInputTokens: cachedInputTokens,
-                OutputTokens: outputTokens,
+                InputTokens: ClampTokenCount(response.Usage?.InputTokenCount),
+                CachedInputTokens: ClampTokenCount(response.Usage?.CachedInputTokenCount),
+                OutputTokens: ClampTokenCount(response.Usage?.OutputTokenCount),
                 ReasoningTokens: 0,
-                TotalTokens: inputTokens + outputTokens,
-                ToolCallCount: CountToolCalls(response))
-            {
-                ProviderResponseId = response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
-                RuntimeSessionKey = runtimeKey,
-                RawUsageJson = response.Usage is null
-                    ? string.Empty
-                    : JsonSerializer.Serialize(response.Usage, SerializerOptions),
-                DiagnosticsJson = JsonSerializer.Serialize(
+                TotalTokens: ClampTokenCount(response.Usage?.TotalTokenCount),
+                ToolCallCount: CountToolCalls(response),
+                ProviderResponseId: response.ResponseId ?? response.ContinuationToken?.ToString() ?? string.Empty,
+                ProviderRequestId: string.Empty,
+                RuntimeSessionKey: runtimeKey,
+                RawUsageJson: rawUsageJson,
+                DiagnosticsJson: JsonSerializer.Serialize(
                     new Dictionary<string, string>
                     {
                         ["diagnostic"] = diagnostic
                     },
-                    SerializerOptions)
-            }
+                    SerializerOptions)))
         ];
     }
 

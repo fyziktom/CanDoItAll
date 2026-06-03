@@ -42,6 +42,19 @@ public static class WorkflowExecutorDisplayAdapter
             : new WorkflowExecutorDisplayBadge("Unsafe retries", "danger");
     }
 
+    public static WorkflowExecutorDisplayBadge BuildPreviewCommitBadge(WorkflowExecutorDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+
+        return descriptor.SideEffects switch
+        {
+            { SupportsPreview: true, SupportsCommit: true } => new WorkflowExecutorDisplayBadge("Preview + commit", "info"),
+            { SupportsPreview: true } => new WorkflowExecutorDisplayBadge("Preview available", "info"),
+            { SupportsCommit: true } => new WorkflowExecutorDisplayBadge("Commit only", "warning"),
+            _ => new WorkflowExecutorDisplayBadge("Direct run", "neutral")
+        };
+    }
+
     public static string BuildAvailabilityDescription(WorkflowExecutorDescriptor descriptor)
     {
         ArgumentNullException.ThrowIfNull(descriptor);
@@ -95,6 +108,28 @@ public static class WorkflowExecutorDisplayAdapter
         return string.Join(" / ", parts);
     }
 
+    public static string BuildPreviewCommitDescription(WorkflowExecutorDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+
+        if (descriptor.SideEffects.SupportsPreview && descriptor.SideEffects.SupportsCommit)
+        {
+            return "Executor separates preview and commit-capable execution when the runtime path supports it.";
+        }
+
+        if (descriptor.SideEffects.SupportsPreview)
+        {
+            return "Executor can produce preview proof before committing durable side effects.";
+        }
+
+        if (descriptor.SideEffects.SupportsCommit)
+        {
+            return "Executor performs commit-capable execution without a separate preview path.";
+        }
+
+        return "Executor has no declared preview or commit split.";
+    }
+
     public static string BuildRetrySafetyDescription(
         WorkflowExecutorDescriptor descriptor,
         WorkflowExecutorExecutionPolicy policy)
@@ -119,7 +154,8 @@ public static class WorkflowExecutorDisplayAdapter
         var badges = new List<string>
         {
             BuildAvailabilityBadge(descriptor).Text,
-            BuildSideEffectBadge(descriptor).Text
+            BuildSideEffectBadge(descriptor).Text,
+            BuildPreviewCommitBadge(descriptor).Text
         };
         if (descriptor.PermissionPolicy.RequiresApproval)
         {

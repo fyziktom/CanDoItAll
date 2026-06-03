@@ -36,17 +36,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
         foreach (var receipt in startupReceipts)
         {
             var stoppedProcessIds = StopRecordedProcessTree(receipt.AppProcessTreeIds);
-            if (stoppedProcessIds.Count == 0)
-            {
-                continue;
-            }
+            var aliasCleanupResults = DismountStaticWebAssetsAliasMappings(receipt.StaticWebAssetsAliasMappings);
+            var dismountedAliasDrives = aliasCleanupResults
+                .Where(result => result.Status == StaticWebAssetsAliasCleanupStatus.Dismounted)
+                .Select(result => result.Mapping.Drive)
+                .ToArray();
+            LogStaticWebAssetsAliasCleanupIssues(candidate, detail, aliasCleanupResults);
 
-            logger.LogInformation(
-                "Stopped kept-alive workspace_dotnet_run process tree for process run {RunId}, step {StepRunId}, execution run {ExecutionRunId}. ProcessIds={ProcessIds}",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                detail.Run.Id,
-                string.Join(",", stoppedProcessIds));
+            if (stoppedProcessIds.Count > 0 || dismountedAliasDrives.Length > 0)
+            {
+                logger.LogInformation(
+                    "Cleaned kept-alive workspace_dotnet_run runtime resources for process run {RunId}, step {StepRunId}, execution run {ExecutionRunId}. ProcessIds={ProcessIds}; StaticWebAssetsAliases={StaticWebAssetsAliases}",
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    detail.Run.Id,
+                    string.Join(",", stoppedProcessIds),
+                    string.Join(",", dismountedAliasDrives));
+            }
         }
     }
 
@@ -67,7 +73,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (TryReadDotnetRunStartupReceipt(fullPath, out var startupReceipt) &&
                 startupReceipt.KeepAlive &&
                 !startupReceipt.CleanupAttempted &&
-                startupReceipt.AppProcessTreeIds.Count > 0 &&
+                startupReceipt.HasCleanupTargets &&
                 startupReceipt.LifetimeScope == WorkspaceProcessLifetimeScope.ExecutionRun)
             {
                 receipts.Add(startupReceipt);
@@ -122,7 +128,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 KeepAlive: keepAlive,
                 LifetimeScope: TryReadLifetimeScope(root, "lifetimeScope"),
                 CleanupAttempted: TryReadBoolean(root, "cleanupAttempted"),
-                AppProcessTreeIds: TryReadIntArray(root, "appProcessTreeIds"));
+                AppProcessTreeIds: TryReadIntArray(root, "appProcessTreeIds"),
+                StaticWebAssetsAliasMappings: TryReadStaticWebAssetsAliasMappings(root, "staticWebAssetsAliasMappings"));
             return true;
         }
         catch (JsonException)
@@ -162,6 +169,289 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return stoppedProcessIds;
     }
 
+    private static IReadOnlyList<StaticWebAssetsAliasCleanupResult> DismountStaticWebAssetsAliasMappings(
+        IReadOnlyList<StaticWebAssetsAliasMapping> mappings)
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return [];
+        }
+
+        var results = new List<StaticWebAssetsAliasCleanupResult>();
+        var processedDrives = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var mapping in mappings)
+        {
+            if (!mapping.Mounted)
+            {
+                results.Add(new StaticWebAssetsAliasCleanupResult(
+                    mapping,
+                    StaticWebAssetsAliasCleanupStatus.SkippedNotMounted,
+                    string.Empty));
+                continue;
+            }
+
+            var normalizedMapping = TryNormalizeSubstDrive(mapping.Drive, out var normalizedDrive)
+                ? mapping with { Drive = normalizedDrive }
+                : mapping;
+            if (!processedDrives.Add(normalizedMapping.Drive))
+            {
+                continue;
+            }
+
+            var currentTarget = string.IsNullOrWhiteSpace(normalizedDrive)
+                ? null
+                : ResolveCurrentSubstDriveTarget(normalizedDrive);
+            var status = ClassifyStaticWebAssetsAliasCleanup(normalizedMapping, currentTarget);
+            if (status != StaticWebAssetsAliasCleanupStatus.ReadyToDismount)
+            {
+                results.Add(new StaticWebAssetsAliasCleanupResult(normalizedMapping, status, string.Empty));
+                continue;
+            }
+
+            if (TryDismountSubstDrive(normalizedDrive, out var failureMessage))
+            {
+                results.Add(new StaticWebAssetsAliasCleanupResult(
+                    normalizedMapping,
+                    StaticWebAssetsAliasCleanupStatus.Dismounted,
+                    string.Empty));
+                continue;
+            }
+
+            results.Add(new StaticWebAssetsAliasCleanupResult(
+                normalizedMapping,
+                StaticWebAssetsAliasCleanupStatus.Failed,
+                failureMessage));
+        }
+
+        return results;
+    }
+
+    internal static StaticWebAssetsAliasCleanupStatus ClassifyStaticWebAssetsAliasCleanup(
+        StaticWebAssetsAliasMapping mapping,
+        string? currentSubstTarget)
+    {
+        if (!mapping.Mounted)
+        {
+            return StaticWebAssetsAliasCleanupStatus.SkippedNotMounted;
+        }
+
+        if (!TryNormalizeSubstDrive(mapping.Drive, out _))
+        {
+            return StaticWebAssetsAliasCleanupStatus.SkippedInvalidDrive;
+        }
+
+        if (string.IsNullOrWhiteSpace(mapping.WorkspaceRoot))
+        {
+            return StaticWebAssetsAliasCleanupStatus.SkippedMissingWorkspaceRoot;
+        }
+
+        if (string.IsNullOrWhiteSpace(currentSubstTarget))
+        {
+            return StaticWebAssetsAliasCleanupStatus.SkippedNoCurrentMapping;
+        }
+
+        return PathsReferToSameDirectory(currentSubstTarget, mapping.WorkspaceRoot)
+            ? StaticWebAssetsAliasCleanupStatus.ReadyToDismount
+            : StaticWebAssetsAliasCleanupStatus.SkippedMappingMismatch;
+    }
+
+    internal static string? ResolveSubstDriveTargetFromOutput(string substOutput, string drive)
+    {
+        if (string.IsNullOrWhiteSpace(substOutput) ||
+            !TryNormalizeSubstDrive(drive, out var normalizedDrive))
+        {
+            return null;
+        }
+
+        foreach (var line in substOutput.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separatorIndex = line.IndexOf("=>", StringComparison.Ordinal);
+            if (separatorIndex < 0)
+            {
+                continue;
+            }
+
+            var alias = line[..separatorIndex].Trim();
+            if (alias.Length < 2 ||
+                char.ToUpperInvariant(alias[0]) != normalizedDrive[0] ||
+                alias[1] != ':')
+            {
+                continue;
+            }
+
+            var target = line[(separatorIndex + 2)..].Trim();
+            return string.IsNullOrWhiteSpace(target)
+                ? null
+                : target;
+        }
+
+        return null;
+    }
+
+    private void LogStaticWebAssetsAliasCleanupIssues(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        IReadOnlyList<StaticWebAssetsAliasCleanupResult> cleanupResults)
+    {
+        foreach (var result in cleanupResults.Where(result => ShouldWarnStaticWebAssetsAliasCleanup(result.Status)))
+        {
+            logger.LogWarning(
+                "Skipped kept-alive workspace_dotnet_run static web assets alias cleanup for process run {RunId}, step {StepRunId}, execution run {ExecutionRunId}. Drive={Drive}; WorkspaceRoot={WorkspaceRoot}; Status={Status}; Message={Message}",
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                detail.Run.Id,
+                result.Mapping.Drive,
+                result.Mapping.WorkspaceRoot,
+                result.Status,
+                result.Message);
+        }
+    }
+
+    private static bool ShouldWarnStaticWebAssetsAliasCleanup(StaticWebAssetsAliasCleanupStatus status)
+        => status is StaticWebAssetsAliasCleanupStatus.SkippedInvalidDrive
+            or StaticWebAssetsAliasCleanupStatus.SkippedMissingWorkspaceRoot
+            or StaticWebAssetsAliasCleanupStatus.SkippedMappingMismatch
+            or StaticWebAssetsAliasCleanupStatus.Failed;
+
+    private static string? ResolveCurrentSubstDriveTarget(string drive)
+    {
+        try
+        {
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo
+            {
+                FileName = "subst",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            if (!process.Start())
+            {
+                return null;
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            _ = process.StandardError.ReadToEnd();
+            if (!process.WaitForExit(5_000) || process.ExitCode != 0)
+            {
+                return null;
+            }
+
+            return ResolveSubstDriveTargetFromOutput(output, drive);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return null;
+        }
+    }
+
+    private static bool TryDismountSubstDrive(string drive, out string failureMessage)
+    {
+        failureMessage = string.Empty;
+        try
+        {
+            using var process = new Process();
+            process.StartInfo = new ProcessStartInfo
+            {
+                FileName = "subst",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+            process.StartInfo.ArgumentList.Add(drive);
+            process.StartInfo.ArgumentList.Add("/d");
+
+            if (!process.Start())
+            {
+                failureMessage = $"Unable to start subst cleanup for drive '{drive}'.";
+                return false;
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            var error = process.StandardError.ReadToEnd();
+            if (!process.WaitForExit(5_000))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch (InvalidOperationException)
+                {
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                }
+
+                failureMessage = $"Timed out while removing subst drive '{drive}'.";
+                return false;
+            }
+
+            if (process.ExitCode == 0)
+            {
+                return true;
+            }
+
+            var diagnostic = string.Join(" ", [output, error]).Trim();
+            failureMessage = string.IsNullOrWhiteSpace(diagnostic)
+                ? $"subst exited with code {process.ExitCode} while removing drive '{drive}'."
+                : diagnostic;
+            return false;
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            failureMessage = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool PathsReferToSameDirectory(string firstPath, string secondPath)
+    {
+        var first = NormalizePathForComparison(firstPath);
+        var second = NormalizePathForComparison(secondPath);
+        return string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizePathForComparison(string path)
+    {
+        var normalized = path.Trim().Trim('"');
+        try
+        {
+            normalized = Path.GetFullPath(normalized);
+        }
+        catch (ArgumentException)
+        {
+        }
+        catch (NotSupportedException)
+        {
+        }
+        catch (PathTooLongException)
+        {
+        }
+
+        return normalized.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    }
+
+    private static bool TryNormalizeSubstDrive(string drive, out string normalizedDrive)
+    {
+        normalizedDrive = string.Empty;
+        var trimmed = drive.Trim();
+        if (trimmed.Length != 2 ||
+            trimmed[1] != ':' ||
+            !IsAsciiLetter(trimmed[0]))
+        {
+            return false;
+        }
+
+        normalizedDrive = $"{char.ToUpperInvariant(trimmed[0])}:";
+        return true;
+    }
+
+    private static bool IsAsciiLetter(char value)
+        => value is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
+
     private static bool TryReadBoolean(JsonElement root, string propertyName)
     {
         if (!root.TryGetProperty(propertyName, out var value))
@@ -198,6 +488,56 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return items;
     }
 
+    private static IReadOnlyList<StaticWebAssetsAliasMapping> TryReadStaticWebAssetsAliasMappings(
+        JsonElement root,
+        string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value) ||
+            value.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var mappings = new List<StaticWebAssetsAliasMapping>();
+        foreach (var element in value.EnumerateArray())
+        {
+            if (element.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var mapping = new StaticWebAssetsAliasMapping(
+                TryReadString(element, "drive"),
+                TryReadString(element, "workspaceRoot"),
+                TryReadBoolean(element, "mounted"));
+            if (string.IsNullOrWhiteSpace(mapping.Drive) &&
+                string.IsNullOrWhiteSpace(mapping.WorkspaceRoot) &&
+                !mapping.Mounted)
+            {
+                continue;
+            }
+
+            mappings.Add(mapping);
+        }
+
+        return mappings;
+    }
+
+    private static string TryReadString(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var value))
+        {
+            return string.Empty;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString() ?? string.Empty,
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => value.ToString(),
+            _ => string.Empty
+        };
+    }
+
     private static WorkspaceProcessLifetimeScope TryReadLifetimeScope(JsonElement root, string propertyName)
     {
         if (!root.TryGetProperty(propertyName, out var value))
@@ -217,8 +557,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
         bool KeepAlive,
         WorkspaceProcessLifetimeScope LifetimeScope,
         bool CleanupAttempted,
-        IReadOnlyList<int> AppProcessTreeIds)
+        IReadOnlyList<int> AppProcessTreeIds,
+        IReadOnlyList<StaticWebAssetsAliasMapping> StaticWebAssetsAliasMappings)
     {
-        public static DotnetRunStartupReceipt Empty { get; } = new(false, WorkspaceProcessLifetimeScope.ExecutionRun, false, []);
+        public static DotnetRunStartupReceipt Empty { get; } = new(false, WorkspaceProcessLifetimeScope.ExecutionRun, false, [], []);
+
+        public bool HasCleanupTargets => AppProcessTreeIds.Count > 0 || StaticWebAssetsAliasMappings.Any(mapping => mapping.Mounted);
     }
+
+    internal sealed record StaticWebAssetsAliasMapping(
+        string Drive,
+        string WorkspaceRoot,
+        bool Mounted);
+
+    internal enum StaticWebAssetsAliasCleanupStatus
+    {
+        ReadyToDismount,
+        Dismounted,
+        SkippedNotMounted,
+        SkippedInvalidDrive,
+        SkippedMissingWorkspaceRoot,
+        SkippedNoCurrentMapping,
+        SkippedMappingMismatch,
+        Failed
+    }
+
+    private sealed record StaticWebAssetsAliasCleanupResult(
+        StaticWebAssetsAliasMapping Mapping,
+        StaticWebAssetsAliasCleanupStatus Status,
+        string Message);
 }

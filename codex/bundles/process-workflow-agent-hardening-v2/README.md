@@ -1,6 +1,6 @@
 # CanDoItAll Process / Workflow / Agent Hardening Follow-up Bundle V2
 
-Status: **Prepared / not implemented**  
+Status: **Completed / validated**
 Profile: **initiative + post-implementation QA feedback**  
 Prepared: `2026-06-02`  
 Target repository: `fyziktom/CanDoItAll`  
@@ -16,7 +16,7 @@ Codex implemented and marked `codex/bundles/process-workflow-agent-hardening-v1`
 
 V1 materially improved the platform: canonical process operation names exist, durable provider usage observations were added, process cost aggregation is now ledger-first when usage observations exist, browser proof rules were strengthened, and five domain-distinct SB08 scenarios were added.
 
-The implementation is still **not sufficiently closed** for the next feature wave. The main remaining problems are not cosmetic:
+At preparation time, V1 was still **not sufficiently closed** for the next feature wave. The main remaining problems were not cosmetic:
 
 1. A governed process step can still become fail-open when its allowed-operation contract is absent or incomplete.
 2. Tool registration/classification is not yet one canonical table. Several known tool names can avoid explicit metadata and fall back to `Read` classification.
@@ -24,6 +24,10 @@ The implementation is still **not sufficiently closed** for the next feature wav
 4. The SB08 “five process E2E” proof is useful, but it is not a real agent-driven app-creation process test. The harness starts process runs, then generates apps locally, manually transitions steps with automation dispatch suppressed, and explicitly records no CanDoItAll provider execution runs.
 5. The proof validator accepted closure even though the critical E2E proof bypassed the exact automation path the user wanted to validate.
 6. Large policy/dispatch services remain heavily heuristic and need decomposition before more process families are added.
+
+## Completion Result
+
+This V2 follow-up bundle has been implemented and validated. Final closure proof is in `proof/SB09/manifest.md`; completed-stage validation passed in `proof/SB09/transcripts/completed-validation.txt`.
 
 ## Non-negotiable Follow-up Principles
 

@@ -2,7 +2,17 @@ using System.Globalization;
 
 namespace CanDoItAll.Modules.Processes;
 
+public enum ProcessUsageCostDisplayKind
+{
+    KnownActual,
+    Estimated,
+    UnknownUsage,
+    MissingUsage,
+    ZeroCost
+}
+
 public sealed record ProcessUsageCostDisplay(
+    ProcessUsageCostDisplayKind Kind,
     string Value,
     string TooltipText,
     string Tone,
@@ -18,17 +28,53 @@ public static class ProcessUsageDisplayAdapter
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(culture);
 
-        if (HasIncompleteUsage(stats))
+        var kind = ResolveDisplayKind(stats);
+        if (kind == ProcessUsageCostDisplayKind.MissingUsage)
         {
             return new ProcessUsageCostDisplay(
-                "Incomplete",
-                BuildIncompleteUsageTooltip(stats),
+                kind,
+                stats.EstimatedCost > 0m ? $"Est. {FormatMoney(stats.EstimatedCost, culture)}" : "Usage missing",
+                "Provider usage observations are missing for this scope, so exact actual cost is not shown.",
                 "warning",
                 "Estimated process cost only because provider usage is incomplete.",
                 ShowsPreciseActualCost: false);
         }
 
+        if (kind == ProcessUsageCostDisplayKind.UnknownUsage)
+        {
+            return new ProcessUsageCostDisplay(
+                kind,
+                "Usage unknown",
+                BuildUnknownUsageTooltip(stats),
+                "warning",
+                "Known cost only; at least one provider usage observation is incomplete.",
+                ShowsPreciseActualCost: false);
+        }
+
+        if (kind == ProcessUsageCostDisplayKind.Estimated)
+        {
+            return new ProcessUsageCostDisplay(
+                kind,
+                $"Est. {FormatMoney(stats.EstimatedCost, culture)}",
+                BuildEstimatedUsageTooltip(stats, culture),
+                "warning",
+                "Estimated process cost; actual provider price is not fully known.",
+                ShowsPreciseActualCost: false);
+        }
+
+        if (kind == ProcessUsageCostDisplayKind.ZeroCost)
+        {
+            return new ProcessUsageCostDisplay(
+                kind,
+                "$0",
+                BuildZeroCostTooltip(stats),
+                "neutral",
+                "No provider cost was observed in this scope.",
+                ShowsPreciseActualCost: true);
+        }
+
         return new ProcessUsageCostDisplay(
+            kind,
             FormatMoney(stats.ActualCost, culture),
             BuildCompleteUsageTooltip(stats, culture),
             "danger",
@@ -40,7 +86,7 @@ public static class ProcessUsageDisplayAdapter
     {
         ArgumentNullException.ThrowIfNull(stats);
 
-        return !HasIncompleteUsage(stats);
+        return ResolveDisplayKind(stats) is ProcessUsageCostDisplayKind.KnownActual or ProcessUsageCostDisplayKind.ZeroCost;
     }
 
     public static string BuildRunCostText(
@@ -52,34 +98,65 @@ public static class ProcessUsageDisplayAdapter
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(culture);
 
-        return ShouldShowPreciseActualCost(stats)
-            ? FormatMoney(run.ActualCost, culture)
-            : "Usage incomplete";
+        return ResolveDisplayKind(stats) switch
+        {
+            ProcessUsageCostDisplayKind.KnownActual => FormatMoney(run.ActualCost, culture),
+            ProcessUsageCostDisplayKind.ZeroCost => "$0",
+            ProcessUsageCostDisplayKind.Estimated => run.EstimatedCost > 0m ? $"Est. {FormatMoney(run.EstimatedCost, culture)}" : "Estimated",
+            ProcessUsageCostDisplayKind.MissingUsage => "Usage missing",
+            ProcessUsageCostDisplayKind.UnknownUsage => "Usage unknown",
+            _ => "Usage unknown"
+        };
     }
 
     public static string BuildRunCostTone(ProcessLiveStats stats)
     {
         ArgumentNullException.ThrowIfNull(stats);
 
-        return ShouldShowPreciseActualCost(stats) ? "neutral" : "warning";
-    }
-
-    private static bool HasIncompleteUsage(ProcessLiveStats stats)
-    {
-        return stats.ProviderUsage.HasUnknownUsage ||
-               stats.ProviderUsage.ObservationCount == 0 &&
-               (stats.TotalTokens > 0 || stats.ToolCalls > 0 || stats.ActualCost > 0m);
-    }
-
-    private static string BuildIncompleteUsageTooltip(ProcessLiveStats stats)
-    {
-        var usage = stats.ProviderUsage;
-        if (usage.ObservationCount == 0)
+        return ResolveDisplayKind(stats) switch
         {
-            return "Provider usage observations are missing for this scope, so exact actual cost is not shown.";
+            ProcessUsageCostDisplayKind.KnownActual => "neutral",
+            ProcessUsageCostDisplayKind.ZeroCost => "neutral",
+            _ => "warning"
+        };
+    }
+
+    private static ProcessUsageCostDisplayKind ResolveDisplayKind(ProcessLiveStats stats)
+    {
+        if (stats.ProviderUsage.HasUnknownUsage)
+        {
+            return ProcessUsageCostDisplayKind.UnknownUsage;
         }
 
+        if (stats.ProviderUsage.ObservationCount == 0)
+        {
+            return stats.TotalTokens > 0 || stats.ToolCalls > 0 || stats.ActualCost > 0m || stats.EstimatedCost > 0m
+                ? ProcessUsageCostDisplayKind.MissingUsage
+                : ProcessUsageCostDisplayKind.ZeroCost;
+        }
+
+        if (stats.ActualCost > 0m || stats.ProviderUsage.KnownCostUsd > 0m)
+        {
+            return ProcessUsageCostDisplayKind.KnownActual;
+        }
+
+        return stats.EstimatedCost > 0m
+            ? ProcessUsageCostDisplayKind.Estimated
+            : ProcessUsageCostDisplayKind.ZeroCost;
+    }
+
+    private static string BuildUnknownUsageTooltip(ProcessLiveStats stats)
+    {
+        var usage = stats.ProviderUsage;
+
         return $"{usage.KnownObservationCount:N0} known and {usage.UnknownObservationCount:N0} incomplete provider usage observation(s). Exact actual cost is not shown.";
+    }
+
+    private static string BuildEstimatedUsageTooltip(
+        ProcessLiveStats stats,
+        CultureInfo culture)
+    {
+        return $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s), but no priced actual cost was available. Estimated process cost: {FormatMoney(stats.EstimatedCost, culture)}.";
     }
 
     private static string BuildCompleteUsageTooltip(
@@ -92,6 +169,13 @@ public static class ProcessUsageDisplayAdapter
         }
 
         return $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s). Estimated process cost: {FormatMoney(stats.EstimatedCost, culture)}.";
+    }
+
+    private static string BuildZeroCostTooltip(ProcessLiveStats stats)
+    {
+        return stats.ProviderUsage.ObservationCount == 0
+            ? "No provider usage or cost was observed in this scope."
+            : $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s) reported zero calculated cost.";
     }
 
     private static string FormatMoney(decimal value, CultureInfo culture)

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SB02 Browser Policy Proof</title>
+</head>
+<body>
+  <main>
+    <h1>SB02 Browser Policy Proof</h1>
+    <p id="status">ready</p>
+    <label for="proof-input">Proof token</label>
+    <input id="proof-input" aria-label="Proof token">
+    <button id="capture" type="button">Capture proof</button>
+    <button id="submit" type="button">Submit token</button>
+  </main>
+  <script>
+    document.getElementById('capture').addEventListener('click', () => {
+      document.getElementById('status').textContent = 'clicked';
+      console.log('SB02 browser click captured');
+    });
+
+    document.getElementById('submit').addEventListener('click', () => {
+      const value = document.getElementById('proof-input').value;
+      document.getElementById('status').textContent = 'submitted:' + value;
+      console.log('SB02 browser typed token=' + value);
+    });
+  </script>
+</body>
+</html>

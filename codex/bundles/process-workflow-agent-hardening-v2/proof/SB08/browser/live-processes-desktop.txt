@@ -1,0 +1,109 @@
+CD
+CanDoItAll local delivery workbench
+chevron_right
+dashboard
+folder_open
+account_tree
+monitor_heart
+forum
+8
+groups
+smart_toy
+account_tree
+psychology
+inventory_2
+extension
+library_books
+construction
+fact_check
+expand_less
+settings
+Settings
+storage
+Switch Database
+Dashboard
+push_pin
+Live Processes
+DELIVERY WORKSPACE
+Live Processes
+Interactive Server
+Live items 0
+Tabs 2
+
+PROCESSES
+
+Live Processes
+3 running
+0 blocked
+0 failed
+Fresh 0s
+Live 1h
+1 day
+7 days
+30 days
+All processes
+Blazor WASM PWA delivery / Tetris Mini Game / 20260602-005817 / Active
+Blazor WASM PWA delivery / Tetris Mini Game / 20260602-005311 / Active
+Blazor WASM PWA delivery / Tetris Mini Game / 20260602-005023 / Active
+Main App / Multi-team software delivery and release governance / Completed
+refresh
+REFRESH
+3 observed
+0 agents
+0 context
+0 tool calls
+0s time
+Est. 1 920,00 Kč cost
+monitoring
+Activity
+3
+smart_toy
+Agents
+0
+bar_chart
+Graphs
+analytics
+Tool analytics
+0
+message
+close
+
+SB08 GENERIC BLAZOR WASM PWA DELIVERY 20260602-005817
+
+Blazor WASM PWA delivery / Tetris Mini Game / 20260602-005817
+Active
+0/8 complete
+1d 5h since activity
+
+1 automation records are pending or retrying.
+
+Usage missing
+0/8 steps
+message
+close
+
+SB08 GENERIC BLAZOR WASM PWA DELIVERY 20260602-005311
+
+Blazor WASM PWA delivery / Tetris Mini Game / 20260602-005311
+Active
+0/8 complete
+1d 5h since activity
+
+1 automation records are pending or retrying.
+
+Usage missing
+0/8 steps
+message
+close
+
+SB08 GENERIC BLAZOR WASM PWA DELIVERY 20260602-005023
+
+Blazor WASM PWA delivery / Tetris Mini Game / 20260602-005023
+Active
+0/8 complete
+1d 5h since activity
+
+1 automation records are pending or retrying.
+
+Usage missing
+0/8 steps

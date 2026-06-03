@@ -409,10 +409,12 @@ public sealed partial class ProcessesService
     private static ProcessDefinitionLintMode ResolveEffectiveLintMode(
         ProcessDefinitionLintMode requestedMode,
         ProcessDefinition definition,
-        ProcessDefinitionContractMode contractMode)
+        ProcessDefinitionContractMode contractMode,
+        ProcessOperatingMode? operatingMode = null)
     {
         var requiresStrictLint = requestedMode == ProcessDefinitionLintMode.Strict ||
             contractMode == ProcessDefinitionContractMode.Strict ||
+            operatingMode == ProcessOperatingMode.GovernedLive ||
             RequiresStrictLint(definition.Criticality, definition.AutonomyLevel);
 
         return requiresStrictLint

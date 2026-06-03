@@ -2779,6 +2779,69 @@ public partial class WorkflowCanvasEditor
         return provider?.Name ?? "Provider missing";
     }
 
+    private LlmCallComponent? ResolveSelectedComponent(WorkflowCanvasNodeDraft node)
+    {
+        return node.ComponentId.HasValue
+            ? componentOptions.FirstOrDefault(component => component.Id == node.ComponentId.Value)
+            : null;
+    }
+
+    private WorkflowProviderOption? ResolveComponentProviderOption(LlmCallComponent? component)
+    {
+        return component?.ProviderProfileId is { } providerProfileId
+            ? ProviderOptions.FirstOrDefault(option => option.ProviderProfileId == providerProfileId)
+            : null;
+    }
+
+    private WorkflowExecutorDisplayBadge BuildLlmProviderUsageBadge(LlmCallComponent? component)
+    {
+        if (component is null)
+        {
+            return new WorkflowExecutorDisplayBadge("Provider unselected", "warning");
+        }
+
+        if (!component.ProviderProfileId.HasValue)
+        {
+            return new WorkflowExecutorDisplayBadge("Provider unbound", "warning");
+        }
+
+        var provider = ResolveComponentProviderOption(component);
+        if (provider is null)
+        {
+            return new WorkflowExecutorDisplayBadge("Provider missing", "danger");
+        }
+
+        return provider.IsEnabled
+            ? new WorkflowExecutorDisplayBadge("Usage unknown until run", "warning")
+            : new WorkflowExecutorDisplayBadge("Provider disabled", "warning");
+    }
+
+    private string BuildLlmProviderUsageDescription(LlmCallComponent? component)
+    {
+        if (component is null)
+        {
+            return "Select an LLM component before runtime provider usage can be attributed.";
+        }
+
+        var provider = ResolveComponentProviderOption(component);
+        if (!component.ProviderProfileId.HasValue)
+        {
+            return $"Component {component.Name} has no provider binding; execution cannot produce provider usage evidence.";
+        }
+
+        if (provider is null)
+        {
+            return $"Component {component.Name} references provider {component.ProviderProfileId.Value:D}, but that provider is missing from the registry.";
+        }
+
+        if (!provider.IsEnabled)
+        {
+            return $"Provider {provider.Name} is disabled; runtime usage and cost remain unavailable until the provider is enabled or replaced.";
+        }
+
+        return $"Provider {provider.Name} / {component.Model}; actual usage and cost appear only after execution records provider usage observations.";
+    }
+
     private string BuildProviderOptionsSummary()
     {
         if (ProviderOptions.Count == 0)

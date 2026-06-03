@@ -258,24 +258,12 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
         "integration-map",
         "output"
     ];
-    private static readonly HashSet<string> BrowserProofTools = new(ToolContractCatalog.BrowserToolNames, StringComparer.OrdinalIgnoreCase);
-    private static readonly HashSet<string> DotNetValidationTools = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ToolContractCatalog.WorkspaceDotNetRestore,
-        ToolContractCatalog.WorkspaceDotNetBuild,
-        ToolContractCatalog.WorkspaceDotNetTest
-    };
-    private static readonly HashSet<string> ProcessDefinitionMutationTools = new(StringComparer.OrdinalIgnoreCase)
-    {
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
-        AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
-        AgentToolInvocationPolicyMetadata.ProcessesRunStart,
-        AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
-        AgentToolInvocationPolicyMetadata.ProcessesTemplateImport
-    };
+    private static readonly ToolOperationRequirementResolver operationRequirementResolver = new();
+    private static readonly BrowserProofPolicy browserProofPolicy = new();
+    private static readonly ExternalTargetBoundaryPolicy externalTargetBoundaryPolicy = new();
+    private static readonly ScriptSideEffectPolicy scriptSideEffectPolicy = new();
+    private static readonly StaleProofPolicy staleProofPolicy = new();
+
     private const string OperationWriteManagedProcessArtifacts = ProcessOperationContractNames.WriteManagedProcessArtifacts;
     private const string OperationWriteExternalArtifactDestination = ProcessOperationContractNames.WriteExternalArtifactDestination;
     private const string OperationMutateProductTarget = ProcessOperationContractNames.MutateProductTarget;
@@ -286,9 +274,8 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     private const string OperationRecoverArtifactsOnly = ProcessOperationContractNames.RecoverArtifactsOnly;
     private const string OperationEscalateOrDecide = ProcessOperationContractNames.EscalateOrDecide;
 
-    private readonly Dictionary<string, int> invocationCounts = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, string> dotnetNewTemplatesByScaffoldRoot = new(StringComparer.OrdinalIgnoreCase);
-    private int mutationGeneration;
+    private readonly RepeatInvocationGuard repeatInvocationGuard = new();
+    private readonly DotnetNewTemplateConsistencyPolicy dotnetNewTemplateConsistencyPolicy = new();
 
     public ValueTask<ToolInvocationPolicyDecision> EvaluateAsync(
         ToolInvocationPolicyContext context,
@@ -321,49 +308,49 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(operationDecision);
         }
 
-        var governedBrowserDecision = EvaluateGovernedBrowserToolBounds(context, signature);
+        var governedBrowserDecision = browserProofPolicy.EvaluateGovernedToolBounds(context, signature);
         if (governedBrowserDecision is not null)
         {
             return ValueTask.FromResult(governedBrowserDecision);
         }
 
-        var externalTargetDecision = EvaluateGovernedExternalTargetIsolation(context, signature);
+        var externalTargetDecision = externalTargetBoundaryPolicy.EvaluateGovernedExternalTargetIsolation(context, signature);
         if (externalTargetDecision is not null)
         {
             return ValueTask.FromResult(externalTargetDecision);
         }
 
-        var staleProductCopyDecision = EvaluateGovernedStaleExternalProductCopySource(context, signature);
+        var staleProductCopyDecision = staleProofPolicy.EvaluateGovernedStaleExternalProductCopySource(context, signature);
         if (staleProductCopyDecision is not null)
         {
             return ValueTask.FromResult(staleProductCopyDecision);
         }
 
-        var archivedExternalProductPathDecision = EvaluateGovernedArchivedExternalProductPathAccess(context, signature);
+        var archivedExternalProductPathDecision = staleProofPolicy.EvaluateGovernedArchivedExternalProductPathAccess(context, signature);
         if (archivedExternalProductPathDecision is not null)
         {
             return ValueTask.FromResult(archivedExternalProductPathDecision);
         }
 
-        var processBoundaryDecision = EvaluateGovernedProcessProductMutationBoundary(context, signature);
+        var processBoundaryDecision = externalTargetBoundaryPolicy.EvaluateGovernedProcessProductMutationBoundary(context, signature);
         if (processBoundaryDecision is not null)
         {
             return ValueTask.FromResult(processBoundaryDecision);
         }
 
-        var scriptSideEffectDecision = EvaluateGovernedScriptSideEffectBoundary(context, signature);
+        var scriptSideEffectDecision = scriptSideEffectPolicy.EvaluateGovernedScriptSideEffectBoundary(context, signature);
         if (scriptSideEffectDecision is not null)
         {
             return ValueTask.FromResult(scriptSideEffectDecision);
         }
 
-        var managedWorkspaceIsolationDecision = EvaluateExternalTargetManagedWorkspaceIsolation(context, signature);
+        var managedWorkspaceIsolationDecision = externalTargetBoundaryPolicy.EvaluateExternalTargetManagedWorkspaceIsolation(context, signature);
         if (managedWorkspaceIsolationDecision is not null)
         {
             return ValueTask.FromResult(managedWorkspaceIsolationDecision);
         }
 
-        var readOnlyExternalTargetDecision = EvaluateReadOnlyExternalTargetMutation(context, signature);
+        var readOnlyExternalTargetDecision = externalTargetBoundaryPolicy.EvaluateReadOnlyExternalTargetMutation(context, signature);
         if (readOnlyExternalTargetDecision is not null)
         {
             return ValueTask.FromResult(readOnlyExternalTargetDecision);
@@ -381,27 +368,15 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
             return ValueTask.FromResult(dotnetNewTemplateConsistencyDecision);
         }
 
-        if (context.Classification is ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation)
+        var repeatInvocationDecision = repeatInvocationGuard.Evaluate(context, signature);
+        if (repeatInvocationDecision is not null)
         {
-            var countedSignature = context.Classification == ToolInvocationClassification.Validation
-                ? $"{signature}|mutationGeneration={mutationGeneration}"
-                : signature;
-            var invocationCount = invocationCounts.TryGetValue(countedSignature, out var currentCount)
-                ? currentCount + 1
-                : 1;
-            invocationCounts[countedSignature] = invocationCount;
-
-            if (invocationCount > MaxRepeatedMutationOrValidationInvocations)
-            {
-                return ValueTask.FromResult(ToolInvocationPolicyDecision.Deny(
-                    countedSignature,
-                    $"Tool '{context.ToolName}' repeated the same mutation or validation signature {invocationCount} times in one run."));
-            }
+            return ValueTask.FromResult(repeatInvocationDecision);
         }
 
         if (context.Classification == ToolInvocationClassification.Mutation)
         {
-            mutationGeneration++;
+            repeatInvocationGuard.RecordMutationDecision();
             if (context.AutoApprovalAllowed)
             {
                 return ValueTask.FromResult(ToolInvocationPolicyDecision.Allow(signature));
@@ -426,56 +401,29 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     }
 
     private static IReadOnlyList<OperationRequirement> ResolveOperationRequirements(ToolInvocationPolicyContext context)
+        => operationRequirementResolver.Resolve(context);
+
+    private sealed class ToolOperationRequirementResolver
     {
-        if (DotNetValidationTools.Contains(context.ToolName))
+        public IReadOnlyList<OperationRequirement> Resolve(ToolInvocationPolicyContext context)
         {
-            return [OperationRequirement.Any(OperationRunValidation)];
-        }
+            if (!ToolCapabilityRegistry.TryResolve(context.ToolName, out var capability))
+            {
+                return [];
+            }
 
-        if (string.Equals(context.ToolName, ToolContractCatalog.WorkspaceDotNetRun, StringComparison.OrdinalIgnoreCase))
-        {
-            return [ResolveDotnetRunOperationRequirement(context)];
+            return capability.OperationRequirementKind switch
+            {
+                ToolCapabilityOperationRequirementKind.Static => capability.OperationRequirements
+                    .Select(requirement => new OperationRequirement(requirement.AnyOf))
+                    .ToArray(),
+                ToolCapabilityOperationRequirementKind.WorkspaceFileMutation => [ResolveWorkspaceFileMutationRequirement(context)],
+                ToolCapabilityOperationRequirementKind.WorkspaceScript => [ResolveWorkspaceScriptRequirement(context)],
+                ToolCapabilityOperationRequirementKind.DotNetRun => [ResolveDotnetRunOperationRequirement(context)],
+                ToolCapabilityOperationRequirementKind.ProcessArtifactRecord => [ResolveProcessArtifactRecordRequirement(context)],
+                _ => []
+            };
         }
-
-        if (BrowserProofTools.Contains(context.ToolName) ||
-            string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.WorkspaceInspectImage, StringComparison.OrdinalIgnoreCase))
-        {
-            return [OperationRequirement.Any(OperationCaptureRuntimeProof)];
-        }
-
-        if (ProductFileMutationTools.Contains(context.ToolName))
-        {
-            return [ResolveWorkspaceFileMutationRequirement(context)];
-        }
-
-        if (WorkspaceScriptExecutionTools.Contains(context.ToolName))
-        {
-            return [ResolveWorkspaceScriptRequirement(context)];
-        }
-
-        if (string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord, StringComparison.OrdinalIgnoreCase))
-        {
-            return [ResolveProcessArtifactRecordRequirement(context)];
-        }
-
-        if (string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ProcessesStepTransition, StringComparison.OrdinalIgnoreCase))
-        {
-            return [OperationRequirement.Any(OperationEscalateOrDecide, OperationRecoverArtifactsOnly, OperationExecuteExternalAction)];
-        }
-
-        if (AgentToolInvocationPolicyMetadata.IsProjectStructureMutationTool(context.ToolName))
-        {
-            return [OperationRequirement.Any(OperationExecuteExternalAction)];
-        }
-
-        if (ProcessDefinitionMutationTools.Contains(context.ToolName) ||
-            string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.ImageGenerationCreate, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(context.ToolName, AgentToolInvocationPolicyMetadata.RunSkillScript, StringComparison.OrdinalIgnoreCase))
-        {
-            return [OperationRequirement.Any(OperationExecuteExternalAction)];
-        }
-
-        return [];
     }
 
     private static OperationRequirement ResolveWorkspaceFileMutationRequirement(ToolInvocationPolicyContext context)
@@ -1124,57 +1072,173 @@ public sealed class DefaultAgentToolInvocationPolicy : IAgentToolInvocationPolic
     public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
-        RecordSuccessfulDotnetNewTemplate(context);
+        dotnetNewTemplateConsistencyPolicy.RecordSuccessfulInvocation(context);
     }
 
     private ToolInvocationPolicyDecision? EvaluateDotnetNewTemplateConsistency(
         ToolInvocationPolicyContext context,
         string signature)
+        => dotnetNewTemplateConsistencyPolicy.Evaluate(context, signature);
+
+    private sealed class DotnetNewTemplateConsistencyPolicy
     {
-        if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-            !context.RedactedArguments.TryGetValue("template", out var template))
+        private readonly Dictionary<string, string> dotnetNewTemplatesByScaffoldRoot = new(StringComparer.OrdinalIgnoreCase);
+
+        public ToolInvocationPolicyDecision? Evaluate(
+            ToolInvocationPolicyContext context,
+            string signature)
         {
+            if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
+                !context.RedactedArguments.TryGetValue("template", out var template))
+            {
+                return null;
+            }
+
+            var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
+            var normalizedTemplate = NormalizeToolArgument(template);
+            if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
+                string.IsNullOrWhiteSpace(scaffoldRoot) ||
+                string.IsNullOrWhiteSpace(normalizedTemplate))
+            {
+                return null;
+            }
+
+            if (dotnetNewTemplatesByScaffoldRoot.TryGetValue(scaffoldRoot, out var previousTemplate) &&
+                !string.Equals(previousTemplate, normalizedTemplate, StringComparison.OrdinalIgnoreCase))
+            {
+                return ToolInvocationPolicyDecision.Deny(
+                    signature,
+                    $"workspace_dotnet_new already scaffolded target '{scaffoldRoot}' with template '{previousTemplate}' in this run. Do not layer a second template such as '{normalizedTemplate}' into the same project root; inspect and repair the existing scaffold explicitly.");
+            }
+
             return null;
         }
 
-        var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
-        var normalizedTemplate = NormalizeToolArgument(template);
-        if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
-            string.IsNullOrWhiteSpace(scaffoldRoot) ||
-            string.IsNullOrWhiteSpace(normalizedTemplate))
+        public void RecordSuccessfulInvocation(ToolInvocationPolicyContext context)
         {
-            return null;
-        }
+            if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
+                !context.RedactedArguments.TryGetValue("template", out var template))
+            {
+                return;
+            }
 
-        if (dotnetNewTemplatesByScaffoldRoot.TryGetValue(scaffoldRoot, out var previousTemplate) &&
-            !string.Equals(previousTemplate, normalizedTemplate, StringComparison.OrdinalIgnoreCase))
-        {
-            return ToolInvocationPolicyDecision.Deny(
-                signature,
-                $"workspace_dotnet_new already scaffolded target '{scaffoldRoot}' with template '{previousTemplate}' in this run. Do not layer a second template such as '{normalizedTemplate}' into the same project root; inspect and repair the existing scaffold explicitly.");
-        }
+            var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
+            var normalizedTemplate = NormalizeToolArgument(template);
+            if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
+                string.IsNullOrWhiteSpace(scaffoldRoot) ||
+                string.IsNullOrWhiteSpace(normalizedTemplate))
+            {
+                return;
+            }
 
-        return null;
+            dotnetNewTemplatesByScaffoldRoot[scaffoldRoot] = normalizedTemplate;
+        }
     }
 
-    private void RecordSuccessfulDotnetNewTemplate(ToolInvocationPolicyContext context)
+    private sealed class BrowserProofPolicy
     {
-        if (!string.Equals(context.ToolName, "workspace_dotnet_new", StringComparison.OrdinalIgnoreCase) ||
-            !context.RedactedArguments.TryGetValue("template", out var template))
+        public ToolInvocationPolicyDecision? EvaluateGovernedToolBounds(
+            ToolInvocationPolicyContext context,
+            string signature)
         {
-            return;
+            return DefaultAgentToolInvocationPolicy.EvaluateGovernedBrowserToolBounds(context, signature);
+        }
+    }
+
+    private sealed class ExternalTargetBoundaryPolicy
+    {
+        public ToolInvocationPolicyDecision? EvaluateGovernedExternalTargetIsolation(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            return DefaultAgentToolInvocationPolicy.EvaluateGovernedExternalTargetIsolation(context, signature);
         }
 
-        var scaffoldRoot = ResolveDotnetNewScaffoldRoot(context.RedactedArguments);
-        var normalizedTemplate = NormalizeToolArgument(template);
-        if (IsSolutionDotnetNewTemplate(normalizedTemplate) ||
-            string.IsNullOrWhiteSpace(scaffoldRoot) ||
-            string.IsNullOrWhiteSpace(normalizedTemplate))
+        public ToolInvocationPolicyDecision? EvaluateGovernedProcessProductMutationBoundary(
+            ToolInvocationPolicyContext context,
+            string signature)
         {
-            return;
+            return DefaultAgentToolInvocationPolicy.EvaluateGovernedProcessProductMutationBoundary(context, signature);
         }
 
-        dotnetNewTemplatesByScaffoldRoot[scaffoldRoot] = normalizedTemplate;
+        public ToolInvocationPolicyDecision? EvaluateExternalTargetManagedWorkspaceIsolation(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            return DefaultAgentToolInvocationPolicy.EvaluateExternalTargetManagedWorkspaceIsolation(context, signature);
+        }
+
+        public ToolInvocationPolicyDecision? EvaluateReadOnlyExternalTargetMutation(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            return DefaultAgentToolInvocationPolicy.EvaluateReadOnlyExternalTargetMutation(context, signature);
+        }
+    }
+
+    private sealed class ScriptSideEffectPolicy
+    {
+        public ToolInvocationPolicyDecision? EvaluateGovernedScriptSideEffectBoundary(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            return DefaultAgentToolInvocationPolicy.EvaluateGovernedScriptSideEffectBoundary(context, signature);
+        }
+    }
+
+    private sealed class StaleProofPolicy
+    {
+        public ToolInvocationPolicyDecision? EvaluateGovernedStaleExternalProductCopySource(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            return DefaultAgentToolInvocationPolicy.EvaluateGovernedStaleExternalProductCopySource(context, signature);
+        }
+
+        public ToolInvocationPolicyDecision? EvaluateGovernedArchivedExternalProductPathAccess(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            return DefaultAgentToolInvocationPolicy.EvaluateGovernedArchivedExternalProductPathAccess(context, signature);
+        }
+    }
+
+    private sealed class RepeatInvocationGuard
+    {
+        private readonly Dictionary<string, int> invocationCounts = new(StringComparer.OrdinalIgnoreCase);
+        private int mutationGeneration;
+
+        public ToolInvocationPolicyDecision? Evaluate(
+            ToolInvocationPolicyContext context,
+            string signature)
+        {
+            if (context.Classification is not (ToolInvocationClassification.Mutation or ToolInvocationClassification.Validation))
+            {
+                return null;
+            }
+
+            var countedSignature = context.Classification == ToolInvocationClassification.Validation
+                ? $"{signature}|mutationGeneration={mutationGeneration}"
+                : signature;
+            var invocationCount = invocationCounts.TryGetValue(countedSignature, out var currentCount)
+                ? currentCount + 1
+                : 1;
+            invocationCounts[countedSignature] = invocationCount;
+
+            if (invocationCount <= MaxRepeatedMutationOrValidationInvocations)
+            {
+                return null;
+            }
+
+            return ToolInvocationPolicyDecision.Deny(
+                countedSignature,
+                $"Tool '{context.ToolName}' repeated the same mutation or validation signature {invocationCount} times in one run.");
+        }
+
+        public void RecordMutationDecision()
+        {
+            mutationGeneration++;
+        }
     }
 
     private static bool IsSolutionDotnetNewTemplate(string template)
@@ -1902,109 +1966,20 @@ public static class AgentToolInvocationPolicyMetadata
         "token"
     ];
 
-    private static readonly IReadOnlyDictionary<string, AgentToolPolicyMetadata> RegisteredTools =
-        new[]
-        {
-            Mutation(ToolContractCatalog.WorkspaceDotNetNew),
-            Mutation(WorkspacePowerShellRunScript),
-            Mutation(WorkspacePythonRunFile),
-            Mutation(ToolContractCatalog.WorkspaceCreateDirectory),
-            Mutation(ToolContractCatalog.WorkspaceWriteFile),
-            Mutation(ToolContractCatalog.WorkspaceAppendFile),
-            Mutation(ToolContractCatalog.WorkspaceCopyPath),
-            Mutation(ToolContractCatalog.WorkspaceMovePath),
-            Mutation(ToolContractCatalog.WorkspaceDeletePath),
-            Validation(ToolContractCatalog.WorkspaceDotNetRestore),
-            Validation(ToolContractCatalog.WorkspaceDotNetBuild),
-            Validation(ToolContractCatalog.WorkspaceDotNetTest),
-            Validation(ToolContractCatalog.WorkspaceDotNetRun),
-            Read(WorkspaceInspectImage),
-            Read(LoadSkill),
-            Read(ReadSkillResource),
-            Mutation(RunSkillScript),
-            Mutation(ProcessesDefinitionSave),
-            Mutation(ProcessesDefinitionRoleAdd),
-            Mutation(ProcessesDefinitionPublish),
-            Mutation(ProcessesDefinitionDelete),
-            Mutation(ProcessesDefinitionImport),
-            Mutation(ProcessesRunStart),
-            Mutation(ProcessesStepTransition),
-            Mutation(ProcessesAssignmentResolve),
-            Mutation(ProcessesArtifactRecord),
-            Mutation(ProcessesTemplateImport),
-            Mutation(ImageGenerationCreate),
-            Read(ProcessesDefinitionsList),
-            Read(ProcessesDefinitionEditorGet),
-            Read(ProcessesDefinitionExport),
-            Read(ProcessesRunsList),
-            Read(ProcessesRunDetailGet),
-            Read(ProcessesAnalyticsGet),
-            Read(ProcessesPartyOptionsList),
-            Read(ProcessesExecutorOptionsList),
-            Read(ProcessesTemplatesList),
-            Read(ProcessesTemplateGet),
-            Read(ProcessesTemplateMermaidGet),
-            Read(ProcessesTemplateBaselineScenariosList),
-            Read(ProcessesTemplateLiveRunProfilesList)
-        }
-        .Concat(ProjectStructureReadToolNames.Select(Read))
-        .Concat(ProjectStructureMutationToolNames.Select(Mutation))
-        .ToDictionary(item => item.Name, StringComparer.OrdinalIgnoreCase);
-
-    public static IReadOnlyCollection<AgentToolPolicyMetadata> Tools => RegisteredTools.Values.ToList();
+    public static IReadOnlyCollection<AgentToolPolicyMetadata> Tools => ToolCapabilityRegistry.PolicyMetadata;
 
     public static IReadOnlyList<string> ProjectStructureReadTools => ProjectStructureReadToolNames.ToArray();
 
     public static IReadOnlyList<string> ProjectStructureMutationTools => ProjectStructureMutationToolNames.ToArray();
 
     public static ToolInvocationClassification Classify(string? toolName)
-    {
-        if (string.IsNullOrWhiteSpace(toolName))
-        {
-            return ToolInvocationClassification.Unknown;
-        }
-
-        var normalized = toolName.Trim();
-        if (RegisteredTools.TryGetValue(normalized, out var metadata))
-        {
-            return metadata.Classification;
-        }
-
-        if (normalized.StartsWith("project_structure_", StringComparison.OrdinalIgnoreCase))
-        {
-            return ToolInvocationClassification.Unknown;
-        }
-
-        if (normalized.StartsWith("processes_", StringComparison.OrdinalIgnoreCase))
-        {
-            return ToolInvocationClassification.Unknown;
-        }
-
-        if (normalized.StartsWith("provider_native_", StringComparison.OrdinalIgnoreCase) ||
-            normalized.StartsWith("provider-native-", StringComparison.OrdinalIgnoreCase))
-        {
-            return ToolInvocationClassification.HostedProviderNative;
-        }
-
-        if (normalized.StartsWith("mcp_", StringComparison.OrdinalIgnoreCase))
-        {
-            return ToolInvocationClassification.LocalMcp;
-        }
-
-        return ToolInvocationClassification.Read;
-    }
+        => ToolCapabilityRegistry.Classify(toolName);
 
     public static bool IsMutationTool(string toolName)
-    {
-        return RegisteredTools.TryGetValue(toolName, out var metadata) &&
-               metadata.Classification == ToolInvocationClassification.Mutation;
-    }
+        => ToolCapabilityRegistry.IsMutationTool(toolName);
 
     public static bool IsValidationTool(string toolName)
-    {
-        return RegisteredTools.TryGetValue(toolName, out var metadata) &&
-               metadata.Classification == ToolInvocationClassification.Validation;
-    }
+        => ToolCapabilityRegistry.IsValidationTool(toolName);
 
     public static bool IsProjectStructureMutationTool(string toolName)
     {
@@ -2012,10 +1987,7 @@ public static class AgentToolInvocationPolicyMetadata
     }
 
     public static bool RequiresApprovalByDefault(string toolName)
-    {
-        return RegisteredTools.TryGetValue(toolName, out var metadata) &&
-               metadata.RequiresApprovalByDefault;
-    }
+        => ToolCapabilityRegistry.RequiresApprovalByDefault(toolName);
 
     public static IReadOnlyDictionary<string, string> RedactArguments(
         IEnumerable<KeyValuePair<string, object?>> arguments)
@@ -2079,30 +2051,4 @@ public static class AgentToolInvocationPolicyMetadata
         return Convert.ToHexString(bytes, 0, 6).ToLowerInvariant();
     }
 
-    private static AgentToolPolicyMetadata Mutation(string name)
-    {
-        return new AgentToolPolicyMetadata(
-            name,
-            ToolInvocationClassification.Mutation,
-            RequiresApprovalByDefault: true,
-            IsStateChanging: true);
-    }
-
-    private static AgentToolPolicyMetadata Validation(string name)
-    {
-        return new AgentToolPolicyMetadata(
-            name,
-            ToolInvocationClassification.Validation,
-            RequiresApprovalByDefault: false,
-            IsStateChanging: false);
-    }
-
-    private static AgentToolPolicyMetadata Read(string name)
-    {
-        return new AgentToolPolicyMetadata(
-            name,
-            ToolInvocationClassification.Read,
-            RequiresApprovalByDefault: false,
-            IsStateChanging: false);
-    }
 }

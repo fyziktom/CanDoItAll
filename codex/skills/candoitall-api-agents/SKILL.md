@@ -42,6 +42,7 @@ Use this skill when a task needs agent catalog, provider, chat, execution, appro
 - Process-driven agent runs should use the canonical structured output contract key for process-step outcomes and preserve `processRunId`, `processStepId`, `schedulerRunId`, and `messageId` filters when reviewing execution runs.
 - Provider usage is a ledger observation, not a chat estimate. Preserve `ProviderUsageObservationStatus`, `ProviderUsageSourcePhase`, token counts, pricing status, and execution/run identifiers when reviewing metrics or artifacts.
 - Tool receipts and runtime snapshots are current-run evidence. Do not treat stale prior-run receipts, copied artifacts, or provider test-chat output as proof for a governed process step.
+- When a process proof claims real automation dispatch, verify at least one execution run is bound to the claimed process run and step, has relevant tool receipts, and has provider usage observations when a provider response was produced. A provider test route or detached chat session proves provider health only, not process execution.
 
 ## Execution DTOs
 

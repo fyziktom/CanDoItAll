@@ -3114,6 +3114,39 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task StartRunAsync_SB01_INV_001_applies_strict_lint_for_governed_live_runtime()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB01 governed live contract lint project");
+        var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
+        definition.ContractMode = ProcessDefinitionContractMode.Compatibility;
+        definition.Criticality = ProcessCriticality.Standard;
+        definition.AutonomyLevel = ProcessAutonomyLevel.Assisted;
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "SB01 governed live lint gate run",
+            OperatingMode = ProcessOperatingMode.GovernedLive,
+            TriggerReason = "SB01 governed live strict contract verification."
+        });
+
+        Assert.True(runResult.IsFailure);
+        Assert.Contains(runResult.Errors, error =>
+            error.Code == "processes.run-start.lint-blocked" &&
+            error.Message.Contains("processes.lint.step-operation-contract-missing", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task SaveAsync_rejects_self_referencing_step_dependency()
     {
         await using var application = await TestApplication.CreateAsync();

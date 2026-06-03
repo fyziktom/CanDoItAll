@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation.  
+Completed.
 Critical foundation: **No**
 
 ## Objective
@@ -57,13 +57,13 @@ Do not use color-only status indicators. Do not hide unknown usage in collapsed 
 
 ## Acceptance Checklist
 
-- [ ] Source references were reopened before editing.
-- [ ] Implementation is the smallest correct change set for this subbundle.
-- [ ] Failing-first proof was captured for behavior-changing critical work.
-- [ ] Passing proof was captured after implementation.
-- [ ] Anti-stub audit was run.
-- [ ] Raw notes owned by this subbundle were closed or explicitly blocked.
-- [ ] Downstream dependency impact was reviewed before moving on.
+- [x] Source references were reopened before editing.
+- [x] Implementation is the smallest correct change set for this subbundle.
+- [x] Failing-first proof was captured for behavior-changing critical work.
+- [x] Passing proof was captured after implementation.
+- [x] Anti-stub audit was run.
+- [x] Raw notes owned by this subbundle were closed or explicitly blocked.
+- [x] Downstream dependency impact was reviewed before moving on.
 
 ## Proof Required
 

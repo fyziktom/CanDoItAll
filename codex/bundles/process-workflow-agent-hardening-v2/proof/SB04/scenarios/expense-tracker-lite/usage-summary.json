@@ -1,0 +1,20 @@
+{
+  "scenarioKey": "expense-tracker-lite",
+  "canDoItAllProviderUsageObserved": true,
+  "observationCount": 8,
+  "knownObservationCount": 8,
+  "totalTokens": 7500310.0,
+  "providerResponseIds": [
+    "resp_00ef8a42f1ecada7016a1f4428d9748196876e81442d1d60aa",
+    "resp_07037e9d87bb619f016a1f43e3816c819186d12bdfde5cd950",
+    "resp_0359c2aa5e29d63d016a1f434b48e0819cbe1f3ad34d04323d",
+    "resp_0fd6abef01582533016a1f42c37cac81a2b86e5106ca47e7bb",
+    "resp_03c9b3909c57c90f016a1f4235713881a0b5dd3b12b006b99b",
+    "resp_0c7ab7be18a23448016a1f41af29e0819ca19693eca5651b5a",
+    "resp_00c83cfeddf4b4a5016a1f413a5088819682567ebb25920ac7",
+    "resp_0c45a87a377c3125016a1f3fcf7db881a3b8ef05d86cc56ca9"
+  ],
+  "statuses": [
+    0
+  ]
+}

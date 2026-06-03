@@ -18,7 +18,20 @@ internal static class ProcessToolOperationAuthorizer
         var allowedOperations = NormalizeOperationNames(context.ProcessStepAllowedOperations);
         if (allowedOperations.Count == 0)
         {
-            return null;
+            var requiredOperations = requirements
+                .SelectMany(requirement => requirement.AnyOf)
+                .Where(item => !string.IsNullOrWhiteSpace(item))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (requiredOperations.Length == 0)
+            {
+                return null;
+            }
+
+            return ToolInvocationPolicyDecision.Deny(
+                signature,
+                $"This governed step is missing an operation contract and cannot use tool '{context.ToolName}'. Required operation: {string.Join(" or ", requiredOperations)}.");
         }
 
         foreach (var requirement in requirements)

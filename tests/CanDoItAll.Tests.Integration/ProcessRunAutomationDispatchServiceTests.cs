@@ -17,6 +17,48 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class ProcessRunAutomationDispatchServiceTests
 {
     [Fact]
+    public void DispatchDecisionServices_expose_typed_resolver_boundaries()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var nestedTypeFlags = BindingFlags.NonPublic | BindingFlags.Public;
+        var staticFieldFlags = BindingFlags.NonPublic | BindingFlags.Static;
+
+        foreach (var nestedTypeName in new[]
+        {
+            "IRequiredToolResolver",
+            "IBrowserProofRequirementResolver",
+            "IArtifactRequirementMatcher",
+            "IStepCompletionPolicy",
+            "IDispatchDecisionEngine",
+            "RequiredToolResolution",
+            "BrowserProofRequirement",
+            "ArtifactRequirementMatch",
+            "StepCompletionPolicyInput",
+            "StepCompletionPolicyDecision",
+            "DispatchDecisionInput",
+            "DispatchDecision"
+        })
+        {
+            Assert.NotNull(serviceType.GetNestedType(nestedTypeName, nestedTypeFlags));
+        }
+
+        foreach (var fieldName in new[]
+        {
+            "RequiredToolResolver",
+            "BrowserProofRequirementResolver",
+            "ArtifactRequirementMatcher",
+            "StepCompletionPolicy",
+            "DispatchDecisionEngine"
+        })
+        {
+            var field = serviceType.GetField(fieldName, staticFieldFlags);
+
+            Assert.NotNull(field);
+            Assert.NotNull(field.GetValue(null));
+        }
+    }
+
+    [Fact]
     public void HasBlockingAutomationExecutionRun_ignores_failed_manual_debug_runs()
     {
         var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
@@ -81,6 +123,102 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var dispatchable = ProcessRunAutomationDispatchService.IsStepStatusDispatchableForRun(runStatus, stepStatus);
 
         Assert.Equal(expected, dispatchable);
+    }
+
+    [Fact]
+    public void TryReadDotnetRunStartupReceipt_preserves_static_web_assets_alias_cleanup_targets()
+    {
+        var tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            $"CanDoItAll.DotnetRunStartupReceipt.{Guid.NewGuid():N}");
+        var stdoutPath = Path.Combine(tempRoot, "stdout.txt");
+        var workspaceRoot = Path.Combine(tempRoot, "workspace");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var receiptJson = JsonSerializer.Serialize(new
+            {
+                keepAlive = true,
+                lifetimeScope = "ExecutionRun",
+                cleanupAttempted = false,
+                appProcessTreeIds = new[] { 321, 654 },
+                staticWebAssetsAliasMappings = new[]
+                {
+                    new { drive = "Y:", workspaceRoot, mounted = true },
+                    new { drive = "Z:", workspaceRoot = Path.Combine(tempRoot, "other-workspace"), mounted = false }
+                }
+            });
+            File.WriteAllText(stdoutPath, $"startup log noise{Environment.NewLine}{receiptJson}", Encoding.UTF8);
+
+            var method = typeof(ProcessRunAutomationDispatchService).GetMethod(
+                "TryReadDotnetRunStartupReceipt",
+                BindingFlags.NonPublic | BindingFlags.Static)
+                ?? throw new InvalidOperationException("TryReadDotnetRunStartupReceipt method was not found.");
+            object?[] arguments = [stdoutPath, null];
+
+            var parsed = (bool)method.Invoke(null, arguments)!;
+
+            Assert.True(parsed);
+            var receipt = arguments[1] ?? throw new InvalidOperationException("Startup receipt was not returned.");
+            var mappings = Assert.IsAssignableFrom<IReadOnlyList<ProcessRunAutomationDispatchService.StaticWebAssetsAliasMapping>>(
+                ReadRecordProperty(receipt, "StaticWebAssetsAliasMappings"));
+            Assert.Equal(2, mappings.Count);
+            Assert.Equal("Y:", mappings[0].Drive);
+            Assert.Equal(workspaceRoot, mappings[0].WorkspaceRoot);
+            Assert.True(mappings[0].Mounted);
+            Assert.Equal("Z:", mappings[1].Drive);
+            Assert.False(mappings[1].Mounted);
+            Assert.True(Assert.IsType<bool>(ReadRecordProperty(receipt, "HasCleanupTargets")));
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData("Y:\\: => C:\\repo\\workspace\r\nZ:\\: => C:\\other", "Y:", "C:\\repo\\workspace")]
+    [InlineData("y:\\: => C:\\repo\\workspace", "Y:", "C:\\repo\\workspace")]
+    [InlineData("Y:\\: => C:\\repo\\workspace", "Q:", null)]
+    public void ResolveSubstDriveTargetFromOutput_parses_subst_alias_lines(
+        string substOutput,
+        string drive,
+        string? expectedTarget)
+    {
+        var target = ProcessRunAutomationDispatchService.ResolveSubstDriveTargetFromOutput(substOutput, drive);
+
+        Assert.Equal(expectedTarget, target);
+    }
+
+    [Fact]
+    public void ClassifyStaticWebAssetsAliasCleanup_requires_matching_subst_target_before_dismount()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), "CanDoItAll.StaticWebAssetsAlias", "workspace");
+        var mapping = new ProcessRunAutomationDispatchService.StaticWebAssetsAliasMapping("y:", workspaceRoot, true);
+
+        Assert.Equal(
+            ProcessRunAutomationDispatchService.StaticWebAssetsAliasCleanupStatus.ReadyToDismount,
+            ProcessRunAutomationDispatchService.ClassifyStaticWebAssetsAliasCleanup(mapping, workspaceRoot + Path.DirectorySeparatorChar));
+        Assert.Equal(
+            ProcessRunAutomationDispatchService.StaticWebAssetsAliasCleanupStatus.SkippedMappingMismatch,
+            ProcessRunAutomationDispatchService.ClassifyStaticWebAssetsAliasCleanup(mapping, Path.Combine(Path.GetTempPath(), "other-workspace")));
+        Assert.Equal(
+            ProcessRunAutomationDispatchService.StaticWebAssetsAliasCleanupStatus.SkippedNoCurrentMapping,
+            ProcessRunAutomationDispatchService.ClassifyStaticWebAssetsAliasCleanup(mapping, null));
+        Assert.Equal(
+            ProcessRunAutomationDispatchService.StaticWebAssetsAliasCleanupStatus.SkippedInvalidDrive,
+            ProcessRunAutomationDispatchService.ClassifyStaticWebAssetsAliasCleanup(
+                new ProcessRunAutomationDispatchService.StaticWebAssetsAliasMapping("Y:\\", workspaceRoot, true),
+                workspaceRoot));
+        Assert.Equal(
+            ProcessRunAutomationDispatchService.StaticWebAssetsAliasCleanupStatus.SkippedNotMounted,
+            ProcessRunAutomationDispatchService.ClassifyStaticWebAssetsAliasCleanup(
+                new ProcessRunAutomationDispatchService.StaticWebAssetsAliasMapping("Y:", workspaceRoot, false),
+                workspaceRoot));
     }
 
     [Theory]
@@ -8214,6 +8352,72 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         Assert.IsType<bool>(shouldRetryResult);
         Assert.True((bool)shouldRetryResult);
+    }
+
+    [Fact]
+    public void ShouldRetryIncompleteSuccessfulRun_returns_false_for_explicit_repair_disposition_with_failed_diagnostic_tool()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var shouldRetry = serviceType.GetMethod("ShouldRetryIncompleteSuccessfulRun", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ShouldRetryIncompleteSuccessfulRun method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the generated Blazor app, then select quality-accepted or repair-required.",
+            ProcessStepKind.Review,
+            [
+                ("quality-accepted", "Quality accepted", "Continue to result writeback."),
+                ("repair-required", "Repair required", "Route back to implementation repair.")
+            ],
+            true,
+            [
+                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", true, "Must include screenshots, browser console, and visible behavior assertions."),
+                (ProcessArtifactKind.Transcript, "Validation self-review summary", true, "Must state accepted or repair-required disposition.")
+            ],
+            [],
+            stepTitle: "Validate Blazor runtime and browser evidence",
+            outputContractSummary: "Browser validation disposition");
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Runtime validation found a repairable form binding failure.",
+            branchOutcomeKey: "repair-required",
+            summaryMarkdown: """
+            ## Blazor runtime evidence pack
+            Browser URL: http://127.0.0.1:5305/
+            Screenshot: artifacts/process-runs/run-1/browser/mobile.png
+            Console result: EditForm requires either a Model parameter, or an EditContext parameter.
+            Visible behavior assertion: the page renders the error UI instead of the pantry planner.
+
+            ## Validation self-review summary
+            Acceptance decision:
+            - Status: repair-required
+            - Reason: Browser runtime proof found a repairable EditForm binding defect.
+            """);
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                ("browser_take_screenshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-repair-proof.png" }, CreateProviderNativeTextResult("Screenshot captured.")),
+                ("browser_snapshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-repair-proof.yml" }, CreateProviderNativeTextResult("Snapshot captured.")),
+                ("browser_console_messages", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/console-repair-proof.log" }, CreateProviderNativeTextResult("Error: EditForm requires either a Model parameter, or an EditContext parameter.")),
+                ("workspace_stat_path", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Evidence artifact path exists.")),
+                ("workspace_read_file", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Evidence artifact reviewed.")),
+                ("workspace_write_file", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Evidence artifacts written."))),
+            [
+                CreateToolReceipt("browser", "browser_take_screenshot", "http://127.0.0.1:5305/", ".", "Succeeded", now),
+                CreateToolReceipt("browser", "browser_snapshot", "http://127.0.0.1:5305/", ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("browser", "browser_console_messages", "http://127.0.0.1:5305/", ".", "Succeeded", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-file", "workspace_write_file", "artifacts/process-runs/run-1/03-blazor-runtime-evidence-pack.md", ".", "Succeeded", now.AddSeconds(3)),
+                CreateToolReceipt("workspace-file", "workspace_write_file", "artifacts/process-runs/run-1/03-validation-self-review-summary.md", ".", "Succeeded", now.AddSeconds(4)),
+                CreateToolReceipt("workspace-file", "workspace_stat_path", "artifacts/process-runs/run-1/03-blazor-runtime-evidence-pack.md", ".", "Succeeded", now.AddSeconds(5)),
+                CreateToolReceipt("workspace-file", "workspace_read_file", "artifacts/process-runs/run-1/03-validation-self-review-summary.md", ".", "Succeeded", now.AddSeconds(6)),
+                CreateToolReceipt("workspace-process", "workspace_pwsh_run_script", "read locked browser host stderr log", ".", "Failed: The process cannot access the file because it is being used by another process.", now.AddSeconds(7))
+            ]);
+
+        var shouldRetryResult = shouldRetry.Invoke(
+            null,
+            [candidate, detail, responseText, Array.Empty<string>(), CreateCarriedImplementationProof(false, false), 1, 3]);
+
+        Assert.IsType<bool>(shouldRetryResult);
+        Assert.False((bool)shouldRetryResult);
     }
 
     [Fact]
@@ -16639,6 +16843,92 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ResolveCompletionStatusWithCarryForward_allows_explicit_repair_disposition_despite_failed_diagnostic_tool()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletionStatus = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "ResolveCompletionStatusWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 4)
+            ?? throw new InvalidOperationException("ResolveCompletionStatusWithCarryForward method was not found.");
+        var buildCompletionReason = serviceType.GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .SingleOrDefault(method => string.Equals(method.Name, "BuildCompletionReasonWithCarryForward", StringComparison.Ordinal) &&
+                                       method.GetParameters().Length == 5)
+            ?? throw new InvalidOperationException("BuildCompletionReasonWithCarryForward method was not found.");
+        var resolveMissingTools = serviceType.GetMethod("ResolveMissingRequiredToolExecutionsWithCarryForward", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredToolExecutionsWithCarryForward method was not found.");
+        var resolveMissingArtifact = serviceType.GetMethod("ResolveMissingRequiredArtifactSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveMissingRequiredArtifactSummary method was not found.");
+        var resolveInvalidBrowserProof = serviceType.GetMethod("ResolveInvalidBrowserProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveInvalidBrowserProofSummary method was not found.");
+        var resolveInvalidQualityProof = serviceType.GetMethod("ResolveInvalidQualityValidationProofSummary", BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveInvalidQualityValidationProofSummary method was not found.");
+        var candidate = CreateDispatchCandidateCore(
+            "Run QA validation and browser proof for the generated Blazor app, then select quality-accepted or repair-required.",
+            ProcessStepKind.Review,
+            [
+                ("quality-accepted", "Quality accepted", "Continue to result writeback."),
+                ("repair-required", "Repair required", "Route back to implementation repair.")
+            ],
+            true,
+            [
+                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", true, "Must include screenshots, browser console, and visible behavior assertions."),
+                (ProcessArtifactKind.Transcript, "Validation self-review summary", true, "Must state accepted or repair-required disposition.")
+            ],
+            [],
+            stepTitle: "Validate Blazor runtime and browser evidence",
+            outputContractSummary: "Browser validation disposition");
+        var responseText = StructuredOutcome(
+            ProcessStepOutcomeStatus.Completed,
+            "Runtime validation found a repairable form binding failure.",
+            branchOutcomeKey: "repair-required",
+            summaryMarkdown: """
+            ## Blazor runtime evidence pack
+            Browser URL: http://127.0.0.1:5305/
+            Screenshot: artifacts/process-runs/run-1/browser/mobile.png
+            Console result: EditForm requires either a Model parameter, or an EditContext parameter.
+            Visible behavior assertion: the page renders the error UI instead of the pantry planner.
+
+            ## Validation self-review summary
+            Acceptance decision:
+            - Status: repair-required
+            - Reason: Browser runtime proof found a repairable EditForm binding defect.
+            """);
+        var now = DateTimeOffset.UtcNow;
+        var detail = CreateSuccessfulExecutionDetail(
+            responseText,
+            BuildSerializedSessionState(
+                ("browser_take_screenshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-repair-proof.png" }, CreateProviderNativeTextResult("Screenshot captured.")),
+                ("browser_snapshot", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/page-repair-proof.yml" }, CreateProviderNativeTextResult("Snapshot captured.")),
+                ("browser_console_messages", new Dictionary<string, object?> { ["filename"] = ".playwright-mcp/console-repair-proof.log" }, CreateProviderNativeTextResult("Error: EditForm requires either a Model parameter, or an EditContext parameter.")),
+                ("workspace_stat_path", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Evidence artifact path exists.")),
+                ("workspace_read_file", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Evidence artifact reviewed.")),
+                ("workspace_write_file", (IReadOnlyDictionary<string, object?>)new Dictionary<string, object?>(), CreateProviderNativeTextResult("Evidence artifacts written."))),
+            [
+                CreateToolReceipt("browser", "browser_take_screenshot", "http://127.0.0.1:5305/", ".", "Succeeded", now),
+                CreateToolReceipt("browser", "browser_snapshot", "http://127.0.0.1:5305/", ".", "Succeeded", now.AddSeconds(1)),
+                CreateToolReceipt("browser", "browser_console_messages", "http://127.0.0.1:5305/", ".", "Succeeded", now.AddSeconds(2)),
+                CreateToolReceipt("workspace-file", "workspace_write_file", "artifacts/process-runs/run-1/03-blazor-runtime-evidence-pack.md", ".", "Succeeded", now.AddSeconds(3)),
+                CreateToolReceipt("workspace-file", "workspace_write_file", "artifacts/process-runs/run-1/03-validation-self-review-summary.md", ".", "Succeeded", now.AddSeconds(4)),
+                CreateToolReceipt("workspace-file", "workspace_stat_path", "artifacts/process-runs/run-1/03-blazor-runtime-evidence-pack.md", ".", "Succeeded", now.AddSeconds(5)),
+                CreateToolReceipt("workspace-file", "workspace_read_file", "artifacts/process-runs/run-1/03-validation-self-review-summary.md", ".", "Succeeded", now.AddSeconds(6)),
+                CreateToolReceipt("workspace-process", "workspace_pwsh_run_script", "read locked browser host stderr log", ".", "Failed: The process cannot access the file because it is being used by another process.", now.AddSeconds(7))
+            ]);
+
+        var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail, Array.Empty<string>(), responseText]);
+        var reason = buildCompletionReason.Invoke(
+            null,
+            [candidate, detail, "Validate Blazor runtime and browser evidence", Array.Empty<string>(), responseText]) as string;
+        var missingTools = resolveMissingTools.Invoke(null, [candidate, detail, Array.Empty<string>()]) as IReadOnlyList<string>;
+        var missingArtifact = resolveMissingArtifact.Invoke(null, [candidate, detail, responseText]) as string;
+        var invalidBrowserProof = resolveInvalidBrowserProof.Invoke(null, [candidate, detail]) as string;
+        var invalidQualityProof = resolveInvalidQualityProof.Invoke(null, [candidate, detail, responseText]) as string;
+
+        Assert.True(
+            status == ProcessStepRunStatus.Completed,
+            $"{reason} Missing tools: {string.Join(", ", missingTools ?? Array.Empty<string>())}. Missing artifact: {missingArtifact}. Invalid browser proof: {invalidBrowserProof}. Invalid quality proof: {invalidQualityProof}.");
+    }
+
+    [Fact]
     public void SatisfiedArtifactDispositionCompletion_recovers_failed_writeback_with_explicit_repair_branch()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -19309,6 +19599,14 @@ Ancestor path to the target work node:
                               parameters[1].ParameterType.IsByRef;
                    })
                ?? throw new InvalidOperationException("TryResolveDeclaredStepOutcome method was not found.");
+    }
+
+    private static object ReadRecordProperty(object instance, string propertyName)
+    {
+        return instance.GetType()
+                   .GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                   ?.GetValue(instance)
+               ?? throw new InvalidOperationException($"Property '{propertyName}' was not found.");
     }
 
     private sealed class TestStorageCatalogService(StorageCatalogRecord storage) : IStorageCatalogService

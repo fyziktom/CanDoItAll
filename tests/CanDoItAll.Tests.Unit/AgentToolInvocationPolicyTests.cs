@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Models;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -742,6 +743,38 @@ public sealed class AgentToolInvocationPolicyTests
         Assert.NotNull(decision);
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
         Assert.Contains("RunValidation", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("workspace_write_file", "MutateProductTarget")]
+    [InlineData("workspace_dotnet_test", "RunValidation")]
+    [InlineData("workspace_dotnet_run", "LaunchRuntime")]
+    [InlineData(ToolContractCatalog.BrowserClick, "CaptureRuntimeProof")]
+    [InlineData("processes_step_transition", "ExecuteExternalAction")]
+    public void ProcessToolOperationAuthorizer_SB01_INV_001_denies_governed_step_with_missing_operation_contract(
+        string toolName,
+        string requiredOperation)
+    {
+        var context = CreateContext(
+            toolName,
+            ToolInvocationClassification.Mutation,
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processStepAllowedOperations: []);
+        var signature = AgentToolInvocationPolicyMetadata.BuildSignature(
+            context.ToolName,
+            context.RedactedArguments);
+
+        var decision = ProcessToolOperationAuthorizer.Evaluate(
+            context,
+            signature,
+            [OperationRequirement.Any(requiredOperation)]);
+
+        Assert.NotNull(decision);
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("missing an operation contract", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(requiredOperation, decision.Reason, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1622,6 +1655,7 @@ public sealed class AgentToolInvocationPolicyTests
     [InlineData("workspace_dotnet_test", ToolInvocationClassification.Validation)]
     [InlineData("provider-native-web-search", ToolInvocationClassification.HostedProviderNative)]
     [InlineData("mcp_project_query", ToolInvocationClassification.LocalMcp)]
+    [InlineData("hosted_mcp_project_query", ToolInvocationClassification.HostedMcp)]
     [InlineData("workspace_read_file", ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.LoadSkill, ToolInvocationClassification.Read)]
     [InlineData(AgentToolInvocationPolicyMetadata.ReadSkillResource, ToolInvocationClassification.Read)]
@@ -1638,6 +1672,119 @@ public sealed class AgentToolInvocationPolicyTests
         var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
 
         Assert.Equal(expected, classification);
+    }
+
+    [Theory]
+    [InlineData("workspace_unregistered_side_effect")]
+    [InlineData("browser_unregistered_side_effect")]
+    [InlineData("arbitrary_unregistered_tool")]
+    public void Classify_SB02_INV_001_does_not_fallback_unknown_tools_to_read(string toolName)
+    {
+        var classification = AgentToolInvocationPolicyMetadata.Classify(toolName);
+
+        Assert.Equal(ToolInvocationClassification.Unknown, classification);
+    }
+
+    [Fact]
+    public void ToolPolicyMetadata_SB02_INV_002_classifies_high_risk_catalog_tools_explicitly()
+    {
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.WorkspaceCommandRun));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.WorkspaceCommandRun));
+
+        Assert.Equal(ToolInvocationClassification.Mutation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.LocalMcpLaunch));
+        Assert.True(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.LocalMcpLaunch));
+        Assert.True(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.LocalMcpLaunch));
+
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserClick));
+        Assert.False(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(ToolContractCatalog.BrowserClick));
+        Assert.False(AgentToolInvocationPolicyMetadata.IsMutationTool(ToolContractCatalog.BrowserClick));
+
+        Assert.Equal(ToolInvocationClassification.Validation, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.BrowserTakeScreenshot));
+        Assert.Equal(ToolInvocationClassification.Read, AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceExecutionBoundary));
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_SB02_INV_003_denies_command_run_without_execute_external_action_operation()
+    {
+        var policy = new DefaultAgentToolInvocationPolicy();
+        var context = CreateContext(
+            ToolContractCatalog.WorkspaceCommandRun,
+            AgentToolInvocationPolicyMetadata.Classify(ToolContractCatalog.WorkspaceCommandRun),
+            isKnownTool: true,
+            autoApprovalAllowed: true,
+            approvalWrapperAvailable: false,
+            processStepAllowedOperations:
+            [
+                "ReadProcessContext",
+                "RunValidation"
+            ],
+            processStepTargetScope: "ExternalProductTargetReadOnly");
+
+        var decision = await policy.EvaluateAsync(context, CancellationToken.None);
+
+        Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
+        Assert.Contains("ExecuteExternalAction", decision.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ToolCapabilityRegistry_SB02_INV_004_registers_every_known_catalog_tool()
+    {
+        var registeredToolNames = ToolCapabilityRegistry.Capabilities
+            .Select(capability => capability.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingToolNames = ToolContractCatalog.KnownToolNames
+            .Select(ToolContractCatalog.NormalizeToolName)
+            .Where(toolName => !registeredToolNames.Contains(toolName))
+            .OrderBy(toolName => toolName, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Empty(missingToolNames);
+        Assert.Equal(registeredToolNames.Count, ToolCapabilityRegistry.Capabilities.Count);
+    }
+
+    [Fact]
+    public void ToolCapabilityRegistry_SB02_INV_005_declares_static_operation_requirements_for_high_risk_tools()
+    {
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceCommandRun, out var commandRun));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, commandRun.OperationRequirementKind);
+        Assert.Contains(commandRun.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("ExecuteExternalAction", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.LocalMcpLaunch, out var localMcpLaunch));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, localMcpLaunch.OperationRequirementKind);
+        Assert.Contains(localMcpLaunch.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("ExecuteExternalAction", StringComparer.Ordinal));
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserClick, out var browserClick));
+        Assert.Equal(ToolCapabilityOperationRequirementKind.Static, browserClick.OperationRequirementKind);
+        Assert.Contains(browserClick.OperationRequirements, requirement =>
+            requirement.AnyOf.Contains("CaptureRuntimeProof", StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void ToolCapabilityRegistry_SB02_INV_006_declares_side_effect_target_scope_and_proof_metadata()
+    {
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceCommandRun, out var commandRun));
+        Assert.Equal(ToolCapabilitySideEffectKind.LocalProcessExecution, commandRun.SideEffectKind);
+        Assert.True(commandRun.CanExecuteExternalAction);
+        Assert.Contains(ProcessOperationContractNames.ExternalActionControlled, commandRun.TargetScopeRequirements);
+        Assert.Equal(ToolCapabilityIdempotencyDescriptor.ExternalSideEffect, commandRun.IdempotencyDescriptor);
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.WorkspaceWriteFile, out var writeFile));
+        Assert.True(writeFile.CanMutateProduct);
+        Assert.True(writeFile.CanWriteManagedArtifact);
+        Assert.Contains(ProcessOperationContractNames.ManagedProcessArtifactsOnly, writeFile.TargetScopeRequirements);
+        Assert.Contains(ProcessOperationContractNames.ExternalProductTargetMutable, writeFile.TargetScopeRequirements);
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserClick, out var browserClick));
+        Assert.Equal(ToolCapabilityBrowserProofRole.Interaction, browserClick.BrowserProofRole);
+        Assert.False(browserClick.CanMutateProduct);
+        Assert.True(browserClick.CanReadExternalTarget);
+        Assert.Contains(ProcessOperationContractNames.ExternalProductTargetReadOnly, browserClick.TargetScopeRequirements);
+
+        Assert.True(ToolCapabilityRegistry.TryResolve(ToolContractCatalog.BrowserTakeScreenshot, out var screenshot));
+        Assert.Equal(ToolCapabilityBrowserProofRole.EvidenceCapture, screenshot.BrowserProofRole);
     }
 
     [Fact]
@@ -2233,7 +2380,7 @@ public sealed class AgentToolInvocationPolicyTests
             ApplicationApprovalAvailable: applicationApprovalAvailable,
             ProcessScaffoldToolOnly: processScaffoldToolOnly,
             ProcessAllowsProductMutation: processAllowsProductMutation,
-            ProcessStepAllowedOperations: processStepAllowedOperations,
+            ProcessStepAllowedOperations: processStepAllowedOperations ?? ProcessOperationContractNames.AllOperations,
             ProcessStepTargetScope: processStepTargetScope,
             InspectedScriptContent: inspectedScriptContent,
             ScriptInspectionFailure: scriptInspectionFailure,

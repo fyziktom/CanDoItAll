@@ -1,0 +1,18 @@
+Command:
+
+`rg -n --pcre2 "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|stubbed|stub-only" <SB04 implementation files>`
+
+Scanned:
+
+- `codex/bundles/process-workflow-agent-hardening-v2/scripts/run_sb04_real_process_e2e.ps1`
+- `tests/CanDoItAll.Tests.Playwright/Sb04GeneratedAppBrowserValidationTests.cs`
+- `src/CanDoItAll.AgentFramework.Core/Workspace/Commands/WorkspaceCommandPlanBuilder.cs`
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.DotnetRunCleanup.cs`
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
+- `Templates/Processes/processes/blazor-app-delivery/steps/*.md`
+- `src/CanDoItAll.AgentFramework.Persistence/SeedAssets/instructions/skills/dotnet-app-delivery.md`
+- `src/CanDoItAll.AgentFramework.Persistence/SeedAssets/instructions/skills/blazor-ssr-delivery.md`
+
+Result:
+
+PASS. No TODO, NotImplemented, fixture-specific, or stub-only implementation markers were found.

@@ -1152,6 +1152,8 @@
                         @RenderDetailMetric("Waiting approval", details.Health.WaitingApprovalStepCount.ToString("N0", CultureInfo.CurrentCulture))
                         @RenderDetailMetric("Missing artifacts", details.Health.MissingArtifactCount.ToString("N0", CultureInfo.CurrentCulture))
                         @RenderDetailMetric("Dead letters", details.Health.DeadLetteredOutboxCount.ToString("N0", CultureInfo.CurrentCulture))
+                        @RenderDetailMetric("Invariant diagnostics", details.Health.InvariantDiagnosticCount.ToString("N0", CultureInfo.CurrentCulture))
+                        @RenderDetailMetric("Recommended action", details.Health.RecommendedAction.ToString())
                     </div>
                 </SectionCard>
 
@@ -1339,6 +1341,8 @@
                             @RenderDetailMetric("Touch", FormatDuration(TimeSpan.FromMinutes(step.TouchMinutes)))
                             @RenderDetailMetric("Blocked", FormatDuration(TimeSpan.FromMinutes(step.BlockedMinutes)))
                             @RenderDetailMetric("Rework", step.ReworkCount.ToString("N0", CultureInfo.CurrentCulture))
+                            @RenderDetailMetric("Target scope", step.OperationTargetScope?.ToString() ?? "Not declared")
+                            @RenderDetailMetric("Allowed operations", FormatAllowedOperations(step.AllowedOperations))
                         </div>
                     </SectionCard>
 
@@ -1349,9 +1353,74 @@
                             @RenderDetailMetric("Latest attempt", string.IsNullOrWhiteSpace(step.Health.LatestAttemptStatus) ? "None" : step.Health.LatestAttemptStatus)
                             @RenderDetailMetric("Approvals", step.Health.PendingApprovalCount.ToString("N0", CultureInfo.CurrentCulture))
                             @RenderDetailMetric("Outbox", step.Health.PendingOutboxCount.ToString("N0", CultureInfo.CurrentCulture))
+                            @RenderDetailMetric("Block code", step.BlockReasonCode.ToString())
+                            @RenderDetailMetric("Next recovery", step.NextRecoveryAction.ToString())
+                            @RenderDetailMetric("Recovery options", FormatRecoveryOptions(step.RecoveryOptions))
                         </div>
                     </SectionCard>
                 </div>
+
+                @if (ShouldShowStepContractBlocker(step))
+                {
+                    <SectionCard Title="Contract and blocker"
+                                 Description="@BuildStepContractBlockerDescription(step)">
+                        <div class="live-processes-detail-list">
+                            @if (IsPolicyDeniedStep(step))
+                            {
+                                <div class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>Tool policy denied the requested operation</h3>
+                                        <p>Required operation and target scope must match the step contract before automation can continue.</p>
+                                    </div>
+                                    <StatusBadge Tone="danger"
+                                                 Text="Policy denied" />
+                                </div>
+                            }
+                            <div class="live-processes-detail-row">
+                                <div class="min-w-0">
+                                    <h3>Step contract</h3>
+                                    <p>Allowed operations: @FormatAllowedOperations(step.AllowedOperations)</p>
+                                    <p>Target scope: @(step.OperationTargetScope?.ToString() ?? "Not declared")</p>
+                                </div>
+                                <StatusBadge Tone="@ResolveStepContractTone(step)"
+                                             Text="@ResolveStepContractStatus(step)" />
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(step.BlockedReason))
+                            {
+                                <div class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>Blocked reason</h3>
+                                        <p>@step.BlockedReason</p>
+                                    </div>
+                                    <StatusBadge Tone="warning"
+                                                 Text="@step.BlockReasonCode.ToString()" />
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(step.ExceptionSummary))
+                            {
+                                <div class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>Exception summary</h3>
+                                        <p>@step.ExceptionSummary</p>
+                                    </div>
+                                    <StatusBadge Tone="danger"
+                                                 Text="Exception" />
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(step.RefusalReason))
+                            {
+                                <div class="live-processes-detail-row">
+                                    <div class="min-w-0">
+                                        <h3>Refusal reason</h3>
+                                        <p>@step.RefusalReason</p>
+                                    </div>
+                                    <StatusBadge Tone="danger"
+                                                 Text="Refused" />
+                                </div>
+                            }
+                        </div>
+                    </SectionCard>
+                }
 
                 @if (step.ArtifactExpectations.Count > 0)
                 {
@@ -2729,6 +2798,87 @@ Reply with the next concrete action or remaining blocker. Do not treat this mess
         }
 
         return $"Recovery classification: {step.Health.RecoveryClassification}.";
+    }
+
+    private static bool ShouldShowStepContractBlocker(ProcessStepRunViewModel step)
+    {
+        return step.Status is ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed or ProcessStepRunStatus.Refused ||
+               step.BlockReasonCode != ProcessStepBlockReasonCode.None ||
+               step.AllowedOperations.Count == 0 ||
+               !step.OperationTargetScope.HasValue ||
+               !string.IsNullOrWhiteSpace(step.BlockedReason) ||
+               !string.IsNullOrWhiteSpace(step.ExceptionSummary) ||
+               !string.IsNullOrWhiteSpace(step.RefusalReason);
+    }
+
+    private static bool IsPolicyDeniedStep(ProcessStepRunViewModel step)
+    {
+        return step.BlockReasonCode == ProcessStepBlockReasonCode.PolicyDeniedExternalPath ||
+               ContainsPolicyDenySignal(step.BlockedReason) ||
+               ContainsPolicyDenySignal(step.ExceptionSummary) ||
+               ContainsPolicyDenySignal(step.RefusalReason);
+    }
+
+    private static bool ContainsPolicyDenySignal(string value)
+    {
+        return !string.IsNullOrWhiteSpace(value) &&
+               (value.Contains("policy", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("denied", StringComparison.OrdinalIgnoreCase) ||
+                value.Contains("not allowed", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string BuildStepContractBlockerDescription(ProcessStepRunViewModel step)
+    {
+        if (step.AllowedOperations.Count == 0 || !step.OperationTargetScope.HasValue)
+        {
+            return "The step is missing part of its typed operation contract.";
+        }
+
+        if (IsPolicyDeniedStep(step))
+        {
+            return "The tool request was denied against the typed operation contract.";
+        }
+
+        return "Typed operation contract, blocker reason, and recovery state for this step.";
+    }
+
+    private static string ResolveStepContractTone(ProcessStepRunViewModel step)
+    {
+        if (step.AllowedOperations.Count == 0 || !step.OperationTargetScope.HasValue || IsPolicyDeniedStep(step))
+        {
+            return "danger";
+        }
+
+        return step.Status == ProcessStepRunStatus.Blocked ? "warning" : "info";
+    }
+
+    private static string ResolveStepContractStatus(ProcessStepRunViewModel step)
+    {
+        if (step.AllowedOperations.Count == 0)
+        {
+            return "Operations missing";
+        }
+
+        if (!step.OperationTargetScope.HasValue)
+        {
+            return "Scope missing";
+        }
+
+        return IsPolicyDeniedStep(step) ? "Denied" : "Declared";
+    }
+
+    private static string FormatAllowedOperations(IReadOnlyList<ProcessStepOperation> operations)
+    {
+        return operations.Count == 0
+            ? "Not declared"
+            : string.Join(", ", operations.Select(operation => operation.ToString()));
+    }
+
+    private static string FormatRecoveryOptions(IReadOnlyList<ProcessStepRecoveryOption> options)
+    {
+        return options.Count == 0
+            ? "None"
+            : string.Join(", ", options.Select(option => option.ToString()));
     }
 
     private static string ResolveStepSummary(ProcessStepRunViewModel step)

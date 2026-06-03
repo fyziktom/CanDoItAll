@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation.  
+Completed.
 Critical foundation: **Yes**
 
 ## Objective
@@ -53,7 +53,7 @@ Critical subbundle validation requires semantic adequacy proof: shallow-pass tra
 
 ## Scope Exceptions
 
-None planned. If implementation discovers a legacy compatibility exception, record it in this file and in `traceability/` before continuing.
+None. Existing compatibility-mode behavior remains visible at publish time, but `GovernedLive` now forces strict lint before execution.
 
 ## Do Not Do
 
@@ -61,13 +61,13 @@ Do not silently infer broad operations for governed live runs. Do not mark old t
 
 ## Acceptance Checklist
 
-- [ ] Source references were reopened before editing.
-- [ ] Implementation is the smallest correct change set for this subbundle.
-- [ ] Failing-first proof was captured for behavior-changing critical work.
-- [ ] Passing proof was captured after implementation.
-- [ ] Anti-stub audit was run.
-- [ ] Raw notes owned by this subbundle were closed or explicitly blocked.
-- [ ] Downstream dependency impact was reviewed before moving on.
+- [x] Source references were reopened before editing.
+- [x] Implementation is the smallest correct change set for this subbundle.
+- [x] Failing-first proof was captured for behavior-changing critical work.
+- [x] Passing proof was captured after implementation.
+- [x] Anti-stub audit was run.
+- [x] Raw notes owned by this subbundle were closed or explicitly blocked.
+- [x] Downstream dependency impact was reviewed before moving on.
 
 ## Proof Required
 

@@ -345,7 +345,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessStepRunStatus ResolveCompletionStatus(DispatchCandidate candidate, ExecutionRunDetail detail)
     {
-        return ResolveCompletionStatusWithCarryForward(candidate, detail, [], detail.Run.ResultSummary);
+        var dispatchDecision = DispatchDecisionEngine.Evaluate(new DispatchDecisionInput(
+            candidate,
+            detail,
+            [],
+            detail.Run.ResultSummary,
+            CarriedImplementationProof.None,
+            ResolveOutputInspectionText(detail.Run.ResultSummary)));
+        return dispatchDecision.CompletionStatus;
     }
 
     private static bool ShouldRetryIncompleteSuccessfulRun(
@@ -380,6 +387,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) &&
             TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) &&
             declaredOutcome.Status == ProcessStepRunStatus.Blocked)
+        {
+            return false;
+        }
+
+        if (TryResolveDeclaredStepOutcome(candidate, responseText, out declaredOutcome, out var processOutcome) &&
+            CanCompleteExplicitDispositionOutcomeWithCriticalToolFailures(
+                candidate,
+                detail,
+                declaredOutcome,
+                processOutcome,
+                responseText,
+                missingRequiredTools,
+                carriedImplementationProof))
         {
             return false;
         }

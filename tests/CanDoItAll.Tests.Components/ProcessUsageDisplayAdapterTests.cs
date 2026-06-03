@@ -24,7 +24,8 @@ public sealed class ProcessUsageDisplayAdapterTests
 
         var display = ProcessUsageDisplayAdapter.BuildCostDisplay(stats, CultureInfo.GetCultureInfo("en-US"));
 
-        Assert.Equal("Incomplete", display.Value);
+        Assert.Equal(ProcessUsageCostDisplayKind.UnknownUsage, display.Kind);
+        Assert.Equal("Usage unknown", display.Value);
         Assert.Equal("warning", display.Tone);
         Assert.False(display.ShowsPreciseActualCost);
         Assert.Contains("incomplete provider usage", display.TooltipText, StringComparison.OrdinalIgnoreCase);
@@ -49,6 +50,7 @@ public sealed class ProcessUsageDisplayAdapterTests
 
         var display = ProcessUsageDisplayAdapter.BuildCostDisplay(stats, CultureInfo.GetCultureInfo("en-US"));
 
+        Assert.Equal(ProcessUsageCostDisplayKind.KnownActual, display.Kind);
         Assert.Equal("$12.34", display.Value);
         Assert.Equal("danger", display.Tone);
         Assert.True(display.ShowsPreciseActualCost);
@@ -73,7 +75,85 @@ public sealed class ProcessUsageDisplayAdapterTests
 
         var text = ProcessUsageDisplayAdapter.BuildRunCostText(stats, run, CultureInfo.GetCultureInfo("en-US"));
 
-        Assert.Equal("Usage incomplete", text);
+        Assert.Equal("Usage unknown", text);
+    }
+
+    [Fact]
+    public void BuildCostDisplay_distinguishes_missing_usage_from_unknown_usage()
+    {
+        var stats = CreateStats(
+            actualCost: 0m,
+            providerUsage: new ProviderUsageSummary(
+                ObservationCount: 0,
+                KnownObservationCount: 0,
+                UnknownObservationCount: 0,
+                InputTokens: 100,
+                CachedInputTokens: 0,
+                OutputTokens: 50,
+                ReasoningTokens: 0,
+                TotalTokens: 150,
+                KnownCostUsd: 0m));
+
+        var display = ProcessUsageDisplayAdapter.BuildCostDisplay(stats, CultureInfo.GetCultureInfo("en-US"));
+
+        Assert.Equal(ProcessUsageCostDisplayKind.MissingUsage, display.Kind);
+        Assert.Equal("Est. $20.00", display.Value);
+        Assert.False(display.ShowsPreciseActualCost);
+        Assert.Contains("missing", display.TooltipText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BuildCostDisplay_distinguishes_estimate_from_zero_cost()
+    {
+        var estimated = ProcessUsageDisplayAdapter.BuildCostDisplay(
+            CreateStats(
+                actualCost: 0m,
+                providerUsage: new ProviderUsageSummary(
+                    ObservationCount: 1,
+                    KnownObservationCount: 1,
+                    UnknownObservationCount: 0,
+                    InputTokens: 0,
+                    CachedInputTokens: 0,
+                    OutputTokens: 0,
+                    ReasoningTokens: 0,
+                    TotalTokens: 0,
+                    KnownCostUsd: 0m)),
+            CultureInfo.GetCultureInfo("en-US"));
+        var zero = ProcessUsageDisplayAdapter.BuildCostDisplay(
+            new ProcessLiveStats(
+                ObservedRunCount: 1,
+                RunningRunCount: 0,
+                BlockedRunCount: 0,
+                FailedRunCount: 0,
+                ActiveAgentCount: 0,
+                PendingApprovalCount: 0,
+                PendingOutboxCount: 0,
+                DeadLetteredOutboxCount: 0,
+                DurationMs: 0,
+                InputTokens: 0,
+                CachedInputTokens: 0,
+                OutputTokens: 0,
+                ToolCalls: 0,
+                EstimatedCost: 0m,
+                ActualCost: 0m,
+                ProviderUsage: new ProviderUsageSummary(
+                    ObservationCount: 0,
+                    KnownObservationCount: 0,
+                    UnknownObservationCount: 0,
+                    InputTokens: 0,
+                    CachedInputTokens: 0,
+                    OutputTokens: 0,
+                    ReasoningTokens: 0,
+                    TotalTokens: 0,
+                    KnownCostUsd: 0m)),
+            CultureInfo.GetCultureInfo("en-US"));
+
+        Assert.Equal(ProcessUsageCostDisplayKind.Estimated, estimated.Kind);
+        Assert.Equal("Est. $20.00", estimated.Value);
+        Assert.False(estimated.ShowsPreciseActualCost);
+        Assert.Equal(ProcessUsageCostDisplayKind.ZeroCost, zero.Kind);
+        Assert.Equal("$0", zero.Value);
+        Assert.True(zero.ShowsPreciseActualCost);
     }
 
     private static ProcessLiveStats CreateStats(

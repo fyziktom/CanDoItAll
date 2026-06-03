@@ -107,7 +107,7 @@ internal sealed record SubprocessCapabilityGapStep(
         int AttemptNumber,
         Guid? SelectedBranchOutcomeId);
 
-    private readonly record struct CarriedImplementationProof(
+    internal readonly record struct CarriedImplementationProof(
         bool HasConcreteImplementationProof,
         bool HasRunnableApplicationProof,
         bool HasConcreteProductMutation)

@@ -47,6 +47,7 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
    - execution report gate rows and browser analytics rows are populated and no longer pending
    - raw note closure rows are no longer pending
    - weak proof is treated as a reopen condition, not a residual-risk paragraph
+   - critical production-path process E2E proof contains automation-dispatch execution runs, tool receipts, current-run artifact lineage, and provider usage observations when provider calls occurred
    - completed critical subbundles have semantic proof that rejects template-only output, fixture-specific behavior, filled-table-only evidence, and status/count-only tests
    - completed critical subbundles have proof manifests whose referenced paths exist
    - behavior-changing critical subbundles have failing-first and passing transcripts
@@ -63,6 +64,7 @@ Use this skill when the bundle needs a gate, not more implementation. It exists 
 - Do not replace UI proof with reasoning when the request depends on actual rendered behavior.
 - Do not pass a readiness or final closure gate for a critical subbundle whose proof only demonstrates file existence, table completion, non-empty strings, diagnostic template markers, or happy-path fixture output.
 - Do not pass a final closure gate from prose-only proof. Missing proof manifests, missing semantic invariant contracts, missing transcript files, missing changed-file hashes, machine-specific-only proof paths, or absent red-team closure artifacts are failures for critical work.
+- Do not pass production-path process E2E proof that used manual transitions with automation dispatch suppressed, harness-generated product source, empty execution-run lists, detached tool receipts, or missing provider usage observations for provider-backed agent runs.
 
 ## Semantic Proof Failure Rule
 

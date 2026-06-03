@@ -10,7 +10,7 @@
 Delivers .NET application changes through typed, observable subprocesses that keep architecture, implementation, validation, runtime commands, screenshots, release authority, and project-structure evidence explicit.
 
 ## Permission model
-Architecture, implementation, validation, runtime command writeback, screenshot writeback, security, and release gates have explicit operation contracts. `allowedOperations` and `operationTargetScope` must stay source-aligned with the canonical ProcessStepOperation and ProcessStepTargetScope catalogs. Architects and QA reviewers do not mutate product files; implementation and repair remain the only product-mutable lanes.
+This template runs in `Strict` contract mode. Architecture, implementation, validation, runtime command writeback, screenshot writeback, security, and release gates have explicit operation contracts. `allowedOperations` and `operationTargetScope` must stay source-aligned with the canonical ProcessStepOperation and ProcessStepTargetScope catalogs. Architects and QA reviewers do not mutate product files; implementation and repair remain the only product-mutable lanes.
 
 ## Steps
 ### 1. Clarify .NET scope and app type boundary (`feature-intake`)

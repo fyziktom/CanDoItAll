@@ -323,6 +323,8 @@
 
                         @if (selected.Kind == WorkflowNodeKind.LlmCall)
                         {
+                            var selectedComponent = ResolveSelectedComponent(selected);
+                            var providerUsageBadge = BuildLlmProviderUsageBadge(selectedComponent);
                             <label class="workflow-canvas-field">
                                 <span>LLM Call Component</span>
                                 <select class="cda-input"
@@ -336,6 +338,15 @@
                                     }
                                 </select>
                             </label>
+                            <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-llm-usage-summary">
+                                <div class="workflow-canvas-executor-summary__badges">
+                                    <StatusBadge Tone="@providerUsageBadge.Tone"
+                                                 Text="@providerUsageBadge.Text" />
+                                </div>
+                                <div class="workflow-canvas-executor-summary__details">
+                                    <span>@BuildLlmProviderUsageDescription(selectedComponent)</span>
+                                </div>
+                            </div>
                         }
 
                         @if (selected.Kind == WorkflowNodeKind.HumanInput)
@@ -399,6 +410,7 @@
                             {
                                 var availabilityBadge = WorkflowExecutorDisplayAdapter.BuildAvailabilityBadge(descriptor);
                                 var sideEffectBadge = WorkflowExecutorDisplayAdapter.BuildSideEffectBadge(descriptor);
+                                var previewCommitBadge = WorkflowExecutorDisplayAdapter.BuildPreviewCommitBadge(descriptor);
                                 var retryBadge = WorkflowExecutorDisplayAdapter.BuildRetrySafetyBadge(descriptor, policy);
                                 <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-executor-summary">
                                     <div class="workflow-canvas-executor-summary__badges">
@@ -408,6 +420,8 @@
                                                      Text="@availabilityBadge.Text" />
                                         <StatusBadge Tone="@sideEffectBadge.Tone"
                                                      Text="@sideEffectBadge.Text" />
+                                        <StatusBadge Tone="@previewCommitBadge.Tone"
+                                                     Text="@previewCommitBadge.Text" />
                                         @if (descriptor.PermissionPolicy.RequiresApproval)
                                         {
                                             <StatusBadge Tone="warning" Text="Approval required" />
@@ -426,6 +440,7 @@
                                         <span>@descriptor.Description</span>
                                         <span data-testid="workflow-canvas-executor-availability">@WorkflowExecutorDisplayAdapter.BuildAvailabilityDescription(descriptor)</span>
                                         <span data-testid="workflow-canvas-executor-side-effects">@WorkflowExecutorDisplayAdapter.BuildSideEffectDescription(descriptor)</span>
+                                        <span data-testid="workflow-canvas-executor-preview-commit">@WorkflowExecutorDisplayAdapter.BuildPreviewCommitDescription(descriptor)</span>
                                         @if (retryBadge is not null)
                                         {
                                             <span data-testid="workflow-canvas-executor-retry-safety">@WorkflowExecutorDisplayAdapter.BuildRetrySafetyDescription(descriptor, policy)</span>
@@ -1360,6 +1375,8 @@
                 <main class="workflow-canvas-node-dialog__main">
                     @if (modalNode.Kind == WorkflowNodeKind.LlmCall)
                     {
+                        var modalComponent = ResolveSelectedComponent(modalNode);
+                        var providerUsageBadge = BuildLlmProviderUsageBadge(modalComponent);
                         <section class="workflow-canvas-dialog-section">
                             <TextBlock TextStyle="TextStyle.Eyebrow" Value="LLM call" />
                             <label class="workflow-canvas-field">
@@ -1375,6 +1392,15 @@
                                     }
                                 </select>
                             </label>
+                            <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-llm-usage-summary">
+                                <div class="workflow-canvas-executor-summary__badges">
+                                    <StatusBadge Tone="@providerUsageBadge.Tone"
+                                                 Text="@providerUsageBadge.Text" />
+                                </div>
+                                <div class="workflow-canvas-executor-summary__details">
+                                    <span>@BuildLlmProviderUsageDescription(modalComponent)</span>
+                                </div>
+                            </div>
                         </section>
                     }
 
@@ -1403,6 +1429,7 @@
                             {
                                 var availabilityBadge = WorkflowExecutorDisplayAdapter.BuildAvailabilityBadge(descriptor);
                                 var sideEffectBadge = WorkflowExecutorDisplayAdapter.BuildSideEffectBadge(descriptor);
+                                var previewCommitBadge = WorkflowExecutorDisplayAdapter.BuildPreviewCommitBadge(descriptor);
                                 var retryBadge = WorkflowExecutorDisplayAdapter.BuildRetrySafetyBadge(descriptor, policy);
                                 <div class="workflow-canvas-executor-summary" data-testid="workflow-canvas-node-modal-executor-summary">
                                     <div class="workflow-canvas-executor-summary__badges">
@@ -1412,6 +1439,8 @@
                                                      Text="@availabilityBadge.Text" />
                                         <StatusBadge Tone="@sideEffectBadge.Tone"
                                                      Text="@sideEffectBadge.Text" />
+                                        <StatusBadge Tone="@previewCommitBadge.Tone"
+                                                     Text="@previewCommitBadge.Text" />
                                         @if (descriptor.PermissionPolicy.RequiresApproval)
                                         {
                                             <StatusBadge Tone="warning" Text="Approval required" />
@@ -1430,6 +1459,7 @@
                                         <span>@descriptor.Description</span>
                                         <span>@WorkflowExecutorDisplayAdapter.BuildAvailabilityDescription(descriptor)</span>
                                         <span>@WorkflowExecutorDisplayAdapter.BuildSideEffectDescription(descriptor)</span>
+                                        <span>@WorkflowExecutorDisplayAdapter.BuildPreviewCommitDescription(descriptor)</span>
                                         @if (retryBadge is not null)
                                         {
                                             <span>@WorkflowExecutorDisplayAdapter.BuildRetrySafetyDescription(descriptor, policy)</span>

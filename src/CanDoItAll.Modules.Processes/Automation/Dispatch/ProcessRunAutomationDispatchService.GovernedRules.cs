@@ -23,7 +23,7 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static IReadOnlyList<string> ResolveRequiredToolNames(DispatchCandidate candidate)
-        => ResolveRequiredToolNamesCore(candidate, null);
+        => RequiredToolResolver.Resolve(candidate).ToolNames;
 
     private static IReadOnlyList<string> ResolveRequiredToolNamesCore(
         DispatchCandidate candidate,
@@ -92,7 +92,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        if (RequiresConcreteBrowserProof(candidate, additionalGroundingText))
+        if (BrowserProofRequirementResolver.Resolve(candidate, additionalGroundingText).IsRequired)
         {
             requiredToolNames.AddRange(ImplicitBrowserProofToolNames);
             if (!ImplementationContractMentionsDotNet(candidate, additionalGroundingText) &&

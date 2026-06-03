@@ -16,6 +16,7 @@
   "Criticality": "High",
   "AutonomyLevel": "Guarded",
   "OperatingMode": "GovernedLive",
+  "ContractMode": "Strict",
   "SourceFrameworkKeys": [
     "nist-ssdf",
     "owasp-samm",

@@ -225,6 +225,77 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
+    public async Task Process_step_finalizer_captures_stringified_result_argument()
+    {
+        var createMethod = typeof(MafAgentRuntime).GetMethod(
+                               "CreateFinalizerCapture",
+                               BindingFlags.NonPublic | BindingFlags.Static)
+                           ?? throw new InvalidOperationException("CreateFinalizerCapture method was not found.");
+        var capture = createMethod.Invoke(null, [AgentStructuredOutputContracts.ProcessStepOutcomeResult, AgentFinalizerMode.Required])
+                      ?? throw new InvalidOperationException("Finalizer capture was not created.");
+        var tools = Assert.IsAssignableFrom<IEnumerable<AITool>>(
+            capture.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(capture));
+        var finalizerTool = Assert.IsAssignableFrom<AIFunction>(Assert.Single(
+            tools,
+            tool => string.Equals(tool.Name, AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, StringComparison.Ordinal)));
+        var outcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Delivery contract was resolved.",
+            EvidenceRefs = ["workspace://artifacts/process-runs/run-001/contract.md"],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = "Contract resolved."
+        };
+
+        await finalizerTool.InvokeAsync(new AIFunctionArguments(new Dictionary<string, object?>
+        {
+            ["result"] = JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions)
+        }));
+
+        var snapshotMethod = capture.GetType().GetMethod("Snapshot", BindingFlags.Public | BindingFlags.Instance)
+                             ?? throw new InvalidOperationException("Finalizer capture snapshot method was not found.");
+        var invocations = Assert.IsAssignableFrom<IReadOnlyList<AgentFinalizerInvocation>>(
+            snapshotMethod.Invoke(capture, []));
+        var invocation = Assert.Single(invocations);
+        Assert.Equal(AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName, invocation.ToolName);
+        Assert.Contains("Delivery contract was resolved.", invocation.ArgumentsJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Streamed_process_step_finalizer_call_creates_valid_finalizer_invocation()
+    {
+        var method = typeof(MafAgentRuntime).GetMethod(
+                         "TryCreateStreamedFinalizerInvocation",
+                         BindingFlags.NonPublic | BindingFlags.Static)
+                     ?? throw new InvalidOperationException("Streamed finalizer helper was not found.");
+        Assert.True(AgentFinalizerPolicies.TryResolveForStructuredOutput(
+            AgentStructuredOutputContracts.ProcessStepOutcomeResult,
+            out var policy));
+        var outcome = new ProcessStepOutcomeResult
+        {
+            Status = ProcessStepOutcomeStatus.Completed,
+            Reason = "Delivery contract was resolved.",
+            EvidenceRefs = ["workspace://artifacts/process-runs/run-001/contract.md"],
+            NextActions = [],
+            HumanReadableSummaryMarkdown = "Contract resolved."
+        };
+        var toolCall = new FunctionCallContent(
+            "call-finalizer-1",
+            AgentFinalizerPolicies.SubmitProcessStepOutcomeToolName,
+            new Dictionary<string, object?>
+            {
+                ["result"] = JsonSerializer.Serialize(outcome, AgentOutputJson.SerializerOptions)
+            });
+
+        var invocation = Assert.IsType<AgentFinalizerInvocation>(method.Invoke(null, [policy, toolCall, 3]));
+        var validation = new DefaultAgentFinalizerValidator().Validate(policy, [invocation]);
+
+        Assert.True(validation.Succeeded);
+        Assert.Equal(3, invocation.Sequence);
+        Assert.Contains("Delivery contract was resolved.", invocation.ArgumentsJson, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void TryBuildRequiredFinalizerRuntimeResponse_returns_authoritative_finalizer_json()
     {
         var method = typeof(MafAgentRuntime).GetMethod(
@@ -264,7 +335,8 @@ public sealed class MafAgentRuntimeTests
                         CompletedAtUtc: timestamp,
                         Succeeded: true,
                         FailureMessage: string.Empty)
-                }
+                },
+                Array.Empty<ProviderUsageObservation>()
             ]));
 
         var parsed = JsonSerializer.Deserialize<ProcessStepOutcomeResult>(

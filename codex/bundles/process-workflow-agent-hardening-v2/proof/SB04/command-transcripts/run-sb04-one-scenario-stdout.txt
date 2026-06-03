@@ -1,0 +1,10 @@
+{
+  "scenarioKey": "tetris-mini-game",
+  "title": "Tetris Mini Game",
+  "runId": "1fd7be69-eb01-4aa1-aca9-a7bd53d036b5",
+  "projectId": "f7f2ab37-a740-4d40-9c4d-ed962657aa3f",
+  "requestAssetId": "custom:076bab751bb546cbb9f177d34193371d",
+  "generatedSourceRoot": "C:\\repositories\\CanDoItAll\\.artifacts\\sb04-real-process-e2e\\20260602-111612\\workspace\\output\\scopes\\organization\\f9b9381fee670e674a281c95ee7e35d9\\process-runs\\1fd7be69-eb01-4aa1-aca9-a7bd53d036b5\\GeneratedBlazorApp",
+  "generatedProjectFile": "C:\\repositories\\CanDoItAll\\.artifacts\\sb04-real-process-e2e\\20260602-111612\\workspace\\output\\scopes\\organization\\f9b9381fee670e674a281c95ee7e35d9\\process-runs\\1fd7be69-eb01-4aa1-aca9-a7bd53d036b5\\GeneratedBlazorApp\\GeneratedBlazorApp.csproj",
+  "proofPath": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v2\\proof\\SB04\\scenarios\\tetris-mini-game"
+}

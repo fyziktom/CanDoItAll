@@ -277,6 +277,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         var script = BuildDotnetHttpRunPowerShellScript(
             target.ProjectArgument,
             target.WorkingDirectoryPath,
+            pathPolicy.WorkspaceRoot,
             normalizedConfiguration,
             noBuild,
             urls.ListenUrl,
@@ -883,6 +884,7 @@ internal sealed class WorkspaceCommandPlanBuilder
     private static string BuildDotnetHttpRunPowerShellScript(
         string projectPath,
         string workingDirectory,
+        string workspaceRoot,
         string configuration,
         bool noBuild,
         string? listenUrl,
@@ -899,6 +901,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("$ProgressPreference = 'SilentlyContinue'");
         builder.AppendLine("$projectPath = " + ToPowerShellSingleQuotedString(projectPath));
         builder.AppendLine("$workingDirectory = " + ToPowerShellSingleQuotedString(workingDirectory));
+        builder.AppendLine("$workspaceRoot = " + ToPowerShellSingleQuotedString(workspaceRoot));
         builder.AppendLine("$configuration = " + ToPowerShellSingleQuotedString(configuration));
         builder.AppendLine("$listenUrl = " + ToPowerShellSingleQuotedString(listenUrl ?? string.Empty));
         builder.AppendLine("$probeUrl = " + ToPowerShellSingleQuotedString(probeUrl ?? string.Empty));
@@ -910,6 +913,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("$keepAlive = " + (keepAlive ? "$true" : "$false"));
         builder.AppendLine("$lifetimeScope = " + ToPowerShellSingleQuotedString(lifetimeScope.ToString()));
         builder.AppendLine("$appProcess = $null");
+        builder.AppendLine("$staticWebAssetsAliasMappings = @()");
         builder.AppendLine("function Read-LogTail {");
         builder.AppendLine("    param([string]$Path)");
         builder.AppendLine("    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return '' }");
@@ -955,6 +959,87 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        } catch { }");
         builder.AppendLine("    }");
         builder.AppendLine("}");
+        builder.AppendLine("function Resolve-StaticWebAssetsAliasMappings {");
+        builder.AppendLine("    param([string]$ProjectPath, [string]$WorkspaceRoot, [string]$Configuration)");
+        builder.AppendLine("    if (-not ($IsWindows -eq $true -or $env:OS -eq 'Windows_NT')) { return @() }");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($WorkspaceRoot) -or -not (Test-Path -LiteralPath $WorkspaceRoot -PathType Container)) { return @() }");
+        builder.AppendLine("    $projectDirectory = Split-Path -Parent $ProjectPath");
+        builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($projectDirectory) -or -not (Test-Path -LiteralPath $projectDirectory -PathType Container)) { return @() }");
+        builder.AppendLine("    $manifestFiles = [System.Collections.Generic.List[object]]::new()");
+        builder.AppendLine("    foreach ($rootName in @('bin', 'obj')) {");
+        builder.AppendLine("        $configurationRoot = Join-Path (Join-Path $projectDirectory $rootName) $Configuration");
+        builder.AppendLine("        if (-not (Test-Path -LiteralPath $configurationRoot -PathType Container)) { continue }");
+        builder.AppendLine("        foreach ($manifestFile in Get-ChildItem -LiteralPath $configurationRoot -Filter '*.staticwebassets*.json' -Recurse -ErrorAction SilentlyContinue) {");
+        builder.AppendLine("            [void]$manifestFiles.Add($manifestFile)");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    $mappings = [System.Collections.Generic.List[object]]::new()");
+        builder.AppendLine("    foreach ($manifestFile in $manifestFiles) {");
+        builder.AppendLine("        try {");
+        builder.AppendLine("            $manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop");
+        builder.AppendLine("        } catch {");
+        builder.AppendLine("            continue");
+        builder.AppendLine("        }");
+        builder.AppendLine("        if (-not ($manifest.PSObject.Properties.Name -contains 'ContentRoots')) { continue }");
+        builder.AppendLine("        foreach ($contentRootValue in @($manifest.ContentRoots)) {");
+        builder.AppendLine("            $contentRoot = [string]$contentRootValue");
+        builder.AppendLine("            if ([string]::IsNullOrWhiteSpace($contentRoot)) { continue }");
+        builder.AppendLine("            if ($contentRoot -notmatch '^[A-Za-z]:[\\\\/]') { continue }");
+        builder.AppendLine("            if (Test-Path -LiteralPath $contentRoot -PathType Container) { continue }");
+        builder.AppendLine("            $driveLetter = [char]::ToUpperInvariant($contentRoot[0])");
+        builder.AppendLine("            $suffix = $contentRoot.Substring(3).TrimStart([char[]]@('\\', '/'))");
+        builder.AppendLine("            $workspaceCandidate = if ([string]::IsNullOrWhiteSpace($suffix)) { $WorkspaceRoot } else { Join-Path $WorkspaceRoot $suffix }");
+        builder.AppendLine("            if (-not (Test-Path -LiteralPath $workspaceCandidate -PathType Container)) { continue }");
+        builder.AppendLine("            $driveName = \"${driveLetter}:\"");
+        builder.AppendLine("            if (@($mappings | Where-Object { $_.drive -eq $driveName }).Count -gt 0) { continue }");
+        builder.AppendLine("            [void]$mappings.Add([pscustomobject]@{");
+        builder.AppendLine("                drive = $driveName");
+        builder.AppendLine("                driveLetter = [string]$driveLetter");
+        builder.AppendLine("                workspaceRoot = $WorkspaceRoot");
+        builder.AppendLine("                manifestPath = $manifestFile.FullName");
+        builder.AppendLine("                contentRoot = $contentRoot");
+        builder.AppendLine("                verifiedPath = $workspaceCandidate");
+        builder.AppendLine("                mounted = $false");
+        builder.AppendLine("            })");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return @($mappings)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Mount-StaticWebAssetsAliasMappings {");
+        builder.AppendLine("    param([object[]]$Mappings)");
+        builder.AppendLine("    foreach ($mapping in @($Mappings)) {");
+        builder.AppendLine("        if (Test-Path -LiteralPath $mapping.contentRoot -PathType Container) { continue }");
+        builder.AppendLine("        $existingDrive = Get-PSDrive -Name $mapping.driveLetter -ErrorAction SilentlyContinue");
+        builder.AppendLine("        if ($existingDrive -ne $null) {");
+        builder.AppendLine("            throw \"Static web assets manifest '$($mapping.manifestPath)' requires $($mapping.drive) for '$($mapping.contentRoot)', but that drive is already assigned and does not expose the expected workspace path '$($mapping.verifiedPath)'.\"");
+        builder.AppendLine("        }");
+        builder.AppendLine("        $substOutput = & subst $mapping.drive $mapping.workspaceRoot 2>&1");
+        builder.AppendLine("        if ($LASTEXITCODE -ne 0) {");
+        builder.AppendLine("            throw \"Failed to create static web assets workspace drive alias $($mapping.drive) -> '$($mapping.workspaceRoot)'. $substOutput\"");
+        builder.AppendLine("        }");
+        builder.AppendLine("        if (-not (Test-Path -LiteralPath $mapping.contentRoot -PathType Container)) {");
+        builder.AppendLine("            & subst $mapping.drive /d 2>$null | Out-Null");
+        builder.AppendLine("            throw \"Created static web assets workspace drive alias $($mapping.drive), but manifest content root is still unavailable: $($mapping.contentRoot).\"");
+        builder.AppendLine("        }");
+        builder.AppendLine("        $mapping.mounted = $true");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return @($Mappings)");
+        builder.AppendLine("}");
+        builder.AppendLine("function Dismount-StaticWebAssetsAliasMappings {");
+        builder.AppendLine("    param([object[]]$Mappings)");
+        builder.AppendLine("    foreach ($mapping in @($Mappings | Where-Object { $_.mounted })) {");
+        builder.AppendLine("        try { & subst $mapping.drive /d 2>$null | Out-Null } catch { }");
+        builder.AppendLine("    }");
+        builder.AppendLine("}");
+        builder.AppendLine("function Build-StopCommand {");
+        builder.AppendLine("    param([int[]]$ProcessTreeIds)");
+        builder.AppendLine("    $commands = [System.Collections.Generic.List[string]]::new()");
+        builder.AppendLine("    if ($ProcessTreeIds.Count -gt 0) { [void]$commands.Add('Stop-Process -Id ' + ($ProcessTreeIds -join ',') + ' -Force') }");
+        builder.AppendLine("    foreach ($mapping in @($staticWebAssetsAliasMappings | Where-Object { $_.mounted })) {");
+        builder.AppendLine("        [void]$commands.Add('subst ' + $mapping.drive + ' /d')");
+        builder.AppendLine("    }");
+        builder.AppendLine("    return ($commands -join '; ')");
+        builder.AppendLine("}");
         builder.AppendLine("function Write-StartupReceipt {");
         builder.AppendLine("    param([bool]$Succeeded, [string]$Message, [bool]$CleanupAttempted = $false, [int[]]$CleanupProcessIds = @())");
         builder.AppendLine("    $processTreeIds = if ($CleanupProcessIds.Count -gt 0) { @($CleanupProcessIds) } elseif ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
@@ -963,6 +1048,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        message = $Message");
         builder.AppendLine("        projectPath = $projectPath");
         builder.AppendLine("        workingDirectory = $workingDirectory");
+        builder.AppendLine("        workspaceRoot = $workspaceRoot");
         builder.AppendLine("        listenUrl = $listenUrl");
         builder.AppendLine("        probeUrl = $probeUrl");
         builder.AppendLine("        hostUrl = $probeUrl");
@@ -978,12 +1064,13 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("        cleanupAttempted = $CleanupAttempted");
         builder.AppendLine("        cleanupProcessIds = @($CleanupProcessIds)");
         builder.AppendLine("        cleanupReceiptPath = $startupReceipt");
+        builder.AppendLine("        staticWebAssetsAliasMappings = @($staticWebAssetsAliasMappings)");
         builder.AppendLine("        stdoutLog = $stdoutLog");
         builder.AppendLine("        stderrLog = $stderrLog");
         builder.AppendLine("        stdoutTail = Read-LogTail $stdoutLog");
         builder.AppendLine("        stderrTail = Read-LogTail $stderrLog");
         builder.AppendLine("        capturedAtUtc = [DateTimeOffset]::UtcNow.ToString('O')");
-        builder.AppendLine("        stopCommand = if ($processTreeIds.Count -gt 0) { 'Stop-Process -Id ' + ($processTreeIds -join ',') + ' -Force' } else { '' }");
+        builder.AppendLine("        stopCommand = Build-StopCommand $processTreeIds");
         builder.AppendLine("    }");
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $startupReceipt) | Out-Null");
         builder.AppendLine("    $json = $payload | ConvertTo-Json -Depth 6");
@@ -1007,6 +1094,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $stdoutLog) | Out-Null");
         builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:ASPNETCORE_ENVIRONMENT)) { $env:ASPNETCORE_ENVIRONMENT = 'Development' }");
         builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:DOTNET_ENVIRONMENT)) { $env:DOTNET_ENVIRONMENT = 'Development' }");
+        builder.AppendLine("    if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings (Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }");
         builder.AppendLine("    $dotnetPath = (Get-Command dotnet -ErrorAction Stop).Source");
         builder.AppendLine("    $argumentList = @('run', '--project', $projectPath, '--configuration', $configuration, '--no-launch-profile')");
         builder.AppendLine("    if ($noBuild) { $argumentList += '--no-build' }");
@@ -1044,6 +1132,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    } else {");
         builder.AppendLine("        $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
         builder.AppendLine("        Stop-AppProcessTree $processTreeIds");
+        builder.AppendLine("        Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings");
         builder.AppendLine("        $successJson = Write-StartupReceipt $true \"Application started and $probeUrl returned success. Process tree was stopped after smoke validation.\" ($processTreeIds.Count -gt 0) $processTreeIds");
         builder.AppendLine("    }");
         builder.AppendLine("    Write-Output $successJson");
@@ -1051,6 +1140,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    $message = $_.Exception.Message");
         builder.AppendLine("    $processTreeIds = if ($appProcess -ne $null) { @(Resolve-ProcessTreeIds $appProcess.Id) } else { @() }");
         builder.AppendLine("    Stop-AppProcessTree $processTreeIds");
+        builder.AppendLine("    Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings");
         builder.AppendLine("    $failureJson = Write-StartupReceipt $false $message ($processTreeIds.Count -gt 0) $processTreeIds");
         builder.AppendLine("    Write-Error $failureJson");
         builder.AppendLine("    exit 1");

@@ -40,6 +40,7 @@ Use this skill when a task needs process authoring or runtime control through th
 - Live-run profiles: `GET /api/processes/templates/live-run-profiles`.
 - Use template `/detail` and `/envelope` routes when verifying typed operation contracts, shared sidecars, workflow mappings, subprocess mappings, and baseline scenarios. Use live-run profiles when preparing a fresh UI-driven run without seeded transitions or artifacts.
 - Do not move product mutation into validation, revalidation, writeback, or escalation steps. Blazor implementation or repair steps may mutate the product target; validation and screenshot/review steps are read-only unless their contract explicitly allows a governed external action.
+- Do not treat `suppressAutomationDispatch: true`, seeded transitions, or manually recorded artifacts as production-path proof for a live process E2E. Those calls are valid for controlled blocking, manual recovery, or fixture setup only when the proof label says so.
 
 ## Runtime Work
 
@@ -50,6 +51,7 @@ Use this skill when a task needs process authoring or runtime control through th
 - Launch and HR matching: `/api/processes/launch-plans`, `/hr-match`, `/submit-approval`, `/approval-decisions`, `/provision`, `/execute`, and `/candidate-selections`.
 - Governed multi-agent process runs are expected to use the active PostgreSQL AppDbContext profile when `Processes:Runtime:RequirePostgreSqlForAgentAutomation` is enabled.
 - After transitions, fetch either `/runs/{runId}/steps/{stepRunId}` for focused state or `/runs/{runId}` for health, invariant diagnostics, artifacts, workflow runs, assignments, and timeline.
+- For production-path process proof, require current-run execution runs, tool receipts, artifact lineage, and provider usage observations when an agent provider call occurred. Empty execution-run lists, provider test-chat output, or chat-only summaries are not sufficient proof.
 
 ## Current-Run Troubleshooting Workflow
 

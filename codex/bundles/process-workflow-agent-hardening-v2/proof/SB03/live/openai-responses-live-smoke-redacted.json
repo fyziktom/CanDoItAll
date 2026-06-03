@@ -1,0 +1,12 @@
+{
+  "status": "completed",
+  "model": "gpt-5-mini-2025-08-07",
+  "provider_response_id": "resp_redacted_c56701c4",
+  "usage_present": true,
+  "input_tokens": 11,
+  "cached_input_tokens": 0,
+  "output_tokens": 0,
+  "reasoning_tokens": 0,
+  "total_tokens": 11,
+  "source": "OpenAI Responses API live smoke; identifiers redacted; OPENAI_API_KEY not recorded."
+}

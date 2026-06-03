@@ -1,0 +1,8 @@
+# SB07 Changed File Hashes
+
+- `Templates/Processes/processes/software-delivery/definition.json` `9009c5515d6704515f5e8a054780b7f8d7d5774099986b0d6e0d7b22400f2122`
+- `Templates/Processes/processes/software-delivery/definition.md` `d8368b61610e1f77b9a8fe9b62c11af91aaa93c94854a637336bdb6dc5b85be6`
+- `codex/skills/candoitall-api-processes/SKILL.md` `e862946d418edfbe505c19f8e27af0a32faba4449f2f9564a9609d9463652687`
+- `codex/skills/candoitall-api-agents/SKILL.md` `ce12bcc136f329d0092b7fd5a19ef74a221c505f131313330da0f1a4a64b5dd9`
+- `codex/skills/bundles/candoitall-bundle-validator/SKILL.md` `5b22cb6cbb8878f2c6cda7858d113efddd37495b845cbd89eb5a0e1deb52a7af`
+- `codex/skills/bundles/candoitall-bundle-execution/SKILL.md` `612b1ae741bb77eae1d46d577d90dcd9d70010d8e3c2083df1f341eaf4d467b4`

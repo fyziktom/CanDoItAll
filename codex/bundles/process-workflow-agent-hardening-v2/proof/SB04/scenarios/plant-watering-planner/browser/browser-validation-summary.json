@@ -1,0 +1,42 @@
+[
+  {
+    "ScenarioKey": "plant-watering-planner",
+    "Viewport": "desktop",
+    "Width": 1440,
+    "Height": 960,
+    "FinalUrl": "http://127.0.0.1:5303/",
+    "Title": "Plant Watering Planner",
+    "BodyTextLength": 581,
+    "InteractiveControlCount": 8,
+    "ConsoleMessageCount": 2,
+    "ConsoleErrorCount": 0,
+    "IgnoredConsoleErrorCount": 0,
+    "BlockingConsoleErrorCount": 0,
+    "PageErrorCount": 0,
+    "IgnoredPageErrorCount": 0,
+    "BlockingPageErrorCount": 0,
+    "FailedResponseCount": 0,
+    "FailedRequestCount": 0,
+    "CapturedAtUtc": "2026-06-02T21:12:23.5792537+00:00"
+  },
+  {
+    "ScenarioKey": "plant-watering-planner",
+    "Viewport": "mobile",
+    "Width": 390,
+    "Height": 844,
+    "FinalUrl": "http://127.0.0.1:5303/",
+    "Title": "Plant Watering Planner",
+    "BodyTextLength": 573,
+    "InteractiveControlCount": 8,
+    "ConsoleMessageCount": 2,
+    "ConsoleErrorCount": 0,
+    "IgnoredConsoleErrorCount": 0,
+    "BlockingConsoleErrorCount": 0,
+    "PageErrorCount": 0,
+    "IgnoredPageErrorCount": 0,
+    "BlockingPageErrorCount": 0,
+    "FailedResponseCount": 0,
+    "FailedRequestCount": 0,
+    "CapturedAtUtc": "2026-06-02T21:12:26.4073753+00:00"
+  }
+]

@@ -1,0 +1,5 @@
+Command: dotnet run --no-build --project Z:\output\scopes\organization\9c98d76954bec2bc7d9cebdacf5dd9d9\process-runs\2b017a75-4941-485e-b187-dcd6a08809ad\GeneratedBlazorApp\GeneratedBlazorApp.csproj --configuration Debug --no-launch-profile -- --urls http://127.0.0.1:5301
+WorkingDirectory: Z:\output\scopes\organization\9c98d76954bec2bc7d9cebdacf5dd9d9\process-runs\2b017a75-4941-485e-b187-dcd6a08809ad\GeneratedBlazorApp
+ProcessId: 608
+StartedAtUtc: 2026-06-02T22:32:49.9001962Z
+Output redirection disabled for long-running host stability.

@@ -1,0 +1,42 @@
+[
+  {
+    "ScenarioKey": "tetris-mini-game",
+    "Viewport": "desktop",
+    "Width": 1440,
+    "Height": 960,
+    "FinalUrl": "http://127.0.0.1:5301/",
+    "Title": "Tetris Mini Game",
+    "BodyTextLength": 462,
+    "InteractiveControlCount": 5,
+    "ConsoleMessageCount": 2,
+    "ConsoleErrorCount": 0,
+    "IgnoredConsoleErrorCount": 0,
+    "BlockingConsoleErrorCount": 0,
+    "PageErrorCount": 0,
+    "IgnoredPageErrorCount": 0,
+    "BlockingPageErrorCount": 0,
+    "FailedResponseCount": 0,
+    "FailedRequestCount": 0,
+    "CapturedAtUtc": "2026-06-02T20:36:58.7342321+00:00"
+  },
+  {
+    "ScenarioKey": "tetris-mini-game",
+    "Viewport": "mobile",
+    "Width": 390,
+    "Height": 844,
+    "FinalUrl": "http://127.0.0.1:5301/",
+    "Title": "Tetris Mini Game",
+    "BodyTextLength": 462,
+    "InteractiveControlCount": 5,
+    "ConsoleMessageCount": 2,
+    "ConsoleErrorCount": 0,
+    "IgnoredConsoleErrorCount": 0,
+    "BlockingConsoleErrorCount": 0,
+    "PageErrorCount": 0,
+    "IgnoredPageErrorCount": 0,
+    "BlockingPageErrorCount": 0,
+    "FailedResponseCount": 0,
+    "FailedRequestCount": 0,
+    "CapturedAtUtc": "2026-06-02T20:37:01.6841065+00:00"
+  }
+]

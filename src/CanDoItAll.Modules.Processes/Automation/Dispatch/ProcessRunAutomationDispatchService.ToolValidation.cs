@@ -420,6 +420,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (!contextValidation.IsValid)
             {
+                if (CanCompleteExplicitDispositionOutcomeWithContextValidation(
+                        candidate,
+                        declaredOutcome,
+                        contextValidation,
+                        responseText,
+                        missingRequiredTools))
+                {
+                    return ProcessStepRunStatus.Completed;
+                }
+
                 if (TryRecoverExplicitDispositionBranchSelection(
                         candidate,
                         declaredOutcome,
@@ -450,7 +460,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        if (unresolvedCriticalToolFailures.Count > 0)
+        if (unresolvedCriticalToolFailures.Count > 0 &&
+            (!hasDeclaredOutcome ||
+             !CanCompleteExplicitDispositionOutcomeWithCriticalToolFailures(
+                 candidate,
+                 detail,
+                 declaredOutcome,
+                 processOutcome,
+                 responseText,
+                 missingRequiredTools,
+                 carriedImplementationProof)))
         {
             return ProcessStepRunStatus.Failed;
         }
@@ -474,7 +493,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             carriedImplementationProof);
         var invalidBrowserProofSummary = ResolveInvalidBrowserProofSummary(candidate, detail);
         var invalidQualityValidationProofSummary = ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText);
-        var missingRequiredArtifactSummary = ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText);
+        var missingRequiredArtifactSummary = ArtifactRequirementMatcher
+            .ResolveMissingRequiredArtifact(candidate, detail, inspectionText)
+            .Summary;
         var downgradedProjectStructureRequirementSummary = ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText);
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
@@ -578,6 +599,80 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return ProcessStepRunStatus.Completed;
+    }
+
+    private static bool CanCompleteExplicitDispositionOutcomeWithCriticalToolFailures(
+        DispatchCandidate candidate,
+        ExecutionRunDetail detail,
+        DeclaredStepOutcome declaredOutcome,
+        ProcessStepOutcomeResult processOutcome,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools,
+        CarriedImplementationProof carriedImplementationProof)
+    {
+        if (declaredOutcome.Status != ProcessStepRunStatus.Completed ||
+            missingRequiredTools.Count > 0 ||
+            !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            !IsDispositionRoutingStep(candidate) ||
+            !TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out _))
+        {
+            return false;
+        }
+
+        var contextValidation = ValidateProcessStepOutcomeContextWithCarryForward(
+            candidate,
+            detail,
+            processOutcome,
+            declaredOutcome,
+            ResolveOutputInspectionText(responseText),
+            carriedImplementationProof);
+        return CanCompleteExplicitDispositionOutcomeWithContextValidation(
+            candidate,
+            declaredOutcome,
+            contextValidation,
+            responseText,
+            missingRequiredTools);
+    }
+
+    private static bool CanCompleteExplicitDispositionOutcomeWithContextValidation(
+        DispatchCandidate candidate,
+        DeclaredStepOutcome declaredOutcome,
+        AgentOutputValidationResult contextValidation,
+        string? responseText,
+        IReadOnlyList<string> missingRequiredTools)
+    {
+        if (declaredOutcome.Status != ProcessStepRunStatus.Completed ||
+            missingRequiredTools.Count > 0 ||
+            !RequiresGovernedStepOutcome(candidate.StepRun) ||
+            !IsDispositionRoutingStep(candidate) ||
+            !TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out var branchOutcome))
+        {
+            return false;
+        }
+
+        if (contextValidation.IsValid ||
+            TryRecoverExplicitDispositionBranchSelection(
+                candidate,
+                declaredOutcome,
+                contextValidation,
+                responseText,
+                out _))
+        {
+            return true;
+        }
+
+        if (!IsRepairBranchOutcomeCandidate(branchOutcome, IsPrimaryRepairBranchOutcomeToken) &&
+            !IsRepairBranchOutcomeCandidate(branchOutcome, IsSecondaryRepairBranchOutcomeToken))
+        {
+            return false;
+        }
+
+        return contextValidation.Errors.Count > 0 &&
+               contextValidation.Errors.All(error =>
+                   error.Code is "process.step_outcome.context.branch_required" or
+                       "process.step_outcome.context.branch_invalid" or
+                       "process.step_outcome.context.invalid_browser_proof" or
+                       "process.step_outcome.context.invalid_quality_validation_proof");
     }
 
     private static string BuildCompletionReasonWithCarryForward(

@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready for implementation.  
+Completed.
 Critical foundation: **Yes**
 
 ## Objective
@@ -50,7 +50,7 @@ Critical subbundle validation requires semantic adequacy proof: shallow-pass tra
 
 ## Scope Exceptions
 
-None planned. If implementation discovers a legacy compatibility exception, record it in this file and in `traceability/` before continuing.
+No legacy compatibility exceptions were added. Browser proof-route validation was attempted, but Browser plugin URL policy blocked both generated `data:` and local `file:` routes; this is recorded in `proof/SB02/browser/browser-validation-blocked.md`.
 
 ## Do Not Do
 
@@ -58,13 +58,13 @@ Do not add a second registry. Do not keep `return Read` as the unknown fallback.
 
 ## Acceptance Checklist
 
-- [ ] Source references were reopened before editing.
-- [ ] Implementation is the smallest correct change set for this subbundle.
-- [ ] Failing-first proof was captured for behavior-changing critical work.
-- [ ] Passing proof was captured after implementation.
-- [ ] Anti-stub audit was run.
-- [ ] Raw notes owned by this subbundle were closed or explicitly blocked.
-- [ ] Downstream dependency impact was reviewed before moving on.
+- [x] Source references were reopened before editing.
+- [x] Implementation is the smallest correct change set for this subbundle.
+- [x] Failing-first proof was captured for behavior-changing critical work.
+- [x] Passing proof was captured after implementation.
+- [x] Anti-stub audit was run.
+- [x] Raw notes owned by this subbundle were closed or explicitly blocked.
+- [x] Downstream dependency impact was reviewed before moving on.
 
 ## Proof Required
 
@@ -73,6 +73,8 @@ Registry completeness test, unknown-tool denial test, command-run operation test
 ## Browser Validation Logging
 
 For browser-tool policy changes, include one proof route using browser actions and evidence tools, but keep full app E2E in SB04.
+
+SB02 browser route validation was attempted and blocked by Browser plugin URL policy. Policy behavior is covered by `AgentToolInvocationPolicyTests`; full app/browser proof remains assigned to SB04 and SB08.
 
 ## Progression Gate
 

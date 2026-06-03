@@ -1,0 +1,42 @@
+[
+  {
+    "ScenarioKey": "study-kanban-flashcards",
+    "Viewport": "desktop",
+    "Width": 1440,
+    "Height": 960,
+    "FinalUrl": "http://127.0.0.1:5304/",
+    "Title": "Study Kanban Flashcards",
+    "BodyTextLength": 883,
+    "InteractiveControlCount": 10,
+    "ConsoleMessageCount": 2,
+    "ConsoleErrorCount": 0,
+    "IgnoredConsoleErrorCount": 0,
+    "BlockingConsoleErrorCount": 0,
+    "PageErrorCount": 0,
+    "IgnoredPageErrorCount": 0,
+    "BlockingPageErrorCount": 0,
+    "FailedResponseCount": 0,
+    "FailedRequestCount": 0,
+    "CapturedAtUtc": "2026-06-02T21:23:41.4377718+00:00"
+  },
+  {
+    "ScenarioKey": "study-kanban-flashcards",
+    "Viewport": "mobile",
+    "Width": 390,
+    "Height": 844,
+    "FinalUrl": "http://127.0.0.1:5304/",
+    "Title": "Study Kanban Flashcards",
+    "BodyTextLength": 866,
+    "InteractiveControlCount": 10,
+    "ConsoleMessageCount": 2,
+    "ConsoleErrorCount": 0,
+    "IgnoredConsoleErrorCount": 0,
+    "BlockingConsoleErrorCount": 0,
+    "PageErrorCount": 0,
+    "IgnoredPageErrorCount": 0,
+    "BlockingPageErrorCount": 0,
+    "FailedResponseCount": 0,
+    "FailedRequestCount": 0,
+    "CapturedAtUtc": "2026-06-02T21:23:44.6041661+00:00"
+  }
+]

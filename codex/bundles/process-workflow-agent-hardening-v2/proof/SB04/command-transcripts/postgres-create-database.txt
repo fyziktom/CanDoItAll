@@ -1,0 +1,10 @@
+Command: docker exec candoitall-postgres psql -U candoitall -d postgres -c create database "cditall_sb04_20260602181836";
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+CREATE DATABASE
+
+
+STDERR:
+

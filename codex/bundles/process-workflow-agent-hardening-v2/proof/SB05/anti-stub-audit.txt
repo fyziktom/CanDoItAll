@@ -1,0 +1,7 @@
+Command:
+
+`rg -n --pcre2 "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|stubbed|stub-only" codex/bundles/process-workflow-agent-hardening-v2/scripts/validate_bundle.py codex/skills/bundles/candoitall-bundle-validator/SKILL.md codex/skills/bundles/candoitall-bundle-execution/SKILL.md`
+
+Result:
+
+PASS. No TODO, NotImplemented, fixture-specific, or stub-only implementation markers were found.

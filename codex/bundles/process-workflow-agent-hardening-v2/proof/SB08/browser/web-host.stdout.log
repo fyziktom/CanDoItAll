@@ -1,0 +1,83 @@
+Použití nastavení spuštění z src\CanDoItAll.Web\Properties\launchSettings.json...
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (e5df9ad6-33db-c697-4a06-78a74976013c) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:candoitall_development:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile e5df9ad6-33db-c697-4a06-78a74976013c.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile e5df9ad6-33db-c697-4a06-78a74976013c is ready.
+info: DBConnectionManager[0]
+      Registering datasource 'default' with db provider: 'Quartz.Impl.AdoJobStore.Common.DbProvider'
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using object serializer: Quartz.Simpl.JsonObjectSerializer, Quartz.Serialization.Json
+info: Quartz.Core.SchedulerSignalerImpl[0]
+      Initialized Scheduler Signaller of type: Quartz.Core.SchedulerSignalerImpl
+info: Quartz.Core.QuartzScheduler[0]
+      Quartz Scheduler created
+info: Quartz.Core.QuartzScheduler[0]
+      JobFactory set to: Quartz.Simpl.MicrosoftDependencyInjectionJobFactory
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Using thread monitor-based data access locking (synchronization).
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Successfully validated presence of 10 schema objects
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      JobStoreTX initialized.
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Quartz Scheduler 3.13.1.0 - 'CanDoItAll Automation' with instanceId 'CanDoItAll.Automation' initialized
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using thread pool 'Quartz.Simpl.DefaultThreadPool', size: 10
+info: Quartz.Impl.StdSchedulerFactory[0]
+      Using job store 'Quartz.Impl.AdoJobStore.JobStoreTX', supports persistence: True, clustered: False
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorCapturedImprovementRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorSessionRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorTurnRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+info: CanDoItAll.Modules.Processes.ProcessCatalogWarmupService[0]
+      Completed process catalog warmup in 518 ms. Imported 0 definitions, synchronized 0 definitions, and published 0 definitions.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://localhost:5032
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\repositories\CanDoItAll\src\CanDoItAll.Web
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Freed 0 triggers from 'acquired' / 'blocked' state.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovering 0 jobs that were in-progress at the time of the last shut-down.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Recovery complete.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 'complete' triggers.
+info: Quartz.Impl.AdoJobStore.JobStoreTX[0]
+      Removed 0 stale fired job entries.
+info: Quartz.Core.QuartzScheduler[0]
+      Scheduler CanDoItAll Automation_$_CanDoItAll.Automation started.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryService[0]
+      Recovered interrupted AgentFramework execution run 1761d6a0-052e-4cfb-ba1a-2218c07e2b56 for agent b0c2a317-a417-385f-9f59-0f4a2c5b7ff2.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkExecutionRecoveryWorker[0]
+      Recovered 1 interrupted AgentFramework execution run(s) during startup.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Summary To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+warn: CanDoItAll.Modules.AgentFramework.WorkflowExampleCatalogSeedService[0]
+      Skipping workflow example seed 'Example: Gmail Label Email Tasks To Project' because one or more optional workflow executors are unavailable in this host: Workflow executor 'gmail.messages-by-label' is not runnable: Plugin 'gmail.mail' is not installed. Workflow executor 'gmail.mark-message-processed' is not runnable: Plugin 'gmail.mail' is not installed.
+info: CanDoItAll.Modules.AgentFramework.AgentFrameworkCatalogWarmupService[0]
+      Completed AgentFramework catalog repair and projection warmup in 17711 ms.
+warn: Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+      Failed to determine the https port for redirect.
