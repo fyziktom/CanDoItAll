@@ -116,7 +116,7 @@ public sealed record ProviderProfileSummary(
     string? LastHealthStatus,
     DateTimeOffset? LastHealthCheckAtUtc);
 
-public sealed class ProviderProfileEditorModel
+public sealed class ProviderProfileEditorModel : CanDoItAll.AgentFramework.Models.IProviderModelPricingEditorModel
 {
     public Guid? Id { get; set; }
 

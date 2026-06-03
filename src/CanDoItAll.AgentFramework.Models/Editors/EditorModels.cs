@@ -82,7 +82,14 @@ public sealed class AgentTeamEditorModel
     }
 }
 
-public sealed class ProviderProfileEditorModel
+public interface IProviderModelPricingEditorModel
+{
+    bool IsPrivateProvider { get; set; }
+
+    List<ProviderModelTokenPriceEditorModel> ModelPrices { get; set; }
+}
+
+public sealed class ProviderProfileEditorModel : IProviderModelPricingEditorModel
 {
     public Guid? Id { get; set; }
     public string Name { get; set; } = string.Empty;

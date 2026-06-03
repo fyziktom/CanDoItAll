@@ -29,7 +29,7 @@ public sealed record ProviderModelPricingDiscoveryResult(
     IReadOnlyList<ProviderDiscoveredModelPrice> Models,
     string Message);
 
-internal static class ProviderConnectorFieldKeys
+public static class ProviderConnectorFieldKeys
 {
     public const string BaseUrl = "baseUrl";
     public const string DefaultModel = "defaultModel";

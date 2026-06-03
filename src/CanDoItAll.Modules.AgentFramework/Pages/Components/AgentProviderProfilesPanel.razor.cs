@@ -5,10 +5,17 @@ using Microsoft.AspNetCore.Components;
 
 namespace CanDoItAll.Modules.AgentFramework.Pages.Components;
 
+using WorkspaceProviderConnectorFieldKeys = CanDoItAll.Modules.Workspace.ProviderConnectorFieldKeys;
+using WorkspaceProviderPricingRefreshResult = CanDoItAll.Modules.Workspace.ProviderModelPricingRefreshResult;
+using WorkspaceProviderService = CanDoItAll.Modules.Workspace.WorkspaceService;
+
 public partial class AgentProviderProfilesPanel
 {
     [Inject]
     public IAgentFrameworkWorkspaceService WorkspaceService { get; set; } = default!;
+
+    [Inject]
+    public WorkspaceProviderService WorkspaceProviderService { get; set; } = default!;
 
     [Inject]
     public NotificationService NotificationService { get; set; } = default!;
@@ -20,6 +27,7 @@ public partial class AgentProviderProfilesPanel
     private IReadOnlyList<string> providerTagValues = [];
     private string providerSearch = string.Empty;
     private string suggestedModelsText = string.Empty;
+    private int providerEditorTabIndex;
     private bool isLoading;
     private bool isBusy;
 
@@ -180,8 +188,67 @@ public partial class AgentProviderProfilesPanel
     private Task ResetProviderAsync()
     {
         providerModel = CreateNewProviderEditor();
+        providerEditorTabIndex = 0;
         SyncProviderEditorText();
         return Task.CompletedTask;
+    }
+
+    private async Task RefreshProviderModelPricesAsync()
+    {
+        if (!providerModel.Id.HasValue)
+        {
+            NotificationService.Warning(
+                "Provider pricing was not loaded",
+                "Save the provider before loading prices from its API.");
+            return;
+        }
+
+        isBusy = true;
+        try
+        {
+            var workspaceProviders = await WorkspaceProviderService.ListProviderProfilesAsync();
+            if (!workspaceProviders.Any(provider => provider.Id == providerModel.Id.Value))
+            {
+                NotificationService.Warning(
+                    "Provider pricing was not loaded",
+                    "Pricing refresh is available only for saved workspace-backed providers. Add model prices manually.");
+                return;
+            }
+
+            var workspaceModel = await WorkspaceProviderService.GetProviderAsync(providerModel.Id.Value);
+            if (workspaceModel.Id != providerModel.Id)
+            {
+                NotificationService.Warning(
+                    "Provider pricing was not loaded",
+                    "The selected provider is not a saved workspace-backed provider. Add model prices manually.");
+                return;
+            }
+
+            workspaceModel.Configuration.SetText(WorkspaceProviderConnectorFieldKeys.BaseUrl, providerModel.BaseUrl);
+            workspaceModel.Configuration.SetText(WorkspaceProviderConnectorFieldKeys.DefaultModel, providerModel.DefaultModel);
+            workspaceModel.IsPrivateProvider = providerModel.IsPrivateProvider;
+            workspaceModel.ModelPrices = CloneModelPrices(providerModel.ModelPrices);
+
+            var result = await WorkspaceProviderService.RefreshProviderModelPricesAsync(workspaceModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning(
+                    "Provider pricing was not loaded",
+                    string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+
+            providerModel.ModelPrices = result.Value!.ModelPrices;
+            NotifyPricingRefresh(result.Value);
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider pricing load failed", exception.Message);
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
 
     private Task HandleProviderTagsChangedAsync(IReadOnlyList<string> value)
@@ -260,6 +327,31 @@ public partial class AgentProviderProfilesPanel
             .ToList();
     }
 
+    private static List<ProviderModelTokenPriceEditorModel> CloneModelPrices(
+        IEnumerable<ProviderModelTokenPriceEditorModel> prices)
+    {
+        return prices
+            .Select(price => new ProviderModelTokenPriceEditorModel
+            {
+                Model = price.Model,
+                InputPerMillionTokensUsd = price.InputPerMillionTokensUsd,
+                CachedInputPerMillionTokensUsd = price.CachedInputPerMillionTokensUsd,
+                OutputPerMillionTokensUsd = price.OutputPerMillionTokensUsd
+            })
+            .ToList();
+    }
+
+    private void NotifyPricingRefresh(WorkspaceProviderPricingRefreshResult result)
+    {
+        if (result.ExplicitPriceCount > 0)
+        {
+            NotificationService.Success("Provider pricing loaded", result.Message);
+            return;
+        }
+
+        NotificationService.Info("Provider models loaded", result.Message);
+    }
+
     private static ProviderProfileEditorModel CreateNewProviderEditor()
     {
         return new ProviderProfileEditorModel
@@ -278,6 +370,10 @@ public partial class AgentProviderProfilesPanel
             PreferFrameworkManagedChatHistory = false,
             ConfigurationJson = "{}",
             SuggestedModels = [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-5.4", "gpt-5-mini", "gpt-4.1-mini"],
+            IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(ProviderKind.OpenAi, null),
+            ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(
+                ProviderKind.OpenAi,
+                ManagedSeedProviderFallbacks.OpenAiDefaultModel),
             Tags = ["openai", "cloud", "chat", "responses"]
         };
     }

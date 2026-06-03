@@ -3,51 +3,67 @@
 
 <FormSection Title="Model pricing" Description="Configure input, cached input, and output prices in USD per one million tokens.">
     <Stack GapScale="LayoutGap.Medium">
-        <Grid Gap="LayoutGap.Medium" ColumnsMd="2">
-            <label class="cda-inline-option">
-                <InputCheckbox @bind-Value="Model.IsPrivateProvider"
-                               disabled="@PrivateProviderLocked"
-                               data-testid="provider-private-input" />
-                Private provider
-            </label>
-        </Grid>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <Cluster Gap="LayoutGap.Small">
+                <label class="cda-inline-option">
+                    <InputCheckbox @bind-Value="Model.IsPrivateProvider"
+                                   disabled="@PrivateProviderLocked"
+                                   data-testid="provider-private-input" />
+                    Private provider
+                </label>
+                <StatusBadge Tone="info" Text="@($"{Model.ModelPrices.Count} model(s)")" />
+            </Cluster>
+            <p class="cda-body-muted">Prices are USD per one million tokens.</p>
+        </div>
 
-        <Grid Gap="LayoutGap.Medium" ColumnsLg="4">
-            @for (var index = 0; index < Model.ModelPrices.Count; index++)
-            {
-                var price = Model.ModelPrices[index];
-                <div>
-                    <label class="cda-field-label">Model</label>
-                    <InputText @bind-Value="price.Model"
-                               class="cda-input"
-                               data-testid="@($"provider-pricing-model-{index}")" />
-                </div>
-                <div>
-                    <label class="cda-field-label">Input</label>
-                    <InputNumber @bind-Value="price.InputPerMillionTokensUsd"
-                                 class="cda-input"
-                                 data-testid="@($"provider-pricing-input-{index}")" />
-                </div>
-                <div>
-                    <label class="cda-field-label">Cached input</label>
-                    <InputNumber @bind-Value="price.CachedInputPerMillionTokensUsd"
-                                 class="cda-input"
-                                 data-testid="@($"provider-pricing-cached-{index}")" />
-                </div>
-                <div>
-                    <label class="cda-field-label">Output</label>
-                    <Cluster Gap="LayoutGap.Small">
-                        <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
-                                     class="cda-input"
-                                     data-testid="@($"provider-pricing-output-{index}")" />
-                        <Button Text="Remove"
-                                ButtonStyle="ButtonStyle.Light"
-                                Size="ButtonSize.Small"
-                                Click="@(() => RemovePriceRow(price))" />
-                    </Cluster>
-                </div>
-            }
-        </Grid>
+        <div class="overflow-x-auto rounded-md border border-slate-200" data-testid="provider-pricing-table">
+            <table class="min-w-full border-collapse text-sm">
+                <thead>
+                    <tr class="border-b border-slate-200 text-left text-slate-600">
+                        <th class="px-3 py-2 font-semibold">Model</th>
+                        <th class="px-3 py-2 font-semibold">Input</th>
+                        <th class="px-3 py-2 font-semibold">Cached input</th>
+                        <th class="px-3 py-2 font-semibold">Output</th>
+                        <th class="px-3 py-2 font-semibold">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var index = 0; index < Model.ModelPrices.Count; index++)
+                    {
+                        var price = Model.ModelPrices[index];
+                        <tr class="border-b border-slate-100 last:border-b-0"
+                            data-testid="@($"provider-pricing-row-{index}")">
+                            <td class="min-w-[14rem] px-3 py-2 align-top">
+                                <InputText @bind-Value="price.Model"
+                                           class="cda-input"
+                                           data-testid="@($"provider-pricing-model-{index}")" />
+                            </td>
+                            <td class="min-w-[10rem] px-3 py-2 align-top">
+                                <InputNumber @bind-Value="price.InputPerMillionTokensUsd"
+                                             class="cda-input"
+                                             data-testid="@($"provider-pricing-input-{index}")" />
+                            </td>
+                            <td class="min-w-[10rem] px-3 py-2 align-top">
+                                <InputNumber @bind-Value="price.CachedInputPerMillionTokensUsd"
+                                             class="cda-input"
+                                             data-testid="@($"provider-pricing-cached-{index}")" />
+                            </td>
+                            <td class="min-w-[10rem] px-3 py-2 align-top">
+                                <InputNumber @bind-Value="price.OutputPerMillionTokensUsd"
+                                             class="cda-input"
+                                             data-testid="@($"provider-pricing-output-{index}")" />
+                            </td>
+                            <td class="px-3 py-2 align-top">
+                                <Button Text="Remove"
+                                        ButtonStyle="ButtonStyle.Light"
+                                        Size="ButtonSize.Small"
+                                        Click="@(() => RemovePriceRow(price))" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
 
         <Cluster Gap="LayoutGap.Small">
             <Button Text="Load from provider"
@@ -59,23 +75,29 @@
             <Button Text="Add model price"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
-                    Click="AddPriceRow" />
+                    Click="AddPriceRow"
+                    data-testid="provider-pricing-add-button" />
             <Button Text="Reset defaults"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
-                    Click="ResetDefaults" />
+                    Click="ResetDefaults"
+                    data-testid="provider-pricing-reset-button" />
         </Cluster>
     </Stack>
 </FormSection>
 
 @code {
     [Parameter]
-    public required CanDoItAll.Modules.Workspace.ProviderProfileEditorModel Model { get; set; }
+    public required IProviderModelPricingEditorModel Model { get; set; }
+
+    [Parameter]
+    public ProviderKind PricingKind { get; set; } = ProviderKind.OpenAi;
+
+    [Parameter]
+    public string? DefaultModel { get; set; }
 
     [Parameter]
     public EventCallback OnRefreshPrices { get; set; }
-
-    private CanDoItAll.AgentFramework.Models.ProviderKind PricingKind => ResolvePricingKind(Model.ConnectorPluginKey);
 
     private bool PrivateProviderLocked => ProviderPricingDefaults.IsPrivateProvider(PricingKind);
 
@@ -94,11 +116,12 @@
 
     private void AddPriceRow()
     {
-        var defaultPrice = ProviderPricingDefaults
-            .CreateDefaultPrices(PricingKind, ResolveDefaultModel())
-            .First();
+        var defaultPrice = ProviderPricingDefaults.CreateManualPriceTemplate(
+            PricingKind,
+            ResolveNextManualModelName());
         Model.ModelPrices.Add(new ProviderModelTokenPriceEditorModel
         {
+            Model = defaultPrice.Model,
             InputPerMillionTokensUsd = defaultPrice.InputPerMillionTokensUsd,
             CachedInputPerMillionTokensUsd = defaultPrice.CachedInputPerMillionTokensUsd,
             OutputPerMillionTokensUsd = defaultPrice.OutputPerMillionTokensUsd
@@ -123,17 +146,30 @@
 
     private string ResolveDefaultModel()
     {
-        return Model.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
+        return DefaultModel?.Trim() ?? string.Empty;
     }
 
-    private static CanDoItAll.AgentFramework.Models.ProviderKind ResolvePricingKind(string? connectorPluginKey)
+    private string ResolveNextManualModelName()
     {
-        return connectorPluginKey?.Trim() switch
+        const string manualModelName = "custom-model";
+        if (!ModelNameExists(manualModelName))
         {
-            ScenarioHarnessProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            ProcessMockProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            OpenAiProviderAdapter.PluginKey => CanDoItAll.AgentFramework.Models.ProviderKind.OpenAi,
-            _ => CanDoItAll.AgentFramework.Models.ProviderKind.Ollama
-        };
+            return manualModelName;
+        }
+
+        for (var suffix = 2; ; suffix++)
+        {
+            var candidate = $"{manualModelName}-{suffix}";
+            if (!ModelNameExists(candidate))
+            {
+                return candidate;
+            }
+        }
+    }
+
+    private bool ModelNameExists(string model)
+    {
+        return Model.ModelPrices.Any(price =>
+            string.Equals(price.Model, model, StringComparison.OrdinalIgnoreCase));
     }
 }

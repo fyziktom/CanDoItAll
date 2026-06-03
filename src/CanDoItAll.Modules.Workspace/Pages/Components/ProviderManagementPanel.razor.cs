@@ -24,6 +24,7 @@ public partial class ProviderManagementPanel
     private IReadOnlyList<SecretListItem> secrets = [];
     private IReadOnlyList<ConnectorPluginManifest> providerManifests = [];
     private string providerSearch = string.Empty;
+    private int providerEditorTabIndex;
 
     private ConnectorPluginManifest? SelectedProviderManifest => providerManifests.FirstOrDefault(manifest =>
             string.Equals(manifest.PluginKey, providerModel.ConnectorPluginKey, StringComparison.OrdinalIgnoreCase))
@@ -147,6 +148,7 @@ public partial class ProviderManagementPanel
     private Task ResetProviderAsync()
     {
         providerModel = NewProvider();
+        providerEditorTabIndex = 0;
         return Task.CompletedTask;
     }
 
@@ -301,6 +303,16 @@ public partial class ProviderManagementPanel
             OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
             _ => AgentFrameworkProviderKind.Ollama
         };
+    }
+
+    private AgentFrameworkProviderKind ResolveProviderPricingKind()
+    {
+        return ResolveAgentFrameworkProviderKind(providerModel.ConnectorPluginKey);
+    }
+
+    private string ResolveProviderDefaultModel()
+    {
+        return providerModel.Configuration.GetText(ProviderConnectorFieldKeys.DefaultModel);
     }
 
     private void NotifyPricingRefresh(ProviderModelPricingRefreshResult result)
