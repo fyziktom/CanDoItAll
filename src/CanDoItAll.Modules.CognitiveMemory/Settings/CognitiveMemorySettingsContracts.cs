@@ -83,7 +83,7 @@ public sealed record CognitiveMemoryAutomationSettings(
         CognitiveMemoryModelExecutionProfileDefaults.OpenAiProfiles;
 
     public static CognitiveMemoryAutomationSettings Defaults(DateTimeOffset nowUtc) => new(
-        IsEnabled: true,
+        IsEnabled: false,
         CognitiveMemoryAutomationScheduleMode.ManualOnly,
         "02:00",
         30,

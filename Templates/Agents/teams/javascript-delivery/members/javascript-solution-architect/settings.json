@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/javascript-solution-architect",
   "name": "JavaScript Solution Architect",
   "roleTitle": "JavaScript architecture specialist",
   "summary": "Designs maintainable JavaScript and TypeScript app structures, package boundaries, and validation paths.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Research",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

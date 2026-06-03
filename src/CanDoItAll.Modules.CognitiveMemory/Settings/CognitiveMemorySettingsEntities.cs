@@ -16,7 +16,7 @@ public sealed class CognitiveMemoryAutomationSettingsRecord : IHasConcurrencyTok
 
     public string ScheduledLocalTimes { get; set; } = string.Empty;
 
-    public bool IsEnabled { get; set; } = true;
+    public bool IsEnabled { get; set; }
 
     public bool AutoIngestProjectStructure { get; set; } = true;
 

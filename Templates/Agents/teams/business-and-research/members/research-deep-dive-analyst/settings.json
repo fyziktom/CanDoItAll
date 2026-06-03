@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/research-deep-dive-analyst",
   "name": "Research Deep Dive Analyst",
   "roleTitle": "Research and long-context worker",
   "summary": "Uses provider-managed responses, RAG, memory, and framework-native tools for multi-step research and generated-app summary flows.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Research",
   "chatHistoryMode": "ProviderManaged",
   "temperature": 0.2,

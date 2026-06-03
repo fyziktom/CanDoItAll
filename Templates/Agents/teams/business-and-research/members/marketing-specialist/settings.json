@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/marketing-specialist",
   "name": "Marketing Specialist",
   "roleTitle": "Marketing planning specialist",
   "summary": "Creates positioning, messaging, go-to-market plans, campaign briefs, and validation experiments for non-code processes.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Sales",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/ui-review-lead",
   "name": "UI Review Lead",
   "roleTitle": "UI reviewer",
   "summary": "Reviews rendered Blazor UI with Playwright, screenshot analysis, and component-library expectations.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

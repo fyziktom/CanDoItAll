@@ -74,7 +74,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
             Assert.Equal(openAiDefaultProvider.Id, qaAgentBeforeRepair.ProviderProfileId);
-            Assert.Equal(string.Empty, qaAgentBeforeRepair.Model);
+            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, qaAgentBeforeRepair.Model);
 
             await repairService.EnsureCurrentOrganizationCatalogAsync();
 
@@ -88,7 +88,7 @@ public sealed class ManagedSeedExecutionFallbackIntegrationTests
                 item => string.Equals(item.Name, "Delivery QA Observer", StringComparison.Ordinal));
 
             Assert.Equal(openAiDefaultProviderAfterRepair.Id, qaAgentAfterRepair.ProviderProfileId);
-            Assert.Equal(string.Empty, qaAgentAfterRepair.Model);
+            Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, qaAgentAfterRepair.Model);
         }
         finally
         {

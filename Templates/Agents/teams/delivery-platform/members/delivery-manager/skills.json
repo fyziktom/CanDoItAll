@@ -1,7 +1,12 @@
 {
-  "skills": [
-    "candoitall-api-processes",
-    "candoitall-api-project-structure",
-    "candoitall-api-workflows"
-  ]
+  "capabilityKeys": [
+    "workspace-list-files",
+    "workspace-search",
+    "workspace-read-file",
+    "workspace-stat-path",
+    "workspace-create-directory",
+    "workspace-write-file",
+    "workspace-append-file"
+  ],
+  "notes": "Resolved against the built-in capability catalog during seed materialization. Keep this role focused on evidence and managed artifact writeback."
 }

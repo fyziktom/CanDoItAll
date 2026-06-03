@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/portfolio-architect",
   "name": "Portfolio Architect",
   "roleTitle": "Architecture steward",
   "summary": "Owns architecture direction, source-of-truth choices, and bounded design guidance for governed delivery work.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Research",
   "chatHistoryMode": "ProviderDefault",
   "temperature": 0.2,

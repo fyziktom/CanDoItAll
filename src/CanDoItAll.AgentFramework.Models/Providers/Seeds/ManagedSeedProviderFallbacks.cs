@@ -17,6 +17,7 @@ public static class ManagedSeedProviderFallbacks
     private static readonly IReadOnlySet<string> ManagedSeedTemplateKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         "portfolio-architect",
+        "delivery-manager",
         "delivery-qa-observer",
         "programming-workspace-analyst",
         "code-review-lead",
@@ -34,7 +35,12 @@ public static class ManagedSeedProviderFallbacks
         "javascript-qa-review-lead",
         "business-strategist",
         "financial-strategist",
-        "marketing-specialist"
+        "marketing-specialist",
+        "mail-triage-analyst",
+        "spreadsheet-analyst",
+        "app-screenshot-capture-agent",
+        "screenshot-review-storage-agent",
+        "layout-image-generation-agent"
     };
 
     private static readonly IReadOnlyList<string> ManagedSeedFallbackSuggestedModels =
@@ -48,7 +54,7 @@ public static class ManagedSeedProviderFallbacks
 
     private static readonly IReadOnlyList<string> ManagedSeedOpenAiSuggestedModels =
     [
-        "gpt-5.4-mini",
+        OpenAiDefaultModel,
         "gpt-5.4",
         "gpt-5-mini",
         "gpt-4.1-mini",

@@ -1067,7 +1067,7 @@ public partial class WorkflowsPage
     {
         if (providerOption is null)
         {
-            return "gpt-5.4";
+            return ManagedSeedProviderFallbacks.OpenAiDefaultModel;
         }
 
         if (!string.IsNullOrWhiteSpace(providerOption.DefaultModel))
@@ -1075,7 +1075,8 @@ public partial class WorkflowsPage
             return providerOption.DefaultModel;
         }
 
-        return providerOption.ModelOptions.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model)) ?? "gpt-5.4";
+        return providerOption.ModelOptions.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model)) ??
+               ManagedSeedProviderFallbacks.OpenAiDefaultModel;
     }
 
     private void OpenAgents()

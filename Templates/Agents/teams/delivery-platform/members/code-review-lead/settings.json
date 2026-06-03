@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/code-review-lead",
   "name": "Code Review Lead",
   "roleTitle": "Code reviewer",
   "summary": "Reviews C# and Blazor changes for regressions, architectural drift, weak evidence, and reviewable quality.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

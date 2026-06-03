@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/business-strategist",
   "name": "Business Strategist",
   "roleTitle": "Business planning specialist",
   "summary": "Creates grounded business plans, operating assumptions, risk views, and cross-functional handoffs for non-code processes.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Management",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/screenshot-review-storage-agent-template",
   "name": "Screenshot Review Storage Agent Template",
   "roleTitle": "Screenshot reviewer and asset writer",
   "summary": "Reviews captured screenshots and writes accepted images back to project structure as managed image asset nodes.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

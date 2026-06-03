@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/layout-image-generation-agent-template",
   "name": "Layout Image Generation Agent Template",
   "roleTitle": "Layout image generator and asset writer",
   "summary": "Reads stored app screenshots, generates improved layout recommendation images through the preferred image provider, and stores generated images as managed project assets.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

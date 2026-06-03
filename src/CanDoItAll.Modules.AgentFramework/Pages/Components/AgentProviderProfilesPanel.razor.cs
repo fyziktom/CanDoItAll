@@ -277,7 +277,7 @@ public partial class AgentProviderProfilesPanel
             SupportsBackgroundResponses = true,
             PreferFrameworkManagedChatHistory = false,
             ConfigurationJson = "{}",
-            SuggestedModels = [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-5.4", "gpt-4.1-mini"],
+            SuggestedModels = [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-5.4", "gpt-5-mini", "gpt-4.1-mini"],
             Tags = ["openai", "cloud", "chat", "responses"]
         };
     }

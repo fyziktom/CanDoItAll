@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/release-readiness-manager",
   "name": "Release Readiness Manager",
   "roleTitle": "Release readiness manager",
   "summary": "Synthesizes QA, security, rollback, and smoke-proof evidence into an explicit release-readiness decision.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Management",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

@@ -5,7 +5,7 @@
   "summary": "Uses spreadsheet skill guidance plus framework-native tools to inspect workbook-like artifacts, compare purchasing documents, and call out concrete findings.",
   "status": "Active",
   "providerProfileKey": "openai-chat-completions",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Spreadsheet",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,
@@ -28,6 +28,18 @@
     "autoApproveExternalCallsByDefault": false
   },
   "access": {
+    "projectStructure": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllProjects": true,
+      "allowedProjectIds": []
+    },
+    "processes": {
+      "canRead": true,
+      "canWrite": false,
+      "allowAllDefinitions": true,
+      "allowedDefinitionIds": []
+    },
     "workspaceTools": {
       "profile": "BusinessAnalysis",
       "canReadStorage": false,

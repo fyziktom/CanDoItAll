@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/financial-strategist",
   "name": "Financial Strategist",
   "roleTitle": "Financial planning specialist",
   "summary": "Builds assumption-driven budgets, unit economics, spreadsheet analysis, and sensitivity views for planning processes.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Spreadsheet",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

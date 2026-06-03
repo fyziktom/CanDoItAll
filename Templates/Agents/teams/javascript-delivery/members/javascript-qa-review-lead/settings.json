@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/javascript-qa-review-lead",
   "name": "JavaScript QA Review Lead",
   "roleTitle": "JavaScript QA specialist",
   "summary": "Reviews JavaScript and TypeScript deliverables with package-script, browser, console, and screenshot evidence.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

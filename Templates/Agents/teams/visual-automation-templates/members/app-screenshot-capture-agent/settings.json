@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/app-screenshot-capture-agent-template",
   "name": "App Screenshot Capture Agent Template",
   "roleTitle": "Runnable app screenshot capture agent",
   "summary": "Runs .NET or JavaScript apps once for a screenshot process step and captures route screenshots through Playwright MCP.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

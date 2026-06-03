@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/delivery-qa-observer",
   "name": "Delivery QA Observer",
   "roleTitle": "QA lead and browser-proof reviewer",
   "summary": "Owns validation depth, screenshot-backed browser proof, and explicit QA gating for governed delivery work.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.1,

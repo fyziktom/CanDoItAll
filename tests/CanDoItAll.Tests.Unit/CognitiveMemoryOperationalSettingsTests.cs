@@ -11,6 +11,21 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class CognitiveMemoryOperationalSettingsTests
 {
     [Fact]
+    public async Task AutomationSettingsService_DefaultsToDisabled()
+    {
+        var fixture = CreateFixture();
+        var service = new CognitiveMemoryAutomationSettingsService(fixture.Factory, fixture.Clock);
+
+        var settings = await service.GetAsync();
+
+        Assert.False(settings.IsEnabled);
+        Assert.Equal(CognitiveMemoryAutomationScheduleMode.ManualOnly, settings.ScheduleMode);
+        Assert.True(settings.AutoIngestProjectStructure);
+        Assert.True(settings.AutoIngestProcessRuntime);
+        Assert.True(settings.AutoConsolidateAfterIngestion);
+    }
+
+    [Fact]
     public async Task AutomationSettingsService_PersistsScheduleAndSourceOptions()
     {
         var fixture = CreateFixture();

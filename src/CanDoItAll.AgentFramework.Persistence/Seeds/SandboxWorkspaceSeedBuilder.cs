@@ -9,7 +9,7 @@ namespace CanDoItAll.AgentFramework.Persistence;
 internal static class SandboxWorkspaceSeedBuilder
 {
     private const string LatestVersion = "3.0";
-    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v14";
+    private const string SeriousDeliveryManagedSeedVersion = "2026-06-agent-template-teams-v16";
     private static readonly DateTimeOffset SeedTimestamp = new(2026, 4, 10, 0, 0, 0, TimeSpan.Zero);
 
     private static readonly IReadOnlyList<string> OpenAiSuggestedModels =
@@ -532,7 +532,7 @@ internal static class SandboxWorkspaceSeedBuilder
             ["openai-image-generation"] = openAiImageProviderId,
             ["ollama-local"] = localOllamaProviderId,
             ["ollama-remote"] = ollamaProviderId,
-            ["managed-seed-openai-default"] = ollamaProviderId
+            ["managed-seed-openai-default"] = openAiProviderId
         };
         var agentSeed = BuildAgentSeedFromTemplates(now, providerIdsByKey, capabilities);
         var agentIdsByTemplateKey = agentSeed.Agents.ToDictionary(

@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/security-reviewer",
   "name": "Security Reviewer",
   "roleTitle": "Security reviewer",
   "summary": "Reviews C# and Blazor changes for trust-boundary risk, hidden fallbacks, and explicit security posture.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Qa",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

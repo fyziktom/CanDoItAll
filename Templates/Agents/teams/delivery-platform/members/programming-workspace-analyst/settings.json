@@ -1,11 +1,11 @@
-﻿{
+{
   "stableIdKey": "agents/programming-workspace-analyst",
   "name": "Programming Workspace Analyst",
   "roleTitle": "Programming and repository worker",
   "summary": "Implements C# and Blazor changes with bounded source inspection, concrete validation, and real UI proof when needed.",
   "status": "Active",
   "providerProfileKey": "managed-seed-openai-default",
-  "model": "",
+  "model": "gpt-5.4-mini",
   "workload": "Programming",
   "chatHistoryMode": "FrameworkManaged",
   "temperature": 0.2,

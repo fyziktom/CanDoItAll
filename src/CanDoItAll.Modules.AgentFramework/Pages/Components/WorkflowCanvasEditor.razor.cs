@@ -2757,7 +2757,7 @@ public partial class WorkflowCanvasEditor
     {
         if (providerOption is null)
         {
-            return "gpt-5.4";
+            return ManagedSeedProviderFallbacks.OpenAiDefaultModel;
         }
 
         if (!string.IsNullOrWhiteSpace(providerOption.DefaultModel))
@@ -2765,7 +2765,8 @@ public partial class WorkflowCanvasEditor
             return providerOption.DefaultModel;
         }
 
-        return providerOption.ModelOptions.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model)) ?? "gpt-5.4";
+        return providerOption.ModelOptions.FirstOrDefault(model => !string.IsNullOrWhiteSpace(model)) ??
+               ManagedSeedProviderFallbacks.OpenAiDefaultModel;
     }
 
     private string ResolveComponentProviderLabel(LlmCallComponent component)
@@ -2866,7 +2867,7 @@ public partial class WorkflowCanvasEditor
             newComponentProviderProfileId = string.Empty;
             if (string.IsNullOrWhiteSpace(newComponentModel))
             {
-                newComponentModel = "gpt-5.4";
+                newComponentModel = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
             }
 
             return;

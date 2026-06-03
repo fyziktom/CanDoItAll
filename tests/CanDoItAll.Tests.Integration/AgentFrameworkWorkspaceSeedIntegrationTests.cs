@@ -10,8 +10,6 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
 {
-    private const string ExplicitDeliveryAgentModel = "gpt-5.4-mini";
-
     [Fact]
     public void Seed_catalog_loads_generic_reconciliation_skill_and_retires_stale_built_in_inline_skills()
     {
@@ -345,7 +343,19 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                      "Security Reviewer",
                      "Release Readiness Manager",
                      "Delivery Manager",
-                     "Research Deep Dive Analyst"
+                     "Research Deep Dive Analyst",
+                     ".NET Solution Architect",
+                     ".NET Application Developer",
+                     "Blazor Application Developer",
+                     ".NET QA Review Lead",
+                     "JavaScript Solution Architect",
+                     "JavaScript Application Developer",
+                     "JavaScript QA Review Lead",
+                     "Business Strategist",
+                     "Financial Strategist",
+                     "Marketing Specialist",
+                     "Mail Triage Analyst",
+                     "Spreadsheet Analyst"
                  })
         {
             var agent = Assert.Single(agents, item => string.Equals(item.Name, agentName, StringComparison.Ordinal));
@@ -398,7 +408,19 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                      "UI Review Lead",
                      "Security Reviewer",
                      "Release Readiness Manager",
-                     "Research Deep Dive Analyst"
+                     "Research Deep Dive Analyst",
+                     ".NET Solution Architect",
+                     ".NET Application Developer",
+                     "Blazor Application Developer",
+                     ".NET QA Review Lead",
+                     "JavaScript Solution Architect",
+                     "JavaScript Application Developer",
+                     "JavaScript QA Review Lead",
+                     "Business Strategist",
+                     "Financial Strategist",
+                     "Marketing Specialist",
+                     "Mail Triage Analyst",
+                     "Spreadsheet Analyst"
                  })
         {
             var agent = Assert.Single(
@@ -630,10 +652,10 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         AssertOpenAiBacked(uiReviewAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(securityReviewerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(releaseManagerAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
-        AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
-        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
-        AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id, ExplicitDeliveryAgentModel);
+        AssertOpenAiBacked(dotnetArchitectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(dotnetDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(blazorDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
+        AssertOpenAiBacked(dotnetQaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptArchitectAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptDeveloperAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
         AssertOpenAiBacked(javascriptQaAgent, openAiDefaultProvider.Id, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
@@ -1071,7 +1093,9 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
             "JavaScript QA Review Lead",
             "Business Strategist",
             "Financial Strategist",
-            "Marketing Specialist"
+            "Marketing Specialist",
+            "Mail Triage Analyst",
+            "Spreadsheet Analyst"
         ];
 
         foreach (var agentName in managedAgentNames)
@@ -1237,35 +1261,13 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
     {
         Assert.False(string.IsNullOrWhiteSpace(expectedModel));
         Assert.Equal(providerId, agent.ProviderProfileId);
-        Assert.Equal(ResolveExpectedSeedModel(agent.Name, expectedModel), agent.Model);
+        Assert.Equal(expectedModel, agent.Model);
     }
 
     private static void AssertManagedSeedRefreshed(string agentName, (string Model, string ConfigurationJson) snapshot)
     {
-        Assert.Equal(ResolveExpectedSeedModel(agentName, ManagedSeedProviderFallbacks.OpenAiDefaultModel), snapshot.Model);
+        Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, snapshot.Model);
         Assert.Contains(GetExpectedManagedSeedVersion(), snapshot.ConfigurationJson, StringComparison.Ordinal);
-    }
-
-    private static string ResolveExpectedSeedModel(string agentName, string expectedModel)
-    {
-        if (expectedModel != ManagedSeedProviderFallbacks.OpenAiDefaultModel)
-        {
-            return expectedModel;
-        }
-
-        return UsesExplicitDeliveryAgentModel(agentName)
-            ? ExplicitDeliveryAgentModel
-            : string.Empty;
-    }
-
-    private static bool UsesExplicitDeliveryAgentModel(string agentName)
-    {
-        return agentName is
-            "HR Staffing Manager" or
-            ".NET Solution Architect" or
-            ".NET Application Developer" or
-            "Blazor Application Developer" or
-            ".NET QA Review Lead";
     }
 
     private static string GetExpectedManagedSeedVersion()
@@ -1297,7 +1299,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var editor = await workspaceService.GetAgentEditorAsync(qaAgent.Id);
         editor.Summary = "Tracks what agents are doing, reviews proofs, and highlights missing gates.";
         editor.ProviderProfileId = ollamaProviderId;
-        editor.Model = "qwen3.5:9b";
+        editor.Model = string.Empty;
         editor.ConfigurationJson = "{}";
         editor.SelectedCapabilityIds = editor.SelectedCapabilityIds
             .Where(id => id != capabilityIdsByKey["candoitall-frontend-theme"] &&
@@ -1324,7 +1326,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var editor = await workspaceService.GetAgentEditorAsync(programmingAgent.Id);
         editor.Summary = "Uses skills, RAG, approval-aware tools, and workspace execution helpers to inspect and improve repositories or build applications.";
         editor.ProviderProfileId = openAiChatProviderId;
-        editor.Model = "gpt-4o-mini";
+        editor.Model = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
         editor.ConfigurationJson = "{}";
         editor.SelectedCapabilityIds = editor.SelectedCapabilityIds
             .Where(id => id != capabilityIdsByKey["candoitall-codeanalytics-mcp"] &&
@@ -1353,7 +1355,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         var editor = await workspaceService.GetAgentEditorAsync(architectAgent.Id);
         editor.Summary = "Explores integration seams, rights boundaries, and long-term CanDoItAll alignment.";
         editor.ProviderProfileId = openAiDefaultProviderId;
-        editor.Model = "gpt-4o-mini";
+        editor.Model = ManagedSeedProviderFallbacks.OpenAiDefaultModel;
         editor.ConfigurationJson = "{}";
         editor.SelectedCapabilityIds = editor.SelectedCapabilityIds
             .Where(id => id != capabilityIdsByKey["candoitall-codeanalytics-mcp"] &&

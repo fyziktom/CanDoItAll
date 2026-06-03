@@ -95,6 +95,13 @@ public sealed class AgentTeamCatalogIntegrationTests
             {
                 Assert.False(string.IsNullOrWhiteSpace(member.Instructions));
                 Assert.False(string.IsNullOrWhiteSpace(member.Settings.ProviderProfileKey));
+                Assert.Equal(ManagedSeedProviderFallbacks.OpenAiDefaultModel, member.Settings.Model);
+                Assert.NotNull(member.Settings.Access.ProjectStructure);
+                Assert.True(member.Settings.Access.ProjectStructure.CanRead);
+                Assert.True(member.Settings.Access.ProjectStructure.AllowAllProjects);
+                Assert.NotNull(member.Settings.Access.Processes);
+                Assert.True(member.Settings.Access.Processes.CanRead);
+                Assert.True(member.Settings.Access.Processes.AllowAllDefinitions);
                 Assert.NotEmpty(member.Skills.CapabilityKeys);
             });
 

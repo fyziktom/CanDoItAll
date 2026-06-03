@@ -212,7 +212,7 @@ public sealed class ManagedSeedProviderFallbacksTests
             Notes: "Seeded OpenAI provider.",
             HealthStatus: "Not checked",
             LastCheckedAtUtc: null,
-            SuggestedModels: [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-4o-mini", "gpt-4.1"]);
+            SuggestedModels: [ManagedSeedProviderFallbacks.OpenAiDefaultModel, "gpt-5.4", "gpt-5-mini", "gpt-4.1-mini", "gpt-4.1"]);
     }
 
     private static ProviderProfile CreateFallbackProvider()
