@@ -1,5 +1,0 @@
-# SB05 Changed File Hashes
-
-- `codex/bundles/process-workflow-agent-hardening-v2/scripts/validate_bundle.py` `51795b7652cbd3f21a63360d529ddc1dbe729eace6e91dac4dd0c1788161889e`
-- `codex/skills/bundles/candoitall-bundle-validator/SKILL.md` `5b22cb6cbb8878f2c6cda7858d113efddd37495b845cbd89eb5a0e1deb52a7af`
-- `codex/skills/bundles/candoitall-bundle-execution/SKILL.md` `612b1ae741bb77eae1d46d577d90dcd9d70010d8e3c2083df1f341eaf4d467b4`

@@ -1,8 +1,0 @@
-Command: git grep -n -E "WorkflowInputParameterDescriptor|ISchedulerWorkflowInputSchemaService|inputParameters:" HEAD -- src Templates/Workflows tests
-ExpectedExitCode: 1
-ActualExitCode: 1
-StartedUtc: 2026-05-29T19:10:23.3256648Z
-
-
-Finding: HEAD did not contain workflow input parameter descriptors, Scheduler schema service, or template inputParameters metadata.
-FinishedUtc: 2026-05-29T19:10:23.3311048Z

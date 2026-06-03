@@ -1,7 +1,0 @@
-Command: completed failing-first index for SB05 Scheduler typed input UX
-ExitCode: 1
-
-Expected pre-implementation failure:
-- Scheduler form did not render typed Office365 workflow input fields.
-- Clearing required email could not be validated through typed controls because users only had raw JSON.
-- The red proof is preserved in bundle://proof/SB05/transcripts/failing-first-typed-scheduler-form-before-implementation.txt.

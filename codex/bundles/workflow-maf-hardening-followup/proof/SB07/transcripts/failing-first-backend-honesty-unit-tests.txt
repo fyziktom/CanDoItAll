@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB07/failing-first-backend-honesty-unit-tests.txt
-ExitCode: 1
-Result: Failed before implementation because backend availability fields and validation were missing.
-Source transcript: bundle://proof/SB07/failing-first-backend-honesty-unit-tests.txt

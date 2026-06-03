@@ -1,9 +1,0 @@
-Command: completed failing-first index for SB08 final closure
-ExitCode: 1
-
-Expected pre-implementation failures across the bundle:
-- R1/R2/R4/R12 were pending before the Office365 executor/template work.
-- R8/R9 required SB05 browser/component proof before final Scheduler closure.
-- R10/R11 required SB07 route/retry/approval proof before final closure.
-
-This index points to the subbundle red proofs and is intentionally non-zero for completed-stage failing-first validation.

@@ -1,7 +1,0 @@
-Command: dotnet restore CanDoItAll.slnx
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 
-2026-05-29T18:11:05.3799924Z
-  Zjišťují se projekty, které se mají obnovit...
-  Všechny projekty jsou v aktuálním stavu pro obnovení.
-ExitCode: 0 EndTimeUtc: 2026-05-29T18:11:24.7659903Z

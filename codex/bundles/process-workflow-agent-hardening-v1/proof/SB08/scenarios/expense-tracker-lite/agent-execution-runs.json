@@ -1,6 +1,0 @@
-{
-  "scenarioKey": "expense-tracker-lite",
-  "processRunId": "23563b78-333e-485e-bb03-8cdea971a696",
-  "executionRuns": [],
-  "note": "The SB08 harness executed through Codex/local browser tooling and manual process transitions with automation dispatch suppressed. No CanDoItAll Agent Framework provider execution runs were created for this scenario."
-}

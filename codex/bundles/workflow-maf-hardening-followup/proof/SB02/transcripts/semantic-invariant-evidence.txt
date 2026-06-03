@@ -1,5 +1,0 @@
-Command: semantic invariant transcript index
-ExitCode: 0
-Result: invariant ids are indexed for completed-stage bundle validation.
-Invariant ID: SB02-HITL-EXECUTION-POSITION
-Invariant ID: SB02-APPROVAL-GATE-RUNTIME

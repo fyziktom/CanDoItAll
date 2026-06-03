@@ -1,8 +1,0 @@
-{
-  "processRunId": "d323bea1-7347-42d1-943b-8aef123c9722",
-  "canDoItAllProviderUsageObserved": false,
-  "incompleteUsageReason": "Provider usage is intentionally reported as unavailable instead of inferred from local tool execution.",
-  "scenarioKey": "recipe-pantry-planner",
-  "actualCostUsd": null,
-  "actualCostSource": "No CanDoItAll provider execution-run usage records were generated; local dotnet, Chrome CDP, Docker PostgreSQL, and Codex work are outside the app provider ledger."
-}

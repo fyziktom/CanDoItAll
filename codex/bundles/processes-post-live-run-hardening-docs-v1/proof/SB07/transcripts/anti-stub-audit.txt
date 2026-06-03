@@ -1,4 +1,0 @@
-Invariant: SB07-INV-001
-Command: rg -n "TODO|NotImplementedException|stub|pending" src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerAgentResolver.cs src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatModels.cs src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.ManagerChat.cs src\CanDoItAll.Modules.Processes\README.md tests\CanDoItAll.Tests.Integration\ProcessObservationIntentResolverTests.cs -S
-ExitCode: 1
-ExpectedExitCode: 1

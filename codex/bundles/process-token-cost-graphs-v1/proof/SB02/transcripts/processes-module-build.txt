@@ -1,9 +1,0 @@
-Command: dotnet build src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj --no-restore --no-dependencies /p:OutDir=.codex\tmp\processes-module-build\ -v minimal
-Working directory: C:\repositories\CanDoItAll
-Run label: 2026-06-01 SB02 processes module build proof
-Exit code: 0
-
-Result summary:
-- CanDoItAll.Modules.Processes built successfully.
-- Warnings: 0
-- Errors: 0

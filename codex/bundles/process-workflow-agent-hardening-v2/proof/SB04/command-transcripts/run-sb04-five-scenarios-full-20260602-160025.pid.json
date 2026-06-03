@@ -1,7 +1,0 @@
-{
-  "pid": 63780,
-  "startedAtUtc": "2026-06-02T20:00:26.1539808Z",
-  "stdout": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v2\\proof\\SB04\\command-transcripts\\run-sb04-five-scenarios-full-20260602-160025.out.txt",
-  "stderr": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v2\\proof\\SB04\\command-transcripts\\run-sb04-five-scenarios-full-20260602-160025.err.txt",
-  "script": "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v2\\scripts\\run_sb04_real_process_e2e.ps1"
-}

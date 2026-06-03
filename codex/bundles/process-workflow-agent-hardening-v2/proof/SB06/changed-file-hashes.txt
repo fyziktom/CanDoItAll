@@ -1,8 +1,0 @@
-# SB06 Changed File Hashes
-
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.DecisionServices.cs` `b8510a1049e52b052e68179c0a0400c1f6a64b9a43341a7af451bf9f26c75435`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Models.cs` `31bb6b20416c17162e239e197c8c2fa46c05f0ecfd9365997fa64ebc06b51f86`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.GovernedRules.cs` `2ad44d010526a35b89521b4f8531d74fd629d815fd651af7f01294330d8ca8aa`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs` `ae1a4bbca11c05355e96ffe1e532e323f10dcc78e34d0e81bb007b859fb1519a`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs` `e0e763e9cb4cab8c0c7aafc27a5f0965637a66337e0ca45f31095cccd5e977ca`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs` `01467a70b327bc61ca28da8b365eac835b12f091e18173b030cae2fb6cd20f7b`

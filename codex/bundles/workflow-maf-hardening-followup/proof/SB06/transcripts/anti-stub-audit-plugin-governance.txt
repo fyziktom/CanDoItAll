@@ -1,4 +1,0 @@
-Command: See proof manifest for the original command captured in this transcript.
-ExitCode: 0
-No anti-stub markers found in SB06 touchpoints.
-

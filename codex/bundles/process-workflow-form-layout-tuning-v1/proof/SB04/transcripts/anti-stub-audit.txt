@@ -1,8 +1,0 @@
-Command: PowerShell anti-stub audit for changed production UI files
-ExitCode: 0
-PASS: No TODO, NotImplemented, lorem ipsum, dummy implementation, or fake implementation markers in changed production UI files.
-AUDITED: repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor
-AUDITED: repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepRoleAssignmentEditor.razor
-AUDITED: repo://src/CanDoItAll.Modules.Processes/Components/ProcessArtifactExpectationEditor.razor
-AUDITED: repo://src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor
-AUDITED: repo://src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs

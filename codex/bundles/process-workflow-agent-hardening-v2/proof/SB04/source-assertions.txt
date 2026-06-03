@@ -1,9 +1,0 @@
-SB04 source assertions:
-
-- The production proof harness does not contain `suppressAutomationDispatch = true`.
-- The production proof harness does not call `Transition-Step`.
-- The production proof harness does not call `dotnet new blazor` or contain harness app generator functions.
-- The generated source root is resolved from process-run lineage and recorded in per-scenario `generated-source-root.json`.
-- Generated-app browser proof is executed by `Sb04GeneratedAppBrowserValidationTests` against hosted generated app artifacts, not static screenshots.
-- Static web asset subst aliases are handled in command planning and cleanup rather than hidden by manual host setup.
-- Production templates, agents, skills, and seed assets do not branch on SB04 scenario keys.

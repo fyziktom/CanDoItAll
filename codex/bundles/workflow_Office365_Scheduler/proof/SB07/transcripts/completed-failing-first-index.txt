@@ -1,7 +1,0 @@
-Command: completed failing-first index for SB07 observability and retry policy
-ExitCode: 1
-
-Expected pre-implementation failure:
-- Scheduler history did not expose route/retry policy.
-- Approval-waiting scheduled workflows were not distinguished from retryable failures.
-- The red proof is preserved in bundle://proof/SB07/transcripts/failing-first-observability-retry-before-implementation.txt.

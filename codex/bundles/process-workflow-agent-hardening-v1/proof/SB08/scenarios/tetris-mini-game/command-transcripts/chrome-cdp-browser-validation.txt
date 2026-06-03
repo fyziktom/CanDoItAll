@@ -1,9 +1,0 @@
-Command: node C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\cdp\sb08-cdp-validator.cjs C:\Program Files\Google\Chrome\Application\chrome.exe tetris-mini-game http://127.0.0.1:5201 C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1\proof\SB08\scenarios\tetris-mini-game\screenshots C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1\proof\SB08\scenarios\tetris-mini-game\browser-state.json C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1\proof\SB08\scenarios\tetris-mini-game\browser-console.json 9401 C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\cdp\tetris-mini-game-profile
-WorkingDirectory: C:\repositories\CanDoItAll
-ExitCode: 0
-
-STDOUT:
-
-
-STDERR:
-

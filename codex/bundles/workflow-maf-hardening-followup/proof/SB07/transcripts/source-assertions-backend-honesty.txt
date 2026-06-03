@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB07/source-assertions-backend-honesty.txt
-ExitCode: 0
-Result: Source assertions found backend availability, policy validation, UI, API, DI, and in-process defaults.
-Source transcript: bundle://proof/SB07/source-assertions-backend-honesty.txt

@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB07/component-backend-honesty-after-implementation.txt
-ExitCode: 0
-Result: 1 targeted workflow canvas component test passed.
-Source transcript: bundle://proof/SB07/component-backend-honesty-after-implementation.txt

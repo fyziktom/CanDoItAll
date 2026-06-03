@@ -1,6 +1,0 @@
-Command: rg anti-stub audit for scoped Office365/Scheduler/Workflow template code
-ExitCode: 0
-
-Scoped anti-stub audit completed.
-Findings below are reviewed: the only match is an explicit unsupported-provider guard in Scheduler schema initialization, not a silent fallback or unfinished implementation.
-src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerSchemaInitializer.cs:24:        throw new NotSupportedException($"Scheduler planner schema initialization only supports PostgreSQL relational providers. Provider '{providerName}' is not supported.");

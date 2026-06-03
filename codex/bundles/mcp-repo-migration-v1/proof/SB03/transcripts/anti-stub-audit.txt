@@ -1,5 +1,0 @@
-Command: rg -n "TODO|NotImplemented|stub|fixture-specific" README.md docs
-Invariant ID: SB03-DOCS-CLOSURE
---- output ---
-Anti-stub audit passed: no TODO, NotImplemented, stub, or fixture-specific markers in MCP repo README/docs.
-ExitCode: 0
