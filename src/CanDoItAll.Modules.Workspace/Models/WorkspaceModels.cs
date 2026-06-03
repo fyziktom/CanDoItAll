@@ -145,6 +145,13 @@ public sealed class ProviderProfileEditorModel
     public List<ProviderModelTokenPriceEditorModel> ModelPrices { get; set; } = [];
 }
 
+public sealed record ProviderModelPricingRefreshResult(
+    List<ProviderModelTokenPriceEditorModel> ModelPrices,
+    int DiscoveredModelCount,
+    int ExplicitPriceCount,
+    int ModelNameOnlyCount,
+    string Message);
+
 public sealed record ProviderHealthResult(bool Success, string Message);
 
 public sealed partial class WorkspaceService(
@@ -378,6 +385,81 @@ public sealed partial class WorkspaceService(
         return Result<Guid>.Success(entity.Id);
     }
 
+    public async Task<Result<ProviderModelPricingRefreshResult>> RefreshProviderModelPricesAsync(
+        ProviderProfileEditorModel model,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var configuredBaseUrl = model.Configuration.GetText(ProviderConnectorFieldKeys.BaseUrl);
+        if (string.IsNullOrWhiteSpace(configuredBaseUrl))
+        {
+            return Result<ProviderModelPricingRefreshResult>.Failure(
+                Error.Validation("Provider base URL is required before model pricing can be loaded."));
+        }
+
+        var providerResolutionError = TryResolveProviderPlugin(
+            model,
+            out var providerPlugin,
+            out var providerManifest,
+            out var configSchemaVersion);
+        if (providerResolutionError is not null)
+        {
+            return Result<ProviderModelPricingRefreshResult>.Failure(providerResolutionError);
+        }
+
+        if (providerPlugin is not IProviderModelPricingSource pricingSource)
+        {
+            return Result<ProviderModelPricingRefreshResult>.Failure(Error.Validation(
+                $"{providerManifest.DisplayName} does not support provider API pricing refresh. Add model prices manually."));
+        }
+
+        var configuredTimeoutSeconds = model.Configuration.GetNumber(ProviderConnectorFieldKeys.TimeoutSeconds) ?? 45;
+        if (configuredTimeoutSeconds < 5)
+        {
+            return Result<ProviderModelPricingRefreshResult>.Failure(
+                Error.Validation("Provider timeout must be at least five seconds."));
+        }
+
+        var defaultModel = ResolveDefaultModel(model, providerPlugin.Manifest.PluginKey);
+        var profile = new ProviderProfile
+        {
+            Id = model.Id ?? Guid.NewGuid(),
+            Name = string.IsNullOrWhiteSpace(model.Name) ? providerManifest.DisplayName : model.Name.Trim(),
+            ConnectorPluginKey = providerPlugin.Manifest.PluginKey,
+            ProviderKind = providerPlugin.LegacyProviderKind,
+            ConfigSchemaVersion = configSchemaVersion,
+            BaseUrl = configuredBaseUrl.Trim().TrimEnd('/'),
+            ApiKeySecretId = model.ApiKeySecretId,
+            DefaultModel = defaultModel,
+            TimeoutSeconds = Math.Max(5, configuredTimeoutSeconds),
+            IsEnabled = model.IsEnabled,
+            ExtraSettingsJson = model.Configuration.ToJson()
+        };
+
+        var secretValue = await ResolveProviderSecretValueAsync(profile, cancellationToken);
+        var discoveryResult = await pricingSource.DiscoverModelPricingAsync(profile, secretValue, cancellationToken);
+        if (!discoveryResult.IsSuccess)
+        {
+            return Result<ProviderModelPricingRefreshResult>.Failure(discoveryResult.Errors);
+        }
+
+        var pricingKind = ResolveAgentFrameworkProviderKind(providerPlugin.Manifest.PluginKey);
+        var mergeResult = ProviderPricingDefaults.MergeDiscoveredModelPrices(
+            pricingKind,
+            defaultModel,
+            ProviderPricingDefaults.FromEditorModels(model.ModelPrices),
+            discoveryResult.Value!.Models);
+        var refreshResult = new ProviderModelPricingRefreshResult(
+            ProviderPricingDefaults.ToEditorModels(mergeResult.ModelPrices),
+            mergeResult.DiscoveredModelCount,
+            mergeResult.ExplicitPriceCount,
+            mergeResult.ModelNameOnlyCount,
+            BuildProviderPricingRefreshMessage(providerManifest.DisplayName, discoveryResult.Value.Message, mergeResult));
+
+        return Result<ProviderModelPricingRefreshResult>.Success(refreshResult);
+    }
+
     public async Task DeleteProviderAsync(Guid id, CancellationToken cancellationToken = default)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -404,6 +486,25 @@ public sealed partial class WorkspaceService(
 
     public Task<IReadOnlyList<SecretListItem>> ListSecretsAsync(CancellationToken cancellationToken = default)
         => secretService.ListForPickerAsync(cancellationToken);
+
+    private async Task<string?> ResolveProviderSecretValueAsync(
+        ProviderProfile profile,
+        CancellationToken cancellationToken)
+    {
+        if (profile.ApiKeySecretId is not { } secretId)
+        {
+            return null;
+        }
+
+        return await secretRuntimeResolver.ResolveValueAsync(
+            new SecretRuntimeRequest(
+                secretId,
+                SecretRuntimePurposes.AgentProviderApiKey,
+                [secretId],
+                ConsumerType: SecretRuntimeConsumerTypes.ProviderProfile,
+                ConsumerId: SecretRuntimeConsumerIds.ProviderProfile(profile.Id)),
+            cancellationToken);
+    }
 
     private static ProviderProfileEditorModel NewProvider() => new()
     {
@@ -497,6 +598,21 @@ public sealed partial class WorkspaceService(
             OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
             _ => AgentFrameworkProviderKind.Ollama
         };
+    }
+
+    private static string BuildProviderPricingRefreshMessage(
+        string providerDisplayName,
+        string adapterMessage,
+        CanDoItAll.AgentFramework.Models.ProviderModelPricingMergeResult mergeResult)
+    {
+        var exactPart = mergeResult.ExplicitPriceCount > 0
+            ? $"{mergeResult.ExplicitPriceCount} exact price row(s)"
+            : "no exact price rows";
+        var modelOnlyPart = mergeResult.ModelNameOnlyCount > 0
+            ? $"{mergeResult.ModelNameOnlyCount} model-name-only row(s)"
+            : "no model-name-only rows";
+
+        return $"{providerDisplayName}: {adapterMessage} Applied {exactPart} and {modelOnlyPart}; manual rows were preserved unless an exact API price matched the same model.";
     }
 }
 

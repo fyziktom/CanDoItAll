@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Globalization;
 using System.Text.Json;
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Security;
 using CanDoItAll.SharedKernel;
@@ -23,6 +25,10 @@ public sealed record ProviderExecutionResponse(
     bool ContainsWarnings,
     string? WarningSummary = null);
 
+public sealed record ProviderModelPricingDiscoveryResult(
+    IReadOnlyList<ProviderDiscoveredModelPrice> Models,
+    string Message);
+
 internal static class ProviderConnectorFieldKeys
 {
     public const string BaseUrl = "baseUrl";
@@ -39,6 +45,14 @@ public interface IProviderAdapter : IConnectorPlugin
     Task<Result<ProviderExecutionResponse>> SendAsync(
         ProviderProfile profile,
         ProviderExecutionRequest request,
+        string? secretValue,
+        CancellationToken cancellationToken = default);
+}
+
+public interface IProviderModelPricingSource
+{
+    Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
+        ProviderProfile profile,
         string? secretValue,
         CancellationToken cancellationToken = default);
 }
@@ -126,10 +140,14 @@ tests: unit:ProviderAdapterTests
 inputs: ProviderProfile, ProviderExecutionRequest
 outputs: ProviderExecutionResponse
 */
-public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
+public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
     public const string PluginKey = "provider.openai";
     public const string DefaultModel = "gpt-5.4-mini";
+    private static readonly string[] ModelIdPropertyNames = ["id", "model"];
+    private static readonly string[] InputPricePropertyNames = ["inputPerMillionTokensUsd", "input_per_million_tokens_usd"];
+    private static readonly string[] CachedInputPricePropertyNames = ["cachedInputPerMillionTokensUsd", "cached_input_per_million_tokens_usd"];
+    private static readonly string[] OutputPricePropertyNames = ["outputPerMillionTokensUsd", "output_per_million_tokens_usd"];
 
     private static readonly ConnectorPluginManifest PluginManifest = new(
         PluginKey,
@@ -203,6 +221,29 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
             request.ContainsSensitiveContent ? "Sensitive content was included in the outbound payload." : null));
     }
 
+    public async Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
+        ProviderProfile profile,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(secretValue))
+        {
+            return Result<ProviderModelPricingDiscoveryResult>.Failure(
+                Error.Validation("OpenAI profiles require an API key secret before model pricing can be loaded from the provider API."));
+        }
+
+        using var client = CreateClient(profile, secretValue);
+        using var response = await client.GetAsync(GetModelsUrl(profile.BaseUrl), cancellationToken);
+        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return Result<ProviderModelPricingDiscoveryResult>.Failure(
+                Error.Failure($"OpenAI model pricing discovery failed with HTTP {(int)response.StatusCode}."));
+        }
+
+        return Result<ProviderModelPricingDiscoveryResult>.Success(ReadOpenAiModelPricing(payload));
+    }
+
     private HttpClient CreateClient(ProviderProfile profile, string secretValue)
     {
         var client = httpClientFactory.CreateClient();
@@ -252,6 +293,153 @@ public sealed class OpenAiProviderAdapter(IHttpClientFactory httpClientFactory) 
         }
 
         return payload;
+    }
+
+    private static ProviderModelPricingDiscoveryResult ReadOpenAiModelPricing(string payload)
+    {
+        using var document = JsonDocument.Parse(payload);
+        var discoveredModels = EnumerateOpenAiModelElements(document.RootElement)
+            .Select(ReadOpenAiModelPricing)
+            .Where(model => !string.IsNullOrWhiteSpace(model.Model))
+            .OrderBy(model => model.Model, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var explicitPriceCount = discoveredModels.Count(model => model.HasExplicitPrices);
+        var message = explicitPriceCount > 0
+            ? $"Loaded exact pricing for {explicitPriceCount} model(s) from provider API."
+            : $"Loaded {discoveredModels.Count} model name(s); provider API did not return exact price metadata.";
+
+        return new ProviderModelPricingDiscoveryResult(discoveredModels, message);
+    }
+
+    private static IEnumerable<JsonElement> EnumerateOpenAiModelElements(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("data", out var dataElement) &&
+            dataElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in dataElement.EnumerateArray())
+            {
+                yield return item;
+            }
+        }
+        else if (root.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in root.EnumerateArray())
+            {
+                yield return item;
+            }
+        }
+    }
+
+    private static ProviderDiscoveredModelPrice ReadOpenAiModelPricing(JsonElement element)
+    {
+        var model = ResolveModelName(element);
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            return new ProviderDiscoveredModelPrice(string.Empty, null, null, null);
+        }
+
+        return TryReadExplicitPrice(element, model, out var discoveredPrice)
+            ? discoveredPrice
+            : new ProviderDiscoveredModelPrice(model, null, null, null);
+    }
+
+    private static string ResolveModelName(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return element.GetString()?.Trim() ?? string.Empty;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        foreach (var propertyName in ModelIdPropertyNames)
+        {
+            if (element.TryGetProperty(propertyName, out var property) &&
+                property.ValueKind == JsonValueKind.String)
+            {
+                return property.GetString()?.Trim() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
+    }
+
+    private static bool TryReadExplicitPrice(
+        JsonElement element,
+        string model,
+        out ProviderDiscoveredModelPrice discoveredPrice)
+    {
+        if (element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty("pricing", out var pricingElement) &&
+            TryReadExplicitPriceCore(pricingElement, model, out discoveredPrice))
+        {
+            return true;
+        }
+
+        return TryReadExplicitPriceCore(element, model, out discoveredPrice);
+    }
+
+    private static bool TryReadExplicitPriceCore(
+        JsonElement element,
+        string model,
+        out ProviderDiscoveredModelPrice discoveredPrice)
+    {
+        discoveredPrice = default!;
+        if (element.ValueKind != JsonValueKind.Object ||
+            !TryReadNonNegativeDecimal(element, InputPricePropertyNames, out var inputPrice) ||
+            !TryReadNonNegativeDecimal(element, CachedInputPricePropertyNames, out var cachedInputPrice) ||
+            !TryReadNonNegativeDecimal(element, OutputPricePropertyNames, out var outputPrice))
+        {
+            return false;
+        }
+
+        discoveredPrice = new ProviderDiscoveredModelPrice(
+            model,
+            inputPrice,
+            cachedInputPrice,
+            outputPrice);
+        return true;
+    }
+
+    private static bool TryReadNonNegativeDecimal(
+        JsonElement element,
+        IReadOnlyList<string> propertyNames,
+        out decimal value)
+    {
+        value = 0m;
+        foreach (var propertyName in propertyNames)
+        {
+            if (!element.TryGetProperty(propertyName, out var property))
+            {
+                continue;
+            }
+
+            if (property.ValueKind == JsonValueKind.Number &&
+                property.TryGetDecimal(out var numericValue) &&
+                numericValue >= 0m)
+            {
+                value = numericValue;
+                return true;
+            }
+
+            if (property.ValueKind == JsonValueKind.String &&
+                decimal.TryParse(
+                    property.GetString(),
+                    NumberStyles.Number,
+                    CultureInfo.InvariantCulture,
+                    out var stringValue) &&
+                stringValue >= 0m)
+            {
+                value = stringValue;
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 
@@ -393,7 +581,7 @@ public sealed class ProcessMockProviderAdapter : IProviderAdapter
     }
 }
 
-public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
+public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
     public const string PluginKey = "provider.ollama.local";
 
@@ -462,15 +650,95 @@ public sealed class OllamaProviderAdapter(IHttpClientFactory httpClientFactory) 
             request.ContainsSensitiveContent ? "Sensitive content was included in the outbound payload." : null));
     }
 
+    public async Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
+        ProviderProfile profile,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+    {
+        using var client = CreateClient(profile);
+        using var response = await client.GetAsync($"{profile.BaseUrl.TrimEnd('/')}/api/tags", cancellationToken);
+        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return Result<ProviderModelPricingDiscoveryResult>.Failure(
+                Error.Failure($"Ollama model discovery failed with HTTP {(int)response.StatusCode}."));
+        }
+
+        var models = ReadOllamaModelNames(payload)
+            .Select(model => new ProviderDiscoveredModelPrice(model, null, null, null))
+            .ToList();
+        return Result<ProviderModelPricingDiscoveryResult>.Success(new ProviderModelPricingDiscoveryResult(
+            models,
+            $"Loaded {models.Count} Ollama model name(s); Ollama does not expose token pricing, so prices remain editable settings."));
+    }
+
     private HttpClient CreateClient(ProviderProfile profile)
     {
         var client = httpClientFactory.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(Math.Max(5, profile.TimeoutSeconds));
         return client;
     }
+
+    private static IReadOnlyList<string> ReadOllamaModelNames(string payload)
+    {
+        using var document = JsonDocument.Parse(payload);
+        return EnumerateOllamaModelElements(document.RootElement)
+            .Select(ResolveOllamaModelName)
+            .Where(model => !string.IsNullOrWhiteSpace(model))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(model => model, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static IEnumerable<JsonElement> EnumerateOllamaModelElements(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Object &&
+            root.TryGetProperty("models", out var modelsElement) &&
+            modelsElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in modelsElement.EnumerateArray())
+            {
+                yield return item;
+            }
+        }
+        else if (root.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in root.EnumerateArray())
+            {
+                yield return item;
+            }
+        }
+    }
+
+    private static string ResolveOllamaModelName(JsonElement element)
+    {
+        if (element.ValueKind == JsonValueKind.String)
+        {
+            return element.GetString()?.Trim() ?? string.Empty;
+        }
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        if (element.TryGetProperty("name", out var nameElement) &&
+            nameElement.ValueKind == JsonValueKind.String)
+        {
+            return nameElement.GetString()?.Trim() ?? string.Empty;
+        }
+
+        if (element.TryGetProperty("model", out var modelElement) &&
+            modelElement.ValueKind == JsonValueKind.String)
+        {
+            return modelElement.GetString()?.Trim() ?? string.Empty;
+        }
+
+        return string.Empty;
+    }
 }
 
-public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter
+public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFactory) : IProviderAdapter, IProviderModelPricingSource
 {
     public const string PluginKey = "provider.ollama.remote";
 
@@ -506,6 +774,12 @@ public sealed class OllamaRemoteProviderAdapter(IHttpClientFactory httpClientFac
         string? secretValue,
         CancellationToken cancellationToken = default)
         => _inner.SendAsync(profile, request, secretValue, cancellationToken);
+
+    public Task<Result<ProviderModelPricingDiscoveryResult>> DiscoverModelPricingAsync(
+        ProviderProfile profile,
+        string? secretValue,
+        CancellationToken cancellationToken = default)
+        => _inner.DiscoverModelPricingAsync(profile, secretValue, cancellationToken);
 }
 
 /* codex-capsule

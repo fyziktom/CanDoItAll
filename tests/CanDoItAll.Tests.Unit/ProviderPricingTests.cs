@@ -1,6 +1,12 @@
+using System.Net;
+using System.Net.Http;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.SharedKernel.Configuration;
+
+using WorkspaceOllamaProviderAdapter = CanDoItAll.Modules.Workspace.OllamaProviderAdapter;
+using WorkspaceOpenAiProviderAdapter = CanDoItAll.Modules.Workspace.OpenAiProviderAdapter;
+using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -161,6 +167,131 @@ public sealed class ProviderPricingTests
         Assert.Equal("gpt-5.4-mini", flatConfiguration.GetText("defaultModel"));
     }
 
+    [Fact]
+    public void Discovered_prices_override_same_model_but_preserve_manual_rows()
+    {
+        var currentPrices = new[]
+        {
+            new ProviderModelTokenPrice("priced-model", 9.00m, 0.90m, 18.00m),
+            new ProviderModelTokenPrice("manual-only", 2.00m, 0.20m, 6.00m)
+        };
+        var discoveredPrices = new[]
+        {
+            new ProviderDiscoveredModelPrice("priced-model", 1.25m, 0.125m, 5.00m),
+            new ProviderDiscoveredModelPrice("name-only-model", null, null, null)
+        };
+
+        var merged = ProviderPricingDefaults.MergeDiscoveredModelPrices(
+            ProviderKind.OpenAi,
+            "priced-model",
+            currentPrices,
+            discoveredPrices);
+
+        Assert.Equal(2, merged.DiscoveredModelCount);
+        Assert.Equal(1, merged.ExplicitPriceCount);
+        Assert.Equal(1, merged.ModelNameOnlyCount);
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "priced-model", out var pricedModel));
+        Assert.Equal(1.25m, pricedModel.InputPerMillionTokensUsd);
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "manual-only", out var manualOnly));
+        Assert.Equal(2.00m, manualOnly.InputPerMillionTokensUsd);
+        Assert.True(ProviderPricingDefaults.TryFindPrice(merged.ModelPrices, "name-only-model", out var nameOnlyModel));
+        Assert.Equal(0.75m, nameOnlyModel.InputPerMillionTokensUsd);
+    }
+
+    [Fact]
+    public async Task OpenAi_pricing_discovery_reads_explicit_price_metadata()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """
+                {
+                  "data": [
+                    {
+                      "id": "priced-model",
+                      "pricing": {
+                        "input_per_million_tokens_usd": 1.25,
+                        "cached_input_per_million_tokens_usd": "0.125",
+                        "output_per_million_tokens_usd": 5.00
+                      }
+                    }
+                  ]
+                }
+                """)
+        };
+        var adapter = new WorkspaceOpenAiProviderAdapter(new FakeHttpClientFactory(_ => response));
+        var result = await adapter.DiscoverModelPricingAsync(
+            new WorkspaceProviderProfile
+            {
+                Name = "OpenAI test",
+                BaseUrl = "https://api.example.test/v1/models",
+                DefaultModel = "priced-model",
+                TimeoutSeconds = 45
+            },
+            "sk-test");
+
+        Assert.True(result.IsSuccess);
+        var price = Assert.Single(result.Value!.Models);
+        Assert.True(price.HasExplicitPrices);
+        Assert.Equal("priced-model", price.Model);
+        Assert.Equal(1.25m, price.InputPerMillionTokensUsd);
+        Assert.Equal(0.125m, price.CachedInputPerMillionTokensUsd);
+        Assert.Equal(5.00m, price.OutputPerMillionTokensUsd);
+    }
+
+    [Fact]
+    public async Task OpenAi_pricing_discovery_requires_secret()
+    {
+        var adapter = new WorkspaceOpenAiProviderAdapter(new FakeHttpClientFactory(_ => new HttpResponseMessage(HttpStatusCode.OK)));
+
+        var result = await adapter.DiscoverModelPricingAsync(
+            new WorkspaceProviderProfile
+            {
+                Name = "OpenAI test",
+                BaseUrl = "https://api.example.test/v1/models",
+                DefaultModel = "priced-model",
+                TimeoutSeconds = 45
+            },
+            null);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(result.Errors, error => error.Message.Contains("API key secret", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Ollama_pricing_discovery_returns_model_names_without_prices()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(
+                """
+                {
+                  "models": [
+                    { "name": "llama3.1" },
+                    { "model": "mistral" }
+                  ]
+                }
+                """)
+        };
+        var adapter = new WorkspaceOllamaProviderAdapter(new FakeHttpClientFactory(_ => response));
+
+        var result = await adapter.DiscoverModelPricingAsync(
+            new WorkspaceProviderProfile
+            {
+                Name = "Ollama test",
+                BaseUrl = "http://127.0.0.1:11434",
+                DefaultModel = "llama3.1",
+                TimeoutSeconds = 45
+            },
+            null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.Models.Count);
+        Assert.All(result.Value.Models, model => Assert.False(model.HasExplicitPrices));
+        Assert.Contains(result.Value.Models, model => model.Model == "llama3.1");
+        Assert.Contains(result.Value.Models, model => model.Model == "mistral");
+    }
+
     private static ProviderProfile CreateProvider(
         string name,
         IReadOnlyList<ProviderModelTokenPrice> prices)
@@ -209,5 +340,23 @@ public sealed class ProviderPricingTests
             ReasoningTokens: 0,
             TotalTokens: inputTokens + outputTokens,
             ToolCallCount: 0);
+    }
+
+    private sealed class FakeHttpClientFactory(Func<HttpRequestMessage, HttpResponseMessage> handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient(new FakeHttpMessageHandler(handler));
+        }
+    }
+
+    private sealed class FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> handler) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(handler(request));
+        }
     }
 }

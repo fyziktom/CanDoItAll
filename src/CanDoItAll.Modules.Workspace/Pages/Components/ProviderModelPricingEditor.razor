@@ -50,6 +50,12 @@
         </Grid>
 
         <Cluster Gap="LayoutGap.Small">
+            <Button Text="Load from provider"
+                    ButtonStyle="ButtonStyle.Info"
+                    Size="ButtonSize.Small"
+                    Disabled="@(!OnRefreshPrices.HasDelegate)"
+                    Click="RefreshPricesAsync"
+                    data-testid="provider-pricing-refresh-button" />
             <Button Text="Add model price"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
@@ -65,6 +71,9 @@
 @code {
     [Parameter]
     public required CanDoItAll.Modules.Workspace.ProviderProfileEditorModel Model { get; set; }
+
+    [Parameter]
+    public EventCallback OnRefreshPrices { get; set; }
 
     private CanDoItAll.AgentFramework.Models.ProviderKind PricingKind => ResolvePricingKind(Model.ConnectorPluginKey);
 
@@ -105,6 +114,11 @@
     {
         Model.ModelPrices = ProviderPricingDefaults.CreateDefaultEditorModels(PricingKind, ResolveDefaultModel());
         Model.IsPrivateProvider = ProviderPricingDefaults.ResolveIsPrivateProvider(PricingKind, null);
+    }
+
+    private Task RefreshPricesAsync()
+    {
+        return OnRefreshPrices.InvokeAsync();
     }
 
     private string ResolveDefaultModel()

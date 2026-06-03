@@ -105,6 +105,29 @@ public partial class ProviderManagementPanel
         }
     }
 
+    private async Task RefreshProviderModelPricesAsync()
+    {
+        try
+        {
+            NormalizeProviderEditorForCurrentPlugin(resetCapabilities: false);
+            var result = await WorkspaceService.RefreshProviderModelPricesAsync(providerModel);
+            if (!result.IsSuccess)
+            {
+                NotificationService.Warning(
+                    "Provider pricing was not loaded",
+                    string.Join(" ", result.Errors.Select(error => error.Message)));
+                return;
+            }
+
+            providerModel.ModelPrices = result.Value!.ModelPrices;
+            NotifyPricingRefresh(result.Value);
+        }
+        catch (Exception exception)
+        {
+            NotificationService.Error("Provider pricing load failed", exception.Message);
+        }
+    }
+
     private async Task DeleteProviderAsync(
         Guid id)
     {
@@ -278,5 +301,16 @@ public partial class ProviderManagementPanel
             OpenAiProviderAdapter.PluginKey => AgentFrameworkProviderKind.OpenAi,
             _ => AgentFrameworkProviderKind.Ollama
         };
+    }
+
+    private void NotifyPricingRefresh(ProviderModelPricingRefreshResult result)
+    {
+        if (result.ExplicitPriceCount > 0)
+        {
+            NotificationService.Success("Provider pricing loaded", result.Message);
+            return;
+        }
+
+        NotificationService.Info("Provider models loaded", result.Message);
     }
 }

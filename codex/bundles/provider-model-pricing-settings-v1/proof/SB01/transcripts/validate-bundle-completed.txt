@@ -1,0 +1,9 @@
+Command:
+
+python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --stage completed codex\bundles\provider-model-pricing-settings-v1
+
+Result:
+
+Bundle is valid for stage 'completed': repo://codex/bundles/provider-model-pricing-settings-v1
+
+ExitCode: 0

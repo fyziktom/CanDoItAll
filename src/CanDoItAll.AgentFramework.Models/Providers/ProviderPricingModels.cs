@@ -9,6 +9,23 @@ public sealed record ProviderModelTokenPrice(
     decimal CachedInputPerMillionTokensUsd,
     decimal OutputPerMillionTokensUsd);
 
+public sealed record ProviderDiscoveredModelPrice(
+    string Model,
+    decimal? InputPerMillionTokensUsd,
+    decimal? CachedInputPerMillionTokensUsd,
+    decimal? OutputPerMillionTokensUsd)
+{
+    public bool HasExplicitPrices => InputPerMillionTokensUsd is >= 0m &&
+                                     CachedInputPerMillionTokensUsd is >= 0m &&
+                                     OutputPerMillionTokensUsd is >= 0m;
+}
+
+public sealed record ProviderModelPricingMergeResult(
+    IReadOnlyList<ProviderModelTokenPrice> ModelPrices,
+    int DiscoveredModelCount,
+    int ExplicitPriceCount,
+    int ModelNameOnlyCount);
+
 public sealed class ProviderModelTokenPriceEditorModel
 {
     public string Model { get; set; } = string.Empty;
@@ -131,6 +148,63 @@ public static class ProviderPricingDefaults
             .ToList();
     }
 
+    public static ProviderModelPricingMergeResult MergeDiscoveredModelPrices(
+        ProviderKind kind,
+        string? defaultModel,
+        IEnumerable<ProviderModelTokenPrice>? configuredPrices,
+        IEnumerable<ProviderDiscoveredModelPrice>? discoveredPrices)
+    {
+        var mergedPrices = NormalizeModelPrices(kind, defaultModel, configuredPrices)
+            .ToDictionary(price => price.Model, StringComparer.OrdinalIgnoreCase);
+        var discoveredModels = (discoveredPrices ?? [])
+            .Select(NormalizeDiscoveredPrice)
+            .Where(price => !string.IsNullOrWhiteSpace(price.Model))
+            .GroupBy(price => price.Model, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToList();
+
+        var explicitPriceCount = 0;
+        var modelNameOnlyCount = 0;
+        foreach (var discoveredPrice in discoveredModels)
+        {
+            if (discoveredPrice.HasExplicitPrices)
+            {
+                mergedPrices[discoveredPrice.Model] = new ProviderModelTokenPrice(
+                    discoveredPrice.Model,
+                    discoveredPrice.InputPerMillionTokensUsd!.Value,
+                    discoveredPrice.CachedInputPerMillionTokensUsd!.Value,
+                    discoveredPrice.OutputPerMillionTokensUsd!.Value);
+                explicitPriceCount++;
+                continue;
+            }
+
+            modelNameOnlyCount++;
+            if (!mergedPrices.ContainsKey(discoveredPrice.Model))
+            {
+                mergedPrices[discoveredPrice.Model] = CreateManualPriceTemplate(kind, discoveredPrice.Model);
+            }
+        }
+
+        return new ProviderModelPricingMergeResult(
+            NormalizeModelPrices(kind, defaultModel, mergedPrices.Values),
+            discoveredModels.Count,
+            explicitPriceCount,
+            modelNameOnlyCount);
+    }
+
+    public static ProviderModelTokenPrice CreateManualPriceTemplate(
+        ProviderKind kind,
+        string? model)
+    {
+        var normalizedModel = NormalizeModelName(model);
+        if (string.IsNullOrWhiteSpace(normalizedModel))
+        {
+            throw new ArgumentException("Model name is required for a manual price template.", nameof(model));
+        }
+
+        return CreateDefaultPrice(kind, normalizedModel);
+    }
+
     public static IReadOnlyList<ProviderModelTokenPrice> FromEditorModels(
         IEnumerable<ProviderModelTokenPriceEditorModel>? editorModels)
     {
@@ -219,6 +293,14 @@ public static class ProviderPricingDefaults
     }
 
     private static ProviderModelTokenPrice NormalizePrice(ProviderModelTokenPrice price)
+    {
+        return price with
+        {
+            Model = NormalizeModelName(price.Model)
+        };
+    }
+
+    private static ProviderDiscoveredModelPrice NormalizeDiscoveredPrice(ProviderDiscoveredModelPrice price)
     {
         return price with
         {
