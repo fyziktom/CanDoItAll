@@ -1732,16 +1732,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static string BuildArtifactTitle(ProcessAutomationExecutionArtifact artifact)
-    {
-        return string.IsNullOrWhiteSpace(artifact.DisplayName)
-            ? Path.GetFileName(artifact.RelativePath)
-            : artifact.DisplayName.Trim();
-    }
+        => ProcessArtifactProjectionPlanner.BuildArtifactTitle(artifact);
 
     private static string BuildExternalReferenceKey(ProcessAutomationExecutionArtifact artifact)
-    {
-        return $"agentframework-artifact:{artifact.Id:D}";
-    }
+        => ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
 
     private static string BuildCompletedDecisionArtifactExternalReferenceKey(Guid stepRunId, Guid artifactExpectationId)
     {
@@ -1749,17 +1743,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static string BuildProviderNativeBrowserArtifactExternalReferenceKey(Guid executionRunId, string relativePath)
-    {
-        return $"agentframework-browser-artifact:{executionRunId:D}:{WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath)}";
-    }
+        => ProcessArtifactProjectionPlanner.BuildProviderNativeBrowserArtifactExternalReferenceKey(executionRunId, relativePath);
 
     private static string BuildProcessMockArtifactExternalReferenceKey(
         Guid stepRunId,
         Guid artifactExpectationId,
         string relativePath)
-    {
-        return $"process-mock-artifact:{stepRunId:D}:{artifactExpectationId:D}:{NormalizeManagedRelativePathForComparison(relativePath)}";
-    }
+        => ProcessArtifactProjectionPlanner.BuildProcessMockArtifactExternalReferenceKey(
+            stepRunId,
+            artifactExpectationId,
+            relativePath);
 
     private static string BuildMissingTechnicalAgentBindingDiagnostic(
         Guid processRunId,
@@ -2440,23 +2433,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var displaySlug = FileSafeSlugBuilder.Build(displayName);
         var fileSlug = FileSafeSlugBuilder.Build(fileNameWithoutExtension);
         var expectedKind = ResolveExpectedArtifactKind(artifact);
-        var strongMatches = expectedArtifacts
-            .Where(item => MatchesExpectedArtifact(item, artifact, relativePath, displayName, displaySlug, fileSlug))
-            .ToList();
-        if (strongMatches.Count == 1)
+        var strongMatchedExpectationId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+            expectedArtifacts,
+            expectedKind,
+            item => MatchesExpectedArtifact(item, artifact, relativePath, displayName, displaySlug, fileSlug));
+        if (strongMatchedExpectationId.HasValue)
         {
-            return strongMatches[0].Id;
-        }
-
-        if (strongMatches.Count > 1)
-        {
-            var kindMatches = strongMatches
-                .Where(item => item.ArtifactKind == expectedKind)
-                .ToList();
-            if (kindMatches.Count == 1)
-            {
-                return kindMatches[0].Id;
-            }
+            return strongMatchedExpectationId.Value;
         }
 
         var providerNativeVisualMatches = expectedArtifacts
@@ -3599,25 +3582,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static string BuildResponseTextArtifactExternalReferenceKey(Guid executionRunId, string relativePath)
-    {
-        return $"assistant-response|{executionRunId:D}|{NormalizeManagedRelativePathForComparison(relativePath)}";
-    }
+        => ProcessArtifactProjectionPlanner.BuildResponseTextArtifactExternalReferenceKey(executionRunId, relativePath);
 
     private static string BuildWorkspaceWrittenArtifactExternalReferenceKey(
         Guid executionRunId,
         Guid artifactExpectationId,
         string relativePath)
-    {
-        return $"workspace-written-artifact|{executionRunId:D}|{artifactExpectationId:D}|{NormalizeManagedRelativePathForComparison(relativePath)}";
-    }
+        => ProcessArtifactProjectionPlanner.BuildWorkspaceWrittenArtifactExternalReferenceKey(
+            executionRunId,
+            artifactExpectationId,
+            relativePath);
 
     private static string BuildExistingManagedArtifactExternalReferenceKey(
         Guid executionRunId,
         Guid artifactExpectationId,
         string relativePath)
-    {
-        return $"existing-managed-artifact|{executionRunId:D}|{artifactExpectationId:D}|{NormalizeManagedRelativePathForComparison(relativePath)}";
-    }
+        => ProcessArtifactProjectionPlanner.BuildExistingManagedArtifactExternalReferenceKey(
+            executionRunId,
+            artifactExpectationId,
+            relativePath);
 
     private static string ResolveWorkspaceWrittenArtifactRelativePath(
         WorkspaceScopeDescriptor workspaceScope,
@@ -3760,12 +3743,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     internal static ProcessArtifactTrustStatus ResolveProjectedArtifactTrustStatus(
         DispatchArtifactExpectation expectedArtifact,
         ProcessStepRunStatus completionStatus)
-    {
-        return completionStatus == ProcessStepRunStatus.Completed &&
-               expectedArtifact.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord
-            ? ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement)
-            : ProcessArtifactTrustStatus.ReviewRequired;
-    }
+        => ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus);
 
     private static string BuildCompletedDecisionArtifactProvenanceSummary(
         DispatchCandidate candidate,

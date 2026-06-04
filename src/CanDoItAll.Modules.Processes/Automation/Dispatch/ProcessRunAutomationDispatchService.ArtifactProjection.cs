@@ -14,7 +14,6 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -50,11 +49,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var sourceExternalReferenceKey = BuildExternalReferenceKey(artifact);
-            var externalReferenceKey = ApplyArtifactProjectionLineage(
+            var recoveryContext = CreateArtifactRecoveryProjectionContext(lineage);
+            var sourceExternalReferenceKey = ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
+            var externalReferenceKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
                 sourceExternalReferenceKey,
                 detail.Run.Id,
-                lineage);
+                recoveryContext);
             if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
@@ -92,6 +92,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 detail.Run.InputSummary,
                 artifact,
                 TryDecodeTextArtifactContent(artifact, fullPath, content));
+            var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+                detail.Run.Id,
+                artifact,
+                matchedExpectation,
+                ResolveProcessArtifactKind(candidate, artifact),
+                completionStatus,
+                detail.Run.ResultSummary,
+                recoveryContext);
+
             var placement = await storagePlacementService.PlaceAsync(
                 new StoragePlacementRequest(
                     Path.GetFileName(fullPath),
@@ -110,37 +119,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 {
                     ProcessRunId = candidate.Run.Id,
                     StepRunId = candidate.StepRun.Id,
-                    ArtifactExpectationId = matchedExpectation?.Id,
-                    ArtifactKind = matchedExpectation?.ArtifactKind ?? ResolveProcessArtifactKind(candidate, artifact),
-                    Title = matchedExpectation?.Title ?? BuildArtifactTitle(artifact),
-                    TrustStatus = matchedExpectation is null
-                        ? ProcessArtifactTrustStatus.ReviewRequired
-                        : ResolveProjectedArtifactTrustStatus(matchedExpectation, completionStatus),
-                    SensitivityLevel = matchedExpectation?.SensitivityLevel ?? ProcessSensitivityLevel.Internal,
-                    ProvenanceSummary = BuildArtifactProjectionProvenance(
-                        $"Projected from AgentFramework execution run {detail.Run.Id:D} artifact '{artifact.RelativePath}'.",
-                        detail.Run.Id,
-                        lineage),
-                    AllowedFutureUsageSummary = "Process evidence and audit review.",
-                    ReviewSummary = string.IsNullOrWhiteSpace(artifact.Summary)
-                        ? detail.Run.ResultSummary
-                        : artifact.Summary,
+                    ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
+                    ArtifactKind = projectionPlan.ArtifactKind,
+                    Title = projectionPlan.Title,
+                    TrustStatus = projectionPlan.TrustStatus,
+                    SensitivityLevel = projectionPlan.SensitivityLevel,
+                    ProvenanceSummary = projectionPlan.ProvenanceSummary,
+                    AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
+                    ReviewSummary = projectionPlan.ReviewSummary,
                     ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = externalReferenceKey,
-                    ProjectionLineage = BuildArtifactProjectionLineage(
-                        ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
-                        detail.Run.Id,
-                        lineage,
-                        sourceArtifactId: artifact.Id,
-                        sourceExternalReferenceKey: sourceExternalReferenceKey)
+                    ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
+                    ProjectionLineage = projectionPlan.ProjectionLineage
                 },
                 cancellationToken);
             if (recordResult.IsSuccess)
             {
-                candidate.ExternalReferenceKeys.Add(externalReferenceKey);
-                if (matchedExpectation is not null)
+                candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
+                if (projectionPlan.ArtifactExpectationId.HasValue)
                 {
-                    candidate.RecordedArtifactExpectationIds.Add(matchedExpectation.Id);
+                    candidate.RecordedArtifactExpectationIds.Add(projectionPlan.ArtifactExpectationId.Value);
                 }
             }
             else
@@ -1639,24 +1636,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string externalReferenceKey,
         Guid executionRunId,
         ArtifactProjectionLineage? lineage)
-    {
-        if (lineage is null ||
-            !lineage.RecoveryExecutionRunId.HasValue ||
-            !lineage.RecoveredForExecutionRunId.HasValue)
-        {
-            return externalReferenceKey;
-        }
-
-        var hashInput = string.Join(
-            "|",
-            lineage.RecoveryExecutionRunId.Value.ToString("D"),
-            lineage.RecoveredForExecutionRunId.Value.ToString("D"),
-            executionRunId.ToString("D"),
-            lineage.ReworkPacketId?.ToString("D") ?? string.Empty,
-            externalReferenceKey);
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(hashInput)).AsSpan(0, 16)).ToLowerInvariant();
-        return $"manager-recovery-artifact|sha256:{hash}";
-    }
+        => ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+            externalReferenceKey,
+            executionRunId,
+            CreateArtifactRecoveryProjectionContext(lineage));
 
     private static ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
         ProcessArtifactProjectionSourceKind sourceKind,
@@ -1664,36 +1647,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ArtifactProjectionLineage? lineage = null,
         Guid? sourceArtifactId = null,
         string sourceExternalReferenceKey = "")
-    {
-        return new ProcessArtifactProjectionLineage
-        {
-            SourceKind = sourceKind,
-            SourceExecutionRunId = sourceExecutionRunId,
-            RecoveryExecutionRunId = lineage?.RecoveryExecutionRunId,
-            RecoveredForExecutionRunId = lineage?.RecoveredForExecutionRunId,
-            ProjectedExecutionRunId = sourceExecutionRunId,
-            SourceArtifactId = sourceArtifactId,
-            ReworkPacketId = lineage?.ReworkPacketId,
-            SourceExternalReferenceKey = sourceExternalReferenceKey
-        };
-    }
+        => ProcessArtifactProjectionLineageBuilder.BuildLineage(
+            sourceKind,
+            sourceExecutionRunId,
+            CreateArtifactRecoveryProjectionContext(lineage),
+            sourceArtifactId,
+            sourceExternalReferenceKey);
 
     private static string BuildArtifactProjectionProvenance(
         string baseProvenance,
         Guid executionRunId,
         ArtifactProjectionLineage? lineage)
-    {
-        if (lineage is null ||
-            !lineage.RecoveryExecutionRunId.HasValue ||
-            !lineage.RecoveredForExecutionRunId.HasValue)
-        {
-            return baseProvenance;
-        }
+        => ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+            baseProvenance,
+            executionRunId,
+            CreateArtifactRecoveryProjectionContext(lineage));
 
-        var reworkPacketSummary = lineage.ReworkPacketId.HasValue
-            ? $" Rework packet id: {lineage.ReworkPacketId.Value:D}."
-            : string.Empty;
-        return $"{baseProvenance} Manager recovery lineage: recovery execution run {lineage.RecoveryExecutionRunId.Value:D}; recovered-for execution run {lineage.RecoveredForExecutionRunId.Value:D}; projected execution run {executionRunId:D}.{reworkPacketSummary}";
+    private static ProcessArtifactRecoveryProjectionContext CreateArtifactRecoveryProjectionContext(ArtifactProjectionLineage? lineage)
+    {
+        return lineage is null
+            ? ProcessArtifactRecoveryProjectionContext.None
+            : new ProcessArtifactRecoveryProjectionContext(
+                lineage.RecoveryExecutionRunId,
+                lineage.RecoveredForExecutionRunId,
+                lineage.ReworkPacketId);
     }
 
 }

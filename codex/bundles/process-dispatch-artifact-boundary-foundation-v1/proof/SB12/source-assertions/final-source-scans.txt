@@ -1,0 +1,55 @@
+Command: source scan: no Process Core/driver pack, no MAF Process dependency, no prohibited viewport proof, planner wiring
+WorkingDirectory: repo://
+RunLabel: SB12 final source assertions
+
+SB02-INV-001 SB04-INV-001 SB07-INV-001 SB10-INV-001 SB12-INV-001
+## No Process Core or driver-pack project files
+No matching project/file paths.
+## MAF source/project references to Process product modules
+No source or project references.
+## Prohibited viewport proof paths in current bundle proof
+No prohibited viewport proof paths.
+## Planner/helper source assertions
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:273:        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactExpectationMatcher.cs")));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:274:        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactProjectionLineageBuilder.cs")));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:276:        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactEvidenceValidationRules.cs")));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:292:        var plannerIndex = source.IndexOf("ProcessArtifactProjectionPlanner.PlanExecutionArtifact", methodIndex, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14447:    public void ProcessArtifactProjectionLineageBuilder_SB05_INV_001_hashes_recovery_key_and_records_lineage()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14459:        var compactKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14463:        var lineage = ProcessArtifactProjectionLineageBuilder.BuildLineage(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14469:        var provenance = ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14488:    public void ProcessArtifactExpectationMatcher_SB05_INV_002_disambiguates_strong_match_by_kind()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14514:        var matchedId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14542:        var plan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14596:    public void ProcessArtifactEvidenceValidationRules_SB10_INV_001_rejects_stranded_evidence_and_requires_durable_paths()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14598:        Assert.False(ProcessArtifactEvidenceValidationRules.IsProducerAllowedForMode(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14601:        Assert.True(ProcessArtifactEvidenceValidationRules.RequiresManagedEvidencePath(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14604:        Assert.True(ProcessArtifactEvidenceValidationRules.RequiresStoredArtifactContent(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14609:        Assert.False(ProcessArtifactEvidenceValidationRules.RequiresStoredArtifactContent(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactExpectationMatcher.cs:3:internal static class ProcessArtifactExpectationMatcher
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceValidationRules.cs:3:internal static class ProcessArtifactEvidenceValidationRules
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionLineageBuilder.cs:16:internal static class ProcessArtifactProjectionLineageBuilder
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:39:            ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:50:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:56:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:54:            var externalReferenceKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:95:            var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1639:        => ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1650:        => ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1661:        => ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2436:        var strongMatchedExpectationId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1345:        => ProcessArtifactEvidenceValidationRules.IsProducerAllowedForMode(mode, producerKind);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1350:        => ProcessArtifactEvidenceValidationRules.RequiresManagedEvidencePath(mode, producerKind);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1357:        => ProcessArtifactEvidenceValidationRules.RequiresStoredArtifactContent(
+## Execution projection duplicate-skip and planner order anchors
+58:            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+95:            var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+248:            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+389:            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+549:            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+769:            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+882:            if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+1034:        if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+1214:                if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+1325:                if (candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+ExitCode: 0

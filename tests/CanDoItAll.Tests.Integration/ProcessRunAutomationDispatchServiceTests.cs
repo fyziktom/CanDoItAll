@@ -14444,6 +14444,176 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ProcessArtifactProjectionLineageBuilder_SB05_INV_001_hashes_recovery_key_and_records_lineage()
+    {
+        var recoveryExecutionRunId = Guid.NewGuid();
+        var recoveredForExecutionRunId = Guid.NewGuid();
+        var projectedExecutionRunId = Guid.NewGuid();
+        var sourceArtifactId = Guid.NewGuid();
+        var context = new ProcessArtifactRecoveryProjectionContext(
+            recoveryExecutionRunId,
+            recoveredForExecutionRunId,
+            Guid.NewGuid());
+        var sourceExternalReferenceKey = $"workspace-written-artifact|{projectedExecutionRunId:D}|{Guid.NewGuid():D}|artifacts/process-runs/current/deep/implementation-change-set.md";
+
+        var compactKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+            sourceExternalReferenceKey,
+            projectedExecutionRunId,
+            context);
+        var lineage = ProcessArtifactProjectionLineageBuilder.BuildLineage(
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+            projectedExecutionRunId,
+            context,
+            sourceArtifactId,
+            sourceExternalReferenceKey);
+        var provenance = ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+            "Projected artifact.",
+            projectedExecutionRunId,
+            context);
+
+        Assert.StartsWith("manager-recovery-artifact|sha256:", compactKey, StringComparison.Ordinal);
+        Assert.True(compactKey.Length <= 200);
+        Assert.Equal(ProcessArtifactProjectionSourceKind.AgentExecutionArtifact, lineage.SourceKind);
+        Assert.Equal(projectedExecutionRunId, lineage.SourceExecutionRunId);
+        Assert.Equal(projectedExecutionRunId, lineage.ProjectedExecutionRunId);
+        Assert.Equal(recoveryExecutionRunId, lineage.RecoveryExecutionRunId);
+        Assert.Equal(recoveredForExecutionRunId, lineage.RecoveredForExecutionRunId);
+        Assert.Equal(sourceArtifactId, lineage.SourceArtifactId);
+        Assert.Equal(sourceExternalReferenceKey, lineage.SourceExternalReferenceKey);
+        Assert.Contains(recoveryExecutionRunId.ToString("D"), provenance, StringComparison.Ordinal);
+        Assert.Contains(recoveredForExecutionRunId.ToString("D"), provenance, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ProcessArtifactExpectationMatcher_SB05_INV_002_disambiguates_strong_match_by_kind()
+    {
+        var deliverableId = Guid.NewGuid();
+        var evidenceId = Guid.NewGuid();
+        var expectedArtifacts = new[]
+        {
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                deliverableId,
+                ProcessArtifactKind.Deliverable,
+                "Release packet",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Create release packet.",
+                string.Empty),
+            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                evidenceId,
+                ProcessArtifactKind.Evidence,
+                "Release packet",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Create release packet evidence.",
+                string.Empty)
+        };
+
+        var matchedId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+            expectedArtifacts,
+            ProcessArtifactKind.Evidence,
+            item => string.Equals(item.Title, "Release packet", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal(evidenceId, matchedId);
+    }
+
+    [Fact]
+    public void ProcessArtifactProjectionPlanner_SB07_INV_001_plans_execution_artifact_without_storage_side_effects()
+    {
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Deliverable,
+            "Implementation change set",
+            true,
+            "Create a durable implementation change set.");
+        var artifact = new ProcessAutomationExecutionArtifact(
+            Guid.NewGuid(),
+            executionRunId,
+            "generated-output",
+            "implementation-change-set.md",
+            "artifacts/process-runs/current/implementation-change-set.md",
+            "text/markdown",
+            "workspace_write_file",
+            "Implementation diff summary.",
+            DateTimeOffset.UtcNow);
+
+        var plan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+            executionRunId,
+            artifact,
+            expectation,
+            ProcessArtifactKind.Evidence,
+            ProcessStepRunStatus.Completed,
+            "Run completed.",
+            ProcessArtifactRecoveryProjectionContext.None);
+
+        Assert.Equal(ProcessArtifactProjectionSourceKind.AgentExecutionArtifact, plan.SourceKind);
+        Assert.Equal($"agentframework-artifact:{artifact.Id:D}", plan.SourceExternalReferenceKey);
+        Assert.Equal(plan.SourceExternalReferenceKey, plan.ExternalReferenceKey);
+        Assert.Equal(expectation.Id, plan.ArtifactExpectationId);
+        Assert.Equal(ProcessArtifactKind.Deliverable, plan.ArtifactKind);
+        Assert.Equal("Implementation change set", plan.Title);
+        Assert.Equal(ProcessArtifactTrustStatus.ReviewRequired, plan.TrustStatus);
+        Assert.Equal("Implementation diff summary.", plan.ReviewSummary);
+        Assert.Equal(plan.SourceExternalReferenceKey, plan.ProjectionLineage.SourceExternalReferenceKey);
+        Assert.Equal(executionRunId, plan.ProjectionLineage.SourceExecutionRunId);
+    }
+
+    [Fact]
+    public void ProcessArtifactProjectionPlanner_SB09_INV_001_normalizes_projection_adapter_keys()
+    {
+        var executionRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var expectationId = Guid.NewGuid();
+
+        Assert.Equal(
+            $"workspace-written-artifact|{executionRunId:D}|{expectationId:D}|artifacts/process-runs/current/report.md",
+            ProcessArtifactProjectionPlanner.BuildWorkspaceWrittenArtifactExternalReferenceKey(
+                executionRunId,
+                expectationId,
+                "\\artifacts\\process-runs\\current\\report.md"));
+        Assert.Equal(
+            $"existing-managed-artifact|{executionRunId:D}|{expectationId:D}|output/process-runs/current/result.json",
+            ProcessArtifactProjectionPlanner.BuildExistingManagedArtifactExternalReferenceKey(
+                executionRunId,
+                expectationId,
+                "output/process-runs/current/result.json"));
+        Assert.Equal(
+            $"assistant-response|{executionRunId:D}|artifacts/process-runs/current/summary.md",
+            ProcessArtifactProjectionPlanner.BuildResponseTextArtifactExternalReferenceKey(
+                executionRunId,
+                "artifacts/process-runs/current/summary.md"));
+        Assert.Equal(
+            $"process-mock-artifact:{stepRunId:D}:{expectationId:D}:data/process-runs/current/mock.json",
+            ProcessArtifactProjectionPlanner.BuildProcessMockArtifactExternalReferenceKey(
+                stepRunId,
+                expectationId,
+                "data/process-runs/current/mock.json"));
+    }
+
+    [Fact]
+    public void ProcessArtifactEvidenceValidationRules_SB10_INV_001_rejects_stranded_evidence_and_requires_durable_paths()
+    {
+        Assert.False(ProcessArtifactEvidenceValidationRules.IsProducerAllowedForMode(
+            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Evidence,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AssistantResponse));
+        Assert.True(ProcessArtifactEvidenceValidationRules.RequiresManagedEvidencePath(
+            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProviderNativeBrowser));
+        Assert.True(ProcessArtifactEvidenceValidationRules.RequiresStoredArtifactContent(
+            expectationIsRequired: true,
+            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Manual,
+            "artifacts/process-runs/current/review.md"));
+        Assert.False(ProcessArtifactEvidenceValidationRules.RequiresStoredArtifactContent(
+            expectationIsRequired: true,
+            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Decision,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowArtifact,
+            "workflow/output/decision.json"));
+    }
+
+    [Fact]
     public void WorkflowArtifactProjectionMapping_SB09_INV_001_uses_explicit_output_id_when_same_kind_names_conflict()
     {
         var stepDefinitionId = Guid.NewGuid();

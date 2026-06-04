@@ -228,6 +228,75 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         });
     }
 
+    [Fact]
+    public void Artifact_boundary_bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
+    {
+        var proofRoot = Path.Combine(
+            FindRepositoryRoot(),
+            "codex",
+            "bundles",
+            "process-dispatch-artifact-boundary-foundation-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public void Artifact_boundary_helpers_stay_inside_processes_module_without_core_project()
+    {
+        var root = FindRepositoryRoot();
+        var processesDispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+
+        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactExpectationMatcher.cs")));
+        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactProjectionLineageBuilder.cs")));
+        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactProjectionPlanner.cs")));
+        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactEvidenceValidationRules.cs")));
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
+    }
+
+    [Fact]
+    public void Execution_artifact_projection_path_uses_projection_planner_before_recording_artifact()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+
+        var methodIndex = source.IndexOf("private async Task ProjectExecutionArtifactsAsync", StringComparison.Ordinal);
+        var plannerIndex = source.IndexOf("ProcessArtifactProjectionPlanner.PlanExecutionArtifact", methodIndex, StringComparison.Ordinal);
+        var recordIndex = source.IndexOf("RecordArtifactAsync", plannerIndex, StringComparison.Ordinal);
+
+        Assert.True(methodIndex >= 0);
+        Assert.True(plannerIndex > methodIndex);
+        Assert.True(recordIndex > plannerIndex);
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));

@@ -59,3 +59,18 @@ Required before final closure:
 ## Browser Validation Analytics
 
 For all subbundles, default to `N/A - service/runtime refactor only`. If unexpectedly needed, record large-screen PC-only proof.
+
+## Execution Order
+
+1. SB01 Entry audit, previous boundary smoke, branch hygiene.
+2. SB02 Artifact/projection/validation inventory.
+3. SB03 Artifact evidence seam design and no-production-movement cutline.
+4. SB04 Refactor Gate A architecture guardrails.
+5. SB05 Artifact expectation matcher and lineage helper foundation.
+6. SB06 Projection planner foundation for execution artifacts only.
+7. SB07 Migrate execution-artifact projection path through planner.
+8. SB08 Refactor Gate B projection parity and line-count review.
+9. SB09 Response/mock/workspace projection planning adapters.
+10. SB10 Artifact validation rule service foundation.
+11. SB11 Refactor Gate C runtime smoke and artifact lineage regression.
+12. SB12 Final red-team and next dispatcher cutline.

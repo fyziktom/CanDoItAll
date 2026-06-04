@@ -1342,69 +1342,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessArtifactExpectationMode mode,
         ProcessArtifactProducerKind producerKind,
         DispatchArtifactExpectation expectation)
-    {
-        return mode switch
-        {
-            ProcessArtifactExpectationMode.Narrative => producerKind != ProcessArtifactProducerKind.WorkflowRun,
-            ProcessArtifactExpectationMode.Decision => producerKind is not ProcessArtifactProducerKind.WorkflowRun and not ProcessArtifactProducerKind.ProviderNativeBrowser,
-            ProcessArtifactExpectationMode.Evidence => producerKind is not ProcessArtifactProducerKind.AssistantResponse and not ProcessArtifactProducerKind.CompletedDecision,
-            ProcessArtifactExpectationMode.Deliverable => producerKind is
-                ProcessArtifactProducerKind.AgentExecutionArtifact or
-                ProcessArtifactProducerKind.WorkspaceWrite or
-                ProcessArtifactProducerKind.ExistingManagedFile or
-                ProcessArtifactProducerKind.WorkflowArtifact or
-                ProcessArtifactProducerKind.SubprocessArtifact or
-                ProcessArtifactProducerKind.ProcessMock or
-                ProcessArtifactProducerKind.ManagerRecovery or
-                ProcessArtifactProducerKind.Manual,
-            ProcessArtifactExpectationMode.RuntimeProof => producerKind is
-                ProcessArtifactProducerKind.AgentExecutionArtifact or
-                ProcessArtifactProducerKind.WorkspaceWrite or
-                ProcessArtifactProducerKind.ProviderNativeBrowser or
-                ProcessArtifactProducerKind.WorkflowArtifact or
-                ProcessArtifactProducerKind.SubprocessArtifact or
-                ProcessArtifactProducerKind.ProcessMock or
-                ProcessArtifactProducerKind.ManagerRecovery or
-                ProcessArtifactProducerKind.Manual,
-            ProcessArtifactExpectationMode.RecoveryDiagnostic => false,
-            _ => false
-        };
-    }
+        => ProcessArtifactEvidenceValidationRules.IsProducerAllowedForMode(mode, producerKind);
 
     private static bool RequiresManagedEvidencePath(
         ProcessArtifactExpectationMode mode,
         ProcessArtifactProducerKind producerKind)
-    {
-        if (producerKind == ProcessArtifactProducerKind.WorkflowArtifact)
-        {
-            return false;
-        }
-
-        return mode is ProcessArtifactExpectationMode.Evidence or
-            ProcessArtifactExpectationMode.Deliverable or
-            ProcessArtifactExpectationMode.RuntimeProof;
-    }
+        => ProcessArtifactEvidenceValidationRules.RequiresManagedEvidencePath(mode, producerKind);
 
     private static bool RequiresStoredArtifactContent(
         DispatchArtifactExpectation expectation,
         ProcessArtifactRecord artifact,
         ProcessArtifactExpectationMode mode,
         ProcessArtifactProducerKind producerKind)
-    {
-        if (RequiresManagedEvidencePath(mode, producerKind))
-        {
-            return true;
-        }
-
-        if (!expectation.IsRequired ||
-            mode is not (ProcessArtifactExpectationMode.Narrative or ProcessArtifactExpectationMode.Decision))
-        {
-            return false;
-        }
-
-        return producerKind is not ProcessArtifactProducerKind.WorkflowArtifact &&
-               !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath);
-    }
+        => ProcessArtifactEvidenceValidationRules.RequiresStoredArtifactContent(
+            expectation.IsRequired,
+            mode,
+            producerKind,
+            artifact.ManagedStoragePath);
 
     private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactProjectionSourceKind sourceKind)
     {
