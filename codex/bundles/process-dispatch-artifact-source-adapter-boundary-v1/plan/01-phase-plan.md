@@ -1,5 +1,20 @@
 # Phase Plan
 
+## Execution Order
+
+1. SB01 Entry audit.
+2. SB02 Projection source inventory.
+3. SB03 Projection snapshots and helper decoupling.
+4. SB04 Refactor Gate A.
+5. SB05 Process mock adapter.
+6. SB06 Workspace-written and existing-managed adapters.
+7. SB07 Refactor Gate B.
+8. SB08 Response-text and provider-native browser adapters.
+9. SB09 Write coordinator foundation.
+10. SB10 Execution write-path migration.
+11. SB11 Refactor Gate C.
+12. SB12 Final red-team and next cutline.
+
 ## Subbundle Dependency Map
 
 ```mermaid

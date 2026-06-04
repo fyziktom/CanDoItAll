@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -16,7 +16,7 @@ Introduce local projection source snapshots and remove practical dependencies on
 
 ## Prerequisites
 
-SB02 closure gate must pass.
+- SB02 closure gate must pass.
 
 ## Exact Source References
 
@@ -37,7 +37,7 @@ SB02 closure gate must pass.
 
 ## Dependency Impact
 
-This subbundle affects downstream migration safety. If it fails, later subbundles must not start because artifact behavior parity would be untrustworthy.
+- This subbundle affects downstream migration safety. If it fails, later subbundles must not start because artifact behavior parity would be untrustworthy.
 
 ## Validation Depth
 
@@ -70,11 +70,11 @@ No Process Core, no driver packs, no UI work, no mobile/small/medium proof.
 
 ## Acceptance Checklist
 
-- [ ] Objective implemented or proof-only scope completed.
-- [ ] Behavior parity proven with focused tests.
-- [ ] Source scans show no forbidden architecture movement.
-- [ ] No prohibited viewport proof artifacts exist.
-- [ ] Execution report row updated.
+- [x] Objective implemented or proof-only scope completed.
+- [x] Behavior parity proven with focused tests.
+- [x] Source scans show no forbidden architecture movement.
+- [x] No prohibited viewport proof artifacts exist.
+- [x] Execution report row updated.
 
 ## Proof Required
 
@@ -85,11 +85,11 @@ No Process Core, no driver packs, no UI work, no mobile/small/medium proof.
 
 ## Browser Validation Logging
 
-N/A expected. If any UI proof is unexpectedly needed, use PC/large-screen only and record why.
+- N/A expected. If any UI proof is unexpectedly needed, use PC/large-screen only and record why.
 
 ## Progression Gate
 
-SB04 may start only after this closure gate passes.
+- SB04 may start only after this closure gate passes.
 
 ## Suggested Agent Prompt
 

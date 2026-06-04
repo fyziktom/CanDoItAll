@@ -14491,7 +14491,7 @@ Ancestor path to the target work node:
         var evidenceId = Guid.NewGuid();
         var expectedArtifacts = new[]
         {
-            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+            new ProcessArtifactProjectionExpectation(
                 deliverableId,
                 ProcessArtifactKind.Deliverable,
                 "Release packet",
@@ -14500,7 +14500,7 @@ Ancestor path to the target work node:
                 ProcessSensitivityLevel.Internal,
                 "Create release packet.",
                 string.Empty),
-            new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+            new ProcessArtifactProjectionExpectation(
                 evidenceId,
                 ProcessArtifactKind.Evidence,
                 "Release packet",
@@ -14523,7 +14523,7 @@ Ancestor path to the target work node:
     public void ProcessArtifactProjectionPlanner_SB07_INV_001_plans_execution_artifact_without_storage_side_effects()
     {
         var executionRunId = Guid.NewGuid();
-        var expectation = CreateDispatchArtifactExpectation(
+        var expectation = CreateProjectionExpectation(
             ProcessArtifactKind.Deliverable,
             "Implementation change set",
             true,
@@ -14590,6 +14590,97 @@ Ancestor path to the target work node:
                 stepRunId,
                 expectationId,
                 "data/process-runs/current/mock.json"));
+    }
+
+    [Fact]
+    public void ProcessArtifactProjectionSourceAdapters_SB05_SB08_preserve_key_and_lineage_parity()
+    {
+        var executionRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var expectation = CreateProjectionExpectation(
+            ProcessArtifactKind.Deliverable,
+            "Implementation change set",
+            true,
+            "Create the implementation change set.");
+        var processMockSource = new ProcessMockArtifactProjectionSource(
+            stepRunId,
+            executionRunId,
+            "data/process-runs/current/mock.json",
+            "scopes/org/data/process-runs/current/mock.json",
+            "developer");
+        var workspaceSource = new WorkspaceWrittenArtifactProjectionSource(
+            executionRunId,
+            "artifacts/process-runs/current/report.md",
+            "artifacts/process-runs/current/report.md");
+        var existingSource = new ExistingManagedArtifactProjectionSource(
+            executionRunId,
+            "output/process-runs/current/result.json");
+        var responseSource = new ResponseTextArtifactProjectionSource(
+            executionRunId,
+            "artifacts/process-runs/current/summary.md");
+        var browserSource = new ProviderNativeBrowserArtifactProjectionSource(
+            executionRunId,
+            "artifacts/process-runs/current/browser/screenshot.png",
+            ".playwright-mcp/screenshot.png",
+            "browser_take_screenshot");
+
+        var processMockPlan = ProcessMockArtifactProjectionSourceAdapter.Plan(
+            processMockSource,
+            expectation,
+            ProcessStepRunStatus.Completed,
+            ProcessArtifactRecoveryProjectionContext.None);
+        var workspacePlan = WorkspaceWrittenArtifactProjectionSourceAdapter.Plan(
+            workspaceSource,
+            expectation,
+            ProcessStepRunStatus.Completed,
+            ProcessArtifactRecoveryProjectionContext.None);
+        var existingPlan = ExistingManagedArtifactProjectionSourceAdapter.Plan(
+            existingSource,
+            expectation,
+            ProcessStepRunStatus.Completed,
+            ProcessArtifactRecoveryProjectionContext.None);
+        var responsePlan = ResponseTextArtifactProjectionSourceAdapter.Plan(
+            responseSource,
+            expectation,
+            ProcessStepRunStatus.Completed,
+            ProcessArtifactRecoveryProjectionContext.None);
+        var browserPlan = ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanExpectedOutput(
+            browserSource,
+            expectation,
+            ProcessStepRunStatus.Completed,
+            ProcessArtifactRecoveryProjectionContext.None);
+
+        Assert.Equal(
+            $"process-mock-artifact:{stepRunId:D}:{expectation.Id:D}:data/process-runs/current/mock.json",
+            processMockPlan.ExternalReferenceKey);
+        Assert.Equal(
+            $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|artifacts/process-runs/current/report.md",
+            workspacePlan.ExternalReferenceKey);
+        Assert.Equal(
+            $"existing-managed-artifact|{executionRunId:D}|{expectation.Id:D}|output/process-runs/current/result.json",
+            existingPlan.ExternalReferenceKey);
+        Assert.Equal(
+            $"assistant-response|{executionRunId:D}|artifacts/process-runs/current/summary.md",
+            responsePlan.ExternalReferenceKey);
+        Assert.Equal(
+            $"agentframework-browser-artifact:{executionRunId:D}:artifacts/process-runs/current/browser/screenshot.png",
+            browserPlan.ExternalReferenceKey);
+        Assert.Equal(ProcessArtifactProjectionSourceKind.ProcessMock, processMockPlan.SourceKind);
+        Assert.Equal(ProcessArtifactProjectionSourceKind.WorkspaceWrite, workspacePlan.SourceKind);
+        Assert.Equal(ProcessArtifactProjectionSourceKind.ExistingManagedFile, existingPlan.SourceKind);
+        Assert.Equal(ProcessArtifactProjectionSourceKind.AssistantResponse, responsePlan.SourceKind);
+        Assert.Equal(ProcessArtifactProjectionSourceKind.ProviderNativeBrowser, browserPlan.SourceKind);
+        Assert.Equal(processMockPlan.ExternalReferenceKey, ProcessMockArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
+            processMockSource,
+            expectation,
+            ProcessArtifactRecoveryProjectionContext.None));
+        Assert.Equal(workspacePlan.ExternalReferenceKey, WorkspaceWrittenArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
+            workspaceSource,
+            expectation,
+            ProcessArtifactRecoveryProjectionContext.None));
+        Assert.Equal(browserPlan.ExternalReferenceKey, ProviderNativeBrowserArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
+            browserSource,
+            ProcessArtifactRecoveryProjectionContext.None));
     }
 
     [Fact]
@@ -19252,6 +19343,23 @@ Ancestor path to the target work node:
             ProcessSensitivityLevel.Internal,
                 validationRequirementSummary,
                 string.Empty);
+    }
+
+    private static ProcessArtifactProjectionExpectation CreateProjectionExpectation(
+        ProcessArtifactKind artifactKind,
+        string title,
+        bool isRequired,
+        string validationRequirementSummary)
+    {
+        return new ProcessArtifactProjectionExpectation(
+            Guid.NewGuid(),
+            artifactKind,
+            title,
+            isRequired,
+            ProcessArtifactTrustRequirement.ReviewRequired,
+            ProcessSensitivityLevel.Internal,
+            validationRequirementSummary,
+            string.Empty);
     }
 
     private static ProcessRunAutomationDispatchService.DispatchArtifactExpectation ResolveDispatchArtifactExpectation(

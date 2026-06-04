@@ -2433,10 +2433,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var displaySlug = FileSafeSlugBuilder.Build(displayName);
         var fileSlug = FileSafeSlugBuilder.Build(fileNameWithoutExtension);
         var expectedKind = ResolveExpectedArtifactKind(artifact);
+        var projectionExpectations = expectedArtifacts
+            .Select(ToProjectionExpectation)
+            .ToList();
+        var expectedArtifactsById = expectedArtifacts.ToDictionary(item => item.Id);
         var strongMatchedExpectationId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
-            expectedArtifacts,
+            projectionExpectations,
             expectedKind,
-            item => MatchesExpectedArtifact(item, artifact, relativePath, displayName, displaySlug, fileSlug));
+            item => MatchesExpectedArtifact(
+                expectedArtifactsById[item.Id],
+                artifact,
+                relativePath,
+                displayName,
+                displaySlug,
+                fileSlug));
         if (strongMatchedExpectationId.HasValue)
         {
             return strongMatchedExpectationId.Value;
@@ -3743,7 +3753,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
     internal static ProcessArtifactTrustStatus ResolveProjectedArtifactTrustStatus(
         DispatchArtifactExpectation expectedArtifact,
         ProcessStepRunStatus completionStatus)
-        => ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus);
+        => ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(
+            ToProjectionExpectation(expectedArtifact),
+            completionStatus);
+
+    private static ProcessArtifactProjectionExpectation ToProjectionExpectation(DispatchArtifactExpectation expectedArtifact)
+    {
+        ArgumentNullException.ThrowIfNull(expectedArtifact);
+
+        return new ProcessArtifactProjectionExpectation(
+            expectedArtifact.Id,
+            expectedArtifact.ArtifactKind,
+            expectedArtifact.Title,
+            expectedArtifact.IsRequired,
+            expectedArtifact.TrustRequirement,
+            expectedArtifact.SensitivityLevel,
+            expectedArtifact.ValidationRequirementSummary,
+            expectedArtifact.AllowedFutureUsageSummary);
+    }
 
     private static string BuildCompletedDecisionArtifactProvenanceSummary(
         DispatchCandidate candidate,

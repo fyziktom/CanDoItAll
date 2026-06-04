@@ -297,6 +297,77 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.True(recordIndex > plannerIndex);
     }
 
+    [Fact]
+    public void Artifact_projection_helpers_do_not_reference_dispatcher_nested_expectations()
+    {
+        var helperFiles = new[]
+        {
+            "ProcessArtifactExpectationMatcher.cs",
+            "ProcessArtifactProjectionPlanner.cs",
+            "ProcessArtifactProjectionSourceAdapters.cs"
+        };
+
+        foreach (var helperFile in helperFiles)
+        {
+            var source = ReadRepositoryFile(
+                "src",
+                "CanDoItAll.Modules.Processes",
+                "Automation",
+                "Dispatch",
+                helperFile);
+
+            Assert.DoesNotContain("ProcessRunAutomationDispatchService.DispatchArtifactExpectation", source, StringComparison.Ordinal);
+            Assert.DoesNotContain("DispatchArtifactExpectation", source, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Artifact_projection_source_adapters_are_local_and_used_by_migrated_source_paths()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var adapterPath = Path.Combine(dispatchDirectory, "ProcessArtifactProjectionSourceAdapters.cs");
+        var projectionSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+
+        Assert.True(File.Exists(adapterPath));
+        Assert.Contains("ProcessMockArtifactProjectionSourceAdapter.Plan", projectionSource, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceWrittenArtifactProjectionSourceAdapter.Plan", projectionSource, StringComparison.Ordinal);
+        Assert.Contains("ExistingManagedArtifactProjectionSourceAdapter.Plan", projectionSource, StringComparison.Ordinal);
+        Assert.Contains("ResponseTextArtifactProjectionSourceAdapter.Plan", projectionSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanExpectedOutput", projectionSource, StringComparison.Ordinal);
+        Assert.Contains("ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanDiscoveredOutput", projectionSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_projection_write_coordinator_is_used_only_by_execution_artifact_path()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var methodIndex = source.IndexOf("private async Task ProjectExecutionArtifactsAsync", StringComparison.Ordinal);
+        var nextMethodIndex = source.IndexOf("private async Task ProjectProcessMockArtifactsAsync", StringComparison.Ordinal);
+        var coordinatorIndex = source.IndexOf("new ProcessArtifactProjectionWriteCoordinator", StringComparison.Ordinal);
+        var totalCoordinatorUsages = Regex.Matches(source, "ProcessArtifactProjectionWriteCoordinator").Count;
+
+        Assert.True(methodIndex >= 0);
+        Assert.True(nextMethodIndex > methodIndex);
+        Assert.True(coordinatorIndex > methodIndex);
+        Assert.True(coordinatorIndex < nextMethodIndex);
+        Assert.Equal(1, totalCoordinatorUsages);
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));

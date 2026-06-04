@@ -22,7 +22,7 @@ internal static class ProcessArtifactProjectionPlanner
     public static ProcessArtifactProjectionPlan PlanExecutionArtifact(
         Guid executionRunId,
         ProcessAutomationExecutionArtifact artifact,
-        ProcessRunAutomationDispatchService.DispatchArtifactExpectation? matchedExpectation,
+        ProcessArtifactProjectionExpectation? matchedExpectation,
         ProcessArtifactKind fallbackArtifactKind,
         ProcessStepRunStatus completionStatus,
         string runResultSummary,
@@ -89,7 +89,7 @@ internal static class ProcessArtifactProjectionPlanner
         => $"agentframework-browser-artifact:{executionRunId:D}:{WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath)}";
 
     public static ProcessArtifactTrustStatus ResolveProjectedArtifactTrustStatus(
-        ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact,
+        ProcessArtifactProjectionExpectation expectedArtifact,
         ProcessStepRunStatus completionStatus)
     {
         ArgumentNullException.ThrowIfNull(expectedArtifact);
@@ -120,8 +120,29 @@ internal static class ProcessArtifactProjectionPlanner
     }
 
     private static string NormalizeManagedRelativePathForComparison(string relativePath)
-        => WorkspaceScopeDescriptor
+    {
+        var normalized = WorkspaceScopeDescriptor
             .NormalizeRelativePath(relativePath)
             .Trim()
             .TrimStart('/');
+        var segments = normalized.Split(
+            '/',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (segments.Length > 4 &&
+            IsManagedRootSegment(segments[0]) &&
+            string.Equals(segments[1], "scopes", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"{segments[0].ToLowerInvariant()}/{string.Join('/', segments.Skip(4))}";
+        }
+
+        return normalized;
+    }
+
+    private static bool IsManagedRootSegment(string segment)
+    {
+        return string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "integration-map", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "data", StringComparison.OrdinalIgnoreCase);
+    }
 }

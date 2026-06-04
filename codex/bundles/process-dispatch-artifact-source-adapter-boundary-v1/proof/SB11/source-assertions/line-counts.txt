@@ -1,0 +1,4 @@
+Baseline from SB01: ArtifactProjection.cs 1555 lines; ArtifactValidation.cs 3409 lines.
+Final: ArtifactProjection.cs 1526 lines; ArtifactValidation.cs 3434 lines.
+Projection partial reduced by 29 lines; validation partial increased by 25 lines for snapshot conversion and key normalization support.
+New helper files hold adapter/coordinator logic instead of increasing dispatcher projection orchestration.
