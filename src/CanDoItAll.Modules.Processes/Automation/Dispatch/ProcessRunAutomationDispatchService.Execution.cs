@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -58,7 +59,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (attemptNumber == 1 && recoverableExecutionRunId.HasValue)
             {
                 executionRunId = recoverableExecutionRunId.Value;
-                detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+                detail = await executionClient.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
                 responseText = ResolveRecoveredExecutionResponseText(detail);
                 automationChatSessionId ??= detail.Run.ChatSessionId;
                 recoverableExecutionRunId = null;
@@ -108,8 +109,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                     try
                     {
-                        executionResult = await workspaceService.ExecuteRunAsync(
-                            new ExecutionRunRequest(
+                        executionResult = await executionClient.ExecuteRunAsync(
+                            new ProcessAutomationExecutionRequest(
                                 candidate.TechnicalAgentId,
                                 BuildExecutionPromptCore(
                                     candidate,
@@ -120,8 +121,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     prefetchedArtifactInspectionGrounding.HasPromptSummary
                                         ? prefetchedArtifactInspectionGrounding.PromptSummary
                                         : null),
-                                ChatSessionId: null,
-                                Context: new ExecutionInvocationContext(
+                                new ProcessAutomationInvocationSource(
                                     SourceKind: "process-step",
                                     SourceId: candidate.StepRun.Id.ToString("D"),
                                     CorrelationId: BuildCorrelationId(candidate.StepRun.Id),
@@ -132,17 +132,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     RequestedByKind: "system",
                                     MetadataJson: processInvocationMetadataJson,
                                     ProcessRunId: candidate.Run.Id.ToString("D"),
-                                    ProcessStepId: candidate.StepRun.Id.ToString("D"),
-                                    Policy: processInvocationPolicy),
+                                    ProcessStepId: candidate.StepRun.Id.ToString("D")),
+                                new ProcessAutomationInvocationPolicy(
+                                    ProcessAutomationFinalizerMode.Required,
+                                    processInvocationPolicy.MaxStructuredOutputRepairAttempts,
+                                    processInvocationPolicy.RequireStructuredOutputValidation),
                                 AutoApprovePendingToolCalls: true,
-                                StructuredOutput: ProcessStepOutcomeStructuredOutputContract),
+                                StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult),
                             cancellationToken);
                     }
                     catch (AgentChatRunFailedException exception)
                     {
                         failedExecutionRunId = exception.ExecutionRunId;
                         automationChatSessionId ??= exception.ChatSessionId;
-                        failedExecutionDetail = await workspaceService.GetExecutionRunDetailAsync(
+                        failedExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
                             exception.ExecutionRunId,
                             cancellationToken);
                         failedResponseText = ResolvePreferredExecutionResponseText(
@@ -161,7 +164,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     {
                         failedExecutionRunId = exception.ExecutionRunId;
                         automationChatSessionId ??= exception.ChatSessionId;
-                        failedExecutionDetail = await workspaceService.GetExecutionRunDetailAsync(
+                        failedExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
                             exception.ExecutionRunId,
                             cancellationToken);
                         failedResponseText = ResolvePreferredExecutionResponseText(
@@ -220,7 +223,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                         executionRunId = executionResult.ExecutionRunId;
                         automationChatSessionId ??= executionResult.ChatSessionId;
-                        detail = await workspaceService.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+                        detail = await executionClient.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
                         responseText = ResolvePreferredExecutionResponseText(candidate, executionResult.ResponseText, detail);
                     }
                 }
@@ -519,7 +522,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return CarriedImplementationProof.None;
         }
 
-        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+        var executionRuns = await executionClient.ListExecutionRunsAsync(
             new ExecutionRunQuery(
                 ProcessRunId: candidate.Run.Id.ToString("D"),
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
@@ -532,7 +535,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                      .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
                      .ThenByDescending(executionRun => executionRun.CreatedAtUtc))
         {
-            historicalDetails.Add(await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+            historicalDetails.Add(await executionClient.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
         }
 
         return ResolveHistoricalCarriedImplementationProof(candidate, historicalDetails);
@@ -559,7 +562,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return null;
         }
 
-        var agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+        var agents = await executionClient.ListAgentsAsync(includeTemplates: false, cancellationToken);
         var agentsById = agents.ToDictionary(item => item.Id);
         if (!agentsById.TryGetValue(candidate.TechnicalAgentId, out var currentAgent) ||
             !currentAgent.ProviderProfileId.HasValue)
@@ -568,7 +571,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var failedProviderId = currentAgent.ProviderProfileId.Value;
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var providers = await executionClient.ListProvidersAsync(cancellationToken);
         var failedProviderName = providers.FirstOrDefault(item => item.Id == failedProviderId)?.Name;
         var fallbackResolution = await ResolveHealthyFallbackProviderAsync(
             providers,
@@ -607,7 +610,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             try
             {
-                var editor = await workspaceService.GetAgentEditorAsync(technicalAgentId, cancellationToken);
+                var editor = await executionClient.GetAgentEditorAsync(technicalAgentId, cancellationToken);
                 var resolvedEditorModel = NormalizeFallbackEditorModel(fallbackResolution);
                 if (editor.ProviderProfileId == fallbackResolution.Provider.Id &&
                     string.Equals(editor.Model, resolvedEditorModel, StringComparison.Ordinal))
@@ -618,7 +621,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                 editor.ProviderProfileId = fallbackResolution.Provider.Id;
                 editor.Model = resolvedEditorModel;
-                await workspaceService.SaveAgentAsync(editor, cancellationToken);
+                await executionClient.SaveAgentAsync(editor, cancellationToken);
                 affectedAgentCount++;
             }
             catch (Exception exception)
@@ -663,7 +666,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             {
                 using var probeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                 probeCancellation.CancelAfter(ProviderFallbackHealthProbeTimeout);
-                healthResult = await workspaceService.TestProviderAsync(provider.Id, probeCancellation.Token);
+                healthResult = await executionClient.TestProviderAsync(provider.Id, probeCancellation.Token);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {

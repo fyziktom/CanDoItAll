@@ -1,0 +1,41 @@
+Command: rg -n 'ApplyArtifactProjectionLineage|BuildArtifactProjectionLineage|ProcessArtifactProjectionSourceKind.ProviderNativeBrowser|ProcessArtifactProjectionSourceKind.WorkspaceWrite|WorkflowArtifactProjectionMapping_SB09_INV_001|ArtifactContractValidation_SB09_INV_001' src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -g '*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB09_INV_003
+Output:
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14414:    public void ApplyArtifactProjectionLineage_SB02_INV_001_uses_compact_key_for_long_recovery_lineage()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14419:        var applyLineage = serviceType.GetMethod("ApplyArtifactProjectionLineage", BindingFlags.NonPublic | BindingFlags.Static)
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14420:            ?? throw new InvalidOperationException("ApplyArtifactProjectionLineage method was not found.");
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14444:    public void WorkflowArtifactProjectionMapping_SB09_INV_001_uses_explicit_output_id_when_same_kind_names_conflict()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14499:    public void WorkflowArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_explicit_output_id()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:14551:    public void WorkflowArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15609:    public void ArtifactContractValidation_SB09_INV_001_accepts_current_run_org_scoped_path_with_matching_typed_lineage()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15640:                        SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15703:                        SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15796:                    SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16088:                    SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:54:            var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:130:                    ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:247:            var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:306:                    ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:388:            var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:475:                    ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:476:                        ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:548:            var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:628:                    ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:793:                    ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:881:            var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:975:                        ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1033:        var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1084:                ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1213:                var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1251:                        ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1252:                            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1324:                var externalReferenceKey = ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1427:                            ProjectionLineage = BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1428:                                ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1638:    private static string ApplyArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1661:    private static ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1414:            ProcessArtifactProjectionSourceKind.WorkspaceWrite => ProcessArtifactProducerKind.WorkspaceWrite,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1422:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser => ProcessArtifactProducerKind.ProviderNativeBrowser,
+
+Exit code: 0

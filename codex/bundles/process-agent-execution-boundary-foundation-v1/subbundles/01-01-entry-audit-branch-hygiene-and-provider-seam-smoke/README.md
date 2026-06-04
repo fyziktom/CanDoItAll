@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared; not started.
+- Status: Completed
 
 ## Objective
 
@@ -17,7 +17,7 @@ Reconfirm the current branch is clean, provider decoupling remains intact, and l
 
 ## Prerequisites
 
-None; start from current `maf-processes-refactor`.
+- None; start from current `maf-processes-refactor`.
 
 ## Exact Source References
 
@@ -73,13 +73,13 @@ None; start from current `maf-processes-refactor`.
 
 ## Acceptance Checklist
 
-- [ ] Objective completed.
-- [ ] Source assertions recorded.
-- [ ] Targeted tests pass.
-- [ ] Previous provider seam preserved.
-- [ ] No forbidden product dependency introduced.
-- [ ] No mobile/small/medium screenshots produced.
-- [ ] Execution report updated.
+- [x] Objective completed.
+- [x] Source assertions recorded.
+- [x] Targeted tests pass.
+- [x] Previous provider seam preserved.
+- [x] No forbidden product dependency introduced.
+- [x] No mobile/small/medium screenshots produced.
+- [x] Execution report updated.
 
 ## Proof Required
 
@@ -90,7 +90,7 @@ None; start from current `maf-processes-refactor`.
 
 ## Browser Validation Logging
 
-N/A unless this subbundle unexpectedly changes rendered UI. If UI is changed, validate only in a large-screen PC viewport and record route, viewport, assertions, and screenshot. Do not test small/medium/mobile.
+- N/A unless this subbundle unexpectedly changes rendered UI. If UI is changed, validate only in a large-screen PC viewport and record route, viewport, assertions, and screenshot. Do not test small/medium/mobile.
 
 ## Progression Gate
 

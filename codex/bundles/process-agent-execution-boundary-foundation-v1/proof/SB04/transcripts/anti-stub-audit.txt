@@ -1,0 +1,6 @@
+Command: rg -n '(TODO|NotImplemented|throw new NotImplementedException|fixture-specific)' tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB04 2026-06-04T06:37:56.0954814-04:00
+Invariant IDs: SB04-RQ005
+Output:
+Exit code: 1

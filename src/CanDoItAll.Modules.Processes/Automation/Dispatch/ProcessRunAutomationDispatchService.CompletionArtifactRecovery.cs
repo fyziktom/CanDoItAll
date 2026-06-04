@@ -59,7 +59,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var previousExecutionRunId = candidate.RecoveryExecutionRunId!.Value;
-        var previousExecutionDetail = await workspaceService.GetExecutionRunDetailAsync(
+        var previousExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
             previousExecutionRunId,
             cancellationToken);
         var responseText = await ResolveRecoveredExecutionResponseTextWithCurrentRunArtifactsAsync(
@@ -616,7 +616,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<AgentDefinition> agents;
         try
         {
-            agents = await workspaceService.ListAgentsAsync(includeTemplates: false, cancellationToken);
+            agents = await executionClient.ListAgentsAsync(includeTemplates: false, cancellationToken);
         }
         catch (Exception exception)
         {

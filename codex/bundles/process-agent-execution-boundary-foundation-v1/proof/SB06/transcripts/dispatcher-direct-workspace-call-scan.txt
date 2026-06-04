@@ -1,0 +1,5 @@
+Command: rg -n 'workspaceService\.|IAgentFrameworkWorkspaceService workspaceService' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g 'ProcessRunAutomationDispatchService*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06_INV_001 SB06_INV_002 SB06_INV_003
+Output:
+Exit code: 1

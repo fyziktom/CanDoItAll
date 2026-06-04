@@ -2184,6 +2184,72 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveRequiredToolNames_preserves_boundary_tool_families_for_execution_lineage()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = "Visual app delivery",
+                Slug = "visual-app-delivery"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "validate-generate-and-store-visual-proof",
+                Title = "Validate, generate, and store visual proof",
+                StepKind = ProcessStepKind.Work,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.RunValidation,
+                    ProcessStepOperation.CaptureRuntimeProof,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.ExecuteExternalAction
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalActionControlled
+            },
+            new ProcessStepRun
+            {
+                Title = "Validate, generate, and store visual proof",
+                StepKind = ProcessStepKind.Work,
+                CurrentExecutorName = "Runtime visual evidence agent"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Validate, generate, and store visual proof",
+                WorkBriefText = """
+                Read the implementation notes with workspace_read_file.
+                Use project_structure_read to resolve the source app node.
+                Capture browser proof with browser_snapshot, browser_take_screenshot, and browser_console_messages.
+                Call image_generation_create for the visual recommendation.
+                Store the generated image and lineage receipt with project_structure_asset_create and workspace_write_file.
+                """,
+                ExpectedOutcome = "Visual proof and generated image lineage are recorded.",
+                EvidenceExpectationSummary = "Visual proof and generated image lineage"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Visual proof and generated image lineage", "Must include browser proof, generated image metadata, project asset node id, and storage receipt.")
+            ],
+            ProcessProjectStructureContextFormatter.AppendToTriggerReason(
+                "Deliver a visual app proof from project structure.",
+                new ProcessProjectStructureContext
+                {
+                    ProjectId = Guid.NewGuid(),
+                    NodeId = "custom:visual-app",
+                    NodeTitle = "Visual App"
+                }));
+
+        Assert.Contains("workspace_read_file", tools);
+        Assert.Contains("workspace_write_file", tools);
+        Assert.Contains("project_structure_read", tools);
+        Assert.Contains("project_structure_asset_create", tools);
+        Assert.Contains("image_generation_create", tools);
+        Assert.Contains("browser_snapshot", tools);
+        Assert.Contains("browser_take_screenshot", tools);
+        Assert.Contains("browser_console_messages", tools);
+    }
+
+    [Fact]
     public void ResolveMissingRequiredToolExecutions_accepts_completed_internal_maf_tool_invocations_from_execution_log()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);

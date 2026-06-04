@@ -1,0 +1,6 @@
+Command: rg --files src | rg 'CanDoItAll\.Processes\.(Core|Driver|Drivers|.*Driver)|CanDoItAll\.Processes\.Abstractions'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB09_INV_003
+Output:
+(no matches)
+Exit code: 1

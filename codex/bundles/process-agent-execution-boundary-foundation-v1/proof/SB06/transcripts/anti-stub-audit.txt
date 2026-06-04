@@ -1,0 +1,5 @@
+Command: rg -n 'TODO|NotImplemented|throw new NotImplementedException|stub' src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs -g 'ProcessRunAutomationDispatchService*.cs' -g 'ProcessAutomationExecutionClient.cs' -g '*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06_INV_001 SB06_INV_002 SB06_INV_003
+Output:
+Exit code: 1

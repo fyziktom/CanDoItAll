@@ -1,0 +1,7 @@
+Command: git cat-file -e HEAD:src/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB08_INV_001 SB08_INV_002 SB08_INV_003
+Output:
+fatal: path 'src/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj' exists on disk, but not in 'HEAD'
+
+Exit code: 128

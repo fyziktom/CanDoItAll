@@ -1,0 +1,6 @@
+Command: git diff --name-only -- src tests
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB03 2026-06-04T06:33:44.2418003-04:00
+Invariant IDs: SB03-RQ004, SB03-RQ011
+Output:
+Exit code: 0

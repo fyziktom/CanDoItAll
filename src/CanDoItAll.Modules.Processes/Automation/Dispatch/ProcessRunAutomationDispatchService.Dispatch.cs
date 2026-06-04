@@ -1875,7 +1875,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var executorPartyId = stepRun.CurrentExecutorPartyId.Value;
-            var executionRuns = await workspaceService.ListExecutionRunsAsync(
+            var executionRuns = await executionClient.ListExecutionRunsAsync(
                 new ExecutionRunQuery(
                     ProcessRunId: processRunId.ToString("D"),
                     ProcessStepId: stepRun.Id.ToString("D"),
@@ -1913,11 +1913,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var agentEditor = await workspaceService.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
+            var agentEditor = await executionClient.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
             if (TryResolveProjectStructureAccessProjectId(run, out var projectStructureAccessProjectId) &&
                 ApplyProjectStructureReadAccess(agentEditor, projectStructureAccessProjectId))
             {
-                await workspaceService.SaveAgentAsync(agentEditor, cancellationToken);
+                await executionClient.SaveAgentAsync(agentEditor, cancellationToken);
                 logger.LogInformation(
                     "Granted project-structure read access for project {ProjectId} to technical agent {TechnicalAgentId} before dispatching process run {RunId}, step {StepRunId}.",
                     projectStructureAccessProjectId,

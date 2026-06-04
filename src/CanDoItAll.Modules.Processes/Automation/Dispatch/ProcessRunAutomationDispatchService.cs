@@ -34,7 +34,7 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     IDbContextFactory<AppDbContext> dbContextFactory,
     IServiceScopeFactory serviceScopeFactory,
     IAiTechnicalAgentBridge technicalAgentBridge,
-    IAgentFrameworkWorkspaceService workspaceService,
+    IProcessAutomationExecutionClient executionClient,
     IStoragePlacementService storagePlacementService,
     IStorageCatalogService storageCatalogService,
     IStorageDriverRegistry storageDriverRegistry,

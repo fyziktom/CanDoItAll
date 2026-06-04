@@ -1,0 +1,7 @@
+Command: <count executionClient.* and workspaceService.* calls across ProcessRunAutomationDispatchService*.cs>
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB10_INV_001 SB10_INV_002
+Output:
+executionClient.calls	26
+workspaceService.calls	0
+Exit code: 0

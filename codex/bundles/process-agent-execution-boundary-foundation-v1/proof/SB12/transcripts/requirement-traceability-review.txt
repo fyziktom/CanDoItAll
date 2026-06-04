@@ -1,0 +1,46 @@
+Command: rg -n 'RQ-00[1-9]|RQ-01[0-4]' codex/bundles/process-agent-execution-boundary-foundation-v1/requirements codex/bundles/process-agent-execution-boundary-foundation-v1/traceability codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md codex/bundles/process-agent-execution-boundary-foundation-v1/proof -g 'manifest.md' -g '*.md'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB12_INV_001 SB12_INV_002 SB12_INV_003
+Output:
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:5:| RQ-001 | Preserve previous provider decoupling | SB01, SB04, SB07, SB12 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:6:| RQ-002 | No premature Process Core split | SB01, SB08, SB12 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:7:| RQ-003 | Inventory process boundary | SB02 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:8:| RQ-004 | Design execution seam | SB03 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:9:| RQ-005 | Architecture guards before movement | SB04 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:10:| RQ-006 | Introduce execution facade | SB05 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:11:| RQ-007 | Move direct execution calls | SB06 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:12:| RQ-008 | Prove dispatcher coupling reduction | SB07 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:13:| RQ-009 | Minimal contracts foundation | SB08 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:14:| RQ-010 | Preserve receipt and required-tool semantics | SB09 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:15:| RQ-011 | Refactor checkpoints | SB04, SB07, SB10 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:16:| RQ-012 | Runtime smoke | SB11, SB12 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:17:| RQ-013 | Large-screen-only validation | All SBs | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/traceability\01-requirement-traceability.md:18:| RQ-014 | Next-phase cutline | SB12 | Subbundle manifest, source assertions, targeted test transcripts |
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:3:## RQ-001: Preserve previous provider decoupling
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:8:## RQ-002: No premature Process Core split
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:13:## RQ-003: Inventory process boundary
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:18:## RQ-004: Design execution seam
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:23:## RQ-005: Architecture guards before movement
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:28:## RQ-006: Introduce execution facade
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:33:## RQ-007: Move direct execution calls
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:38:## RQ-008: Prove dispatcher coupling reduction
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:43:## RQ-009: Minimal contracts foundation
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:48:## RQ-010: Preserve receipt and required-tool semantics
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:53:## RQ-011: Refactor checkpoints
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:58:## RQ-012: Runtime smoke
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:63:## RQ-013: Large-screen-only validation
+codex/bundles/process-agent-execution-boundary-foundation-v1/requirements\01-normalized-requirements.md:68:## RQ-014: Next-phase cutline
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB01\manifest.md:5:- Owned requirements: RQ-001, RQ-002, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB12\manifest.md:4:- Owned requirements: RQ-014, RQ-013
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB03\manifest.md:4:- Owned requirements: RQ-004, RQ-011, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB05\manifest.md:4:- Owned requirements: RQ-006, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB02\manifest.md:4:- Owned requirements: RQ-003, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB06\manifest.md:4:- Owned requirements: RQ-007, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB08\manifest.md:4:- Owned requirements: RQ-009, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB07\manifest.md:4:- Owned requirements: RQ-008, RQ-011, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB09\manifest.md:4:- Owned requirements: RQ-010, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB10\manifest.md:4:- Owned requirements: RQ-011, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB11\manifest.md:4:- Owned requirements: RQ-012, RQ-013.
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof\SB04\manifest.md:4:- Owned requirements: RQ-005, RQ-011, RQ-013.
+
+Exit code: 0

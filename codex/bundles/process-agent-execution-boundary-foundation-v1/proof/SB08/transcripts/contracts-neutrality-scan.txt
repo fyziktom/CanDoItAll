@@ -1,0 +1,6 @@
+Command: rg -n 'Microsoft.EntityFrameworkCore|Microsoft.AspNetCore.Components|CanDoItAll.AgentFramework|CanDoItAll.Modules\.|DbContext|ComponentBase|RazorComponent|IComponent' src/CanDoItAll.Processes.Contracts
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB08_INV_001 SB08_INV_002
+Output:
+(no matches)
+Exit code: 1

@@ -1,0 +1,32 @@
+Command: rg -n 'IProcessAutomationExecutionClient executionClient|executionClient\.' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g 'ProcessRunAutomationDispatchService*.cs'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06_INV_001 SB06_INV_002 SB06_INV_003
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:62:        var previousExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:619:            agents = await executionClient.ListAgentsAsync(includeTemplates: false, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Costing.cs:32:        var providers = await executionClient.ListProvidersAsync(cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Costing.cs:33:        var executionRuns = await executionClient.ListExecutionRunsAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Costing.cs:46:            executionRunDetails.Add(await executionClient.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.cs:37:    IProcessAutomationExecutionClient executionClient,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:119:        var executionRuns = await executionClient.ListExecutionRunsAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:131:        var detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:135:            detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:149:        var executionRuns = await executionClient.ListExecutionRunsAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1878:            var executionRuns = await executionClient.ListExecutionRunsAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1916:            var agentEditor = await executionClient.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1920:                await executionClient.SaveAgentAsync(agentEditor, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:61:                detail = await executionClient.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:111:                        executionResult = await executionClient.ExecuteRunAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:145:                        failedExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:164:                        failedExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:223:                        detail = await executionClient.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:522:        var executionRuns = await executionClient.ListExecutionRunsAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:535:            historicalDetails.Add(await executionClient.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:562:        var agents = await executionClient.ListAgentsAsync(includeTemplates: false, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:571:        var providers = await executionClient.ListProvidersAsync(cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:610:                var editor = await executionClient.GetAgentEditorAsync(technicalAgentId, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:621:                await executionClient.SaveAgentAsync(editor, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:666:                healthResult = await executionClient.TestProviderAsync(provider.Id, probeCancellation.Token);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:285:        var executionRuns = await executionClient.ListExecutionRunsAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:306:            var detail = await executionClient.GetExecutionRunDetailAsync(run.Id, cancellationToken);
+Exit code: 0

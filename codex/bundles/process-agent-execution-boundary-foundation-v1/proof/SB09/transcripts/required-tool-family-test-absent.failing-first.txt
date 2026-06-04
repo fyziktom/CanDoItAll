@@ -1,0 +1,6 @@
+Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs | rg 'ResolveRequiredToolNames_preserves_boundary_tool_families_for_execution_lineage'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB09_INV_002
+Output:
+(no matches)
+Exit code: 1

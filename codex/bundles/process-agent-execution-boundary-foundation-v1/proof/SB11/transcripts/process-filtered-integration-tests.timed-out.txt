@@ -1,0 +1,6 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --filter FullyQualifiedName~Process --no-restore
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB11_INV_002
+Output:
+Command timed out after 604394 milliseconds before the transcript wrapper could write test output. The leftover dotnet test process tree rooted at PID 22248 was stopped before rerun.
+Exit code: 124

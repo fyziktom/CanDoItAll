@@ -1,0 +1,9 @@
+Command: Get-FileHash -Algorithm SHA256 <SB10 proof/report files>
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB10_INV_001 SB10_INV_002 SB10_INV_003
+Output:
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB10/source-assertions/gate-c-boundary-consistency-review.txt	AE828F6749FC988B5A2C8B264208B6D4F8E2038F9B23A3256948E88AC7BEAC45
+codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB10/semantic-invariants.md	F6F9159B441554D5B7CC8101045B59F577EC42F4690B7CA841DB624E8CB54C74
+codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/10-10-refactor-gate-c-boundary-consistency-review/README.md	0D83289395B35C96CCA1463F3D174234DB762CC6486A0908A88D474BD2D58324
+codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md	3BCF091736138648EA5FED14998354E9F96C537107C029F15CEC271BAE4B2B55
+Exit code: 0

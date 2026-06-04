@@ -154,9 +154,32 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         Assert.Equal("provider-native.mcp", screenshotReceipt.RuntimeToolProviderKey);
         Assert.Equal("Provider-native MCP", screenshotReceipt.RuntimeToolProviderName);
 
+        var projectedBrowserReceipts = detail.ToolReceipts
+            .Where(item => item.ToolName.StartsWith("browser_", StringComparison.Ordinal))
+            .ToList();
+        Assert.Equal(3, projectedBrowserReceipts.Count);
+        Assert.All(
+            projectedBrowserReceipts,
+            receipt =>
+            {
+                Assert.Equal("provider-native.mcp", receipt.RuntimeToolProviderKey);
+                Assert.Equal("Provider-native MCP", receipt.RuntimeToolProviderName);
+            });
+
         Assert.Contains(receipts, item => string.Equals(item.ToolName, "browser_navigate", StringComparison.Ordinal));
         Assert.Contains(receipts, item => string.Equals(item.ToolName, "browser_snapshot", StringComparison.Ordinal));
         Assert.Contains(receipts, item => string.Equals(item.ToolName, "browser_take_screenshot", StringComparison.Ordinal));
+        var persistedBrowserReceipts = receipts
+            .Where(item => item.ToolName.StartsWith("browser_", StringComparison.Ordinal))
+            .ToList();
+        Assert.Equal(3, persistedBrowserReceipts.Count);
+        Assert.All(
+            persistedBrowserReceipts,
+            receipt =>
+            {
+                Assert.Equal("provider-native.mcp", receipt.RuntimeToolProviderKey);
+                Assert.Equal("Provider-native MCP", receipt.RuntimeToolProviderName);
+            });
     }
 
     [Fact]

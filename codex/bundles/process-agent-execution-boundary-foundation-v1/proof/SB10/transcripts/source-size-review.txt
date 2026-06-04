@@ -1,0 +1,14 @@
+Command: Get-Content <facade and changed dispatcher files> | Measure-Object -Line
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB10_INV_002
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs	139
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs	231
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs	680
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs	845
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs	1303
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Costing.cs	110
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs	1899
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Grounding.cs	754
+src/CanDoItAll.Processes.Contracts/Automation/ProcessAutomationExecutionContracts.cs	33
+Exit code: 0

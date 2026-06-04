@@ -1,0 +1,6 @@
+Command: Get-ChildItem src -Recurse -Filter *.csproj | project-name scan for premature Processes.Core or driver-pack projects
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB04 2026-06-04T06:38:17.4773273-04:00
+Invariant IDs: SB04-RQ005, SB04-RQ011
+Output:
+Exit code: 0

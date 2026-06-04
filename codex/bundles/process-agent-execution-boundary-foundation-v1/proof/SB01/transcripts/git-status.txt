@@ -1,0 +1,25 @@
+Command: git status --short --branch
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 2026-06-04T06:24:44.3312288-04:00
+Invariant IDs: SB01-RQ001, SB01-RQ002, SB01-RQ013
+Output:
+## maf-processes-refactor...origin/maf-processes-refactor [ahead 1]
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/plan/01-phase-plan.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/01-01-entry-audit-branch-hygiene-and-provider-seam-smoke/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/02-02-process-boundary-and-agentframework-usage-inventory/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/03-03-execution-seam-design-and-cutline/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/04-04-refactor-gate-a-architecture-guardrails/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/05-05-process-automation-execution-client-foundation/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/06-06-dispatcher-execution-call-migration/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/07-07-refactor-gate-b-coupling-reduction-proof/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/08-08-minimal-process-contracts-foundation/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/09-09-receipt-required-tool-and-artifact-lineage-hardening/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/10-10-refactor-gate-c-boundary-consistency-review/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/11-11-runtime-smoke-large-screen-policy-check/README.md
+ M codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/12-12-final-red-team-and-next-core-cutline/README.md
+?? codex/bundles/process-agent-execution-boundary-foundation-v1/inputs/01-source-artifacts.md
+?? codex/bundles/process-agent-execution-boundary-foundation-v1/inputs/02-structured-input.md
+?? codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB01/transcripts/
+?? codex/bundles/process-agent-execution-boundary-foundation-v1/templates/
+Exit code: 0

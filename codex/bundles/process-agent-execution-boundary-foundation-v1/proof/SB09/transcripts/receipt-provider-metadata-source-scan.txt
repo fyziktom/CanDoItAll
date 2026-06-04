@@ -1,0 +1,24 @@
+Command: rg -n 'projectedBrowserReceipts|persistedBrowserReceipts|RuntimeToolProviderKey|RuntimeToolProviderName|ResolvePlaywrightLaunchReceipt|ProjectProviderNativeMcpToolReceipts' tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB09_INV_001
+Output:
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:134:                            RuntimeToolProviderKey = "provider-native.mcp",
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:135:                            RuntimeToolProviderName = "Provider-native MCP"
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:154:        Assert.Equal("provider-native.mcp", screenshotReceipt.RuntimeToolProviderKey);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:155:        Assert.Equal("Provider-native MCP", screenshotReceipt.RuntimeToolProviderName);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:157:        var projectedBrowserReceipts = detail.ToolReceipts
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:160:        Assert.Equal(3, projectedBrowserReceipts.Count);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:162:            projectedBrowserReceipts,
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:165:                Assert.Equal("provider-native.mcp", receipt.RuntimeToolProviderKey);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:166:                Assert.Equal("Provider-native MCP", receipt.RuntimeToolProviderName);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:172:        var persistedBrowserReceipts = receipts
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:175:        Assert.Equal(3, persistedBrowserReceipts.Count);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:177:            persistedBrowserReceipts,
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:180:                Assert.Equal("provider-native.mcp", receipt.RuntimeToolProviderKey);
+tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:181:                Assert.Equal("Provider-native MCP", receipt.RuntimeToolProviderName);
+src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:23:        var launchReceipt = ResolvePlaywrightLaunchReceipt(detail.ToolReceipts);
+src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:83:                    RuntimeToolProviderKey = launchReceipt.RuntimeToolProviderKey,
+src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:84:                    RuntimeToolProviderName = launchReceipt.RuntimeToolProviderName
+src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.ProviderNativeMcp.cs:103:    private static ToolExecutionReceiptRecord? ResolvePlaywrightLaunchReceipt(
+
+Exit code: 0

@@ -282,7 +282,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return 0;
         }
 
-        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+        var executionRuns = await executionClient.ListExecutionRunsAsync(
             new ExecutionRunQuery(
                 SourceKind: "process-step",
                 ProcessRunId: candidate.Run.Id.ToString("D"),
@@ -303,7 +303,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                      .Where(item => !string.Equals(item.ProcessStepId, candidate.StepRun.Id.ToString("D"), StringComparison.OrdinalIgnoreCase))
                      .OrderByDescending(item => item.CompletedAtUtc ?? item.UpdatedAtUtc))
         {
-            var detail = await workspaceService.GetExecutionRunDetailAsync(run.Id, cancellationToken);
+            var detail = await executionClient.GetExecutionRunDetailAsync(run.Id, cancellationToken);
             foreach (var receipt in detail.ToolReceipts
                          .Where(IsSuccessfulUpstreamValidationReceipt)
                          .OrderByDescending(item => item.CompletedAtUtc)

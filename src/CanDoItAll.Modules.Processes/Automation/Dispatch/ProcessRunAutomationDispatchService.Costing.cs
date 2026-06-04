@@ -29,8 +29,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid processRunId,
         CancellationToken cancellationToken)
     {
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
-        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+        var providers = await executionClient.ListProvidersAsync(cancellationToken);
+        var executionRuns = await executionClient.ListExecutionRunsAsync(
             new ExecutionRunQuery(
                 Take: ProcessRunCostExecutionRunLimit,
                 ProcessRunId: processRunId.ToString("D")),
@@ -43,7 +43,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var executionRunDetails = new List<ExecutionRunDetail>(executionRuns.Count);
         foreach (var executionRun in executionRuns)
         {
-            executionRunDetails.Add(await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+            executionRunDetails.Add(await executionClient.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
         }
 
         var actualCost = ResolveProcessRunActualCost(executionRunDetails, providers);

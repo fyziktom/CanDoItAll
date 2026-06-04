@@ -1,5 +1,20 @@
 # Phase Plan
 
+## Execution Order
+
+1. SB01 Entry audit, branch hygiene, and previous provider seam smoke.
+2. SB02 Process module dependency and dispatcher coupling inventory.
+3. SB03 Execution boundary design and source cutline.
+4. SB04 Refactor Gate A architecture guardrails.
+5. SB05 Process automation execution client foundation.
+6. SB06 Dispatcher execution call migration.
+7. SB07 Refactor Gate B coupling reduction proof.
+8. SB08 Minimal process contracts foundation.
+9. SB09 Receipt and required-tool hardening.
+10. SB10 Refactor Gate C boundary consistency review.
+11. SB11 Runtime smoke and large-screen policy check.
+12. SB12 Final red-team and next Process Core cutline.
+
 ## Subbundle Dependency Map
 
 ```mermaid

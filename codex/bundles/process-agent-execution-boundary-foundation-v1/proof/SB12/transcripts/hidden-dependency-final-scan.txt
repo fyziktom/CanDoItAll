@@ -1,0 +1,6 @@
+Command: rg hidden dependency scans; exit 0 when all scoped scans return no matches
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB12_INV_001 SB12_INV_002
+Output:
+(no matches)
+Exit code: 0

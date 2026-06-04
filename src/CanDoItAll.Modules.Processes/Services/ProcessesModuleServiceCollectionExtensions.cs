@@ -41,6 +41,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
         services.AddScoped<ProcessWorkflowRunCoordinator>();
+        services.AddScoped<IProcessAutomationExecutionClient, ProcessAutomationExecutionClient>();
         services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
         services.AddScoped<IProcessDefinitionListQueryService, ProcessDefinitionListQueryService>();
         services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();

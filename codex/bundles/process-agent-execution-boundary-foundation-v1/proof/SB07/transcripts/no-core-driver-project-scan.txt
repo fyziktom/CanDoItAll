@@ -1,0 +1,6 @@
+Command: Get-ChildItem src -Recurse -Filter *.csproj | scan for Process Core or driver-pack project names
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07_INV_002
+Output:
+Forbidden project count: 0
+Exit code: 0

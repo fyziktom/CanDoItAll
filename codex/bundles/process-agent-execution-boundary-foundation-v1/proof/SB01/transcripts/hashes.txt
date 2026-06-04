@@ -1,0 +1,9 @@
+Command: Get-FileHash selected SB01 source and bundle files
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 2026-06-04T06:25:17.0851008-04:00
+Invariant IDs: SB01-RQ001, SB01-RQ002, SB01-RQ013
+Output:
+042FAFAA73C70B37D74F7EAE1FE51E6CCCAFB3FD41C818622ECC0174E11B02E1  C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj
+CFD816FD0C045E07CD48ED83DA08E0E46D9601B4DF136BDAA0B882FB12F8C5FE  C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tooling\IAgentRuntimeToolProvider.cs
+0636E6DE732809D7A1F5CF0DEC0DA487DEECAFBA4F23F00E5533BCC4A02D57DA  C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\subbundles\01-01-entry-audit-branch-hygiene-and-provider-seam-smoke\README.md
+Exit code: 0

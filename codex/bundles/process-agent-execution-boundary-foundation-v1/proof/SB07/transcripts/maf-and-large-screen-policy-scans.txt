@@ -1,0 +1,9 @@
+Command: MAF/Tooling source dependency scan and forbidden proof viewport path scan
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07_INV_002 SB07_INV_003
+Output:
+MAF/Tooling product reference scan:
+MAF scan exit code: 1
+Forbidden proof viewport path scan:
+Forbidden proof path count: 0
+Exit code: 0

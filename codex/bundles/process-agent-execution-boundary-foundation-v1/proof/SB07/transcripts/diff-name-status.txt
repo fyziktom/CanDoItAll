@@ -1,0 +1,73 @@
+Command: git diff --name-status -- src tests codex/bundles/process-agent-execution-boundary-foundation-v1
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07_INV_001 SB07_INV_002
+Output:
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/architecture/02-execution-boundary-staging.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/plan/01-phase-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB01/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB01/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB02/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB02/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB03/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB03/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB04/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB04/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB05/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB05/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB06/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB06/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/01-01-entry-audit-branch-hygiene-and-provider-seam-smoke/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/02-02-process-boundary-and-agentframework-usage-inventory/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/03-03-execution-seam-design-and-cutline/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/04-04-refactor-gate-a-architecture-guardrails/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/05-05-process-automation-execution-client-foundation/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/06-06-dispatcher-execution-call-migration/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/07-07-refactor-gate-b-coupling-reduction-proof/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/08-08-minimal-process-contracts-foundation/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/09-09-receipt-required-tool-and-artifact-lineage-hardening/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/10-10-refactor-gate-c-boundary-consistency-review/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/11-11-runtime-smoke-large-screen-policy-check/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/12-12-final-red-team-and-next-core-cutline/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Costing.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs', LF will be replaced by CRLF the next time Git touches it
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/architecture/02-execution-boundary-staging.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/inventories/02-agentframework-usage-in-processes.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/plan/01-phase-plan.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB01/manifest.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB01/semantic-invariants.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB02/manifest.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB02/semantic-invariants.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB03/manifest.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB03/semantic-invariants.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB04/manifest.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB04/semantic-invariants.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB05/manifest.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB05/semantic-invariants.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB06/manifest.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB06/semantic-invariants.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/01-01-entry-audit-branch-hygiene-and-provider-seam-smoke/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/02-02-process-boundary-and-agentframework-usage-inventory/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/03-03-execution-seam-design-and-cutline/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/04-04-refactor-gate-a-architecture-guardrails/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/05-05-process-automation-execution-client-foundation/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/06-06-dispatcher-execution-call-migration/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/07-07-refactor-gate-b-coupling-reduction-proof/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/08-08-minimal-process-contracts-foundation/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/09-09-receipt-required-tool-and-artifact-lineage-hardening/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/10-10-refactor-gate-c-boundary-consistency-review/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/11-11-runtime-smoke-large-screen-policy-check/README.md
+M	codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/12-12-final-red-team-and-next-core-cutline/README.md
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Costing.cs
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Grounding.cs
+M	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs
+M	src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs
+Exit code: 0

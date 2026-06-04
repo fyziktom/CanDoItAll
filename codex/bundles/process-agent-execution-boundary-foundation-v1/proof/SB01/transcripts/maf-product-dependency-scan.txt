@@ -1,0 +1,6 @@
+Command: Get-ChildItem src/CanDoItAll.AgentFramework.Maf -Recurse -Include *.cs,*.csproj | Select-String -Pattern 'CanDoItAll\.Modules\.(Processes|Projects|Workbench)'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 2026-06-04T06:24:47.6912447-04:00
+Invariant IDs: SB01-RQ001
+Output:
+Exit code: 0

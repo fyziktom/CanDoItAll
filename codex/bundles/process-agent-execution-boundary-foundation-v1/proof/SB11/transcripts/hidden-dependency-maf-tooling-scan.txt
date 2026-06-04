@@ -1,0 +1,8 @@
+Command: rg -n 'CanDoItAll.Modules.Processes|CanDoItAll.Modules.Projects|CanDoItAll.Modules.Workbench' src/CanDoItAll.AgentFramework.Maf src/CanDoItAll.AgentFramework.Tooling
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB11_INV_002
+Output:
+src/CanDoItAll.AgentFramework.Maf\README.md:25:- `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
+src/CanDoItAll.AgentFramework.Maf\README.md:27:- `../CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
+
+Exit code: 0

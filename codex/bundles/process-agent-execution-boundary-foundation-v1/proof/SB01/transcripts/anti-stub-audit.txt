@@ -1,0 +1,6 @@
+Command: rg -n '(TODO|NotImplemented|throw new NotImplementedException|fixture-specific)' src/CanDoItAll.AgentFramework.Maf src/CanDoItAll.AgentFramework.Tooling src/CanDoItAll.Modules.Processes/AgentTools
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01 2026-06-04T06:25:16.8601090-04:00
+Invariant IDs: SB01-RQ001, SB01-RQ002
+Output:
+Exit code: 1

@@ -1,0 +1,14 @@
+Command: Select-String IProcessAutomationExecutionClient and SB06 movement cutline in architecture/02
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB03 2026-06-04T06:33:43.9893244-04:00
+Invariant IDs: SB03-RQ004, SB03-RQ011, SB03-RQ013
+Output:
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:5:Introduce a process-owned execution client/facade that wraps the existing `IAgentFrameworkWorkspaceService` calls.
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:10:internal interface IProcessAutomationExecutionClient
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:47:### SB06 Movement Cutline
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:49:Move dispatcher calls behind `IProcessAutomationExecutionClient` where the current dispatcher directly:
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:56:The facade implementation may remain in `CanDoItAll.Modules.Processes` for this bundle and may delegate directly to `IAgentFrameworkWorkspaceService`. That delegation is the boundary; it is not a final `Processes.Core` contract.
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:58:### Explicit Out Of Scope For Stage 1
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:67:### Registration Rule
+C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md:69:Register the facade in `ProcessesModuleServiceCollectionExtensions` beside `IProcessRunAutomationDispatchService`. The dispatcher should depend on `IProcessAutomationExecutionClient`; the facade implementation is the only process-dispatch source that should directly depend on `IAgentFrameworkWorkspaceService` for the moved calls after SB06.
+Exit code: 0

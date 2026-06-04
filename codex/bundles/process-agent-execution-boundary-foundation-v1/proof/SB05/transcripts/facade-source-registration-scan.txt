@@ -1,0 +1,41 @@
+Command: rg -n 'IProcessAutomationExecutionClient|ProcessAutomationExecutionClient|IAgentFrameworkWorkspaceService' src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05_INV_001 SB05_INV_002 SB05_INV_003 SB05_INV_004
+Output:
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:10:public sealed class ProcessAutomationExecutionClientTests
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:16:        var client = new ProcessAutomationExecutionClient(workspaceService);
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:23:        var call = Assert.Single(proxy.Calls, item => item.MethodName == nameof(IAgentFrameworkWorkspaceService.ExecuteRunAsync));
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:32:        var client = new ProcessAutomationExecutionClient(workspaceService);
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:42:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) &&
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:45:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.ListExecutionRunsAsync) &&
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:53:        var client = new ProcessAutomationExecutionClient(workspaceService);
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:69:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) &&
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:72:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.ListProvidersAsync));
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:74:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.TestProviderAsync) &&
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:77:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.GetAgentEditorAsync) &&
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:80:            call.MethodName == nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) &&
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:91:        var descriptor = Assert.Single(services, item => item.ServiceType == typeof(IProcessAutomationExecutionClient));
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:93:        Assert.Equal(typeof(ProcessAutomationExecutionClient), descriptor.ImplementationType);
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:96:    private static IAgentFrameworkWorkspaceService CreateWorkspaceService(out RecordingWorkspaceProxy proxy)
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:98:        var service = DispatchProxy.Create<IAgentFrameworkWorkspaceService, RecordingWorkspaceProxy>();
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:262:                nameof(IAgentFrameworkWorkspaceService.ExecuteRunAsync) => Task.FromResult(ExecutionRunResult),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:263:                nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) => Task.FromResult(ExecutionRunDetail),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:264:                nameof(IAgentFrameworkWorkspaceService.ListExecutionRunsAsync) => Task.FromResult(ExecutionRuns),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:265:                nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => Task.FromResult(Agents),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:266:                nameof(IAgentFrameworkWorkspaceService.ListProvidersAsync) => Task.FromResult(Providers),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:267:                nameof(IAgentFrameworkWorkspaceService.TestProviderAsync) => Task.FromResult(ProviderHealthResult),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:268:                nameof(IAgentFrameworkWorkspaceService.GetAgentEditorAsync) => Task.FromResult(AgentEditor),
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:269:                nameof(IAgentFrameworkWorkspaceService.SaveAgentAsync) => Task.FromResult(SavedAgentId),
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:15:    IAgentFrameworkWorkspaceService workspaceService,
+src/CanDoItAll.Modules.Processes\Components\LiveProcessesDashboard.razor:10:@inject IAgentFrameworkWorkspaceService AgentWorkspaceService
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:37:    IAgentFrameworkWorkspaceService workspaceService,
+src/CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:44:        services.AddScoped<IProcessAutomationExecutionClient, ProcessAutomationExecutionClient>();
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:6:internal interface IProcessAutomationExecutionClient
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:40:internal sealed class ProcessAutomationExecutionClient(
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:41:    IAgentFrameworkWorkspaceService workspaceService) : IProcessAutomationExecutionClient
+src/CanDoItAll.Modules.Processes\Services\ProcessesService.cs:23:    IAgentFrameworkWorkspaceService agentWorkspaceService,
+src/CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:13:    IAgentFrameworkWorkspaceService workspaceService,
+src/CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs:10:    IAgentFrameworkWorkspaceService workspaceService,
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.cs:91:    private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:8:    IAgentFrameworkWorkspaceService workspaceService,
+Exit code: 0

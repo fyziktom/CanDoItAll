@@ -116,7 +116,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         CancellationToken cancellationToken)
     {
-        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+        var executionRuns = await executionClient.ListExecutionRunsAsync(
             new ExecutionRunQuery(
                 ProcessRunId: candidate.Run.Id.ToString("D"),
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
@@ -128,11 +128,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return null;
         }
 
-        var detail = await workspaceService.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+        var detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
         for (var pollIndex = 0; pollIndex < 2 && !IsTerminalAutomationExecutionRun(detail.Run); pollIndex++)
         {
             await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
-            detail = await workspaceService.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+            detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
         }
 
         return new ConcurrentAutomationExecution(
@@ -146,7 +146,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchExecutionOutcome executionOutcome,
         CancellationToken cancellationToken)
     {
-        var executionRuns = await workspaceService.ListExecutionRunsAsync(
+        var executionRuns = await executionClient.ListExecutionRunsAsync(
             new ExecutionRunQuery(
                 ProcessRunId: candidate.Run.Id.ToString("D"),
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
