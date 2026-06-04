@@ -99,7 +99,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
                 detail.Run.Id,
                 artifact,
-                matchedExpectation is null ? null : ToProjectionExpectation(matchedExpectation),
+                matchedExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(matchedExpectation),
                 ResolveProcessArtifactKind(candidate, artifact),
                 completionStatus,
                 detail.Run.ResultSummary,
@@ -232,7 +232,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var expectedArtifact = matchedExpectations[0];
-            var expectedProjection = ToProjectionExpectation(expectedArtifact);
+            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
             var scopedRelativePath = ResolveScopedManagedRelativePath(workspaceScope, projection.RelativePath);
             var projectionSource = new ProcessMockArtifactProjectionSource(
                 candidate.StepRun.Id,
@@ -362,7 +362,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var expectedProjection = ToProjectionExpectation(expectedArtifact);
+            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
             var duplicateProbeSource = new WorkspaceWrittenArtifactProjectionSource(
                 detail.Run.Id,
                 projectedRelativePath,
@@ -500,7 +500,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var expectedProjection = ToProjectionExpectation(expectedArtifact);
+            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
             var projectionSource = new ExistingManagedArtifactProjectionSource(
                 detail.Run.Id,
                 projectedRelativePath);
@@ -948,7 +948,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     DateTimeOffset.UtcNow);
                 var projectionPlan = ResponseTextArtifactProjectionSourceAdapter.Plan(
                     projectionSource,
-                    ToProjectionExpectation(expectedArtifact),
+                    ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
                     completionStatus,
                     recoveryContext);
 
@@ -1009,7 +1009,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var recoveryContext = CreateArtifactRecoveryProjectionContext(lineage);
-        var expectedProjection = ToProjectionExpectation(expectedArtifact);
+        var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
         var projectionSource = new ExistingManagedArtifactProjectionSource(
             detail.Run.Id,
             projectedRelativePath);
@@ -1177,7 +1177,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     requiredToolName);
                 var projectionPlan = ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanExpectedOutput(
                     projectionSource,
-                    ToProjectionExpectation(expectedArtifact),
+                    ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
                     completionStatus,
                     recoveryContext);
                 if (candidate.ExternalReferenceKeys.Contains(projectionPlan.ExternalReferenceKey))
@@ -1333,7 +1333,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         : null;
                     var projectionPlan = ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanDiscoveredOutput(
                         projectionSource,
-                        recordExpectation is null ? null : ToProjectionExpectation(recordExpectation),
+                        recordExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(recordExpectation),
                         ProcessArtifactKind.Evidence,
                         BuildProviderNativeBrowserArtifactTitle(syntheticArtifact),
                         completionStatus,
@@ -1420,22 +1420,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool IsProviderNativeBrowserArtifactPath(string relativePath)
-    {
-        if (string.IsNullOrWhiteSpace(relativePath))
-        {
-            return false;
-        }
-
-        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
-        var comparablePath = NormalizeManagedRelativePathForComparison(normalizedPath);
-        if (comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase))
-        {
-            return ResolveProviderNativeBrowserToolName(comparablePath).Length > 0;
-        }
-
-        return normalizedPath.StartsWith(".playwright-mcp/", StringComparison.OrdinalIgnoreCase) &&
-               ResolveProviderNativeBrowserToolName(normalizedPath).Length > 0;
-    }
+        => ProcessArtifactProviderNativeVisualValidationRules.IsProviderNativeBrowserArtifactPath(relativePath);
 
     private void EnsureProviderNativeBrowserOutputDirectories(DispatchCandidate candidate)
     {

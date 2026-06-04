@@ -1,0 +1,45 @@
+Command: git branch --show-current
+maf-processes-refactor
+
+Command: git rev-parse HEAD
+38d371251f3d2adbee443388025dd69eee957403
+
+Command: git status --short
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/plan/01-phase-plan.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/01-entry-audit-current-artifact-validation-baseline/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/02-artifact-validation-method-and-side-effect-inventory/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/03-validation-snapshot-and-rule-seam-design/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/04-refactor-gate-a-guardrails-and-failing-first-tests/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/05-expectation-snapshot-and-nested-type-decoupling/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/06-path-and-managed-artifact-rule-extraction/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/07-title-slug-and-text-content-matching-extraction/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/08-refactor-gate-b-matcher-parity-and-line-count-review/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/09-provider-native-visual-artifact-validation-extraction/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/10-placeholder-and-quality-validation-rule-extraction/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/11-project-structure-requirement-preservation-rule-extraction/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/12-refactor-gate-c-validation-regression-and-driver-readiness-review/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/13-runtime-smoke-and-large-screen-policy-check/README.md
+ M codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/subbundles/14-final-red-team-and-next-dispatcher-cutline/README.md
+?? codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/inputs/01-source-artifacts.md
+?? codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/inputs/02-structured-input.md
+?? codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/reviews/01-execution-report.md
+
+Command: ArtifactValidation line count
+3931
+
+Command: required source path existence
+ArtifactValidation.cs=True
+ArtifactProjection.cs=True
+StepCompletionFinalizer.cs=True
+Integration tests=True
+Architecture tests=True
+
+Command: rg -n "CanDoItAll\.Processes\.Core|IProcessDriverPack|ProcessDriver|DriverPack" src tests
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:18:            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:20:            name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:21:            name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:277:        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+
+Command: rg -n "PlaceAsync\(" src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjection.cs
+No matches.

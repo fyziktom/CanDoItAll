@@ -1,0 +1,4 @@
+﻿Command: See proof manifest for recorded command/proof operation.
+ArtifactValidation.cs line count: 3223
+ExitCode: 0
+Invariant: SB14-INV-001

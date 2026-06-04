@@ -1,0 +1,5 @@
+Command: ArtifactValidation line count after SB06
+3855
+
+Command: rg side-effect/prohibited/nested tokens in ProcessArtifactPathValidationRules.cs
+No matches.

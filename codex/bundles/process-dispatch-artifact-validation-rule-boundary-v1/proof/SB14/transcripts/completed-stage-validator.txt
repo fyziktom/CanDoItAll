@@ -1,0 +1,4 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-dispatch-artifact-validation-rule-boundary-v1 --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll --bundle-root C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-validation-rule-boundary-v1
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-validation-rule-boundary-v1
+ExitCode: 0
+Invariant: SB14-INV-001

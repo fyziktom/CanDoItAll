@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Subbundle status: Completed
 
 ## Objective
 
@@ -35,7 +35,7 @@ Run full validation regression, update driver-readiness map, and prove no driver
 
 ## Dependency Impact
 
-Downstream dependency: SB13. If this subbundle changes semantics or cannot prove parity, downstream work must stop and reopen this subbundle.
+- Downstream dependency: SB13. If this subbundle changes semantics or cannot prove parity, downstream work must stop and reopen this subbundle.
 
 ## Validation Depth
 
@@ -66,11 +66,11 @@ Gate C must pass before final smoke.
 
 ## Acceptance Checklist
 
-- [ ] Subbundle objective is complete.
-- [ ] Tests/source scans are recorded.
-- [ ] No prohibited scope was introduced.
-- [ ] Execution report updated.
-- [ ] Gate C criteria satisfied where applicable.
+- [x] Subbundle objective is complete.
+- [x] Tests/source scans are recorded.
+- [x] No prohibited scope was introduced.
+- [x] Execution report updated.
+- [x] Gate C criteria satisfied where applicable.
 
 ## Proof Required
 
@@ -80,11 +80,11 @@ Gate C must pass before final smoke.
 
 ## Browser Validation Logging
 
-N/A expected. This is runtime/service refactor work. If UI proof becomes unavoidable, use large desktop/PC only and record why.
+- N/A expected. This is runtime/service refactor work. If UI proof becomes unavoidable, use large desktop/PC only and record why.
 
 ## Progression Gate
 
-Gate C: pass all focused proof for this subbundle before moving to SB13.
+- Gate C: pass all focused proof for this subbundle before moving to SB13.
 
 ## Suggested Agent Prompt
 

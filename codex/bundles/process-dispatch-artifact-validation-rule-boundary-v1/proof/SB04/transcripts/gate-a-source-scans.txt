@@ -1,0 +1,23 @@
+﻿Command: ArtifactValidation line count
+3931
+
+Command: rg no-core/no-driver tokens in src tests
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:18:            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:19:            string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:20:            name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:21:            name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:277:        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:278:        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:302:        Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:303:        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:304:        Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:305:        Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:306:        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:351:        Assert.DoesNotContain("IProcessDriverPack", driverReadiness, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:352:        Assert.DoesNotContain("DriverPack", driverReadiness, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:353:        Assert.DoesNotContain("ProcessDriver", driverReadiness, StringComparison.Ordinal);
+
+Command: prohibited viewport proof artifact path scan under current bundle proof
+No matches.
+ExitCode: 0
+Invariant: SB04-INV-001

@@ -1,0 +1,4 @@
+﻿Command: rg no-core/no-driver tokens in src
+No matches.
+ExitCode: 0
+Invariant: SB04-INV-001

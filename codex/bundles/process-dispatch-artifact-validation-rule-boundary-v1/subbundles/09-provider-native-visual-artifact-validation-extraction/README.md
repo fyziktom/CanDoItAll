@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Subbundle status: Completed
 
 ## Objective
 
@@ -35,7 +35,7 @@ Move provider-native visual artifact scoring and screenshot/visual signal rules 
 
 ## Dependency Impact
 
-Downstream dependency: SB10. If this subbundle changes semantics or cannot prove parity, downstream work must stop and reopen this subbundle.
+- Downstream dependency: SB10. If this subbundle changes semantics or cannot prove parity, downstream work must stop and reopen this subbundle.
 
 ## Validation Depth
 
@@ -66,11 +66,11 @@ Keep expected/discovered projection modes unchanged.
 
 ## Acceptance Checklist
 
-- [ ] Subbundle objective is complete.
-- [ ] Tests/source scans are recorded.
-- [ ] No prohibited scope was introduced.
-- [ ] Execution report updated.
-- [ ] SB09 closure criteria satisfied where applicable.
+- [x] Subbundle objective is complete.
+- [x] Tests/source scans are recorded.
+- [x] No prohibited scope was introduced.
+- [x] Execution report updated.
+- [x] SB09 closure criteria satisfied where applicable.
 
 ## Proof Required
 
@@ -80,11 +80,11 @@ Keep expected/discovered projection modes unchanged.
 
 ## Browser Validation Logging
 
-N/A expected. This is runtime/service refactor work. If UI proof becomes unavoidable, use large desktop/PC only and record why.
+- N/A expected. This is runtime/service refactor work. If UI proof becomes unavoidable, use large desktop/PC only and record why.
 
 ## Progression Gate
 
-SB09 closure: pass all focused proof for this subbundle before moving to SB10.
+- SB09 closure: pass all focused proof for this subbundle before moving to SB10.
 
 ## Suggested Agent Prompt
 

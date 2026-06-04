@@ -1,0 +1,4 @@
+﻿Command: rg anti-stub and prohibited boundary tokens in SB03 production files
+No matches.
+ExitCode: 0
+Invariant: SB03-INV-001

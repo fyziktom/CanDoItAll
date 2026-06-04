@@ -1,0 +1,4 @@
+﻿Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|return default" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactValidationSnapshot.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactValidationSnapshotBuilder.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactPathValidationRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactTextMatchRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProviderNativeVisualValidationRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactQualityValidationRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectStructureRequirementValidationRules.cs tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs
+No matches.
+ExitCode: 0
+Invariant: SB14-INV-001

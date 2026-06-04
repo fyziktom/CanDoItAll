@@ -1,0 +1,4 @@
+﻿Command: rg -n "CanDoItAll\.Processes\.Core|CanDoItAll\.Modules\.Processes\.Core|IProcessDriverPack|DriverPack|ProcessDriver" src
+No matches.
+ExitCode: 0
+Invariant: SB12-INV-001

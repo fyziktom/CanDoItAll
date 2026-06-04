@@ -148,63 +148,6 @@ internal sealed partial class ProcessRunAutomationDispatchService(
         ToolContractCatalog.BrowserSnapshot,
         ToolContractCatalog.BrowserTakeScreenshot
     ];
-    private static readonly HashSet<string> ArtifactTitleNoiseTokens = new(StringComparer.Ordinal)
-    {
-        "artifact",
-        "artifacts",
-        "brief",
-        "briefs",
-        "checklist",
-        "checklists",
-        "doc",
-        "docs",
-        "document",
-        "documents",
-        "evidence",
-        "file",
-        "files",
-        "note",
-        "notes",
-        "output",
-        "outputs",
-        "packet",
-        "packets",
-        "record",
-        "records",
-        "report",
-        "reports"
-    };
-    private static readonly HashSet<string> ArtifactContentNoiseTokens = new(StringComparer.Ordinal)
-    {
-        "and",
-        "are",
-        "capture",
-        "captured",
-        "create",
-        "created",
-        "form",
-        "must",
-        "required",
-        "should",
-        "the",
-        "this",
-        "with"
-    };
-    private static readonly HashSet<string> ProjectStructureRequirementNoiseTokens = new(StringComparer.Ordinal)
-    {
-        "acceptance",
-        "constraint",
-        "criteria",
-        "from",
-        "grounded",
-        "project",
-        "projectblock",
-        "requirement",
-        "requirements",
-        "selected",
-        "structure",
-        "type"
-    };
     private sealed record PrefetchedProjectStructureGrounding(string PromptSummary, IReadOnlyList<string> SatisfiedToolNames)
     {
         public static PrefetchedProjectStructureGrounding Empty { get; } = new(string.Empty, []);

@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Subbundle status: Completed
 
 ## Objective
 
@@ -35,7 +35,7 @@ Final red-team review and next safe dispatcher isolation cutline.
 
 ## Dependency Impact
 
-Downstream dependency: Final closure. If this subbundle changes semantics or cannot prove parity, downstream work must stop and reopen this subbundle.
+- Downstream dependency: Final closure. If this subbundle changes semantics or cannot prove parity, downstream work must stop and reopen this subbundle.
 
 ## Validation Depth
 
@@ -66,11 +66,11 @@ No production movement beyond proof/doc closure.
 
 ## Acceptance Checklist
 
-- [ ] Subbundle objective is complete.
-- [ ] Tests/source scans are recorded.
-- [ ] No prohibited scope was introduced.
-- [ ] Execution report updated.
-- [ ] Final Gate criteria satisfied where applicable.
+- [x] Subbundle objective is complete.
+- [x] Tests/source scans are recorded.
+- [x] No prohibited scope was introduced.
+- [x] Execution report updated.
+- [x] Final Gate criteria satisfied where applicable.
 
 ## Proof Required
 
@@ -80,11 +80,11 @@ No production movement beyond proof/doc closure.
 
 ## Browser Validation Logging
 
-N/A expected. This is runtime/service refactor work. If UI proof becomes unavoidable, use large desktop/PC only and record why.
+- N/A expected. This is runtime/service refactor work. If UI proof becomes unavoidable, use large desktop/PC only and record why.
 
 ## Progression Gate
 
-Final Gate: pass all focused proof for this subbundle before moving to Final closure.
+- Final Gate: pass all focused proof for this subbundle before moving to Final closure.
 
 ## Suggested Agent Prompt
 

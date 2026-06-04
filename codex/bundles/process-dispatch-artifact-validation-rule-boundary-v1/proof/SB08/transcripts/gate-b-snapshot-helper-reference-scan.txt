@@ -1,0 +1,77 @@
+﻿Command: rg -n "ProcessArtifactValidationSnapshot|ProcessArtifactValidationExpectation|ProcessArtifactPathValidationRules|ProcessArtifactTextMatchRules" src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:291:        var snapshotPath = Path.Combine(processesDispatchDirectory, "ProcessArtifactValidationSnapshot.cs");
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:292:        var builderPath = Path.Combine(processesDispatchDirectory, "ProcessArtifactValidationSnapshotBuilder.cs");
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:300:        Assert.Contains("internal sealed record ProcessArtifactValidationSnapshot", helperSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:301:        Assert.Contains("internal sealed record ProcessArtifactValidationExpectation", helperSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:376:            "ProcessArtifactValidationSnapshot.cs");
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:378:        Assert.Contains("ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectations", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:379:        Assert.Contains("IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:380:        Assert.Contains("ProcessArtifactValidationExpectation expectedArtifact", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:393:            "ProcessArtifactPathValidationRules.cs");
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:395:        Assert.Contains("internal static class ProcessArtifactPathValidationRules", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:416:            "ProcessArtifactTextMatchRules.cs");
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:418:        Assert.Contains("internal static class ProcessArtifactTextMatchRules", source, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactPathValidationRules.cs:5:internal static class ProcessArtifactPathValidationRules
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactPathValidationRules.cs:94:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactTextMatchRules.cs:5:internal static class ProcessArtifactTextMatchRules
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactTextMatchRules.cs:52:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactTextMatchRules.cs:84:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactTextMatchRules.cs:93:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshot.cs:3:internal sealed record ProcessArtifactValidationSnapshot(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshot.cs:4:    IReadOnlyList<ProcessArtifactValidationExpectation> ExpectedArtifacts,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshot.cs:7:    public static ProcessArtifactValidationSnapshot Empty { get; } = new([], string.Empty);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshot.cs:10:internal sealed record ProcessArtifactValidationExpectation(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshotBuilder.cs:3:internal static class ProcessArtifactValidationSnapshotBuilder
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshotBuilder.cs:5:    public static ProcessArtifactValidationSnapshot FromDispatchExpectations(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshotBuilder.cs:11:        return new ProcessArtifactValidationSnapshot(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactValidationSnapshotBuilder.cs:16:    public static ProcessArtifactValidationExpectation FromDispatchExpectation(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:102:                matchedExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(matchedExpectation),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:235:            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:365:            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:503:            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:951:                    ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1012:        var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1180:                    ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1336:                        recordExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(recordExpectation),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:309:            .Where(token => !ProcessArtifactTextMatchRules.IsArtifactTitleNoiseToken(token))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:310:            .Where(token => !ProcessArtifactTextMatchRules.IsArtifactContentNoiseToken(token))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:812:        => ProcessArtifactPathValidationRules.NormalizeManagedPathReference(path);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:815:        => ProcessArtifactPathValidationRules.IsShallowSharedManagedArtifactPath(path);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:818:        => ProcessArtifactPathValidationRules.IsManagedRootSegment(segment);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1025:            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1029:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1031:        => ProcessArtifactPathValidationRules.ExpectedArtifactExplicitlyTargetsPath(expectedArtifact, normalizedPath);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1037:            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1041:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1064:            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact));
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1066:    private static bool IsNarrativeEvidenceArtifactExpectation(ProcessArtifactValidationExpectation expectedArtifact)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1162:            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1167:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1170:        => ProcessArtifactTextMatchRules.HasExpectedArtifactContentSignals(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1180:            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1184:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1186:        => ProcessArtifactTextMatchRules.HasExpectedArtifactValidationSignals(expectedArtifact, normalizedResponse);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1192:            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1196:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1198:        => ProcessArtifactTextMatchRules.HasExpectedArtifactValidationSignals(expectedArtifact, responseTokens);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1201:        => ProcessArtifactTextMatchRules.TokenizeArtifactContentSignalText(value);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2365:        var snapshot = ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectations(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2373:        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2451:        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2493:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2531:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2595:        => ProcessArtifactTextMatchRules.TokenizeVisualArtifactMatchText(value);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2601:        => ProcessArtifactTextMatchRules.MatchesExpectedArtifactByTitleTokens(expectedTitle, relativePath, displayName);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2604:        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2605:        ProcessArtifactValidationExpectation expectedArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2646:        => ProcessArtifactTextMatchRules.ContainsNarrativeArtifactSignal(text);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2649:        => ProcessArtifactTextMatchRules.SharesNarrativeArtifactPurpose(expectedText, observedText);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2652:        => ProcessArtifactTextMatchRules.TokenizeArtifactComparisonText(value);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2819:        => ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(validationRequirementSummary, out relativePath);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2936:            .Where(token => !ProcessArtifactTextMatchRules.IsArtifactTitleNoiseToken(token))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2937:            .Where(token => !ProcessArtifactTextMatchRules.IsArtifactContentNoiseToken(token))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:3186:        => ProcessArtifactPathValidationRules.NormalizeManagedRelativePathForComparison(relativePath);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:3566:            ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:3718:        => ProcessArtifactPathValidationRules.IsManagedRootSegment(segment);
+ExitCode: 0
+Invariant: SB08-INV-001

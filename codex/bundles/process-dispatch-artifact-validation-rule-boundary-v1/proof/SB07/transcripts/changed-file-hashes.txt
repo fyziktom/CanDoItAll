@@ -1,0 +1,5 @@
+Command: Get-FileHash changed SB07 files
+C139AB340F98B3640E70718C8EE212E18C59793E9A12545903A727AA8ABACAE9  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactTextMatchRules.cs
+1FA8AD80026FF3B2450726B97F8ECE9273BE0586CB8DEEA6A1E341D8C99620A0  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs
+385C865BD6A1DA24249E8448F919DB689B009685982E41B9E2AF1EA82C98A244  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs
+49EF16B8A24CCAF387C9CF78950B4F5A765B1584C66CBD9DFCD52AED4992C2A8  repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs

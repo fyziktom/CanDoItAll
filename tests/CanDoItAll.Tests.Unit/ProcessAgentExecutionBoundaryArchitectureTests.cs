@@ -279,6 +279,263 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Artifact_validation_snapshot_boundary_is_process_module_local_without_driver_contracts()
+    {
+        var root = FindRepositoryRoot();
+        var processesDispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var snapshotPath = Path.Combine(processesDispatchDirectory, "ProcessArtifactValidationSnapshot.cs");
+        var builderPath = Path.Combine(processesDispatchDirectory, "ProcessArtifactValidationSnapshotBuilder.cs");
+        var helperSource = string.Join(
+            Environment.NewLine,
+            File.ReadAllText(snapshotPath),
+            File.ReadAllText(builderPath));
+
+        Assert.True(File.Exists(snapshotPath));
+        Assert.True(File.Exists(builderPath));
+        Assert.Contains("internal sealed record ProcessArtifactValidationSnapshot", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessArtifactValidationExpectation", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+    }
+
+    [Fact]
+    public void Artifact_validation_gate_a_records_live_inventory_and_blocks_driver_or_viewport_drift()
+    {
+        var root = FindRepositoryRoot();
+        var inventory = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-artifact-validation-rule-boundary-v1",
+            "inventories",
+            "02-artifact-validation-method-inventory-seed.md");
+        var driverReadiness = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-artifact-validation-rule-boundary-v1",
+            "inventories",
+            "04-driver-readiness-map.md");
+        var proofRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-artifact-validation-rule-boundary-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.Contains("Status: refreshed from live source in SB02.", inventory, StringComparison.Ordinal);
+        Assert.Contains("Current line count: 3931", inventory, StringComparison.Ordinal);
+        Assert.Contains("Method declaration rows found: 188", inventory, StringComparison.Ordinal);
+        Assert.Contains("Side-effect indicator rows found: 57", inventory, StringComparison.Ordinal);
+        Assert.Contains("File.Copy", inventory, StringComparison.Ordinal);
+        Assert.Contains("Do not implement driver APIs", driverReadiness, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", driverReadiness, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", driverReadiness, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", driverReadiness, StringComparison.Ordinal);
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public void Artifact_validation_matcher_core_uses_validation_snapshot_expectations()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
+        var snapshotSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactValidationSnapshot.cs");
+
+        Assert.Contains("ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectations", source, StringComparison.Ordinal);
+        Assert.Contains("IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactValidationExpectation expectedArtifact", source, StringComparison.Ordinal);
+        Assert.Contains("ToProjectionExpectation()", snapshotSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static ProcessArtifactProjectionExpectation ToProjectionExpectation", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_validation_path_rules_are_local_and_do_not_own_file_or_storage_effects()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactPathValidationRules.cs");
+
+        Assert.Contains("internal static class ProcessArtifactPathValidationRules", source, StringComparison.Ordinal);
+        Assert.Contains("NormalizeManagedPathReference", source, StringComparison.Ordinal);
+        Assert.Contains("IsShallowSharedManagedArtifactPath", source, StringComparison.Ordinal);
+        Assert.Contains("TryExtractExpectedArtifactRelativePath", source, StringComparison.Ordinal);
+        Assert.Contains("ExpectedArtifactExplicitlyTargetsPath", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchArtifactExpectation", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_validation_text_match_rules_are_local_and_do_not_own_orchestration_effects()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactTextMatchRules.cs");
+
+        Assert.Contains("internal static class ProcessArtifactTextMatchRules", source, StringComparison.Ordinal);
+        Assert.Contains("HasExpectedArtifactContentSignals", source, StringComparison.Ordinal);
+        Assert.Contains("MatchesExpectedArtifactByTitleTokens", source, StringComparison.Ordinal);
+        Assert.Contains("TokenizeArtifactComparisonText", source, StringComparison.Ordinal);
+        Assert.Contains("SharesNarrativeArtifactPurpose", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchArtifactExpectation", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_validation_provider_native_visual_rules_are_local_and_do_not_own_orchestration_effects()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactProviderNativeVisualValidationRules.cs");
+        var dispatcherSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
+
+        Assert.Contains("internal static class ProcessArtifactProviderNativeVisualValidationRules", source, StringComparison.Ordinal);
+        Assert.Contains("ScoreProviderNativeVisualArtifactExpectation", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveProviderNativeBrowserToolName", source, StringComparison.Ordinal);
+        Assert.Contains("IsProviderNativeBrowserArtifactPath", source, StringComparison.Ordinal);
+        Assert.Contains("ContainsScreenshotArtifactSignal", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProviderNativeVisualValidationRules.ScoreProviderNativeVisualArtifactExpectation", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchArtifactExpectation", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_validation_quality_rules_are_local_and_do_not_own_orchestration_effects()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactQualityValidationRules.cs");
+        var dispatcherSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
+
+        Assert.Contains("internal static class ProcessArtifactQualityValidationRules", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveInvalidQualityValidationProofSummary", source, StringComparison.Ordinal);
+        Assert.Contains("ContainsZeroTestRunEvidence", source, StringComparison.Ordinal);
+        Assert.Contains("ContainsBuildWarningEvidence", source, StringComparison.Ordinal);
+        Assert.Contains("IsPlaceholderCriticalToolRequestSummary", source, StringComparison.Ordinal);
+        Assert.Contains("ContainsConcreteBrowserProofSignal", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactQualityValidationRules.ResolveInvalidQualityValidationProofSummary", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchArtifactExpectation", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_validation_project_structure_requirement_rules_are_local_and_preserve_mandatory_source_lines()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactProjectStructureRequirementValidationRules.cs");
+        var dispatcherSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
+        var rootSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.cs");
+
+        Assert.Contains("internal static class ProcessArtifactProjectStructureRequirementValidationRules", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveDowngradedProjectStructureRequirementSummary", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveGroundedProjectStructureRequirementLines", source, StringComparison.Ordinal);
+        Assert.Contains("IsNonMandatoryProjectStructureSourceLine", source, StringComparison.Ordinal);
+        Assert.Contains("ContainsRequirementWeakeningPhrase", source, StringComparison.Ordinal);
+        Assert.Contains("TokenizeProjectStructureRequirementText", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectStructureRequirementValidationRules.ResolveDowngradedProjectStructureRequirementSummary", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProjectStructureRequirementNoiseTokens", rootSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchArtifactExpectation", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Execution_artifact_projection_path_uses_projection_planner_before_recording_artifact()
     {
         var source = ReadRepositoryFile(
