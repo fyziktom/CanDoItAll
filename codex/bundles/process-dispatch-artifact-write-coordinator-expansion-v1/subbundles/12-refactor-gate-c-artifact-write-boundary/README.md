@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Refactor Gate C: prove all storage-backed and record-only artifact write paths a
 
 ## Prerequisites
 
-SB09-SB11 complete.
+- SB09-SB11 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB09-SB11 complete.
 
 ## Dependency Impact
 
-Blocks final runtime smoke.
+- Blocks final runtime smoke.
 
 ## Validation Depth
 
@@ -73,14 +75,26 @@ Blocks final runtime smoke.
 - proof/SB12/transcripts/gate-c-tests.txt
 - proof/SB12/source-assertions/final-write-boundary-scan.txt
 
+## Proof Captured
+
+- `bundle://proof/SB12/transcripts/gate-c-tests.txt`
+- `bundle://proof/SB12/source-assertions/final-write-boundary-scan.txt`
+- `bundle://proof/SB12/source-assertions/gate-c-source-scan.txt`
+- `bundle://proof/SB12/source-assertions/line-counts.txt`
+- `bundle://proof/SB12/source-assertions/anti-stub-audit.txt`
+- `bundle://proof/SB12/source-assertions/changed-file-hashes.txt`
+- `bundle://proof/SB12/semantic-invariants.md`
+- `bundle://proof/SB12/manifest.md`
+
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB13 may start only after Gate C passes.
+- SB13 may start only after Gate C passes.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

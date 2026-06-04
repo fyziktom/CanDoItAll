@@ -1,0 +1,3 @@
+# SB10 changed file hashes
+2A0F709DFF4E9C2D75FA2BD3DAFC19E341BA531574B360A57E9DD92CB1DB92DA  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs
+B1ED79BA790A4F3A769F348CC692B17F295BA075C231933E0A27B97EE571A340  tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs

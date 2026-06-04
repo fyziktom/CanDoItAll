@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Migrate workspace-written artifact storage/write/record path through the write c
 
 ## Prerequisites
 
-SB05 complete.
+- SB05 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB05 complete.
 
 ## Dependency Impact
 
-Prepares migration of other storage-backed paths.
+- Prepares migration of other storage-backed paths.
 
 ## Validation Depth
 
@@ -64,22 +66,32 @@ Prepares migration of other storage-backed paths.
 
 ## Acceptance Checklist
 
-- SourceRelativePath/ProjectedRelativePath behavior unchanged.
-- Duplicate detection unchanged.
-- Candidate state updates preserved.
+- SourceRelativePath/ProjectedRelativePath behavior unchanged; dispatcher still resolves source full paths before write coordination.
+- Duplicate detection unchanged; external-reference probe still uses the workspace-written source adapter.
+- Candidate state updates preserved; successful coordinator outcome updates `ExternalReferenceKeys` and `RecordedArtifactExpectationIds`.
 
 ## Proof Required
 
 - proof/SB06/transcripts/workspace-written-tests.txt
+- proof/SB06/transcripts/failing-first-workspace-written-source-guard.txt
+- proof/SB06/source-assertions/workspace-written-source-scan.txt
+- proof/SB06/source-assertions/changed-file-hashes.txt
+
+## Completion Notes
+
+- Migrated `ProjectWorkspaceWrittenArtifactsAsync` to accept the existing write coordinator and call `WriteAsync`.
+- Removed the direct `storagePlacementService.PlaceAsync` and `RecordArtifactAsync` block from the workspace-written method.
+- Preserved soft failure behavior with warning logs and continue semantics for coordinator/recording failures.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB07 may start only after workspace-written parity passes.
+- SB07 may start only after workspace-written parity passes.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

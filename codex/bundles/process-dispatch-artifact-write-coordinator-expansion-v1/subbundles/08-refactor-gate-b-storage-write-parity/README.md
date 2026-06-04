@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Refactor Gate B: prove first batch of storage-backed migrations is safe and line
 
 ## Prerequisites
 
-SB05-SB07 complete.
+- SB05-SB07 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB05-SB07 complete.
 
 ## Dependency Impact
 
-Blocks response/provider/native migrations.
+- Blocks response/provider/native migrations.
 
 ## Validation Depth
 
@@ -64,22 +66,33 @@ Blocks response/provider/native migrations.
 ## Acceptance Checklist
 
 - Gate B passed.
-- No migration regressions.
+- No migration regressions; architecture guards, coordinator tests, migrated artifact projection parity tests, and full solution build passed.
 - No prohibited proof paths.
 
 ## Proof Required
 
 - proof/SB08/transcripts/gate-b-tests.txt
 - proof/SB08/source-assertions/line-counts.txt
+- proof/SB08/source-assertions/gate-b-source-scan.txt
+- proof/SB08/source-assertions/anti-stub-audit.txt
+- proof/SB08/source-assertions/changed-file-hashes.txt
+- proof/SB08/manifest.md
+
+## Completion Notes
+
+- Re-scanned process mock, workspace-written, and existing-managed sections and confirmed each uses `writeCoordinator.WriteAsync` without direct placement/record calls.
+- Recorded line counts; `ArtifactProjection.cs` is 1506 lines versus the SB04 1526-line baseline.
+- Full `dotnet build CanDoItAll.slnx --no-restore -v:minimal` passed.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB09 may start only after Gate B.
+- SB09 may start only after Gate B.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

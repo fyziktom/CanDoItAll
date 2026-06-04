@@ -1,0 +1,34 @@
+Run label: SB05 process mock source scan
+Working directory: C:\repositories\CanDoItAll
+
+ProjectProcessMockArtifactsAsync section assertions:
+Contains writeCoordinator.WriteAsync: True
+Contains ProcessArtifactProjectionWriteRequest: True
+Contains storagePlacementService.PlaceAsync: False
+Contains RecordArtifactAsync(: False
+Contains throw new InvalidOperationException: True
+
+Command: rg -n "storagePlacementService\.PlaceAsync|RecordArtifactAsync|writeCoordinator\.WriteAsync|ProjectProcessMockArtifactsAsync" ArtifactProjection.cs
+40:            RecordArtifactAsync);
+107:            var writeResult = await writeCoordinator.WriteAsync(
+140:        await ProjectProcessMockArtifactsAsync(
+188:    private async Task ProjectProcessMockArtifactsAsync(
+268:            var writeResult = await writeCoordinator.WriteAsync(
+425:            var placement = await storagePlacementService.PlaceAsync(
+436:            var recordResult = await RecordArtifactAsync(
+564:            var placement = await storagePlacementService.PlaceAsync(
+586:            var recordResult = await RecordArtifactAsync(
+746:            var recordResult = await RecordArtifactAsync(
+920:                var placement = await storagePlacementService.PlaceAsync(
+931:                var recordResult = await RecordArtifactAsync(
+1027:        var placement = await storagePlacementService.PlaceAsync(
+1037:        var recordResult = await RecordArtifactAsync(
+1190:                var placement = await storagePlacementService.PlaceAsync(
+1201:                var recordResult = await RecordArtifactAsync(
+1363:                    var placement = await storagePlacementService.PlaceAsync(
+1374:                    var recordResult = await RecordArtifactAsync(
+1587:    private async Task<Result<Guid>> RecordArtifactAsync(
+1593:        return await processesService.RecordArtifactAsync(request, cancellationToken);
+
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific|template-only" SB05 changed files
+No TODO, NotImplemented, fixture-specific, or template-only markers found in SB05 changed files.

@@ -1,0 +1,75 @@
+**********************
+PowerShell transcript start
+Start time: 20260604142520
+Username: LUCYSPOWER\lucys
+RunAs User: LUCYSPOWER\lucys
+Configuration Name: 
+Machine: LUCYSPOWER (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Program Files\PowerShell\7\pwsh.dll -Command [Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+$ErrorActionPreference = 'Continue'
+$proofRoot = 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-write-coordinator-expansion-v1\proof\SB12'
+$transcriptDir = Join-Path $proofRoot 'transcripts'
+New-Item -ItemType Directory -Force -Path $transcriptDir | Out-Null
+$transcriptPath = Join-Path $transcriptDir 'gate-c-tests.txt'
+if (Test-Path -LiteralPath $transcriptPath) { Remove-Item -LiteralPath $transcriptPath -Force }
+Start-Transcript -LiteralPath $transcriptPath | Out-Null
+$failed = $false
+function Invoke-GateStep {
+    param(
+        [Parameter(Mandatory = $true)][string]$Name,
+        [Parameter(Mandatory = $true)][string[]]$Command
+    )
+
+    Write-Host "## $Name"
+    Write-Host ("Command: " + ($Command -join ' '))
+    & $Command[0] @($Command[1..($Command.Length - 1)])
+    $exit = $LASTEXITCODE
+    Write-Host "ExitCode: $exit"
+    if ($exit -ne 0) {
+        $script:failed = $true
+    }
+}
+
+Invoke-GateStep 'Unit architecture boundary guards' @('dotnet','test','tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj','--no-restore','--filter','FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests','-v:minimal')
+Invoke-GateStep 'Write coordinator integration contract tests' @('dotnet','test','tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj','--no-restore','--filter','FullyQualifiedName~ProcessArtifactProjectionWriteCoordinatorTests','-v:minimal')
+Invoke-GateStep 'Artifact projection helper parity tests' @('dotnet','test','tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj','--no-restore','--filter','FullyQualifiedName~WorkspaceWrittenFileMatchesExpectedArtifact|FullyQualifiedName~ResolveWorkspaceWrittenArtifactSourceRelativePaths|FullyQualifiedName~ExistingManagedArtifactFileMatches|FullyQualifiedName~Response_text_projection|FullyQualifiedName~ShouldProjectResponseTextArtifacts|FullyQualifiedName~ResolveProjectableResponseArtifactText|FullyQualifiedName~CanProjectResponseTextArtifactWithoutDeclaredPath|FullyQualifiedName~ProcessArtifactProjectionPlanner_SB09_INV_001|FullyQualifiedName~ProcessArtifactProjectionSourceAdapters_SB05_SB08|FullyQualifiedName~IsProviderNativeBrowserArtifactPath|FullyQualifiedName~ResolveProviderNativeBrowserProjectedRelativePath|FullyQualifiedName~ResolveProviderNativeBrowserOutputDirectoryPaths|FullyQualifiedName~CompletedDecisionArtifactExternalReferenceKey_SB11_INV_001|FullyQualifiedName~CompletedDecisionArtifactTrustStatus_SB11_INV_002|FullyQualifiedName~ProcessArtifactEvidenceValidationRules_SB10_INV_001','-v:minimal')
+Invoke-GateStep 'Artifact contract validation regression tests' @('dotnet','test','tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj','--no-restore','--filter','FullyQualifiedName~ArtifactContractValidation','-v:minimal')
+Invoke-GateStep 'Full solution build' @('dotnet','build','CanDoItAll.slnx','--no-restore','-v:minimal')
+Stop-Transcript | Out-Null
+if ($failed) { exit 1 }
+exit 0
+Process ID: 63324
+PSVersion: 7.5.5
+PSEdition: Core
+GitCommitId: 7.5.5
+OS: Microsoft Windows 10.0.26200
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+## Unit architecture boundary guards
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-restore --filter FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests -v:minimal
+
+ExitCode: 0
+## Write coordinator integration contract tests
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~ProcessArtifactProjectionWriteCoordinatorTests -v:minimal
+
+ExitCode: 0
+## Artifact projection helper parity tests
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~WorkspaceWrittenFileMatchesExpectedArtifact|FullyQualifiedName~ResolveWorkspaceWrittenArtifactSourceRelativePaths|FullyQualifiedName~ExistingManagedArtifactFileMatches|FullyQualifiedName~Response_text_projection|FullyQualifiedName~ShouldProjectResponseTextArtifacts|FullyQualifiedName~ResolveProjectableResponseArtifactText|FullyQualifiedName~CanProjectResponseTextArtifactWithoutDeclaredPath|FullyQualifiedName~ProcessArtifactProjectionPlanner_SB09_INV_001|FullyQualifiedName~ProcessArtifactProjectionSourceAdapters_SB05_SB08|FullyQualifiedName~IsProviderNativeBrowserArtifactPath|FullyQualifiedName~ResolveProviderNativeBrowserProjectedRelativePath|FullyQualifiedName~ResolveProviderNativeBrowserOutputDirectoryPaths|FullyQualifiedName~CompletedDecisionArtifactExternalReferenceKey_SB11_INV_001|FullyQualifiedName~CompletedDecisionArtifactTrustStatus_SB11_INV_002|FullyQualifiedName~ProcessArtifactEvidenceValidationRules_SB10_INV_001 -v:minimal
+
+ExitCode: 0
+## Artifact contract validation regression tests
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~ArtifactContractValidation -v:minimal
+
+ExitCode: 0
+## Full solution build
+Command: dotnet build CanDoItAll.slnx --no-restore -v:minimal
+
+ExitCode: 0
+**********************
+PowerShell transcript end
+End time: 20260604142758
+**********************

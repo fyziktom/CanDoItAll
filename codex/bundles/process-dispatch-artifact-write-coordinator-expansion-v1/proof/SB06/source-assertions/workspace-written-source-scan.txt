@@ -1,0 +1,32 @@
+# SB06 workspace-written source scan
+
+## Method assertions
+method found: True
+next method found after method: True
+contains coordinator parameter: True
+contains coordinator write call: True
+contains write request: True
+contains source adapter plan: True
+contains source full path resolver: True
+contains warning logging: True
+contains direct storage placement: False
+contains direct record call: False
+contains hard invalid operation throw: False
+
+## Remaining direct writes for later subbundles
+559:            var placement = await storagePlacementService.PlaceAsync(
+581:            var recordResult = await RecordArtifactAsync(
+741:            var recordResult = await RecordArtifactAsync(
+915:                var placement = await storagePlacementService.PlaceAsync(
+926:                var recordResult = await RecordArtifactAsync(
+1022:        var placement = await storagePlacementService.PlaceAsync(
+1032:        var recordResult = await RecordArtifactAsync(
+1185:                var placement = await storagePlacementService.PlaceAsync(
+1196:                var recordResult = await RecordArtifactAsync(
+1358:                    var placement = await storagePlacementService.PlaceAsync(
+1369:                    var recordResult = await RecordArtifactAsync(
+1582:    private async Task<Result<Guid>> RecordArtifactAsync(
+1588:        return await processesService.RecordArtifactAsync(request, cancellationToken);
+
+## Changed-file anti-stub scan
+No anti-stub markers found in SB06 changed source files.

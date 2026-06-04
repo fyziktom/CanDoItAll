@@ -10620,6 +10620,41 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Fact]
+    public void CompletedDecisionArtifactExternalReferenceKey_SB11_INV_001_preserves_step_expectation_format()
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var buildCompletedDecisionArtifactExternalReferenceKey = serviceType.GetMethod(
+            "BuildCompletedDecisionArtifactExternalReferenceKey",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("BuildCompletedDecisionArtifactExternalReferenceKey method was not found.");
+        var stepRunId = Guid.NewGuid();
+        var artifactExpectationId = Guid.NewGuid();
+
+        var key = buildCompletedDecisionArtifactExternalReferenceKey.Invoke(null, [stepRunId, artifactExpectationId]) as string;
+
+        Assert.Equal($"process-step-decision:{stepRunId:D}:{artifactExpectationId:D}", key);
+    }
+
+    [Theory]
+    [InlineData(ProcessArtifactTrustRequirement.ReviewRequired, ProcessArtifactTrustStatus.ReviewRequired)]
+    [InlineData(ProcessArtifactTrustRequirement.HumanApproved, ProcessArtifactTrustStatus.Approved)]
+    [InlineData(ProcessArtifactTrustRequirement.ApprovalRequired, ProcessArtifactTrustStatus.Approved)]
+    public void CompletedDecisionArtifactTrustStatus_SB11_INV_002_preserves_existing_mapping(
+        ProcessArtifactTrustRequirement trustRequirement,
+        ProcessArtifactTrustStatus expected)
+    {
+        var serviceType = typeof(ProcessRunAutomationDispatchService);
+        var resolveCompletedDecisionArtifactTrustStatus = serviceType.GetMethod(
+            "ResolveCompletedDecisionArtifactTrustStatus",
+            BindingFlags.NonPublic | BindingFlags.Static)
+            ?? throw new InvalidOperationException("ResolveCompletedDecisionArtifactTrustStatus method was not found.");
+
+        var trustStatus = (ProcessArtifactTrustStatus)(resolveCompletedDecisionArtifactTrustStatus.Invoke(null, [trustRequirement]) ?? ProcessArtifactTrustStatus.ReviewRequired);
+
+        Assert.Equal(expected, trustStatus);
+    }
+
+    [Fact]
     public void ResolveProjectableResponseArtifactText_uses_human_summary_for_structured_process_outcome()
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);

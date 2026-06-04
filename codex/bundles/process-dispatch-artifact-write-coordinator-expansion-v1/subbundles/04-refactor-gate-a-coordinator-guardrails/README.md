@@ -2,7 +2,12 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
+
+- Entry gate: Passed on 2026-06-04. SB03 critical proof manifest and semantic invariants exist.
+- Closure gate: Passed on 2026-06-04. Gate A tests, full build, source scans, line counts, no-core/no-driver scan, coordinator semantic-isolation scan, and no-prohibited-viewport proof scan passed.
 
 ## Objective
 
@@ -16,7 +21,7 @@ Refactor Gate A: prove the hardened coordinator boundary is safe before migratin
 
 ## Prerequisites
 
-SB03 complete.
+- SB03 complete.
 
 ## Exact Source References
 
@@ -36,7 +41,7 @@ SB03 complete.
 
 ## Dependency Impact
 
-Blocks SB05-SB07 production migrations.
+- Blocks SB05-SB07 production migrations.
 
 ## Validation Depth
 
@@ -72,17 +77,19 @@ Blocks SB05-SB07 production migrations.
 
 ## Proof Required
 
+- proof/SB04/manifest.md
 - proof/SB04/transcripts/gate-a-tests.txt
 - proof/SB04/source-assertions/gate-a-source-scan.txt
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB05 may start only after Gate A is marked passed.
+- SB05 may start only after Gate A is marked passed.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

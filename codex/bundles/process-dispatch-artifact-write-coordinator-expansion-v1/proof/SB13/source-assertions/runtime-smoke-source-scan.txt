@@ -1,0 +1,13 @@
+# SB13 runtime smoke source/proof scan
+
+## Projection write boundary
+1542:    private async Task<Result<Guid>> RecordArtifactAsync(
+1548:        return await processesService.RecordArtifactAsync(request, cancellationToken);
+ArtifactProjection contains no storagePlacementService.PlaceAsync calls: True
+ArtifactProjection RecordArtifactAsync paren references are only helper definition and service delegate call: True
+
+## Process Core and driver-pack scan
+No Process Core or driver-pack files found.
+
+## Prohibited viewport proof artifact path scan
+No prohibited viewport proof artifact file paths found under bundle proof.

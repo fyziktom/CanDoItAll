@@ -1,0 +1,75 @@
+# SB12 final write boundary source scan
+
+## ArtifactProjection direct write scan
+1542:    private async Task<Result<Guid>> RecordArtifactAsync(
+1548:        return await processesService.RecordArtifactAsync(request, cancellationToken);
+ArtifactProjection contains no storagePlacementService.PlaceAsync calls: True
+ArtifactProjection RecordArtifactAsync paren references are only helper definition and service delegate call: True
+
+## Response text section
+response section keeps workspace path safety checks: True
+response section keeps dispatcher-owned file creation: True
+response section uses response source adapter planning: True
+response section uses write coordinator: True
+response section keeps existing-managed short-circuit helper: True
+response section has no direct storage placement: True
+response section has no direct RecordArtifactAsync call: True
+
+## Response existing-managed helper section
+response existing-managed helper uses existing-managed source adapter planning: True
+response existing-managed helper uses write coordinator: True
+response existing-managed helper has no direct storage placement: True
+response existing-managed helper has no direct RecordArtifactAsync call: True
+
+## Provider-native browser expected section
+provider expected section keeps workspace path safety checks: True
+provider expected section keeps dispatcher-owned file copy: True
+provider expected section uses PlanExpectedOutput: True
+provider expected section uses write coordinator: True
+provider expected section has no direct storage placement: True
+provider expected section has no direct RecordArtifactAsync call: True
+
+## Provider-native browser discovered section
+provider discovered section keeps workspace path safety checks: True
+provider discovered section keeps dispatcher-owned file copy: True
+provider discovered section uses PlanDiscoveredOutput: True
+provider discovered section uses write coordinator: True
+provider discovered section has no direct storage placement: True
+provider discovered section has no direct RecordArtifactAsync call: True
+
+## Completed decision record-only section
+decision section uses record-only coordinator parameter: True
+decision section uses record-only request: True
+decision section calls record-only coordinator: True
+decision section keeps decision external key builder: True
+decision section keeps decision trust resolver: True
+decision section has no storage-backed write coordinator: True
+decision section has no write coordinator call: True
+decision section has no direct storage placement: True
+decision section has no direct RecordArtifactAsync call: True
+
+## Coordinator source-semantics split
+write coordinator contains storage placement side effect: True
+write coordinator creates StoragePlacementRequest: True
+coordinator source does not contain response source adapter planning: True
+coordinator source does not contain provider-native source adapter planning: True
+coordinator source does not contain PlanExpectedOutput: True
+coordinator source does not contain PlanDiscoveredOutput: True
+coordinator source does not contain workspace path safety checks: True
+coordinator source does not contain dispatcher file writes or copies: True
+record-only coordinator contains record delegate: True
+record-only coordinator has no storage placement service: True
+record-only coordinator has no StoragePlacementRequest: True
+source adapters retain PlanExpectedOutput: True
+source adapters retain PlanDiscoveredOutput: True
+projection planner retains response external key builder: True
+projection planner retains provider-native external key builder: True
+
+## Process Core and driver-pack scan
+No Process Core or driver-pack files found.
+
+## MAF/Tooling/project dependency change scan
+No csproj/slnx/MAF/Tooling dependency diffs found.
+
+## Prohibited viewport proof artifact path scan
+No prohibited viewport proof artifact file paths found under bundle proof.

@@ -1,0 +1,2 @@
+# SB09 anti-stub audit
+No anti-stub markers found in SB09 changed source/test files.

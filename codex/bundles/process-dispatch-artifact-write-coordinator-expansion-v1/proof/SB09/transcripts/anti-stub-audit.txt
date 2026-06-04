@@ -1,0 +1,10 @@
+Command: rg anti-stub audit for SB09 changed production/test files
+
+Invariant ID: SB09-INV-001
+
+# SB09 anti-stub audit
+No anti-stub markers found in SB09 changed source/test files.
+
+
+No new stubs were introduced by SB09.
+ExitCode: 0

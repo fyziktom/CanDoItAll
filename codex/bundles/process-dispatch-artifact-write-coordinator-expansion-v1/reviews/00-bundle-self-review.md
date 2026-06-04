@@ -12,6 +12,6 @@ The bundle includes path-by-path migration, focused tests, source scans, and ref
 
 The plan is long enough for Codex to work in phases but each subbundle has a bounded deliverable and clear progression gate.
 
-## Open Concern
+## Closure Review
 
-Response-text and provider-native browser paths are more complex than execution artifacts. They must not be migrated together without separate tests.
+Response-text and provider-native browser paths were migrated separately with focused tests, source scans, and Gate C proof. Final red-team closure passed and the next recommended cutline is artifact validation rule extraction without creating Process Core.

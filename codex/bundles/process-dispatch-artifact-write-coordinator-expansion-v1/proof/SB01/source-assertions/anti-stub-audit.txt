@@ -1,0 +1,2 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" target dispatch files
+No TODO/NotImplemented markers found in targeted production files.

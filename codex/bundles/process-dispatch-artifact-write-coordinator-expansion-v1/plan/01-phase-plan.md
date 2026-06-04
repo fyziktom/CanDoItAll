@@ -19,6 +19,12 @@ graph TD
   SB13 --> SB14[SB14 Final red-team]
 ```
 
+## Execution Order
+
+- Execute subbundles sequentially from SB01 through SB14.
+- Stop after SB04, SB08, SB12, and SB14 for the named phase gate before starting the next dependent phase.
+- Reopen an earlier subbundle if later source observations weaken its prerequisite proof.
+
 ## Critical Subbundles
 
 - SB03 is critical because all later migrations depend on coordinator semantics.

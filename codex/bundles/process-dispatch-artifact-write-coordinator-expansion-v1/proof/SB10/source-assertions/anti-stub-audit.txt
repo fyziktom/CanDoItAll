@@ -1,0 +1,2 @@
+# SB10 anti-stub audit
+No anti-stub markers found in SB10 changed source/test files.

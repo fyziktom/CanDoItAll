@@ -1,0 +1,3 @@
+# SB06 changed file hashes
+22E42FD182F2274FB39A13CD09D85C3E7611060090C52F15E28F36763C2195AF  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs
+B4755344821A8811B10FF3D30B89824835CB1DBD0E3F80AB0173258FC988731F  tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs

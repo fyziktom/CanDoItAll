@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Introduce a record-only helper/coordinator for completed-decision artifacts with
 
 ## Prerequisites
 
-SB10 complete.
+- SB10 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB10 complete.
 
 ## Dependency Impact
 
-Prepares Gate C and avoids storage-backed coordinator misuse.
+- Prepares Gate C and avoids storage-backed coordinator misuse.
 
 ## Validation Depth
 
@@ -64,22 +66,34 @@ Prepares Gate C and avoids storage-backed coordinator misuse.
 
 ## Acceptance Checklist
 
-- No managed storage required for record-only decision artifacts.
-- External reference key unchanged.
-- Candidate state updates preserved.
+- No managed storage required for record-only decision artifacts; record-only coordinator has no storage placement dependency.
+- External reference key unchanged; focused integration test covers the `process-step-decision:{stepRunId}:{artifactExpectationId}` format.
+- Candidate state updates preserved from record-only coordinator outcome.
 
 ## Proof Required
 
 - proof/SB11/transcripts/decision-artifact-tests.txt
+- proof/SB11/transcripts/failing-first-decision-record-only-source-guard.txt
+- proof/SB11/source-assertions/decision-record-only-source-scan.txt
+- proof/SB11/source-assertions/anti-stub-audit.txt
+- proof/SB11/source-assertions/changed-file-hashes.txt
+
+## Completion Notes
+
+- Added `ProcessArtifactProjectionRecordOnlyCoordinator` and typed record-only request/result records.
+- Migrated completed-decision artifact recording through the record-only coordinator without adding managed storage.
+- Added focused tests for decision external-reference key and trust mapping.
+- Full `dotnet build CanDoItAll.slnx --no-restore -v:minimal` passed.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB12 Gate C may start after this helper lands.
+- SB12 Gate C may start after this helper lands.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

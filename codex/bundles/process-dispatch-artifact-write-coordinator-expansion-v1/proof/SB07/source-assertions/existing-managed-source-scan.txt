@@ -1,0 +1,31 @@
+# SB07 existing-managed source scan
+
+## Method assertions
+method found: True
+next method found after method: True
+contains existing file matcher: True
+contains coordinator parameter: True
+contains coordinator write call: True
+contains write request: True
+contains source adapter plan: True
+contains full path resolver: True
+contains warning logging: True
+contains direct storage placement: False
+contains direct record call: False
+contains hard invalid operation throw: False
+
+## Remaining direct writes for later subbundles
+735:            var recordResult = await RecordArtifactAsync(
+909:                var placement = await storagePlacementService.PlaceAsync(
+920:                var recordResult = await RecordArtifactAsync(
+1016:        var placement = await storagePlacementService.PlaceAsync(
+1026:        var recordResult = await RecordArtifactAsync(
+1179:                var placement = await storagePlacementService.PlaceAsync(
+1190:                var recordResult = await RecordArtifactAsync(
+1352:                    var placement = await storagePlacementService.PlaceAsync(
+1363:                    var recordResult = await RecordArtifactAsync(
+1576:    private async Task<Result<Guid>> RecordArtifactAsync(
+1582:        return await processesService.RecordArtifactAsync(request, cancellationToken);
+
+## Changed-file anti-stub scan
+No anti-stub markers found in SB07 changed source files.

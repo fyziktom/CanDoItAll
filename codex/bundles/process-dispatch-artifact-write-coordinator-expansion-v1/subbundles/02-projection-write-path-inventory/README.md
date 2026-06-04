@@ -2,7 +2,12 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
+
+- Entry gate: Passed on 2026-06-04. SB01 closure proof exists and no prerequisite weakness was found.
+- Closure gate: Passed on 2026-06-04. Every direct `storagePlacementService.PlaceAsync` and `RecordArtifactAsync` call in `ArtifactProjection.cs` is classified in the inventory and scan transcript.
 
 ## Objective
 
@@ -16,7 +21,7 @@ Build a precise inventory of every remaining direct storage placement and artifa
 
 ## Prerequisites
 
-SB01 complete.
+- SB01 complete.
 
 ## Exact Source References
 
@@ -35,7 +40,7 @@ SB01 complete.
 
 ## Dependency Impact
 
-SB03 coordinator changes depend on this inventory.
+- SB03 coordinator changes depend on this inventory.
 
 ## Validation Depth
 
@@ -74,12 +79,13 @@ SB03 coordinator changes depend on this inventory.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB03 may start only after all write paths are classified.
+- SB03 may start only after all write paths are classified.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Migrate provider-native browser expected/discovered artifact write paths through
 
 ## Prerequisites
 
-SB09 complete.
+- SB09 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB09 complete.
 
 ## Dependency Impact
 
-Completes storage-backed projection migration.
+- Completes storage-backed projection migration.
 
 ## Validation Depth
 
@@ -64,22 +66,36 @@ Completes storage-backed projection migration.
 
 ## Acceptance Checklist
 
-- Expected/discovered modes remain distinct.
-- Key and lineage unchanged.
-- Trust behavior unchanged.
+- Expected/discovered modes remain distinct; expected uses `PlanExpectedOutput`, discovered uses `PlanDiscoveredOutput`.
+- Key and lineage unchanged through existing provider-native source adapter planning.
+- Trust behavior unchanged through mode-specific projection plans.
 
 ## Proof Required
 
 - proof/SB10/transcripts/provider-native-browser-tests.txt
+- proof/SB10/transcripts/failing-first-provider-native-browser-source-guard.txt
+- proof/SB10/source-assertions/provider-native-browser-source-scan.txt
+- proof/SB10/source-assertions/anti-stub-audit.txt
+- proof/SB10/source-assertions/changed-file-hashes.txt
+- proof/SB10/semantic-invariants.md
+- proof/SB10/manifest.md
+
+## Completion Notes
+
+- Migrated expected provider-native browser artifacts through `ProcessArtifactProjectionWriteCoordinator`.
+- Migrated discovered provider-native browser outputs through `ProcessArtifactProjectionWriteCoordinator`.
+- Kept output discovery, path safety, file copy, expected/discovered planning, and optional expectation matching outside the coordinator.
+- Full `dotnet build CanDoItAll.slnx --no-restore -v:minimal` passed.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB11 may start only after provider-native tests pass.
+- SB11 may start only after provider-native tests pass.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

@@ -1,0 +1,2 @@
+Command: proof file names searched for prohibited responsive/mobile proof labels
+No prohibited viewport proof artifacts found.

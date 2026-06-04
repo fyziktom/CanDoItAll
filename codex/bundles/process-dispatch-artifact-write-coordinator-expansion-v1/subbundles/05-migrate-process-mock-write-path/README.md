@@ -2,7 +2,12 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
+
+- Entry gate: Passed on 2026-06-04. Gate A closure proof exists and SB03 coordinator proof was rechecked by SB04.
+- Closure gate: Passed on 2026-06-04. Critical proof manifest and semantic invariants exist under `proof/SB05`; process-mock focused tests passed; source scan proves no direct storage placement or artifact record call remains in `ProjectProcessMockArtifactsAsync`.
 
 ## Objective
 
@@ -16,7 +21,7 @@ Migrate process mock artifact storage/write/record path through the write coordi
 
 ## Prerequisites
 
-Gate A complete.
+- Gate A complete.
 
 ## Exact Source References
 
@@ -35,7 +40,7 @@ Gate A complete.
 
 ## Dependency Impact
 
-Validates coordinator can support required deterministic artifacts.
+- Validates coordinator can support required deterministic artifacts.
 
 ## Validation Depth
 
@@ -70,17 +75,22 @@ Validates coordinator can support required deterministic artifacts.
 
 ## Proof Required
 
+- proof/SB05/manifest.md
+- proof/SB05/semantic-invariants.md
 - proof/SB05/transcripts/process-mock-tests.txt
+- proof/SB05/transcripts/failing-first-process-mock-source-guard.txt
 - proof/SB05/source-assertions/process-mock-source-scan.txt
+- proof/SB05/source-assertions/changed-file-hashes.txt
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB06 may start only after process mock tests pass.
+- SB06 may start only after process mock tests pass.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

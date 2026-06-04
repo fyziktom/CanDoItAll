@@ -348,7 +348,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void Artifact_projection_write_coordinator_is_used_only_by_execution_artifact_path()
+    public void Artifact_projection_write_coordinator_is_created_once_by_artifact_projection_flow()
     {
         var source = ReadRepositoryFile(
             "src",
@@ -357,15 +357,216 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "Dispatch",
             "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
         var methodIndex = source.IndexOf("private async Task ProjectExecutionArtifactsAsync", StringComparison.Ordinal);
-        var nextMethodIndex = source.IndexOf("private async Task ProjectProcessMockArtifactsAsync", StringComparison.Ordinal);
         var coordinatorIndex = source.IndexOf("new ProcessArtifactProjectionWriteCoordinator", StringComparison.Ordinal);
-        var totalCoordinatorUsages = Regex.Matches(source, "ProcessArtifactProjectionWriteCoordinator").Count;
+        var totalCoordinatorCreations = Regex.Matches(source, "new ProcessArtifactProjectionWriteCoordinator").Count;
 
         Assert.True(methodIndex >= 0);
-        Assert.True(nextMethodIndex > methodIndex);
         Assert.True(coordinatorIndex > methodIndex);
-        Assert.True(coordinatorIndex < nextMethodIndex);
-        Assert.Equal(1, totalCoordinatorUsages);
+        Assert.Equal(1, totalCoordinatorCreations);
+    }
+
+    [Fact]
+    public void Process_mock_projection_SB05_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var methodStart = source.IndexOf("private async Task ProjectProcessMockArtifactsAsync", StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private async Task ProjectWorkspaceWrittenArtifactsAsync", StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0);
+        Assert.True(nextMethodStart > methodStart);
+
+        var processMockSection = source[methodStart..nextMethodStart];
+
+        Assert.Contains("writeCoordinator.WriteAsync", processMockSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", processMockSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", processMockSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", processMockSection, StringComparison.Ordinal);
+        Assert.Contains("throw new InvalidOperationException", processMockSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Workspace_written_projection_SB06_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var methodStart = source.IndexOf("private async Task ProjectWorkspaceWrittenArtifactsAsync", StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private static IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths", StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0);
+        Assert.True(nextMethodStart > methodStart);
+
+        var workspaceWrittenSection = source[methodStart..nextMethodStart];
+
+        Assert.Contains("ProcessArtifactProjectionWriteCoordinator writeCoordinator", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator.WriteAsync", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("logger.LogWarning", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("throw new InvalidOperationException", workspaceWrittenSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Existing_managed_projection_SB07_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var methodStart = source.IndexOf("private async Task ProjectExistingManagedArtifactFilesAsync", StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private static IReadOnlyList<string> ResolveExpectedManagedArtifactRelativePaths", StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0);
+        Assert.True(nextMethodStart > methodStart);
+
+        var existingManagedSection = source[methodStart..nextMethodStart];
+
+        Assert.Contains("ExistingManagedArtifactFileMatches", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteCoordinator writeCoordinator", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator.WriteAsync", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", existingManagedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", existingManagedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("logger.LogWarning", existingManagedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("throw new InvalidOperationException", existingManagedSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Response_text_projection_SB09_INV_001_uses_write_coordinator_without_moving_file_creation_or_short_circuit()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var responseMethodStart = source.IndexOf("private async Task ProjectResponseTextArtifactsAsync", StringComparison.Ordinal);
+        var helperMethodStart = source.IndexOf("private async Task<bool> TryRecordExistingManagedArtifactForResponseProjectionAsync", StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private async Task ProjectProviderNativeBrowserArtifactsAsync", StringComparison.Ordinal);
+
+        Assert.True(responseMethodStart >= 0);
+        Assert.True(helperMethodStart > responseMethodStart);
+        Assert.True(nextMethodStart > helperMethodStart);
+
+        var responseSection = source[responseMethodStart..helperMethodStart];
+        var existingManagedHelperSection = source[helperMethodStart..nextMethodStart];
+
+        Assert.Contains("ProcessArtifactProjectionWriteCoordinator writeCoordinator", responseSection, StringComparison.Ordinal);
+        Assert.Contains("IsWithinWorkspace", responseSection, StringComparison.Ordinal);
+        Assert.Contains("File.WriteAllTextAsync", responseSection, StringComparison.Ordinal);
+        Assert.Contains("persistedResponseText", responseSection, StringComparison.Ordinal);
+        Assert.Contains("Environment.NewLine", responseSection, StringComparison.Ordinal);
+        Assert.Contains("Encoding.UTF8.GetBytes(persistedResponseText)", responseSection, StringComparison.Ordinal);
+        Assert.Contains("TryRecordExistingManagedArtifactForResponseProjectionAsync", responseSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator.WriteAsync", responseSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", responseSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", responseSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", responseSection, StringComparison.Ordinal);
+
+        Assert.Contains("ExistingManagedArtifactFileMatches", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteCoordinator writeCoordinator", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator.WriteAsync", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.Contains("logger.LogWarning", existingManagedHelperSection, StringComparison.Ordinal);
+        Assert.Contains("return false", existingManagedHelperSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Provider_native_browser_projection_SB10_INV_001_uses_write_coordinator_for_expected_and_discovered_modes()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var expectedMethodStart = source.IndexOf("private async Task ProjectProviderNativeBrowserArtifactsAsync", StringComparison.Ordinal);
+        var discoveredMethodStart = source.IndexOf("private async Task ProjectProviderNativeBrowserOutputArtifactsAsync", StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private static string ResolveProviderNativeBrowserProjectedRelativePath", StringComparison.Ordinal);
+
+        Assert.True(expectedMethodStart >= 0);
+        Assert.True(discoveredMethodStart > expectedMethodStart);
+        Assert.True(nextMethodStart > discoveredMethodStart);
+
+        var expectedSection = source[expectedMethodStart..discoveredMethodStart];
+        var discoveredSection = source[discoveredMethodStart..nextMethodStart];
+
+        Assert.Contains("ProcessArtifactProjectionWriteCoordinator writeCoordinator", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("ProjectProviderNativeBrowserOutputArtifactsAsync", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("ResolveProviderNativeBrowserToolName", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("PlanExpectedOutput", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("IsWithinWorkspace", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("File.Copy", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator.WriteAsync", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", expectedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", expectedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", expectedSection, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessArtifactProjectionWriteCoordinator writeCoordinator", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("IsProviderNativeBrowserArtifactPath", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("ResolveArtifactExpectation", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("recordExpectation", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("PlanDiscoveredOutput", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("File.Copy", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("writeCoordinator.WriteAsync", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionWriteRequest", discoveredSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", discoveredSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", discoveredSection, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Completed_decision_projection_SB11_INV_001_uses_record_only_coordinator_without_storage_placement()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var coordinatorSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactProjectionWriteCoordinator.cs");
+        var methodStart = source.IndexOf("private async Task EnsureDecisionArtifactsForCompletedStepAsync", StringComparison.Ordinal);
+        var nextMethodStart = source.IndexOf("private static bool HasProjectedArtifactExpectationExternalReference", StringComparison.Ordinal);
+        var recordOnlyCoordinatorStart = coordinatorSource.IndexOf("internal sealed class ProcessArtifactProjectionRecordOnlyCoordinator", StringComparison.Ordinal);
+
+        Assert.True(methodStart >= 0);
+        Assert.True(nextMethodStart > methodStart);
+        Assert.True(recordOnlyCoordinatorStart >= 0);
+
+        var decisionSection = source[methodStart..nextMethodStart];
+        var recordOnlyCoordinatorSection = coordinatorSource[recordOnlyCoordinatorStart..];
+
+        Assert.Contains("ProcessArtifactProjectionRecordOnlyCoordinator recordOnlyCoordinator", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionRecordOnlyRequest", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("recordOnlyCoordinator.RecordAsync", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("BuildCompletedDecisionArtifactExternalReferenceKey", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("ResolveCompletedDecisionArtifactTrustStatus", decisionSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", decisionSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessArtifactProjectionWriteCoordinator", decisionSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync(", decisionSection, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessArtifactProjectionRecordOnlyRequest", recordOnlyCoordinatorSection, StringComparison.Ordinal);
+        Assert.Contains("recordArtifactAsync", recordOnlyCoordinatorSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService.PlaceAsync", recordOnlyCoordinatorSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("StoragePlacementRequest", recordOnlyCoordinatorSection, StringComparison.Ordinal);
     }
 
     private static string ReadRepositoryFile(params string[] pathParts)

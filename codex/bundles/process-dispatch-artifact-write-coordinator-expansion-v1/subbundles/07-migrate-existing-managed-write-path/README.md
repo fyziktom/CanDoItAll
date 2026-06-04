@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Migrate existing-managed artifact storage/write/record path through the write co
 
 ## Prerequisites
 
-SB06 complete.
+- SB06 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB06 complete.
 
 ## Dependency Impact
 
-Completes the first batch of storage-backed migrations.
+- Completes the first batch of storage-backed migrations.
 
 ## Validation Depth
 
@@ -63,22 +65,32 @@ Completes the first batch of storage-backed migrations.
 
 ## Acceptance Checklist
 
-- Duplicate behavior unchanged.
-- Key and lineage unchanged.
-- Candidate state updates preserved.
+- Duplicate behavior unchanged; `ExistingManagedArtifactFileMatches` remains outside the coordinator.
+- Key and lineage unchanged; existing-managed source adapter still builds the projection plan and external-reference key.
+- Candidate state updates preserved; successful coordinator outcome updates `ExternalReferenceKeys` and `RecordedArtifactExpectationIds`.
 
 ## Proof Required
 
 - proof/SB07/transcripts/existing-managed-tests.txt
+- proof/SB07/transcripts/failing-first-existing-managed-source-guard.txt
+- proof/SB07/source-assertions/existing-managed-source-scan.txt
+- proof/SB07/source-assertions/changed-file-hashes.txt
+
+## Completion Notes
+
+- Migrated `ProjectExistingManagedArtifactFilesAsync` to accept the existing write coordinator and call `WriteAsync`.
+- Removed the direct `storagePlacementService.PlaceAsync` and `RecordArtifactAsync` block from the existing-managed method.
+- Preserved soft failure behavior with warning logs and continue semantics for coordinator/recording failures.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB08 Gate B may start after this migration.
+- SB08 Gate B may start after this migration.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

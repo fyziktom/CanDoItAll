@@ -1,0 +1,27 @@
+Run label: SB03 outcome contract source assertions
+Working directory: C:\repositories\CanDoItAll
+Command: rg -n "SB03_INV|ProcessArtifactProjectionWriteResult|Result<ProcessArtifactProjectionWriteResult>|writeOutcome|ManagedStoragePath|ArtifactRecordId" production/test files
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:10:    public async Task WriteAsync_SB03_INV_001_returns_structured_outcome_and_records_request()
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:42:        Assert.Equal("managed/process/evidence.txt", result.Value.ManagedStoragePath);
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:43:        Assert.Equal(recordId, result.Value.ArtifactRecordId);
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:47:        Assert.Equal("managed/process/evidence.txt", capturedRecord.ManagedStoragePath);
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:55:    public async Task WriteAsync_SB03_INV_002_returns_record_errors_without_success_outcome_when_recording_fails()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:121:            if (writeResult.IsSuccess && writeResult.Value is { } writeOutcome)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:123:                candidate.ExternalReferenceKeys.Add(writeOutcome.ExternalReferenceKey);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:124:                if (writeOutcome.ArtifactExpectationId.HasValue)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:126:                    candidate.RecordedArtifactExpectationIds.Add(writeOutcome.ArtifactExpectationId.Value);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:290:                    ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:458:                    ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:608:                    ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:953:                        ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1059:                ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1223:                        ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1396:                            ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:17:internal sealed record ProcessArtifactProjectionWriteResult(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:18:    string ManagedStoragePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:19:    Guid ArtifactRecordId,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:27:    public async Task<Result<ProcessArtifactProjectionWriteResult>> WriteAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:58:                ManagedStoragePath = placement.RelativePath,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:65:            ? Result<ProcessArtifactProjectionWriteResult>.Success(new ProcessArtifactProjectionWriteResult(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:70:            : Result<ProcessArtifactProjectionWriteResult>.Failure(recordResult.Errors);
+Exit code: 0

@@ -1,0 +1,54 @@
+Run label: SB03 focused coordinator and execution-artifact tests
+Working directory: C:\repositories\CanDoItAll
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-restore --filter "FullyQualifiedName~ProcessArtifactProjectionWriteCoordinatorTests|FullyQualifiedName~ProcessArtifactProjectionPlanner_SB07_INV_001_plans_execution_artifact_without_storage_side_effects" -v:minimal
+
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Qdrant\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Contracts\bin\Debug\net10.0\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\src\CanDoItAll.Tools.Documents\bin\Debug\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\src\CanDoItAll.AppComponents\bin\Debug\net10.0\CanDoItAll.AppComponents.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tooling\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Persistence\bin\Debug\net10.0\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Voice\bin\Debug\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\bin\Debug\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\tools\CanDoItAll.Manager\bin\Debug\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\bin\Debug\net10.0\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\bin\Debug\net10.0\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.Modules.Validation -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\bin\Debug\net10.0\CanDoItAll.Modules.Validation.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Components\bin\Debug\net10.0\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\bin\Debug\net10.0\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.Modules.Activity -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\bin\Debug\net10.0\CanDoItAll.Modules.Activity.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\bin\Debug\net10.0\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\bin\Debug\net10.0\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Docker\bin\Debug\net10.0\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Hosting\bin\Debug\net10.0\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\bin\Debug\net10.0\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Office365\bin\Debug\net10.0\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\bin\Debug\net10.0\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Gmail\bin\Debug\net10.0\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\bin\Debug\net10.0\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Automation -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\bin\Debug\net10.0\CanDoItAll.Modules.Automation.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\bin\Debug\net10.0\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\bin\Debug\net10.0\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\bin\Debug\net10.0\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\bin\Debug\net10.0\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\bin\Debug\net10.0\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\src\CanDoItAll.Composition\bin\Debug\net10.0\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\bin\Debug\net10.0\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\src\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Support\bin\Debug\net10.0\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Integration -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 37 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+Exit code: 0

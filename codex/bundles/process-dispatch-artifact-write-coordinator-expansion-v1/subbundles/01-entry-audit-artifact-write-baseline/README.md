@@ -2,7 +2,12 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
+
+- Entry gate: Passed on 2026-06-04. No prerequisite subbundles exist; prepared-stage bundle validation passed.
+- Closure gate: Passed on 2026-06-04. Baseline transcripts, line counts, no-core/no-driver scan, no-prohibited-viewport scan, anti-stub audit, and baseline build transcript were captured.
 
 ## Objective
 
@@ -16,7 +21,7 @@ Record exact baseline for current projection write side effects, line counts, ex
 
 ## Prerequisites
 
-Current branch builds or known blockers are documented.
+- Current branch builds or known blockers are documented.
 
 ## Exact Source References
 
@@ -36,7 +41,7 @@ Current branch builds or known blockers are documented.
 
 ## Dependency Impact
 
-Blocks every downstream subbundle; if the baseline is wrong, migration proof is untrustworthy.
+- Blocks every downstream subbundle; if the baseline is wrong, migration proof is untrustworthy.
 
 ## Validation Depth
 
@@ -75,15 +80,19 @@ Blocks every downstream subbundle; if the baseline is wrong, migration proof is 
 - proof/SB01/transcripts/source-baseline.txt
 - proof/SB01/transcripts/line-counts.txt
 - proof/SB01/transcripts/no-core-driver-scan.txt
+- proof/SB01/transcripts/build-baseline.txt
+- proof/SB01/source-assertions/no-prohibited-viewport-proof.txt
+- proof/SB01/source-assertions/anti-stub-audit.txt
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB02 may start only after baseline proof is committed.
+- SB02 may start only after baseline proof is committed.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

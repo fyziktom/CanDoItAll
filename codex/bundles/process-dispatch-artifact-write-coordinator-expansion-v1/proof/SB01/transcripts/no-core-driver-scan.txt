@@ -1,0 +1,8 @@
+Command: rg --files -g "*.csproj" | rg "CanDoItAll\.Processes\.Core|DriverPack|Driver\.Pack|ProcessDriver"
+No Process Core or driver-pack project files found.
+
+Command: rg -n "CanDoItAll\.Processes\.Core|DriverPack|Driver Pack|driver-pack|ProcessDriver" src tests
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:18:            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:20:            name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:21:            name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:277:        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));

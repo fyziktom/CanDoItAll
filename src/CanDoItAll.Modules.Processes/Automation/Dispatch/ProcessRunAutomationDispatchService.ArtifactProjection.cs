@@ -38,6 +38,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var writeCoordinator = new ProcessArtifactProjectionWriteCoordinator(
             storagePlacementService,
             RecordArtifactAsync);
+        var recordOnlyCoordinator = new ProcessArtifactProjectionRecordOnlyCoordinator(RecordArtifactAsync);
         foreach (var artifact in detail.Artifacts)
         {
             await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
@@ -118,12 +119,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ResolveStorageContentKind(artifact.ContentType, fullPath),
                     BuildStorageRelativePath(candidate, artifact)),
                 cancellationToken);
-            if (writeResult.IsSuccess)
+            if (writeResult.IsSuccess && writeResult.Value is { } writeOutcome)
             {
-                candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-                if (projectionPlan.ArtifactExpectationId.HasValue)
+                candidate.ExternalReferenceKeys.Add(writeOutcome.ExternalReferenceKey);
+                if (writeOutcome.ArtifactExpectationId.HasValue)
                 {
-                    candidate.RecordedArtifactExpectationIds.Add(projectionPlan.ArtifactExpectationId.Value);
+                    candidate.RecordedArtifactExpectationIds.Add(writeOutcome.ArtifactExpectationId.Value);
                 }
             }
             else
@@ -142,6 +143,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             workspaceRoot,
             workspaceScope,
+            writeCoordinator,
             completionStatus,
             cancellationToken,
             lineage);
@@ -150,6 +152,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             workspaceRoot,
             workspaceScope,
+            writeCoordinator,
             completionStatus,
             cancellationToken,
             lineage);
@@ -158,6 +161,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             workspaceRoot,
             workspaceScope,
+            writeCoordinator,
             completionStatus,
             cancellationToken,
             lineage);
@@ -166,6 +170,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             responseText,
             workspaceRoot,
+            writeCoordinator,
             completionStatus,
             cancellationToken,
             lineage);
@@ -173,6 +178,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate,
             detail,
             workspaceRoot,
+            writeCoordinator,
             completionStatus,
             cancellationToken,
             lineage);
@@ -180,6 +186,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate,
             detail,
             responseText,
+            recordOnlyCoordinator,
             completionStatus,
             cancellationToken);
     }
@@ -189,6 +196,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -263,43 +271,32 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var contentType = GuessContentTypeFromPath(fullPath);
-            var placement = await storagePlacementService.PlaceAsync(
-                new StoragePlacementRequest(
+            var writeResult = await writeCoordinator.WriteAsync(
+                new ProcessArtifactProjectionWriteRequest(
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    candidate.Run.ProjectId,
+                    projectionPlan,
                     Path.GetFileName(fullPath),
                     contentType,
                     content,
-                    StorageUsagePurpose.Evidence,
                     ResolveStorageContentKind(contentType, fullPath),
-                    ProjectId: candidate.Run.ProjectId,
-                    RelativePathHint: scopedRelativePath),
+                    scopedRelativePath),
                 cancellationToken);
-
-            var recordResult = await RecordArtifactAsync(
-                new ProcessArtifactRecordRequest
-                {
-                    ProcessRunId = candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                    ArtifactKind = projectionPlan.ArtifactKind,
-                    Title = projectionPlan.Title,
-                    TrustStatus = projectionPlan.TrustStatus,
-                    SensitivityLevel = projectionPlan.SensitivityLevel,
-                    ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                    AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                    ReviewSummary = projectionPlan.ReviewSummary,
-                    ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                    ProjectionLineage = projectionPlan.ProjectionLineage
-                },
-                cancellationToken);
-            if (recordResult.IsFailure)
+            if (writeResult.IsFailure || writeResult.Value is not { } writeOutcome)
             {
                 throw new InvalidOperationException(
-                    $"Process mock artifact projection failed for expected artifact '{expectedArtifact.Title}': {string.Join(" | ", recordResult.Errors.Select(error => error.Message))}");
+                    $"Process mock artifact projection failed for expected artifact '{expectedArtifact.Title}': {string.Join(" | ", writeResult.Errors.Select(error => error.Message))}");
             }
 
-            candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-            candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
+            if (writeOutcome.ArtifactExpectationId != expectedArtifact.Id)
+            {
+                throw new InvalidOperationException(
+                    $"Process mock artifact projection for expected artifact '{expectedArtifact.Title}' returned artifact expectation id '{writeOutcome.ArtifactExpectationId?.ToString("D") ?? "null"}' instead of '{expectedArtifact.Id:D}'.");
+            }
+
+            candidate.ExternalReferenceKeys.Add(writeOutcome.ExternalReferenceKey);
+            candidate.RecordedArtifactExpectationIds.Add(writeOutcome.ArtifactExpectationId.Value);
             projectedExpectationIds.Add(expectedArtifact.Id);
         }
     }
@@ -309,6 +306,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -431,48 +429,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 expectedProjection,
                 completionStatus,
                 recoveryContext);
-            var placement = await storagePlacementService.PlaceAsync(
-                new StoragePlacementRequest(
+            var writeResult = await writeCoordinator.WriteAsync(
+                new ProcessArtifactProjectionWriteRequest(
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    candidate.Run.ProjectId,
+                    projectionPlan,
                     Path.GetFileName(fullPath),
                     syntheticArtifact.ContentType,
                     content,
-                    StorageUsagePurpose.Evidence,
                     ResolveStorageContentKind(syntheticArtifact.ContentType, fullPath),
-                    ProjectId: candidate.Run.ProjectId,
-                    RelativePathHint: BuildStorageRelativePath(candidate, syntheticArtifact)),
+                    BuildStorageRelativePath(candidate, syntheticArtifact)),
                 cancellationToken);
-
-            var recordResult = await RecordArtifactAsync(
-                new ProcessArtifactRecordRequest
-                {
-                    ProcessRunId = candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                    ArtifactKind = projectionPlan.ArtifactKind,
-                    Title = projectionPlan.Title,
-                    TrustStatus = projectionPlan.TrustStatus,
-                    SensitivityLevel = projectionPlan.SensitivityLevel,
-                    ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                    AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                    ReviewSummary = projectionPlan.ReviewSummary,
-                    ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                    ProjectionLineage = projectionPlan.ProjectionLineage
-                },
-                cancellationToken);
-            if (recordResult.IsSuccess)
-            {
-                candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-                candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
-            }
-            else
+            if (!TryApplyExpectedArtifactProjectionWriteOutcome(candidate, expectedArtifact, writeResult, out var errorSummary))
             {
                 logger.LogWarning(
                     "Workspace-written artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
                     candidate.Run.Id,
                     candidate.StepRun.Id,
                     expectedArtifact.Title,
-                    string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                    errorSummary);
             }
         }
     }
@@ -491,6 +467,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -565,64 +542,41 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             var contentType = GuessContentTypeFromPath(fullPath);
+            var syntheticArtifact = new ProcessAutomationExecutionArtifact(
+                Guid.NewGuid(),
+                detail.Run.Id,
+                "generated-output",
+                expectedArtifact.Title,
+                projectedRelativePath,
+                contentType,
+                "managed-workspace-file",
+                $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
+                DateTimeOffset.UtcNow);
             var projectionPlan = ExistingManagedArtifactProjectionSourceAdapter.Plan(
                 projectionSource,
                 expectedProjection,
                 completionStatus,
                 recoveryContext);
-            var placement = await storagePlacementService.PlaceAsync(
-                new StoragePlacementRequest(
+            var writeResult = await writeCoordinator.WriteAsync(
+                new ProcessArtifactProjectionWriteRequest(
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    candidate.Run.ProjectId,
+                    projectionPlan,
                     Path.GetFileName(fullPath),
                     contentType,
                     content,
-                    StorageUsagePurpose.Evidence,
                     ResolveStorageContentKind(contentType, fullPath),
-                    ProjectId: candidate.Run.ProjectId,
-                    RelativePathHint: BuildStorageRelativePath(
-                        candidate,
-                        new ProcessAutomationExecutionArtifact(
-                            Guid.NewGuid(),
-                            detail.Run.Id,
-                            "generated-output",
-                            expectedArtifact.Title,
-                            projectedRelativePath,
-                            contentType,
-                            "managed-workspace-file",
-                            $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {detail.Run.Id:D}.",
-                            DateTimeOffset.UtcNow))),
+                    BuildStorageRelativePath(candidate, syntheticArtifact)),
                 cancellationToken);
-
-            var recordResult = await RecordArtifactAsync(
-                new ProcessArtifactRecordRequest
-                {
-                    ProcessRunId = candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                    ArtifactKind = projectionPlan.ArtifactKind,
-                    Title = projectionPlan.Title,
-                    TrustStatus = projectionPlan.TrustStatus,
-                    SensitivityLevel = projectionPlan.SensitivityLevel,
-                    ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                    AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                    ReviewSummary = projectionPlan.ReviewSummary,
-                    ManagedStoragePath = placement.RelativePath,
-                    ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                    ProjectionLineage = projectionPlan.ProjectionLineage
-                },
-                cancellationToken);
-            if (recordResult.IsSuccess)
-            {
-                candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-                candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
-            }
-            else
+            if (!TryApplyExpectedArtifactProjectionWriteOutcome(candidate, expectedArtifact, writeResult, out var errorSummary))
             {
                 logger.LogWarning(
                     "Existing managed artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
                     candidate.Run.Id,
                     candidate.StepRun.Id,
                     expectedArtifact.Title,
-                    string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                    errorSummary);
             }
         }
     }
@@ -728,6 +682,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail,
         string responseText,
+        ProcessArtifactProjectionRecordOnlyCoordinator recordOnlyCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
     {
@@ -752,41 +707,49 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var recordResult = await RecordArtifactAsync(
-                new ProcessArtifactRecordRequest
-                {
-                    ProcessRunId = candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    ArtifactExpectationId = expectedArtifact.Id,
-                    ArtifactKind = expectedArtifact.ArtifactKind,
-                    Title = expectedArtifact.Title,
-                    TrustStatus = ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement),
-                    SensitivityLevel = expectedArtifact.SensitivityLevel,
-                    ProvenanceSummary = BuildCompletedDecisionArtifactProvenanceSummary(candidate, detail),
-                    AllowedFutureUsageSummary = string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
+            var recordResult = await recordOnlyCoordinator.RecordAsync(
+                new ProcessArtifactProjectionRecordOnlyRequest(
+                    candidate.Run.Id,
+                    candidate.StepRun.Id,
+                    expectedArtifact.Id,
+                    expectedArtifact.ArtifactKind,
+                    expectedArtifact.Title,
+                    ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement),
+                    expectedArtifact.SensitivityLevel,
+                    BuildCompletedDecisionArtifactProvenanceSummary(candidate, detail),
+                    string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                         ? "Reusable for audit, release replay, and governance tuning."
                         : expectedArtifact.AllowedFutureUsageSummary,
-                    ReviewSummary = BuildCompletedDecisionArtifactReviewSummary(candidate, detail, responseText, expectedArtifact),
-                    ExternalReferenceKey = externalReferenceKey,
-                    ProjectionLineage = BuildArtifactProjectionLineage(
+                    BuildCompletedDecisionArtifactReviewSummary(candidate, detail, responseText, expectedArtifact),
+                    externalReferenceKey,
+                    BuildArtifactProjectionLineage(
                         ProcessArtifactProjectionSourceKind.CompletedDecision,
                         detail.Run.Id,
-                        sourceExternalReferenceKey: externalReferenceKey)
-                },
+                        sourceExternalReferenceKey: externalReferenceKey)),
                 cancellationToken);
-            if (recordResult.IsSuccess)
+            if (recordResult.IsSuccess &&
+                recordResult.Value is { ArtifactExpectationId: { } artifactExpectationId } recordOutcome &&
+                artifactExpectationId == expectedArtifact.Id)
             {
-                candidate.ExternalReferenceKeys.Add(externalReferenceKey);
-                candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
+                candidate.ExternalReferenceKeys.Add(recordOutcome.ExternalReferenceKey);
+                candidate.RecordedArtifactExpectationIds.Add(artifactExpectationId);
             }
             else
             {
+                var errorSummary = recordResult.IsFailure
+                    ? string.Join(" | ", recordResult.Errors.Select(error => error.Message))
+                    : recordResult.Value is null
+                        ? "Record-only coordinator completed without an artifact record outcome."
+                        : recordResult.Value.ArtifactExpectationId.HasValue
+                            ? $"Record-only coordinator returned artifact expectation id '{recordResult.Value.ArtifactExpectationId.Value:D}' instead of '{expectedArtifact.Id:D}'."
+                            : "Record-only coordinator completed without an artifact expectation id.";
+
                 logger.LogWarning(
                     "Completed-step decision artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
                     candidate.Run.Id,
                     candidate.StepRun.Id,
                     expectedArtifact.Title,
-                    string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                    errorSummary);
             }
         }
     }
@@ -803,11 +766,73 @@ internal sealed partial class ProcessRunAutomationDispatchService
              key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)));
     }
 
+    private static bool TryApplyExpectedArtifactProjectionWriteOutcome(
+        DispatchCandidate candidate,
+        DispatchArtifactExpectation expectedArtifact,
+        Result<ProcessArtifactProjectionWriteResult> writeResult,
+        out string errorSummary)
+        => TryApplyProjectionWriteOutcome(
+            candidate,
+            writeResult,
+            expectedArtifact.Id,
+            out errorSummary);
+
+    private static bool TryApplyProjectionWriteOutcome(
+        DispatchCandidate candidate,
+        Result<ProcessArtifactProjectionWriteResult> writeResult,
+        Guid? expectedArtifactId,
+        out string errorSummary)
+    {
+        if (writeResult.IsFailure)
+        {
+            errorSummary = string.Join(" | ", writeResult.Errors.Select(error => error.Message));
+            return false;
+        }
+
+        if (writeResult.Value is not { } writeOutcome)
+        {
+            errorSummary = "Coordinator completed without a projection write outcome.";
+            return false;
+        }
+
+        if (expectedArtifactId.HasValue &&
+            !writeOutcome.ArtifactExpectationId.HasValue)
+        {
+            errorSummary = "Coordinator completed without an artifact expectation id.";
+            return false;
+        }
+
+        if (expectedArtifactId is { } expectedId &&
+            writeOutcome.ArtifactExpectationId is { } actualId &&
+            actualId != expectedId)
+        {
+            errorSummary = $"Coordinator returned artifact expectation id '{actualId:D}' instead of '{expectedId:D}'.";
+            return false;
+        }
+
+        if (expectedArtifactId is null &&
+            writeOutcome.ArtifactExpectationId is { } unexpectedId)
+        {
+            errorSummary = $"Coordinator returned unexpected artifact expectation id '{unexpectedId:D}'.";
+            return false;
+        }
+
+        candidate.ExternalReferenceKeys.Add(writeOutcome.ExternalReferenceKey);
+        if (writeOutcome.ArtifactExpectationId is { } artifactExpectationId)
+        {
+            candidate.RecordedArtifactExpectationIds.Add(artifactExpectationId);
+        }
+
+        errorSummary = string.Empty;
+        return true;
+    }
+
     private async Task ProjectResponseTextArtifactsAsync(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail,
         string responseText,
         string workspaceRoot,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -891,6 +916,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         workspaceRoot,
                         projectedRelativePath,
                         targetFullPath,
+                        writeCoordinator,
                         completionStatus,
                         cancellationToken,
                         lineage))
@@ -926,48 +952,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     completionStatus,
                     recoveryContext);
 
-                var placement = await storagePlacementService.PlaceAsync(
-                    new StoragePlacementRequest(
+                var writeResult = await writeCoordinator.WriteAsync(
+                    new ProcessArtifactProjectionWriteRequest(
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        candidate.Run.ProjectId,
+                        projectionPlan,
                         Path.GetFileName(targetFullPath),
                         syntheticArtifact.ContentType,
                         content,
-                        StorageUsagePurpose.Evidence,
                         ResolveStorageContentKind(syntheticArtifact.ContentType, targetFullPath),
-                        ProjectId: candidate.Run.ProjectId,
-                        RelativePathHint: BuildStorageRelativePath(candidate, syntheticArtifact)),
+                        BuildStorageRelativePath(candidate, syntheticArtifact)),
                     cancellationToken);
 
-                var recordResult = await RecordArtifactAsync(
-                    new ProcessArtifactRecordRequest
-                    {
-                        ProcessRunId = candidate.Run.Id,
-                        StepRunId = candidate.StepRun.Id,
-                        ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                        ArtifactKind = projectionPlan.ArtifactKind,
-                        Title = projectionPlan.Title,
-                        TrustStatus = projectionPlan.TrustStatus,
-                        SensitivityLevel = projectionPlan.SensitivityLevel,
-                        ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                        AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                        ReviewSummary = projectionPlan.ReviewSummary,
-                        ManagedStoragePath = placement.RelativePath,
-                        ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                        ProjectionLineage = projectionPlan.ProjectionLineage
-                    },
-                    cancellationToken);
-                if (recordResult.IsSuccess)
-                {
-                    candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-                    candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
-                }
-                else
+                if (!TryApplyExpectedArtifactProjectionWriteOutcome(candidate, expectedArtifact, writeResult, out var errorSummary))
                 {
                     logger.LogWarning(
                         "Response-text artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
                         candidate.Run.Id,
                         candidate.StepRun.Id,
                         expectedArtifact.Title,
-                        string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                        errorSummary);
                 }
             }
             catch (Exception exception)
@@ -989,6 +994,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string workspaceRoot,
         string projectedRelativePath,
         string targetFullPath,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -1033,47 +1039,29 @@ internal sealed partial class ProcessRunAutomationDispatchService
             expectedProjection,
             completionStatus,
             recoveryContext);
-        var placement = await storagePlacementService.PlaceAsync(
-            new StoragePlacementRequest(
+        var writeResult = await writeCoordinator.WriteAsync(
+            new ProcessArtifactProjectionWriteRequest(
+                candidate.Run.Id,
+                candidate.StepRun.Id,
+                candidate.Run.ProjectId,
+                projectionPlan,
                 Path.GetFileName(targetFullPath),
                 contentType,
                 content,
-                StorageUsagePurpose.Evidence,
                 ResolveStorageContentKind(contentType, targetFullPath),
-                ProjectId: candidate.Run.ProjectId,
-                RelativePathHint: BuildStorageRelativePath(candidate, syntheticArtifact)),
+                BuildStorageRelativePath(candidate, syntheticArtifact)),
             cancellationToken);
-        var recordResult = await RecordArtifactAsync(
-            new ProcessArtifactRecordRequest
-            {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
-                ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                ArtifactKind = projectionPlan.ArtifactKind,
-                Title = projectionPlan.Title,
-                TrustStatus = projectionPlan.TrustStatus,
-                SensitivityLevel = projectionPlan.SensitivityLevel,
-                ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                ReviewSummary = projectionPlan.ReviewSummary,
-                ManagedStoragePath = placement.RelativePath,
-                ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                ProjectionLineage = projectionPlan.ProjectionLineage
-            },
-            cancellationToken);
-        if (recordResult.IsFailure)
+        if (!TryApplyExpectedArtifactProjectionWriteOutcome(candidate, expectedArtifact, writeResult, out var errorSummary))
         {
             logger.LogWarning(
                 "Existing response-target artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
                 candidate.Run.Id,
                 candidate.StepRun.Id,
                 expectedArtifact.Title,
-                string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                errorSummary);
             return false;
         }
 
-        candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-        candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
         return true;
     }
 
@@ -1081,6 +1069,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -1196,48 +1185,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     continue;
                 }
 
-                var placement = await storagePlacementService.PlaceAsync(
-                    new StoragePlacementRequest(
+                var writeResult = await writeCoordinator.WriteAsync(
+                    new ProcessArtifactProjectionWriteRequest(
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        candidate.Run.ProjectId,
+                        projectionPlan,
                         Path.GetFileName(targetFullPath),
                         syntheticArtifact.ContentType,
                         content,
-                        StorageUsagePurpose.Evidence,
                         ResolveStorageContentKind(syntheticArtifact.ContentType, targetFullPath),
-                        ProjectId: candidate.Run.ProjectId,
-                        RelativePathHint: BuildStorageRelativePath(candidate, syntheticArtifact)),
+                        BuildStorageRelativePath(candidate, syntheticArtifact)),
                     cancellationToken);
 
-                var recordResult = await RecordArtifactAsync(
-                    new ProcessArtifactRecordRequest
-                    {
-                        ProcessRunId = candidate.Run.Id,
-                        StepRunId = candidate.StepRun.Id,
-                        ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                        ArtifactKind = projectionPlan.ArtifactKind,
-                        Title = projectionPlan.Title,
-                        TrustStatus = projectionPlan.TrustStatus,
-                        SensitivityLevel = projectionPlan.SensitivityLevel,
-                        ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                        AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                        ReviewSummary = projectionPlan.ReviewSummary,
-                        ManagedStoragePath = placement.RelativePath,
-                        ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                        ProjectionLineage = projectionPlan.ProjectionLineage
-                    },
-                    cancellationToken);
-                if (recordResult.IsSuccess)
-                {
-                    candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-                    candidate.RecordedArtifactExpectationIds.Add(expectedArtifact.Id);
-                }
-                else
+                if (!TryApplyExpectedArtifactProjectionWriteOutcome(candidate, expectedArtifact, writeResult, out var errorSummary))
                 {
                     logger.LogWarning(
                         "Provider-native browser artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
                         candidate.Run.Id,
                         candidate.StepRun.Id,
                         expectedArtifact.Title,
-                        string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                        errorSummary);
                 }
             }
             catch (Exception exception)
@@ -1258,6 +1226,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             workspaceScope,
             browserOutputsByToolName,
             browserWorkingDirectory,
+            writeCoordinator,
             completionStatus,
             cancellationToken,
             lineage);
@@ -1270,6 +1239,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         WorkspaceScopeDescriptor workspaceScope,
         IReadOnlyDictionary<string, IReadOnlyList<string>> browserOutputsByToolName,
         string browserWorkingDirectory,
+        ProcessArtifactProjectionWriteCoordinator writeCoordinator,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
         ArtifactProjectionLineage? lineage = null)
@@ -1369,51 +1339,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         completionStatus,
                         recoveryContext);
 
-                    var placement = await storagePlacementService.PlaceAsync(
-                        new StoragePlacementRequest(
+                    var writeResult = await writeCoordinator.WriteAsync(
+                        new ProcessArtifactProjectionWriteRequest(
+                            candidate.Run.Id,
+                            candidate.StepRun.Id,
+                            candidate.Run.ProjectId,
+                            projectionPlan,
                             Path.GetFileName(targetFullPath),
                             contentType,
                             content,
-                            StorageUsagePurpose.Evidence,
                             ResolveStorageContentKind(contentType, targetFullPath),
-                            ProjectId: candidate.Run.ProjectId,
-                            RelativePathHint: projectedRelativePath),
+                            projectedRelativePath),
                         cancellationToken);
 
-                    var recordResult = await RecordArtifactAsync(
-                        new ProcessArtifactRecordRequest
-                        {
-                            ProcessRunId = candidate.Run.Id,
-                            StepRunId = candidate.StepRun.Id,
-                            ArtifactExpectationId = projectionPlan.ArtifactExpectationId,
-                            ArtifactKind = projectionPlan.ArtifactKind,
-                            Title = projectionPlan.Title,
-                            TrustStatus = projectionPlan.TrustStatus,
-                            SensitivityLevel = projectionPlan.SensitivityLevel,
-                            ProvenanceSummary = projectionPlan.ProvenanceSummary,
-                            AllowedFutureUsageSummary = projectionPlan.AllowedFutureUsageSummary,
-                            ReviewSummary = projectionPlan.ReviewSummary,
-                            ManagedStoragePath = placement.RelativePath,
-                            ExternalReferenceKey = projectionPlan.ExternalReferenceKey,
-                            ProjectionLineage = projectionPlan.ProjectionLineage
-                        },
-                        cancellationToken);
-                    if (recordResult.IsSuccess)
-                    {
-                        candidate.ExternalReferenceKeys.Add(projectionPlan.ExternalReferenceKey);
-                        if (recordExpectation is not null)
-                        {
-                            candidate.RecordedArtifactExpectationIds.Add(recordExpectation.Id);
-                        }
-                    }
-                    else
+                    if (!TryApplyProjectionWriteOutcome(candidate, writeResult, recordExpectation?.Id, out var errorSummary))
                     {
                         logger.LogWarning(
                             "Provider-native browser output projection failed for run {RunId}, step {StepRunId}, output {OutputPath}. Errors: {Errors}",
                             candidate.Run.Id,
                             candidate.StepRun.Id,
                             normalizedOutputPath,
-                            string.Join(" | ", recordResult.Errors.Select(error => error.Message)));
+                            errorSummary);
                     }
                 }
                 catch (Exception exception)

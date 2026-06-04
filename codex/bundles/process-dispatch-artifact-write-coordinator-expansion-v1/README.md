@@ -2,8 +2,20 @@
 
 Bundle preparation status: `Ready`
 Bundle readiness gate: `Ready for Codex execution after repo-root validation`
-Execution status: `Not started`
+Execution status: `Completed`
 Profile: `initiative`
+
+## Validation Summary
+
+- Bundle preparation status: Ready after structural repair and prepared-stage validator rerun.
+- Bundle readiness gate: Passed live prepared-stage validator on 2026-06-04.
+- Execution status: SB01-SB14 completed.
+- Subbundle gate review: SB01-SB14 entry and closure passed; Gate A, Gate B, Gate C, and final red-team closure passed.
+- Final closure gate: Passed completed-stage validator after SB14.
+- Browser validation analytics: N/A expected for runtime/service refactor; only large desktop/PC proof allowed if UI proof becomes unavoidable.
+- Prepared-stage validation must pass from the repo root before production implementation starts.
+- Browser validation is expected to be N/A for this runtime/service refactor unless an unexpected UI-visible change is introduced.
+- Final closure completed with completed-stage bundle validation, focused tests, source scans, and note-by-note closure in `reviews/01-execution-report.md`.
 
 ## Purpose
 
@@ -17,7 +29,7 @@ Source-backed current facts this bundle assumes:
 
 - `ProcessArtifactProjectionSourceAdapters.cs` now owns typed planning for process mock, workspace-written, existing-managed, response-text, and provider-native browser projection sources.
 - `ProcessArtifactProjectionWriteCoordinator.cs` exists, but currently coordinates only storage placement + artifact recording for the execution-artifact projection path.
-- `ProcessRunAutomationDispatchService.ArtifactProjection.cs` still contains repeated storage placement and `RecordArtifactAsync` blocks in process mock, workspace-written, existing-managed, response-text, provider-native browser, and completed-decision paths.
+- `ProcessRunAutomationDispatchService.ArtifactProjection.cs` now routes all storage-backed artifact projection writes through the write coordinator and the completed-decision record-only path through a record-only coordinator. The only remaining `RecordArtifactAsync` reference in `ArtifactProjection.cs` is the service delegate helper.
 - `ArtifactProjection.cs` remains large; the last proof reported `ArtifactProjection.cs` at 1526 lines and `ArtifactValidation.cs` at 3434 lines after the source-adapter step.
 
 ## Scope

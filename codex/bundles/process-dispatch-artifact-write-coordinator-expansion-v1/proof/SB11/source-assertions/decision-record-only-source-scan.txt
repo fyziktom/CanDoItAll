@@ -1,0 +1,22 @@
+# SB11 record-only decision source scan
+
+## Completed-decision method assertions
+contains record-only coordinator parameter: True
+contains record-only request: True
+contains record-only call: True
+contains decision external key builder: True
+contains decision trust resolver: True
+contains direct storage placement: False
+contains storage-backed write coordinator: False
+contains direct record call: False
+
+## Record-only coordinator assertions
+contains record-only class: True
+contains record-only request: True
+contains recordArtifactAsync delegate: True
+contains storage placement service: False
+contains storage placement request: False
+
+## Remaining direct writes
+1542:    private async Task<Result<Guid>> RecordArtifactAsync(
+1548:        return await processesService.RecordArtifactAsync(request, cancellationToken);

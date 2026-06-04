@@ -1,0 +1,58 @@
+Command: git status --short
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/plan/01-phase-plan.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/reviews/01-execution-report.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/01-entry-audit-artifact-write-baseline/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/02-projection-write-path-inventory/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/03-write-coordinator-contract-hardening/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/04-refactor-gate-a-coordinator-guardrails/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/05-migrate-process-mock-write-path/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/06-migrate-workspace-written-write-path/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/07-migrate-existing-managed-write-path/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/08-refactor-gate-b-storage-write-parity/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/09-migrate-response-text-write-path/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/10-migrate-provider-native-browser-write-path/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/11-isolate-record-only-decision-artifacts/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/12-refactor-gate-c-artifact-write-boundary/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/13-runtime-smoke-artifact-write-regression/README.md
+ M codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/14-final-red-team-next-dispatch-cutline/README.md
+?? codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/proof/
+
+Command: git diff --name-only
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/plan/01-phase-plan.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/reviews/01-execution-report.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/01-entry-audit-artifact-write-baseline/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/02-projection-write-path-inventory/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/03-write-coordinator-contract-hardening/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/04-refactor-gate-a-coordinator-guardrails/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/05-migrate-process-mock-write-path/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/06-migrate-workspace-written-write-path/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/07-migrate-existing-managed-write-path/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/08-refactor-gate-b-storage-write-parity/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/09-migrate-response-text-write-path/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/10-migrate-provider-native-browser-write-path/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/11-isolate-record-only-decision-artifacts/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/12-refactor-gate-c-artifact-write-boundary/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/13-runtime-smoke-artifact-write-regression/README.md
+codex/bundles/process-dispatch-artifact-write-coordinator-expansion-v1/subbundles/14-final-red-team-next-dispatch-cutline/README.md
+
+Command: git diff --stat
+ .../README.md                                              | 12 ++++++++++++
+ .../plan/01-phase-plan.md                                  |  6 ++++++
+ .../reviews/01-execution-report.md                         | 14 ++++++++++----
+ .../01-entry-audit-artifact-write-baseline/README.md       |  8 ++++----
+ .../02-projection-write-path-inventory/README.md           |  8 ++++----
+ .../03-write-coordinator-contract-hardening/README.md      |  8 ++++----
+ .../04-refactor-gate-a-coordinator-guardrails/README.md    |  8 ++++----
+ .../05-migrate-process-mock-write-path/README.md           |  8 ++++----
+ .../06-migrate-workspace-written-write-path/README.md      |  8 ++++----
+ .../07-migrate-existing-managed-write-path/README.md       |  8 ++++----
+ .../08-refactor-gate-b-storage-write-parity/README.md      |  8 ++++----
+ .../09-migrate-response-text-write-path/README.md          |  8 ++++----
+ .../README.md                                              |  8 ++++----
+ .../11-isolate-record-only-decision-artifacts/README.md    |  8 ++++----
+ .../12-refactor-gate-c-artifact-write-boundary/README.md   |  8 ++++----
+ .../13-runtime-smoke-artifact-write-regression/README.md   |  8 ++++----
+ .../14-final-red-team-next-dispatch-cutline/README.md      |  8 ++++----
+ 17 files changed, 84 insertions(+), 60 deletions(-)

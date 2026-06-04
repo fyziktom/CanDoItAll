@@ -1,11 +1,15 @@
 # Projection Write Path Inventory
 
-| Path | Storage-backed? | Current migration state | Next action |
-| --- | --- | --- | --- |
-| Execution artifact | Yes | Uses write coordinator | Harden with structured outcome and parity proof |
-| Process mock artifact | Yes | Uses source adapter, still writes directly | Migrate through coordinator, preserve hard failure behavior |
-| Workspace-written artifact | Yes | Uses source adapter, still writes directly | Migrate through coordinator, preserve matching/path rules |
-| Existing managed artifact | Yes | Uses source adapter, still writes directly | Migrate through coordinator, preserve duplicate detection |
-| Response text artifact | Yes, after writing text file | Uses source adapter, still writes/places/records directly | Migrate storage/recording through coordinator; keep file creation/path safety outside coordinator |
-| Provider-native browser artifact | Yes | Uses source adapter, still writes directly | Migrate expected and discovered paths; preserve modes |
-| Completed decision artifact | No | Record-only direct `RecordArtifactAsync` | Add record-only helper, no storage placement |
+Source scan: `bundle://proof/SB02/transcripts/write-path-scan.txt`
+
+| Path | Source lines | Storage-backed? | Current migration state | Failure behavior | Candidate state updates | Next action |
+| --- | --- | --- | --- | --- | --- | --- |
+| Execution artifact | `ArtifactProjection.cs:38-40`, coordinator `ProcessArtifactProjectionWriteCoordinator.cs:27` | Yes | Uses write coordinator | Existing caller handles coordinator/record result semantics | Existing path already records external reference and expectation state through the execution-artifact flow | Harden with structured outcome and parity proof |
+| Process mock artifact | `ArtifactProjection.cs:270` | Yes | Uses source adapter and write coordinator | Hard failure: missing/unreadable source file throws; coordinator write/record failure throws | Adds `ExternalReferenceKeys`, `RecordedArtifactExpectationIds`, and local projected expectation id after coordinator success | Gate B re-scan passed in SB08 |
+| Workspace-written artifact | `ArtifactProjection.cs:428` | Yes | Uses source adapter and write coordinator | Soft failure: missing/unreadable source and coordinator/record failure are skipped or logged | Adds `ExternalReferenceKeys` and `RecordedArtifactExpectationIds` only after coordinator success | Gate B re-scan passed in SB08 |
+| Existing managed artifact | `ArtifactProjection.cs:571` | Yes | Uses source adapter and write coordinator | Soft failure: missing/unreadable source and coordinator/record failure are skipped or logged | Adds `ExternalReferenceKeys` and `RecordedArtifactExpectationIds` only after coordinator success | Gate B re-scan passed in SB08 |
+| Completed decision artifact | `ArtifactProjection.cs:710` | No | Uses record-only coordinator | Soft failure: record-only coordinator/record failure is logged | Adds `ExternalReferenceKeys` and `RecordedArtifactExpectationIds` only after record-only coordinator success | Completed in SB11 |
+| Response text artifact | `ArtifactProjection.cs:918` | Yes, after writing text file | Uses source adapter and write coordinator after dispatcher-owned file creation | Soft failure: path escape skipped, existing-file helper may short-circuit, write/place exceptions are caught, coordinator/record failures are logged | Adds `ExternalReferenceKeys` and `RecordedArtifactExpectationIds` after coordinator success | Completed in SB09 |
+| Response target existing-managed helper | `ArtifactProjection.cs:1005` | Yes | Uses existing-managed adapter and write coordinator inside response-text path | Soft failure: coordinator/record failure logs and returns false so caller can continue response-text projection | Adds `ExternalReferenceKeys` and `RecordedArtifactExpectationIds` after coordinator success | Completed in SB09 |
+| Provider-native browser expected output | `ArtifactProjection.cs:1177` | Yes | Uses provider-native source adapter and write coordinator | Soft failure: unavailable source/unsafe target skipped; copy/place exceptions are caught; coordinator/record failures logged | Adds `ExternalReferenceKeys` and `RecordedArtifactExpectationIds` after coordinator success | Completed in SB10 |
+| Provider-native browser discovered output | `ArtifactProjection.cs:1331` | Yes | Uses provider-native source adapter and write coordinator | Soft failure: unavailable source/unsafe target skipped; copy/place exceptions are caught; coordinator/record failures logged | Adds `ExternalReferenceKeys` and matched `RecordedArtifactExpectationIds` after coordinator success | Completed in SB10 |

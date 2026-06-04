@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Run runtime smoke and artifact write regression proof after all migrations.
 
 ## Prerequisites
 
-Gate C complete.
+- Gate C complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ Gate C complete.
 
 ## Dependency Impact
 
-Final proof before red-team closure.
+- Final proof before red-team closure.
 
 ## Validation Depth
 
@@ -74,14 +76,25 @@ Final proof before red-team closure.
 - proof/SB13/transcripts/integration-tests.txt
 - proof/SB13/transcripts/full-build.txt
 
+## Proof Captured
+
+- `bundle://proof/SB13/transcripts/unit-tests.txt`
+- `bundle://proof/SB13/transcripts/integration-tests.txt`
+- `bundle://proof/SB13/transcripts/full-build.txt`
+- `bundle://proof/SB13/source-assertions/runtime-smoke-source-scan.txt`
+- `bundle://proof/SB13/source-assertions/anti-stub-audit.txt`
+- `bundle://proof/SB13/source-assertions/changed-file-hashes.txt`
+- `bundle://proof/SB13/manifest.md`
+
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-SB14 may start after runtime smoke passes or exact blocker is recorded.
+- SB14 may start after runtime smoke passes or exact blocker is recorded.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+

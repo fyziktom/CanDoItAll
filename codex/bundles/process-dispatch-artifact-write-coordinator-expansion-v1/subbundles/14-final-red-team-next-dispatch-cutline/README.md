@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -16,7 +18,7 @@ Final red-team review and next dispatcher isolation cutline.
 
 ## Prerequisites
 
-SB13 complete.
+- SB13 complete.
 
 ## Exact Source References
 
@@ -35,7 +37,7 @@ SB13 complete.
 
 ## Dependency Impact
 
-Closes bundle.
+- Closes bundle.
 
 ## Validation Depth
 
@@ -75,14 +77,22 @@ Closes bundle.
 - proof/SB14/source-assertions/final-red-team.md
 - proof/SB14/transcripts/completed-validator.txt
 
+## Proof Captured
+
+- `bundle://proof/SB14/source-assertions/final-red-team.md`
+- `bundle://proof/SB14/source-assertions/changed-file-hashes.txt`
+- `bundle://proof/SB14/transcripts/completed-validator.txt`
+- `bundle://proof/SB14/manifest.md`
+
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
+- N/A expected. Runtime/service refactor only. If unexpectedly needed, record only large desktop/PC proof and explain why service tests were insufficient.
 
 ## Progression Gate
 
-Bundle may close after final red-team passes.
+- Bundle may close after final red-team passes.
 
 ## Suggested Agent Prompt
 
 Implement this subbundle only. Record source assertions, tests, and anti-stub audit before proceeding. Preserve all prior behavior and update `reviews/01-execution-report.md`.
+
