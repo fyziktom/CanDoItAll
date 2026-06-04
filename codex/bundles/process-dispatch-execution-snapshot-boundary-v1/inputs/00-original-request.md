@@ -1,0 +1,3 @@
+# Original Request
+
+The user asked to inspect the completed `maf-processes-refactor` branch, verify whether the previous process-agent execution boundary work is complete, identify what remains to fix or improve, and prepare the next bundle. The user specifically requested not to push into full Process Core extraction yet; instead, continue with smaller bundles that gradually isolate the huge dispatch service areas through abstractions and refactor gates. The user wants phases that let Codex work longer and forces additional refactoring every few subbundles. The user also asked to produce the bundle as a ZIP.
