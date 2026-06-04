@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: `Completed`
 
 ## Objective
 
@@ -16,15 +16,15 @@ Update live docs and static guardrails after providerizing project-structure/ima
 
 ## Prerequisites
 
-`SB09` must be complete and its progression gate must have passed.
+- `SB09` must be complete and its progression gate must have passed.
 
 ## Exact Source References
 
-- `README.md`
-- `docs/architecture-beta.md`
-- `src/CanDoItAll.AgentFramework.Maf/README.md`
-- `src/CanDoItAll.Modules.Processes/README.md`
-- `codex/skills/candoitall-api-processes/SKILL.md`
+- repo://README.md
+- repo://docs/architecture-beta.md
+- repo://src/CanDoItAll.AgentFramework.Maf/README.md
+- repo://src/CanDoItAll.Modules.Processes/README.md
+- repo://codex/skills/candoitall-api-processes/SKILL.md
 
 ## Deliverables
 
@@ -35,11 +35,11 @@ Update live docs and static guardrails after providerizing project-structure/ima
 
 ## Dependency Impact
 
-Moderate dependency impact; downstream proof must still include regression checks.
+- Moderate dependency impact; downstream proof must still include regression checks.
 
 ## Validation Depth
 
-This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
+- This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
 
 ## Implementation Steps
 
@@ -65,13 +65,13 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Acceptance Checklist
 
-- [ ] Source inventory for this slice is recorded.
-- [ ] Implementation is limited to this subbundle scope.
-- [ ] Tool parity/access/approval behavior is proven where applicable.
-- [ ] Static dependency scans are updated where applicable.
-- [ ] Targeted tests pass.
-- [ ] Full or relevant project build pass is recorded.
-- [ ] Execution report is updated.
+- [x] Source inventory for this slice is recorded.
+- [x] Implementation is limited to this subbundle scope.
+- [x] Tool parity/access/approval behavior is proven where applicable.
+- [x] Static dependency scans are updated where applicable.
+- [x] Targeted tests pass.
+- [x] Full or relevant project build pass is recorded.
+- [x] Execution report is updated.
 
 ## Proof Required
 
@@ -82,11 +82,20 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Browser Validation Logging
 
-N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
+- N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
 
 ## Progression Gate
 
-Docs must be live-source accurate; historical bundle mentions may remain only when classified as historical.
+- Docs must be live-source accurate; historical bundle mentions may remain only when classified as historical.
+
+## Completion Notes
+
+- Root, architecture, MAF, Processes, and process-skill docs now describe the providerized first-party tool boundary: Processes owns `ProcessAgentRuntimeToolProvider`, Workbench owns `ProjectStructureAgentRuntimeToolProvider`, and the AgentFramework module owns `ImageGenerationAgentRuntimeToolProvider`.
+- Architecture docs explicitly state this is a dependency-inversion seam, not a completed process-core extraction.
+- Operator troubleshooting now points to provider key/display name, expected process tool count, `AgentProcessAccessMetadata`, and optional runtime-provider receipt/trace ownership fields.
+- `ApiDocsSkillsParityTests` now asserts the live docs and skill text keep this boundary and diagnostic guidance current.
+- The stale-reference scan found no removed hard-coded attach method names in live source, docs, or installed skills.
+- Proof is recorded in `bundle://proof/SB10/manifest.md` and `bundle://proof/SB10/semantic-invariants.md`.
 
 ## Suggested Agent Prompt
 

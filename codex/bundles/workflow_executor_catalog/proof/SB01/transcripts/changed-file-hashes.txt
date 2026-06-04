@@ -1,0 +1,6 @@
+Command: Get-FileHash <SB01 changed files> -Algorithm SHA256
+2C7F776012072868202F60CCA5826C1446720EDE715C3560A0330DA3ECB80DF3  repo://src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs
+496FA09001B41BB6E753184B87A6571794F8A85B3B57B849AF3C2A1B2A633E1F  repo://src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs
+9DCCA75E948F7448FB30D5C9A428E459FFD1176C7DFD6B72C7DA14F7BB3B5A4F  repo://src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowTemplatePackLoader.cs
+E3DE24C9CA3449619FE7FD6A1DE5EA824895040CBD1D2377B8A3F7B4A9B80849  repo://tests\CanDoItAll.Tests.Unit\AgentFrameworkHostingServiceCollectionTests.cs
+ExitCode: 0

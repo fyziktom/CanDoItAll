@@ -1,0 +1,52 @@
+Command: rg -n IWorkflowArtifactContentStore|WorkflowArtifactContent|GetArtifactContent|ArtifactContent|WriteAsync|TryReadAsync src/CanDoItAll.AgentFramework.Core/Workflows src/CanDoItAll.Web/Api tests/CanDoItAll.Tests.Unit tests/CanDoItAll.Tests.Integration -S
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:6:public sealed class InMemoryWorkflowArtifactContentStore : IWorkflowArtifactContentStore
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:8:    private readonly ConcurrentDictionary<WorkflowArtifactId, WorkflowArtifactContent> contents = new();
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:18:        contents[artifact.Id] = new WorkflowArtifactContent(artifact, content ?? string.Empty);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:22:    public Task<WorkflowArtifactContent?> ReadContentAsync(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:34:public sealed class FileWorkflowArtifactContentStore : IWorkflowArtifactContentStore
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:40:    public FileWorkflowArtifactContentStore(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:60:        var fullPath = ResolveArtifactContentPath(artifact);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:70:    public async Task<WorkflowArtifactContent?> ReadContentAsync(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:77:        var artifactContentPath = ResolveArtifactContentPath(artifact);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:80:            return new WorkflowArtifactContent(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:90:            return new WorkflowArtifactContent(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowArtifactContentStores.cs:98:    private string ResolveArtifactContentPath(WorkflowArtifactRecord artifact)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowContracts.cs:241:public sealed record WorkflowArtifactContent(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowContracts.cs:245:public interface IWorkflowArtifactContentStore
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowContracts.cs:252:    Task<WorkflowArtifactContent?> ReadContentAsync(
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:165:                BuildManagedArtifactContent(step, stepKey, artifactOutput.Title));
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:223:    private static string BuildManagedArtifactContent(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:58:    private readonly IWorkflowArtifactContentStore? artifactContentStore;
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowPayloadPolicyService.cs:62:        IWorkflowArtifactContentStore? artifactContentStore = null)
+src\CanDoItAll.Web\Api\WorkflowsApi.cs:330:                IWorkflowArtifactContentStore artifactContentStore,
+src\CanDoItAll.Web\Api\WorkflowsApi.cs:332:            await GetArtifactContentResultAsync(
+src\CanDoItAll.Web\Api\WorkflowsApi.cs:338:            .WithName("GetWorkflowRunArtifactContent");
+src\CanDoItAll.Web\Api\WorkflowsApi.cs:504:    private static async Task<IResult> GetArtifactContentResultAsync(
+src\CanDoItAll.Web\Api\WorkflowsApi.cs:508:        IWorkflowArtifactContentStore artifactContentStore,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:368:        await logStore.WriteAsync(new PluginLogWriteRequest(
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:377:        await logStore.WriteAsync(new PluginLogWriteRequest(
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:4952:            BuildWorkflowRepairManagedArtifactContent(stepRun, artifactOutput.Title));
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:5015:    private static string BuildWorkflowRepairManagedArtifactContent(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:14998:            var reader = new ProcessRunAutomationDispatchService.StorageBackedProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15010:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15099:            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15109:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15151:            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15161:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15204:            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15214:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15260:            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15270:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15325:            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15335:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15386:            var reader = new ProcessRunAutomationDispatchService.WorkspaceProcessArtifactContentReader(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15396:                managedArtifactContentReader: reader);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1979:            await stream.WriteAsync(headerBytes);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1980:            await stream.WriteAsync(bodyBytes);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:479:        var contentStore = new InMemoryWorkflowArtifactContentStore();
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:504:    public async Task InMemoryWorkflowArtifactContentStore_returns_null_for_missing_content()
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:516:        var contentStore = new InMemoryWorkflowArtifactContentStore();
+

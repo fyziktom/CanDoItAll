@@ -1,0 +1,14 @@
+Command: completed proof index for SB06 no-message and idempotency semantics
+ExitCode: 0
+
+PASS SB06-INV-NO-MESSAGES-TERMINAL: Scheduler treats Office365 no-message workflow output as terminal NoMessages success without retry.
+PASS SB06-INV-IDEMPOTENT-PROJECT-WRITES: summary assets and task nodes use Office365 message idempotency keys so retry/replay does not duplicate project output.
+PASS SB06-INV-CONCURRENT-REPLAY: runtime gateway replay protection prevents duplicate writes for concurrent matching dispatches.
+
+Passing evidence:
+- bundle://proof/SB06/transcripts/unit-idempotency-and-template-after-sb06-final.txt
+- bundle://proof/SB06/transcripts/integration-no-message-idempotency-after-sb06-with-launcher-final.txt
+- bundle://proof/SB06/transcripts/build-web-after-sb06-final.txt
+
+Anti-stub audit:
+- No scoped Scheduler/idempotency production stubs were introduced; reviewed matches are documented in bundle://proof/SB06/transcripts/anti-stub-audit-after-sb06-final.txt.

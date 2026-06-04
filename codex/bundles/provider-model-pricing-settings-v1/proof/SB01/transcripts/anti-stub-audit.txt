@@ -1,0 +1,9 @@
+Command:
+
+rg -n "TODO|NotImplemented|throw new NotImplementedException|fake refresh|stub" <changed production and test files> -S
+
+Result:
+
+No anti-stub findings in changed production/test files.
+
+ExitCode: 0

@@ -1,0 +1,9 @@
+Command: node C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\cdp\sb08-cdp-validator.cjs C:\Program Files\Google\Chrome\Application\chrome.exe recipe-pantry-planner http://127.0.0.1:5205 C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1\proof\SB08\scenarios\recipe-pantry-planner\screenshots C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1\proof\SB08\scenarios\recipe-pantry-planner\browser-state.json C:\repositories\CanDoItAll\codex\bundles\process-workflow-agent-hardening-v1\proof\SB08\scenarios\recipe-pantry-planner\browser-console.json 9405 C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\cdp\recipe-pantry-planner-profile
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+
+
+STDERR:
+

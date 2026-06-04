@@ -1,0 +1,15 @@
+Command: browser proof for Scheduler and Workflows final Office365 closure
+ExitCode: 0
+
+PASS SB08-INV-BROWSER-PROOF: Scheduler desktop and narrow browser captures show Office365 Email Watch Summary To Project typed configuration, advanced JSON availability, raw JSON back-to-field sync, every-two-hours interval, and required-email validation.
+PASS SB08-INV-BROWSER-PROOF: Workflows desktop and narrow browser captures show Office365 Email Watch Summary To Project and Office365 Email Watch Tasks To Project templates.
+PASS SB08-INV-BROWSER-PROOF: Workflows editor toolbox capture shows Office365 mark processed, Office365 messages by category, and Office365 unprocessed message by address executors under Office365 Mail.
+
+Screenshots:
+- bundle://proof/SB08/browser/scheduler-office365-configured-desktop.png
+- bundle://proof/SB08/browser/scheduler-raw-json-sync-after-change-desktop.png
+- bundle://proof/SB08/browser/scheduler-required-validation-desktop.png
+- bundle://proof/SB08/browser/scheduler-office365-form-narrow.png
+- bundle://proof/SB08/browser/workflows-templates-desktop.png
+- bundle://proof/SB08/browser/workflows-templates-narrow.png
+- bundle://proof/SB08/browser/workflows-office365-toolbox-expanded-desktop.png

@@ -972,6 +972,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
+            var projectedManagedStoragePath = await WriteProjectedSubprocessArtifactAsync(
+                candidate,
+                subprocessRun,
+                expectation,
+                sourceArtifact,
+                cancellationToken);
+            var projectionLineage = ProcessArtifactProjectionLineageJson.Normalize(
+                new ProcessArtifactProjectionLineage
+                {
+                    SourceKind = ProcessArtifactProjectionSourceKind.SubprocessArtifact,
+                    SubprocessRunId = subprocessRun.RunId,
+                    SourceArtifactId = sourceArtifact.Id,
+                    SourceExternalReferenceKey = sourceArtifact.ExternalReferenceKey
+                })!;
             var artifact = new ProcessArtifactRecord
             {
                 ProcessRunId = candidate.Run.Id,
@@ -984,16 +998,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProvenanceSummary = BuildSubprocessArtifactProjectionProvenance(candidate, subprocessRun, sourceArtifact),
                 AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
                 ReviewSummary = BuildSubprocessArtifactProjectionReviewSummary(subprocessRun, sourceArtifact, projectionDiagnostic),
-                ManagedStoragePath = BoundProjectedSubprocessStoragePath(sourceArtifact.ManagedStoragePath),
+                ManagedStoragePath = projectedManagedStoragePath,
                 ExternalReferenceKey = BuildSubprocessArtifactProjectionReferenceKey(subprocessRun.RunId, sourceArtifact.Id),
-                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
-                    new ProcessArtifactProjectionLineage
-                    {
-                        SourceKind = ProcessArtifactProjectionSourceKind.SubprocessArtifact,
-                        SubprocessRunId = subprocessRun.RunId,
-                        SourceArtifactId = sourceArtifact.Id,
-                        SourceExternalReferenceKey = sourceArtifact.ExternalReferenceKey
-                    }),
+                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.SerializeNormalized(projectionLineage),
+                ProjectionIdentityHash = projectionLineage.ProjectionIdentityHash,
                 CreatedAtUtc = now
             };
             await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
@@ -1023,6 +1031,68 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<string> WriteProjectedSubprocessArtifactAsync(
+        DispatchCandidate candidate,
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord sourceArtifact,
+        CancellationToken cancellationToken)
+    {
+        var fileSlug = FileSafeSlugBuilder.Build(expectation.Title);
+        if (string.IsNullOrWhiteSpace(fileSlug))
+        {
+            fileSlug = "subprocess-artifact-projection";
+        }
+
+        var scopedProfileId = databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N");
+        var relativePath = WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(
+            "artifacts",
+            "scopes",
+            "organization",
+            scopedProfileId,
+            "process-runs",
+            candidate.Run.Id.ToString("D"),
+            candidate.StepRun.Id.ToString("D"),
+            $"{fileSlug}.md"));
+        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
+        var fullPath = Path.GetFullPath(Path.Combine(
+            workspaceRoot,
+            relativePath.Replace('/', Path.DirectorySeparatorChar)));
+        if (!IsWithinWorkspace(workspaceRoot, fullPath))
+        {
+            throw new InvalidOperationException(
+                $"Projected subprocess artifact path '{relativePath}' resolves outside the workspace root.");
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        await File.WriteAllTextAsync(
+            fullPath,
+            BuildProjectedSubprocessArtifactMarkdown(candidate, subprocessRun, expectation, sourceArtifact),
+            Encoding.UTF8,
+            cancellationToken);
+        return relativePath;
+    }
+
+    private static string BuildProjectedSubprocessArtifactMarkdown(
+        DispatchCandidate candidate,
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessArtifactExpectation expectation,
+        ProcessArtifactRecord sourceArtifact)
+    {
+        return $"""
+            # {expectation.Title}
+
+            Parent process run: {candidate.Run.Id:D}
+            Parent subprocess step: {candidate.StepRun.Id:D}
+            Subprocess run: {subprocessRun.RunId:D}
+            Subprocess artifact: {sourceArtifact.Id:D}
+            Subprocess artifact title: {sourceArtifact.Title}
+            Subprocess managed path: {sourceArtifact.ManagedStoragePath}
+
+            This parent-scoped artifact is a durable projection of the completed subprocess output. The child run artifact ledger remains the source of detailed runtime evidence.
+            """;
     }
 
     private async Task RecordSubprocessProjectionGapAsync(
@@ -1193,14 +1263,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ? $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}."
             : $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}. {sourceArtifact.ReviewSummary}";
         return $"{summary}{diagnosticSuffix}";
-    }
-
-    private static string BoundProjectedSubprocessStoragePath(string value) {
-        const int maxManagedStoragePathLength = 500;
-        var normalized = value.Trim();
-        return normalized.Length <= maxManagedStoragePathLength
-            ? normalized
-            : normalized[..maxManagedStoragePathLength];
     }
 
     private static string BuildSubprocessArtifactProjectionReferenceKey(Guid subprocessRunId, Guid expectationId) {

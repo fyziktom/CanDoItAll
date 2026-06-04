@@ -1,5 +1,10 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute subbundles sequentially from `SB01` through `SB12`.
+- Stop for Gate A after `SB03`, Gate B after `SB06`, Gate C after `SB09`, and the final gate at `SB12`.
+- Do not start a subbundle until its prerequisite gate rows and proof artifacts are current.
 ## Subbundle Dependency Map
 
 ```mermaid

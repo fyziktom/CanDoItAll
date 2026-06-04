@@ -1,0 +1,8 @@
+Command: rg -n 'TODO|NotImplemented|throw new NotImplementedException|STUB|stub' src/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs tests/CanDoItAll.Tests.Unit/ImageGenerationAgentRuntimeToolProviderTests.cs tests/CanDoItAll.Tests.Integration/MafAgentRuntimeTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05
+TimestampUtc: 2026-06-04T02:28:33.6599036+00:00
+---- Output ----
+No stub markers found in SB05 source/tests.
+SearchExitCode: 1
+AuditResultExitCode: 0

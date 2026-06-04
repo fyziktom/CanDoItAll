@@ -23,12 +23,14 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
 
         var executionIndex = FindRequired(source, "ExecuteUntilSettledAsync");
         var claimLostGuardIndex = FindRequired(source, "dispatchHeartbeat.ThrowIfClaimLost();", executionIndex);
-        var artifactProjectionIndex = FindRequired(source, "ProjectExecutionArtifactsAsync", claimLostGuardIndex);
+        var artifactProjectionIndex = FindRequired(source, "FinalizeStepCompletionAsync", claimLostGuardIndex);
+        var projectionFlagIndex = FindRequired(source, "ProjectExecutionArtifacts: true", artifactProjectionIndex);
         var transitionIndex = FindRequired(source, "TransitionStepWithClaimAsync", artifactProjectionIndex);
 
         Assert.True(
             executionIndex < claimLostGuardIndex &&
             claimLostGuardIndex < artifactProjectionIndex &&
+            artifactProjectionIndex < projectionFlagIndex &&
             artifactProjectionIndex < transitionIndex,
             "Stale dispatch workers must stop before projecting artifacts or attempting completion transitions.");
 

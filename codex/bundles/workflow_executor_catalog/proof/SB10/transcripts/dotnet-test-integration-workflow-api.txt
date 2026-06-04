@@ -1,0 +1,2353 @@
+Command: dotnet test tests\\CanDoItAll.Tests.Integration\\CanDoItAll.Tests.Integration.csproj --no-build --filter FullyQualifiedName~WorkflowApiIntegrationTests --logger console;verbosity=normal
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:01.03]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:01.33]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:01.38]   Starting:    CanDoItAll.Tests.Integration
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (26c579f6-52e8-89a2-648b-46481358f996) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_643103ed00714689883cdcff2a409f8c:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 26c579f6-52e8-89a2-648b-46481358f996 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_643103ed00714689883cdcff2a409f8c:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 26c579f6-52e8-89a2-648b-46481358f996 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 26c579f6-52e8-89a2-648b-46481358f996.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 26c579f6-52e8-89a2-648b-46481358f996 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:55737
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\a2fa930cbf3e44f4a0b7ee1d56bcc066
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:55737/api/workflows/test-runs - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/test-runs'
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorCapturedImprovementRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorSessionRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+warn: Microsoft.EntityFrameworkCore.Model.Validation[20601]
+      The 'CognitiveMemoryCuratorConversationDepth' property 'ConversationDepth' on entity type 'CognitiveMemoryCuratorTurnRecord' is configured with a database-generated default, but has no configured sentinel value. The database-generated default will always be used for inserts when the property has the value 'Short', since this is the CLR default for the 'CognitiveMemoryCuratorConversationDepth' type. Consider using a nullable type, using a nullable backing field, or setting the sentinel value for the property to ensure the database default is used when, and only when, appropriate. See https://aka.ms/efcore-docs-default-values for more information.
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@run_RunId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."RunId", a."Backend", a."BackendRunId", a."CreatedAtUtc", a."State", a."Summary", a."UpdatedAtUtc", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowRuns" AS a
+      WHERE a."RunId" = @run_RunId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Int32), @p5='?', @p6='?' (DbType = DateTime), @p7='?' (DbType = Guid), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowRuns" ("RunId", "Backend", "BackendRunId", "CreatedAtUtc", "State", "Summary", "UpdatedAtUtc", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (7ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (11ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@checkpoint_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."Id" = @checkpoint_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Guid), @p5='?' (DbType = Int32), @p6='?', @p7='?', @p8='?', @p9='?' (DbType = Int32), @p10='?', @p11='?' (DbType = DateTime), @p12='?' (DbType = Guid), @p13='?', @p14='?' (DbType = Int32), @p15='?' (DbType = Guid), @p16='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowCheckpoints" ("Id", "Backend", "BackendCheckpointId", "CreatedAtUtc", "ExternalRequestId", "Kind", "NodeId", "PayloadHash", "PayloadReference", "ResumeAvailability", "ResumeUnavailableReason", "ResumedAtUtc", "RunId", "Summary", "TrustBoundary", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."EventName", a."Kind", a."NodeId", a."RequestJson", a."RespondedAtUtc", a."ResponseJson", a."RunId"
+      FROM "AgentFramework_WorkflowExternalRequests" AS a
+      WHERE a."RunId" = @runId_Value AND a."RespondedAtUtc" IS NULL
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc", a."Id"
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowTestRunResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:55737/api/workflows/test-runs - 200 - application/json;+charset=utf-8 4159.5139ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:55737/api/workflows/test-runs - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@run_RunId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."RunId", a."Backend", a."BackendRunId", a."CreatedAtUtc", a."State", a."Summary", a."UpdatedAtUtc", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowRuns" AS a
+      WHERE a."RunId" = @run_RunId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Int32), @p5='?', @p6='?' (DbType = DateTime), @p7='?' (DbType = Guid), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowRuns" ("RunId", "Backend", "BackendRunId", "CreatedAtUtc", "State", "Summary", "UpdatedAtUtc", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@request_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."EventName", a."Kind", a."NodeId", a."RequestJson", a."RespondedAtUtc", a."ResponseJson", a."RunId"
+      FROM "AgentFramework_WorkflowExternalRequests" AS a
+      WHERE a."Id" = @request_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = DateTime), @p7='?', @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowExternalRequests" ("Id", "CreatedAtUtc", "EventName", "Kind", "NodeId", "RequestJson", "RespondedAtUtc", "ResponseJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@checkpoint_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."Id" = @checkpoint_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Guid), @p5='?' (DbType = Int32), @p6='?', @p7='?', @p8='?', @p9='?' (DbType = Int32), @p10='?', @p11='?' (DbType = DateTime), @p12='?' (DbType = Guid), @p13='?', @p14='?' (DbType = Int32), @p15='?' (DbType = Guid), @p16='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowCheckpoints" ("Id", "Backend", "BackendCheckpointId", "CreatedAtUtc", "ExternalRequestId", "Kind", "NodeId", "PayloadHash", "PayloadReference", "ResumeAvailability", "ResumeUnavailableReason", "ResumedAtUtc", "RunId", "Summary", "TrustBoundary", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."EventName", a."Kind", a."NodeId", a."RequestJson", a."RespondedAtUtc", a."ResponseJson", a."RunId"
+      FROM "AgentFramework_WorkflowExternalRequests" AS a
+      WHERE a."RunId" = @runId_Value AND a."RespondedAtUtc" IS NULL
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc", a."Id"
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowTestRunResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:55737/api/workflows/test-runs - 200 - application/json;+charset=utf-8 234.7644ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_test_run_pauses_human_input_only_when_route_reaches_node [27 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (27312d94-2067-c062-bbb4-674b74cdc124) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_f06a9507612848c3883a8bd848ba65d0:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 27312d94-2067-c062-bbb4-674b74cdc124 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_f06a9507612848c3883a8bd848ba65d0:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 27312d94-2067-c062-bbb4-674b74cdc124 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 27312d94-2067-c062-bbb4-674b74cdc124.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 27312d94-2067-c062-bbb4-674b74cdc124 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:55745
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\2db70ce62cb34669a30f824f07d43cf2
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:55745/api/workflows/definitions - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:55745/api/workflows/definitions - 200 - application/json;+charset=utf-8 1304.6793ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:55745/api/workflows/definitions/bbf3fcfc-5106-4a7e-a7c4-5f966dcdd29d - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/workflows/definitions/{workflowId:guid}'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinitionDetail' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/workflows/definitions/{workflowId:guid}'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:55745/api/workflows/definitions/bbf3fcfc-5106-4a7e-a7c4-5f966dcdd29d - 200 - application/json;+charset=utf-8 29.1732ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_round_trips_typed_route_metadata [10 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (bbf997d2-93f8-f526-651a-c3c90bdd449d) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_fb3717b9a75f40299c4bb6c3687b399a:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile bbf997d2-93f8-f526-651a-c3c90bdd449d (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_fb3717b9a75f40299c4bb6c3687b399a:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile bbf997d2-93f8-f526-651a-c3c90bdd449d (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile bbf997d2-93f8-f526-651a-c3c90bdd449d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile bbf997d2-93f8-f526-651a-c3c90bdd449d is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:55749
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\70aa4a5aa6074dd289a2662e0b8819f9
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:55749/api/workflows/test-runs - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]
+      Setting HTTP status code 400.
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]
+      Writing value of type 'WorkflowTestRunResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:55749/api/workflows/test-runs - 400 - application/json;+charset=utf-8 1068.7121ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_returns_validation_failure_for_invalid_test_run [9 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (5f583a40-370e-389f-c44e-e00c2a080739) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_c3659a5b1c7d4c2eb5c3eab9b45046f6:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 5f583a40-370e-389f-c44e-e00c2a080739 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_c3659a5b1c7d4c2eb5c3eab9b45046f6:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 5f583a40-370e-389f-c44e-e00c2a080739 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 5f583a40-370e-389f-c44e-e00c2a080739.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 5f583a40-370e-389f-c44e-e00c2a080739 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:55753
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\6a178e60c4224e5faf2fadd1fb38b136
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:55753/openapi/v1.json - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /openapi/{documentName}.json'
+info: Microsoft.AspNetCore.Mvc.Infrastructure.DefaultActionDescriptorCollectionProvider[1]
+      No action descriptors found. This may indicate an incorrectly configured application or missing application parts. To learn more, visit https://aka.ms/aspnet/mvc/app-parts
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /openapi/{documentName}.json'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:55753/openapi/v1.json - 200 - application/json;charset=utf-8 1542.4975ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Openapi_exposes_workflow_routes [10 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (b35c65f6-3150-9032-f0e4-428fcfc75f82) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_a26239ee241242da8cb41933db74a027:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile b35c65f6-3150-9032-f0e4-428fcfc75f82 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_a26239ee241242da8cb41933db74a027:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile b35c65f6-3150-9032-f0e4-428fcfc75f82 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile b35c65f6-3150-9032-f0e4-428fcfc75f82.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile b35c65f6-3150-9032-f0e4-428fcfc75f82 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62161
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\0287455bdc124874859f2cdd3f3a4a84
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:62161/api/workflows/provider-options - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/workflows/provider-options'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT w."Id", w."ApiKeySecretId", w."BaseUrl", w."ConfigSchemaVersion", w."ConnectorPluginKey", w."DefaultModel", w."ExtraSettingsJson", w."IsEnabled", w."LastHealthCheckAtUtc", w."LastHealthStatus", w."Name", w."ProviderKind", w."SupportsStreaming", w."SupportsStructuredOutput", w."SupportsToolCalling", w."SupportsVision", w."TimeoutSeconds"
+      FROM "Workspace_ProviderProfiles" AS w
+      ORDER BY w."Name"
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowProviderOption[]' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/workflows/provider-options'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:62161/api/workflows/provider-options - 200 - application/json;+charset=utf-8 2236.6040ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_exposes_agent_provider_options_for_llm_components [12 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (07e10f54-87da-e024-ae98-c0dc8edd8692) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_e134542606f64735b5f1101ddabfd523:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 07e10f54-87da-e024-ae98-c0dc8edd8692 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_e134542606f64735b5f1101ddabfd523:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 07e10f54-87da-e024-ae98-c0dc8edd8692 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 07e10f54-87da-e024-ae98-c0dc8edd8692.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 07e10f54-87da-e024-ae98-c0dc8edd8692 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62166
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\4392d1fabca94ac6942e590dc00a3b74
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/components - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowComponents" ("Id", "ComponentJson", "CreatedAtUtc", "Modality", "Model", "Name", "ProviderProfileId", "UpdatedAtUtc")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmCallComponent' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/components - 200 - application/json;+charset=utf-8 1136.1954ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/definitions - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/definitions - 200 - application/json;+charset=utf-8 35.5200ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:62166/api/workflows/definitions - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowCatalogItem[]' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:62166/api/workflows/definitions - 200 - application/json;+charset=utf-8 44.7997ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/definitions/c4eab926-50dd-46f0-a63b-4f9b3352bb33/validate - - 0
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions/{workflowId:guid}/validate'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowValidationResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions/{workflowId:guid}/validate'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/definitions/c4eab926-50dd-46f0-a63b-4f9b3352bb33/validate - 200 - application/json;+charset=utf-8 13.6199ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/test-runs - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@workflowId_Value='?' (DbType = Guid), @versionId_Value_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value AND a."VersionId" = @versionId_Value_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@run_RunId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."RunId", a."Backend", a."BackendRunId", a."CreatedAtUtc", a."State", a."Summary", a."UpdatedAtUtc", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowRuns" AS a
+      WHERE a."RunId" = @run_RunId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Int32), @p5='?', @p6='?' (DbType = DateTime), @p7='?' (DbType = Guid), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowRuns" ("RunId", "Backend", "BackendRunId", "CreatedAtUtc", "State", "Summary", "UpdatedAtUtc", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@checkpoint_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."Id" = @checkpoint_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Guid), @p5='?' (DbType = Int32), @p6='?', @p7='?', @p8='?', @p9='?' (DbType = Int32), @p10='?', @p11='?' (DbType = DateTime), @p12='?' (DbType = Guid), @p13='?', @p14='?' (DbType = Int32), @p15='?' (DbType = Guid), @p16='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowCheckpoints" ("Id", "Backend", "BackendCheckpointId", "CreatedAtUtc", "ExternalRequestId", "Kind", "NodeId", "PayloadHash", "PayloadReference", "ResumeAvailability", "ResumeUnavailableReason", "ResumedAtUtc", "RunId", "Summary", "TrustBoundary", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."EventName", a."Kind", a."NodeId", a."RequestJson", a."RespondedAtUtc", a."ResponseJson", a."RunId"
+      FROM "AgentFramework_WorkflowExternalRequests" AS a
+      WHERE a."RunId" = @runId_Value AND a."RespondedAtUtc" IS NULL
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc", a."Id"
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowTestRunResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62166/api/workflows/test-runs - 200 - application/json;+charset=utf-8 226.8858ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_saves_validates_and_runs_workflow [9 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (5f28d3cb-f9f8-c3f1-6b04-977d593e68f8) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_cc4adc532f77488c9772faa260c743fe:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_cc4adc532f77488c9772faa260c743fe:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 5f28d3cb-f9f8-c3f1-6b04-977d593e68f8 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62171
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\eb38678302a643cea3ca0fd24e1c855c
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62171/api/workflows/definitions - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]
+      Setting HTTP status code 400.
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]
+      Writing value of type 'ApiErrorResponse' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62171/api/workflows/definitions - 400 - application/json;+charset=utf-8 1172.2255ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_rejects_invalid_definition_on_save [9 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (09da7f07-c785-08d7-8862-4b7b0c7e606d) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_38c98d45f7cc407b99b2ca572373ed2d:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 09da7f07-c785-08d7-8862-4b7b0c7e606d (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_38c98d45f7cc407b99b2ca572373ed2d:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 09da7f07-c785-08d7-8862-4b7b0c7e606d (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 09da7f07-c785-08d7-8862-4b7b0c7e606d.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 09da7f07-c785-08d7-8862-4b7b0c7e606d is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:62175
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\ba0c8a19d6d74107b41f512f28433c5c
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62175/api/workflows/components - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowComponents" ("Id", "ComponentJson", "CreatedAtUtc", "Modality", "Model", "Name", "ProviderProfileId", "UpdatedAtUtc")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmCallComponent' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62175/api/workflows/components - 200 - application/json;+charset=utf-8 1161.6582ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:62175/api/workflows/definitions - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]
+      Setting HTTP status code 400.
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]
+      Writing value of type 'ApiErrorResponse' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:62175/api/workflows/definitions - 400 - application/json;+charset=utf-8 30.9955ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_rejects_unregistered_durable_backend_policy_on_save [9 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (b1f55c84-1c1d-3931-1ae0-00834c711210) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_4a8668e21eeb4481a7903ce6416f477a:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile b1f55c84-1c1d-3931-1ae0-00834c711210 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_4a8668e21eeb4481a7903ce6416f477a:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile b1f55c84-1c1d-3931-1ae0-00834c711210 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile b1f55c84-1c1d-3931-1ae0-00834c711210.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile b1f55c84-1c1d-3931-1ae0-00834c711210 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:50293
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\dc066d6caf884f3192b78a3618a27254
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:50293/api/workflows/components - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowComponents" ("Id", "ComponentJson", "CreatedAtUtc", "Modality", "Model", "Name", "ProviderProfileId", "UpdatedAtUtc")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmCallComponent' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:50293/api/workflows/components - 200 - application/json;+charset=utf-8 1221.5515ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:50293/api/workflows/test-runs - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]
+      Setting HTTP status code 400.
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]
+      Writing value of type 'WorkflowTestRunResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:50293/api/workflows/test-runs - 400 - application/json;+charset=utf-8 30.1218ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_test_run_rejects_unregistered_durable_backend_policy_before_runtime [10 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_def41bd6925e4089a97561e113306617:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_def41bd6925e4089a97561e113306617:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 4061d3cb-e5e8-9f3e-88e3-7e97e4aa46fd is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:50297
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\9397323f893b4a8792edabdfbd4375de
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:50297/api/workflows/runtime-backends - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/workflows/runtime-backends'
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowRuntimeBackendDescriptor[]' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/workflows/runtime-backends'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:50297/api/workflows/runtime-backends - 200 - application/json;+charset=utf-8 1109.5622ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_runtime_backend_catalog_marks_unregistered_durable_backends_unavailable [9 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (42c64ded-05c5-f04a-9255-3ddc09e50f36) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_1e4e6eba172749529b3be1b9132999a1:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 42c64ded-05c5-f04a-9255-3ddc09e50f36 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_1e4e6eba172749529b3be1b9132999a1:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 42c64ded-05c5-f04a-9255-3ddc09e50f36 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 42c64ded-05c5-f04a-9255-3ddc09e50f36.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 42c64ded-05c5-f04a-9255-3ddc09e50f36 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:56553
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\a06ea7041fc64bf3ba8bd12659a882f7
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:56553/api/workflows/settings - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/settings'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?', @p1='?', @p2='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowSettings" ("Id", "SettingsJson", "UpdatedAtUtc")
+      VALUES (@p0, @p1, @p2);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowSettings' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/settings'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:56553/api/workflows/settings - 200 - application/json;+charset=utf-8 1206.5441ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:56553/api/workflows/test-runs - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ComponentJson", a."CreatedAtUtc", a."Modality", a."Model", a."Name", a."ProviderProfileId", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowComponents" AS a
+      ORDER BY a."Name"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@run_RunId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."RunId", a."Backend", a."BackendRunId", a."CreatedAtUtc", a."State", a."Summary", a."UpdatedAtUtc", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowRuns" AS a
+      WHERE a."RunId" = @run_RunId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Int32), @p5='?', @p6='?' (DbType = DateTime), @p7='?' (DbType = Guid), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowRuns" ("RunId", "Backend", "BackendRunId", "CreatedAtUtc", "State", "Summary", "UpdatedAtUtc", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowEvent_Id='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."Id" = @workflowEvent_Id
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?' (DbType = Int32), @p3='?', @p4='?', @p5='?', @p6='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowEvents" ("Id", "CreatedAtUtc", "Kind", "Message", "NodeId", "PayloadJson", "RunId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@checkpoint_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."Id" = @checkpoint_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = Int32), @p2='?', @p3='?' (DbType = DateTime), @p4='?' (DbType = Guid), @p5='?' (DbType = Int32), @p6='?', @p7='?', @p8='?', @p9='?' (DbType = Int32), @p10='?', @p11='?' (DbType = DateTime), @p12='?' (DbType = Guid), @p13='?', @p14='?' (DbType = Int32), @p15='?' (DbType = Guid), @p16='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowCheckpoints" ("Id", "Backend", "BackendCheckpointId", "CreatedAtUtc", "ExternalRequestId", "Kind", "NodeId", "PayloadHash", "PayloadReference", "ResumeAvailability", "ResumeUnavailableReason", "ResumedAtUtc", "RunId", "Summary", "TrustBoundary", "VersionId", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8, @p9, @p10, @p11, @p12, @p13, @p14, @p15, @p16);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@artifact_Id_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."Id" = @artifact_Id_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?', @p8='?'], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowArtifacts" ("Id", "ContentType", "CreatedAtUtc", "Kind", "Name", "NodeId", "RunId", "StoragePath", "Summary")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."Kind", a."Message", a."NodeId", a."PayloadJson", a."RunId"
+      FROM "AgentFramework_WorkflowEvents" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."CreatedAtUtc", a."EventName", a."Kind", a."NodeId", a."RequestJson", a."RespondedAtUtc", a."ResponseJson", a."RunId"
+      FROM "AgentFramework_WorkflowExternalRequests" AS a
+      WHERE a."RunId" = @runId_Value AND a."RespondedAtUtc" IS NULL
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."Backend", a."BackendCheckpointId", a."CreatedAtUtc", a."ExternalRequestId", a."Kind", a."NodeId", a."PayloadHash", a."PayloadReference", a."ResumeAvailability", a."ResumeUnavailableReason", a."ResumedAtUtc", a."RunId", a."Summary", a."TrustBoundary", a."VersionId", a."WorkflowId"
+      FROM "AgentFramework_WorkflowCheckpoints" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc", a."Id"
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowTestRunResult' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/test-runs'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:56553/api/workflows/test-runs - 200 - application/json;+charset=utf-8 246.9752ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:56553/api/workflows/runs/77d3bef9-c339-4487-90f7-d4d4f82c60cf/artifacts/41da9a9e-68ce-4fac-9897-4ef3fca83c3f/content - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/workflows/runs/{runId:guid}/artifacts/{artifactId:guid}/content'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@runId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."ContentType", a."CreatedAtUtc", a."Kind", a."Name", a."NodeId", a."RunId", a."StoragePath", a."Summary"
+      FROM "AgentFramework_WorkflowArtifacts" AS a
+      WHERE a."RunId" = @runId_Value
+      ORDER BY a."CreatedAtUtc"
+info: Microsoft.AspNetCore.Http.Result.ContentResult[2]
+      Write content with HTTP Response ContentType of application/json
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/workflows/runs/{runId:guid}/artifacts/{artifactId:guid}/content'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:56553/api/workflows/runs/77d3bef9-c339-4487-90f7-d4d4f82c60cf/artifacts/41da9a9e-68ce-4fac-9897-4ef3fca83c3f/content - 200 2082 application/json 16.2536ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_test_run_applies_payload_policy_to_large_runtime_payloads [11 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (08474bfe-8c2f-e465-f374-90dc413c3a43) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_199a112fd58e42b4a650b5d24b8c3ae3:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 08474bfe-8c2f-e465-f374-90dc413c3a43 (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_199a112fd58e42b4a650b5d24b8c3ae3:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 08474bfe-8c2f-e465-f374-90dc413c3a43 (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 08474bfe-8c2f-e465-f374-90dc413c3a43.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 08474bfe-8c2f-e465-f374-90dc413c3a43 is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:50067
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\69478d993f99448da3e01a3942802465
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:50067/api/workflows/components - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?', @p2='?' (DbType = DateTime), @p3='?' (DbType = Int32), @p4='?', @p5='?', @p6='?' (DbType = Guid), @p7='?' (DbType = DateTime)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowComponents" ("Id", "ComponentJson", "CreatedAtUtc", "Modality", "Model", "Name", "ProviderProfileId", "UpdatedAtUtc")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'LlmCallComponent' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/components'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:50067/api/workflows/components - 200 - application/json;+charset=utf-8 1172.7252ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:50067/api/workflows/definitions - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:50067/api/workflows/definitions - 200 - application/json;+charset=utf-8 29.1330ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:50067/api/workflows/runs/start - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/runs/start'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (1ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[1]
+      Setting HTTP status code 400.
+info: Microsoft.AspNetCore.Http.Result.BadRequestObjectResult[3]
+      Writing value of type 'ApiErrorResponse' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/runs/start'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:50067/api/workflows/runs/start - 400 - application/json;+charset=utf-8 46.2542ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_rejects_unregistered_durable_backend_start_request [9 s]
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]
+      Resolved database profile Configured PostgreSQL override (299c9340-ec25-6a29-53aa-bd889f243caa) via ExplicitOverride. Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_f9271003de2d44c2ad7057b11be7a85f:candoitall. RuntimeLocked=True.
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]
+      Initialized canonical runtime database profile 299c9340-ec25-6a29-53aa-bd889f243caa (Configured PostgreSQL override). Provider=PostgreSql. Fingerprint=postgres:127.0.0.1:5432:cditall_api_host_f9271003de2d44c2ad7057b11be7a85f:candoitall. Generation=0.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring runtime database profile 299c9340-ec25-6a29-53aa-bd889f243caa (Configured PostgreSQL override) is ready. Provider=PostgreSql, Source=PostgresConnection.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Applying EF migrations for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring CRM/HR schema for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring Quartz automation schema for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring plugin runtime schema for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring scheduler planner schema for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Ensuring agent provider bootstrap for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Seeded OpenAI provider bootstrap for profile 299c9340-ec25-6a29-53aa-bd889f243caa.
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]
+      Runtime database profile 299c9340-ec25-6a29-53aa-bd889f243caa is ready.
+info: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://127.0.0.1:63476
+info: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+info: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Development
+info: Microsoft.Hosting.Lifetime[0]
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-api-tests\2f4db119f2d54a21882975d23b28913f
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions - 200 - application/json;+charset=utf-8 1093.4999ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions/6f9d8c87-4164-4c31-89d9-2e0e4fb47dab/publish?expectedVersionId=79a4e69e-4fa2-485b-abbc-674b27e1e8c7 - - 0
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions/{workflowId:guid}/publish'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (4ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (6ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions/{workflowId:guid}/publish'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions/6f9d8c87-4164-4c31-89d9-2e0e4fb47dab/publish?expectedVersionId=79a4e69e-4fa2-485b-abbc-674b27e1e8c7 - 200 - application/json;+charset=utf-8 52.5021ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions/6f9d8c87-4164-4c31-89d9-2e0e4fb47dab/suspend?expectedVersionId=6aa78a56-51b6-4d7e-b332-4291e86d2424 - - 0
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions/{workflowId:guid}/suspend'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions/{workflowId:guid}/suspend'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions/6f9d8c87-4164-4c31-89d9-2e0e4fb47dab/suspend?expectedVersionId=6aa78a56-51b6-4d7e-b332-4291e86d2424 - 200 - application/json;+charset=utf-8 62.8298ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 GET http://127.0.0.1:63476/api/workflows/definitions/6f9d8c87-4164-4c31-89d9-2e0e4fb47dab/export - - -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: GET /api/workflows/definitions/{workflowId:guid}/export'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinitionExportEnvelope' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: GET /api/workflows/definitions/{workflowId:guid}/export'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 GET http://127.0.0.1:63476/api/workflows/definitions/6f9d8c87-4164-4c31-89d9-2e0e4fb47dab/export - 200 - application/json;+charset=utf-8 22.8323ms
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions/import - application/json;+charset=utf-8 -
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'HTTP: POST /api/workflows/definitions/import'
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[@pluginId_Value='?'], CommandType='Text', CommandTimeout='15']
+      SELECT p."Id", p."ConcurrencyToken", p."DisplayNameSnapshot", p."InstalledAtUtc", p."InstalledBy", p."IsEnabled", p."ManifestSnapshotJson", p."PackageId", p."PluginId", p."UpdatedAtUtc", p."Vendor", p."Version"
+      FROM "Plugins_Installations" AS p
+      WHERE p."PluginId" = @pluginId_Value
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (2ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[@workflowId_Value='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      SELECT a."VersionId", a."CreatedAtUtc", a."DefinitionJson", a."Description", a."Name", a."PreferredBackend", a."Status", a."UpdatedAtUtc", a."WorkflowId"
+      FROM "AgentFramework_WorkflowDefinitions" AS a
+      WHERE a."WorkflowId" = @workflowId_Value
+      ORDER BY a."UpdatedAtUtc" DESC, a."CreatedAtUtc" DESC
+      LIMIT 1
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (3ms) [Parameters=[], CommandType='Text', CommandTimeout='15']
+      SELECT a."Id", a."SettingsJson", a."UpdatedAtUtc"
+      FROM "AgentFramework_WorkflowSettings" AS a
+      WHERE a."Id" = 'default'
+      LIMIT 2
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (5ms) [Parameters=[@p0='?' (DbType = Guid), @p1='?' (DbType = DateTime), @p2='?', @p3='?', @p4='?', @p5='?' (DbType = Int32), @p6='?' (DbType = Int32), @p7='?' (DbType = DateTime), @p8='?' (DbType = Guid)], CommandType='Text', CommandTimeout='15']
+      INSERT INTO "AgentFramework_WorkflowDefinitions" ("VersionId", "CreatedAtUtc", "DefinitionJson", "Description", "Name", "PreferredBackend", "Status", "UpdatedAtUtc", "WorkflowId")
+      VALUES (@p0, @p1, @p2, @p3, @p4, @p5, @p6, @p7, @p8);
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]
+      Setting HTTP status code 200.
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]
+      Writing value of type 'WorkflowDefinition' as Json.
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'HTTP: POST /api/workflows/definitions/import'
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/1.1 POST http://127.0.0.1:63476/api/workflows/definitions/import - 200 - application/json;+charset=utf-8 32.8432ms
+info: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+[xUnit.net 00:02:30.30]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.WorkflowApiIntegrationTests.Workflow_api_exports_imports_and_changes_definition_lifecycle [9 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 13
+     Úspěšné: 13
+ Celkový čas: 2,5316 Minuty
+

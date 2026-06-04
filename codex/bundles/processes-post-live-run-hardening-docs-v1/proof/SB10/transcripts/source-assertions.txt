@@ -1,0 +1,58 @@
+Command: rg -n "AgentCapabilityRequirement|AgentCapabilityDiagnostic|AgentCapabilityRequirementEvaluator|IsRetiredCapability" src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:194:    public void AgentCapabilityRequirementEvaluator_reports_typed_missing_required_skill()
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:197:        var requirement = new AgentCapabilityRequirement(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:203:        var evaluation = AgentCapabilityRequirementEvaluator.Evaluate(agent, [], [requirement]);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:207:        Assert.Equal(AgentCapabilityDiagnosticCode.MissingRequiredCapability, diagnostic.Code);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:208:        Assert.Equal(AgentCapabilityDiagnosticSeverity.Error, diagnostic.Severity);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:217:    public void AgentCapabilityRequirementEvaluator_reports_retired_required_skill()
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:241:        var requirement = new AgentCapabilityRequirement(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:247:        var evaluation = AgentCapabilityRequirementEvaluator.Evaluate(agent, [retiredCapability], [requirement]);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:251:        Assert.Equal(AgentCapabilityDiagnosticCode.RetiredCapability, diagnostic.Code);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:257:    public void AgentCapabilityRequirementEvaluator_accepts_attached_catalog_capability()
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:281:        var requirement = new AgentCapabilityRequirement(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:287:        var evaluation = AgentCapabilityRequirementEvaluator.Evaluate(agent, [capability], [requirement]);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Chat.cs:275:            .Where(item => !AgentCapabilityRequirementEvaluator.IsRetiredCapability(item))
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:21:public sealed record AgentCapabilityRequirement(
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:27:public enum AgentCapabilityDiagnosticSeverity
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:33:public enum AgentCapabilityDiagnosticCode
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:41:public sealed record AgentCapabilityDiagnostic(
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:42:    AgentCapabilityDiagnosticCode Code,
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:43:    AgentCapabilityDiagnosticSeverity Severity,
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:52:public sealed record AgentCapabilityRequirementEvaluation(
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:53:    IReadOnlyList<AgentCapabilityDiagnostic> Diagnostics)
+src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs:55:    public bool IsSatisfied => Diagnostics.All(item => item.Severity != AgentCapabilityDiagnosticSeverity.Error);
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:6:public static class AgentCapabilityRequirementEvaluator
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:10:    public static AgentCapabilityRequirementEvaluation Evaluate(
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:13:        IReadOnlyList<AgentCapabilityRequirement> requirements)
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:20:        var diagnostics = new List<AgentCapabilityDiagnostic>();
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:32:                    AgentCapabilityDiagnosticCode.MissingRequiredCapability,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:42:                    AgentCapabilityDiagnosticCode.MissingCatalogCapability,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:53:                    AgentCapabilityDiagnosticCode.StaleCapabilityAssignment,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:60:            if (IsRetiredCapability(catalogItem))
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:63:                    AgentCapabilityDiagnosticCode.RetiredCapability,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:70:        return new AgentCapabilityRequirementEvaluation(diagnostics);
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:73:    public static bool IsRetiredCapability(CapabilityCatalogItem capability)
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:105:    private static void ValidateRequirement(AgentCapabilityRequirement requirement)
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:123:    private static AgentCapabilityDiagnostic CreateDiagnostic(
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:124:        AgentCapabilityDiagnosticCode code,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:126:        AgentCapabilityRequirement requirement,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:129:        return new AgentCapabilityDiagnostic(
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:131:            AgentCapabilityDiagnosticSeverity.Error,
+src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs:143:        AgentCapabilityRequirement requirement)
+ExitCode: 0
+
+Command: rg -n "Governed Process Capability Matrix|Agent Skill And Tool Matrix|DefaultAgentToolInvocationPolicy" src\CanDoItAll.AgentFramework.Core\README.md codex\skills\candoitall-api-processes\SKILL.md
+codex\skills\candoitall-api-processes\SKILL.md:49:## Agent Skill And Tool Matrix
+codex\skills\candoitall-api-processes\SKILL.md:61:Runtime policy backs this matrix. `DefaultAgentToolInvocationPolicy` denies unknown tools and known tools without a registered policy classification, while process tools enforce `AgentProcessAccessMetadata` read/write scope.
+src\CanDoItAll.AgentFramework.Core\README.md:35:## Governed Process Capability Matrix
+src\CanDoItAll.AgentFramework.Core\README.md:47:Anti-improvisation is enforced in two layers. `DefaultAgentToolInvocationPolicy` denies tools that are not in the composed capability set and denies known tools with no registered classification. `AgentCapabilityRequirementEvaluator` catches missing, stale, or retired role capabilities before dispatch so callers can block or restaff explicitly.
+ExitCode: 0
+
+Command: rg -n "not part of the composed capability set|no registered invocation policy classification" tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs
+132:        Assert.Contains("not part of the composed capability set", decision.Reason, StringComparison.Ordinal);
+149:        Assert.Contains("no registered invocation policy classification", decision.Reason, StringComparison.Ordinal);
+ExitCode: 0
+
+Command: $matches = rg -n "Tetris|process-run-001|external-target/C" src\CanDoItAll.AgentFramework.Core\Capabilities\AgentCapabilityRequirementEvaluator.cs src\CanDoItAll.AgentFramework.Models\Capabilities\CapabilityModels.cs src\CanDoItAll.AgentFramework.Core\README.md 2>$null; if ($LASTEXITCODE -eq 0) { $matches; exit 1 } else { "No template-specific hardcoding in runtime source."; exit 0 }
+No template-specific hardcoding in runtime source.
+ExitCode: 0

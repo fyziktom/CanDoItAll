@@ -1,0 +1,5 @@
+Command: rg "AgentProviderProfilesPanel|Local Ollama|gpt-5.4-mini" src/CanDoItAll.Modules.AgentFramework src/CanDoItAll.AgentFramework.Persistence src/CanDoItAll.AgentFramework.Models before implementation
+Exit code: 1
+
+SB01-PROVIDER-PARITY-TAGS failing-first: before this repair, the Agents provider tab did not render AgentProviderProfilesPanel, so the provider badge and visible list could come from different catalog sources.
+SB01-LOCAL-OLLAMA-OPENAI-DEFAULT failing-first: the clean seed source did not expose a local Ollama provider assertion and the OpenAI default model assertion for gpt-5.4-mini was absent.

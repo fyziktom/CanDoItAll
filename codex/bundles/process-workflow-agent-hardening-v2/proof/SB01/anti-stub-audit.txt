@@ -1,0 +1,3 @@
+Anti-stub audit patterns: TODO|NotImplemented|throw new NotImplementedException|fixture-specific
+Files: src\CanDoItAll.AgentFramework.Core\ToolPolicy\ProcessToolOperationAuthorizer.cs, src\CanDoItAll.Modules.Processes\Services\ProcessesService.Support.cs, src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs
+PASS: no anti-stub patterns found in changed production files.

@@ -1,0 +1,23 @@
+Command: PowerShell final hidden dependency and process-core scope scan over source/project files
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB12
+Invariant: SB12-INVARIANT-001
+TimestampUtc: 2026-06-04T06:38:26.4924866Z
+
+Check: MAF project references no product tool modules
+Result: Pass
+- No matches.
+
+Check: MAF source/project files have no hard-coded first-party product attach paths
+Result: Pass
+- No matches.
+
+Check: Tooling source/project files stay product-neutral
+Result: Pass
+- No matches.
+
+Check: No process-core project or driver-pack implementation introduced
+Result: Pass
+- No matches.
+
+ExitCode: 0

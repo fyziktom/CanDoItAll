@@ -1,0 +1,37 @@
+{
+  "capturedAtUtc": "2026-05-29T20:59:55.713Z",
+  "route": "http://localhost:5032/scheduler",
+  "selectedWorkflow": "Example: Office365 Email Watch Summary To Project",
+  "typedFieldCount": 6,
+  "manualEmailInRawJson": true,
+  "clearedEmailRemovedFromRawJson": true,
+  "cronPresetApplied": true,
+  "projectOptionCount": 2,
+  "nodeOptionCount": 26,
+  "selectedProject": {
+    "value": "7330105d-8450-4c80-923b-5c27d8e63d6c",
+    "label": "TetrisGame"
+  },
+  "selectedNode": "process-run-output:01ee78c6-077e-4a6c-8139-1f4120e659a5:3d02fbf34ae8",
+  "crmSuggestionCount": 0,
+  "validationError": "Watched email address is required.",
+  "summaryErrorVisible": true,
+  "countsBefore": {
+    "schedules": 1,
+    "enabled": 0,
+    "upcoming": 0,
+    "hasPausedProofPlan": true
+  },
+  "countsAfter": {
+    "schedules": 1,
+    "enabled": 0,
+    "upcoming": 0,
+    "hasPausedProofPlan": true
+  },
+  "screenshots": [
+    "C:/repositories/CanDoItAll/codex/bundles/workflow_Office365_Scheduler/proof/SB05/browser/scheduler-office365-watch-typed-form-desktop.png",
+    "C:/repositories/CanDoItAll/codex/bundles/workflow_Office365_Scheduler/proof/SB05/browser/scheduler-office365-watch-validation-narrow.png"
+  ],
+  "filledRawJson": "{\n  \"processedCategory\": \"CanDoItAllProcessed\",\n  \"lookbackHours\": 336,\n  \"emailAddress\": \"manual.browser-proof@example.com\",\n  \"projectId\": \"7330105d-8450-4c80-923b-5c27d8e63d6c\",\n  \"nodeId\": \"process-run-output:01ee78c6-077e-4a6c-8139-1f4120e659a5:3d02fbf34ae8\"\n}",
+  "clearedRawJson": "{\n  \"processedCategory\": \"CanDoItAllProcessed\",\n  \"lookbackHours\": 336,\n  \"projectId\": \"7330105d-8450-4c80-923b-5c27d8e63d6c\",\n  \"nodeId\": \"process-run-output:01ee78c6-077e-4a6c-8139-1f4120e659a5:3d02fbf34ae8\"\n}"
+}

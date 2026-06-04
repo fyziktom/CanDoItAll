@@ -1,0 +1,14 @@
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:5877:    public void BuildResolvedArtifactInputs_rejects_stale_process_run_artifact()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:5894:    public void BuildResolvedArtifactInputs_rejects_current_run_artifact_outside_managed_root()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:5910:    public void BuildResolvedArtifactInputs_accepts_current_run_managed_artifact()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:24:internal static class ProcessArtifactLineageValidator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:26:    public static ProcessArtifactLineageValidationResult ValidateCurrentRunArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:47:        var boundaryResult = ValidateManagedStorageBoundary(artifact, context.ProcessRunId);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:62:    public static ProcessArtifactLineageValidationResult ValidateManagedStorageBoundary(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2032:                    IsCurrentRunUpstreamArtifactInput(item, sourceStepRunIds, sourceProcessRunIds) &&
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2059:    internal static bool IsCurrentRunUpstreamArtifactInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2071:        return ProcessArtifactLineageValidator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2072:            .ValidateManagedStorageBoundary(artifact, artifact.ProcessRunId)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:135:            var lineageValidation = ProcessArtifactLineageValidator.ValidateCurrentRunArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1815:        return !ProcessArtifactLineageValidator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1816:            .ValidateManagedStorageBoundary(artifact, artifact.ProcessRunId)

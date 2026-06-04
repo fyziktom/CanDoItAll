@@ -1,0 +1,51 @@
+# SB16 Passing Proof
+
+## Entry gate
+
+Command:
+
+```powershell
+$output = & python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\processes-post-live-run-hardening-docs-v1 --stage prepared --repo-root C:\repositories\CanDoItAll 2>&1; $matches = $output | Select-String -Pattern 'SB16|RN02|Traceback|ValueError'; if ($matches) { $matches; exit 1 } else { 'No SB16 entry-gate findings.'; exit 0 }
+```
+
+Exit code: 0
+
+Output:
+
+```text
+No SB16 entry-gate findings.
+```
+
+## Integration build
+
+Command:
+
+```powershell
+dotnet build tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb16-integration\ -p:CopyRepositoryTemplatesToOutput=false
+```
+
+Exit code: 0
+
+Result: build succeeded in 2:45.81. The only warnings were the known pre-existing EF Core relational assembly conflict warnings.
+
+## Focused runtime-service test slice
+
+Command:
+
+```powershell
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessArtifactStatusProjectionServiceTests|FullyQualifiedName~ProcessExternalTargetGroundingServiceTests|FullyQualifiedName~ProcessObservationIntentResolverTests|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessArtifactIdentityService_SB07_INV_001_normalizes_projection_identity_without_runtime|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessHealthInvariantAuditor_SB11_INV_001_builds_generic_actionable_recovery_health|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessManagerAgentResolver_uses_assigned_manager_before_ambiguous_manager_options|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessManagerAgentResolver_rejects_ambiguous_assigned_managers" -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb16-integration\ -p:CopyRepositoryTemplatesToOutput=false --logger "console;verbosity=normal"
+```
+
+Exit code: 0
+
+Result: 37 passed, 0 failed, 0 skipped. Duration: 42.7993 seconds.
+
+Covered services:
+
+- `ProcessArtifactStatusProjectionServiceTests`
+- `ProcessExternalTargetGroundingServiceTests`
+- `ProcessObservationIntentResolverTests`
+- `ProcessRunAutomationDispatchServiceTests.ProcessArtifactIdentityService_SB07_INV_001_normalizes_projection_identity_without_runtime`
+- `ProcessRunAutomationDispatchServiceTests.ProcessHealthInvariantAuditor_SB11_INV_001_builds_generic_actionable_recovery_health`
+- `ProcessRunAutomationDispatchServiceTests.ProcessManagerAgentResolver_uses_assigned_manager_before_ambiguous_manager_options`
+- `ProcessRunAutomationDispatchServiceTests.ProcessManagerAgentResolver_rejects_ambiguous_assigned_managers`

@@ -1,0 +1,6 @@
+{
+  "scenarioKey": "study-kanban-flashcards",
+  "processRunId": "6f14d795-bfc2-4532-8a05-9910a42186b8",
+  "executionRuns": [],
+  "note": "The SB08 harness executed through Codex/local browser tooling and manual process transitions with automation dispatch suppressed. No CanDoItAll Agent Framework provider execution runs were created for this scenario."
+}

@@ -1,0 +1,425 @@
+- main [ref=e257] [box=8,-36,359,3816]:
+  - group [ref=e689] [box=8,-36,359,46]:
+    - generic "Workspace navigation" [ref=e690] [cursor=pointer] [box=25,-23,325,20]
+  - generic [ref=e258] [box=8,18,359,110]:
+    - generic [ref=e262] [box=12,18,351,30]:
+      - button "Dashboard" [ref=e264] [box=21,23,85,20]:
+        - generic [ref=e265] [box=21,25,59,16]: Dashboard
+        - generic [ref=e267] [box=86,23,20,20]: push_pin
+      - button "Workflows" [ref=e269] [box=130,25,58,16]:
+        - generic [ref=e270] [box=130,25,58,16]: Workflows
+    - generic [ref=e272] [box=8,68,359,60]:
+      - generic [ref=e273] [box=20,68,222,26]:
+        - generic [ref=e274] [box=31,74,136,13]: Delivery Workspace
+        - generic [ref=e275] [box=173,73,58,16]: Workflows
+      - generic [ref=e276] [box=250,68,117,26]: Interactive Server
+      - generic [ref=e277] [box=217,102,86,26]: Live items 0
+      - generic [ref=e278] [box=311,102,56,26]: Tabs 2
+  - generic [ref=e281] [box=25,153,325,3610]:
+    - generic [ref=e283] [box=25,153,310,132]:
+      - generic [ref=e284] [box=25,153,310,88]:
+        - generic [ref=e285] [box=25,153,310,28]:
+          - paragraph [ref=e286] [box=25,158,119,13]: AgentFramework
+          - heading "Workflows" [level=1] [ref=e287] [box=154,153,83,28]
+        - generic [ref=e288] [box=25,189,310,52]:
+          - generic [ref=e291] [box=25,189,96,22]: 27 definitions
+          - generic [ref=e294] [box=129,189,132,22]: 33 LLM components
+          - generic [ref=e297] [box=270,189,56,22]: 0 runs
+          - generic [ref=e300] [box=25,219,109,22]: 0 pending input
+          - generic [ref=e303] [box=142,219,123,22]: InProcess backend
+      - generic [ref=e304] [box=25,249,124,36]:
+        - button "Refresh" [ref=e306] [box=25,249,36,36]:
+          - generic [ref=e307] [box=33,257,20,20]: refresh
+          - generic [ref=e308] [box=43,266,1,1]: refresh
+        - button "Create starter" [ref=e310] [box=69,249,36,36]:
+          - generic [ref=e311] [box=77,257,20,20]: add
+          - generic [ref=e312] [box=87,266,1,1]: add
+        - button "Open agents" [ref=e314] [box=113,249,36,36]:
+          - generic [ref=e315] [box=121,257,20,20]: support_agent
+          - generic [ref=e316] [box=131,266,1,1]: support agent
+    - generic [ref=e318] [box=25,299,310,3464]:
+      - tablist "Workflow workspace tabs" [ref=e319] [box=25,299,310,211]:
+        - tab "Dashboard" [ref=e320] [box=29,299,139,46]:
+          - generic [ref=e321] [box=46,312,20,20]: dashboard
+          - generic [ref=e322] [box=74,310,77,24]: Dashboard
+        - tab "Workflows 27" [ref=e323] [box=29,353,174,46]:
+          - generic [ref=e324] [box=46,366,20,20]: list_alt
+          - generic [ref=e325] [box=74,364,74,24]: Workflows
+          - generic [ref=e326] [box=156,367,31,19]: "27"
+        - tab "Editor" [selected] [ref=e327] [box=211,354,104,46]:
+          - generic [ref=e328] [box=228,367,20,20]: edit_square
+          - generic [ref=e329] [box=256,365,42,24]: Editor
+        - tab "Templates 33" [ref=e330] [box=29,408,172,46]:
+          - generic [ref=e331] [box=46,421,20,20]: content_copy
+          - generic [ref=e332] [box=74,419,71,24]: Templates
+          - generic [ref=e333] [box=153,422,31,19]: "33"
+        - tab "History 0" [ref=e334] [box=29,462,144,46]:
+          - generic [ref=e335] [box=46,476,20,20]: history
+          - generic [ref=e336] [box=74,474,50,24]: History
+          - generic [ref=e337] [box=132,476,24,19]: "0"
+        - tab "Analytics" [ref=e338] [box=181,462,125,46]:
+          - generic [ref=e339] [box=198,476,20,20]: query_stats
+          - generic [ref=e340] [box=226,474,63,24]: Analytics
+      - tabpanel "Editor" [ref=e342] [box=25,508,310,3254]:
+        - generic [ref=e345] [box=63,546,234,3178]:
+          - generic [ref=e346] [box=63,546,234,1628]:
+            - generic [ref=e347] [box=78,561,203,793]:
+              - paragraph [ref=e348] [box=78,561,203,17]: Workflow canvas
+              - generic [ref=e349] [box=78,591,203,764]:
+                - generic [ref=e350] [box=78,591,203,369]:
+                  - generic [ref=e351] [box=78,591,203,210]:
+                    - 'heading "Example: Approval Gated HTTP Action" [level=2] [ref=e352] [box=78,591,203,108]'
+                    - generic [ref=e353] [box=78,709,203,92]:
+                      - button "New draft" [ref=e354] [box=78,709,104,42]:
+                        - generic [ref=e355] [box=95,718,70,24]: New draft
+                      - button "Validate" [ref=e356] [box=190,709,90,42]:
+                        - generic [ref=e357] [box=207,718,56,24]: Validate
+                      - button "Run preview" [ref=e358] [box=78,759,121,42]:
+                        - generic [ref=e359] [box=95,768,87,24]: Run preview
+                      - button "Save" [ref=e360] [box=207,759,67,42]:
+                        - generic [ref=e361] [box=224,768,33,24]: Save
+                  - paragraph [ref=e362] [box=78,812,203,147]: "Requires explicit workflow approval before a bounded HTTP action can run. Managed workflow example seed: 2026-05-office365-email-watch-schema-v1."
+                - generic [ref=e363] [box=78,976,203,379]:
+                  - generic [ref=e364] [box=78,976,112,68]:
+                    - generic [ref=e365] [box=95,988,80,17]: Nodes
+                    - strong [ref=e366] [box=95,1008,80,24]: "4"
+                  - generic [ref=e367] [box=78,1053,112,68]:
+                    - generic [ref=e368] [box=95,1066,80,17]: Edges
+                    - strong [ref=e369] [box=95,1085,80,24]: "3"
+                  - generic [ref=e370] [box=78,1131,126,68]:
+                    - generic [ref=e371] [box=95,1143,94,17]: Components
+                    - strong [ref=e372] [box=95,1163,94,24]: "33"
+                  - generic [ref=e373] [box=78,1209,112,68]:
+                    - generic [ref=e374] [box=95,1221,80,17]: Executors
+                    - strong [ref=e375] [box=95,1241,80,24]: "10"
+                  - generic [ref=e376] [box=78,1286,115,68]:
+                    - generic [ref=e377] [box=95,1299,82,17]: Validation
+                    - strong [ref=e378] [box=95,1318,82,24]: Valid
+            - generic [ref=e380] [box=78,1370,203,789]:
+              - generic [ref=e381] [box=79,1371,201,230]:
+                - generic [box=88,1380,0,213]:
+                  - button "Open quick create actions" [ref=e383] [cursor=pointer] [box=88,1380,42,42]:
+                    - generic [ref=e384] [box=98,1389,22,22]: add
+                    - generic [ref=e385] [box=109,1400,1,1]: Open quick create actions
+                  - button "Focus start" [ref=e386] [cursor=pointer] [box=88,1428,35,37]:
+                    - generic [ref=e387] [box=98,1439,15,15]: center_focus_strong
+                    - generic [ref=e388] [box=105,1446,1,1]: Focus start
+                  - generic [box=88,1471,0,122]:
+                    - button "widgets" [ref=e390] [box=88,1471,46,38]:
+                      - generic [ref=e391] [box=101,1480,20,20]: widgets
+                      - generic [ref=e392] [box=111,1490,1,1]: widgets
+                    - button "select all" [ref=e393] [box=88,1513,46,38]:
+                      - generic [ref=e394] [box=101,1522,20,20]: select_all
+                      - generic [ref=e395] [box=111,1532,1,1]: select all
+                    - button "smart toy" [ref=e396] [box=88,1555,46,38]:
+                      - generic [ref=e397] [box=101,1564,20,20]: smart_toy
+                      - generic [ref=e398] [box=111,1574,1,1]: smart toy
+                - generic [ref=e399] [box=99,1466,480,41]:
+                  - button "Fit canvas" [ref=e400] [cursor=pointer] [box=99,1468,35,37]:
+                    - generic [ref=e401] [box=109,1479,15,15]: fit_screen
+                    - generic [ref=e402] [box=116,1486,1,1]: Fit canvas
+                  - button "Toggle maximize" [ref=e403] [cursor=pointer] [box=140,1468,35,37]:
+                    - generic [ref=e404] [box=150,1479,15,15]: open_in_full
+                    - generic [ref=e405] [box=157,1486,1,1]: Maximize canvas
+                  - button "Toggle minimap" [ref=e406] [cursor=pointer] [box=182,1468,35,37]:
+                    - generic [ref=e407] [box=192,1479,15,15]: map
+                    - generic [ref=e408] [box=199,1486,1,1]: Toggle minimap
+                  - button "Toggle diagnostics" [ref=e409] [cursor=pointer] [box=224,1468,35,37]:
+                    - generic [ref=e410] [box=234,1479,15,15]: monitor_heart
+                    - generic [ref=e411] [box=241,1486,1,1]: Toggle diagnostics
+                  - button "Toggle help" [ref=e412] [cursor=pointer] [box=265,1468,35,37]:
+                    - generic [ref=e413] [box=275,1479,15,15]: help
+                    - generic [ref=e414] [box=282,1486,1,1]: Canvas help
+                  - button "Toggle settings" [ref=e415] [cursor=pointer] [box=307,1468,35,37]:
+                    - generic [ref=e416] [box=317,1479,15,15]: settings
+                    - generic [ref=e417] [box=324,1486,1,1]: Canvas settings
+                  - generic [ref=e418] [box=348,1466,231,41]:
+                    - button "Zoom out" [ref=e419] [cursor=pointer] [box=352,1469,35,35]:
+                      - generic [ref=e420] [box=362,1479,15,15]: remove
+                      - generic [ref=e421] [box=369,1486,1,1]: Zoom out
+                    - slider "Canvas zoom" [ref=e422] [box=393,1478,88,16]: "100"
+                    - button "Zoom in" [ref=e423] [cursor=pointer] [box=486,1469,35,35]:
+                      - generic [ref=e424] [box=496,1479,15,15]: add
+                      - generic [ref=e425] [box=503,1486,1,1]: Zoom in
+                    - generic [ref=e426] [box=526,1471,50,31]: 100%
+              - generic [ref=e427] [box=79,1614,201,544]:
+                - generic "Canvas workbench" [ref=e428] [box=79,1614,201,544]:
+                  - generic [ref=e429] [box=79,1614,201,544]:
+                    - generic [box=79,1614,201,544]:
+                      - generic "Request external action approval Json" [ref=e693] [box=249,1872,14,14]
+                      - generic "Request external action approval Json" [ref=e694] [box=533,1872,14,14]
+                  - paragraph [ref=e434] [box=139,2101,110,17]: Scene overview
+                - region "Workflow toolbox floating window" [ref=e436] [box=91,1626,185,380]:
+                  - generic [ref=e437] [box=104,1639,208,93]:
+                    - generic [ref=e438] [box=104,1639,89,93]:
+                      - paragraph [ref=e439] [box=104,1639,89,14]: Workflow
+                      - heading "Nodes and executors" [level=3] [ref=e440] [box=104,1655,89,36]
+                      - paragraph [ref=e441] [box=104,1694,89,38]: 4 nodes · 10 executors
+                    - generic [ref=e442] [box=205,1639,107,32]:
+                      - button "Minimize window" [ref=e443] [box=205,1639,32,32]:
+                        - generic [ref=e444] [box=214,1647,14,14]: minimize
+                      - button "Restart window position and size" [ref=e445] [box=242,1639,32,32]:
+                        - generic [ref=e446] [box=251,1647,14,14]: restart_alt
+                      - button "Hide window" [ref=e447] [box=280,1639,32,32]:
+                        - generic [ref=e448] [box=289,1647,14,14]: visibility_off
+                  - region "Workflow nodes and executors toolbox" [ref=e450] [box=104,1744,190,250]:
+                    - generic [ref=e451] [box=115,1755,167,59]:
+                      - generic [ref=e452] [box=115,1755,75,26]: Workflow
+                      - generic [ref=e453] [box=115,1789,89,26]: 10 executors
+                    - searchbox "Search nodes, executors, files, HTTP, spreadsheets" [ref=e454] [box=115,1823,167,40]
+                    - generic [ref=e456] [box=115,1872,167,110]:
+                      - generic [ref=e457] [box=115,1872,153,423]:
+                        - button "Decisions IF/ELSE, SWITCH/default, and fan-out split blocks. 3" [ref=e458] [cursor=pointer] [box=116,1873,151,89]:
+                          - generic [ref=e459] [box=127,1882,95,71]:
+                            - strong [ref=e460] [box=127,1882,95,14]: Decisions
+                            - generic [ref=e461] [box=127,1899,95,54]: IF/ELSE, SWITCH/default, and fan-out split blocks.
+                          - generic [ref=e462] [box=230,1906,26,23]: "3"
+                        - generic [ref=e464] [box=125,1970,134,316]:
+                          - button "Branching blocks Drop a configured split node with default branches. 3" [ref=e465] [cursor=pointer] [box=126,1971,132,117]:
+                            - generic [ref=e466] [box=136,1980,76,99]:
+                              - strong [ref=e467] [box=136,1980,76,29]: Branching blocks
+                              - generic [ref=e468] [box=136,2010,76,68]: Drop a configured split node with default branches.
+                            - generic [ref=e469] [box=221,2018,26,23]: "3"
+                          - generic [ref=e470] [box=126,2095,132,189]:
+                            - button "IF Create a binary decision with true and else branches." [ref=e472] [cursor=pointer] [box=134,2095,115,57]:
+                              - generic [ref=e474] [box=145,2113,20,20]: call_split
+                              - generic [ref=e475] [box=175,2103,65,41]:
+                                - strong [ref=e476] [box=175,2103,65,14]: IF
+                                - generic [ref=e477] [box=175,2118,65,26]: Create a binary decision with true and else branches.
+                            - button "SWITCH Create switch cases plus a default branch." [ref=e479] [cursor=pointer] [box=134,2157,115,57]:
+                              - generic [ref=e481] [box=145,2176,20,20]: alt_route
+                              - generic [ref=e482] [box=175,2165,65,41]:
+                                - strong [ref=e483] [box=175,2165,65,14]: SWITCH
+                                - generic [ref=e484] [box=175,2180,65,26]: Create switch cases plus a default branch.
+                            - button "FAN-OUT Create parallel branch selectors for multi-target routing." [ref=e486] [cursor=pointer] [box=134,2219,115,57]:
+                              - generic [ref=e488] [box=145,2238,20,20]: hub
+                              - generic [ref=e489] [box=175,2227,65,41]:
+                                - strong [ref=e490] [box=175,2227,65,14]: FAN-OUT
+                                - generic [ref=e491] [box=175,2243,65,26]: Create parallel branch selectors for multi-target routing.
+                      - generic [ref=e492] [box=115,2303,153,172]:
+                        - button "Workflow nodes Control, AI, human, artifact, and orchestration steps. 7" [ref=e493] [cursor=pointer] [box=116,2304,151,90]:
+                          - generic [ref=e494] [box=127,2313,95,72]:
+                            - strong [ref=e495] [box=127,2313,95,29]: Workflow nodes
+                            - generic [ref=e496] [box=127,2344,95,41]: Control, AI, human, artifact, and orchestration steps.
+                          - generic [ref=e497] [box=230,2337,26,23]: "7"
+                        - button "Typed nodes Core workflow node kinds 7" [ref=e500] [cursor=pointer] [box=126,2402,132,61]:
+                          - generic [ref=e501] [box=136,2411,76,43]:
+                            - strong [ref=e502] [box=136,2411,76,14]: Typed nodes
+                            - generic [ref=e503] [box=136,2428,76,27]: Core workflow node kinds
+                          - generic [ref=e504] [box=221,2421,26,23]: "7"
+                      - generic [ref=e505] [box=115,2482,153,1258]:
+                        - button "Executors Typed tool execution nodes backed by the executor catalog. 16" [ref=e506] [cursor=pointer] [box=116,2483,151,89]:
+                          - generic [ref=e507] [box=127,2492,94,71]:
+                            - strong [ref=e508] [box=127,2492,94,14]: Executors
+                            - generic [ref=e509] [box=127,2509,94,54]: Typed tool execution nodes backed by the executor catalog.
+                          - generic [ref=e510] [box=229,2516,28,23]: "16"
+                        - generic [ref=e511] [box=116,2580,151,1159]:
+                          - button "Storage Workspace storage reads, writes, searches, stats, and diffs. 1" [ref=e513] [cursor=pointer] [box=126,2581,132,102]:
+                            - generic [ref=e514] [box=136,2590,76,84]:
+                              - strong [ref=e515] [box=136,2590,76,14]: Storage
+                              - generic [ref=e516] [box=136,2606,76,68]: Workspace storage reads, writes, searches, stats, and diffs.
+                            - generic [ref=e517] [box=221,2621,26,23]: "1"
+                          - button "Project structure Project tree reads and typed asset creation. 1" [ref=e519] [cursor=pointer] [box=126,2691,132,103]:
+                            - generic [ref=e520] [box=136,2700,76,85]:
+                              - strong [ref=e521] [box=136,2700,76,29]: Project structure
+                              - generic [ref=e522] [box=136,2731,76,54]: Project tree reads and typed asset creation.
+                            - generic [ref=e523] [box=221,2731,26,23]: "1"
+                          - button "HTTP Bounded HTTP and HTTPS calls. 1" [ref=e525] [cursor=pointer] [box=126,2802,132,75]:
+                            - generic [ref=e526] [box=136,2811,76,57]:
+                              - strong [ref=e527] [box=136,2811,76,14]: HTTP
+                              - generic [ref=e528] [box=136,2827,76,41]: Bounded HTTP and HTTPS calls.
+                            - generic [ref=e529] [box=221,2828,26,23]: "1"
+                          - button "Images Image generation and image-provider output. 1" [ref=e531] [cursor=pointer] [box=126,2884,132,89]:
+                            - generic [ref=e532] [box=136,2893,76,71]:
+                              - strong [ref=e533] [box=136,2893,76,14]: Images
+                              - generic [ref=e534] [box=136,2909,76,54]: Image generation and image-provider output.
+                            - generic [ref=e535] [box=221,2917,26,23]: "1"
+                          - button "Spreadsheets XLSX inspection, reading, writing, and Markdown extraction. 1" [ref=e537] [cursor=pointer] [box=126,2980,132,102]:
+                            - generic [ref=e538] [box=136,2989,76,84]:
+                              - strong [ref=e539] [box=136,2989,78,14]: Spreadsheets
+                              - generic [ref=e540] [box=136,3006,78,68]: XLSX inspection, reading, writing, and Markdown extraction.
+                            - generic [ref=e541] [box=221,3020,26,23]: "1"
+                          - button "Data Structured payload transformations. 2" [ref=e543] [cursor=pointer] [box=126,3090,132,75]:
+                            - generic [ref=e544] [box=136,3099,76,57]:
+                              - strong [ref=e545] [box=136,3099,78,14]: Data
+                              - generic [ref=e546] [box=136,3116,78,41]: Structured payload transformations.
+                            - generic [ref=e547] [box=221,3116,26,23]: "2"
+                          - button "Markdown Markdown rendering and report assembly. 1" [ref=e549] [cursor=pointer] [box=126,3173,132,89]:
+                            - generic [ref=e550] [box=136,3182,76,71]:
+                              - strong [ref=e551] [box=136,3182,76,14]: Markdown
+                              - generic [ref=e552] [box=136,3198,76,54]: Markdown rendering and report assembly.
+                            - generic [ref=e553] [box=221,3206,26,23]: "1"
+                          - button "Human Human approvals and workflow pauses. 1" [ref=e555] [cursor=pointer] [box=126,3269,132,89]:
+                            - generic [ref=e556] [box=136,3278,76,71]:
+                              - strong [ref=e557] [box=136,3278,76,14]: Human
+                              - generic [ref=e558] [box=136,3295,76,54]: Human approvals and workflow pauses.
+                            - generic [ref=e559] [box=221,3302,26,23]: "1"
+                          - button "Utility Bounded helper executors for local control flow. 1" [ref=e561] [cursor=pointer] [box=126,3366,132,102]:
+                            - generic [ref=e562] [box=136,3375,76,84]:
+                              - strong [ref=e563] [box=136,3375,76,14]: Utility
+                              - generic [ref=e564] [box=136,3391,76,68]: Bounded helper executors for local control flow.
+                            - generic [ref=e565] [box=221,3405,26,23]: "1"
+                          - button "Commands Bounded local process execution. 1" [ref=e567] [cursor=pointer] [box=126,3475,132,75]:
+                            - generic [ref=e568] [box=136,3484,76,57]:
+                              - strong [ref=e569] [box=136,3484,76,14]: Commands
+                              - generic [ref=e570] [box=136,3501,76,41]: Bounded local process execution.
+                            - generic [ref=e571] [box=221,3501,26,23]: "1"
+                          - button "Gmail Executors contributed by Gmail. 2" [ref=e573] [cursor=pointer] [box=126,3558,132,75]:
+                            - generic [ref=e574] [box=136,3567,76,57]:
+                              - strong [ref=e575] [box=136,3567,76,14]: Gmail
+                              - generic [ref=e576] [box=136,3583,76,41]: Executors contributed by Gmail.
+                            - generic [ref=e577] [box=221,3584,26,23]: "2"
+                          - button "Office365 Mail Executors contributed by Office365 Mail. 3" [ref=e579] [cursor=pointer] [box=126,3641,132,89]:
+                            - generic [ref=e580] [box=136,3650,76,71]:
+                              - strong [ref=e581] [box=136,3650,76,29]: Office365 Mail
+                              - generic [ref=e582] [box=136,3680,76,41]: Executors contributed by Office365 Mail.
+                            - generic [ref=e583] [box=221,3674,26,23]: "3"
+                - region "Workflow selection floating window" [ref=e584] [box=91,1626,185,320]:
+                  - generic [ref=e585] [box=104,1639,204,112]:
+                    - generic [ref=e586] [box=104,1639,85,112]:
+                      - paragraph [ref=e587] [box=104,1639,85,14]: Selection
+                      - heading "Workflow nodes" [level=3] [ref=e588] [box=104,1655,85,36]
+                      - paragraph [ref=e589] [box=104,1694,85,57]: Executor · request-approval
+                    - generic [ref=e590] [box=201,1639,107,32]:
+                      - button "Minimize window" [ref=e591] [box=201,1639,32,32]:
+                        - generic [ref=e592] [box=210,1647,14,14]: minimize
+                      - button "Restart window position and size" [ref=e593] [box=238,1639,32,32]:
+                        - generic [ref=e594] [box=247,1647,14,14]: restart_alt
+                      - button "Hide window" [ref=e595] [box=276,1639,32,32]:
+                        - generic [ref=e596] [box=285,1647,14,14]: visibility_off
+                  - generic [ref=e598] [box=104,1763,186,397]:
+                    - button "Start Start" [ref=e599] [box=104,1763,186,69]:
+                      - generic [ref=e600] [box=117,1774,161,24]: Start
+                      - generic [ref=e601] [box=117,1801,161,19]: Start
+                    - button "Request external action approval Executor" [ref=e602] [box=104,1839,186,93]:
+                      - generic [ref=e603] [box=117,1851,161,48]: Request external action approval
+                      - generic [ref=e604] [box=117,1902,161,19]: Executor
+                    - button "Call approved endpoint Executor" [ref=e605] [box=104,1940,186,93]:
+                      - generic [ref=e606] [box=117,1951,161,48]: Call approved endpoint
+                      - generic [ref=e607] [box=117,2003,161,19]: Executor
+                    - button "End End" [ref=e608] [box=104,2041,186,69]:
+                      - generic [ref=e609] [box=117,2052,161,24]: End
+                      - generic [ref=e610] [box=117,2079,161,19]: End
+                    - button "Open details" [ref=e611] [box=104,2118,143,42]:
+                      - generic [ref=e612] [box=117,2129,20,20]: open_in_new
+                      - generic [ref=e613] [box=145,2127,89,24]: Open details
+                - generic [box=79,1614,201,544]:
+                  - generic [box=78,1613,1,1]: Request external action approval is the primary selection.
+                  - region "Canvas accessibility mirror" [box=78,1613,1,1]:
+                    - heading "Canvas accessibility mirror" [level=3] [box=78,1613,1,24]
+                    - paragraph [box=78,1637,1,24]: 1 selected nodes across 4 canvas nodes
+                    - list [box=78,1661,1,96]:
+                      - listitem [box=78,1661,1,24]: Request external action approvalHuman executor • Status valid
+                      - listitem [box=78,1685,1,24]: Call approved endpointHttp executor • Status valid
+                      - listitem [box=78,1709,1,24]: EndWorkflow output • Status valid
+                      - listitem [box=78,1733,1,24]: StartWorkflow input • Status valid
+          - complementary [ref=e614] [box=63,2195,234,1530]:
+            - generic [ref=e615] [box=78,2210,203,1499]:
+              - tablist "Workflow editor inspector sections" [ref=e616] [box=78,2210,203,58]:
+                - tab "Definition" [ref=e617] [box=82,2210,128,43]:
+                  - generic [ref=e618] [box=98,2222,20,20]: settings
+                  - generic [ref=e619] [box=126,2220,69,24]: Definition
+                - tab "Node setup" [active] [selected] [ref=e620] [box=218,2211,141,43]:
+                  - generic [ref=e621] [box=234,2223,20,20]: account_tree
+                  - generic [ref=e622] [box=262,2221,83,24]: Node setup
+                - tab "Routes" [ref=e623] [box=368,2210,107,43]:
+                  - generic [ref=e624] [box=383,2222,20,20]: alt_route
+                  - generic [ref=e625] [box=411,2220,48,24]: Routes
+                - tab "Preview" [ref=e626] [box=483,2210,113,43]:
+                  - generic [ref=e627] [box=498,2222,20,20]: play_circle
+                  - generic [ref=e628] [box=526,2220,54,24]: Preview
+              - tabpanel "Node setup" [ref=e630] [box=78,2266,203,1442]:
+                - generic [ref=e631] [box=94,2282,172,1412]:
+                  - paragraph [ref=e632] [box=108,2296,144,15]: Selected node
+                  - generic [ref=e633] [box=108,2323,144,66]:
+                    - generic [ref=e634] [box=108,2323,144,19]: Node name
+                    - textbox "Node name" [ref=e635] [box=108,2348,144,42]: Request external action approval
+                  - generic [ref=e636] [box=108,2402,144,66]:
+                    - generic [ref=e637] [box=108,2402,144,19]: Kind
+                    - combobox "Kind" [ref=e638] [box=108,2426,144,42]:
+                      - option "Start" [box=0,0,0,0]
+                      - option "LlmCall" [box=0,0,0,0]
+                      - option "Triage" [box=0,0,0,0]
+                      - option "StrictLogic" [box=0,0,0,0]
+                      - option "Executor" [selected] [box=0,0,0,0]
+                      - option "Artifact" [box=0,0,0,0]
+                      - option "HumanInput" [box=0,0,0,0]
+                      - option "AgentStep" [box=0,0,0,0]
+                      - option "Subworkflow" [box=0,0,0,0]
+                      - option "End" [box=0,0,0,0]
+                  - generic [ref=e639] [box=108,2479,144,66]:
+                    - generic [ref=e640] [box=108,2479,144,19]: Executor
+                    - combobox "Executor" [ref=e641] [box=108,2504,144,42]:
+                      - option "Select executor" [box=0,0,0,0]
+                      - option "Workspace files" [box=0,0,0,0]
+                      - option "Project structure" [box=0,0,0,0]
+                      - option "HTTP fetch" [box=0,0,0,0]
+                      - option "Image generation" [box=0,0,0,0]
+                      - option "Spreadsheet" [box=0,0,0,0]
+                      - option "Gmail mark processed (unavailable)" [disabled] [box=0,0,0,0]
+                      - option "Gmail messages by label (unavailable)" [disabled] [box=0,0,0,0]
+                      - option "JSON transform" [box=0,0,0,0]
+                      - option "Office365 mark processed (unavailable)" [disabled] [box=0,0,0,0]
+                      - option "Office365 messages by category (unavailable)" [disabled] [box=0,0,0,0]
+                      - option "Office365 unprocessed message by address (unavailable)" [disabled] [box=0,0,0,0]
+                      - option "Source ingestion" [box=0,0,0,0]
+                      - option "Markdown render" [box=0,0,0,0]
+                      - option "Approval request" [selected] [box=0,0,0,0]
+                      - option "Delay" [box=0,0,0,0]
+                      - option "Command process (planned)" [disabled] [box=0,0,0,0]
+                  - generic [ref=e642] [box=108,2557,144,340]:
+                    - generic [ref=e643] [box=120,2568,120,142]:
+                      - generic [ref=e644] [box=120,2568,62,26]: Human
+                      - generic [ref=e645] [box=120,2601,71,26]: Available
+                      - generic [ref=e646] [box=120,2634,103,26]: No side effects
+                      - generic [ref=e647] [box=120,2667,120,42]: Deterministic preview
+                    - generic [ref=e648] [box=120,2720,120,167]:
+                      - generic [ref=e649] [box=120,2720,120,97]: Creates a workflow approval request through the existing external request runtime.
+                      - generic [ref=e650] [box=120,2823,120,39]: Executor is available.
+                      - generic [ref=e651] [box=120,2867,120,19]: No side effects
+                  - generic [ref=e652] [box=108,2897,144,251]:
+                    - generic [ref=e653] [box=108,2909,144,66]:
+                      - generic [ref=e654] [box=108,2909,144,19]: Timeout seconds
+                      - spinbutton "Timeout seconds" [ref=e655] [box=108,2933,144,42]: "90"
+                    - generic [ref=e656] [box=108,2995,144,66]:
+                      - generic [ref=e657] [box=108,2995,144,19]: Retries
+                      - spinbutton "Retries" [ref=e658] [box=108,3020,144,42]: "1"
+                    - generic [ref=e659] [box=108,3082,144,66]:
+                      - generic [ref=e660] [box=108,3082,144,19]: Retry delay ms
+                      - spinbutton "Retry delay ms" [ref=e661] [box=108,3106,144,42]: "250"
+                  - generic [ref=e662] [box=108,3160,144,40]:
+                    - checkbox "Capture output as workflow artifact" [checked] [ref=e663] [box=108,3172,13,16]
+                    - generic [ref=e664] [box=128,3160,123,40]: Capture output as workflow artifact
+                  - generic [ref=e665] [box=108,3200,144,133]:
+                    - generic [ref=e667] [box=108,3200,144,66]:
+                      - generic [ref=e668] [box=108,3200,144,20]: Prompt
+                      - textbox [ref=e669] [box=108,3224,144,42]: Approve the external HTTP action before the workflow continues.
+                    - generic [ref=e671] [box=108,3278,144,55]:
+                      - generic [ref=e672] [box=108,3278,144,20]: IncludeInputPayload
+                      - checkbox [checked] [ref=e674] [box=121,3311,13,13]
+                  - generic [ref=e675] [box=108,3333,144,164]:
+                    - generic [ref=e676] [box=108,3345,144,66]:
+                      - generic [ref=e677] [box=108,3345,144,19]: Input shape
+                      - combobox "Input shape" [ref=e678] [box=108,3370,144,42]:
+                        - option "Text" [box=0,0,0,0]
+                        - option "Json" [selected] [box=0,0,0,0]
+                        - option "Object" [box=0,0,0,0]
+                        - option "Boolean" [box=0,0,0,0]
+                        - option "Number" [box=0,0,0,0]
+                        - option "FileReference" [box=0,0,0,0]
+                        - option "ArtifactReference" [box=0,0,0,0]
+                    - generic [ref=e679] [box=108,3431,144,66]:
+                      - generic [ref=e680] [box=108,3431,144,19]: Result shape
+                      - combobox "Result shape" [ref=e681] [box=108,3455,144,42]:
+                        - option "Text" [box=0,0,0,0]
+                        - option "Json" [selected] [box=0,0,0,0]
+                        - option "Object" [box=0,0,0,0]
+                        - option "Boolean" [box=0,0,0,0]
+                        - option "Number" [box=0,0,0,0]
+                        - option "FileReference" [box=0,0,0,0]
+                        - option "ArtifactReference" [box=0,0,0,0]
+                  - generic [ref=e682] [box=108,3509,144,128]:
+                    - generic [ref=e683] [box=108,3509,144,19]: Instructions
+                    - textbox "Instructions" [ref=e684] [box=108,3533,144,104]: Create an explicit workflow approval request and pause the run until a response is supplied.
+                  - button "Remove node" [ref=e685] [box=108,3637,123,42]:
+                    - generic [ref=e686] [box=121,3646,97,24]: Remove node

@@ -1,0 +1,151 @@
+Command: rg -n workflow-executor-catalog-v2|Available|Planned|Approval required|Deterministic preview Templates src tests -S
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+tests\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:107:        Assert.True(result.TraceAvailable);
+tests\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:126:        Assert.True(result.TraceAvailable);
+tests\CanDoItAll.Tests.Unit\AgentFinalizerPolicyTests.cs:149:        Assert.True(result.TraceAvailable);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:18:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:34:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:52:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:70:            approvalWrapperAvailable: true,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:90:            approvalWrapperAvailable: true,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:109:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:127:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:144:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:161:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:187:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:211:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:232:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:256:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:278:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:302:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:325:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:347:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:376:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:404:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:431:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:454:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:479:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:506:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:531:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:559:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:584:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:611:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:639:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:665:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:692:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:730:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:756:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:781:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:804:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:827:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:851:            approvalWrapperAvailable: true,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:874:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:895:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:920:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:943:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:956:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:983:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:996:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1035:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1048:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1073:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1097:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1123:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1152:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1180:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1196:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1219:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1241:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1259:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1281:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1302:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1326:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1349:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1373:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1395:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1418:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1453:                approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1471:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1493:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1515:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1537:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1707:            approvalWrapperAvailable: true,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1728:            approvalWrapperAvailable: false);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1747:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1769:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1790:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1814:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1838:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1862:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1890:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1921:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1955:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1987:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2013:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2037:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2061:            approvalWrapperAvailable: false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2115:        bool approvalWrapperAvailable,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2117:        bool applicationApprovalAvailable = false,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2137:            ApprovalWrapperAvailable: approvalWrapperAvailable,
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2145:            ApplicationApprovalAvailable: applicationApprovalAvailable,
+Templates\Workflows\manifest.yaml:3:version: 2026-05-workflow-executor-catalog-v2
+Templates\Workflows\manifest.yaml:5:seedVersion: 2026-05-workflow-executor-catalog-v2
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:91:        foreach (var descriptor in BuiltInWorkflowExecutorDescriptors.Planned)
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:93:            services.AddScoped<IWorkflowExecutor>(_ => new PlannedWorkflowExecutor(descriptor));
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor:267:                                        <div class="workflows-artifact" data-testid="workflows-template-pack-item">
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:167:            [CognitiveMemoryAttentionDecisionKind.AnswerFromWorkspace] = new(0.9, 0.1, RiskImpact: 0.1, AvailableWorkspaceEvidence: 0.9),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:168:            [CognitiveMemoryAttentionDecisionKind.Recall] = new(0.8, 0.1, RiskImpact: 0.1, AvailableWorkspaceEvidence: 0.2),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:169:            [CognitiveMemoryAttentionDecisionKind.AskClarification] = new(0.8, 0.8, RiskImpact: 0.1, AvailableWorkspaceEvidence: 0.2),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:170:            [CognitiveMemoryAttentionDecisionKind.RunSourceAudit] = new(0.3, 0.2, RiskImpact: 0.2, AvailableWorkspaceEvidence: 0.2, MissingKnowledgePressure: 0.2, ExpectedValue: 0.2),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:171:            [CognitiveMemoryAttentionDecisionKind.StartProbe] = new(0.6, 0.2, RiskImpact: 0.1, AvailableWorkspaceEvidence: 0.1, MissingKnowledgePressure: 0.8, ExpectedValue: 0.6),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:172:            [CognitiveMemoryAttentionDecisionKind.CreateReviewItem] = new(0.8, 0.2, RiskImpact: 0.85, AvailableWorkspaceEvidence: 0.8),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:173:            [CognitiveMemoryAttentionDecisionKind.RequestLearningProposal] = new(0.2, 0.2, RiskImpact: 0.3, AvailableWorkspaceEvidence: 0.1, MissingKnowledgePressure: 0.85, ExpectedValue: 0.8),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:174:            [CognitiveMemoryAttentionDecisionKind.RunReplay] = new(0.6, 0.2, RiskImpact: 0.2, AvailableWorkspaceEvidence: 0.6, CalibrationRisk: 0.8, ExpectedValue: 0.7),
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:175:            [CognitiveMemoryAttentionDecisionKind.Abstain] = new(0.1, 0.2, RiskImpact: 0.8, AvailableWorkspaceEvidence: 0.1)
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryWorkspaceAttentionTests.cs:214:            new CognitiveMemoryAttentionSignalSet(0.95, 0.05, RiskImpact: 0.1, AvailableWorkspaceEvidence: 0.95),
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentCapabilitiesPanel.razor:92:                                                     Text="@(isAttached ? "Attached" : "Available")" />
+tests\CanDoItAll.Tests.Unit\ManagerDashboardPageTests.cs:76:            openApiAvailable: true);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\AgentDetailsDialog.razor:612:                                                                     Text="@(isAttached ? "Attached" : "Available")" />
+tests\CanDoItAll.Tests.Unit\ProjectStructureLocalFileOpenerManagedFilesTests.cs:290:            "Planned",
+tests\CanDoItAll.Tests.Unit\ProjectStructureRuntimeLauncherPathResolverTests.cs:42:            "Planned",
+tests\CanDoItAll.Tests.Unit\ProjectStructureRuntimeLauncherTests.cs:297:            "Planned",
+tests\CanDoItAll.Tests.Components\PartyRelationshipsEditorTests.cs:17:            .Add(component => component.AvailableParties, Array.Empty<PartyDirectoryListItemModel>()));
+tests\CanDoItAll.Tests.Components\PartyRelationshipsEditorTests.cs:24:            .Add(component => component.AvailableParties,
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:394:                                        <StatusBadge Tone="warning" Text="Approval required" />
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:398:                                        <StatusBadge Tone="success" Text="Deterministic preview" />
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:1369:                                        <StatusBadge Tone="warning" Text="Approval required" />
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:1373:                                        <StatusBadge Tone="success" Text="Deterministic preview" />
+tests\CanDoItAll.Tests.Components\ProcessCanvasSurfaceFactoryTests.cs:601:            link.SourcePortId == ProcessCanvasBranching.BuildOutcomePortId(stepRuns[0].AvailableBranchOutcomes[0]));
+tests\CanDoItAll.Tests.Components\ProcessCanvasSurfaceFactoryTests.cs:605:            link.SourcePortId == ProcessCanvasBranching.BuildOutcomePortId(stepRuns[0].AvailableBranchOutcomes[1]));
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:163:            descriptor.CanExecute ? "Available" : descriptor.Availability.Kind.ToString()
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:167:            badges.Add("Approval required");
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowExecutorCanvasCatalog.cs:172:            badges.Add("Deterministic preview");
+tests\CanDoItAll.Tests.Components\ProcessStepEditorFormTests.cs:77:            ComponentParameter.CreateParameter(nameof(ProcessStepEditorForm.AvailableRoles), new List<ProcessRoleEditorModel>
+tests\CanDoItAll.Tests.Components\ProcessStepRoleAssignmentEditorTests.cs:23:            ComponentParameter.CreateParameter(nameof(ProcessStepRoleAssignmentEditor.AvailableRoles), new List<ProcessRoleEditorModel>
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:26:    public void CatalogListsBuiltInAndPlannedExecutors()
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:32:            new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0])
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:43:    public void BuiltInRegistrationAddsImplementedAndPlannedExecutors()
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:52:        Assert.Equal(10 + BuiltInWorkflowExecutorDescriptors.Planned.Count, executorDescriptors.Length);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:64:            BuiltInWorkflowExecutorDescriptors.Planned.Count,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:65:            executorDescriptors.Count(descriptor => descriptor.ImplementationInstance is PlannedWorkflowExecutor));
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:72:        var planned = BuiltInWorkflowExecutorDescriptors.Planned[0];
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:77:        Assert.Equal(WorkflowExecutorAvailabilityKind.Available, descriptor.Availability.Kind);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:86:        Assert.Equal(WorkflowExecutorAvailabilityKind.Planned, planned.Availability.Kind);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:133:        Assert.Equal(WorkflowExecutorAvailabilityKind.Available, descriptor.Availability.Kind);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:141:    public void ValidatorRejectsPlannedExecutorNode()
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:143:        var plannedExecutor = new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0]);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:164:    public async Task InvokerRejectsPlannedExecutorBeforeCallingImplementation()
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:166:        var plannedExecutor = new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0]);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:177:        Assert.Equal(WorkflowExecutorAvailabilityKind.Planned, exception.Availability.Kind);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1486:            await Assert.ThrowsAsync<NotSupportedException>(() => ExecuteDirectAsync(new PlannedWorkflowExecutor(BuiltInWorkflowExecutorDescriptors.Planned[0]), new { }));
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:85:    public void RuntimeBackendCatalogMarksUnregisteredDurableBackendsAsPlanned()
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:96:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, durableTask.Availability);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:102:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, azureFunctions.Availability);
+tests\CanDoItAll.Tests.Components\ProjectStructurePageTests.cs:2674:        public bool IsAvailable => true;
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:129:            var templates = cut.FindAll("[data-testid='workflows-template-pack-item']");
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:157:            Assert.Contains("Deterministic preview", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:175:            Assert.Contains("Approval required", cut.Markup, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:333:        Assert.Contains("Planned", durableOption.TextContent, StringComparison.OrdinalIgnoreCase);
+

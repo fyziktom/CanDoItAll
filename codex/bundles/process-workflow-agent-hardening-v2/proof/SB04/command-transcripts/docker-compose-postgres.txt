@@ -1,0 +1,10 @@
+Command: docker compose up -d postgres
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+
+
+STDERR:
+ Container candoitall-postgres Running 
+

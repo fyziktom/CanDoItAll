@@ -1,0 +1,34 @@
+{
+  "scenario": "recipe-pantry-planner",
+  "url": "http://127.0.0.1:5205",
+  "finalState": {
+    "title": "Recipe Pantry Planner",
+    "url": "http://127.0.0.1:5205/",
+    "bodyText": "Recipe Pantry Planner\n\nMaintain pantry ingredients, rank built-in recipes, and build a shopping list from missing ingredients.\n\nBuilt-in recipes\nLocal pantry\nIngredient\nAdd ingredient\nPantry\npasta\ntomato\nShopping list\ngarlic\nTomato Pasta\n\n2/3 ingredients available\n\nMissing: garlic\n\nAdd missing\nVeggie Omelet\n\n0/3 ingredients available\n\nMissing: eggs, spinach, cheese\n\nAdd missing\nBean Tacos\n\n0/4 ingredients available\n\nMissing: tortilla, beans, cheese, salsa\n\nAdd missing\nApple Oats\n\n0/3 ingredients available\n\nMissing: oats, apple, milk\n\nAdd missing",
+    "ready": "recipe-pantry-planner",
+    "appState": {
+      "pantry": [
+        "pasta",
+        "tomato"
+      ],
+      "shopping": [
+        "garlic"
+      ],
+      "recipeText": "\n                Tomato Pasta\n                2/3 ingredients available\n                Missing: garlic\n                Add missing\n            \n                Veggie Omelet\n                0/3 ingredients available\n                Missing: eggs, spinach, cheese\n                Add missing\n            \n                Bean Tacos\n                0/4 ingredients available\n                Missing: tortilla, beans, cheese, salsa\n                Add missing\n            \n                Apple Oats\n                0/3 ingredients available\n                Missing: oats, apple, milk\n                Add missing\n            "
+    }
+  },
+  "snapshot": {
+    "heading": "Recipe Pantry Planner",
+    "text": "Recipe Pantry Planner\n\nMaintain pantry ingredients, rank built-in recipes, and build a shopping list from missing ingredients.\n\nBuilt-in recipes\nLocal pantry\nIngredient\nAdd ingredient\nPantry\npasta\ntomato\nShopping list\ngarlic\nTomato Pasta\n\n2/3 ingredients available\n\nMissing: garlic\n\nAdd missing\nVeggie Omelet\n\n0/3 ingredients available\n\nMissing: eggs, spinach, cheese\n\nAdd missing\nBean Tacos\n\n0/4 ingredients available\n\nMissing: tortilla, beans, cheese, salsa\n\nAdd missing\nApple Oats\n\n0/3 ingredients available\n\nMissing: oats, apple, milk\n\nAdd missing",
+    "activeElement": "H1",
+    "storageKeys": [
+      "sb08-recipe-pantry-planner:shopping",
+      "sb08-recipe-pantry-planner:pantry"
+    ]
+  },
+  "assertions": "passed",
+  "screenshots": [
+    "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\recipe-pantry-planner\\screenshots\\recipe-pantry-planner-desktop.png",
+    "C:\\repositories\\CanDoItAll\\codex\\bundles\\process-workflow-agent-hardening-v1\\proof\\SB08\\scenarios\\recipe-pantry-planner\\screenshots\\recipe-pantry-planner-mobile.png"
+  ]
+}

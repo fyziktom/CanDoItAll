@@ -78,7 +78,11 @@ internal sealed partial class AgentFrameworkWorkspaceExecutionService
                     WorkingDirectory: launchReceipt.WorkingDirectory,
                     ExitSummary: "Succeeded",
                     StartedAtUtc: startedAtUtc,
-                    CompletedAtUtc: completedAtUtc));
+                    CompletedAtUtc: completedAtUtc)
+                {
+                    RuntimeToolProviderKey = launchReceipt.RuntimeToolProviderKey,
+                    RuntimeToolProviderName = launchReceipt.RuntimeToolProviderName
+                });
         }
 
         if (syntheticReceipts.Count == 0)

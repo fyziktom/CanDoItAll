@@ -1,0 +1,6 @@
+Command: rg -n "TODO|NotImplementedException|throw new NotImplemented|\bstub\b|fixture-specific" tools\Reinstall-CanDoItAllMcps.ps1
+Invariant ID: SB02-RESETUP-ROOT-SEPARATION
+Invariant ID: SB02-ARTIFACT-CLEANUP
+--- output ---
+Anti-stub audit passed: no TODO, NotImplemented, stub, or fixture-specific markers in resetup tooling.
+ExitCode: 0

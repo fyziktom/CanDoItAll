@@ -32,6 +32,12 @@ Direct package references:
 
 Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. MAF-specific workflow adapters and checkpoint helpers belong in `CanDoItAll.AgentFramework.Maf`. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly.
 
+## Runtime Tool Ownership Receipts
+
+Tool receipts can include optional runtime-provider ownership through `RuntimeToolProviderKey` and `RuntimeToolProviderName`. These fields are populated when a provider-aware runtime sets `AgentRuntimeToolOwnershipContext` around a tool invocation; older receipts and tools that are not supplied by an `IAgentRuntimeToolProvider` keep both values empty.
+
+Consumers must treat empty provider ownership as unknown, not as evidence that a receipt is invalid. Receipt validity still comes from the existing fields: tool family/name, risk class, approval mode, isolation guarantee, request summary, working directory, exit summary, and timestamps.
+
 ## Governed Process Capability Matrix
 
 Process roles must be staffed with the tools and skills they are expected to use. Missing capability checks should use `AgentCapabilityRequirementEvaluator` so callers receive typed `AgentCapabilityDiagnostic` values instead of prose-only capability gaps.

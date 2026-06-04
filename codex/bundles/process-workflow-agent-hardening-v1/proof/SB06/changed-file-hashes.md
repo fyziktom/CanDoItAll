@@ -1,0 +1,22 @@
+# SB06 Changed File Hashes
+
+| SHA256 | Path |
+| --- | --- |
+| BB19F35A1F4DC0A8677DA3C9B41E014385567D25B912C5976E9E529C90412623 | codex/bundles/process-workflow-agent-hardening-v1/reviews/01-execution-report.md |
+| 82B92ABE3F0AFB3BD92F7A558061E7F58221BBCAFE93B07AFC8CF190E1E4CE89 | codex/bundles/process-workflow-agent-hardening-v1/subbundles/SB06-agent-skill-template-canonicalization-and-active-sync/README.md |
+| 2E15AC5667F70D2F49DB4E8710196A13759DA5B0D52823092CCDD4B1DA662A03 | codex/bundles/process-workflow-agent-hardening-v1/proof/SB06/manifest.md |
+| 93F83B01489C877446F25175B7B741B2C262DED876AD192A48590DA5D4A764AE | codex/bundles/process-workflow-agent-hardening-v1/proof/SB06/semantic-invariants.md |
+| 66F433E868E27D6428F5448AD85088A86556544F86CCC8FC86F059C4300D9FC8 | codex/bundles/process-workflow-agent-hardening-v1/proof/SB06/production-behavior-artifact-matrix.md |
+| 77FA2A1EA816B5B1EB910FB013FFBEC9F3B3C7BB57F4FDD493A709CDE4FFDE47 | codex/bundles/process-workflow-agent-hardening-v1/proof/SB06/browser-validation-analytics.md |
+| 91210457E8E389C3BC0EFC54B218215A31D42BC66E6804222E5E025DB4E6E362 | Templates/Agents/teams/delivery-platform/members/delivery-manager/instructions.md |
+| 903AE63E4661E03E949B157A94E46728C337356B49B07E85152BCB814AC59F88 | Templates/Agents/teams/dotnet-delivery/members/blazor-application-developer/instructions.md |
+| 82E918179941ECF9BC099062E95CF49D466B8035096E94DCF55B1FA828A4E4D8 | Templates/Agents/teams/dotnet-delivery/members/dotnet-application-developer/instructions.md |
+| 7937A5D0995ED4FB06D5A35FB0A5FDB70426FD28D6F2767C975BEB6A094996F1 | Templates/Agents/teams/visual-automation-templates/members/screenshot-review-storage-agent/instructions.md |
+| 74C8F1F13A139650CFB28FC808636DF8A1D818CF2CB9D58A489E80535C3A3F29 | Templates/Processes/processes/software-delivery/definition.json |
+| D5AC046DA752DC2ED09194763428E2798353AD32B35A23BC1D5CC4F67F853164 | Templates/Processes/processes/software-delivery/definition.md |
+| 9DDFD6207E7DFDBFB6C12395FFEE4DC75793B323D1CEB265B727256433B2125F | codex/skills/candoitall-api-agents/SKILL.md |
+| B329B1E9ED8BFEA08A517C40BD8D7DFEED527D11E53E7D1E0F22B7F67A5CD403 | codex/skills/candoitall-api-processes/SKILL.md |
+| 573ECEB7AA4457F900DA04EA8621AEED5626EE3DD20662C16B20083A28EF4C4E | codex/skills/candoitall-api-project-structure/SKILL.md |
+| 751E194D17A7C3AEC3AC12E21EAFA78C9D7B40556C3A95AC79AFBAACAC3E6A68 | codex/skills/candoitall-api-workflows/SKILL.md |
+| 1C58F6E222EFEB867E9062FABBB3B14863EFF6DE1588E99296ECF84B0F1228B7 | tests/CanDoItAll.Tests.Unit/ApiDocsSkillsParityTests.cs |
+| B06E30149EBD984D2D678716F58005690CDB139121AA4700A887F2B1983C76F5 | tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs |

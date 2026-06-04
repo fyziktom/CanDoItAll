@@ -1,0 +1,12 @@
+SB04 changed file hash manifest
+TimestampUtc: 2026-06-04T02:12:37.5505624+00:00
+
+ba73edfa4165b02f7e948eefca7dd72e16faafade145383ea045af88ae2a5e3c  repo://src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs
+98562e0bfb45b9a9f8f3b481ee3451ca72ca499d38069754301afb1c34ccce9f  repo://src/CanDoItAll.Modules.Workbench/Services/WorkbenchModuleServiceCollectionExtensions.cs
+30d988f3ef8429f32c965cd925f5ae8de072577da852ac917d5a49e994e8ab92  repo://src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj
+6d36cc4f27f1206fef2ba12504b980c63f7ce68fe53ff5e1e0fa5538d1aad9de  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs
+9080f346b5798fea349c9877961c302ad24055a8e9dffe6b89a266ca35cb3731  repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj
+f078efa4c3e4f6ce538ced1aa2afad40f983b7952767935c1fbdbe60d894181f  repo://tests/CanDoItAll.Tests.Integration/ProcessRuntimeToolProviderCompositionIntegrationTests.cs
+896c015909d4d510db0e8224a5ca56c363e8363933b8dba6b20e4499b7fd9096  repo://tests/CanDoItAll.Tests.Integration/MafAgentRuntimeTests.cs
+470d624c468556ef2426b098ada129a6de5fffb4e4ea3b1115e65d556cb0efde  repo://tests/CanDoItAll.Tests.Unit/ProjectWorkbenchServiceArchitectureTests.cs
+deleted  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProjectStructureTools.cs

@@ -1,0 +1,9 @@
+SB01-INVARIANT-001
+
+- The feature branch baseline deleted $baselineDeletedCount historical codex/bundles/* paths.
+- Representative restored files exist after restoring from development:
+  - epo://codex/bundles/api-docs-skills-parity-v1/README.md
+  - epo://codex/bundles/app-components-rename-v1/README.md
+  - epo://codex/bundles/workflow_executor_catalog/README.md
+- The production MAF hidden-dependency scan is scoped to .cs and .csproj files so documentation mentions do not mask source coupling.
+- No production source behavior was changed in SB01 beyond branch hygiene and proof artifacts.

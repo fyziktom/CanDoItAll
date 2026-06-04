@@ -1,0 +1,8 @@
+COMMAND: python - validate software-delivery template contract fields
+PASS software-delivery ContractMode/operation assertions
+steps 20
+mutable quality-repair
+runtimeProof qa-validation,qa-recheck
+
+COMMAND: rg scenario keys in production templates/agents/skills
+PASS no SB04 scenario keys in production templates, agents, repo skills, or seed assets

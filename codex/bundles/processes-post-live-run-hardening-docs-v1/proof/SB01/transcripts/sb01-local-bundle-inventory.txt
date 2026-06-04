@@ -1,0 +1,6 @@
+Command: Get-ChildItem codex/bundles for SB01-INV-001 prior process bundle availability
+ExitCode: 0
+
+cognitive-memory-architecture-v2
+processes-post-live-run-hardening-docs-v1
+SB01-INV-001 local bundle inventory completed

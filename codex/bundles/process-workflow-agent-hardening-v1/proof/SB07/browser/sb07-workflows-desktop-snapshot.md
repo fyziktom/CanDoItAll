@@ -1,0 +1,36 @@
+- main [ref=e106] [box=12,8,908,903]:
+  - group [ref=e107] [box=12,8,908,46]:
+    - generic "Workspace navigation" [ref=e108] [cursor=pointer] [box=29,21,874,20]
+  - generic [ref=e109] [box=12,62,908,76]:
+    - generic [ref=e113] [box=16,62,900,30]:
+      - button "Dashboard" [ref=e115] [box=25,67,85,20]:
+        - generic [ref=e116] [box=25,69,59,16]: Dashboard
+        - generic [ref=e118] [box=90,67,20,20]: push_pin
+      - button "Workflows" [ref=e120] [box=134,69,58,16]:
+        - generic [ref=e121] [box=134,69,58,16]: Workflows
+    - generic [ref=e123] [box=12,112,908,26]:
+      - generic [ref=e124] [box=415,112,222,26]:
+        - generic [ref=e125] [box=426,118,136,13]: Delivery Workspace
+        - generic [ref=e126] [box=568,117,58,16]: Workflows
+      - generic [ref=e127] [box=645,112,117,26]: Interactive Server
+      - generic [ref=e128] [box=770,112,86,26]: Live items 0
+      - generic [ref=e129] [box=864,112,56,26]: Tabs 2
+  - generic [ref=e194] [box=29,163,874,599]:
+    - generic [ref=e196] [box=29,163,859,102]:
+      - generic [ref=e197] [box=29,163,540,58]:
+        - generic [ref=e198] [box=29,163,540,28]
+        - generic [ref=e201] [box=29,199,540,22]
+      - generic [ref=e217] [box=29,229,124,36]:
+        - button "Refresh" [ref=e219] [box=29,229,36,36]
+        - button "Create starter" [ref=e223] [box=73,229,36,36]
+        - button "Open agents" [ref=e227] [box=117,229,36,36]
+    - generic [ref=e231] [box=29,279,859,483]:
+      - tablist "Workflow workspace tabs" [ref=e232] [box=29,279,859,101]:
+        - tab "Dashboard" [selected] [ref=e233] [box=33,280,139,46]
+        - tab "Workflows 27" [ref=e236] [box=180,279,174,46]
+        - tab "Editor" [ref=e240] [box=362,279,104,46]
+        - tab "Templates -" [ref=e243] [box=474,279,165,46]
+        - tab "History 0" [ref=e247] [box=647,279,144,46]
+        - tab "Analytics" [ref=e251] [box=33,334,125,46]
+      - tabpanel "Dashboard" [ref=e255] [box=29,379,859,383]:
+        - generic [ref=e256] [box=46,396,825,349]

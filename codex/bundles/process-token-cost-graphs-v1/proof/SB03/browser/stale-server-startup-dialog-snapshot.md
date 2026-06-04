@@ -1,0 +1,72 @@
+- generic [active] [ref=e1] [box=0,0,1600,900]:
+  - generic [ref=e345] [box=0,0,1600,900]:
+    - complementary [ref=e346] [box=16,8,76,884]:
+      - generic [ref=e347] [box=27,19,54,862]:
+        - generic [ref=e348] [box=27,19,54,40]:
+          - generic [ref=e349] [box=27,19,10,40]
+          - button "Expand navigation" [ref=e352] [box=45,21,36,36]
+        - navigation "Primary navigation" [ref=e354] [box=27,67,54,703]:
+          - button "Dashboard" [ref=e356] [box=27,71,44,44]
+          - button "Projects" [ref=e360] [box=27,121,44,44]
+          - button "Processes" [ref=e364] [box=27,171,44,44]
+          - button "Live Processes" [ref=e368] [box=27,221,44,44]
+          - button "Collaboration" [ref=e372] [box=27,271,44,44]
+          - button "CRM / HR" [ref=e377] [box=27,321,44,44]
+          - button "Agents" [ref=e381] [box=27,371,44,44]
+          - button "Workflows" [ref=e385] [box=27,421,44,44]
+          - button "Cognitive Memory" [ref=e389] [box=27,471,44,44]
+          - button "Resources" [ref=e393] [box=27,521,44,44]
+          - button "Plugins" [ref=e397] [box=27,571,44,44]
+          - button "Prompt Gallery" [ref=e401] [box=27,621,44,44]
+          - button "More pages" [ref=e405] [box=32,671,44,44]
+        - generic [ref=e409] [box=27,787,54,94]:
+          - button "Settings" [ref=e411] [box=27,787,54,44]
+          - button "Switch Database" [ref=e416] [box=27,837,54,44]
+    - main [ref=e420] [box=100,8,1484,884]:
+      - generic [ref=e421] [box=100,8,1484,30]:
+        - generic [ref=e425] [box=104,8,960,30]:
+          - button "Dashboard" [ref=e427] [box=113,13,85,20]
+          - button "Processes" [ref=e432] [box=222,15,53,16]
+        - generic [ref=e435] [box=1084,10,500,26]:
+          - generic [ref=e436] [box=1084,10,216,26]
+          - generic [ref=e439] [box=1309,10,117,26]: Interactive Server
+          - generic [ref=e440] [box=1434,10,86,26]: Live items 0
+          - generic [ref=e441] [box=1528,10,56,26]: Tabs 2
+      - generic [ref=e444] [box=100,46,1484,174]:
+        - paragraph [ref=e445] [box=121,79,1442,16]: Database startup
+        - heading "Continue with the active database to load the workspace" [level=3] [ref=e446] [box=121,103,1442,28]
+        - paragraph [ref=e447] [box=506,139,672,48]: The routed page stays paused until the startup database profile is confirmed, so module dashboards do not initialize against a false zero-state.
+  - dialog "Database profiles" [ref=e450] [box=96,107,1408,686]:
+    - banner [ref=e451] [box=97,108,1406,109]:
+      - generic [ref=e452] [box=121,124,1358,76]:
+        - generic [ref=e453] [box=121,124,677,76]:
+          - generic [ref=e454] [box=121,124,66,16]: Startup
+          - heading "Database profiles" [level=2] [ref=e456] [box=121,144,149,28]
+          - paragraph [ref=e457] [box=121,176,677,24]: Continue with the resolved runtime database or activate another saved PostgreSQL profile for the next restart.
+        - button "Close" [ref=e459] [box=1387,124,92,42]:
+          - generic [ref=e460] [box=1400,135,20,20]: close
+          - generic [ref=e461] [box=1428,133,38,24]: Close
+    - generic [ref=e463] [box=121,241,1358,452]:
+      - generic [ref=e464] [box=121,241,613,242]:
+        - generic [ref=e465] [box=138,258,579,44]:
+          - generic [ref=e466] [box=138,258,234,44]
+          - generic [ref=e469] [box=384,258,333,26]
+        - generic [ref=e473] [box=138,314,579,124]:
+          - generic [ref=e474] [box=138,314,310,58]
+          - generic [ref=e482] [box=138,380,389,58]
+        - paragraph [ref=e490] [box=138,450,579,16]: "Selection source: Explicit startup override"
+      - generic [ref=e491] [box=121,499,1029,50]: Startup configuration owns the active database for this session. Continue is still safe, but profile activation and creation are disabled until the override is removed.
+      - generic [ref=e494] [box=138,582,325,94]:
+        - button "Local PostgreSQL PostgreSQL PostgreSQL connection localhost:5432/candoitall" [ref=e495] [box=138,582,281,94]:
+          - generic [ref=e497] [box=138,582,269,58]
+          - paragraph [ref=e503] [box=138,652,281,24]: localhost:5432/candoitall
+        - button "Copy database target for Local PostgreSQL" [ref=e505] [box=431,582,32,38]:
+          - generic [ref=e506] [box=437,591,20,20]: content_copy
+          - generic [ref=e507] [box=446,601,1,1]: content copy
+    - contentinfo [ref=e509] [box=97,717,1406,75]:
+      - generic [ref=e510] [box=121,734,1358,42]:
+        - generic [ref=e511] [box=121,734,276,42]:
+          - button "Continue" [ref=e512] [box=121,734,98,42]
+          - button "Open Data Sources" [ref=e514] [box=227,734,170,42]
+        - button "Activate for restart" [disabled] [ref=e517] [box=1314,734,165,42]:
+          - generic [ref=e518] [box=1331,743,131,24]: Activate for restart

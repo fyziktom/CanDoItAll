@@ -1,0 +1,61 @@
+# SB11 Source Assertions
+
+Invariant IDs: SB11-INV-001, SB11-INV-002, SB11-INV-003
+
+Command: rg -n "FreshRunPolicy|ProcessTemplateLiveRunProfileSummary\(" src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs src\CanDoItAll.Web\Api\ProcessesApi.cs src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:587:        Assert.True(profile.FreshRunPolicy.RequiresFreshRun);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:588:        Assert.False(profile.FreshRunPolicy.AllowsSeededTransitions);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:589:        Assert.False(profile.FreshRunPolicy.AllowsSeededArtifacts);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:590:        Assert.NotEmpty(profile.FreshRunPolicy.RequiredPreDispatchChecks);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:591:        Assert.NotEmpty(profile.FreshRunPolicy.RequiredEvidenceChecks);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:593:            profile.FreshRunPolicy.RequiredPreDispatchChecks,
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:596:            profile.FreshRunPolicy.RequiredEvidenceChecks,
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:600:            profile.FreshRunPolicy.ProjectStructureWritebackGuidance,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:599:                    .Select(item => new ProcessTemplateLiveRunProfileSummary(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:606:                        item.FreshRunPolicy,
+src\CanDoItAll.Web\Api\ProcessesApi.cs:703:                .Select(item => new ProcessTemplateLiveRunProfileSummary(
+src\CanDoItAll.Web\Api\ProcessesApi.cs:710:                    item.FreshRunPolicy,
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs:113:    public ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy { get; set; } = new();
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs:122:public sealed class ProcessTemplateLiveRunFreshRunPolicy
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs:195:public sealed record ProcessTemplateLiveRunProfileSummary(
+src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs:202:    ProcessTemplateLiveRunFreshRunPolicy FreshRunPolicy,
+ExitCode: 0
+ExpectedExitCode: 0
+
+Command: rg -n "ProcessesTemplateLiveRunProfilesList|processes_template_live_run_profiles_list" src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs codex\skills\candoitall-api-processes\SKILL.md
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:1686:            "processes_template_live_run_profiles_list"
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:1935:            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
+codex\skills\candoitall-api-processes\SKILL.md:60:| Template curator | `processes_templates_list`, `processes_template_get`, `processes_template_mermaid_get`, `processes_template_baseline_scenarios_list`, `processes_template_live_run_profiles_list`, `processes_template_import` | Write access only for import/publish work | Inspect templates read-only unless import or publish is explicitly requested. |
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1631:    [InlineData(AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList, ToolInvocationClassification.Read)]
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2106:            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
+src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:145:                    (CancellationToken cancellationToken = default) => ProcessesTemplateLiveRunProfilesListAsync(accessState, cancellationToken),
+src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:146:                    AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:591:        private Task<IReadOnlyList<ProcessTemplateLiveRunProfileSummary>> ProcessesTemplateLiveRunProfilesListAsync(
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1804:    public const string ProcessesTemplateLiveRunProfilesList = "processes_template_live_run_profiles_list";
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\AgentToolInvocationPolicy.cs:1927:            Read(ProcessesTemplateLiveRunProfilesList)
+ExitCode: 0
+ExpectedExitCode: 0
+
+Command: rg -n "templates/\{processKey\}/envelope|templates/\{processKey\}/mermaid|templates/\{processKey\}/import|live-run-profiles" tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs codex\skills\candoitall-api-processes\SKILL.md
+codex\skills\candoitall-api-processes\SKILL.md:34:- Templates: `GET /api/processes/templates`, `GET /api/processes/templates/{processKey}`, `GET /api/processes/templates/{processKey}/detail`, `GET /api/processes/templates/{processKey}/envelope`, `GET /api/processes/templates/{processKey}/mermaid`, `POST /api/processes/templates/{processKey}/import`.
+codex\skills\candoitall-api-processes\SKILL.md:36:- Live-run profiles: `GET /api/processes/templates/live-run-profiles`.
+codex\skills\candoitall-api-processes\SKILL.md:152:GET /api/processes/templates/live-run-profiles
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:528:        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/envelope", out _));
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:529:        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/mermaid", out _));
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:530:        Assert.True(paths.TryGetProperty("/api/processes/templates/{processKey}/import", out _));
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:532:        Assert.True(paths.TryGetProperty("/api/processes/templates/live-run-profiles", out _));
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:580:        var profiles = await host.Client.GetFromJsonAsync<List<ProcessTemplateLiveRunProfileSummary>>("/api/processes/templates/live-run-profiles");
+ExitCode: 0
+ExpectedExitCode: 0
+
+Command: git diff --check -- [SB11 changed files]
+warning: in the working copy of 'codex/skills/candoitall-api-processes/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Templates/ProcessTemplatePackScenarios.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Web/Api/ProcessesApi.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/MafAgentRuntimeTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs', LF will be replaced by CRLF the next time Git touches it
+ExitCode: 0
+ExpectedExitCode: 0

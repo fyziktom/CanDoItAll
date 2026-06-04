@@ -1,0 +1,25 @@
+Command: historical transcript capture for process-provider-registration-and-guard-scan.txt
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB07
+Invariant: SB07-INVARIANT-001
+TimestampUtc: 2026-06-04T06:50:50.1529844Z
+
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs:13:    private static readonly string[] ExpectedProcessToolNames =
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs:97:    public async Task ProcessRuntimeProvider_app_composition_preserves_process_tool_exact_name_parity()
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs:104:                .OfType<ProcessAgentRuntimeToolProvider>());
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs:141:        Assert.Equal(ExpectedProcessToolNames.Length, toolNames.Count);
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs:143:            ExpectedProcessToolNames.Length,
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs:146:        foreach (var toolName in ExpectedProcessToolNames)
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:74:        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProcessAgentRuntimeToolProvider>());
+tests\CanDoItAll.Tests.Unit\AgentRuntimeToolProviderArchitectureTests.cs:80:    public void ProcessAgentRuntimeToolProvider_split_files_stay_below_monolith_threshold()
+tests\CanDoItAll.Tests.Unit\AgentRuntimeToolProviderArchitectureTests.cs:106:            string.Equals(file.Name, "ProcessAgentRuntimeToolProvider.cs", StringComparison.OrdinalIgnoreCase));
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Access.cs:10:public sealed partial class ProcessAgentRuntimeToolProvider
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Templates.cs:10:public sealed partial class ProcessAgentRuntimeToolProvider
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Runs.cs:10:public sealed partial class ProcessAgentRuntimeToolProvider
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Definitions.cs:10:public sealed partial class ProcessAgentRuntimeToolProvider
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:10:public sealed partial class ProcessAgentRuntimeToolProvider(
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:17:    private const int DefaultOrder = 1000;
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:25:    public int Order => DefaultOrder;
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:28:        "processes.runtime-tools",
+ExitCode: 0
+

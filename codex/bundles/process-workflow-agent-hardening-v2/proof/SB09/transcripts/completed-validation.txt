@@ -1,0 +1,1 @@
+PASS: bundle validation succeeded for stage completed

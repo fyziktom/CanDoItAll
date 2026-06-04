@@ -21,7 +21,7 @@ public sealed class ProcessDeletionIntegrationTests
         var projectId = await CreateProjectAsync(projectsService, "Process deletion project");
         var seedResult = await seedService.SeedBaselineAsync(projectId);
 
-        Assert.True(seedResult.IsSuccess);
+        Assert.True(seedResult.IsSuccess, string.Join(" | ", seedResult.Errors.Select(error => error.Message)));
 
         var definitionId = seedResult.Value!.PrimaryDefinitionId;
         List<Guid> versionIds;

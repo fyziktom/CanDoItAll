@@ -1,0 +1,26 @@
+Command: historical transcript capture for provider-composition-size-review.txt
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06
+Invariant: SB06-INVARIANT-001
+TimestampUtc: 2026-06-04T06:50:50.1233860Z
+
+Command: Measure provider composition and Tooling contract files
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06
+TimestampUtc: 2026-06-04T02:37:11.2038401+00:00
+---- Line Counts ----
+  235 lines  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.RuntimeToolProviders.cs
+  840 lines  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs
+   13 lines  repo://src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs
+   48 lines  repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderDescriptor.cs
+   38 lines  repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolMetadata.cs
+  815 lines  repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs
+ 1314 lines  repo://src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs
+  645 lines  repo://src/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs
+---- Responsibility Review ----
+- MAF provider composition remains isolated in MafAgentRuntime.Capabilities.RuntimeToolProviders.cs and owns ordering, descriptor validation, duplicate-name validation, metadata inference, approval wrapping, and diagnostics.
+- Tooling contracts remain limited to provider context, descriptors, purpose, operation kind, metadata, and the IAgentRuntimeToolProvider interface.
+- Product tool construction now lives in first-party modules: Processes, Workbench, and AgentFramework.
+- ProcessAgentRuntimeToolProvider remains large and is intentionally deferred to SB07, where internal split work is the owned objective.
+ExitCode: 0
+

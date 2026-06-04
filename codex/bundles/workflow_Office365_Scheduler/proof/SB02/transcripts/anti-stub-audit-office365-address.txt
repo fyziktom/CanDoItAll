@@ -1,0 +1,6 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific" src/plugins/CanDoItAll.Plugin.Office365
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 
+2026-05-29T18:42:41.2574934Z
+No anti-stub matches found in scoped Office365 production files.
+RgExitCode: 1 ExitCode: 0 EndTimeUtc: 2026-05-29T18:42:41.4457279Z

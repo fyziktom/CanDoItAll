@@ -1,0 +1,19 @@
+{
+  "id": "7a87bd1a-fc3a-412c-987c-458274956d4d",
+  "runId": "e58cb776-9dcd-4c99-acc4-e3fa0bddead0",
+  "workflowId": "ec134686-8cb2-49ac-b20f-bffcd04f8ff1",
+  "versionId": "790a4fa5-6648-47c1-bf8b-368fdebe67a8",
+  "backend": 0,
+  "kind": 3,
+  "trustBoundary": 0,
+  "resumeAvailability": 0,
+  "nodeId": null,
+  "externalRequestId": null,
+  "backendCheckpointId": "",
+  "payloadReference": "runtime://metadata-only",
+  "payloadHash": "",
+  "summary": "Workflow 'Example: Office365 Category Email Summary To Project' completed.",
+  "resumeUnavailableReason": "Resume is not available for metadata-only workflow checkpoints. Use a durable workflow backend with trusted runtime state before enabling resume.",
+  "createdAtUtc": "2026-06-01T05:31:27.818519-04:00",
+  "resumedAtUtc": null
+}

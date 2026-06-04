@@ -1,0 +1,6 @@
+{
+  "scenarioKey": "plant-watering-planner",
+  "processRunId": "6ecf7150-8810-49fa-ba25-572ec3d80611",
+  "executionRuns": [],
+  "note": "The SB08 harness executed through Codex/local browser tooling and manual process transitions with automation dispatch suppressed. No CanDoItAll Agent Framework provider execution runs were created for this scenario."
+}

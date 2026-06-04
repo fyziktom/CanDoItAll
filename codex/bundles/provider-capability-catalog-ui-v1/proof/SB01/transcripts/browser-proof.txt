@@ -1,0 +1,13 @@
+Command: Playwright MCP browser proof for /agents?tab=providers at 1440x1000
+Exit code: 0
+
+SB01-PROVIDER-PARITY-TAGS browser proof:
+- Route opened: /agents?tab=providers.
+- Provider tab showed Providers5.
+- Provider tree heading showed provider profiles grouped by tag.
+- Provider tree showed tags including chat, local, ollama, and openai.
+- Provider count text showed 5 of 5 provider(s).
+
+SB01-LOCAL-OLLAMA-OPENAI-DEFAULT browser proof:
+- Provider tree contained Local Ollama.
+- The source/test proof covers gpt-5.4-mini because it is a default seed/fallback value rather than visible text while Local Ollama is selected.

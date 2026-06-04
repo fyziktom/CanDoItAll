@@ -1,0 +1,4 @@
+SB07 browser validation host cleanup
+Port 5033 listeners: 0
+CanDoItAll.Web processes: 0
+Result: validation host stopped after browser proof capture.

@@ -1,0 +1,16 @@
+Command: dotnet build src/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore -m:1
+Exit code: 0
+
+Command: Playwright MCP browser proof for /agents?tab=capabilities at 1440x1000, New MCP wizard
+Exit code: 0
+
+SB03-MCP-SKILL-WIZARD browser proof:
+- New MCP opened CapabilitySetupWizardDialog.
+- Identity step accepted name/key values.
+- Configure step rendered inside the existing Steps component.
+- CSS evaluation returned stepsOverflowY=auto, stepsBottom=794.171875, footerTop=876.5, overlap=false, stepText=true.
+
+SB03-NO-CHAT-TAG-SHORTCUT browser proof:
+- No chat UI/parser behavior was exercised or changed; tag editing remains in catalog management only.
+
+Known warnings: pre-existing EF Core relational assembly version warnings and an existing unused `profileAccessor` warning.

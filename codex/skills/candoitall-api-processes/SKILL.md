@@ -79,7 +79,9 @@ Before dispatching or staffing an agent, evaluate required role capabilities wit
 
 Runtime policy backs this matrix. `DefaultAgentToolInvocationPolicy` denies unknown tools and known tools without a registered policy classification, while process tools enforce `AgentProcessAccessMetadata` read/write scope.
 
-The internal MAF process tool surface currently exposes 23 direct tools. The HTTP API exposes 58 process routes. Launch plans, manager directives, direct messages, escalations, operator approvals, step-scoped artifact/assignment list/detail routes, artifact detail routes, and stop/rerun/recovery-style run operations are HTTP-only unless a typed tool is deliberately added with policy and approval coverage.
+The internal MAF process tool surface currently exposes 23 direct tools through `ProcessAgentRuntimeToolProvider`. If process tools are absent from a run, inspect the MAF runtime-provider attachment message for the provider key/display name, confirm the Processes module registered `IAgentRuntimeToolProvider`, and check `AgentProcessAccessMetadata` before assuming a runtime bug. Provider-owned receipts and traces may include `RuntimeToolProviderKey` and `RuntimeToolProviderName`; empty values mean older or non-provider-owned receipt data, not invalid proof.
+
+The HTTP API exposes 58 process routes. Launch plans, manager directives, direct messages, escalations, operator approvals, step-scoped artifact/assignment list/detail routes, artifact detail routes, and stop/rerun/recovery-style run operations are HTTP-only unless a typed tool is deliberately added with policy and approval coverage.
 
 ## Filtering Rules
 

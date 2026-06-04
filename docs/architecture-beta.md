@@ -1,6 +1,6 @@
 # CanDoItAll Architecture Beta
 
-This page describes the current CanDoItAll architecture as of 2026-06-03. It is source-grounded in the current `CanDoItAll.slnx`, `CanDoItAll.Web`, `CanDoItAll.Composition`, `CanDoItAll.Infrastructure`, `CanDoItAll.Modules.Processes`, `CanDoItAll.Modules.AgentFramework`, and `CanDoItAll.AgentFramework.*` projects.
+This page describes the current CanDoItAll architecture as of 2026-06-04. It is source-grounded in the current `CanDoItAll.slnx`, `CanDoItAll.Web`, `CanDoItAll.Composition`, `CanDoItAll.Infrastructure`, `CanDoItAll.Modules.Processes`, `CanDoItAll.Modules.AgentFramework`, and `CanDoItAll.AgentFramework.*` projects.
 
 ## Current Shape
 
@@ -20,6 +20,8 @@ Primary source references:
 - [`src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`](../src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs)
 - [`src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`](../src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs)
 - [`src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs)
+- [`src/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs`](../src/CanDoItAll.Modules.AgentFramework/AgentTools/ImageGenerationAgentRuntimeToolProvider.cs)
+- [`src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs`](../src/CanDoItAll.Modules.Workbench/AgentTools/ProjectStructureAgentRuntimeToolProvider.cs)
 - [`src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`](../src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs)
 - [`src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`](../src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs)
 
@@ -340,11 +342,21 @@ Tool approval is modeled in execution state. Process automation passes `AutoAppr
 
 ## Runtime Tool Provider Seam
 
-MAF no longer owns process tool construction directly. `CanDoItAll.AgentFramework.Tooling` defines `IAgentRuntimeToolProvider`; MAF resolves registered providers from DI, orders them deterministically, attaches their tools, and applies the same approval wrapping policy used by built-in tools. `CanDoItAll.Modules.Processes` registers `ProcessAgentRuntimeToolProvider` and keeps process-specific request handling beside `ProcessesService`, template services, and process access checks.
+MAF no longer owns first-party product tool construction directly. `CanDoItAll.AgentFramework.Tooling` defines `IAgentRuntimeToolProvider`; MAF resolves registered providers from DI, orders them deterministically, attaches their tools, records provider descriptors/metadata, and applies the same approval wrapping policy used by built-in tools.
+
+Current first-party runtime providers are owned by their product/module boundary:
+
+- `CanDoItAll.Modules.Processes` registers `ProcessAgentRuntimeToolProvider` and keeps process-specific request handling beside `ProcessesService`, template services, process access checks, and purpose-aware read/write exposure policy.
+- `CanDoItAll.Modules.Workbench` registers `ProjectStructureAgentRuntimeToolProvider` and owns project-structure tool construction instead of MAF.
+- `CanDoItAll.Modules.AgentFramework` registers `ImageGenerationAgentRuntimeToolProvider` and owns image-generation tool construction instead of MAF.
 
 This is a dependency-inversion seam, not a completed process-core extraction. The process dispatcher, process DTOs, artifact lineage, recovery, and template-pack behavior still live in `CanDoItAll.Modules.Processes`. A future process-core or driver-pack split must be handled as its own migration with parity, policy, and runtime smoke proof.
 
-When process tools are missing from an agent run, inspect runtime DI for `IEnumerable<IAgentRuntimeToolProvider>`, verify `ProcessAgentRuntimeToolProvider` is registered, check MAF progress for the registered-provider attachment message, and inspect `AgentProcessAccessMetadata` before changing runtime code. Do not fix missing tools by adding a direct `CanDoItAll.AgentFramework.Maf` reference to `CanDoItAll.Modules.Processes`.
+Provider ownership is observable. MAF progress logs include provider key/display name/tool count, `AgentToolInvocationTrace` can carry `RuntimeToolProviderKey` and `RuntimeToolProviderName`, and provider-owned workspace receipts can include the same optional fields. Empty provider ownership means unknown or pre-existing receipt data, not invalid evidence.
+
+When process tools are missing from an agent run, inspect runtime DI for `IEnumerable<IAgentRuntimeToolProvider>`, verify `ProcessAgentRuntimeToolProvider` is registered, check MAF progress for the registered-provider attachment message and provider key/display name, and inspect `AgentProcessAccessMetadata` before changing runtime code. Do not fix missing tools by adding a direct `CanDoItAll.AgentFramework.Maf` reference to `CanDoItAll.Modules.Processes`.
+
+MAF currently keeps direct module references only for `CanDoItAll.Modules.Security` and `CanDoItAll.Modules.Workspace`. Those are allowed while MAF still needs security/workspace runtime services directly; product tool ownership should continue moving through runtime providers instead of adding new direct product-module references.
 
 ## Persistence And Control Plane
 

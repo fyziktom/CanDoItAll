@@ -1,0 +1,15 @@
+# SB13 failing-first.txt
+
+Command:
+`git show HEAD:src/CanDoItAll.Modules.Processes/Components/ProcessWorkspaceRunsOperatorConsoleSection.razor | rg -n "processes-operator-artifact-matrix|processes-operator-dispatch-receipts|Recovery Advice|Manager Resolution"`
+
+ExitCode: 1
+
+Output:
+No matches.
+
+Interpretation:
+The pre-SB13 operator console did not expose a dedicated artifact matrix, dispatch receipt section, recovery advice section, or manager-resolution readback. This rejects the shallow path of claiming SB13 observability from the existing escalation/approval/timeline controls alone.
+
+Adversarial fixture correction:
+The first focused component-test attempt recorded an artifact with the editor-side expectation id and failed with `Artifact expectation was not found.` The final test instead reads the persisted runtime expectation id from `ListStepRunsAsync` before recording the artifact, proving the UI assertion is grounded in runtime state rather than editor assumptions.

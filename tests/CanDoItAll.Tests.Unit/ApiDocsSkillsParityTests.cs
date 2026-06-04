@@ -155,6 +155,31 @@ public sealed class ApiDocsSkillsParityTests
     }
 
     [Fact]
+    public void Runtime_provider_docs_describe_current_tool_ownership_and_diagnostics()
+    {
+        var rootReadme = ReadRepositoryFile("README.md");
+        var architecture = ReadRepositoryFile("docs", "architecture-beta.md");
+        var mafReadme = ReadRepositoryFile("src", "CanDoItAll.AgentFramework.Maf", "README.md");
+        var processesReadme = ReadRepositoryFile("src", "CanDoItAll.Modules.Processes", "README.md");
+        var processSkill = ReadRepositoryFile("codex", "skills", "candoitall-api-processes", "SKILL.md");
+
+        foreach (var text in new[] { rootReadme, architecture, mafReadme })
+        {
+            Assert.Contains("ProcessAgentRuntimeToolProvider", text, StringComparison.Ordinal);
+            Assert.Contains("ProjectStructureAgentRuntimeToolProvider", text, StringComparison.Ordinal);
+            Assert.Contains("ImageGenerationAgentRuntimeToolProvider", text, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("not a completed process-core extraction", architecture, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("CanDoItAll.Modules.Security", architecture, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Modules.Workspace", architecture, StringComparison.Ordinal);
+        Assert.Contains("RuntimeToolProviderKey", architecture, StringComparison.Ordinal);
+        Assert.Contains("RuntimeToolProviderName", processSkill, StringComparison.Ordinal);
+        Assert.Contains("23 direct process tools", processesReadme, StringComparison.Ordinal);
+        Assert.Contains("provider key/display name", processesReadme, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Skill_and_template_text_does_not_reintroduce_removed_mcp_assumptions()
     {
         var root = FindRepositoryRoot();

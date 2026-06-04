@@ -2665,10 +2665,10 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.NotEmpty(softwareDeliveryConformance);
         var releaseApprovalStepRun = Assert.Single(softwareDeliveryStepRuns, item => item.Title == "Approve first-pass release readiness");
         Assert.True(releaseApprovalStepRun.Dependencies.Count >= 3);
-        Assert.Equal(4, releaseApprovalStepRun.ArtifactInputCount);
+        Assert.Equal(6, releaseApprovalStepRun.ArtifactInputCount);
         Assert.Contains(releaseApprovalStepRun.ResponsibilityPorts, item => item.ResponsibilityKind == ProcessResponsibilityKind.Approver);
         var releaseApprovalDefinitionStep = Assert.Single(softwareDeliveryEditor.Steps, item => item.Key == "release-approval");
-        Assert.Equal(4, releaseApprovalDefinitionStep.ArtifactInputs.Count);
+        Assert.Equal(6, releaseApprovalDefinitionStep.ArtifactInputs.Count);
 
         var hotfixRun = Assert.Single(
             await processesService.ListRunsAsync(hotfixDefinition.Id, projectId),
@@ -4662,7 +4662,7 @@ public sealed class ProcessesServiceIntegrationTests
             Assert.Contains("browser_console_messages", contract, StringComparison.Ordinal);
             Assert.Contains("no active JavaScript/runtime errors", contract, StringComparison.Ordinal);
             Assert.Contains("cleanup receipt", contract, StringComparison.Ordinal);
-            Assert.Contains("project-structure evidence writeback", contract, StringComparison.Ordinal);
+            Assert.Contains("project-structure result writeback", contract, StringComparison.Ordinal);
             Assert.Contains("project_structure_asset_create", contract, StringComparison.Ordinal);
             Assert.Contains("project_structure_node_create", contract, StringComparison.Ordinal);
             Assert.Contains("do not select the Error branch as a completed outcome", contract, StringComparison.Ordinal);

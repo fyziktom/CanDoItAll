@@ -1,0 +1,35 @@
+Command:
+
+Codex in-app Browser navigation and DOM assertion against updated local proof build on port 5045, route `settings?tab=providers`.
+
+Browser target:
+
+local port `5045`, route `settings?tab=providers`
+
+Setup:
+
+- Started updated build from repo://.artifacts/test-bin/provider-pricing/CanDoItAll.Web.dll with a temporary local proof URL on port `5045`.
+- Verified the process listened on local port `5045`.
+- Navigated with the Codex in-app Browser.
+- Clicked the startup database `Continue` dialog when present.
+
+DOM assertion result:
+
+{
+  "url": "local proof app settings providers route",
+  "hasProviderEditor": true,
+  "hasPricingText": true,
+  "hasRefreshText": true,
+  "hasPricingRefreshTestId": false,
+  "hasEditablePriceInput": true
+}
+
+Screenshot:
+
+bundle://proof/SB01/browser/provider-pricing-refresh-desktop.png
+
+Cleanup:
+
+- Stopped the temporary proof app process.
+
+ExitCode: 0

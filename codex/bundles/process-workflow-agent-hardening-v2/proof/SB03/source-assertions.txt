@@ -1,0 +1,28 @@
+SB03 source assertions
+
+Opened before editing:
+- src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs
+- src/CanDoItAll.AgentFramework.Core/Execution/AgentFrameworkWorkspaceExecutionService.Usage.cs
+- src/CanDoItAll.AgentFramework.Models/Providers/ProviderPricingModels.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Costing.cs
+- src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowLlmComponentInvoker.cs
+- src/CanDoItAll.AgentFramework.Models/Providers/ProviderUsageModels.cs
+- OpenAI Responses API docs for usage, cached input tokens, reasoning tokens, total tokens, and usage-null response states.
+
+Implementation assertions:
+- src/CanDoItAll.AgentFramework.Core/Execution/ProviderUsageNormalization.cs:28 defines DefaultProviderUsageNormalizer behind IProviderUsageNormalizer.
+- src/CanDoItAll.AgentFramework.Core/Execution/ProviderUsageNormalization.cs:42 routes OpenAI and AzureOpenAI through provider-specific normalization.
+- src/CanDoItAll.AgentFramework.Core/Execution/ProviderUsageNormalization.cs:102 preserves usage-null as ProviderUsageObservationStatus.UsageUnavailable with zero cost-bearing tokens.
+- src/CanDoItAll.AgentFramework.Core/Execution/ProviderUsageNormalization.cs:118 reads cached input token details from OpenAI-style nested usage JSON.
+- src/CanDoItAll.AgentFramework.Core/Execution/ProviderUsageNormalization.cs:125 reads reasoning token details from OpenAI-style nested usage JSON.
+- src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs:778 routes MAF-created usage observations through DefaultProviderUsageNormalizer.
+- src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs:789 passes provider total token count into normalization.
+- src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs:794 preserves raw usage JSON in the normalized observation.
+- src/CanDoItAll.AgentFramework.Models/Providers/ProviderUsageReconciliationModels.cs:43 defines ProviderUsageReconciliationReporter.
+- tests/CanDoItAll.Tests.Unit/ProviderUsageNormalizationTests.cs:9 covers OpenAI cached/reasoning/provider-total normalization.
+- tests/CanDoItAll.Tests.Unit/ProviderUsageNormalizationTests.cs:58 covers usage-null normalization without invented tokens.
+- tests/CanDoItAll.Tests.Unit/ProviderUsageNormalizationTests.cs:95 covers matched, mismatch, unknown-internal, and external-only reconciliation rows.
+
+Documentation references:
+- Official OpenAI Responses API reference documents usage.input_tokens, usage.input_tokens_details.cached_tokens, usage.output_tokens, usage.output_tokens_details.reasoning_tokens, and usage.total_tokens.
+- Official OpenAI streaming response docs show usage can be null for some response states.

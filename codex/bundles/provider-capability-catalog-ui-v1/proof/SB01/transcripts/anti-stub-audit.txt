@@ -1,0 +1,5 @@
+Command: rg "TODO|NotImplemented|Providers4|Providers5|hard-coded provider count" changed provider files
+Exit code: 0
+
+SB01-PROVIDER-PARITY-TAGS anti-stub audit: no TODO or NotImplemented stubs were added in the changed provider files, and the UI does not hard-code the provider badge/list count.
+SB01-LOCAL-OLLAMA-OPENAI-DEFAULT anti-stub audit: no browser-only Local Ollama placeholder was added; the provider is seeded in catalog source.

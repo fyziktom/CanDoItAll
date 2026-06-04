@@ -1,0 +1,7 @@
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:753:    public void ProcessToolOperationAuthorizer_SB01_INV_001_denies_governed_step_with_missing_operation_contract(
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:775:        Assert.Contains("missing an operation contract", decision.Reason, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3117:    public async Task StartRunAsync_SB01_INV_001_applies_strict_lint_for_governed_live_runtime()
+tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:360:    public async Task Manifest_process_templates_SB08_INV_001_all_steps_declare_typed_operation_contracts()
+src\CanDoItAll.AgentFramework.Core\ToolPolicy\ProcessToolOperationAuthorizer.cs:34:                $"This governed step is missing an operation contract and cannot use tool '{context.ToolName}'. Required operation: {string.Join(" or ", requiredOperations)}.");
+src\CanDoItAll.Modules.Processes\Services\ProcessesService.Support.cs:417:            operatingMode == ProcessOperatingMode.GovernedLive ||
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:455:        var lintMode = ResolveEffectiveLintMode(request.LintMode, definition, publishedVersion.ContractMode, operatingMode);

@@ -303,7 +303,7 @@ public sealed partial class ProcessesService
                 .Where(item => item.StepDefinitionId == stepRun.StepDefinitionId)
                 .OrderBy(item => item.Title)
                 .ToListAsync(cancellationToken);
-            artifactExpectation = ResolveArtifactExpectation(stepArtifactExpectations, request.ArtifactKind, request.Title);
+            artifactExpectation = ResolveArtifactExpectation(stepArtifactExpectations, request.ArtifactKind, title);
         }
 
         var scopedArtifactExpectationId = artifactExpectation?.Id ?? request.ArtifactExpectationId;

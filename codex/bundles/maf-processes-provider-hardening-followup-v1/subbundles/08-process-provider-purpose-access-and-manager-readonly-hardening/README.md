@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: `Completed`
 
 ## Objective
 
@@ -16,14 +16,14 @@ Start using provider context purpose and tags for process tools so future manage
 
 ## Prerequisites
 
-`SB07` must be complete and its progression gate must have passed.
+- `SB07` must be complete and its progression gate must have passed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderContext.cs`
-- `src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderPurpose.cs`
-- `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
+- repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderContext.cs
+- repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderPurpose.cs
+- repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs
 
 ## Deliverables
 
@@ -34,11 +34,11 @@ Start using provider context purpose and tags for process tools so future manage
 
 ## Dependency Impact
 
-Critical foundation for downstream work.
+- Critical foundation for downstream work.
 
 ## Validation Depth
 
-This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
+- This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
 
 ## Implementation Steps
 
@@ -64,13 +64,13 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Acceptance Checklist
 
-- [ ] Source inventory for this slice is recorded.
-- [ ] Implementation is limited to this subbundle scope.
-- [ ] Tool parity/access/approval behavior is proven where applicable.
-- [ ] Static dependency scans are updated where applicable.
-- [ ] Targeted tests pass.
-- [ ] Full or relevant project build pass is recorded.
-- [ ] Execution report is updated.
+- [x] Source inventory for this slice is recorded.
+- [x] Implementation is limited to this subbundle scope.
+- [x] Tool parity/access/approval behavior is proven where applicable.
+- [x] Static dependency scans are updated where applicable.
+- [x] Targeted tests pass.
+- [x] Full or relevant project build pass is recorded.
+- [x] Execution report is updated.
 
 ## Proof Required
 
@@ -81,12 +81,21 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Browser Validation Logging
 
-N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
+- N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
 
 ## Progression Gate
 
-Purpose-aware behavior must be observable in tests, but existing process automation must not lose required mutation capability when explicitly permitted.
+- Purpose-aware behavior must be observable in tests, but existing process automation must not lose required mutation capability when explicitly permitted.
 
 ## Suggested Agent Prompt
 
 Implement SB08 only. Read this README, update the relevant source files, run the required proof, record transcripts, update the execution report, and stop at the progression gate before starting the next subbundle.
+
+## Completion Notes
+
+- Added explicit purpose policy in `ProcessAgentRuntimeToolProvider`.
+- Supported purposes now include `InteractiveChat`, `GovernedProcessAutomation`, `AutoApprovedNonInteractive`, and `A2AEndpoint`.
+- Process read tools are exposed only with process read access; process mutation tools are exposed only with explicit process write access.
+- Explicitly write-enabled automation still receives the exact 23-tool process inventory.
+- Proof manifest: `bundle://proof/SB08/manifest.md`.
+- Semantic invariants: `bundle://proof/SB08/semantic-invariants.md`.

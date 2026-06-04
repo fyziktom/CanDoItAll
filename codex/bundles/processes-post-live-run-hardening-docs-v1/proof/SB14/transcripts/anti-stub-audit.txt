@@ -1,0 +1,9 @@
+# SB14 anti-stub-audit.txt
+
+Command:
+`git diff --unified=0 -- Templates\Processes\seed-catalog\baseline-scenarios.json tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs | rg -n "TODO|NotImplemented|stub|fake|Tetris|Blazor|hard-code|hardcoded"`
+
+ExitCode: 1
+
+Output:
+No matches. Git emitted LF-to-CRLF working-copy warnings for the two changed files.

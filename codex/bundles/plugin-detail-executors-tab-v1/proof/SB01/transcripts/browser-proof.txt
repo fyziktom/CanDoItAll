@@ -1,0 +1,8 @@
+Command: Browser skill via node_repl against http://127.0.0.1:5187/plugins; continue database startup; open Executors tab; assert descriptor-loaded executor rows at 1600x900 and 390x844; save screenshots
+Desktop result: rowCount=2, hasDescriptorBadge=True, hasDescription=True, overflowCount=0, viewport=1600x900
+Narrow result: rowCount=2, hasTab=True, hasDescription=True, overflowCount=0, viewport=390x844
+Screenshots: bundle://proof/SB01/browser/plugins-executors-desktop.png; bundle://proof/SB01/browser/plugins-executors-narrow.png
+Route: /plugins
+ExitCode: 0
+Invariant ID: SB01-DYNAMIC-DESCRIPTOR
+Invariant ID: SB01-NO-EXECUTOR-EMPTY-STATE

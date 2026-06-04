@@ -1,0 +1,19 @@
+Command: historical transcript capture for tooling-build.txt
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06
+Invariant: SB06-INVARIANT-001
+TimestampUtc: 2026-06-04T06:50:50.1329433Z
+
+  Zjišťují se projekty, které se mají obnovit...
+  Všechny projekty jsou v aktuálním stavu pro obnovení.
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tooling\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tooling.dll
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:02.05
+ExitCode: 0
+

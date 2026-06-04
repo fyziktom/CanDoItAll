@@ -1,0 +1,3 @@
+SB06 removed-MCP assumption scan started: 2026-06-01T22:59:35.8559291-04:00
+PASS: No stale removed MCP-only assumptions found in Templates/Agents, Templates/Processes, or codex/skills.
+SB06 removed-MCP assumption scan completed: 2026-06-01T22:59:37.6279051-04:00

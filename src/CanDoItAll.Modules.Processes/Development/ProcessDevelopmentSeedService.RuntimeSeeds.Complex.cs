@@ -136,7 +136,8 @@ public sealed partial class ProcessDevelopmentSeedService
         string provenanceSummary,
         string allowedFutureUsageSummary,
         string reviewSummary,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool forceMarkdownPath = false)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -146,12 +147,17 @@ public sealed partial class ProcessDevelopmentSeedService
         var normalizedTitle = title.Trim();
         var artifactExpectationId = ResolveArtifactExpectationId(artifactOutputs, normalizedTitle);
         var artifacts = await processesService.ListArtifactsAsync(runId, cancellationToken);
-        var existingArtifact = artifacts.FirstOrDefault(item =>
-            artifactExpectationId.HasValue
-                ? item.ArtifactExpectationId == artifactExpectationId.Value
-                : string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
-                  item.ArtifactKind == artifactKind);
-        if (existingArtifact is not null)
+        var existingArtifacts = artifacts
+            .Where(item =>
+                artifactExpectationId.HasValue
+                    ? item.ArtifactExpectationId == artifactExpectationId.Value
+                    : string.Equals(item.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase) &&
+                      item.ArtifactKind == artifactKind)
+            .ToList();
+        var hasReusableExistingArtifact = existingArtifacts.Count > 0 &&
+            (!forceMarkdownPath ||
+             existingArtifacts.Any(item => item.ManagedStoragePath.EndsWith(".md", StringComparison.OrdinalIgnoreCase)));
+        if (hasReusableExistingArtifact)
         {
             return Result.Success();
         }
@@ -161,7 +167,8 @@ public sealed partial class ProcessDevelopmentSeedService
             normalizedTitle,
             provenanceSummary,
             allowedFutureUsageSummary,
-            reviewSummary);
+            reviewSummary,
+            forceMarkdownPath);
         await WriteSeedManagedArtifactAsync(
             managedStoragePath,
             normalizedTitle,
@@ -222,15 +229,16 @@ public sealed partial class ProcessDevelopmentSeedService
         string title,
         string provenanceSummary,
         string allowedFutureUsageSummary,
-        string reviewSummary)
+        string reviewSummary,
+        bool forceMarkdownPath = false)
     {
-        var extension = RequiresImageSeedArtifactPath(
-            title,
-            provenanceSummary,
-            allowedFutureUsageSummary,
-            reviewSummary)
-            ? ".svg"
-            : ".md";
+        var useImagePath = !forceMarkdownPath &&
+            RequiresImageSeedArtifactPath(
+                title,
+                provenanceSummary,
+                allowedFutureUsageSummary,
+                reviewSummary);
+        var extension = useImagePath ? ".svg" : ".md";
         return $"artifacts/baseline-seed/{runId:N}/{FileSafeSlugBuilder.Build(title)}{extension}";
     }
 

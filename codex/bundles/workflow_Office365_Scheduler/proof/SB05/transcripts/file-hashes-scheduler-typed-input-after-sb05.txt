@@ -1,0 +1,13 @@
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    11FD63FA4F279FAEB28238F406E659076987EBFBDFA5A9B11E9EF4588894A42C C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor
+SHA256    0626A7478DB68F0398F60D0CC19D0832FB0D3DECCFCA5F2E1AE0D34C1ED307CB C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor.css
+SHA256    16B826A2DAF0CCB85EBB93F5B636B88C012AFFEE3D20DF90E46E893618142A2C C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputOptionService.cs
+SHA256    2482C68B99EFD8158D24A2160EF1F74556E79EF70F9703B7F249FA4D056C30F4 C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModuleServiceCollectionExtensions.cs
+SHA256    3662EBBF2E7948B1A341A6C08748FF174845BA279C73D6E18045526FB3D190F5 C:\repositories\CanDoItAll\src\CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs
+SHA256    6B9C652E13D3988BD3E79C6AF78499626066D91099012142DB0F8FE7BA94C2C9 C:\repositories\CanDoItAll\src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs
+SHA256    64202282E41D2FB4A34D29E3F1F5EDE5D5588481179208C863F4268C227A8299 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs
+
+
+ExitCode: 0

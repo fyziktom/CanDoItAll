@@ -1,0 +1,10 @@
+SB08 source assertions
+
+- ProcessAgentRuntimeToolProvider now resolves an explicit purpose policy from AgentRuntimeToolProviderContext.Purpose.
+- Supported process-provider purposes are InteractiveChat, GovernedProcessAutomation, AutoApprovedNonInteractive, and A2AEndpoint.
+- Tool exposure is filtered at creation time: read tools require process read access; mutation tools require explicit process write access.
+- Explicit write access still returns the full 23-tool process inventory for process automation.
+- Read-only access returns read tools only, including A2AEndpoint manager-verification groundwork.
+- No-access agents receive no process tools, and unknown purposes receive no process tools.
+- Existing MAF zero-provider and provider-failure tests remain green.
+- No rendered UI route changed; browser validation is N/A.

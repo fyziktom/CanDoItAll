@@ -107,13 +107,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requiredToolNames.Add(ToolContractCatalog.WorkspaceWriteFile);
         }
 
-        if (RequiresProjectStructureWriteback(candidate))
+        var requiresProjectStructureWriteback = RequiresProjectStructureWriteback(candidate);
+        var requiresProjectStructureAssetWriteback = RequiresProjectStructureAssetWriteback(candidate);
+        if (requiresProjectStructureWriteback)
         {
             requiredToolNames.Add(AgentToolInvocationPolicyMetadata.ProjectStructureNodeCreate);
-            if (RequiresProjectStructureAssetWriteback(candidate))
-            {
-                requiredToolNames.Add(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate);
-            }
+        }
+
+        if (requiresProjectStructureAssetWriteback)
+        {
+            requiredToolNames.Add(AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate);
         }
 
         if (RequiresRuntimeCleanupCommand(candidate))
@@ -351,7 +354,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool RequiresProjectStructureAssetWriteback(DispatchCandidate candidate)
     {
-        var normalized = CollapsePromptWhitespace(string.Join(
+        var contractText = CollapsePromptWhitespace(string.Join(
                 ' ',
                 candidate.StepRun.Title,
                 candidate.StepDefinition.Title,
@@ -363,12 +366,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 string.Join(" ", candidate.ExpectedArtifacts.Select(item => item.Title)),
                 string.Join(" ", candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary))))
             .ToLowerInvariant();
+        var requiredToolReferences = RequiredToolNameRegex.Matches(contractText);
+        var hasExplicitAssetCreate = requiredToolReferences
+            .Any(match =>
+                string.Equals(
+                    NormalizeToolToken(match.Value),
+                    AgentToolInvocationPolicyMetadata.ProjectStructureAssetCreate,
+                    StringComparison.Ordinal) &&
+                !IsNegatedRequiredToolReference(contractText, match));
+        if (hasExplicitAssetCreate)
+        {
+            return true;
+        }
 
-        return normalized.Contains("project_structure_asset_create", StringComparison.Ordinal) ||
-               (normalized.Contains("project-structure", StringComparison.Ordinal) &&
-                normalized.Contains("asset", StringComparison.Ordinal) &&
-                (normalized.Contains("writeback", StringComparison.Ordinal) ||
-                 normalized.Contains("write back", StringComparison.Ordinal)));
+        var heuristicText = RequiredToolNameRegex.Replace(
+            contractText,
+            match => IsNegatedRequiredToolReference(contractText, match) ? " " : match.Value);
+        return heuristicText.Contains("project-structure", StringComparison.Ordinal) &&
+               heuristicText.Contains("asset", StringComparison.Ordinal) &&
+               (heuristicText.Contains("writeback", StringComparison.Ordinal) ||
+                heuristicText.Contains("write back", StringComparison.Ordinal));
     }
 
     private static bool ContainsProjectStructureResultWritebackSignal(string? value)
@@ -522,7 +539,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         if (toolName is "project_structure_node_create" or "project_structure_node_update" or "project_structure_asset_create")
         {
-            return AllowsProjectStructureWriteback(candidate.StepDefinition);
+            return true;
         }
 
         if (!toolName.StartsWith("browser_", StringComparison.Ordinal))

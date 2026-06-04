@@ -278,7 +278,12 @@ public sealed record ToolExecutionReceiptRecord(
     string WorkingDirectory,
     string ExitSummary,
     DateTimeOffset StartedAtUtc,
-    DateTimeOffset CompletedAtUtc);
+    DateTimeOffset CompletedAtUtc)
+{
+    public string RuntimeToolProviderKey { get; init; } = string.Empty;
+
+    public string RuntimeToolProviderName { get; init; } = string.Empty;
+}
 
 public sealed record ExecutionWorkflowCheckpointRecord(
     Guid Id,

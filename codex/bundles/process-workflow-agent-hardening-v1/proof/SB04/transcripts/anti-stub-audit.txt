@@ -1,0 +1,11 @@
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:494:        var projectDirectory = Path.Combine(workspaceRoot, "apps", "TetrisGame");
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:497:            Path.Combine(projectDirectory, "TetrisGame.csproj"),
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:505:                "apps/TetrisGame/TetrisGame.csproj",
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:563:            var result = await service.DotnetNew("blazorwasm", "TetrisGame", "apps");
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:568:            Assert.Equal(["new", "blazorwasm", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:570:            Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:588:            var result = await service.DotnetNew("blazorwasm-empty", "TetrisGame", "apps");
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:593:            Assert.Equal(["new", "blazorwasm-empty", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+tests\CanDoItAll.Tests.Unit\WorkspaceCommandExecutionServiceTests.cs:595:            Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1982:                ["path"] = $"{productRoot}/TetrisGame.Core/TetrisGame.Core.csproj",
+tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:2047:                ["targetPath"] = $"{productRoot}/oldruns/codex-before-process-rerun/src/TetrisGame/TetrisGame.csproj",

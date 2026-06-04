@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: `Completed`
 
 ## Objective
 
@@ -16,14 +16,14 @@ Harden the new IAgentRuntimeToolProvider seam so providers expose stable identit
 
 ## Prerequisites
 
-`SB01` must be complete and its progression gate must have passed.
+- `SB01` must be complete and its progression gate must have passed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
-- `src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderContext.cs`
-- `src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderPurpose.cs`
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
+- repo://src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs
+- repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderContext.cs
+- repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderPurpose.cs
+- repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs
 
 ## Deliverables
 
@@ -34,11 +34,11 @@ Harden the new IAgentRuntimeToolProvider seam so providers expose stable identit
 
 ## Dependency Impact
 
-Critical foundation for downstream work.
+- Critical foundation for downstream work.
 
 ## Validation Depth
 
-This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
+- This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
 
 ## Implementation Steps
 
@@ -64,13 +64,13 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Acceptance Checklist
 
-- [ ] Source inventory for this slice is recorded.
-- [ ] Implementation is limited to this subbundle scope.
-- [ ] Tool parity/access/approval behavior is proven where applicable.
-- [ ] Static dependency scans are updated where applicable.
-- [ ] Targeted tests pass.
-- [ ] Full or relevant project build pass is recorded.
-- [ ] Execution report is updated.
+- [x] Source inventory for this slice is recorded.
+- [x] Implementation is limited to this subbundle scope.
+- [x] Tool parity/access/approval behavior is proven where applicable.
+- [x] Static dependency scans are updated where applicable.
+- [x] Targeted tests pass.
+- [x] Full or relevant project build pass is recorded.
+- [x] Execution report is updated.
 
 ## Proof Required
 
@@ -79,11 +79,11 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Browser Validation Logging
 
-N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
+- N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
 
 ## Progression Gate
 
-A provider without metadata must still work through an adapter during migration, but new first-party providers must declare descriptor metadata and tests must fail on duplicate provider keys.
+- A provider without metadata must still work through an adapter during migration, but new first-party providers must declare descriptor metadata and tests must fail on duplicate provider keys.
 
 ## Suggested Agent Prompt
 

@@ -1,0 +1,129 @@
+- generic [ref=e175] [box=0,0,1440,1000]:
+  - complementary [ref=e176] [box=16,8,76,984]:
+    - generic [ref=e177] [box=27,19,54,962]:
+      - generic [ref=e178] [box=27,19,54,40]:
+        - generic [ref=e179] [box=27,19,10,40]:
+          - generic [ref=e180] [box=12,19,40,40]: CD
+          - generic [ref=e181] [box=32,39,1,1]: CanDoItAll local delivery workbench
+        - button "Expand navigation" [ref=e182] [box=45,21,36,36]:
+          - generic [ref=e183] [box=53,29,20,20]: chevron_right
+      - navigation "Primary navigation" [ref=e184] [box=27,67,54,803]:
+        - button "Dashboard" [ref=e186] [box=27,71,44,44]:
+          - generic [ref=e188] [box=39,83,20,20]: dashboard
+        - button "Projects" [ref=e190] [box=27,121,44,44]:
+          - generic [ref=e192] [box=39,133,20,20]: folder_open
+        - button "Processes" [ref=e194] [box=27,171,44,44]:
+          - generic [ref=e196] [box=39,183,20,20]: account_tree
+        - button "Live Processes" [ref=e198] [box=27,221,44,44]:
+          - generic [ref=e200] [box=39,233,20,20]: monitor_heart
+        - button "Collaboration" [ref=e202] [box=27,271,44,44]:
+          - generic [ref=e204] [box=39,283,20,20]: forum
+        - button "CRM / HR" [ref=e206] [box=27,321,44,44]:
+          - generic [ref=e208] [box=39,333,20,20]: groups
+        - button "Agents" [ref=e210] [box=27,371,44,44]:
+          - generic [ref=e212] [box=39,383,20,20]: smart_toy
+        - button "Workflows" [ref=e214] [box=27,421,44,44]:
+          - generic [ref=e216] [box=39,433,20,20]: account_tree
+        - button "Cognitive Memory" [ref=e218] [box=27,471,44,44]:
+          - generic [ref=e220] [box=39,483,20,20]: psychology
+        - button "Resources" [ref=e222] [box=27,521,44,44]:
+          - generic [ref=e224] [box=39,533,20,20]: inventory_2
+        - button "Plugins" [ref=e226] [box=27,571,44,44]:
+          - generic [ref=e228] [box=39,583,20,20]: extension
+        - button "Prompt Gallery" [ref=e230] [box=27,621,44,44]:
+          - generic [ref=e232] [box=39,633,20,20]: library_books
+        - button "Prompt Factory" [ref=e234] [box=27,671,44,44]:
+          - generic [ref=e236] [box=39,683,20,20]: construction
+        - button "Validation Center" [ref=e238] [box=27,721,44,44]:
+          - generic [ref=e240] [box=39,733,20,20]: fact_check
+        - button "More pages" [ref=e242] [box=32,771,44,44]:
+          - generic [ref=e244] [box=44,783,20,20]: expand_less
+      - generic [ref=e246] [box=27,887,54,94]:
+        - button "Settings" [ref=e248] [box=27,887,54,44]:
+          - generic [ref=e250] [box=44,899,20,20]: settings
+          - generic [ref=e251] [box=54,909,1,1]: Settings
+        - button "Switch Database" [ref=e253] [box=27,937,54,44]:
+          - generic [ref=e255] [box=44,949,20,20]: storage
+          - generic [ref=e256] [box=54,959,1,1]: Switch Database
+  - main [ref=e257] [box=100,8,1324,984]:
+    - generic [ref=e258] [box=100,8,1324,34]:
+      - generic [ref=e262] [box=104,8,795,30]:
+        - button "Dashboard" [ref=e264] [box=113,13,85,20]:
+          - generic [ref=e265] [box=113,15,59,16]: Dashboard
+          - generic [ref=e267] [box=178,13,20,20]: push_pin
+        - button "Workflows" [ref=e269] [box=222,15,58,16]:
+          - generic [ref=e270] [box=222,15,58,16]: Workflows
+      - generic [ref=e272] [box=919,12,505,26]:
+        - generic [ref=e273] [box=919,12,222,26]:
+          - generic [ref=e274] [box=930,18,136,13]: Delivery Workspace
+          - generic [ref=e275] [box=1072,17,58,16]: Workflows
+        - generic [ref=e276] [box=1149,12,117,26]: Interactive Server
+        - generic [ref=e277] [box=1274,12,86,26]: Live items 0
+        - generic [ref=e278] [box=1368,12,56,26]: Tabs 2
+    - generic [ref=e281] [box=121,71,1282,338]:
+      - generic [ref=e283] [box=121,71,1267,36]:
+        - generic [ref=e284] [box=121,75,773,28]:
+          - generic [ref=e285] [box=121,75,221,28]:
+            - paragraph [ref=e286] [box=121,80,119,13]: AgentFramework
+            - heading "Workflows" [active] [level=1] [ref=e287] [box=250,75,92,28]
+          - generic [ref=e288] [box=354,78,540,22]:
+            - generic [ref=e291] [box=354,78,96,22]: 27 definitions
+            - generic [ref=e294] [box=458,78,124,22]: "- LLM components"
+            - generic [ref=e297] [box=590,78,56,22]: 0 runs
+            - generic [ref=e300] [box=654,78,109,22]: 0 pending input
+            - generic [ref=e303] [box=771,78,123,22]: InProcess backend
+        - generic [ref=e304] [box=1264,71,124,36]:
+          - button "Refresh" [ref=e306] [box=1264,71,36,36]:
+            - generic [ref=e307] [box=1272,79,20,20]: refresh
+            - generic [ref=e308] [box=1282,89,1,1]: refresh
+          - button "Create starter" [ref=e310] [box=1308,71,36,36]:
+            - generic [ref=e311] [box=1316,79,20,20]: add
+            - generic [ref=e312] [box=1326,89,1,1]: add
+          - button "Open agents" [ref=e314] [box=1352,71,36,36]:
+            - generic [ref=e315] [box=1360,79,20,20]: support_agent
+            - generic [ref=e316] [box=1370,89,1,1]: support agent
+      - generic [ref=e318] [box=121,123,1267,286]:
+        - tablist "Workflow workspace tabs" [ref=e319] [box=121,123,1267,47]:
+          - tab "Dashboard" [selected] [ref=e320] [box=125,124,139,46]:
+            - generic [ref=e321] [box=142,137,20,20]: dashboard
+            - generic [ref=e322] [box=170,135,77,24]: Dashboard
+          - tab "Workflows 27" [ref=e323] [box=272,123,174,46]:
+            - generic [ref=e324] [box=289,136,20,20]: list_alt
+            - generic [ref=e325] [box=317,134,74,24]: Workflows
+            - generic [ref=e326] [box=399,137,31,19]: "27"
+          - tab "Editor" [ref=e327] [box=454,123,104,46]:
+            - generic [ref=e328] [box=471,136,20,20]: edit_square
+            - generic [ref=e329] [box=499,134,42,24]: Editor
+          - tab "Templates -" [ref=e330] [box=566,123,165,46]:
+            - generic [ref=e331] [box=583,136,20,20]: content_copy
+            - generic [ref=e332] [box=611,134,71,24]: Templates
+            - generic [ref=e333] [box=690,137,24,19]: "-"
+          - tab "History 0" [ref=e334] [box=739,123,144,46]:
+            - generic [ref=e335] [box=756,136,20,20]: history
+            - generic [ref=e336] [box=784,134,50,24]: History
+            - generic [ref=e337] [box=842,137,24,19]: "0"
+          - tab "Analytics" [ref=e338] [box=891,123,125,46]:
+            - generic [ref=e339] [box=908,136,20,20]: query_stats
+            - generic [ref=e340] [box=936,134,63,24]: Analytics
+        - tabpanel "Dashboard" [ref=e342] [box=121,169,1267,240]:
+          - generic [ref=e343] [box=138,186,1233,206]:
+            - generic [ref=e344] [box=138,186,730,206]:
+              - generic [ref=e345] [box=159,207,688,77]:
+                - generic [ref=e346] [box=159,207,688,43]:
+                  - paragraph [ref=e347] [box=159,207,688,15]: Live dashboard
+                  - 'heading "Example: Approval Gated HTTP Action" [level=2] [ref=e348] [box=159,226,688,24]'
+                - generic [ref=e349] [box=159,258,688,26]: No run selected
+              - paragraph [ref=e350] [box=159,284,688,45]: "Requires explicit workflow approval before a bounded HTTP action can run. Managed workflow example seed: 2026-05-office365-email-watch-schema-v1."
+              - generic [ref=e351] [box=159,345,688,26]:
+                - generic [ref=e352] [box=159,345,92,26]: Status Active
+                - generic [ref=e353] [box=259,345,123,26]: Backend InProcess
+                - generic [ref=e354] [box=390,345,73,26]: 4 node(s)
+                - generic [ref=e355] [box=471,345,72,26]: 3 edge(s)
+            - generic [ref=e356] [box=884,186,487,206]:
+              - paragraph [ref=e357] [box=905,207,445,15]: Activity
+              - heading "Current signals" [level=2] [ref=e358] [box=905,226,445,24]
+              - generic [ref=e359] [box=905,266,445,60]:
+                - generic [ref=e360] [box=905,266,106,26]: Validation Valid
+                - generic [ref=e361] [box=1020,266,109,26]: 0 pending input
+                - generic [ref=e362] [box=1137,266,84,26]: 0 artifact(s)
+                - generic [ref=e363] [box=905,300,123,26]: Backend InProcess

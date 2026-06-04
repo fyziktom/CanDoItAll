@@ -1,0 +1,421 @@
+{
+  "definition": {
+    "id": "ec134686-8cb2-49ac-b20f-bffcd04f8ff1",
+    "versionId": "790a4fa5-6648-47c1-bf8b-368fdebe67a8",
+    "name": "Example: Office365 Category Email Summary To Project",
+    "description": "Downloads a Microsoft 365 mailbox message in a configured Outlook category, summarizes it, stores the markdown result under the selected project-structure node, and moves the processed category. Managed workflow example seed: 2026-05-office365-email-watch-schema-v1.",
+    "status": 1,
+    "graph": {
+      "startNodeId": "start",
+      "nodes": [
+        {
+          "id": "start",
+          "kind": 0,
+          "name": "Start",
+          "ports": [
+            {
+              "id": "workflow:output",
+              "name": "Output",
+              "direction": 1,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            }
+          ],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Accept the workflow input payload.",
+            "inputShape": null,
+            "resultShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 80,
+          "canvasY": 220
+        },
+        {
+          "id": "download-office365",
+          "kind": 4,
+          "name": "Download Office365 category",
+          "ports": [
+            {
+              "id": "workflow:input",
+              "name": "Input",
+              "direction": 0,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            },
+            {
+              "id": "workflow:output",
+              "name": "Output",
+              "direction": 1,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            }
+          ],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Download a bounded Microsoft Graph message batch from the configured OAuth connection and Outlook category.",
+            "inputShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "resultShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "executorId": "office365.messages-by-category",
+            "executorSettingsJson": "{\"connectionId\":\"\",\"category\":\"CanDoItAllSummaryTest\",\"processedCategory\":\"CanDoItAllSummaryTestProcessed\",\"maxMessages\":1}",
+            "executionPolicy": {
+              "timeoutSeconds": 90,
+              "maxRetryAttempts": 1,
+              "retryDelayMilliseconds": 250,
+              "captureOutputArtifact": true
+            }
+          },
+          "canvasX": 340,
+          "canvasY": 220
+        },
+        {
+          "id": "summarize-office365",
+          "kind": 1,
+          "name": "Summarize Office365 batch",
+          "ports": [
+            {
+              "id": "workflow:input",
+              "name": "Input",
+              "direction": 0,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            },
+            {
+              "id": "workflow:output",
+              "name": "Output",
+              "direction": 1,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            }
+          ],
+          "settings": {
+            "componentId": "fcd8cf77-4ce1-434b-949c-045ed24c079c",
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Run the prepared LLM component and return the strict JSON contract.",
+            "inputShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "resultShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 620,
+          "canvasY": 220
+        },
+        {
+          "id": "store-office365-summary",
+          "kind": 4,
+          "name": "Store Office365 summary",
+          "ports": [
+            {
+              "id": "workflow:input",
+              "name": "Input",
+              "direction": 0,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            },
+            {
+              "id": "workflow:output",
+              "name": "Output",
+              "direction": 1,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            }
+          ],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Create a markdown asset in the selected project structure from the LLM summary payload.",
+            "inputShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "resultShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "executorId": "project-structure",
+            "executorSettingsJson": "{\"operation\":\"CreateAsset\",\"projectIdJsonPath\":\"$.projectId\",\"nodeIdJsonPath\":\"$.nodeId\",\"title\":\"Office365 category email summary\",\"assetKind\":\"md\",\"contentFromInput\":true,\"includeInputPayload\":true,\"contentType\":\"text/markdown\"}",
+            "executionPolicy": {
+              "timeoutSeconds": 90,
+              "maxRetryAttempts": 1,
+              "retryDelayMilliseconds": 250,
+              "captureOutputArtifact": true
+            }
+          },
+          "canvasX": 920,
+          "canvasY": 220
+        },
+        {
+          "id": "mark-office365-processed",
+          "kind": 4,
+          "name": "Mark Office365 processed",
+          "ports": [
+            {
+              "id": "workflow:input",
+              "name": "Input",
+              "direction": 0,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            },
+            {
+              "id": "workflow:output",
+              "name": "Output",
+              "direction": 1,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            }
+          ],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Ensure the processed Outlook category exists, add it to the message, and remove the source category after the summary asset is stored.",
+            "inputShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "resultShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "executorId": "office365.mark-message-processed",
+            "executorSettingsJson": "{\"connectionId\":\"\",\"sourceCategory\":\"CanDoItAllSummaryTest\",\"processedCategory\":\"CanDoItAllSummaryTestProcessed\",\"messageIdJsonPath\":\"$.inputPayload.runContext.office365Processing.messageIds[0]\"}",
+            "executionPolicy": {
+              "timeoutSeconds": 90,
+              "maxRetryAttempts": 1,
+              "retryDelayMilliseconds": 250,
+              "captureOutputArtifact": true
+            }
+          },
+          "canvasX": 1210,
+          "canvasY": 220
+        },
+        {
+          "id": "end",
+          "kind": 9,
+          "name": "End",
+          "ports": [
+            {
+              "id": "workflow:input",
+              "name": "Input",
+              "direction": 0,
+              "shape": {
+                "kind": 1,
+                "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+                "description": "Workflow JSON payload"
+              },
+              "required": true
+            }
+          ],
+          "settings": {
+            "componentId": null,
+            "agentId": null,
+            "subworkflowId": null,
+            "externalRequestKind": null,
+            "instructions": "Return the final workflow payload.",
+            "inputShape": {
+              "kind": 1,
+              "schemaJson": "{\"type\":\"object\",\"additionalProperties\":true}",
+              "description": "Workflow JSON payload"
+            },
+            "resultShape": null,
+            "executorId": null,
+            "executorSettingsJson": "",
+            "executionPolicy": null
+          },
+          "canvasX": 1500,
+          "canvasY": 220
+        }
+      ],
+      "edges": [
+        {
+          "id": "start-to-download-office365",
+          "sourceNodeId": "start",
+          "sourcePortId": "workflow:output",
+          "targetNodeId": "download-office365",
+          "targetPortId": "workflow:input",
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        },
+        {
+          "id": "download-office365-to-summarize-office365",
+          "sourceNodeId": "download-office365",
+          "sourcePortId": "workflow:output",
+          "targetNodeId": "summarize-office365",
+          "targetPortId": "workflow:input",
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        },
+        {
+          "id": "summarize-office365-to-store-office365-summary",
+          "sourceNodeId": "summarize-office365",
+          "sourcePortId": "workflow:output",
+          "targetNodeId": "store-office365-summary",
+          "targetPortId": "workflow:input",
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        },
+        {
+          "id": "store-office365-summary-to-mark-office365-processed",
+          "sourceNodeId": "store-office365-summary",
+          "sourcePortId": "workflow:output",
+          "targetNodeId": "mark-office365-processed",
+          "targetPortId": "workflow:input",
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        },
+        {
+          "id": "mark-office365-processed-to-end",
+          "sourceNodeId": "mark-office365-processed",
+          "sourcePortId": "workflow:output",
+          "targetNodeId": "end",
+          "targetPortId": "workflow:input",
+          "kind": 0,
+          "conditionExpression": "",
+          "routing": {
+            "kind": 0,
+            "label": "",
+            "jsonPath": "",
+            "operator": 0,
+            "expectedValueJson": "",
+            "expectedValueKind": 4,
+            "caseSensitive": false,
+            "fanOutTargetIndex": null,
+            "routingLanguage": "built-in-json-v1"
+          }
+        }
+      ]
+    },
+    "runtimePolicy": {
+      "preferredBackend": 0,
+      "allowInProcessPreviewRuns": true,
+      "requireDurableProductionRuns": false,
+      "exposeAzureFunctionsStatusEndpoint": false,
+      "exposeAzureFunctionsMcpTool": false
+    },
+    "createdAtUtc": "2026-05-31T20:22:21.4059955-04:00",
+    "updatedAtUtc": "2026-05-31T20:22:21.4059955-04:00",
+    "inputParameters": []
+  },
+  "validation": {
+    "issues": [],
+    "succeeded": true
+  }
+}

@@ -1,6 +1,14 @@
 # Assumptions And Risks
 
+## Working Assumptions
+
+- The `maf-processes-refactor` branch remains the implementation branch for this bundle.
+- The later process-core extraction is explicitly out of scope for this bundle.
+
+
 ## Critical Path Risks
+
+- Critical risks are tracked in the table below and must be rechecked at each refactor checkpoint.
 
 | Risk | Impact | Mitigation |
 | --- | --- | --- |

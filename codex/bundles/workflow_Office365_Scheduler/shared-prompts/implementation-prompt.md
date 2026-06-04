@@ -1,0 +1,1 @@
+Implement the selected subbundle only. Start by reading its README and the current branch state. Make the smallest correct production-quality changes. Add failing-first tests when the subbundle asks for them. Keep source-code comments in English. Update the execution report and proof manifest before stopping.

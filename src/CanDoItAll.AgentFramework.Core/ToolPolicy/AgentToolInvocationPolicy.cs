@@ -53,7 +53,12 @@ public sealed record AgentToolInvocationTrace(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset? CompletedAtUtc,
     bool Succeeded,
-    string FailureMessage);
+    string FailureMessage)
+{
+    public string RuntimeToolProviderKey { get; init; } = string.Empty;
+
+    public string RuntimeToolProviderName { get; init; } = string.Empty;
+}
 
 public sealed record AgentToolPolicyMetadata(
     string Name,

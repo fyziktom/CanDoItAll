@@ -1,0 +1,27 @@
+# SB15 Anti-Stub Audit
+
+Command:
+
+```powershell
+git diff --unified=0 -- codex\bundles\processes-post-live-run-hardening-docs-v1\scripts\validation-commands.md | rg -n "TODO|NotImplemented|stub|fake|Tetris|Blazor|hard-code|hardcoded"
+```
+
+Exit code: 1
+
+Output:
+
+```text
+warning: in the working copy of 'codex/bundles/processes-post-live-run-hardening-docs-v1/scripts/validation-commands.md', LF will be replaced by CRLF the next time Git touches it
+```
+
+Result: no TODO, NotImplemented, stub, fake, Tetris, Blazor, hard-code, or hardcoded markers were found in the SB15 diff. The only output was Git's line-ending warning.
+
+Diff hygiene command:
+
+```powershell
+git diff --check -- codex\bundles\processes-post-live-run-hardening-docs-v1\scripts\validation-commands.md
+```
+
+Exit code: 0
+
+Result: no whitespace errors; Git emitted the same LF-to-CRLF working-copy warning.

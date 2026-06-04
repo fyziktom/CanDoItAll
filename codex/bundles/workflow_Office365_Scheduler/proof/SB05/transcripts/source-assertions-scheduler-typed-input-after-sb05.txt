@@ -1,0 +1,36 @@
+
+Pattern: interface ISchedulerWorkflowInputOptionService
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputOptionService.cs:18:public interface ISchedulerWorkflowInputOptionService
+PatternExitCode: 0
+Pattern: interface ISchedulerWorkflowInputOptionProvider
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerWorkflowInputOptionService.cs:9:public interface ISchedulerWorkflowInputOptionProvider
+PatternExitCode: 0
+Pattern: Office365ConnectionSchedulerWorkflowInputOptionProvider
+src/CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs:18:        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerWorkflowInputOptionProvider, Office365ConnectionSchedulerWorkflowInputOptionProvider>());
+src/CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs:100:internal sealed class Office365ConnectionSchedulerWorkflowInputOptionProvider(
+PatternExitCode: 0
+Pattern: CrmContactEmailSchedulerWorkflowInputOptionProvider
+src/CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs:15:        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerWorkflowInputOptionProvider, CrmContactEmailSchedulerWorkflowInputOptionProvider>());
+src/CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs:23:internal sealed class CrmContactEmailSchedulerWorkflowInputOptionProvider(
+PatternExitCode: 0
+Pattern: ProjectStructureNodeSchedulerWorkflowInputOptionProvider
+src/CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs:17:        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulerWorkflowInputOptionProvider, ProjectStructureNodeSchedulerWorkflowInputOptionProvider>());
+src/CanDoItAll.Composition\SchedulerPlannerWorkflowInputOptionProviders.cs:62:internal sealed class ProjectStructureNodeSchedulerWorkflowInputOptionProvider(
+PatternExitCode: 0
+Pattern: scheduler-typed-inputs
+src/CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:214:                                    <section class="scheduler-workflow-input" data-testid="scheduler-typed-inputs">
+tests/CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:161:        cut.WaitForElement("[data-testid='scheduler-typed-inputs']");
+tests/CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:244:        cut.WaitForElement("[data-testid='scheduler-typed-inputs']");
+PatternExitCode: 0
+Pattern: scheduler-input-emailAddress
+tests/CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:168:        cut.Find("[data-testid='scheduler-input-emailAddress']").Change("ada@example.com");
+tests/CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:201:            Assert.Equal("manual@example.com", cut.Find("[data-testid='scheduler-input-emailAddress']").GetAttribute("value"));
+PatternExitCode: 0
+Pattern: Every 2 hours
+src/CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:175:                                    <Button Text="Every 2 hours"
+PatternExitCode: 0
+Pattern: 0 0 0/2 ? * *
+src/CanDoItAll.Modules.SchedulerPlanner\Pages\SchedulerPlannerPage.razor:737:            SchedulerCronPreset.EveryTwoHours => "0 0 0/2 ? * *",
+tests/CanDoItAll.Tests.Components\SchedulerPlannerPageTests.cs:182:            Assert.Contains("0 0 0/2 ? * *", cut.Markup);
+PatternExitCode: 0
+ExitCode: 0

@@ -1,0 +1,17 @@
+Command: dotnet build C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\plant-watering-planner --no-restore
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+  plant-watering-planner -> C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\plant-watering-planner\bin\Debug\net10.0\plant-watering-planner.dll
+  plant-watering-planner (Blazor output) -> C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\plant-watering-planner\bin\Debug\net10.0\wwwroot
+
+Vytváření sestavení bylo úspěšně dokončeno.
+    0 upozornění
+    Počet chyb: 0
+
+Uplynulý čas 00:00:05.09
+
+
+STDERR:
+

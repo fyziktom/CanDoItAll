@@ -1,0 +1,34 @@
+# SB13 browser-validation.txt
+
+Server:
+- Started a fresh web app instance from `artifacts\codex-sb13-components\CanDoItAll.Web.dll`.
+- URL: `http://127.0.0.1:51313`
+- Content root: `src\CanDoItAll.Web`
+- Existing port `5032` was not reused because it was started before SB13 edits.
+
+Data setup:
+- Started process run `dabb14ef-8053-48db-a83d-ca709858565a` for definition `840687f5-249b-4b79-9752-0bd17d4d6d7e`.
+- Route validated: `http://127.0.0.1:51313/processes?processId=840687f5-249b-4b79-9752-0bd17d4d6d7e&runId=dabb14ef-8053-48db-a83d-ca709858565a`
+
+Browser assertions:
+- `processes-operator-control-section`: 1
+- `processes-operator-readback`: 1
+- `processes-operator-artifact-matrix`: 1
+- `processes-operator-dispatch-receipts`: 1
+- `processes-invariant-diagnostics`: 1
+- `processes-attempt-timeline`: 1
+
+Visible text confirmed:
+- `Recovery Advice`
+- `Manager Resolution`
+- `Artifact Matrix`
+- `Dispatch Receipts`
+- `DefaultManager`
+- `dispatch-run-automation`
+- `start-run`
+
+Console check:
+- Browser error log entries: `[]`
+
+Screenshot:
+- `proof/SB13/browser/operator-console-control-tab.png`

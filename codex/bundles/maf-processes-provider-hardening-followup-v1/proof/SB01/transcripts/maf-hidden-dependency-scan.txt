@@ -1,0 +1,8 @@
+Command: rg -n 'CanDoItAll\.Modules\.Processes|ProcessAgentRuntimeToolProvider|MafAgentRuntime\.ProcessTools|ProcessToolBuilder|CreateProcessToolBuilder' src/CanDoItAll.AgentFramework.Maf -g '*.cs' -g '*.csproj'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB01
+TimestampUtc: 2026-06-04T01:32:15.5900803Z
+ExitCode: 0
+---- Output ----
+SB01-INVARIANT-001
+No hidden MAF production code/project dependency markers found.

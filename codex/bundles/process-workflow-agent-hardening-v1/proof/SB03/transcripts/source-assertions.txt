@@ -1,0 +1,216 @@
+src\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:188:        foreach (var observation in document.ProviderUsageObservations.Where(item => item.ExecutionRunId.HasValue))
+src\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:203:        foreach (var observation in document.ProviderUsageObservations.Where(item => item.ChatSessionId.HasValue))
+src\CanDoItAll.AgentFramework.Persistence\Validation\SandboxWorkspaceDocumentInvariantValidator.cs:271:            document.ProviderUsageObservations
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceStore.cs:753:            detail.UsageObservations
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:88:            UsageObservations = (await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(layout.RunUsageRoot(executionRunId), cancellationToken))
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:138:            previousDetail?.UsageObservations ?? [],
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:139:            normalizedDetail.UsageObservations,
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:165:            UsageObservationCount: currentIndex.UsageObservationCount + normalizedDetail.UsageObservations.Count - (previousDetail?.UsageObservations.Count ?? 0));
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:197:        var previousUsageByRun = GroupByRunId(previousState.ProviderUsageObservations, item => item.ExecutionRunId ?? Guid.Empty);
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:198:        var usageByRun = GroupByRunId(executionState.ProviderUsageObservations, item => item.ExecutionRunId ?? Guid.Empty);
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:316:            UsageObservationCount: executionState.ProviderUsageObservations.Count);
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:349:        var usageObservations = new List<ProviderUsageObservation>();
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:368:                usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(Path.Combine(runDirectory, "usage"), cancellationToken));
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:378:        usageObservations.AddRange(await jsonStore.LoadRecordsFromDirectoryAsync<ProviderUsageObservation>(layout.OrphanUsageRoot, cancellationToken));
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:395:            ProviderUsageObservations = usageObservations,
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:410:        IReadOnlyList<ProviderUsageObservation> previousUsageObservations,
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:411:        IReadOnlyList<ProviderUsageObservation> usageObservations,
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:444:            previousUsageObservations,
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:646:            UsageObservations = detail.UsageObservations.OrderByDescending(item => item.CreatedAtUtc).ToList(),
+src\CanDoItAll.AgentFramework.Persistence\Storage\FileSandboxWorkspaceExecutionSliceStore.cs:694:        EnsureRunScoped(detail.Run.Id, detail.UsageObservations.Select(item => item.ExecutionRunId ?? Guid.Empty), "provider usage observation");
+src\CanDoItAll.AgentFramework.Persistence\Seeds\SandboxWorkspaceSeedNormalizer.cs:66:            ProviderUsageObservations = (executionState.ProviderUsageObservations ?? []).OrderByDescending(item => item.CreatedAtUtc).ToList(),
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:114:            ProviderUsageObservationStatus.Observed,
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:119:            ProviderUsageObservationStatus.EstimatedFromMetric,
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:124:            ProviderUsageObservationStatus.MissingAfterProviderActivity,
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:129:        var summary = ProviderPricingCalculator.SummarizeUsage([observed, estimated, unknown], [provider]);
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:139:        Assert.False(ProviderPricingCalculator.TryResolveObservationCost(estimated, [provider], out _));
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:140:        Assert.False(ProviderPricingCalculator.TryResolveObservationCost(unknown, [provider], out _));
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:191:    private static ProviderUsageObservation CreateUsageObservation(
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:192:        ProviderUsageObservationStatus status,
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:197:        return new ProviderUsageObservation(
+tests\CanDoItAll.Tests.Unit\ProviderPricingTests.cs:204:            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:57:        var usage = CreateWorkflowUsageMetrics(provider, model, response);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:68:    private static WorkflowUsageMetrics? CreateWorkflowUsageMetrics(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:73:        if (response.UsageObservations.Count > 0)
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:75:            var observations = response.UsageObservations
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:86:            var summary = ProviderPricingCalculator.SummarizeUsage(observations, [provider]);
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:87:            return new WorkflowUsageMetrics(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowLlmComponentInvoker.cs:108:                ? new WorkflowUsageMetrics(
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:218:            WorkflowUsageMetrics? usage = null;
+src\CanDoItAll.AgentFramework.Maf\Runtime\Workflows\MafWorkflowCompiler.cs:348:        WorkflowUsageMetrics? usage = null)
+src\CanDoItAll.AgentFramework.Models\Workspace\WorkspaceModels.cs:19:    public IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations { get; init; } = [];
+src\CanDoItAll.AgentFramework.Models\Workspace\WorkspaceModels.cs:57:            ProviderUsageObservations = ProviderUsageObservations
+src\CanDoItAll.AgentFramework.Models\Workspace\WorkspaceModels.cs:85:            ProviderUsageObservations = executionState.ProviderUsageObservations
+src\CanDoItAll.AgentFramework.Models\Workspace\WorkspaceModels.cs:118:    public IReadOnlyList<ProviderUsageObservation> ProviderUsageObservations { get; init; } = [];
+src\CanDoItAll.AgentFramework.Models\OutputContracts\AgentOutputContracts.cs:317:    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:695:    public WorkflowUsageMetrics? Usage { get; init; }
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:747:    public WorkflowUsageMetrics? Usage { get; init; }
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:373:                            ProviderUsageSourcePhases.FinalizerShortCircuit,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:393:                        ProviderUsageSourcePhases.FinalizerShortCircuit,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:415:                        ProviderUsageSourcePhases.FinalizerShortCircuit,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:450:                    throw new AgentRuntimeUsageException(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:453:                        CreateProviderUsageObservations(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:459:                            ProviderUsageSourcePhases.AgentRuntime,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:503:                    UsageObservations = CreateProviderUsageObservations(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:509:                        ProviderUsageSourcePhases.AgentRuntime,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:552:            CreateProviderUsageObservations(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:639:            UsageObservations = CreateProviderUsageObservations(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:645:                ProviderUsageSourcePhases.FinalizerRecovery,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:674:            CreateProviderUsageObservations(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:709:        IReadOnlyList<ProviderUsageObservation> usageObservations)
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:744:            UsageObservations = usageObservations
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:748:    private static IReadOnlyList<ProviderUsageObservation> CreateProviderUsageObservations(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:761:                CreateMissingProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:778:            new ProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:787:                    ? ProviderUsageObservationStatus.UsageUnavailable
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:788:                    : ProviderUsageObservationStatus.Observed,
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:811:    private static ProviderUsageObservation CreateMissingProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:818:        return new ProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Maf\Runtime\MafAgentRuntime.cs:826:            UsageStatus: ProviderUsageObservationStatus.MissingAfterProviderActivity,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:766:    public async Task MafWorkflowLlmComponentInvokerUsesProviderUsageObservationsForWorkflowUsage()
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:772:            UsageObservations =
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:775:                    ProviderUsageObservationStatus.Observed,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:815:            UsageObservations =
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:818:                    ProviderUsageObservationStatus.UsageUnavailable,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1777:    private static ProviderUsageObservation CreateWorkflowUsageObservation(
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1778:        ProviderUsageObservationStatus status,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1783:        return new ProviderUsageObservation(
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1790:            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1910:        public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1947:                UsageObservations = UsageObservations
+src\CanDoItAll.AgentFramework.Models\Conversations\ConversationModels.cs:449:    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderUsageModels.cs:3:public enum ProviderUsageObservationStatus
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderUsageModels.cs:12:public static class ProviderUsageSourcePhases
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderUsageModels.cs:22:public sealed record ProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderUsageModels.cs:30:    ProviderUsageObservationStatus UsageStatus,
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:38:public sealed record WorkflowUsageMetrics(
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:436:    public static bool TryResolveObservationCost(
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:437:        ProviderUsageObservation observation,
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:482:    public static ProviderUsageSummary SummarizeUsage(
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:483:        IEnumerable<ProviderUsageObservation> observations,
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:492:            .Select(item => TryResolveObservationCost(item, providers, out var costUsd) ? costUsd : 0m)
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:514:    public static bool IsKnownUsageStatus(ProviderUsageObservationStatus status)
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:516:        return status is ProviderUsageObservationStatus.Observed
+src\CanDoItAll.AgentFramework.Models\Providers\ProviderPricingModels.cs:517:            or ProviderUsageObservationStatus.ObservedFromMetric;
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18264:    public void ResolveProcessRunActualCost_prefers_usage_ledger_over_legacy_metrics()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18279:            ProviderUsageObservationStatus.Observed,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18280:            ProviderUsageSourcePhases.AgentRuntime,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18291:            ProviderUsageObservationStatus.MissingAfterProviderActivity,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18292:            ProviderUsageSourcePhases.FinalizerShortCircuit,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18308:        var actualCost = ProcessRunAutomationDispatchService.ResolveProcessRunActualCost(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18349:        IReadOnlyList<ProviderUsageObservation> usageObservations)
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18384:            UsageObservations = usageObservations
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18411:    private static ProviderUsageObservation CreateCostUsageObservation(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18413:        ProviderUsageObservationStatus status,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18420:        return new ProviderUsageObservation(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:193:        var usage = Assert.Single(detail.UsageObservations);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:194:        Assert.Equal(ProviderUsageObservationStatus.ObservedFromMetric, usage.UsageStatus);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:195:        Assert.Equal(ProviderUsageSourcePhases.AgentRuntime, usage.SourcePhase);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:206:    public async Task ExecuteRunAsync_preserves_usage_when_runtime_fails_after_provider_call()
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:221:                    InitialUsageObservations =
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:223:                        CreateUsageObservation(ProviderUsageSourcePhases.AgentRuntime, 31, 4, 9)
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:250:        var usage = Assert.Single(failedDetail.UsageObservations);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:251:        Assert.Equal(ProviderUsageObservationStatus.Observed, usage.UsageStatus);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:299:        Assert.Contains(detail.UsageObservations, item => item.SourcePhase == ProviderUsageSourcePhases.AgentRuntime);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:300:        var repairUsage = Assert.Single(detail.UsageObservations, item => item.SourcePhase == ProviderUsageSourcePhases.StructuredOutputRepair);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:301:        Assert.Equal(ProviderUsageObservationStatus.Observed, repairUsage.UsageStatus);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:354:        var usage = Assert.Single(failedDetail.UsageObservations);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:355:        Assert.Equal(ProviderUsageObservationStatus.ObservedFromMetric, usage.UsageStatus);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:414:    public async Task ExecuteRunAsync_records_finalizer_short_circuit_usage_when_metrics_are_zero()
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:433:                    InitialUsageObservations =
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:436:                            ProviderUsageSourcePhases.FinalizerShortCircuit,
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:440:                            ProviderUsageObservationStatus.MissingAfterProviderActivity)
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:468:        var usage = Assert.Single(detail.UsageObservations);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:469:        Assert.Equal(ProviderUsageObservationStatus.MissingAfterProviderActivity, usage.UsageStatus);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:470:        Assert.Equal(ProviderUsageSourcePhases.FinalizerShortCircuit, usage.SourcePhase);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:764:    private static ProviderUsageObservation CreateUsageObservation(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:769:        ProviderUsageObservationStatus status = ProviderUsageObservationStatus.Observed)
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:771:        return new ProviderUsageObservation(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:979:        public IReadOnlyList<ProviderUsageObservation> InitialUsageObservations { get; init; } = [];
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:1046:                throw new AgentRuntimeUsageException(
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:1049:                    InitialUsageObservations);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:1066:                UsageObservations = InitialUsageObservations
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:1135:                UsageObservations =
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:1137:                    CreateUsageObservation(ProviderUsageSourcePhases.StructuredOutputRepair, 3, 1, 2)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowNodeExecutionProgress.cs:26:    public WorkflowUsageMetrics? Usage { get; init; }
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowEventPayloads.cs:24:        WorkflowUsageMetrics? usage = null)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:7:    private IReadOnlyList<ProviderUsageObservation> BuildUsageObservations(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:14:        var sourceObservations = runtimeResponse.UsageObservations.ToList();
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:19:                CreateObservationFromMetric(metric, provider, ProviderUsageObservationStatus.ObservedFromMetric, ProviderUsageSourcePhases.AgentRuntime));
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:28:    private IReadOnlyList<ProviderUsageObservation> BuildRuntimeResponseUsageObservations(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:35:        var sourceObservations = runtimeResponse.UsageObservations.ToList();
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:47:    private IReadOnlyList<ProviderUsageObservation> BuildFailureUsageObservations(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:54:        if (exception is AgentRuntimeUsageException usageException &&
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:55:            usageException.UsageObservations.Count > 0)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:57:            return usageException.UsageObservations
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:73:                        ProviderUsageObservationStatus.EstimatedFromMetric,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:74:                        ProviderUsageSourcePhases.LegacyAgentRunMetric)),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:79:    private IReadOnlyList<ProviderUsageObservation> BuildRepairUsageObservations(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:85:        return repair.UsageObservations
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:89:                    ? ProviderUsageSourcePhases.StructuredOutputRepair
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:96:    private static AgentRuntimeResponse AppendRepairUsageObservations(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:100:        if (repair.UsageObservations.Count == 0)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:107:            UsageObservations = response.UsageObservations
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:108:                .Concat(repair.UsageObservations.Select(observation => observation with
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:111:                        ? ProviderUsageSourcePhases.StructuredOutputRepair
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:118:    private static bool HasRuntimeUsageObservation(IReadOnlyList<ProviderUsageObservation> observations)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:121:            !string.Equals(observation.SourcePhase, ProviderUsageSourcePhases.StructuredOutputRepair, StringComparison.OrdinalIgnoreCase));
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:124:    private static ProviderUsageObservation CreateObservationFromMetric(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:127:        ProviderUsageObservationStatus status,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:131:        return new ProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:151:            DiagnosticsJson = status == ProviderUsageObservationStatus.EstimatedFromMetric
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:157:    private static ProviderUsageObservation CreateObservationFromRuntimeResponse(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:165:        return new ProviderUsageObservation(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:172:            SourcePhase: ProviderUsageSourcePhases.AgentRuntime,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:173:            UsageStatus: ProviderUsageObservationStatus.ObservedFromMetric,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:188:    private ProviderUsageObservation EnrichUsageObservation(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:192:        ProviderUsageObservation observation)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:211:    private static ProviderUsageObservation PriceUsageObservation(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:212:        ProviderUsageObservation observation,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Usage.cs:215:        return ProviderPricingCalculator.TryResolveObservationCost(observation, [provider], out var costUsd)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:21:        IReadOnlyList<ProviderUsageObservation>? UsageObservations = null);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:67:                    currentDetail.UsageObservations,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:118:                    mutation.UsageObservations is null
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:119:                        ? currentDetail?.UsageObservations ?? []
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:120:                        : InsertUsageObservations(currentDetail?.UsageObservations ?? [], mutation.UsageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:146:            ProviderUsageObservations = mutation.UsageObservations is null
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:147:                ? executionState.ProviderUsageObservations
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:148:                : InsertUsageObservations(executionState.ProviderUsageObservations, mutation.UsageObservations)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:181:            executionState.ProviderUsageObservations.Where(item => item.ExecutionRunId == executionRunId).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:193:        IReadOnlyList<ProviderUsageObservation> usageObservations,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:205:            UsageObservations = usageObservations.OrderByDescending(item => item.CreatedAtUtc).ToList(),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:595:    private static IReadOnlyList<ProviderUsageObservation> InsertUsageObservations(
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:596:        IReadOnlyList<ProviderUsageObservation> usageObservations,
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.Helpers.cs:597:        IReadOnlyList<ProviderUsageObservation> newObservations)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:232:                var usageObservations = BuildUsageObservations(run, agent, provider, metric, runtimeResponse);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:265:                            UsageObservations: usageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:275:                            UsageObservations: usageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:323:            var failureUsageObservations = lastRuntimeResponse is null
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:324:                ? BuildFailureUsageObservations(run, agent, provider, failureMetric, exception)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:325:                : BuildRuntimeResponseUsageObservations(run, agent, provider, failureMetric, lastRuntimeResponse);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:349:                            UsageObservations: failureUsageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:358:                        UsageObservations: failureUsageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:706:                var usageObservations = BuildUsageObservations(run, agent, provider, metric, runtimeResponse);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:739:                            UsageObservations: usageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:749:                            UsageObservations: usageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:797:            var failureUsageObservations = lastRuntimeResponse is null
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:798:                ? BuildFailureUsageObservations(run, agent, provider, failureMetric, exception)
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:799:                : BuildRuntimeResponseUsageObservations(run, agent, provider, failureMetric, lastRuntimeResponse);
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:822:                            UsageObservations: failureUsageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:831:                        UsageObservations: failureUsageObservations),
+src\CanDoItAll.AgentFramework.Core\Execution\AgentFrameworkWorkspaceExecutionService.ExecutionRuns.cs:1005:            response = AppendRepairUsageObservations(response, repair);
+src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:122:    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; init; } = [];
+src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:125:public sealed class AgentRuntimeUsageException : Exception
+src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:127:    public AgentRuntimeUsageException(
+src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:130:        IReadOnlyList<ProviderUsageObservation> usageObservations)
+src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:133:        UsageObservations = usageObservations;
+src\CanDoItAll.AgentFramework.Core\Contracts\Contracts.cs:136:    public IReadOnlyList<ProviderUsageObservation> UsageObservations { get; }
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:296:                ProviderUsageObservations = prunedDocument.ProviderUsageObservations
+src\CanDoItAll.AgentFramework.Core\Catalog\AgentFrameworkWorkspaceCatalogService.Agents.cs:354:            ProviderUsageObservations = document.ProviderUsageObservations
+src\CanDoItAll.Modules.AgentFramework\Execution\AgentFrameworkExecutionRecoveryService.cs:72:                UsageObservations = detail.UsageObservations,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:49:        var actualCost = ResolveProcessRunActualCost(executionRunDetails, providers);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:69:    internal static decimal? ResolveProcessRunActualCost(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:77:            if (detail.UsageObservations.Count > 0)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:79:                foreach (var observation in detail.UsageObservations)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:87:                    if (ProviderPricingCalculator.TryResolveObservationCost(observation, providers, out var costUsd))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:118:    private static string ResolveUsageCostKey(ProviderUsageObservation observation)

@@ -1,0 +1,146 @@
+{
+  "schema": "candoitall.followup.bundle.manifest.v1",
+  "generatedUtc": "2026-06-02T08:52:45.676699Z",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "a4b0a3ed7912d2a38e83a6cff659c62b7a1fc57d9a3d25f609bd9f5e54d54935"
+    },
+    {
+      "path": "analysis/01-current-state-review.md",
+      "sha256": "66bac5a3c328f1a5e1170618109f6293ca5eaef31f30bbe2a7ea9951dd3dadb6"
+    },
+    {
+      "path": "analysis/02-assumptions-and-risks.md",
+      "sha256": "fb0d3730b3de8f81818b28e6380e825f3b4ff6d9b88769fb173f8c170210ac5c"
+    },
+    {
+      "path": "architecture/01-target-architecture.md",
+      "sha256": "a1d5c840c95dcd5fe2c77afc1402b3bf44e1a72568a04450a9a9da9e2c9c3a16"
+    },
+    {
+      "path": "evidence/01-reviewed-source-evidence.md",
+      "sha256": "28bc4e1fdbe3a3bbd476481bf93a5253c7cbcc3f81070dfdf7e38c81e72da067"
+    },
+    {
+      "path": "inputs/00-user-request.md",
+      "sha256": "bc725f670fb24331761fcf3e3bc0481edc32af78a5d99582892884cad8736416"
+    },
+    {
+      "path": "inputs/01-reviewed-commit.md",
+      "sha256": "ef90c325b249332831ef3ff39e643e6b4e315608d5b54aa3e391171bb832f25a"
+    },
+    {
+      "path": "inventories/01-hotspot-inventory.md",
+      "sha256": "4adb7432dc3227ba5b6bd79bbe23e470a3b342df67ad951587ecae7ce92e16a5"
+    },
+    {
+      "path": "plan/01-phase-plan.md",
+      "sha256": "a3b938c8fc7a7980e6df3b2b03c63a279499a1c74317708110a4ecdd05745331"
+    },
+    {
+      "path": "requirements/01-normalized-requirements.md",
+      "sha256": "f1bc9d91cb0cd23beae7b937d85eadfd094868fcaecd6bbc6de410ff56019260"
+    },
+    {
+      "path": "reviews/00-bundle-self-review.md",
+      "sha256": "8c79b6aa94744add7f1c609aadf1538c1c27f5c883b9f4231d77a6f2e8eea5e4"
+    },
+    {
+      "path": "reviews/01-execution-report.md",
+      "sha256": "606c5e567b7d03ca43227fae74ad0139645fb05fdec28764cc970d408f095e80"
+    },
+    {
+      "path": "reviews/02-prepared-validation-result.txt",
+      "sha256": "ec01f858fce1e265e6b3e404c48cb414186ba964c275f4aeb0e0a96a3a1930aa"
+    },
+    {
+      "path": "reviews/03-senior-qa-inspection.md",
+      "sha256": "47d3a94136daddab72558afd96ca07f4e8def1d8612db9a26345d1128f9191c6"
+    },
+    {
+      "path": "scripts/proof_quality_checker_spec.md",
+      "sha256": "51ee772ec677321e5a51179e85aa02cab6511d6c84230ed65b5d0bbfea6b1f99"
+    },
+    {
+      "path": "scripts/validate_bundle.py",
+      "sha256": "5a6bcdd04c6649e12174ac21028af019d649796570375ebce9575e477ffc4c9d"
+    },
+    {
+      "path": "shared-prompts/implementation-prompt.md",
+      "sha256": "2d73e570e493e6c22bfe602bea4f897db183c5c87958fd5e483e09a0f007574d"
+    },
+    {
+      "path": "shared-prompts/openai-cost-reconciliation-prompt.md",
+      "sha256": "ad603c150aa8e9be1b0de49420b4f31562084a3ef201bbadad72511e448e68cd"
+    },
+    {
+      "path": "shared-prompts/qa-prompt.md",
+      "sha256": "965b011ba03a160ab9b0316b727d09c546f1ec3f24c5aa25af9df64c49c749b0"
+    },
+    {
+      "path": "subbundles/SB01-fail-closed-process-operation-contracts/README.md",
+      "sha256": "993f5de24df2fcae7e1eec5be570a72943f1a814dc9421256a5210ee7e2d9277"
+    },
+    {
+      "path": "subbundles/SB02-canonical-tool-capability-registry/README.md",
+      "sha256": "0e74dfb71b7582e4fbdcbdbdee31d01631e1f2eb4943c27b18a28ed0d48a4297"
+    },
+    {
+      "path": "subbundles/SB03-provider-usage-normalization-and-reconciliation/README.md",
+      "sha256": "484a976bdc56434ee2479039026b54afc7c595ef83e9e47997cd381075ea3e02"
+    },
+    {
+      "path": "subbundles/SB04-real-agent-driven-multidomain-process-e2e/README.md",
+      "sha256": "3e7de3683174c22c2172166e66403dd9b5655002b90f576fd4bab71f33f28f0d"
+    },
+    {
+      "path": "subbundles/SB05-proof-quality-anti-fake-gates/README.md",
+      "sha256": "b74ba92f3d1a09e1375901f3266fa040c84dce09f489e9b11ea2c22bb8fc90de"
+    },
+    {
+      "path": "subbundles/SB06-process-dispatch-heuristic-refactor/README.md",
+      "sha256": "ea0288d014d5581ad385411b921398b031aff691e105d69b6ae0a4f290802561"
+    },
+    {
+      "path": "subbundles/SB07-agent-template-skill-governance-resync/README.md",
+      "sha256": "2faf8c483fcfacc2be7db14d2f4eaaa87d70b3328af59ccf636c34eebaae9e5b"
+    },
+    {
+      "path": "subbundles/SB08-ui-observability-hardening/README.md",
+      "sha256": "e14af3547470bca5fae90c26039192c11dd6fa9049b2150d2304d4961724d7e3"
+    },
+    {
+      "path": "subbundles/SB09-final-senior-qa-red-team/README.md",
+      "sha256": "3a0d66d9d9b749a5c22ce34595c8b8d3341c0a2fe718a2307f493af9e42ff431"
+    },
+    {
+      "path": "templates/process-test-scenarios/expense-tracker-lite.md",
+      "sha256": "0eaeef92afe5067801eb1ceb92c40746e6062f3d3a051c205312c21307235e96"
+    },
+    {
+      "path": "templates/process-test-scenarios/plant-watering-planner.md",
+      "sha256": "b3d59a513a55230da6fef700023b9d7779185404e71bbd0cc8de5f4b8049a5d6"
+    },
+    {
+      "path": "templates/process-test-scenarios/recipe-pantry-planner.md",
+      "sha256": "13fa20052f784af18fd83537b0ead13039cc5d9c63ccba1563eacd11b2f76b2b"
+    },
+    {
+      "path": "templates/process-test-scenarios/study-kanban-flashcards.md",
+      "sha256": "7587f62677f9ddfbb4e2b13cf5a57ba96e8e1c2e4dd692f4007bdd1e76c9aa58"
+    },
+    {
+      "path": "templates/process-test-scenarios/tetris-mini-game.md",
+      "sha256": "effd5cc15857ea357c69639fe341c03b7a15f1c7c745bc73b26e100113de95c9"
+    },
+    {
+      "path": "traceability/01-input-coverage-matrix.md",
+      "sha256": "ebd43557f8c70d2faf0b777184fe23d600ca9821002a2cf04b96f836f917164b"
+    },
+    {
+      "path": "traceability/02-gap-map-against-v1.md",
+      "sha256": "cab4350cf3620c49201b6abb70eb59d8797dec23b664bdf5dcbc23683d1dbde7"
+    }
+  ]
+}

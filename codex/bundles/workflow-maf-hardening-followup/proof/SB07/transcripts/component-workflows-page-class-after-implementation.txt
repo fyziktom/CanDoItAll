@@ -1,0 +1,4 @@
+Command: wrapper transcript for bundle://proof/SB07/component-workflows-page-class-after-implementation.txt
+ExitCode: 0
+Result: 14 workflow page component tests passed.
+Source transcript: bundle://proof/SB07/component-workflows-page-class-after-implementation.txt

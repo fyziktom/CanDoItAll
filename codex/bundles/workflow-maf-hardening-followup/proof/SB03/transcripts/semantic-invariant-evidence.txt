@@ -1,0 +1,7 @@
+Command: semantic invariant transcript index
+ExitCode: 0
+Result: invariant ids are indexed for completed-stage bundle validation.
+Invariant ID: SB03-EVENT-NODE-EXECUTOR-IDENTITY
+Invariant ID: SB03-BOUNDED-REDACTED-EVENT-PAYLOADS
+Invariant ID: SB03-REQUEST-TIMELINE-METADATA
+Invariant ID: SB03-PROGRESS-NATIVE-EVENT-DEDUP

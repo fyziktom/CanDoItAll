@@ -1,0 +1,5 @@
+SHA-256 4e8090887344228adbb8c28727dfc0daa3f526f0560605b25cac16078f38111f  repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepEditorForm.razor
+SHA-256 6ca0e7f0b662a6fcced1e691940d21e2a73f7fe4aa0d5bf37ae892ab6a05bbab  repo://src/CanDoItAll.Modules.Processes/Components/ProcessStepRoleAssignmentEditor.razor
+SHA-256 d60495776082d74b356958b91cb27d791a6424ee6160625e4e70c86bf0e9a388  repo://src/CanDoItAll.Modules.Processes/Components/ProcessArtifactExpectationEditor.razor
+SHA-256 600ff76d17c819d4fbebfc459138288317742976a463246244398e4d1d5d6eef  repo://src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor
+SHA-256 fd23a486b240b0bb8da646b789880093246cdff3708c5afc6eb95c96c5b33ccb  repo://src/CanDoItAll.Modules.AgentFramework/Pages/Components/WorkflowCanvasEditor.razor.cs

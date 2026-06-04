@@ -1,0 +1,5 @@
+Command: dotnet run --no-launch-profile --project C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\tetris-mini-game --urls http://127.0.0.1:5201
+WorkingDirectory: C:\repositories\CanDoItAll
+ProcessId: 28288
+StartedAtUtc: 2026-06-02T05:36:07.1825633Z
+Output redirection disabled for long-running host stability.

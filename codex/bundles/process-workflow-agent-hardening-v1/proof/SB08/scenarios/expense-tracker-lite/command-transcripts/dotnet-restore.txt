@@ -1,0 +1,11 @@
+Command: dotnet restore C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\expense-tracker-lite
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+  Zjišťují se projekty, které se mají obnovit...
+  Obnovil se projekt C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\expense-tracker-lite\expense-tracker-lite.csproj (v 271 ms).
+
+
+STDERR:
+

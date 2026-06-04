@@ -587,13 +587,17 @@ public sealed class ProcessLaunchPlanningIntegrationTests
         Assert.True(role.SelectedCandidateId.HasValue);
         var selectedCandidate = Assert.Single(role.Candidates, item => item.Id == role.SelectedCandidateId.Value);
         var teamCandidate = Assert.Single(role.Candidates, item => item.PartyId == teamAgentPartyId);
+        var outsideCandidate = Assert.Single(role.Candidates, item => item.PartyId == outsideAgentPartyId);
 
-        Assert.Equal(outsideAgentPartyId, selectedCandidate.PartyId);
+        Assert.Equal(teamAgentPartyId, selectedCandidate.PartyId);
         Assert.Equal(teamId, selectedCandidate.AgentTeamId);
         Assert.Equal($"Primary Delivery Team {suffix}", selectedCandidate.AgentTeamName);
-        Assert.True(selectedCandidate.IsOutsideSelectedTeam);
+        Assert.False(selectedCandidate.IsOutsideSelectedTeam);
         Assert.Equal(teamId, teamCandidate.AgentTeamId);
         Assert.False(teamCandidate.IsOutsideSelectedTeam);
+        Assert.Equal(teamId, outsideCandidate.AgentTeamId);
+        Assert.Equal($"Primary Delivery Team {suffix}", outsideCandidate.AgentTeamName);
+        Assert.True(outsideCandidate.IsOutsideSelectedTeam);
     }
 
     [Fact]

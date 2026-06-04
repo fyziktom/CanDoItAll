@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: `Completed`
 
 ## Objective
 
@@ -16,13 +16,13 @@ Refactor the Processes-owned provider into smaller maintainable slices without e
 
 ## Prerequisites
 
-`SB06` must be complete and its progression gate must have passed.
+- `SB06` must be complete and its progression gate must have passed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
-- `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
-- `src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
+- repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs
+- repo://src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs
+- repo://src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj
 
 ## Deliverables
 
@@ -33,11 +33,11 @@ Refactor the Processes-owned provider into smaller maintainable slices without e
 
 ## Dependency Impact
 
-Critical foundation for downstream work.
+- Critical foundation for downstream work.
 
 ## Validation Depth
 
-This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
+- This subbundle requires source assertions, targeted tests, and proof transcripts. Compile-only proof is not sufficient when tool-provider behavior changes.
 
 ## Implementation Steps
 
@@ -63,13 +63,13 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Acceptance Checklist
 
-- [ ] Source inventory for this slice is recorded.
-- [ ] Implementation is limited to this subbundle scope.
-- [ ] Tool parity/access/approval behavior is proven where applicable.
-- [ ] Static dependency scans are updated where applicable.
-- [ ] Targeted tests pass.
-- [ ] Full or relevant project build pass is recorded.
-- [ ] Execution report is updated.
+- [x] Source inventory for this slice is recorded.
+- [x] Implementation is limited to this subbundle scope.
+- [x] Tool parity/access/approval behavior is proven where applicable.
+- [x] Static dependency scans are updated where applicable.
+- [x] Targeted tests pass.
+- [x] Full or relevant project build pass is recorded.
+- [x] Execution report is updated.
 
 ## Proof Required
 
@@ -79,12 +79,20 @@ This subbundle requires source assertions, targeted tests, and proof transcripts
 
 ## Browser Validation Logging
 
-N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
+- N/A unless this subbundle unexpectedly changes a rendered UI route. If a rendered route changes, add Playwright MCP route, viewport, assertions, screenshot path, and review notes.
 
 ## Progression Gate
 
-The provider split is accepted only when exact tool parity, access denial tests, and policy/capability registry tests still pass.
+- The provider split is accepted only when exact tool parity, access denial tests, and policy/capability registry tests still pass.
 
 ## Suggested Agent Prompt
 
 Implement SB07 only. Read this README, update the relevant source files, run the required proof, record transcripts, update the execution report, and stop at the progression gate before starting the next subbundle.
+
+## Completion Notes
+
+- Split `ProcessAgentRuntimeToolProvider` into catalog/factory, definitions, runs, templates, access guard, and DTO source files.
+- Preserved exact 23-tool process runtime inventory; source audit resolves `AgentToolInvocationPolicyMetadata` constants and records no missing or added names.
+- Added `AgentRuntimeToolProviderArchitectureTests.ProcessAgentRuntimeToolProvider_split_files_stay_below_monolith_threshold` as the maintainability guard.
+- Proof manifest: `bundle://proof/SB07/manifest.md`.
+- Semantic invariants: `bundle://proof/SB07/semantic-invariants.md`.

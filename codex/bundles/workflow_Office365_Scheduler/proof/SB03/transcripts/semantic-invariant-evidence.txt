@@ -1,0 +1,18 @@
+Command: assert SB03 semantic invariant evidence from focused tests and source assertions
+StartedUtc: 2026-05-29T19:05:12.7883154Z
+
+PASS SB03-INV-FILE-BACKED-TEMPLATES: Template pack loader and preview support tests passed for the file-backed Office365 watch templates.
+PASS SB03-INV-NO-MESSAGE-SKIPS-SIDE-EFFECTS: No-message branch is structurally asserted and routes to compact end nodes before LLM/project/mark side effects.
+PASS SB03-INV-WRITE-BEFORE-MARK: Workflow graph tests assert project writes precede Office365 mark-processed nodes.
+PASS SB03-INV-SUMMARY-WRITE-BEFORE-MARK: Summary graph tests assert `store-office365-watch-summary` precedes `mark-office365-watch-summary-processed`.
+PASS SB03-INV-TASK-WRITE-BEFORE-MARK: Task graph tests assert task/no-task project writes precede `mark-office365-watch-tasks-processed`.
+PASS SB03-INV-SCHEDULER-INPUT-PATHS: Integration tests passed for resolving Office365 Scheduler input paths and bundled preview simulation.
+PASS SB03-INV-DYNAMIC-CONFIG-SOURCE: Source assertions show dynamic category/lookback path wiring and test coverage.
+
+ReferencedArtifacts:
+- codex\bundles\workflow_Office365_Scheduler\proof\SB03\transcripts\unit-template-loader-after-sb03.txt
+- codex\bundles\workflow_Office365_Scheduler\proof\SB03\transcripts\integration-office365-scheduler-input-paths-after-sb03.txt
+- codex\bundles\workflow_Office365_Scheduler\proof\SB03\transcripts\source-assertions-office365-watch-templates.txt
+
+ExitCode: 0
+FinishedUtc: 2026-05-29T19:05:12.8466281Z

@@ -1,0 +1,16 @@
+{
+  "id": "4b3ecd66-63f6-4ba6-8db8-010b6d350c68",
+  "projectId": null,
+  "name": "SB08 Generic Blazor WASM PWA Delivery 20260602-013426",
+  "status": 1,
+  "latestVersionNumber": 2,
+  "hasPublishedVersion": true,
+  "roleCount": 4,
+  "stepCount": 8,
+  "activeRunCount": 0,
+  "unfilledRoleCount": 0,
+  "summary": "Simplified multi-team delivery for a new or rebuilt Blazor SSR, WASM, or WASM PWA application from project-structure requirements.",
+  "valueStatement": "Agents build the requested Blazor app and prove it with build, test, browser screenshots, console checks, cleanup, summaries, and project-structure evidence.",
+  "projectName": "",
+  "updatedAtUtc": "2026-06-02T01:35:46.729966-04:00"
+}

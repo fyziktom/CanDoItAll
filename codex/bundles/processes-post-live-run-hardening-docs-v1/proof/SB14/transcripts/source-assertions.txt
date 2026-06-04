@@ -1,0 +1,21 @@
+# SB14 source-assertions.txt
+
+Command:
+`rg -n "baseline-agent-training-and-improvement|ai-assisted-change-delivery|agent training and improvement|delegation policy refinement|delegation-design|agent-execution|evaluation-and-benchmarking|safety-and-security-review|RuntimeEvidence|PolicyDenied|RequiredTypedBaselineScenarios" Templates\Processes\manifest.json Templates\Processes\seed-catalog\baseline-scenarios.json tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs`
+
+ExitCode: 0
+
+Key output:
+`Templates\Processes\manifest.json:106:      "Key": "ai-assisted-change-delivery",`
+`Templates\Processes\manifest.json:107:      "RelativePath": "processes/ai-assisted-change-delivery"`
+`tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:34:    private static readonly (string ScenarioKey, string TemplateKey)[] RequiredTypedBaselineScenarios =`
+`tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs:42:        ("baseline-agent-training-and-improvement", "ai-assisted-change-delivery")`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1385:    "Key": "baseline-agent-training-and-improvement",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1386:    "ProcessTemplateKey": "ai-assisted-change-delivery",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1387:    "RunName": "Agent training and improvement / delegation policy refinement",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1450:        "StepKey": "delegation-design",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1457:        "StepKey": "agent-execution",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1464:        "StepKey": "evaluation-and-benchmarking",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1471:        "StepKey": "safety-and-security-review",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1652:        "BlockCause": "RuntimeEvidence",`
+`Templates\Processes\seed-catalog\baseline-scenarios.json:1661:        "BlockCause": "PolicyDenied",`

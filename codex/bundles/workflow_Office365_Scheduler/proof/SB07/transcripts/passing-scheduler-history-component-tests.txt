@@ -1,0 +1,18 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:03.16]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:03.35]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:03.38]   Starting:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_typed_workflow_input_clearing_required_value_removes_json_and_blocks_save [20 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_typed_workflow_input_validation_errors_render_before_save [10 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_history_renders_route_and_retry_policy_labels [10 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_typed_workflow_input_form_syncs_options_raw_json_and_cron_preset [9 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_target_picker_uses_dialog_cards_and_filters [10 s]
+[xUnit.net 00:01:13.04]   Finished:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_page_renders_tabs_and_canvas_calendar_host [9 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 6
+     Úspěšné: 6
+ Celkový čas: 1,2502 Minuty

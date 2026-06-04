@@ -1,0 +1,15 @@
+Invariant: SB08-INV-001
+Slice: finalizer.txt
+Finalizer proof: required/shadow finalizer attachment, capture, sequencing, and instruction wording.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~MafAgentRuntimeTests.CreateFinalizerCapture_attaches_process_step_outcome_tool|FullyQualifiedName~MafAgentRuntimeTests.CreateFinalizerCapture_omits_tool_when_finalizer_mode_is_disabled|FullyQualifiedName~MafAgentRuntimeTests.TryBuildRequiredFinalizerRuntimeResponse_returns_authoritative_finalizer_json|FullyQualifiedName~MafAgentRuntimeTests.ExecuteRunAsync_checks_required_finalizer_after_streaming_finishes|FullyQualifiedName~MafAgentRuntimeTests.Required_finalizer_tool_call_short_circuits_before_post_finalizer_model_turn|FullyQualifiedName~MafAgentRuntimeTests.Required_finalizer_session_serialization_is_bounded|FullyQualifiedName~MafAgentRuntimeTests.AppendFinalizerInstructions_uses_json_response_wording_for_required_mode|FullyQualifiedName~MafAgentRuntimeTests.AppendFinalizerInstructions_uses_shadow_comparison_wording_for_shadow_mode" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     8, Přeskočeno:     0, Celkem:     8, Doba trvání: 115 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\ --filter "FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests.Process_step_execution_request_sets_required_finalizer_policy|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests.Runtime_build_uses_execution_options_for_finalizer_mode|FullyQualifiedName~AgentRuntimeHardeningStaticRegressionTests.Assistant_message_is_created_after_structured_output_validation" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb08-unit-bin\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 25 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+ExitCode: 0

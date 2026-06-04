@@ -1,0 +1,6 @@
+{
+  "scenarioKey": "tetris-mini-game",
+  "processRunId": "54923282-a686-409f-a8a1-59eeb1f5d932",
+  "executionRuns": [],
+  "note": "The SB08 harness executed through Codex/local browser tooling and manual process transitions with automation dispatch suppressed. No CanDoItAll Agent Framework provider execution runs were created for this scenario."
+}

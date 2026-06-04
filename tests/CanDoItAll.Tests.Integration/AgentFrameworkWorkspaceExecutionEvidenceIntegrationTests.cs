@@ -115,22 +115,26 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
                 ],
                 [])
             {
-                ToolReceipts =
-                [
-                    new ToolExecutionReceiptRecord(
-                        Id: Guid.NewGuid(),
-                        ExecutionRunId: runId,
+                    ToolReceipts =
+                    [
+                        new ToolExecutionReceiptRecord(
+                            Id: Guid.NewGuid(),
+                            ExecutionRunId: runId,
                         ToolFamily: "workspace-process",
                         ToolName: "local_mcp_launch",
                         RiskClass: "LocalExecution:Mcp",
                         ApprovalMode: "NotRequired",
                         IsolationGuarantee: "PolicyOnlyLocal",
                         RequestSummary: "@playwright/mcp@latest, --headless, --caps, vision",
-                        WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
-                        ExitSummary: "Prepared",
-                        StartedAtUtc: now,
-                        CompletedAtUtc: now)
-                ]
+                            WorkingDirectory: application.ActiveProfile.WorkspaceRootPath,
+                            ExitSummary: "Prepared",
+                            StartedAtUtc: now,
+                            CompletedAtUtc: now)
+                        {
+                            RuntimeToolProviderKey = "provider-native.mcp",
+                            RuntimeToolProviderName = "Provider-native MCP"
+                        }
+                    ]
             },
             CancellationToken.None);
 
@@ -147,6 +151,8 @@ public sealed class AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests
         Assert.Equal(application.ActiveProfile.WorkspaceRootPath, screenshotReceipt.WorkingDirectory);
         Assert.Equal("Succeeded", screenshotReceipt.ExitSummary);
         Assert.Contains("filename=", screenshotReceipt.RequestSummary, StringComparison.Ordinal);
+        Assert.Equal("provider-native.mcp", screenshotReceipt.RuntimeToolProviderKey);
+        Assert.Equal("Provider-native MCP", screenshotReceipt.RuntimeToolProviderName);
 
         Assert.Contains(receipts, item => string.Equals(item.ToolName, "browser_navigate", StringComparison.Ordinal));
         Assert.Contains(receipts, item => string.Equals(item.ToolName, "browser_snapshot", StringComparison.Ordinal));

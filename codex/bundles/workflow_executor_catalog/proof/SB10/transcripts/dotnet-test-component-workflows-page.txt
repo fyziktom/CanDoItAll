@@ -1,0 +1,33 @@
+Command: dotnet test tests\\CanDoItAll.Tests.Components\\CanDoItAll.Tests.Components.csproj --no-build --filter FullyQualifiedName~WorkflowsPageTests --logger console;verbosity=normal
+ExitCode: 0
+Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.50]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.67]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:00.71]   Starting:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_authors_typed_predicate_route_metadata [24 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes [8 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_places_llm_component_validates_runs_and_saves_definition [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_decision_context_action_adds_and_edits_routes_in_node_dialog [7 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_reconnects_linear_route_after_delete_and_accepts_canvas_connections [8 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflows_templates_tab_lists_executor_catalog_examples [1 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_marks_planned_runtime_backends_unavailable [7 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog [7 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_example_seed_preserves_non_managed_definitions_with_template_names [103 ms]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress [8 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_toolbox_exposes_executor_catalog_metadata [276 ms]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_preserves_maximized_state_when_selection_changes [7 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation [7 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_example_seed_creates_production_examples_when_enabled [1 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflows_page_defers_component_library_until_component_sections_need_it [7 s]
+[xUnit.net 00:01:56.91]   Finished:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflows_page_creates_starter_workflow_and_runs_preview [8 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 16
+     Úspěšné: 16
+ Celkový čas: 1,9775 Minuty
+

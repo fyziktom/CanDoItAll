@@ -1,0 +1,16 @@
+Command: dotnet build tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj --no-restore -m:1
+Exit code: 0
+
+Command: dotnet build tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore -m:1
+Exit code: 0
+
+Command: dotnet build src/CanDoItAll.Web/CanDoItAll.Web.csproj --no-restore -m:1
+Exit code: 0
+
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~Organization_workspace_seeds_tagged_openai_and_local_ollama_provider_catalog|FullyQualifiedName~Capability_catalog_save_normalizes_and_persists_tags"
+Exit code: 0
+Result: 2 passed, 0 failed, 0 skipped.
+Test name: `Capability_catalog_save_normalizes_and_persists_tags`
+
+Invariant IDs covered: SB02-CAPABILITY-TREE-FILTERS, SB02-CAPABILITY-DETAILS-TAGS-CONFIG.
+Known warnings: pre-existing EF Core relational assembly version warnings and an existing unused `profileAccessor` warning.

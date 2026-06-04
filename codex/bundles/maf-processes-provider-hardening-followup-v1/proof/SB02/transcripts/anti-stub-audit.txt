@@ -1,0 +1,8 @@
+Command: rg -n 'TODO|NotImplemented|throw new NotImplementedException|STUB|stub' src/CanDoItAll.AgentFramework.Tooling src/CanDoItAll.AgentFramework.Maf src/CanDoItAll.Modules.Processes/AgentTools tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB02
+TimestampUtc: 2026-06-04T01:44:08.7219461Z
+ExitCode: 0
+---- Output ----
+SB02-INVARIANT-001
+No production/test stub markers found in the SB02 provider metadata slice.

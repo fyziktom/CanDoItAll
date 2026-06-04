@@ -1,0 +1,16 @@
+{
+  "scenarioKey": "recipe-pantry-planner",
+  "canDoItAllProviderUsageObserved": true,
+  "observationCount": 4,
+  "knownObservationCount": 4,
+  "totalTokens": 4442549.0,
+  "providerResponseIds": [
+    "resp_0bb86a444f399432016a1f5abb4c788191aa07f757bc450010",
+    "resp_00ca49e3c3d8b1c6016a1f5a69e0f48192aec1276113ffad38",
+    "resp_077527fbaaa9e46f016a1f59e6319481a2bfb8c5c931a67455",
+    "resp_028c66e059ea02dd016a1f5819d32c819f8be49ac7bca532ce"
+  ],
+  "statuses": [
+    0
+  ]
+}

@@ -252,6 +252,7 @@ public sealed class CognitiveMemoryOperationalServicesTests
     {
         var settings = CognitiveMemoryAutomationSettings.Defaults(DateTimeOffset.UnixEpoch) with
         {
+            IsEnabled = true,
             ScheduleMode = CognitiveMemoryAutomationScheduleMode.Nightly,
             AutoIngestProjectStructure = true,
             AutoIngestProcessRuntime = true,
@@ -291,6 +292,7 @@ public sealed class CognitiveMemoryOperationalServicesTests
     {
         var settings = CognitiveMemoryAutomationSettings.Defaults(DateTimeOffset.UnixEpoch) with
         {
+            IsEnabled = true,
             ScheduleMode = CognitiveMemoryAutomationScheduleMode.Nightly,
             AutoIngestProjectStructure = true,
             AutoIngestProcessRuntime = false,

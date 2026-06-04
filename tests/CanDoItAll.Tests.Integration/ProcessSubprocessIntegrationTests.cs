@@ -27,9 +27,18 @@ public sealed class ProcessSubprocessIntegrationTests
         var childDefinitionId = await SaveAndPublishAsync(
             processesService,
             BuildChildDefinition(projectId));
+        var childValidationEvidenceExpectationId = await LoadPublishedArtifactExpectationIdAsync(
+            dbContextFactory,
+            childDefinitionId,
+            "child-validation",
+            "Child validation evidence");
         var parentDefinitionId = await SaveAndPublishAsync(
             processesService,
-            BuildParentDefinition(projectId, childDefinitionId, managerPartyId));
+            BuildParentDefinition(
+                projectId,
+                childDefinitionId,
+                childValidationEvidenceExpectationId,
+                managerPartyId));
 
         var runResult = await processesService.StartRunAsync(
             new ProcessRunStartRequest
@@ -61,7 +70,7 @@ public sealed class ProcessSubprocessIntegrationTests
 
         var parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         var intakeStep = Assert.Single(parentSteps, step => step.Title == "Capture parent intake");
-        await CompleteStepAsync(processesService, parentRunId, intakeStep.Id);
+        await CompleteStepAsync(processesService, application.ActiveProfile.WorkspaceRootPath, parentRunId, intakeStep.Id);
 
         parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         var subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run child validation subprocess");
@@ -97,7 +106,11 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(2, subprocessStep.SubprocessRun.TotalStepCount);
 
         var childSteps = await processesService.ListStepRunsAsync(childRunId);
-        await CompleteStepAsync(processesService, childRunId, Assert.Single(childSteps, step => step.Title == "Capture child intake").Id);
+        await CompleteStepAsync(
+            processesService,
+            application.ActiveProfile.WorkspaceRootPath,
+            childRunId,
+            Assert.Single(childSteps, step => step.Title == "Capture child intake").Id);
 
         parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run child validation subprocess");
@@ -107,7 +120,11 @@ public sealed class ProcessSubprocessIntegrationTests
         Assert.Equal(ProcessRunStatus.Active, subprocessStep.SubprocessRun.Status);
 
         childSteps = await processesService.ListStepRunsAsync(childRunId);
-        await CompleteStepAsync(processesService, childRunId, Assert.Single(childSteps, step => step.Title == "Validate child result").Id);
+        await CompleteStepAsync(
+            processesService,
+            application.ActiveProfile.WorkspaceRootPath,
+            childRunId,
+            Assert.Single(childSteps, step => step.Title == "Validate child result").Id);
 
         childRun = await processesService.GetRunAsync(childRunId);
         Assert.NotNull(childRun);
@@ -131,7 +148,9 @@ public sealed class ProcessSubprocessIntegrationTests
         parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         subprocessStep = Assert.Single(parentSteps, step => step.Title == "Run child validation subprocess");
 
-        Assert.Equal(ProcessStepRunStatus.Completed, subprocessStep.Status);
+        Assert.True(
+            subprocessStep.Status == ProcessStepRunStatus.Completed,
+            $"Expected subprocess step to complete but status was {subprocessStep.Status}. BlockedReason: {subprocessStep.BlockedReason}");
         Assert.NotNull(subprocessStep.SubprocessRun);
         Assert.Equal(ProcessRunStatus.Completed, subprocessStep.SubprocessRun.Status);
         Assert.Equal(2, subprocessStep.SubprocessRun.CompletedStepCount);
@@ -175,15 +194,25 @@ public sealed class ProcessSubprocessIntegrationTests
         var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await CreateProjectAsync(projectsService, "Subprocess capability gap validation");
         var managerPartyId = await CreateAiManagerAsync(partyDirectoryService, "Capability gap subprocess manager");
         var childDefinitionId = await SaveAndPublishAsync(
             processesService,
             BuildChildDefinition(projectId));
+        var childValidationEvidenceExpectationId = await LoadPublishedArtifactExpectationIdAsync(
+            dbContextFactory,
+            childDefinitionId,
+            "child-validation",
+            "Child validation evidence");
         var parentDefinitionId = await SaveAndPublishAsync(
             processesService,
-            BuildParentDefinition(projectId, childDefinitionId, managerPartyId));
+            BuildParentDefinition(
+                projectId,
+                childDefinitionId,
+                childValidationEvidenceExpectationId,
+                managerPartyId));
 
         var runResult = await processesService.StartRunAsync(
             new ProcessRunStartRequest
@@ -200,6 +229,7 @@ public sealed class ProcessSubprocessIntegrationTests
         var parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         await CompleteStepAsync(
             processesService,
+            application.ActiveProfile.WorkspaceRootPath,
             parentRunId,
             Assert.Single(parentSteps, step => step.Title == "Capture parent intake").Id);
 
@@ -266,6 +296,7 @@ public sealed class ProcessSubprocessIntegrationTests
         var parentSteps = await processesService.ListStepRunsAsync(parentRunId);
         await CompleteStepAsync(
             processesService,
+            application.ActiveProfile.WorkspaceRootPath,
             parentRunId,
             Assert.Single(parentSteps, step => step.Title == "Capture inherited parent intake").Id);
 
@@ -678,12 +709,14 @@ public sealed class ProcessSubprocessIntegrationTests
         var saveResult = await processesService.SaveAsync(definition);
 
         Assert.True(saveResult.IsSuccess, ToErrorMessage(saveResult.Errors));
-        Assert.True((await processesService.PublishAsync(saveResult.Value)).IsSuccess);
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, ToErrorMessage(publishResult.Errors));
         return saveResult.Value;
     }
 
     private static async Task CompleteStepAsync(
         ProcessesService processesService,
+        string workspaceRootPath,
         Guid runId,
         Guid stepRunId)
     {
@@ -701,6 +734,33 @@ public sealed class ProcessSubprocessIntegrationTests
 
         Assert.True(startResult.IsSuccess, ToErrorMessage(startResult.Errors));
         stepRun = Assert.Single(await processesService.ListStepRunsAsync(runId), step => step.Id == stepRunId);
+
+        foreach (var expectation in stepRun.ArtifactExpectations.Where(item => item.Status != ProcessArtifactExpectationSatisfactionStatus.Satisfied))
+        {
+            var managedStoragePath = $"artifacts/scopes/organization/subprocess-integration/process-runs/{runId:D}/{stepRun.Id:D}/{expectation.ArtifactExpectationId:D}.md";
+            var fullPath = Path.Combine(workspaceRootPath, managedStoragePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            await File.WriteAllTextAsync(
+                fullPath,
+                $"# {expectation.Title}{Environment.NewLine}{Environment.NewLine}Subprocess integration proof for run {runId:D}.");
+
+            var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+            {
+                ProcessRunId = runId,
+                StepRunId = stepRunId,
+                ArtifactExpectationId = expectation.ArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = expectation.Title,
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = ProcessSensitivityLevel.Internal,
+                ProvenanceSummary = "Recorded by subprocess integration validation.",
+                AllowedFutureUsageSummary = "Subprocess integration validation.",
+                ReviewSummary = "Required subprocess evidence is present.",
+                ManagedStoragePath = managedStoragePath
+            });
+
+            Assert.True(artifactResult.IsSuccess, ToErrorMessage(artifactResult.Errors));
+        }
 
         var completeResult = await processesService.TransitionStepAsync(
             new ProcessStepTransitionRequest
@@ -732,6 +792,29 @@ public sealed class ProcessSubprocessIntegrationTests
             .Where(item => item.ProcessDefinitionVersionId == definition.ActivePublishedVersionId!.Value)
             .Where(item => item.Key == roleKey)
             .Select(item => item.Id)
+            .SingleAsync();
+    }
+
+    private static async Task<Guid> LoadPublishedArtifactExpectationIdAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        Guid definitionId,
+        string stepKey,
+        string artifactTitle)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var definition = await dbContext.Set<ProcessDefinition>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == definitionId);
+
+        Assert.NotNull(definition.ActivePublishedVersionId);
+        return await (
+                from step in dbContext.Set<ProcessStepDefinition>().AsNoTracking()
+                join artifact in dbContext.Set<ProcessArtifactExpectation>().AsNoTracking()
+                    on step.Id equals artifact.StepDefinitionId
+                where step.ProcessDefinitionVersionId == definition.ActivePublishedVersionId!.Value &&
+                    step.Key == stepKey &&
+                    artifact.Title == artifactTitle
+                select artifact.Id)
             .SingleAsync();
     }
 
@@ -795,6 +878,19 @@ public sealed class ProcessSubprocessIntegrationTests
                     RoleAssignments =
                     [
                         CreateRoleAssignment(roleId)
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel
+                        {
+                            Title = "Child validation evidence",
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            IsRequired = true,
+                            TrustRequirement = ProcessArtifactTrustRequirement.ReviewRequired,
+                            SensitivityLevel = ProcessSensitivityLevel.Internal,
+                            AllowedFutureUsageSummary = "Parent subprocess projection validation.",
+                            ValidationRequirementSummary = "Must prove the child validation result."
+                        }
                     ]
                 }
             ]);
@@ -803,6 +899,7 @@ public sealed class ProcessSubprocessIntegrationTests
     private static ProcessDefinitionEditorModel BuildParentDefinition(
         Guid projectId,
         Guid childDefinitionId,
+        Guid childValidationEvidenceExpectationId,
         Guid managerPartyId)
     {
         var roleId = Guid.NewGuid();
@@ -850,7 +947,10 @@ public sealed class ProcessSubprocessIntegrationTests
                             TrustRequirement = ProcessArtifactTrustRequirement.ReviewRequired,
                             SensitivityLevel = ProcessSensitivityLevel.Internal,
                             AllowedFutureUsageSummary = "Parent process may use this projection to continue after the child subprocess completes.",
-                            ValidationRequirementSummary = "Must point at the completed child subprocess run instead of duplicating child runtime state."
+                            ValidationRequirementSummary = "Must point at the completed child subprocess run instead of duplicating child runtime state.",
+                            SubprocessChildArtifactExpectationId = childValidationEvidenceExpectationId,
+                            SubprocessChildStepKey = "child-validation",
+                            SubprocessChildArtifactTitle = "Child validation evidence"
                         }
                     ],
                     RoleAssignments =

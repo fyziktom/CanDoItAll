@@ -1,0 +1,227 @@
+CD
+CanDoItAll local delivery workbench
+chevron_right
+dashboard
+folder_open
+account_tree
+monitor_heart
+forum
+8
+groups
+smart_toy
+account_tree
+psychology
+inventory_2
+extension
+library_books
+construction
+fact_check
+expand_less
+settings
+Settings
+storage
+Switch Database
+Dashboard
+push_pin
+Live Processes
+Workflows
+DELIVERY WORKSPACE
+Workflows
+Interactive Server
+Live items 0
+Tabs 3
+
+AGENTFRAMEWORK
+
+Workflows
+40 definitions
+- LLM components
+0 runs
+0 pending input
+InProcess backend
+refresh
+REFRESH
+add
+ADD
+support_agent
+SUPPORT AGENT
+dashboard
+Dashboard
+list_alt
+Workflows
+40
+edit_square
+Editor
+content_copy
+Templates
+-
+history
+History
+0
+query_stats
+Analytics
+
+WORKFLOW CANVAS
+
+SB08 executor observability proof 20260603103210
+New draft
+Validate
+Run preview
+Save
+
+Browser proof workflow containing a storage executor node so preview/commit and side-effect badges render in the workflow editor.
+
+NODES
+3
+EDGES
+2
+COMPONENTS
+0
+EXECUTORS
+13
+VALIDATION
+Valid
+add
+Open quick create actions
+center_focus_strong
+Focus start
+widgets
+widgets
+select_all
+select all
+smart_toy
+smart toy
+fit_screen
+Fit canvas
+open_in_full
+Maximize canvas
+map
+Toggle minimap
+monitor_heart
+Toggle diagnostics
+help
+Canvas help
+settings
+Canvas settings
+remove
+Zoom out
+add
+Zoom in
+100%
+
+SCENE OVERVIEW
+
+WORKFLOW
+
+Nodes and executors
+
+3 nodes · 13 executors
+
+minimize
+restart_alt
+visibility_off
+Workflow
+13 executors
+Decisions
+IF/ELSE, SWITCH/default, and fan-out split blocks.
+3
+Branching blocks
+Drop a configured split node with default branches.
+3
+call_split
+IF
+Create a binary decision with true and else branches.
+alt_route
+SWITCH
+Create switch cases plus a default branch.
+hub
+FAN-OUT
+Create parallel branch selectors for multi-target routing.
+Workflow nodes
+Control, AI, human, artifact, and orchestration steps.
+7
+Typed nodes
+Core workflow node kinds
+7
+Executors
+Typed tool execution nodes backed by the executor catalog.
+16
+Storage
+Workspace storage reads, writes, searches, stats, and diffs.
+1
+Project structure
+Project tree reads and typed asset creation.
+1
+HTTP
+Bounded HTTP and HTTPS calls.
+1
+Images
+Image generation and image-provider output.
+1
+Spreadsheets
+XLSX inspection, reading, writing, and Markdown extraction.
+1
+Data
+Structured payload transformations.
+2
+Markdown
+Markdown rendering and report assembly.
+1
+Human
+Human approvals and workflow pauses.
+1
+Utility
+Bounded helper executors for local control flow.
+1
+Commands
+Bounded local process execution.
+1
+Gmail
+Executors contributed by Gmail.
+2
+Office365 Mail
+Executors contributed by Office365 Mail.
+3
+
+SELECTION
+
+Workflow nodes
+
+Start · start
+
+minimize
+restart_alt
+visibility_off
+start
+Start
+SB08 proof executor
+Executor
+end
+End
+open_in_new
+Open details
+start is the primary selection.
+Canvas accessibility mirror
+
+1 selected nodes across 3 canvas nodes
+
+startWorkflow input • Status valid
+endWorkflow output • Status valid
+SB08 proof executorStorage executor • Status valid
+settings
+Definition
+account_tree
+Node setup
+alt_route
+Routes
+play_circle
+Preview
+
+DEFINITION
+
+Name
+Description
+Runtime backend
+InProcess
+DurableTask (Planned)
+AzureFunctions (Planned)

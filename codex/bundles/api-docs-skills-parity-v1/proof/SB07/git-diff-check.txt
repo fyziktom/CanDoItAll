@@ -1,0 +1,10 @@
+warning: in the working copy of 'codex/skills/candoitall-api-agents/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/skills/candoitall-api-cognitive-memory/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/skills/candoitall-api-processes/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/skills/candoitall-api-project-structure/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/skills/candoitall-api-workflows/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/agent-runtime-hardening-verification.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/api-control-plane.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/cognitive-memory/operations/api.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/process-agent-operator-runbook.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ApiIntegrationTests.cs', LF will be replaced by CRLF the next time Git touches it

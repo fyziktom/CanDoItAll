@@ -1,0 +1,8 @@
+Command: rg -n 'TODO|NotImplemented|throw new NotImplementedException|STUB|stub' tests/CanDoItAll.Tests.Unit/AgentRuntimeToolProviderArchitectureTests.cs src/CanDoItAll.AgentFramework.Tooling src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.RuntimeToolProviders.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB06
+TimestampUtc: 2026-06-04T02:38:48.1831584+00:00
+---- Output ----
+No stub markers found in SB06 source/tests.
+SearchExitCode: 1
+AuditResultExitCode: 0

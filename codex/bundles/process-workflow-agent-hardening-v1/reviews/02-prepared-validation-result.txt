@@ -1,0 +1,11 @@
+Command:
+python scripts/validate_bundle.py --stage prepared --root /mnt/data/candoitall-process-workflow-agent-hardening-refactor-bundle-v1
+
+Exit code:
+0
+
+Stdout:
+PASS: bundle structure validated for stage 'prepared' at /mnt/data/candoitall-process-workflow-agent-hardening-refactor-bundle-v1
+
+Stderr:
+An environment-level spreadsheet runtime warmup warning was emitted by this notebook Python startup before the validator ran. It was unrelated to the bundle validator and did not affect the exit code. Rerun the command in the repository execution environment for the authoritative local result.

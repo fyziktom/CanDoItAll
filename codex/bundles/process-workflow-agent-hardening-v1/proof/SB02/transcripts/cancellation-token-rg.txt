@@ -1,0 +1,124 @@
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:12:    public async Task<Result> TransitionStepAsync(ProcessStepTransitionRequest request, CancellationToken cancellationToken = default)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:273:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:632:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:28:    public async Task<Result<Guid>> StartRunAsync(ProcessRunStartRequest request, CancellationToken cancellationToken = default)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:266:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:552:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:679:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:712:        CancellationToken cancellationToken = default)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:800:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:1070:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:1248:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:1308:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:7:    private readonly Func<CancellationToken, Task> renewLeaseAsync;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:8:    private readonly CancellationTokenSource stopCancellation;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:9:    private readonly CancellationTokenSource dispatchCancellation;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:17:        Func<CancellationToken, Task> renewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:18:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:23:        stopCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:24:        dispatchCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:28:    public CancellationToken DispatchCancellationToken => dispatchCancellation.Token;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:35:        Func<CancellationToken, Task> renewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:36:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactKinds.cs:105:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:32:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:210:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:331:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:514:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:754:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:834:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1017:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1112:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1304:        CancellationToken cancellationToken,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1601:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1611:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1619:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:1631:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:21:        Func<CancellationToken, Task>? renewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:22:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:49:        Func<CancellationToken, Task>? renewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:50:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:112:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:178:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:309:        Func<CancellationToken, Task>? renewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:310:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:614:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:899:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:117:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:147:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:455:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:13:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:30:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:29:        Func<CancellationToken, Task>? renewLeaseAsync = null,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:30:        CancellationToken cancellationToken = default);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:30:        Func<CancellationToken, Task>? renewLeaseAsync = null,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:31:        CancellationToken cancellationToken = default)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:75:                    var dispatchCancellationToken = cancellationToken;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:84:                        dispatchCancellationToken = dispatchHeartbeat.DispatchCancellationToken;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:86:                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:121:                            await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, dispatchClaim, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:125:                        if (await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, dispatchClaim, dispatchCancellationToken))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:135:                            dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:156:                                dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:159:                                await ApplyFinalizedStepTransitionAsync(candidate, finalizedRecoveryCompletion, dispatchClaim, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:167:                            await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, dispatchClaim, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:184:                                dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:192:                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:212:                            dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:215:                            await HandleWorkflowExecutionOutcomeAsync(candidate, workflowOutcome, dispatchClaim, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:219:                        var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, dispatchRenewLeaseAsync, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:222:                            ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, dispatchCancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:235:                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:260:                            dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:264:                            await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:361:                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:370:                        if (!await IsStepDispatchClaimHeldAsync(dispatchClaim, dispatchCancellationToken))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:389:                            dispatchCancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:470:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:502:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:545:    private Func<CancellationToken, Task> CreateDispatchRenewLeaseCallback(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:547:        Func<CancellationToken, Task>? renewOuterLeaseAsync)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:565:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:591:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:603:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:617:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:645:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:709:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:851:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:915:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1035:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1237:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1302:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1410:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1534:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1570:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1975:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:28:        Func<CancellationToken, Task>? renewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:29:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:515:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:554:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:657:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:664:                using var probeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:706:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:27:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:63:                        [typeof(Guid), typeof(CancellationToken)]);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:67:                            "Project workbench service did not expose GetStructureAsync(Guid, CancellationToken) while building project structure grounding for process run {RunId}, step {StepRunId}. Falling back to canonical workbench nodes only.",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:145:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:277:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:388:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:474:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs:93:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs:150:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs:181:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:263:            var storage = await storageCatalogService.GetAsync(reference.StorageId!.Value, CancellationToken.None);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:275:            await using var stream = await driver.OpenReadAsync(storage, reference, CancellationToken.None);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:287:            await stream.CopyToAsync(memory, CancellationToken.None);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:328:        Func<CancellationToken, Task>? RenewLeaseAsync,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:378:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:558:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:626:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:676:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:807:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:25:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:147:        CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:299:        CancellationToken cancellationToken)

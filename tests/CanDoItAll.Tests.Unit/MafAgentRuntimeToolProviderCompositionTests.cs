@@ -53,8 +53,132 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         Assert.Equal(provider.Id, earlyProvider.Contexts[0].Provider.Id);
         Assert.Equal(AgentRuntimeToolProviderPurpose.InteractiveChat, earlyProvider.Contexts[0].Purpose);
         Assert.False(earlyProvider.Contexts[0].SuppressApprovalRequirements);
+        var descriptors = ReadProviderDescriptors(state);
+        Assert.Equal(2, descriptors.Count);
+        Assert.All(descriptors, descriptor =>
+            Assert.StartsWith("legacy:", descriptor.ProviderKey, StringComparison.Ordinal));
         Assert.Contains(progressMessages, message =>
             message.Contains("Attached 2 tool(s) from 2 registered runtime tool provider(s).", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_records_provider_descriptor_metadata()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.provider-a"),
+            "provider_descriptor_tool"));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+        var progressMessages = new List<string>();
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), progressMessages);
+
+        var descriptor = Assert.Single(ReadProviderDescriptors(state));
+        Assert.Equal("tests.provider-a", descriptor.ProviderKey);
+        Assert.Equal("Test provider tests.provider-a", descriptor.DisplayName);
+        Assert.Contains("tests", descriptor.DomainTags);
+        Assert.Contains(AgentRuntimeToolProviderPurpose.InteractiveChat, descriptor.SupportedPurposes);
+        Assert.Contains(progressMessages, message =>
+            message.Contains("tests.provider-a", StringComparison.Ordinal) &&
+            message.Contains("Test provider tests.provider-a", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_rejects_duplicate_provider_keys()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.duplicate-provider"),
+            "first_provider_tool"));
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            20,
+            CreateDescriptor("tests.duplicate-provider"),
+            "second_provider_tool"));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+            await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []);
+        });
+
+        Assert.Contains("Runtime tool provider key(s) must be unique", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("tests.duplicate-provider", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AgentRuntimeToolProviderDescriptor_rejects_null_or_empty_provider_key(string? providerKey)
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new AgentRuntimeToolProviderDescriptor(providerKey!, "Display", "Description"));
+
+        Assert.Equal("providerKey", exception.ParamName);
+    }
+
+    [Fact]
+    public void AgentRuntimeToolProviderDescriptor_rejects_empty_display_name()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            new AgentRuntimeToolProviderDescriptor("tests.provider", " ", "Description"));
+
+        Assert.Equal("displayName", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_infers_tool_operation_metadata_from_policy_catalog()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.process-provider"),
+            "processes_runs_list",
+            "processes_run_start",
+            "unclassified_provider_tool"));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var state = await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []);
+
+        var metadata = ReadToolMetadata(state);
+        var readMetadata = Assert.Single(metadata, item => item.ToolName == "processes_runs_list");
+        Assert.Equal("tests.process-provider", readMetadata.ProviderKey);
+        Assert.Equal(AgentRuntimeToolOperationKind.Read, readMetadata.OperationKind);
+        Assert.False(readMetadata.RequiresApprovalByDefault);
+        Assert.Contains("tests", readMetadata.OwnershipTags);
+
+        var mutationMetadata = Assert.Single(metadata, item => item.ToolName == "processes_run_start");
+        Assert.Equal(AgentRuntimeToolOperationKind.Mutation, mutationMetadata.OperationKind);
+        Assert.True(mutationMetadata.RequiresApprovalByDefault);
+
+        var unknownMetadata = Assert.Single(metadata, item => item.ToolName == "unclassified_provider_tool");
+        Assert.Equal(AgentRuntimeToolOperationKind.Unknown, unknownMetadata.OperationKind);
+    }
+
+    [Fact]
+    public async Task MafAgentRuntimeToolProviderComposition_rejects_tool_metadata_for_unknown_tool_name()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+            10,
+            CreateDescriptor("tests.metadata-provider"),
+            ["metadata_known_tool"],
+            [
+                new AgentRuntimeToolMetadata(
+                    "tests.metadata-provider",
+                    "metadata_unknown_tool",
+                    AgentRuntimeToolOperationKind.Read,
+                    requiresApprovalByDefault: false)
+            ]));
+        var runtime = new MafAgentRuntime(Path.GetTempPath(), services.BuildServiceProvider());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await InvokeCreateCapabilityStateAsync(runtime, CreateToolEnabledAgent(), CreateProviderProfile(), []));
+
+        Assert.Contains("declared metadata for unknown tool name(s)", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("metadata_unknown_tool", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -109,6 +233,24 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
         => Assert.IsAssignableFrom<IEnumerable<AITool>>(
                 state.GetType().GetProperty("Tools", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
             .ToList();
+
+    private static IReadOnlyList<AgentRuntimeToolProviderDescriptor> ReadProviderDescriptors(object state)
+        => Assert.IsAssignableFrom<IEnumerable<AgentRuntimeToolProviderDescriptor>>(
+                state.GetType().GetProperty("RuntimeToolProviderDescriptors", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
+            .ToList();
+
+    private static IReadOnlyList<AgentRuntimeToolMetadata> ReadToolMetadata(object state)
+        => Assert.IsAssignableFrom<IEnumerable<AgentRuntimeToolMetadata>>(
+                state.GetType().GetProperty("RuntimeToolMetadata", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state))
+            .ToList();
+
+    private static AgentRuntimeToolProviderDescriptor CreateDescriptor(string providerKey)
+        => new(
+            providerKey,
+            $"Test provider {providerKey}",
+            "Test runtime provider.",
+            ["tests"],
+            [AgentRuntimeToolProviderPurpose.InteractiveChat]);
 
     private static async Task<object> InvokeCreateCapabilityStateAsync(
         MafAgentRuntime runtime,
@@ -195,14 +337,36 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
     private sealed class TestRuntimeToolProvider : IAgentRuntimeToolProvider
     {
         private readonly IReadOnlyList<string> toolNames;
+        private readonly IReadOnlyList<AgentRuntimeToolMetadata> metadata;
 
         public TestRuntimeToolProvider(int order, params string[] toolNames)
+            : this(order, null, toolNames)
+        {
+        }
+
+        public TestRuntimeToolProvider(
+            int order,
+            AgentRuntimeToolProviderDescriptor? descriptor,
+            params string[] toolNames)
+            : this(order, descriptor, toolNames, [])
+        {
+        }
+
+        public TestRuntimeToolProvider(
+            int order,
+            AgentRuntimeToolProviderDescriptor? descriptor,
+            IReadOnlyList<string> toolNames,
+            IReadOnlyList<AgentRuntimeToolMetadata> metadata)
         {
             Order = order;
+            Descriptor = descriptor;
             this.toolNames = toolNames;
+            this.metadata = metadata;
         }
 
         public int Order { get; }
+
+        public AgentRuntimeToolProviderDescriptor? Descriptor { get; }
 
         public List<AgentRuntimeToolProviderContext> Contexts { get; } = [];
 
@@ -216,6 +380,10 @@ public sealed class MafAgentRuntimeToolProviderCompositionTests
                 .Select(toolName => AIFunctionFactory.Create(() => "ok", toolName, "Test runtime provider tool."))
                 .ToList());
         }
+
+        public IReadOnlyList<AgentRuntimeToolMetadata> GetToolMetadata(
+            AgentRuntimeToolProviderContext context)
+            => metadata;
     }
 
     private sealed class ThrowingRuntimeToolProvider : IAgentRuntimeToolProvider

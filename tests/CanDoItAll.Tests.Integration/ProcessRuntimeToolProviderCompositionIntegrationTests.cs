@@ -3,6 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Workbench;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -37,7 +38,63 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
     ];
 
     [Fact]
-    public async Task ProcessRuntimeToolProviderComposition_app_composition_registers_process_provider_with_complete_tool_inventory()
+    public async Task ProjectStructureRuntimeToolProviderComposition_app_composition_registers_project_structure_provider_with_complete_tool_inventory()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var projectStructureProvider = Assert.Single(
+            scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProjectStructureAgentRuntimeToolProvider>());
+
+        Assert.Equal(900, projectStructureProvider.Order);
+        Assert.Equal("project-structure.runtime-tools", projectStructureProvider.Descriptor?.ProviderKey);
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = true,
+                    CanWrite = true,
+                    AllowAllProjects = true
+                })
+        };
+
+        var tools = await projectStructureProvider.CreateToolsAsync(
+            new AgentRuntimeToolProviderContext(
+                agent,
+                provider,
+                [],
+                SuppressApprovalRequirements: false,
+                AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+                RuntimeSessionKey: "sb04-runtime-smoke",
+                Tags: new Dictionary<string, string>
+                {
+                    ["proof"] = "SB04"
+                }),
+            CancellationToken.None);
+        var toolNames = tools
+            .Select(item => item.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var expectedToolNames = AgentToolInvocationPolicyMetadata.ProjectStructureReadTools
+            .Concat(AgentToolInvocationPolicyMetadata.ProjectStructureMutationTools)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.Equal(expectedToolNames.Count, toolNames.Count);
+        foreach (var toolName in expectedToolNames)
+        {
+            Assert.Contains(toolName, toolNames);
+        }
+    }
+
+    [Fact]
+    public async Task ProcessRuntimeProvider_app_composition_preserves_process_tool_exact_name_parity()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();

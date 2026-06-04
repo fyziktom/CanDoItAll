@@ -1,0 +1,19 @@
+# SB12 Passing Proof
+
+Invariant IDs: SB12-INV-001, SB12-INV-002, SB12-INV-003
+
+Command: git diff --check -- [SB12 docs]
+warning: in the working copy of 'Templates/Processes/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/skills/candoitall-api-processes/SKILL.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/api-control-plane.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Core/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Maf/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/README.md', LF will be replaced by CRLF the next time Git touches it
+ExitCode: 0
+ExpectedExitCode: 0
+
+Command: Compare repo and active candoitall-api-processes skill SHA-256 hashes
+repo=9523684EECF476679E0E29025380F06CF9EA489DF72BF9DC38B9BA98087088CC
+active=9523684EECF476679E0E29025380F06CF9EA489DF72BF9DC38B9BA98087088CC
+ExitCode: 0
+ExpectedExitCode: 0

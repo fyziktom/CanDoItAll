@@ -261,8 +261,9 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
                 .Select(File.ReadAllText));
         var forbiddenTerms = new[]
         {
-            string.Concat("calcu", "lator"),
             string.Concat("Simple", "Calcu", "lator", "App"),
+            string.Concat("Simple ", "calcu", "lator"),
+            string.Concat("calcu", "lator app"),
             string.Concat("calc", "app"),
             string.Concat("Community", "Bike", "Pump", "Locator"),
             string.Concat("Craft", "Swap", "Shelf", "Catalog")

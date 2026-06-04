@@ -1,0 +1,13 @@
+Command: dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter FullyQualifiedName~Sb04GeneratedAppBrowserValidationTests.Generated_app_supports_desktop_and_mobile_browser_validation --no-build
+WorkingDirectory: C:\repositories\CanDoItAll
+ExitCode: 0
+
+STDOUT:
+Testovac├ş b─Ťh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkov├Ż po─Źet testovac├şch soubor┼», kter├ę odpov├şdaj├ş zadan├ęmu vzoru: 1
+
+├Üsp─Ť┼ín├ę!    - Ne├║sp─Ť┼ín├ę:     0, ├Üsp─Ť┼ín├ę:     1, P┼Öesko─Źeno:     0, Celkem:     1, Doba trv├ín├ş: 8 s - CanDoItAll.Tests.Playwright.dll (net10.0)
+
+
+STDERR:
+

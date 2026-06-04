@@ -1,0 +1,9 @@
+Command: rg -n "BoundProjectedSubprocessStoragePath|ManagedStoragePath = subprocessArtifact.ManagedStoragePath" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB11
+Invariant: SB11-INVARIANT-001
+TimestampUtc: 2026-06-04T06:34:36.8761826Z
+
+No old subprocess projection storage-path reuse found. This non-zero rg result is the expected adversarial negative proof for the pre-fix behavior.
+
+ExitCode: 1

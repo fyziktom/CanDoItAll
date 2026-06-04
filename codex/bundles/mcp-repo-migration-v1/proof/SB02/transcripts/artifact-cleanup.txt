@@ -1,0 +1,5 @@
+Command: PowerShell artifact cleanup assertions for stale MCP traces and retired servers
+Invariant ID: SB02-ARTIFACT-CLEANUP
+--- output ---
+SB02 artifact cleanup assertion passed: live MCP traces are limited to mcp-installs/mcp-server-shadow, generated history artifacts with old MCP source/test/tool paths were removed, current installs include all active installed MCPs, and retired Processes/ProjectStructure MCP references are absent from installs and active config.
+ExitCode: 0

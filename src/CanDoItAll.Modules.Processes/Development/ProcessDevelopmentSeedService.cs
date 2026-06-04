@@ -80,6 +80,18 @@ public sealed partial class ProcessDevelopmentSeedService
                     "processes.seed-template-not-found"));
         }
 
+        var dependencyResult = await EnsureTemplateDependencyDefinitionsAsync(
+            pack,
+            process,
+            projectId,
+            seededDefinitionIds,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            cancellationToken);
+        if (dependencyResult.IsFailure)
+        {
+            return Result<Guid>.Failure(dependencyResult.Errors.ToArray());
+        }
+
         var existingDefinition = (await processesService.ListDefinitionsAsync(projectId, cancellationToken))
             .FirstOrDefault(item =>
                 string.Equals(item.Name, process.DisplayName, StringComparison.OrdinalIgnoreCase) &&
@@ -151,6 +163,99 @@ public sealed partial class ProcessDevelopmentSeedService
         return runtimeResult.IsFailure
             ? Result<Guid>.Failure(runtimeResult.Errors.ToArray())
             : Result<Guid>.Success(definitionId);
+    }
+
+    private async Task<Result> EnsureTemplateDependencyDefinitionsAsync(
+        ProcessTemplatePack pack,
+        ProcessTemplateDefinition process,
+        Guid? projectId,
+        ICollection<Guid> seededDefinitionIds,
+        ISet<string> visitedProcessKeys,
+        CancellationToken cancellationToken)
+    {
+        if (!visitedProcessKeys.Add(process.Key))
+        {
+            return Result.Success();
+        }
+
+        foreach (var subprocessKey in process.Steps
+                     .Select(step => step.SubprocessProcessKey)
+                     .Where(key => !string.IsNullOrWhiteSpace(key))
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!pack.Processes.TryGetValue(subprocessKey, out var subprocess))
+            {
+                return Result.Failure(
+                    Error.Validation(
+                        $"Template process '{process.Key}' references subprocess '{subprocessKey}', but that process was not found in the process template pack.",
+                        "processes.seed-subprocess-template-not-found"));
+            }
+
+            var nestedResult = await EnsureTemplateDependencyDefinitionsAsync(
+                pack,
+                subprocess,
+                projectId,
+                seededDefinitionIds,
+                visitedProcessKeys,
+                cancellationToken);
+            if (nestedResult.IsFailure)
+            {
+                return nestedResult;
+            }
+
+            var ensureResult = await EnsureTemplateDefinitionImportedAndPublishedAsync(
+                subprocess,
+                projectId,
+                cancellationToken);
+            if (ensureResult.IsFailure)
+            {
+                return Result.Failure(ensureResult.Errors.ToArray());
+            }
+
+            if (!seededDefinitionIds.Contains(ensureResult.Value))
+            {
+                seededDefinitionIds.Add(ensureResult.Value);
+            }
+        }
+
+        return Result.Success();
+    }
+
+    private async Task<Result<Guid>> EnsureTemplateDefinitionImportedAndPublishedAsync(
+        ProcessTemplateDefinition process,
+        Guid? projectId,
+        CancellationToken cancellationToken)
+    {
+        var existingDefinition = (await processesService.ListDefinitionsAsync(projectId, cancellationToken))
+            .FirstOrDefault(item =>
+                string.Equals(item.Name, process.DisplayName, StringComparison.OrdinalIgnoreCase) &&
+                item.ProjectId == projectId);
+
+        var definitionId = existingDefinition?.Id;
+        if (!definitionId.HasValue)
+        {
+            var envelope = projectionService.GetProjectedEnvelope(process.Key, projectId);
+            var importResult = await processesService.ImportAsync(envelope, cancellationToken);
+            if (importResult.IsFailure)
+            {
+                return Result<Guid>.Failure(importResult.Errors.ToArray());
+            }
+
+            definitionId = importResult.Value;
+        }
+
+        var refreshedDefinition = (await processesService.ListDefinitionsAsync(projectId, cancellationToken))
+            .Single(item => item.Id == definitionId.Value);
+        if (!refreshedDefinition.HasPublishedVersion)
+        {
+            var publishResult = await processesService.PublishAsync(definitionId.Value, cancellationToken);
+            if (publishResult.IsFailure)
+            {
+                return Result<Guid>.Failure(publishResult.Errors.ToArray());
+            }
+        }
+
+        return Result<Guid>.Success(definitionId.Value);
     }
 
     private static TEnum ParseEnum<TEnum>(string? value, TEnum fallback)

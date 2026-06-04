@@ -1,10 +1,19 @@
 # MAF / Runtime Tool Provider Hardening Follow-up v1
 
-Bundle preparation status: `Prepared`
+Bundle preparation status: `Completed`
 Bundle profile: `initiative`
 Target branch reviewed: `maf-processes-refactor`
 Baseline branch: `development`
 Created: `2026-06-04`
+
+## Validation Summary
+
+Bundle preparation status: `Prepared`
+Bundle readiness gate: `Passed prepared-stage validator after structural repair`
+Execution status: `Completed; SB01-SB12 completed`
+Subbundle gate review: `SB01-SB12 passed; Gate A, Gate B, Gate C, and final gate passed`
+Final closure gate: `Passed`
+Browser validation analytics: `SB01-SB12 N/A; no rendered UI changed`
 
 ## Purpose
 
@@ -55,3 +64,16 @@ This bundle stabilizes those seams first so the later process contracts/core ext
 ## Execution Rule
 
 Do not collapse phases. After SB03, SB06, and SB09, stop for a refactor checkpoint before continuing. The implementation agent must preserve exact tool parity and policy behavior unless a subbundle explicitly owns a tool-surface change.
+
+## Refactor Checkpoints
+
+- Gate A after SB03: Passed. Provider metadata exists, MAF runtime-provider composition is provider-neutral in source naming and tests, process/provider composition tests pass, and no product-provider migration started before the generic seam was hardened.
+- SB04 project-structure provider extraction: Passed. Workbench owns `ProjectStructureAgentRuntimeToolProvider`, MAF no longer contains project-structure attach code, project-structure tool parity is recorded, and MAF's direct Projects reference was removed.
+- SB05 image-generation provider extraction: Passed. AgentFramework owns `ImageGenerationAgentRuntimeToolProvider`, MAF no longer contains image-generation attach code, eligible-agent image tool availability is proven, and MAF direct Workbench/Projects references are removed.
+- Gate B after SB06: Passed. Tooling remains product-neutral, MAF provider composition remains provider-neutral, MAF direct product-tool references are removed or allowed-listed, and the remaining large Process provider is explicitly deferred to SB07.
+- SB07 Process provider internal split: Passed. The Processes provider is split into smaller source files, exact 23-tool parity is recorded, access/policy/capability tests pass, and a static guard prevents returning to a 900+ line provider file.
+- SB08 Process provider purpose/access hardening: Passed. Process tool exposure is purpose-aware, read tools require process read access, mutation tools require explicit write access, A2AEndpoint behavior is covered, and write-enabled automation still gets all 23 process tools.
+- Gate C after SB09: Passed. Runtime provider ownership is visible in attach diagnostics, invocation traces, and optional receipt ownership fields; receipt schema compatibility and process receipt semantics pass.
+- SB10 Documentation and architecture guard refresh: Passed. Live docs describe providerized first-party tool ownership, provider diagnostics, allowed MAF references, and the non-goal of completed process-core extraction; stale hard-coded attach method names are absent from live source/docs/skills.
+- SB11 Integration smoke and real process regression: Passed. Full unit tests, process-filtered integration tests, solution build, whitespace check, anti-stub audit, and adversarial old-subprocess-projection scan passed on the final source shape.
+- SB12 Final red-team, merge readiness, and next-phase cutline: Passed. Hidden dependency/scope scans, targeted provider/policy tests, targeted integration reruns, final build, branch hygiene, manual red-team checklist, and next-phase cutline are recorded.

@@ -1,0 +1,72 @@
+Worksheet "cd1uc1" is missing a required sheetId.
+{
+  "outputXlsx": "C:\\repositories\\CanDoItAll\\codex\\bundles\\api-docs-skills-parity-v1\\inventories\\api-docs-skills-gap-map.xlsx",
+  "previewPng": "C:\\repositories\\CanDoItAll\\codex\\bundles\\api-docs-skills-parity-v1\\inventories\\api-docs-skills-gap-map-summary.png",
+  "inspectJson": "C:\\repositories\\CanDoItAll\\codex\\bundles\\api-docs-skills-parity-v1\\inventories\\api-docs-skills-gap-map-inspect.json",
+  "endpointCount": 311,
+  "surfaces": [
+    {
+      "Surface": "access",
+      "RouteCount": 2,
+      "DocsExactRouteCovered": 1,
+      "SkillsExactRouteCovered": 2,
+      "Notes": ""
+    },
+    {
+      "Surface": "agents",
+      "RouteCount": 57,
+      "DocsExactRouteCovered": 2,
+      "SkillsExactRouteCovered": 20,
+      "Notes": ""
+    },
+    {
+      "Surface": "cognitive-memory",
+      "RouteCount": 38,
+      "DocsExactRouteCovered": 35,
+      "SkillsExactRouteCovered": 28,
+      "Notes": ""
+    },
+    {
+      "Surface": "cognitive-memory-v1",
+      "RouteCount": 38,
+      "DocsExactRouteCovered": 35,
+      "SkillsExactRouteCovered": 0,
+      "Notes": "Alias surface; new integrations should prefer this base path."
+    },
+    {
+      "Surface": "plugins",
+      "RouteCount": 20,
+      "DocsExactRouteCovered": 2,
+      "SkillsExactRouteCovered": 0,
+      "Notes": ""
+    },
+    {
+      "Surface": "processes",
+      "RouteCount": 58,
+      "DocsExactRouteCovered": 12,
+      "SkillsExactRouteCovered": 29,
+      "Notes": ""
+    },
+    {
+      "Surface": "project-structure",
+      "RouteCount": 51,
+      "DocsExactRouteCovered": 7,
+      "SkillsExactRouteCovered": 4,
+      "Notes": ""
+    },
+    {
+      "Surface": "projects",
+      "RouteCount": 10,
+      "DocsExactRouteCovered": 2,
+      "SkillsExactRouteCovered": 5,
+      "Notes": ""
+    },
+    {
+      "Surface": "workflows",
+      "RouteCount": 37,
+      "DocsExactRouteCovered": 1,
+      "SkillsExactRouteCovered": 33,
+      "Notes": ""
+    }
+  ]
+}

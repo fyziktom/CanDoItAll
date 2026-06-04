@@ -1,0 +1,4 @@
+Command: wrapper transcript for bundle://proof/SB08/final-verifier-red-team.md
+ExitCode: 0
+Result: No SB08 production stub markers identified by final verifier audit.
+Source transcript: bundle://proof/SB08/final-verifier-red-team.md

@@ -1570,7 +1570,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 Key = "revalidate-blazor-repair",
                 Title = "Revalidate Blazor repair",
                 StepKind = ProcessStepKind.Review,
-                EvidenceContractSummary = "Record commands, files, URLs, screenshots, console messages, errors, and assumptions. Project-structure writeback belongs to result-recording steps, not validation.",
+                EvidenceContractSummary = "Record commands, files, URLs, browser proof outputs, console messages, errors, and assumptions. Result-recording steps own project-structure updates; validation remains read-only.",
                 AllowedOperations =
                 [
                     ProcessStepOperation.ReadProcessContext,
@@ -1597,8 +1597,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 EvidenceExpectationSummary = "Runtime evidence pack"
             },
             [
-                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", "Must include fresh dotnet build/test results as applicable, fresh app startup receipt, fresh Playwright screenshot paths, fresh browser_snapshot output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, cleanup receipt, and project-structure evidence writeback references."),
-                (ProcessArtifactKind.Brief, "Validation self-review summary", "Must state validated routes, screenshots captured, console status, failed assertions if any, and whether acceptance criteria are satisfied.")
+                (ProcessArtifactKind.Evidence, "Blazor runtime evidence pack", "Must include fresh dotnet build/test results as applicable, fresh browser proof with app startup receipt, fresh browser_snapshot output, fresh browser_console_messages output showing no active JavaScript/runtime errors, visible behavior assertions, and cleanup receipt."),
+                (ProcessArtifactKind.Brief, "Validation self-review summary", "Must state validated routes, browser proof captured, console status, failed assertions if any, and whether acceptance criteria are satisfied.")
             ],
             ProcessProjectStructureContextFormatter.AppendToTriggerReason(
                 "Deliver a Blazor WebAssembly PWA from project structure.",
@@ -5340,11 +5340,15 @@ Requirements from project-level planning context:
                 ProcessRunId: Guid.NewGuid().ToString("D"),
                 ProcessStepId: Guid.NewGuid().ToString("D"),
                 AllowedExternalTargetAliases: [],
-                ReadOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary"]),
+                ReadOnlyExternalTargetAliases: ["external-target/C/programovani/todo-summary"],
+                ProcessAllowsProductMutation: false,
+                ProcessStepAllowedOperations: [ProcessStepOperation.MutateProductTarget.ToString()],
+                ProcessStepTargetScope: ProcessStepTargetScope.ExternalProductTargetReadOnly.ToString()),
             CancellationToken.None);
 
         Assert.Equal(ToolInvocationDecisionKind.Deny, decision.Kind);
-        Assert.Contains("read-only access", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not authorized to mutate product targets", decision.Reason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("read-only", decision.Reason, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

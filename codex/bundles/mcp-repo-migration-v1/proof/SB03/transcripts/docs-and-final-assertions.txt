@@ -1,0 +1,5 @@
+Command: PowerShell docs and stale reference assertions
+Invariant ID: SB03-DOCS-CLOSURE
+--- output ---
+SB03 docs assertion passed: MCP repo docs exist, Mermaid is documented as installed by resetup, and current main-repo docs/skills no longer point at obsolete in-repo MCP source paths.
+ExitCode: 0

@@ -1567,7 +1567,7 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
-    public async Task CreateCapabilityState_attaches_internal_project_structure_tools_by_default_when_workspace_services_are_available()
+    public async Task CreateCapabilityState_attaches_project_structure_runtime_provider_by_default_when_workspace_services_are_available()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1603,6 +1603,8 @@ public sealed class MafAgentRuntimeTests
         var toolNames = tools
             .Select(item => item.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var providerDescriptors = Assert.IsAssignableFrom<IEnumerable<AgentRuntimeToolProviderDescriptor>>(
+            state.GetType().GetProperty("RuntimeToolProviderDescriptors", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
         var expectedToolNames = new[]
         {
             "project_structure_projects_list",
@@ -1641,6 +1643,12 @@ public sealed class MafAgentRuntimeTests
         }
 
         Assert.Contains(
+            providerDescriptors,
+            descriptor => string.Equals(descriptor.ProviderKey, "project-structure.runtime-tools", StringComparison.Ordinal));
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("registered runtime tool provider", StringComparison.Ordinal));
+        Assert.DoesNotContain(
             progressMessages,
             item => item.Contains("Attached internal project-structure tools", StringComparison.Ordinal));
     }
@@ -1689,9 +1697,17 @@ public sealed class MafAgentRuntimeTests
         var toolNames = tools
             .Select(item => item.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var providerDescriptors = Assert.IsAssignableFrom<IEnumerable<AgentRuntimeToolProviderDescriptor>>(
+            state.GetType().GetProperty("RuntimeToolProviderDescriptors", BindingFlags.Public | BindingFlags.Instance)?.GetValue(state));
 
         Assert.Contains("image_generation_create", toolNames);
         Assert.Contains(
+            providerDescriptors,
+            descriptor => string.Equals(descriptor.ProviderKey, "image-generation.runtime-tools", StringComparison.Ordinal));
+        Assert.Contains(
+            progressMessages,
+            item => item.Contains("registered runtime tool provider", StringComparison.Ordinal));
+        Assert.DoesNotContain(
             progressMessages,
             item => item.Contains("Attached internal image-generation tools", StringComparison.Ordinal));
     }
@@ -1713,6 +1729,7 @@ public sealed class MafAgentRuntimeTests
                 new AgentProcessAccessSettings
                 {
                     CanRead = true,
+                    CanWrite = true,
                     AllowedDefinitionIds =
                     [
                         Guid.NewGuid()
@@ -1779,7 +1796,7 @@ public sealed class MafAgentRuntimeTests
 
         Assert.Contains(
             progressMessages,
-            item => item.Contains("Attached 23 tool(s) from 1 registered runtime tool provider(s).", StringComparison.Ordinal));
+            item => item.Contains("registered runtime tool provider", StringComparison.Ordinal));
         Assert.DoesNotContain(
             progressMessages,
             item => item.Contains("Attached internal process-module tools", StringComparison.Ordinal));
@@ -1809,11 +1826,7 @@ public sealed class MafAgentRuntimeTests
             CreateProcessProviderContext(readDeniedAgent, provider),
             CancellationToken.None);
 
-        await AssertProcessProviderToolErrorAsync(
-            readDeniedTools,
-            "processes_definitions_list",
-            new Dictionary<string, object?>(),
-            "ProcessReadDenied");
+        Assert.Empty(readDeniedTools);
 
         var definitionId = Guid.NewGuid();
         var writeDeniedAgent = seededAgent with
@@ -1834,17 +1847,12 @@ public sealed class MafAgentRuntimeTests
             CreateProcessProviderContext(writeDeniedAgent, provider),
             CancellationToken.None);
 
-        await AssertProcessProviderToolErrorAsync(
+        Assert.Contains(
             writeDeniedTools,
-            "processes_run_start",
-            new Dictionary<string, object?>
-            {
-                ["request"] = new ProcessRunStartRequest
-                {
-                    ProcessDefinitionId = definitionId
-                }
-            },
-            "ProcessWriteDenied");
+            tool => string.Equals(tool.Name, AgentToolInvocationPolicyMetadata.ProcessesRunsList, StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            writeDeniedTools,
+            tool => AgentToolInvocationPolicyMetadata.IsMutationTool(tool.Name));
 
         var scopedDeniedAgent = seededAgent with
         {

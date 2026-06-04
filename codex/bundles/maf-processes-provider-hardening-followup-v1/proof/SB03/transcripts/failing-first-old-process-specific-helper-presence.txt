@@ -1,0 +1,9 @@
+Command: rg -n 'WrapInternalProcessMutationTool|AttachInternalProcessToolsAsync|CreateProcessToolBuilder' src/CanDoItAll.AgentFramework.Maf; if absent, proof exit 1
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB03
+TimestampUtc: 2026-06-04T01:50:09.2672599Z
+ExitCode: 1
+---- Output ----
+SB03-INVARIANT-001
+Adversarial old-name presence check: a shallow/no-refactor implementation would still contain process-specific provider composition helper names.
+Old process-specific provider-composition helper names are absent, so the presence check fails as intended.

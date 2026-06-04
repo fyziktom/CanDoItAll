@@ -1,0 +1,7 @@
+# SB11 Active Skill Sync
+
+Command: Copy-Item -LiteralPath codex\skills\candoitall-api-processes\SKILL.md -Destination C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md -Force; compare SHA-256 hashes
+ExitCode: 0
+
+CD4E2CFF782BD4AFF42F6E6ACD9F026006710374C273168B8B2633C18F0E71BE C:\repositories\CanDoItAll\codex\skills\candoitall-api-processes\SKILL.md
+CD4E2CFF782BD4AFF42F6E6ACD9F026006710374C273168B8B2633C18F0E71BE C:\Users\lucys\.codex\skills\candoitall-api-processes\SKILL.md

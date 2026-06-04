@@ -1,0 +1,12 @@
+# SB13 anti-stub-audit.txt
+
+Command:
+`git diff --unified=0 -- src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs tests\CanDoItAll.Tests.Components\ProcessWorkspaceTests.cs | rg -n "TODO|NotImplemented|stub|fake|Tetris|Blazor|hard-code|hardcoded"`
+
+ExitCode: 1
+
+Output:
+No matches in the SB13 diff.
+
+Note:
+Whole-file scans of `ProcessWorkspaceTests.cs` still find pre-existing Blazor PWA component fixtures outside this SB13 change. The SB13 diff adds generic operator-console coverage only.

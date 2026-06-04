@@ -1,0 +1,15 @@
+Command: dotnet build CanDoItAll.slnx
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB05
+Result: Failing-first after moving image builder out of MAF and before local helper extraction
+ExitCode: 1
+---- Failure Summary ----
+The first build after moving `MafAgentRuntime.ImageGenerationTools.cs` into `ImageGenerationAgentRuntimeToolProvider` failed because copied code still referenced helpers that were private to MAF.
+
+Representative compiler errors:
+- `ImageGenerationAgentRuntimeToolProvider.cs`: `ProviderFeatureService` did not exist in the current context.
+- `ImageGenerationAgentRuntimeToolProvider.cs`: `SerializerOptions` did not exist in the current context.
+- `ImageGenerationAgentRuntimeToolProvider.cs`: `ResolveProviderNetworkTimeout` did not exist in the current context.
+
+Resolution: `ImageGenerationAgentRuntimeToolProvider` now owns JSON serializer options, provider-profile normalization service, and the same timeout parsing/clamping logic used by the former MAF path.
+Passing rerun: `bundle://proof/SB05/transcripts/solution-build.txt`.

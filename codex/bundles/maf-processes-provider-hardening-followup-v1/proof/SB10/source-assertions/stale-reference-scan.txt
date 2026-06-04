@@ -1,0 +1,2 @@
+Command: rg -n "AttachInternalProjectStructureToolsAsync|AttachInternalImageGenerationToolsAsync|CreateProjectStructureToolBuilder|CreateImageGenerationToolBuilder|WrapInternalProcessMutationTool" src docs README.md codex\skills
+Result: no stale references found in live source, docs, or installed skills.

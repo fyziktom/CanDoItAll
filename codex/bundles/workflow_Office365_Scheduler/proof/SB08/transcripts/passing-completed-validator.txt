@@ -1,0 +1,4 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\workflow_Office365_Scheduler --stage completed --repo-root C:\repositories\CanDoItAll
+
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\workflow_Office365_Scheduler
+ExitCode: 0

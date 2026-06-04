@@ -58,8 +58,6 @@ public sealed partial class MafAgentRuntime
             contextWorkspaceScope);
         await AttachSkillsAsync(composition, capabilities, progressCallback, suppressApprovalRequirements);
         await AttachConfiguredWorkspaceToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
-        await AttachInternalProjectStructureToolsAsync(composition, agent, progressCallback);
-        await AttachInternalImageGenerationToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
         await AttachRegisteredRuntimeToolProvidersAsync(
             composition,
             agent,
@@ -102,11 +100,13 @@ public sealed partial class MafAgentRuntime
         var contextBuilder = new ContextCapabilityBuilder(this);
         var contextContributors = services.GetServices<IAgentContextContributor>().ToList();
         var runtimeToolProviders = services.GetServices<IAgentRuntimeToolProvider>()
-            .OrderBy(toolProvider => toolProvider.Order)
-            .ThenBy(toolProvider => toolProvider.GetType().FullName, StringComparer.Ordinal)
+            .Select(CreateRuntimeToolProviderRegistration)
+            .OrderBy(registration => registration.Provider.Order)
+            .ThenBy(registration => registration.Descriptor.ProviderKey, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(registration => registration.Provider.GetType().FullName, StringComparer.Ordinal)
             .ToList();
+        EnsureRuntimeToolProviderKeysAreUnique(runtimeToolProviders);
         var mcpBuilder = new McpCapabilityBuilder(this);
-        var projectStructureToolBuilder = CreateProjectStructureToolBuilder(workspaceCommandExecutionService);
         var fileSkillExecutionPolicies = skillBuilder.ResolveScriptExecutionPolicies(capabilities);
         var toolBuilder = new ToolCapabilityBuilder(this, workspacePlugin, storagePlugin, workspaceCommandExecutionService, workspaceToolAccess, fileSkillExecutionPolicies);
 
@@ -118,7 +118,6 @@ public sealed partial class MafAgentRuntime
             contextContributors,
             runtimeToolProviders,
             mcpBuilder,
-            projectStructureToolBuilder,
             toolBuilder);
     }
 
@@ -294,30 +293,6 @@ public sealed partial class MafAgentRuntime
         }
     }
 
-    private async Task AttachInternalProjectStructureToolsAsync(
-        RuntimeCapabilityComposition composition,
-        AgentDefinition agent,
-        Func<ExecutionState, string, string, Task> progressCallback)
-    {
-        if (!agent.Permissions.CanUseTools ||
-            composition.ProjectStructureToolBuilder is null)
-        {
-            return;
-        }
-
-        var tools = composition.ProjectStructureToolBuilder.CreateTools(agent);
-        if (tools.Count == 0)
-        {
-            return;
-        }
-
-        composition.State.Tools.AddRange(tools);
-        await progressCallback(
-            ExecutionState.Preparing,
-            "Project structure",
-            "Attached internal project-structure tools backed by the workspace services and current agent policy.");
-    }
-
     private async Task AttachConfiguredWorkspaceToolsAsync(
         RuntimeCapabilityComposition composition,
         AgentDefinition agent,
@@ -345,98 +320,6 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "Workspace tools",
             "Attached configured workspace file and storage tools from the current agent settings." + profileSuffix);
-    }
-
-    private async Task AttachInternalImageGenerationToolsAsync(
-        RuntimeCapabilityComposition composition,
-        AgentDefinition agent,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        bool suppressApprovalRequirements)
-    {
-        if (!agent.Permissions.CanUseTools)
-        {
-            return;
-        }
-
-        var tools = CreateImageGenerationToolBuilder()
-            .CreateTools(agent)
-            .Select(tool => WrapInternalProcessMutationTool(tool, suppressApprovalRequirements))
-            .ToList();
-        if (tools.Count == 0)
-        {
-            return;
-        }
-
-        composition.State.Tools.AddRange(tools);
-        composition.State.HasApprovalTools |= tools.Any(tool => tool is ApprovalRequiredAIFunction);
-        await progressCallback(
-            ExecutionState.Preparing,
-            "Image generation",
-            "Attached internal image-generation tools backed by the agent image-generation access policy.");
-    }
-
-    private async Task AttachRegisteredRuntimeToolProvidersAsync(
-        RuntimeCapabilityComposition composition,
-        AgentDefinition agent,
-        ProviderProfile provider,
-        IReadOnlyList<CapabilityCatalogItem> capabilities,
-        Func<ExecutionState, string, string, Task> progressCallback,
-        CancellationToken cancellationToken,
-        bool suppressApprovalRequirements,
-        WorkspaceScopeDescriptor contextWorkspaceScope)
-    {
-        if (!agent.Permissions.CanUseTools ||
-            composition.RuntimeToolProviders.Count == 0)
-        {
-            return;
-        }
-
-        var context = new AgentRuntimeToolProviderContext(
-            agent,
-            provider,
-            capabilities,
-            suppressApprovalRequirements,
-            MapRuntimeToolProviderPurpose(ResolveContextPolicyKind(agent, suppressApprovalRequirements)),
-            RuntimeSessionKey: string.Empty,
-            ResolveRuntimeToolProviderTags(contextWorkspaceScope));
-        var attachedToolCount = 0;
-
-        foreach (var toolProvider in composition.RuntimeToolProviders)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<AITool> providerTools;
-            try
-            {
-                providerTools = await toolProvider.CreateToolsAsync(context, cancellationToken);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                throw new InvalidOperationException(
-                    $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' failed to create tools. {exception.Message}",
-                    exception);
-            }
-
-            if (providerTools is null)
-            {
-                throw new InvalidOperationException(
-                    $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned a null tool list.");
-            }
-
-            var tools = providerTools
-                .Select(tool => WrapInternalProcessMutationTool(tool, suppressApprovalRequirements))
-                .ToList();
-            EnsureRuntimeToolProviderNamesAreValid(toolProvider, tools);
-            EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(toolProvider, composition.State.Tools, tools);
-
-            composition.State.Tools.AddRange(tools);
-            attachedToolCount += tools.Count;
-        }
-
-        composition.State.HasApprovalTools |= composition.State.Tools.Any(tool => tool is ApprovalRequiredAIFunction);
-        await progressCallback(
-            ExecutionState.Preparing,
-            "Runtime tool providers",
-            $"Attached {attachedToolCount} tool(s) from {composition.RuntimeToolProviders.Count} registered runtime tool provider(s).");
     }
 
     private async Task AttachA2ARemoteAgentToolsAsync(
@@ -485,92 +368,6 @@ public sealed partial class MafAgentRuntime
             ExecutionState.Preparing,
             "A2A",
             $"Attached {tools.Count} A2A skill tool(s) from {endpoints.Count} configured remote endpoint(s).");
-    }
-
-    private static AITool WrapInternalProcessMutationTool(
-        AITool tool,
-        bool suppressApprovalRequirements)
-    {
-        if (suppressApprovalRequirements ||
-            tool is not AIFunction function ||
-            !AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(tool.Name))
-        {
-            return tool;
-        }
-
-        return new ApprovalRequiredAIFunction(function);
-    }
-
-    private static void EnsureRuntimeToolProviderNamesAreValid(
-        IAgentRuntimeToolProvider toolProvider,
-        IReadOnlyList<AITool> tools)
-    {
-        var unnamedToolCount = tools.Count(tool => string.IsNullOrWhiteSpace(tool.Name));
-        if (unnamedToolCount > 0)
-        {
-            throw new InvalidOperationException(
-                $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned {unnamedToolCount} tool(s) without a name.");
-        }
-
-        var duplicateNames = tools
-            .GroupBy(tool => tool.Name, StringComparer.OrdinalIgnoreCase)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (duplicateNames.Count > 0)
-        {
-            throw new InvalidOperationException(
-                $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned duplicate tool name(s): {string.Join(", ", duplicateNames)}.");
-        }
-    }
-
-    private static void EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(
-        IAgentRuntimeToolProvider toolProvider,
-        IReadOnlyList<AITool> existingTools,
-        IReadOnlyList<AITool> providerTools)
-    {
-        var duplicateNames = providerTools
-            .Select(tool => tool.Name)
-            .Where(toolName => existingTools.Any(existingTool => string.Equals(existingTool.Name, toolName, StringComparison.OrdinalIgnoreCase)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (duplicateNames.Count > 0)
-        {
-            throw new InvalidOperationException(
-                $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned tool name(s) already registered by the runtime: {string.Join(", ", duplicateNames)}.");
-        }
-    }
-
-    private static AgentRuntimeToolProviderPurpose MapRuntimeToolProviderPurpose(AgentRuntimeContextPolicyKind policyKind)
-        => policyKind switch
-        {
-            AgentRuntimeContextPolicyKind.GovernedProcessAutomation => AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
-            AgentRuntimeContextPolicyKind.AutoApprovedNonInteractive => AgentRuntimeToolProviderPurpose.AutoApprovedNonInteractive,
-            AgentRuntimeContextPolicyKind.A2AEndpoint => AgentRuntimeToolProviderPurpose.A2AEndpoint,
-            AgentRuntimeContextPolicyKind.InteractiveChat => AgentRuntimeToolProviderPurpose.InteractiveChat,
-            _ => AgentRuntimeToolProviderPurpose.InteractiveChat
-        };
-
-    private static IReadOnlyDictionary<string, string> ResolveRuntimeToolProviderTags(
-        WorkspaceScopeDescriptor contextWorkspaceScope)
-    {
-        var tags = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["workspaceScopeKind"] = contextWorkspaceScope.Kind.ToString()
-        };
-        if (!string.IsNullOrWhiteSpace(contextWorkspaceScope.Key))
-        {
-            tags["workspaceScopeKey"] = contextWorkspaceScope.Key;
-        }
-
-        return tags;
-    }
-
-    private static string DescribeRuntimeToolProvider(IAgentRuntimeToolProvider toolProvider)
-    {
-        return toolProvider.GetType().FullName ?? toolProvider.GetType().Name;
     }
 
     private async Task AttachCapabilityAsync(
@@ -1050,10 +847,13 @@ public sealed partial class MafAgentRuntime
         SkillCapabilityBuilder SkillBuilder,
         ContextCapabilityBuilder ContextBuilder,
         IReadOnlyList<IAgentContextContributor> ContextContributors,
-        IReadOnlyList<IAgentRuntimeToolProvider> RuntimeToolProviders,
+        IReadOnlyList<RuntimeToolProviderRegistration> RuntimeToolProviders,
         McpCapabilityBuilder McpBuilder,
-        ProjectStructureToolBuilder? ProjectStructureToolBuilder,
         ToolCapabilityBuilder ToolBuilder);
+
+    private sealed record RuntimeToolProviderRegistration(
+        IAgentRuntimeToolProvider Provider,
+        AgentRuntimeToolProviderDescriptor Descriptor);
 
     private sealed class SkillCapabilityConfiguration
     {

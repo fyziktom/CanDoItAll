@@ -1,0 +1,38 @@
+Command: dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --no-build --filter "FullyQualifiedName~SchedulerPlannerPageTests|FullyQualifiedName~WorkflowExecutorCanvasCatalogTests|FullyQualifiedName~WorkflowsPageTests" --logger "console;verbosity=normal"
+ExitCode: 0
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Components\bin\Debug\net10.0\CanDoItAll.Tests.Components.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.82]   Discovering: CanDoItAll.Tests.Components
+[xUnit.net 00:00:01.11]   Discovered:  CanDoItAll.Tests.Components
+[xUnit.net 00:00:01.16]   Starting:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_typed_workflow_input_clearing_required_value_removes_json_and_blocks_save [20 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_typed_workflow_input_validation_errors_render_before_save [10 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_history_renders_route_and_retry_policy_labels [11 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_typed_workflow_input_form_syncs_options_raw_json_and_cron_preset [9 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_target_picker_uses_dialog_cards_and_filters [10 s]
+  Úspěšné CanDoItAll.Tests.Components.SchedulerPlannerPageTests.Scheduler_page_renders_tabs_and_canvas_calendar_host [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_authors_typed_predicate_route_metadata [11 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_preview_prompts_for_project_context_and_can_skip_project_writes [10 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_places_llm_component_validates_runs_and_saves_definition [12 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_decision_context_action_adds_and_edits_routes_in_node_dialog [10 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_reconnects_linear_route_after_delete_and_accepts_canvas_connections [10 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflows_templates_tab_lists_executor_catalog_examples [1 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_marks_planned_runtime_backends_unavailable [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_history_paginates_runs_and_events_and_moves_full_payload_to_detail_dialog [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_example_seed_preserves_non_managed_definitions_with_template_names [87 ms]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_preview_selects_running_node_from_progress [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_toolbox_exposes_executor_catalog_metadata [281 ms]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_canvas_preserves_maximized_state_when_selection_changes [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Agents_shell_exposes_workflows_page_navigation [9 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflow_example_seed_creates_production_examples_when_enabled [1 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflows_page_defers_component_library_until_component_sections_need_it [10 s]
+  Úspěšné CanDoItAll.Tests.Components.WorkflowsPageTests.Workflows_page_creates_starter_workflow_and_runs_preview [10 s]
+[xUnit.net 00:03:19.90]   Finished:    CanDoItAll.Tests.Components
+  Úspěšné CanDoItAll.Tests.Components.WorkflowExecutorCanvasCatalogTests.BuildQuickCreateActions_groups_plugin_executors_under_plugin_menu [4 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 23
+     Úspěšné: 23
+ Celkový čas: 3,3660 Minuty

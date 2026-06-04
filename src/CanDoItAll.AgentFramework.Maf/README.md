@@ -63,16 +63,23 @@ MAF runtime regression proof is tracked by named slices so process automation an
 
 ## Architecture Notes
 
-Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly.
+Keep AgentFramework model contracts, persistence, provider-neutral orchestration, and provider/runtime adapters separated. Process automation should consume this layer through the AgentFramework module bridge instead of reaching into provider-specific code directly. MAF currently allows direct references to `CanDoItAll.Modules.Security` and `CanDoItAll.Modules.Workspace`; first-party product tool ownership for Processes, Workbench project-structure, and image generation belongs in registered `IAgentRuntimeToolProvider` implementations.
 
 ## Process Automation Notes
 
 - Process tools are composed through registered `IAgentRuntimeToolProvider` implementations. Read tools such as `processes_run_detail_get`, `processes_template_baseline_scenarios_list`, and `processes_template_live_run_profiles_list` must remain approval-free; mutation tools such as transitions, assignment resolution, artifact recording, definition saves, and template imports require approval wrappers unless governed automation explicitly suppresses approvals.
 - The concrete process provider lives in the Processes module as `ProcessAgentRuntimeToolProvider`. MAF must not reference that product module directly; it should only resolve registered provider instances from DI.
+- Project-structure tools live in Workbench as `ProjectStructureAgentRuntimeToolProvider`; image-generation tools live in the AgentFramework module as `ImageGenerationAgentRuntimeToolProvider`. Do not reintroduce hard-coded first-party product tool attachment methods into MAF.
 - MAF process agents should use the process API/tool surface for run state, artifacts, assignments, manager directives, and live-run profiles. They should not infer process state from prompt text, template files, or database rows.
 - Adopted MAF 1.8 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
 - Deferred or guarded surfaces must fail predictably. A2A endpoints require valid configuration and bearer secrets, browser MCP payloads are bounded, incompatible approval continuations are rejected, and workflow handoff depth is guarded.
 - Process automation that records final delivery must produce current-run evidence and let Processes validate the artifact and transition. MAF finalizers should not mark process steps complete by prose-only conclusion text.
+
+## Runtime Tool Provider Observability
+
+MAF records runtime-provider ownership at attach and invocation time. The provider attach progress message includes each provider key, display name, and attached tool count. During invocation, MAF tags the activity and `AgentToolInvocationTrace` with `RuntimeToolProviderKey` and `RuntimeToolProviderName` when the tool came from `IAgentRuntimeToolProvider` metadata.
+
+Workspace receipts written inside a provider-owned tool invocation inherit the same optional provider key/name through the Core audit context. Provider-native receipt projections copy those optional fields from the source receipt when available and leave them empty for existing persisted runs.
 
 ## Runtime Tool Provider Troubleshooting
 
@@ -80,7 +87,7 @@ When process tools are missing from a MAF run:
 
 1. Confirm the host registered the Processes module through `AddCanDoItAllRuntimeModules`.
 2. Confirm `IEnumerable<IAgentRuntimeToolProvider>` contains `ProcessAgentRuntimeToolProvider` in the run scope.
-3. Check MAF progress output for the registered-provider attachment message and the expected 23 process tools.
+3. Check MAF progress output for the registered-provider attachment message, provider key/display name, and the expected 23 process tools.
 4. Check `AgentProcessAccessMetadata` on the agent before treating absent or denied process behavior as a runtime bug.
 5. Check `AgentToolInvocationPolicy` classification before changing approval behavior.
 

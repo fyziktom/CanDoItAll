@@ -116,10 +116,31 @@ public sealed partial class ProcessDevelopmentSeedService
                 return Result.Failure(selectedBranchOutcomeIdResult.Errors.ToArray());
             }
 
+            var targetStatus = ParseEnum(transition.TargetStatus, ProcessStepRunStatus.Completed);
+            if (targetStatus == ProcessStepRunStatus.Completed &&
+                stepRunsByStepKey.TryGetValue(transition.StepKey, out var transitionStepRun))
+            {
+                var requiredArtifactsResult = await EnsureRequiredCompletionArtifactsAsync(
+                    scenario.Key,
+                    runId,
+                    transitionStepRun,
+                    cancellationToken);
+                if (requiredArtifactsResult.IsFailure)
+                {
+                    return Result.Failure(
+                        requiredArtifactsResult.Errors
+                            .Select(error =>
+                                Error.Validation(
+                                    $"Baseline scenario '{scenario.Key}' failed to materialize required artifacts before transitioning step '{transition.StepKey}' to '{transition.TargetStatus}': {error.Message}",
+                                    error.Code))
+                            .ToArray());
+                }
+            }
+
             var transitionResult = await EnsureStepStatusAsync(
                 runId,
                 stepRunIdResult.Value,
-                ParseEnum(transition.TargetStatus, ProcessStepRunStatus.Completed),
+                targetStatus,
                 selectedBranchOutcomeIdResult.Value,
                 transition.BlockCause,
                 transition.Reason,
@@ -134,6 +155,41 @@ public sealed partial class ProcessDevelopmentSeedService
                                 $"Baseline scenario '{scenario.Key}' failed to transition step '{transition.StepKey}' to '{transition.TargetStatus}': {error.Message}",
                                 error.Code))
                         .ToArray());
+            }
+        }
+
+        return Result.Success();
+    }
+
+    private async Task<Result> EnsureRequiredCompletionArtifactsAsync(
+        string scenarioKey,
+        Guid runId,
+        ProcessStepRunViewModel stepRun,
+        CancellationToken cancellationToken)
+    {
+        foreach (var expectation in stepRun.ArtifactExpectations
+                     .Where(item => item.IsRequired)
+                     .Where(item =>
+                         item.Status is not ProcessArtifactExpectationSatisfactionStatus.Satisfied and
+                             not ProcessArtifactExpectationSatisfactionStatus.AutoProjected and
+                             not ProcessArtifactExpectationSatisfactionStatus.NotApplicable))
+        {
+            var artifactResult = await EnsureArtifactAsync(
+                runId,
+                stepRun.Id,
+                stepRun.ArtifactOutputs,
+                expectation.ArtifactKind,
+                expectation.Title,
+                ProcessArtifactTrustStatus.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                $"Baseline scenario '{scenarioKey}' generated required artifact before completing step '{stepRun.Title}'.",
+                "Baseline seed state only.",
+                "Required baseline artifact was materialized by the seed service.",
+                cancellationToken,
+                forceMarkdownPath: true);
+            if (artifactResult.IsFailure)
+            {
+                return artifactResult;
             }
         }
 

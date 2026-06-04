@@ -1,0 +1,35 @@
+SB05 source assertions
+=======================
+PASS: side-effect descriptor model
+479:public sealed record WorkflowExecutorSideEffectDescriptor(
+492:    public static WorkflowExecutorSideEffectDescriptor None { get; } = new(
+503:    public static WorkflowExecutorSideEffectDescriptor ExternalRead(
+516:    public static WorkflowExecutorSideEffectDescriptor ExternalWrite(
+533:    public static WorkflowExecutorSideEffectDescriptor IdempotentProcessedMarker(
+623:    public WorkflowExecutorSideEffectDescriptor SideEffects { get; init; } = WorkflowExecutorSideEffectDescriptor.None;
+PASS: external write classification helper
+490:    public bool WritesExternalState => Kind == WorkflowExecutorSideEffectKind.ExternalWrite;
+PASS: runtime unsafe retry guard
+182:        WorkflowExecutorSideEffectPolicy.ThrowIfUnsafeRetryPolicy(descriptor, policy, node.Id);
+470:    public static void ThrowIfUnsafeRetryPolicy(
+PASS: definition validator unsafe retry diagnostic
+231:                    WorkflowExecutorSideEffectPolicy.CreateUnsafeRetryPolicyMessage(descriptor, policy, node.Id),
+PASS: manifest side-effect consistency validation
+250:                (executor.SideEffects.ExternalMutationKind != WorkflowExecutorExternalMutationKind.ProcessedMarker ||
+PASS: Gmail external side-effect receipt payload
+246:            "$.externalSideEffectReceipt.idempotencyKey",
+312:        payload["externalSideEffectReceipt"] = receipt;
+503:          "externalSideEffectReceipt": {
+PASS: Office365 external side-effect receipt payload
+487:            "$.externalSideEffectReceipt.idempotencyKey",
+567:        payload["externalSideEffectReceipt"] = receipt;
+824:          "externalSideEffectReceipt": {
+PASS: Gmail pre-mutation label state read
+72:        var currentLabelIds = await GetMessageLabelIdsAsync(client, messageId.Trim(), cancellationToken);
+185:    private static async Task<IReadOnlySet<string>> GetMessageLabelIdsAsync(
+PASS: Gmail duplicate-prevention test
+411:    public async Task Gmail_client_skips_modify_when_message_already_has_processed_marker()
+PASS: Office365 duplicate-prevention test
+835:    public async Task Office365_client_skips_patch_when_message_already_has_processed_category()
+PASS: unsafe retry validation test
+127:    public void PluginPolicy_validator_rejects_non_idempotent_external_write_retry_policy()

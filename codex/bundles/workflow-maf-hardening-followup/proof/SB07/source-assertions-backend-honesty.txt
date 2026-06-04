@@ -1,0 +1,120 @@
+Templates\Workflows\manifest.yaml:89:  preferredBackend: InProcess
+tests\CanDoItAll.Tests.Unit\WorkflowTemplatePackLoaderTests.cs:75:                  preferredBackend: InProcess
+tests\CanDoItAll.Tests.Unit\WorkflowPreviewSimulationTests.cs:109:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:93:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Registered, inProcess.Availability);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:94:        Assert.True(inProcess.IsRegistered);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:95:        Assert.True(inProcess.IsRunnable);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:96:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, durableTask.Availability);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:97:        Assert.False(durableTask.IsRegistered);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:98:        Assert.False(durableTask.IsRunnable);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:101:        Assert.Contains("not registered", durableTask.AvailabilityReason, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:102:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, azureFunctions.Availability);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:103:        Assert.False(azureFunctions.IsRunnable);
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:282:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:361:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:410:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:499:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:557:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:609:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowFoundationTests.cs:728:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:81:        Assert.False(planned.Availability.IsRunnable);
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:252:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:298:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:353:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1327:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorPolicyObservabilityTests.cs:282:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:400:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:417:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\SettingsSchemaTests.cs:135:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureWorkflows.cs:262:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\ProjectStructureWorkflowPreviewSimulationSupportTests.cs:140:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\PluginCapabilityFacadeTests.cs:225:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\MafWorkflowEventNormalizerTests.cs:101:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:136:                    RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:179:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:300:        var response = await host.Client.GetAsync("/api/workflows/runtime-backends");
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:308:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Registered, inProcess.Availability);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:309:        Assert.True(inProcess.IsRegistered);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:310:        Assert.True(inProcess.IsRunnable);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:311:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, durableTask.Availability);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:312:        Assert.False(durableTask.IsRegistered);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:313:        Assert.False(durableTask.IsRunnable);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:314:        Assert.Contains("not registered", durableTask.AvailabilityReason, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:315:        Assert.Equal(WorkflowRuntimeBackendAvailabilityKind.Planned, azureFunctions.Availability);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:316:        Assert.False(azureFunctions.IsRunnable);
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:383:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:439:        Assert.True(paths.TryGetProperty("/api/workflows/runtime-backends", out _));
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:486:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\WorkflowApiIntegrationTests.cs:503:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Unit\AgentFrameworkHostingServiceCollectionTests.cs:36:            Assert.True(inProcessBackend.IsRegistered);
+tests\CanDoItAll.Tests.Unit\AgentFrameworkHostingServiceCollectionTests.cs:37:            Assert.True(inProcessBackend.IsRunnable);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:429:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\ProjectStructureWorkflowScenarioHarnessTests.cs:488:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1120:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1147:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1185:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1245:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:252:        var runtimeSelect = cut.Find("[data-testid='workflow-canvas-runtime']");
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:598:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:819:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:880:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Components\WorkflowsPageTests.cs:927:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:343:            RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Components\ProjectStructurePageTests.cs:2462:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1134:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1544:                RequireDurableProductionRuns: false,
+tests\CanDoItAll.Tests.Integration\EmailWorkflowSwitchScenarioTests.cs:389:                RequireDurableProductionRuns: false,
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:297:public enum WorkflowRuntimeBackendAvailabilityKind
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:631:    public WorkflowRuntimeBackendAvailabilityKind Availability { get; init; } = WorkflowRuntimeBackendAvailabilityKind.Registered;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:633:    public bool IsRegistered { get; init; } = true;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:635:    public bool IsRunnable { get; init; } = true;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowModels.cs:637:    public string AvailabilityReason { get; init; } = "Runtime backend is registered and runnable in this host.";
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:245:        IsRunnable = isRunnable;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:252:    public bool IsRunnable { get; init; }
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowExecutorModels.cs:513:    public bool CanExecute => IsImplemented && Availability.IsRunnable;
+src\CanDoItAll.AgentFramework.Models\Workflows\WorkflowCatalogModels.cs:67:            RequireDurableProductionRuns: false,
+src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs:68:        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:25:    private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog;
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:37:        IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:46:        this.runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:289:        issues.AddRange(WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:291:            runtimeBackendCatalog));
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:452:        var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowCatalogServices.cs:454:            runtimeBackendCatalog);
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:662:            Availability = WorkflowRuntimeBackendAvailabilityKind.Registered,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:663:            IsRegistered = true,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:664:            IsRunnable = true,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:665:            AvailabilityReason = "Runtime backend is registered and runnable in this host."
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:671:            Availability = WorkflowRuntimeBackendAvailabilityKind.Planned,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:672:            IsRegistered = false,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:673:            IsRunnable = false,
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:674:            AvailabilityReason = $"Runtime backend '{descriptor.Kind}' is planned but not registered in this host."
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:680:    public static IReadOnlyList<WorkflowValidationIssue> ValidateRegisteredBackendAvailability(WorkflowRuntimePolicy policy)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:681:        => ValidateRegisteredBackendAvailability(policy, new WorkflowRuntimeBackendCatalog());
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:683:    public static IReadOnlyList<WorkflowValidationIssue> ValidateRegisteredBackendAvailability(
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:697:        if (!preferredBackend.IsRunnable)
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:701:                $"Workflow runtime backend '{preferredBackend.Kind}' is not registered in this host. {preferredBackend.AvailabilityReason}"));
+src\CanDoItAll.AgentFramework.Core\Workflows\WorkflowDefinitionValidator.cs:705:            !backendCatalog.GetRequiredBackend(WorkflowRuntimeBackendKind.AzureFunctions).IsRunnable)
+src\CanDoItAll.Modules.AgentFramework\Services\AgentFrameworkModuleServiceCollectionExtensions.cs:96:        services.TryAddSingleton<IWorkflowRuntimeBackendCatalog>(_ => new WorkflowRuntimeBackendCatalog());
+src\CanDoItAll.Modules.AgentFramework\Catalog\WorkflowExampleCatalogSeedService.cs:128:                    RequireDurableProductionRuns: false,
+src\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:15:    IWorkflowRuntimeBackendCatalog? runtimeBackendCatalog = null) :
+src\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:22:    private readonly IWorkflowRuntimeBackendCatalog runtimeBackendCatalog = runtimeBackendCatalog ?? new WorkflowRuntimeBackendCatalog();
+src\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:225:        issues.AddRange(WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+src\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:227:            runtimeBackendCatalog));
+src\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:396:        var runtimeIssues = WorkflowRuntimePolicyValidator.ValidateRegisteredBackendAvailability(
+src\CanDoItAll.Modules.AgentFramework\Persistence\PersistentWorkflowStores.cs:398:            runtimeBackendCatalog);
+src\CanDoItAll.Modules.AgentFramework\Pages\WorkflowsPage.razor.cs:266:                    RequireDurableProductionRuns: false,
+src\CanDoItAll.Web\Api\WorkflowsApi.cs:29:        workflows.MapGet("/runtime-backends", (
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:268:                                data-testid="workflow-canvas-runtime">
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:269:                            @foreach (var backend in RuntimeBackendOptions)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:272:                                        disabled="@(!backend.IsRunnable)"
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor:273:                                        title="@backend.AvailabilityReason">@BuildRuntimeBackendOptionText(backend)</option>
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:772:    private IReadOnlyList<WorkflowRuntimeBackendDescriptor> RuntimeBackendOptions
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:776:        => backend.IsRunnable
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:1108:        if (!backendDescriptor.IsRunnable)
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasEditor.razor.cs:1110:            NotificationService.Warning("Runtime backend unavailable", backendDescriptor.AvailabilityReason);
+src\CanDoItAll.Modules.AgentFramework\Pages\Components\WorkflowCanvasModels.cs:133:                RequireDurableProductionRuns: false,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1310:        var materializationTarget = missingInputs.FirstOrDefault(IsRunnableUpstreamArtifactMaterializationTarget);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:1494:    private static bool IsRunnableUpstreamArtifactMaterializationTarget(DispatchArtifactInput input)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs:665:            .Where(IsRunnableDotNetHostProjectFile)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs:786:    private static bool IsRunnableDotNetHostProjectFile(string fullPath)

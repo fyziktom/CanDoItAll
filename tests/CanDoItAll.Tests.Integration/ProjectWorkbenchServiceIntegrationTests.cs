@@ -587,6 +587,11 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             Reason = "Start the review step.",
             DecidedBy = "integration-tests"
         })).IsSuccess);
+        var reviewEvidencePath = $"artifacts/scopes/organization/project-workbench-integration/process-runs/{runResult.Value:D}/{reviewStep.Id:D}/review-evidence.md";
+        var reviewEvidenceFullPath = Path.Combine(application.ActiveProfile.WorkspaceRootPath, reviewEvidencePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(reviewEvidenceFullPath)!);
+        await File.WriteAllTextAsync(reviewEvidenceFullPath, "# Projected structure review evidence");
+
         Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
         {
             ProcessRunId = runResult.Value,
@@ -598,15 +603,17 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
             SensitivityLevel = ProcessSensitivityLevel.Internal,
             ProvenanceSummary = "Recorded to satisfy the bound workbench rollup test.",
             AllowedFutureUsageSummary = "Integration verification only.",
-            ReviewSummary = "Required review evidence is present."
+            ReviewSummary = "Required review evidence is present.",
+            ManagedStoragePath = reviewEvidencePath
         })).IsSuccess);
-        Assert.True((await processes.TransitionStepAsync(new ProcessStepTransitionRequest
+        var completeReviewResult = await processes.TransitionStepAsync(new ProcessStepTransitionRequest
         {
             StepRunId = reviewStep.Id,
             TargetStatus = ProcessStepRunStatus.Completed,
             Reason = "Complete the review step.",
             DecidedBy = "integration-tests"
-        })).IsSuccess);
+        });
+        Assert.True(completeReviewResult.IsSuccess, string.Join(" | ", completeReviewResult.Errors.Select(error => error.Message)));
 
         var surface = await workbench.GetStructureAsync(projectId);
         var refreshedPhase = Assert.Single(surface.Nodes, item => string.Equals(item.Id, phaseNode.Id, StringComparison.Ordinal));

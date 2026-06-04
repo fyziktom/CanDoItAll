@@ -1,0 +1,7 @@
+Invariant: SB03-INV-005 operator read model preserves rejected-artifact finalizer status projection semantics after consolidation.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb03-integration-bin\ --filter "FullyQualifiedName~ProcessRuntimeOperatorReadModelTests" -v minimal
+Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb03-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    20, Přeskočeno:     0, Celkem:    20, Doba trvání: 3 m 52 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
