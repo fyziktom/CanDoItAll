@@ -1,0 +1,2 @@
+Dispatcher unchanged assertion
+No git diff under process dispatcher paths.

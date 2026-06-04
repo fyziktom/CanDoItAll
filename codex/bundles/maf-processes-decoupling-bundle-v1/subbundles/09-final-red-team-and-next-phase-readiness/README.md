@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -73,12 +73,20 @@ Run final fake-proof and hidden-dependency audit, then prepare the handoff for t
 
 ## Acceptance Checklist
 
-- [ ] No hidden MAF -> Processes dependency.
-- [ ] Old process builder names are gone from MAF.
-- [ ] All process tools preserved.
-- [ ] All critical proof manifests complete.
-- [ ] Final red-team artifact written.
-- [ ] Next-phase readiness note written.
+- [x] No hidden MAF -> Processes dependency.
+- [x] Old process builder names are gone from MAF.
+- [x] All process tools preserved.
+- [x] All critical proof manifests complete.
+- [x] Final red-team artifact written.
+- [x] Next-phase readiness note written.
+
+## Closure Notes
+
+- Entry gate: Passed. SB08 documentation handoff closed before final red-team.
+- Validation: Hidden dependency scan, MAF static dependency guard, provider/policy unit tests, provider composition integration tests, capability filtering tests, process outbox, receipt semantics, artifact-lineage smoke, proof audit, and final solution build passed.
+- Browser validation: N/A. SB09 is closure/proof work with no rendered UI route exercised.
+- Proof: `bundle://proof/SB09/manifest.md`, `bundle://proof/SB09/semantic-invariants.md`, `bundle://reviews/02-final-red-team-review.md`, and `bundle://architecture/04-next-phase-readiness.md`.
+- Progression gate: Passed. The bundle may close; the next bundle should start with the SB09 smoke set.
 
 ## Proof Required
 
@@ -92,12 +100,12 @@ Run final fake-proof and hidden-dependency audit, then prepare the handoff for t
 
 ## Browser Validation Logging
 
-- No browser validation required unless runtime UI smoke reveals a rendered-regression risk. Record `N/A` in execution report if no browser route is exercised.
+- N/A. Final closure did not exercise or change a rendered UI route.
 
 
 ## Progression Gate
 
-- Pass only when final closure can honestly say MAF and Processes are decoupled and guarded.
+- Passed for the scoped objective: direct MAF process-tool coupling is removed, guarded, documented, and runtime-smoked.
 
 
 ## Suggested Agent Prompt

@@ -9,6 +9,7 @@
     <Project Path="src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Persistence/CanDoItAll.AgentFramework.Persistence.csproj" />
+    <Project Path="src/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj" />
     <Project Path="src/CanDoItAll.AgentFramework.Voice/CanDoItAll.AgentFramework.Voice.csproj" />
     <Project Path="src/CanDoItAll.Infrastructure/CanDoItAll.Infrastructure.csproj" />
     <Project Path="src/CanDoItAll.Migrations.PostgreSql/CanDoItAll.Migrations.PostgreSql.csproj" />

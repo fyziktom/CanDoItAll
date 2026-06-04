@@ -1,0 +1,4 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\maf-processes-decoupling-bundle-v1 --stage completed --profile initiative --repo-root .
+ExitCode: 0
+--- Captured output ---
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\maf-processes-decoupling-bundle-v1

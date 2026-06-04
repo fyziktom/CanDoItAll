@@ -1,18 +1,23 @@
 # Agent Runtime Tool Surface
 
-This page defines the boundary between internal MAF tools and the HTTP control-plane APIs.
+This page defines the boundary between internal MAF/runtime-provider tools and the HTTP control-plane APIs.
 
-The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered in `MafAgentRuntime.ProcessTools.cs` or `MafAgentRuntime.ProjectStructureTools.cs` and classified by `AgentToolInvocationPolicy`.
+The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered by MAF itself or by an `IAgentRuntimeToolProvider`, and classified by `AgentToolInvocationPolicy`.
 
 ## Process Tools
 
 Source:
 
-- `src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`
+- `src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
+- `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
+- `src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
 - `src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
 - `src/CanDoItAll.Web/Api/ProcessesApi.cs`
 
 Current direct runtime tools: 23.
+
+Process tools are owned by `CanDoItAll.Modules.Processes` and exposed through `ProcessAgentRuntimeToolProvider`, which is registered as an `IAgentRuntimeToolProvider` by the Processes module. `CanDoItAll.AgentFramework.Maf` composes registered providers and applies the same approval wrapping rules it applies to its built-in tools. If the Processes module is not registered, MAF starts without process tools instead of carrying a compile-time dependency on `CanDoItAll.Modules.Processes`.
 
 | Capability | Direct tools |
 | --- | --- |
@@ -68,7 +73,7 @@ The following project-structure HTTP operations are HTTP-only until typed runtim
 
 Adding a direct tool is a runtime/security change, not documentation cleanup. The minimum implementation set is:
 
-- Tool descriptor registration in the relevant MAF tool builder.
+- Tool descriptor registration in the relevant MAF tool builder or owning `IAgentRuntimeToolProvider`.
 - Strongly typed request/response shape or reuse of an existing strongly typed model.
 - Service-layer call through the owning module boundary.
 - `AgentToolInvocationPolicy` constant and classification.

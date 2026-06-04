@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -73,12 +73,19 @@ Repair and expand tests so the decoupling cannot silently drop process tools, we
 
 ## Acceptance Checklist
 
-- [ ] Every process tool from inventory is tested by exact name.
-- [ ] Read tools approval-free behavior tested.
-- [ ] Mutation tools approval-required behavior tested.
-- [ ] MAF no-Processes behavior tested.
-- [ ] Processes registered behavior tested.
-- [ ] No existing test was weakened without replacement.
+- [x] Every process tool from inventory is tested by exact name.
+- [x] Read tools approval-free behavior tested.
+- [x] Mutation tools approval-required behavior tested.
+- [x] MAF no-Processes behavior tested.
+- [x] Processes registered behavior tested.
+- [x] No existing test was weakened without replacement.
+
+## Closure Notes
+
+- Entry gate: Passed. SB05 completed direct reference removal and post-removal parity.
+- Validation: Required unit/integration filters, provider integration slice, and full solution build passed.
+- Proof: `bundle://proof/SB06/manifest.md` and `bundle://proof/SB06/semantic-invariants.md`.
+- Progression gate: Passed. SB07 may perform composition registration and runtime smoke.
 
 ## Proof Required
 

@@ -100,6 +100,41 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
     }
 
     [Fact]
+    public void Maf_runtime_has_no_compile_time_processes_module_dependency()
+    {
+        var root = FindRepositoryRoot();
+        var mafProject = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "CanDoItAll.AgentFramework.Maf.csproj");
+        var mafSourceRoot = Path.Combine(root, "src", "CanDoItAll.AgentFramework.Maf");
+        var searchableText = string.Join(
+            Environment.NewLine,
+            Directory.EnumerateFiles(mafSourceRoot, "*", SearchOption.AllDirectories)
+                .Where(IsSearchableMafSourceFile)
+                .Select(File.ReadAllText));
+
+        Assert.DoesNotContain("CanDoItAll.Modules.Processes", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Processes", searchableText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessToolBuilder", searchableText, StringComparison.Ordinal);
+        Assert.DoesNotContain("CreateProcessToolBuilder", searchableText, StringComparison.Ordinal);
+        Assert.DoesNotContain("MafAgentRuntime.ProcessTools", searchableText, StringComparison.Ordinal);
+    }
+
+    private static bool IsSearchableMafSourceFile(string path)
+    {
+        if (path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{Path.AltDirectorySeparatorChar}bin{Path.AltDirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains($"{Path.AltDirectorySeparatorChar}obj{Path.AltDirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return Path.GetExtension(path).ToLowerInvariant() is ".cs" or ".csproj" or ".props" or ".targets" or ".md" or ".razor";
+    }
+
+    [Fact]
     public void Process_dispatch_has_explicit_process_step_outcome_context_validation()
     {
         var validationSource = ReadRepositoryFile(

@@ -104,7 +104,7 @@ New integrations should prefer `/api/cognitive-memory/v1`. Legacy `/api/cognitiv
 
 ### Internal Agent Tools
 
-The internal MAF tool surface is narrower than the HTTP API. Do not assume every HTTP route is callable as a direct tool. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for direct process/project-structure tools and HTTP-only operations.
+The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Direct process tools are registered by `ProcessAgentRuntimeToolProvider` in the Processes module and composed by MAF through `IAgentRuntimeToolProvider`; they are not a reason for MAF to reference the Processes module directly. Do not assume every HTTP route is callable as a direct tool. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for direct process/project-structure tools and HTTP-only operations.
 
 ## Development Workflow
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -23,7 +23,7 @@ Move the current process tool builder from MAF into the Processes module as a re
 
 ## Exact Source References
 
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
 - `repo://src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`
 - `repo://src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
@@ -71,12 +71,19 @@ Move the current process tool builder from MAF into the Processes module as a re
 
 ## Acceptance Checklist
 
-- [ ] All 23 process tools exposed by provider.
-- [ ] Tool names exactly match inventory.
-- [ ] Read/write/definition-scope checks preserved.
-- [ ] Provider is registered by Processes module.
-- [ ] MAF old process path can still exist but should not be needed after provider is registered.
-- [ ] No process dispatcher files moved.
+- [x] All 23 process tools exposed by provider.
+- [x] Tool names exactly match inventory.
+- [x] Read/write/definition-scope checks preserved.
+- [x] Provider is registered by Processes module.
+- [x] MAF old process path can still exist but should not be needed after provider is registered.
+- [x] No process dispatcher files moved.
+
+## Closure Notes
+
+- Entry gate: Passed. SB03 completed and provider composition was available.
+- Validation: Targeted provider parity test, provider access-denial test, and full solution build passed.
+- Proof: `bundle://proof/SB04/manifest.md` and `bundle://proof/SB04/semantic-invariants.md`.
+- Progression gate: Passed. SB05 may remove the temporary MAF -> Processes project reference and legacy process tool partial.
 
 ## Proof Required
 

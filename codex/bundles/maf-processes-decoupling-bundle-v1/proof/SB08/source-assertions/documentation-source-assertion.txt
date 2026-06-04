@@ -1,0 +1,29 @@
+# SB08 Documentation Source Assertions
+
+## Repository overview names the provider-owned process tool path
+C:\repositories\CanDoItAll\README.md:174: Agent execution is handled by `CanDoItAll.AgentFramework.*`. The Microsoft Agent Framework adapter attaches permitted workspace, project-structure, skill, API, MCP, provider-native, and registered runtime-provider tools. Process tools are contributed by `CanDoItAll.Modules.Processes` through `ProcessAgentRuntimeToolProvider`; when the Processes module is not registered, MAF starts without process tools instead of depending on the product process module. Execution state, chat sessions, tool receipts, artifacts, approvals, and metrics are persisted in the active profile's file sandbox workspace.
+
+## Tool surface doc defines provider-based direct tools
+C:\repositories\CanDoItAll\docs\agent-runtime-tool-surface.md:5: The runtime tool surface is intentionally narrower than the HTTP API surface. Do not tell agents that an operation is a direct tool unless it is registered by MAF itself or by an `IAgentRuntimeToolProvider`, and classified by `AgentToolInvocationPolicy`.
+
+## Tool surface doc points at the Processes provider source
+C:\repositories\CanDoItAll\docs\agent-runtime-tool-surface.md:13: - `src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
+
+## API control-plane doc explains direct process tools are provider-owned
+C:\repositories\CanDoItAll\docs\api-control-plane.md:107: The internal MAF/runtime-provider tool surface is narrower than the HTTP API. Direct process tools are registered by `ProcessAgentRuntimeToolProvider` in the Processes module and composed by MAF through `IAgentRuntimeToolProvider`; they are not a reason for MAF to reference the Processes module directly. Do not assume every HTTP route is callable as a direct tool. See [Agent runtime tool surface](agent-runtime-tool-surface.md) for direct process/project-structure tools and HTTP-only operations.
+
+## Architecture doc explains the provider seam
+C:\repositories\CanDoItAll\docs\architecture-beta.md:343: MAF no longer owns process tool construction directly. `CanDoItAll.AgentFramework.Tooling` defines `IAgentRuntimeToolProvider`; MAF resolves registered providers from DI, orders them deterministically, attaches their tools, and applies the same approval wrapping policy used by built-in tools. `CanDoItAll.Modules.Processes` registers `ProcessAgentRuntimeToolProvider` and keeps process-specific request handling beside `ProcessesService`, template services, and process access checks.
+
+## Architecture doc avoids overclaiming the next phase
+C:\repositories\CanDoItAll\docs\architecture-beta.md:345: This is a dependency-inversion seam, not a completed process-core extraction. The process dispatcher, process DTOs, artifact lineage, recovery, and template-pack behavior still live in `CanDoItAll.Modules.Processes`. A future process-core or driver-pack split must be handled as its own migration with parity, policy, and runtime smoke proof.
+
+## MAF README blocks recoupling as troubleshooting
+C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\README.md:87: Do not repair missing process tools by reintroducing a MAF project reference to the Processes module; fix provider registration, provider construction, or policy coverage at the owning boundary.
+
+## Processes README owns the process provider
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\README.md:55: - **Agent runtime tool provider**: `ProcessAgentRuntimeToolProvider` owns the 23 direct process tools exposed to MAF through `IAgentRuntimeToolProvider`. `ProcessesModuleServiceCollectionExtensions` registers it with DI. MAF composes it when the Processes module is loaded; MAF does not own process tool construction or reference this module directly.
+
+## Processes README includes operator troubleshooting
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\README.md:99: | Process tools are absent from an AgentFramework run | Inspect runtime DI for `IAgentRuntimeToolProvider`, confirm `ProcessAgentRuntimeToolProvider` is registered, and check MAF progress for the 23-tool provider attachment message. | Fix module/provider registration or agent process access metadata. Do not add a direct MAF reference to Processes. |
+

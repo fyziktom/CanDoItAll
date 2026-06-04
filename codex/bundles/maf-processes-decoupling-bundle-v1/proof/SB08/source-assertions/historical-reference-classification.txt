@@ -1,0 +1,5 @@
+# SB08 Historical Reference Classification
+
+The required scan including `codex` still finds `ProcessToolBuilder` and `MafAgentRuntime.ProcessTools` only inside bundle preparation inputs, historical inventories, earlier subbundle instructions, and proof manifests. Those records intentionally preserve baseline evidence and prior gate instructions.
+
+The live-doc scan over `README.md docs src` has no matches and is recorded at `bundle://proof/SB08/transcripts/stale-reference-scan-live-docs.txt`.

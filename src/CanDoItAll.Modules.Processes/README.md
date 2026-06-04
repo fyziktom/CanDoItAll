@@ -20,6 +20,7 @@ Project references:
 
 - `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
 - `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
+- `../CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj`
 - `../CanDoItAll.Components.BaseLib/CanDoItAll.Components.BaseLib.csproj`
 - `../CanDoItAll.Components.CanvasLib/CanDoItAll.Components.CanvasLib.csproj`
 - `../CanDoItAll.Components.Mermaid/CanDoItAll.Components.Mermaid.csproj`
@@ -51,6 +52,7 @@ The runtime is organized around these surfaces:
 - **Launch planning and staffing**: `ProcessesService.Launch.*` builds launch plans, resolves candidate roles, applies process-manager overrides, and preserves project-structure launch context.
 - **Run lifecycle and transitions**: `ProcessesService.Runtime.*`, `ProcessRuntimeProgressionPlanner`, `ProcessStepTransitionGuard`, and `ProcessStepRunBlockState` own run start, step transitions, stop/rerun, dependency compatibility, and block-state classification.
 - **Dispatch and finalization**: `ProcessRunAutomationDispatchService.*` claims executable steps, builds execution metadata and prompts, validates tool outputs, projects artifacts, finalizes step completion, and creates recovery packets. External target grounding and stale path inspection are delegated to `ProcessExternalTargetGroundingService` so prompt rules, invocation metadata, and final-delivery validation consume the same typed normalization path.
+- **Agent runtime tool provider**: `ProcessAgentRuntimeToolProvider` owns the 23 direct process tools exposed to MAF through `IAgentRuntimeToolProvider`. `ProcessesModuleServiceCollectionExtensions` registers it with DI. MAF composes it when the Processes module is loaded; MAF does not own process tool construction or reference this module directly.
 - **Artifacts and lineage**: `ProcessArtifactIdentityService`, `ProcessArtifactProjectionLineage`, artifact projection/finalizer code, and runtime read queries own identity hash, content hash, lineage, projection source, trust status, and expectation satisfaction. Retention remains definition-driven through artifact expectation `RetentionDays`; cleanup must be explicit, dry-run first, and must preserve lineage metadata needed to explain stale, duplicate, or hash-mismatched evidence.
 - **Observation and manager chat**: `ProcessObservationService`, `ProcessObservationDashboardState`, `ProcessManagerChatService`, and `ProcessManagerAgentResolver` expose run inspection, manager directives, chat, approvals, diagnostics, selected-run context, and explainable manager-agent resolution.
 - **Project-structure integration**: `IProcessProjectStructureBridge`, `ProcessProjectStructureContext`, and the Workbench bridge synchronize process runs into project-structure nodes and feed grounded launch/output context back into Processes.
@@ -94,6 +96,7 @@ Use current-run readbacks before changing state. Start with run detail and narro
 | Manager chat answers the wrong run or agent | Inspect `ProcessManagerAgentResolver` reason code, confidence, selected-run assignment, configured manager, fallback candidates, and ambiguity diagnostics. | Prefer configured manager, then selected-run assignment, then fallback. Resolve ambiguity before sending a manager directive or direct message. |
 | Project-structure output is too noisy or points to stale receipts | Inspect Workbench projection through `ProjectStructureProcessRunFolderProjectionPolicy`. | Project current-run managed roots and generated or external-delivery output roots; ignore wrong-run, dated receipt, traversal, absolute, and unanchored paths. |
 | A live UI-driven run looks seeded | Read the selected `ProcessTemplateLiveRunProfile` or `ProcessTemplateLiveRunProfileSummary.FreshRunPolicy`. | Reject baseline transitions/artifacts as live proof. Require current-run evidence checks before validation and project-structure writeback. |
+| Process tools are absent from an AgentFramework run | Inspect runtime DI for `IAgentRuntimeToolProvider`, confirm `ProcessAgentRuntimeToolProvider` is registered, and check MAF progress for the 23-tool provider attachment message. | Fix module/provider registration or agent process access metadata. Do not add a direct MAF reference to Processes. |
 
 For API or agent-driven operation, prefer the HTTP `/api/processes` routes and the `candoitall-api-processes` skill. The old Processes MCP server is not the current control plane.
 

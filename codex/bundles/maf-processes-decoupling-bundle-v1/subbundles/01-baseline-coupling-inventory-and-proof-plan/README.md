@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -23,7 +23,7 @@ Create the durable baseline that later subbundles must preserve: exact process t
 ## Exact Source References
 
 - `repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
 - `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
 - `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 - `repo://src/CanDoItAll.AgentFramework.Core/ToolPolicy/AgentToolInvocationPolicy.cs`
@@ -71,11 +71,18 @@ Create the durable baseline that later subbundles must preserve: exact process t
 
 ## Acceptance Checklist
 
-- [ ] Exact current coupling points are documented.
-- [ ] Exact current process tool names are documented.
-- [ ] Process dispatcher is scoped out of this bundle.
-- [ ] Filing-first guard plan is written.
-- [ ] Proof manifest and semantic invariants exist.
+- [x] Exact current coupling points are documented.
+- [x] Exact current process tool names are documented.
+- [x] Process dispatcher is scoped out of this bundle.
+- [x] Failing-first guard plan is written.
+- [x] Proof manifest and semantic invariants exist.
+
+## Closure Notes
+
+- Entry gate: Passed. The prepared-stage bundle validator passed and SB01 has no subbundle prerequisites.
+- Baseline MAF project build: Passed in `bundle://proof/SB01/transcripts/maf-project-build-baseline.txt`.
+- Full normal Web build blocker: Unrelated running `CanDoItAll.Web` process 48648 locks copied output DLLs; captured in `bundle://proof/SB01/transcripts/baseline-web-lock-process.txt` and `bundle://proof/SB01/transcripts/web-lock-build-baseline.txt`.
+- Progression gate: Passed. SB02 can start from the recorded coupling and exact 23-tool process surface without rediscovery.
 
 ## Proof Required
 

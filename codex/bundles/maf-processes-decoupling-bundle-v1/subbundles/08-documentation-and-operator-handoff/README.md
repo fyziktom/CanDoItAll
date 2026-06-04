@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -69,10 +69,18 @@ Update architecture/runtime documentation so future contributors know that proce
 
 ## Acceptance Checklist
 
-- [ ] No stale `MafAgentRuntime.ProcessToolBuilder` documentation remains.
-- [ ] Docs describe provider seam accurately.
-- [ ] Docs identify next phase without claiming it is done.
-- [ ] Operator troubleshooting is actionable.
+- [x] No stale `MafAgentRuntime.ProcessToolBuilder` documentation remains.
+- [x] Docs describe provider seam accurately.
+- [x] Docs identify next phase without claiming it is done.
+- [x] Operator troubleshooting is actionable.
+
+## Closure Notes
+
+- Entry gate: Passed. SB07 completed real app-composition runtime smoke before docs were updated.
+- Validation: Live stale-reference scan, broader bundle-history scan, documentation source assertions, `git diff --check`, and solution build passed.
+- Browser validation: N/A. SB08 is documentation-only and did not render or modify a UI route.
+- Proof: `bundle://proof/SB08/manifest.md`.
+- Progression gate: Passed. SB09 may perform final red-team and next-phase readiness.
 
 ## Proof Required
 
@@ -82,12 +90,12 @@ Update architecture/runtime documentation so future contributors know that proce
 
 ## Browser Validation Logging
 
-- No browser validation required unless runtime UI smoke reveals a rendered-regression risk. Record `N/A` in execution report if no browser route is exercised.
+- N/A. Documentation-only change; no rendered UI route was exercised.
 
 
 ## Progression Gate
 
-- Pass when docs match the implemented architecture and avoid overclaiming.
+- Passed. Docs match the implemented provider seam and explicitly avoid claiming the process-core or driver-pack split is complete.
 
 
 ## Suggested Agent Prompt

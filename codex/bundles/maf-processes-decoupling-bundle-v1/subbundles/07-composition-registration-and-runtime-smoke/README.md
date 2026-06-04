@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -69,12 +69,20 @@ Prove the real app composition registers the process tool provider and that gove
 
 ## Acceptance Checklist
 
-- [ ] App composition registers process provider.
-- [ ] MAF can run without process provider.
-- [ ] Process automation smoke passes.
-- [ ] No missing tool receipts due to migration.
-- [ ] No artifact lineage regression due to migration.
-- [ ] Browser logging updated or explicitly marked N/A.
+- [x] App composition registers process provider.
+- [x] MAF can run without process provider.
+- [x] Process automation smoke passes.
+- [x] No missing tool receipts due to migration.
+- [x] No artifact lineage regression due to migration.
+- [x] Browser logging updated or explicitly marked N/A.
+
+## Closure Notes
+
+- Entry gate: Passed. SB06 closed parity, policy, and architecture guardrails before runtime smoke.
+- Validation: Runtime provider composition, zero-provider MAF behavior, process outbox, tool-receipt semantics, current-run artifact-lineage smoke, and full solution build passed.
+- Browser validation: N/A. SB07 exercised runtime/service paths only and did not render or modify a UI route.
+- Proof: `bundle://proof/SB07/manifest.md` and `bundle://proof/SB07/semantic-invariants.md`.
+- Progression gate: Passed. SB08 may perform documentation and operator handoff.
 
 ## Proof Required
 
@@ -86,12 +94,12 @@ Prove the real app composition registers the process tool provider and that gove
 
 ## Browser Validation Logging
 
-- No browser validation required unless runtime UI smoke reveals a rendered-regression risk. Record `N/A` in execution report if no browser route is exercised.
+- N/A. Runtime smoke did not exercise or change a rendered UI route.
 
 
 ## Progression Gate
 
-- Pass only when real composition proof exists, not only unit tests.
+- Passed with real `TestApplication` composition proof and downstream process runtime smoke.
 
 
 ## Suggested Agent Prompt

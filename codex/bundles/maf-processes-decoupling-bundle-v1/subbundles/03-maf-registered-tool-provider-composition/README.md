@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -23,7 +23,7 @@ Teach `MafAgentRuntime` to attach tools from registered `IAgentRuntimeToolProvid
 ## Exact Source References
 
 - `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
 - `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ImageGenerationTools.cs`
 - `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProjectStructureTools.cs`
 - `repo://tests/CanDoItAll.Tests.Unit/AgentContextContributionTests.cs`
@@ -72,12 +72,19 @@ Teach `MafAgentRuntime` to attach tools from registered `IAgentRuntimeToolProvid
 
 ## Acceptance Checklist
 
-- [ ] MAF builds with new Tooling reference.
-- [ ] Zero registered providers does not fail.
-- [ ] Fake provider tool appears in runtime build/composition.
-- [ ] Duplicate tool behavior is explicit and tested.
-- [ ] Old process tools are still available until migration.
-- [ ] No MAF -> Processes reference removed yet.
+- [x] MAF builds with new Tooling reference.
+- [x] Zero registered providers does not fail.
+- [x] Fake provider tool appears in runtime build/composition.
+- [x] Duplicate tool behavior is explicit and tested.
+- [x] Old process tools are still available until migration.
+- [x] No MAF -> Processes reference removed yet.
+
+## Closure Notes
+
+- Entry gate: Passed. SB02 completed and Tooling contracts were available.
+- Validation: Focused provider-composition tests and solution build passed.
+- Proof: `bundle://proof/SB03/manifest.md` and `bundle://proof/SB03/semantic-invariants.md`.
+- Progression gate: Passed. SB04 may migrate process tool construction into a registered Processes-module provider.
 
 ## Proof Required
 

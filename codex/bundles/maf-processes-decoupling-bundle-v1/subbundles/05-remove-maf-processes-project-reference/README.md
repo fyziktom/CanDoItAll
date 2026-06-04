@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started.
+- Status: Completed
 
 ## Objective
 
@@ -23,7 +23,7 @@ Delete the old MAF process tool builder path and remove all compile-time MAF dep
 ## Exact Source References
 
 - `repo://src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj`
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Tools/MafAgentRuntime.ProcessTools.cs`
+- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`
 - `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`
 - `repo://src/CanDoItAll.AgentFramework.Maf/README.md`
 - `repo://tests/CanDoItAll.Tests.Unit/AgentRuntimeHardeningStaticRegressionTests.cs`
@@ -71,12 +71,19 @@ Delete the old MAF process tool builder path and remove all compile-time MAF dep
 
 ## Acceptance Checklist
 
-- [ ] MAF csproj has no Processes project reference.
-- [ ] MAF source has no `CanDoItAll.Modules.Processes` usage.
-- [ ] MAF source has no `ProcessToolBuilder` implementation.
-- [ ] MAF project builds.
-- [ ] Solution builds.
-- [ ] Process provider still supplies process tools through app composition.
+- [x] MAF csproj has no Processes project reference.
+- [x] MAF source has no `CanDoItAll.Modules.Processes` usage.
+- [x] MAF source has no `ProcessToolBuilder` implementation.
+- [x] MAF project builds.
+- [x] Solution builds.
+- [x] Process provider still supplies process tools through app composition.
+
+## Closure Notes
+
+- Entry gate: Passed. SB04 completed with provider parity proof.
+- Validation: Forbidden-source scan, static architecture guard, MAF project build, post-removal provider parity test, and full solution build passed.
+- Proof: `bundle://proof/SB05/manifest.md` and `bundle://proof/SB05/semantic-invariants.md`.
+- Progression gate: Passed. SB06 may add/repair broader parity and policy regression coverage.
 
 ## Proof Required
 

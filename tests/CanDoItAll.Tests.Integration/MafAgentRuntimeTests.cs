@@ -4,7 +4,9 @@ using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Modules.Processes;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -1695,7 +1697,7 @@ public sealed class MafAgentRuntimeTests
     }
 
     [Fact]
-    public async Task CreateCapabilityState_attaches_internal_process_tools_by_default_when_workspace_services_are_available()
+    public async Task ProcessAgentRuntimeToolProviderParity_attaches_registered_process_tools_by_default_when_workspace_services_are_available()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -1777,7 +1779,96 @@ public sealed class MafAgentRuntimeTests
 
         Assert.Contains(
             progressMessages,
+            item => item.Contains("Attached 23 tool(s) from 1 registered runtime tool provider(s).", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            progressMessages,
             item => item.Contains("Attached internal process-module tools", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task ProcessAgentRuntimeToolProviderAccess_denies_read_write_and_definition_scope()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var toolProvider = Assert.Single(
+            scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProcessAgentRuntimeToolProvider>());
+
+        var readDeniedAgent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProcessAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProcessAccessSettings())
+        };
+        var readDeniedTools = await toolProvider.CreateToolsAsync(
+            CreateProcessProviderContext(readDeniedAgent, provider),
+            CancellationToken.None);
+
+        await AssertProcessProviderToolErrorAsync(
+            readDeniedTools,
+            "processes_definitions_list",
+            new Dictionary<string, object?>(),
+            "ProcessReadDenied");
+
+        var definitionId = Guid.NewGuid();
+        var writeDeniedAgent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProcessAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProcessAccessSettings
+                {
+                    CanRead = true,
+                    AllowedDefinitionIds =
+                    [
+                        definitionId
+                    ]
+                })
+        };
+        var writeDeniedTools = await toolProvider.CreateToolsAsync(
+            CreateProcessProviderContext(writeDeniedAgent, provider),
+            CancellationToken.None);
+
+        await AssertProcessProviderToolErrorAsync(
+            writeDeniedTools,
+            "processes_run_start",
+            new Dictionary<string, object?>
+            {
+                ["request"] = new ProcessRunStartRequest
+                {
+                    ProcessDefinitionId = definitionId
+                }
+            },
+            "ProcessWriteDenied");
+
+        var scopedDeniedAgent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProcessAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProcessAccessSettings
+                {
+                    CanRead = true,
+                    CanWrite = true
+                })
+        };
+        var scopedDeniedTools = await toolProvider.CreateToolsAsync(
+            CreateProcessProviderContext(scopedDeniedAgent, provider),
+            CancellationToken.None);
+
+        await AssertProcessProviderToolErrorAsync(
+            scopedDeniedTools,
+            "processes_definition_editor_get",
+            new Dictionary<string, object?>
+            {
+                ["definitionId"] = Guid.NewGuid()
+            },
+            "ProcessDefinitionDenied");
     }
 
     [Fact]
@@ -1822,6 +1913,40 @@ public sealed class MafAgentRuntimeTests
             var tool = Assert.Single(tools, item => string.Equals(item.Name, toolName, StringComparison.OrdinalIgnoreCase));
             Assert.IsNotType<ApprovalRequiredAIFunction>(tool);
         }
+    }
+
+    private static AgentRuntimeToolProviderContext CreateProcessProviderContext(
+        AgentDefinition agent,
+        ProviderProfile provider)
+    {
+        return new AgentRuntimeToolProviderContext(
+            agent,
+            provider,
+            [],
+            SuppressApprovalRequirements: false,
+            AgentRuntimeToolProviderPurpose.InteractiveChat,
+            RuntimeSessionKey: string.Empty,
+            Tags: new Dictionary<string, string>());
+    }
+
+    private static async Task AssertProcessProviderToolErrorAsync(
+        IReadOnlyList<AITool> tools,
+        string toolName,
+        IDictionary<string, object?> arguments,
+        string expectedErrorCode)
+    {
+        var tool = Assert.IsAssignableFrom<AIFunction>(
+            Assert.Single(tools, item => string.Equals(item.Name, toolName, StringComparison.OrdinalIgnoreCase)));
+
+        var exception = await Record.ExceptionAsync(async () =>
+            await tool.InvokeAsync(new AIFunctionArguments(arguments)));
+        var invalidOperationException = Assert.IsAssignableFrom<InvalidOperationException>(exception);
+        var errorCode = invalidOperationException
+            .GetType()
+            .GetProperty("ErrorCode", BindingFlags.Public | BindingFlags.Instance)
+            ?.GetValue(invalidOperationException);
+
+        Assert.Equal(expectedErrorCode, Assert.IsType<string>(errorCode));
     }
 
     private sealed class OpaqueToolCallContent(

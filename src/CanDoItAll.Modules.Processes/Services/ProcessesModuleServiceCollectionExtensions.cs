@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.SharedKernel;
@@ -70,6 +71,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<ProcessTemplateLibraryService>();
         services.AddScoped<ProcessTemplateProjectionService>();
         services.AddScoped<ProcessTemplateMermaidExporter>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProcessAgentRuntimeToolProvider>());
         services.AddScoped<ProcessDevelopmentSeedService>();
         services.AddScoped<ProcessCatalogWarmupService>();
         services.TryAddScoped<IProcessProjectStructureBridge, NoopProcessProjectStructureBridge>();

@@ -2,10 +2,10 @@
 
 Bundle preparation status: `Ready`
 Bundle readiness gate: `Ready for Codex execution`
-Execution status: `Not started`
-Subbundle gate review: `Not started`
-Final closure gate: `Not started`
-Browser validation analytics: `Planned; required only for runtime/UI smoke phases`
+Execution status: `Completed`
+Subbundle gate review: `SB01-SB09 passed`
+Final closure gate: `Passed`
+Browser validation analytics: `N/A for this bundle; no rendered UI route exercised`
 
 ## Purpose
 
@@ -33,7 +33,7 @@ The bundle does **not** extract process core yet and does **not** introduce full
 
 ## Why This Must Be Done First
 
-`MafAgentRuntime.ProcessTools.cs` currently sits inside the MAF adapter and directly imports `CanDoItAll.Modules.Processes`. That makes the provider/runtime adapter depend on the product process module. This is the wrong direction for long-term generic process support and makes future driver extraction harder.
+Before this bundle, `MafAgentRuntime.ProcessTools.cs` sat inside the MAF adapter and directly imported `CanDoItAll.Modules.Processes`. That made the provider/runtime adapter depend on the product process module. This was the wrong direction for long-term generic process support and made future driver extraction harder.
 
 The current process dispatcher is also very large: 33 partial files and about 25k lines under `src/CanDoItAll.Modules.Processes/Automation/Dispatch`. This bundle avoids touching dispatcher behavior except for proof and smoke coverage. The first cut must be dependency inversion, not a full dispatcher rewrite.
 
@@ -54,15 +54,25 @@ The current process dispatcher is also very large: 33 partial files and about 25
 
 Bundle preparation status: `Ready`
 Bundle readiness gate: `Ready for Codex execution with repo-root validation`
-Execution status: `Not started`
-Subbundle gate review: `Not started`
-Final closure gate: `Not started`
-Browser validation analytics: `Planned; required only for SB07 if runtime/UI surfaces are exercised`
+Execution status: `Completed`
+Subbundle gate review: `SB01-SB09 entry and closure passed`
+Final closure gate: `Passed`
+Browser validation analytics: `N/A for this bundle; no rendered UI route exercised`
 
 - Prepared-stage bundle structure is expected to pass `validate_bundle.py --stage prepared --profile initiative --repo-root <repo-root>`.
+- Prepared-stage bundle validation passed before execution on 2026-06-03.
+- SB01 completed with artifact-backed baseline proof under `proof/SB01/`.
+- SB02 completed with provider-neutral Tooling contracts and artifact-backed proof under `proof/SB02/`.
+- SB03 completed with MAF provider composition and artifact-backed proof under `proof/SB03/`.
+- SB04 completed with Processes-owned process tool provider migration and artifact-backed proof under `proof/SB04/`.
+- SB05 completed with direct MAF -> Processes project reference removal and artifact-backed proof under `proof/SB05/`.
+- SB06 completed with parity, policy, provider-registration, and architecture regression proof under `proof/SB06/`.
+- SB07 completed with real app-composition runtime provider proof, zero-provider MAF proof, process outbox smoke, tool-receipt semantics, and artifact-lineage smoke under `proof/SB07/`.
+- SB08 completed with provider-seam documentation, operator troubleshooting, stale-reference scans, and documentation source assertions under `proof/SB08/`.
+- SB09 completed with final hidden-dependency scans, parity/policy/runtime smoke reruns, red-team review, next-phase readiness, proof audit, and final closure under `proof/SB09/`.
 - Critical foundations require artifact-backed proof manifests and semantic invariants.
-- Runtime proof is deferred to SB07 because this preparation bundle does not implement code.
-- Browser validation is planned only for SB07 if runtime/UI smoke touches rendered surfaces.
+- Runtime smoke proof completed in SB07.
+- Browser validation was not required because no subbundle exercised or changed a rendered UI route.
 
 ## Bundle Contents
 

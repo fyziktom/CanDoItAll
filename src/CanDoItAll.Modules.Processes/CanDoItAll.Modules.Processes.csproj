@@ -20,6 +20,7 @@
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Components\CanDoItAll.AgentFramework.Components.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Core\CanDoItAll.AgentFramework.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.AgentFramework.Models\CanDoItAll.AgentFramework.Models.csproj" />
+    <ProjectReference Include="..\CanDoItAll.AgentFramework.Tooling\CanDoItAll.AgentFramework.Tooling.csproj" />
     <PackageReference Include="CanDoItAll.Components.BaseLib" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.CanvasLib" Version="0.1.0" />
     <PackageReference Include="CanDoItAll.Components.Charts" Version="0.1.0" />

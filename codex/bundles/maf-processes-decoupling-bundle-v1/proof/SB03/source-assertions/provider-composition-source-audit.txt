@@ -1,0 +1,29 @@
+Command: rg -n "AttachRegisteredRuntimeToolProvidersAsync|IAgentRuntimeToolProvider|EnsureRuntimeToolProviderDoesNotDuplicateExistingTools|Runtime tool provider" src/CanDoItAll.AgentFramework.Maf tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs
+Working directory: C:\repositories\CanDoItAll
+Run label: 2026-06-03T22:59:02Z
+
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:33:        services.AddSingleton<IAgentRuntimeToolProvider>(lateProvider);
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:34:        services.AddSingleton<IAgentRuntimeToolProvider>(earlyProvider);
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:60:        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(10, "duplicate_runtime_tool"));
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:61:        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(20, "duplicate_runtime_tool"));
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:67:        Assert.Contains("Runtime tool provider", exception.Message, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:76:        services.AddSingleton<IAgentRuntimeToolProvider>(new TestRuntimeToolProvider(
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:93:        services.AddSingleton<IAgentRuntimeToolProvider>(new ThrowingRuntimeToolProvider());
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:191:    private sealed class TestRuntimeToolProvider : IAgentRuntimeToolProvider
+tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs:217:    private sealed class ThrowingRuntimeToolProvider : IAgentRuntimeToolProvider
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:64:        await AttachRegisteredRuntimeToolProvidersAsync(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:105:        var runtimeToolProviders = services.GetServices<IAgentRuntimeToolProvider>()
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:409:    private async Task AttachRegisteredRuntimeToolProvidersAsync(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:446:                    $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' failed to create tools. {exception.Message}",
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:453:                    $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned a null tool list.");
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:460:            EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(toolProvider, composition.State.Tools, tools);
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:469:            "Runtime tool providers",
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:536:        IAgentRuntimeToolProvider toolProvider,
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:543:                $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned {unnamedToolCount} tool(s) without a name.");
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:555:                $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned duplicate tool name(s): {string.Join(", ", duplicateNames)}.");
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:559:    private static void EnsureRuntimeToolProviderDoesNotDuplicateExistingTools(
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:560:        IAgentRuntimeToolProvider toolProvider,
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:573:                $"Runtime tool provider '{DescribeRuntimeToolProvider(toolProvider)}' returned tool name(s) already registered by the runtime: {string.Join(", ", duplicateNames)}.");
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:602:    private static string DescribeRuntimeToolProvider(IAgentRuntimeToolProvider toolProvider)
+src/CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs:1084:        IReadOnlyList<IAgentRuntimeToolProvider> RuntimeToolProviders,
+Exit code: 0

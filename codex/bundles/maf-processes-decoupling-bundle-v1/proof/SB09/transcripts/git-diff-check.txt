@@ -1,0 +1,46 @@
+Command: git diff --check
+ExitCode: 0
+--- Captured output ---
+warning: in the working copy of 'CanDoItAll.slnx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/architecture/04-next-phase-readiness.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB01/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB01/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB02/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB02/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB03/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB03/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB04/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB04/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB05/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB05/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB06/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB06/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB07/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB07/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB09/manifest.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/proof/SB09/semantic-invariants.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/reviews/01-execution-report.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/01-baseline-coupling-inventory-and-proof-plan/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/02-agent-runtime-tooling-abstractions/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/03-maf-registered-tool-provider-composition/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/04-process-agent-runtime-tool-provider-migration/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/05-remove-maf-processes-project-reference/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/06-process-tool-parity-and-policy-regression-suite/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/07-composition-registration-and-runtime-smoke/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/08-documentation-and-operator-handoff/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/maf-processes-decoupling-bundle-v1/subbundles/09-final-red-team-and-next-phase-readiness/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/agent-runtime-tool-surface.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/api-control-plane.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/architecture-beta.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Maf/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/MafAgentRuntimeTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/AgentRuntimeHardeningStaticRegressionTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/AgentToolInvocationPolicyTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj', LF will be replaced by CRLF the next time Git touches it

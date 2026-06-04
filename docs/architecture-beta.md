@@ -1,6 +1,6 @@
 # CanDoItAll Architecture Beta
 
-This page describes the current CanDoItAll architecture as of 2026-05-09. It is source-grounded in the current `CanDoItAll.slnx`, `CanDoItAll.Web`, `CanDoItAll.Composition`, `CanDoItAll.Infrastructure`, `CanDoItAll.Modules.Processes`, `CanDoItAll.Modules.AgentFramework`, and `CanDoItAll.AgentFramework.*` projects.
+This page describes the current CanDoItAll architecture as of 2026-06-03. It is source-grounded in the current `CanDoItAll.slnx`, `CanDoItAll.Web`, `CanDoItAll.Composition`, `CanDoItAll.Infrastructure`, `CanDoItAll.Modules.Processes`, `CanDoItAll.Modules.AgentFramework`, and `CanDoItAll.AgentFramework.*` projects.
 
 ## Current Shape
 
@@ -16,10 +16,12 @@ Primary source references:
 - [`src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs`](../src/CanDoItAll.Composition/RuntimeHostServiceCollectionExtensions.cs)
 - [`src/CanDoItAll.Composition/ModuleAssemblies.cs`](../src/CanDoItAll.Composition/ModuleAssemblies.cs)
 - [`src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs`](../src/CanDoItAll.Infrastructure/DependencyInjection/InfrastructureServiceCollectionExtensions.cs)
-- [`src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.Processes/ProcessesModuleServiceCollectionExtensions.cs)
-- [`src/CanDoItAll.Modules.Processes/ProcessRunAutomationDispatchService.cs`](../src/CanDoItAll.Modules.Processes/ProcessRunAutomationDispatchService.cs)
-- [`src/CanDoItAll.Modules.AgentFramework/AgentFrameworkModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.AgentFramework/AgentFrameworkModuleServiceCollectionExtensions.cs)
-- [`src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.Capabilities.cs`](../src/CanDoItAll.AgentFramework.Maf/MafAgentRuntime.Capabilities.cs)
+- [`src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs)
+- [`src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs`](../src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.cs)
+- [`src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs`](../src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs)
+- [`src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs`](../src/CanDoItAll.Modules.AgentFramework/Services/AgentFrameworkModuleServiceCollectionExtensions.cs)
+- [`src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs`](../src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs)
+- [`src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs`](../src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs)
 
 ## Architecture Overview
 
@@ -44,7 +46,7 @@ flowchart LR
     AgentModule --> AgentCore["AgentFramework core"]
     AgentCore --> Maf["MAF runtime adapter"]
     Maf --> Providers["AI providers"]
-    Maf --> Tools["Workspace, API, skill, and MCP tools"]
+    Maf --> Tools["Workspace, API, skill, MCP, provider-native, and provider-registered tools"]
 
     Infrastructure --> AppDb[("AppDbContext profile")]
     Infrastructure --> ControlPlane[("Control-plane files")]
@@ -124,6 +126,7 @@ Container_Boundary(processes, "CanDoItAll.Modules.Processes") {
     Component(progressionPlanner, "ProcessRuntimeProgressionPlanner", "Domain service", "Unlocks dependent steps after transitions.")
     Component(outbox, "ProcessOutboxService", "Durable outbox", "Queues process automation dispatch work.")
     Component(dispatcher, "ProcessRunAutomationDispatchService", "Automation dispatcher", "Claims ready steps, builds prompts, runs technical agents, audits tools, projects artifacts, and settles steps.")
+    Component(processToolProvider, "ProcessAgentRuntimeToolProvider", "Runtime tool provider", "Creates direct process tools and calls Processes services through the owning module boundary.")
     Component(recovery, "ProcessRunRecoveryWorker", "Hosted worker", "Recovers stranded process automation runs.")
 }
 Container_Boundary(agentModule, "CanDoItAll.Modules.AgentFramework") {
@@ -133,7 +136,7 @@ Container_Boundary(agentModule, "CanDoItAll.Modules.AgentFramework") {
 }
 Container_Boundary(agentCore, "CanDoItAll.AgentFramework.*") {
     Component(executionService, "AgentFrameworkWorkspaceExecutionService", "Execution service", "Persists chat sessions, execution runs, tool receipts, approvals, artifacts, and metrics.")
-    Component(mafRuntime, "MafAgentRuntime", "Runtime adapter", "Builds Microsoft Agent Framework agents and attaches workspace, process, project-structure, API, skill, MCP, and provider-native tools.")
+    Component(mafRuntime, "MafAgentRuntime", "Runtime adapter", "Builds Microsoft Agent Framework agents and attaches built-in and provider-registered runtime tools.")
     Component(fileStore, "FileSandboxWorkspaceStore", "File store", "Persists organization-scoped catalog, chats, execution slices, and artifacts.")
 }
 ContainerDb(appDb, "AppDbContext profile", "EF Core")
@@ -143,12 +146,14 @@ System_Ext(localTools, "Workspace, API, browser, and MCP tools")
 Rel(processesService, transitionGuard, "Uses")
 Rel(processesService, progressionPlanner, "Uses")
 Rel(processesService, outbox, "Enqueues")
+Rel(processToolProvider, processesService, "Calls")
 Rel(outbox, dispatcher, "Dispatches")
 Rel(recovery, dispatcher, "Recovers")
 Rel(dispatcher, aiBridge, "Resolves technical agent")
 Rel(dispatcher, workspaceFacade, "Executes agent run")
 Rel(workspaceFacade, executionService, "Delegates")
 Rel(executionService, mafRuntime, "Runs")
+Rel(mafRuntime, processToolProvider, "Composes through IAgentRuntimeToolProvider")
 Rel(mafRuntime, provider, "Sends model requests")
 Rel(mafRuntime, localTools, "Calls tools")
 Rel(executionService, fileStore, "Persists")
@@ -249,7 +254,7 @@ sequenceDiagram
     Workspace->>MAF: Build runtime agent and attach allowed tools
     MAF->>Provider: Send chat/model request
     Provider-->>MAF: Assistant response and tool requests
-    MAF->>MAF: Execute permitted workspace, API, skill, MCP, or provider-native tools
+    MAF->>MAF: Execute permitted workspace, process-provider, API, skill, MCP, or provider-native tools
     MAF-->>Workspace: Response, tool receipts, approvals, artifacts, metrics
     Workspace-->>Dispatcher: ExecutionRunResult
     Dispatcher->>Dispatcher: Validate required tools, branch outcome, browser or workspace evidence when required
@@ -314,14 +319,14 @@ sequenceDiagram
     participant Service as AgentFrameworkWorkspaceExecutionService
     participant Store as FileSandboxWorkspaceStore
     participant Runtime as MafAgentRuntime
-    participant Tools as Workspace, API, and MCP Tools
+    participant Tools as Workspace, API, process-provider, and MCP Tools
     participant Provider as AI Provider
 
     Request->>Service: ExecuteRunAsync(agent id, prompt, chat session, context)
     Service->>Store: Load catalog, chat session, execution state
     Service->>Store: Create or update execution run and user message
     Service->>Runtime: Execute with agent definition and runtime session
-    Runtime->>Runtime: Attach workspace memory, process and project APIs, built-in tools, skills, MCP, and provider-native tools
+    Runtime->>Runtime: Attach workspace memory, registered runtime tool providers, project APIs, built-in tools, skills, MCP, and provider-native tools
     Runtime->>Provider: Send prompt and available tool definitions
     Provider-->>Runtime: Response and tool calls
     Runtime->>Tools: Execute permitted tool calls
@@ -332,6 +337,14 @@ sequenceDiagram
 ```
 
 Tool approval is modeled in execution state. Process automation passes `AutoApprovePendingToolCalls=true`, and `AgentFrameworkWorkspaceExecutionService` can continue approved pending tool calls when the agent/session policy allows it. For normal interactive agent use, approvals can remain explicit.
+
+## Runtime Tool Provider Seam
+
+MAF no longer owns process tool construction directly. `CanDoItAll.AgentFramework.Tooling` defines `IAgentRuntimeToolProvider`; MAF resolves registered providers from DI, orders them deterministically, attaches their tools, and applies the same approval wrapping policy used by built-in tools. `CanDoItAll.Modules.Processes` registers `ProcessAgentRuntimeToolProvider` and keeps process-specific request handling beside `ProcessesService`, template services, and process access checks.
+
+This is a dependency-inversion seam, not a completed process-core extraction. The process dispatcher, process DTOs, artifact lineage, recovery, and template-pack behavior still live in `CanDoItAll.Modules.Processes`. A future process-core or driver-pack split must be handled as its own migration with parity, policy, and runtime smoke proof.
+
+When process tools are missing from an agent run, inspect runtime DI for `IEnumerable<IAgentRuntimeToolProvider>`, verify `ProcessAgentRuntimeToolProvider` is registered, check MAF progress for the registered-provider attachment message, and inspect `AgentProcessAccessMetadata` before changing runtime code. Do not fix missing tools by adding a direct `CanDoItAll.AgentFramework.Maf` reference to `CanDoItAll.Modules.Processes`.
 
 ## Persistence And Control Plane
 
@@ -349,10 +362,10 @@ This separation lets the selected app database change without losing machine-lev
 | `CanDoItAll.Web` | Host, HTTP APIs, routes, Razor component bootstrapping, development endpoints, runtime readiness, health checks. |
 | `CanDoItAll.Composition` | Runtime module registration, module assembly list, database profile bootstrapping and switching. |
 | `CanDoItAll.Infrastructure` | AppDbContext factory, control plane, storage, search, readiness, managed artifacts, DataProtection, health. |
-| `CanDoItAll.Modules.Processes` | Process definitions, template pack import/projection, process canvas, run state, transitions, outbox, recovery, agent dispatch, artifact records. |
+| `CanDoItAll.Modules.Processes` | Process definitions, template pack import/projection, process canvas, run state, transitions, outbox, recovery, agent dispatch, artifact records, and the registered process runtime tool provider. |
 | `CanDoItAll.Modules.AgentFramework` | Current-profile AgentFramework facade, CRM/HR AI-party bridge, provider runtime gateway, catalog warmup and repair. |
 | `CanDoItAll.AgentFramework.Core` | Agent catalog services, execution service, workspace tools, command/file/artifact policies, execution audit trail. |
-| `CanDoItAll.AgentFramework.Maf` | Microsoft Agent Framework integration, provider transport, capability composition, MCP integration, tool execution wrappers. |
+| `CanDoItAll.AgentFramework.Maf` | Microsoft Agent Framework integration, provider transport, capability composition, registered runtime tool-provider attachment, MCP integration, and tool execution wrappers. |
 | `CanDoItAll.AppComponents`, `CanDoItAll.Components.*` | App shell facade, shared UI primitives, canvas, overlays, WebGL workbench experiments, and sandbox projects. |
 | Sibling `CanDoItAll.Mcp` repo | Selected local sidecars for development diagnostics, code analytics, components, Mermaid, SSH, and local runtime helpers. |
 

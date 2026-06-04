@@ -1841,6 +1841,50 @@ public sealed class AgentToolInvocationPolicyTests
         }
     }
 
+    [Fact]
+    public void ProcessToolInventory_SB06_INV_001_registers_every_process_tool_in_catalog_and_capability_registry()
+    {
+        var expectedProcessTools = new[]
+        {
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionSave,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionRoleAdd,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionPublish,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionDelete,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionImport,
+            AgentToolInvocationPolicyMetadata.ProcessesRunStart,
+            AgentToolInvocationPolicyMetadata.ProcessesStepTransition,
+            AgentToolInvocationPolicyMetadata.ProcessesAssignmentResolve,
+            AgentToolInvocationPolicyMetadata.ProcessesArtifactRecord,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateImport,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionEditorGet,
+            AgentToolInvocationPolicyMetadata.ProcessesDefinitionExport,
+            AgentToolInvocationPolicyMetadata.ProcessesRunsList,
+            AgentToolInvocationPolicyMetadata.ProcessesRunDetailGet,
+            AgentToolInvocationPolicyMetadata.ProcessesAnalyticsGet,
+            AgentToolInvocationPolicyMetadata.ProcessesPartyOptionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesExecutorOptionsList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplatesList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateGet,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateMermaidGet,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateBaselineScenariosList,
+            AgentToolInvocationPolicyMetadata.ProcessesTemplateLiveRunProfilesList
+        };
+
+        Assert.Equal(23, expectedProcessTools.Length);
+        Assert.Equal(
+            expectedProcessTools.Length,
+            expectedProcessTools.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+
+        foreach (var toolName in expectedProcessTools)
+        {
+            Assert.Contains(toolName, ToolContractCatalog.KnownToolNames);
+            Assert.True(ToolCapabilityRegistry.TryResolve(toolName, out var capability), toolName);
+            Assert.Equal(AgentToolInvocationPolicyMetadata.Classify(toolName), capability.Classification);
+            Assert.Equal(AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault(toolName), capability.RequiresApprovalByDefault);
+        }
+    }
+
     [Theory]
     [MemberData(nameof(ProcessMutationTools))]
     public async Task EvaluateAsync_requires_approval_for_process_mutation_tools(string toolName)

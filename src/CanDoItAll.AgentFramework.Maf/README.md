@@ -20,8 +20,8 @@ Project references:
 
 - `../CanDoItAll.AgentFramework.Models/CanDoItAll.AgentFramework.Models.csproj`
 - `../CanDoItAll.AgentFramework.Core/CanDoItAll.AgentFramework.Core.csproj`
+- `../CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj`
 - `../CanDoItAll.Tools.Documents/CanDoItAll.Tools.Documents.csproj`
-- `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
 - `../CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj`
 - `../CanDoItAll.Modules.Security/CanDoItAll.Modules.Security.csproj`
 - `../CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj`
@@ -67,11 +67,24 @@ Keep AgentFramework model contracts, persistence, provider-neutral orchestration
 
 ## Process Automation Notes
 
-- Internal process tools are composed by `MafAgentRuntime.ProcessToolBuilder` when process services are available. Read tools such as `processes_run_detail_get`, `processes_template_baseline_scenarios_list`, and `processes_template_live_run_profiles_list` must remain approval-free; mutation tools such as transitions, assignment resolution, artifact recording, definition saves, and template imports require approval wrappers unless governed automation explicitly suppresses approvals.
+- Process tools are composed through registered `IAgentRuntimeToolProvider` implementations. Read tools such as `processes_run_detail_get`, `processes_template_baseline_scenarios_list`, and `processes_template_live_run_profiles_list` must remain approval-free; mutation tools such as transitions, assignment resolution, artifact recording, definition saves, and template imports require approval wrappers unless governed automation explicitly suppresses approvals.
+- The concrete process provider lives in the Processes module as `ProcessAgentRuntimeToolProvider`. MAF must not reference that product module directly; it should only resolve registered provider instances from DI.
 - MAF process agents should use the process API/tool surface for run state, artifacts, assignments, manager directives, and live-run profiles. They should not infer process state from prompt text, template files, or database rows.
 - Adopted MAF 1.8 surfaces are tracked by the proof slices above: tool loop, context providers, finalizer, errors, approvals, MCP bounding, A2A endpoint validation, workflow mapping, and trace correlation.
 - Deferred or guarded surfaces must fail predictably. A2A endpoints require valid configuration and bearer secrets, browser MCP payloads are bounded, incompatible approval continuations are rejected, and workflow handoff depth is guarded.
 - Process automation that records final delivery must produce current-run evidence and let Processes validate the artifact and transition. MAF finalizers should not mark process steps complete by prose-only conclusion text.
+
+## Runtime Tool Provider Troubleshooting
+
+When process tools are missing from a MAF run:
+
+1. Confirm the host registered the Processes module through `AddCanDoItAllRuntimeModules`.
+2. Confirm `IEnumerable<IAgentRuntimeToolProvider>` contains `ProcessAgentRuntimeToolProvider` in the run scope.
+3. Check MAF progress output for the registered-provider attachment message and the expected 23 process tools.
+4. Check `AgentProcessAccessMetadata` on the agent before treating absent or denied process behavior as a runtime bug.
+5. Check `AgentToolInvocationPolicy` classification before changing approval behavior.
+
+Do not repair missing process tools by reintroducing a MAF project reference to the Processes module; fix provider registration, provider construction, or policy coverage at the owning boundary.
 
 ## Related Docs
 

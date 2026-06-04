@@ -1,0 +1,1 @@
+60819D2A0FC62F18E3F28A8227F44E9A3F593BD5F3972B1BB7A81854D1A8179E  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ProcessRuntimeToolProviderCompositionIntegrationTests.cs
