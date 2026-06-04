@@ -1,5 +1,19 @@
 # Phase Plan
 
+## Execution Order
+
+- SB01 entry audit, branch hygiene, and baseline proof.
+- SB02 execution snapshot contract design.
+- SB03 refactor gate A: contracts and guardrails.
+- SB04 client mapping foundation.
+- SB05 dispatcher result/detail migration.
+- SB06 failure normalization boundary.
+- SB07 refactor gate B: coupling reduction proof.
+- SB08 receipt observation helper foundation.
+- SB09 required-tool and artifact-lineage consumer migration.
+- SB10 refactor gate C: boundary consistency review.
+- SB11 runtime smoke and large-screen policy check.
+- SB12 final red-team and next isolation cutline.
 ## Subbundle Dependency Map
 
 ```mermaid

@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
@@ -63,7 +64,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
         [
-            CreateExecutionRun("agent-run-debug", ExecutionState.Failed, RunOutcome.Failed)
+            CreateExecutionRun("agent-run-debug", ProcessAutomationExecutionState.Failed, ProcessAutomationRunOutcome.Failed)
         ]);
 
         Assert.False(hasBlockingRun);
@@ -74,7 +75,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
         [
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded)
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded)
         ]);
 
         Assert.False(hasBlockingRun);
@@ -85,7 +86,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
         [
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null)
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null)
         ]);
 
         Assert.True(hasBlockingRun);
@@ -437,12 +438,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     [Fact]
     public void ResolveBlockingAutomationExecutionRunId_returns_latest_fresh_active_automation_run()
     {
-        var olderRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Preparing, null) with
+        var olderRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Preparing, null) with
         {
             UpdatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1),
             CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-2)
         };
-        var latestRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+        var latestRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
         {
             UpdatedAtUtc = DateTimeOffset.UtcNow,
             CreatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
@@ -461,11 +462,11 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var staleCreatedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
         var blockingRunId = ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(
         [
-            CreateExecutionRun("agent-run-debug", ExecutionState.Running, null) with
+            CreateExecutionRun("agent-run-debug", ProcessAutomationExecutionState.Running, null) with
             {
                 UpdatedAtUtc = DateTimeOffset.UtcNow
             },
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Preparing, null) with
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Preparing, null) with
             {
                 CreatedAtUtc = staleCreatedAtUtc,
                 StartedAtUtc = staleCreatedAtUtc,
@@ -481,7 +482,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     public void HasBlockingAutomationExecutionRun_ignores_stale_active_automation_runs()
     {
         var createdAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
-        var staleRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Preparing, null) with
+        var staleRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Preparing, null) with
         {
             CreatedAtUtc = createdAtUtc,
             StartedAtUtc = createdAtUtc,
@@ -499,7 +500,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     public void HasBlockingAutomationExecutionRun_keeps_silent_automation_runs_blocking_for_longer_recovery_window()
     {
         var createdAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
-        var quietRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+        var quietRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
         {
             CreatedAtUtc = createdAtUtc,
             StartedAtUtc = createdAtUtc,
@@ -517,7 +518,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
     {
         var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
-        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
@@ -2431,14 +2432,14 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     public void ResolveRecoverableAutomationExecutionRunId_returns_latest_terminal_automation_run_for_in_progress_step()
     {
         var attemptStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-10);
-        var olderRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded) with
+        var olderRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(1),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(1),
             UpdatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5),
             CompletedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5)
         };
-        var latestRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Failed, RunOutcome.Failed) with
+        var latestRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Failed, ProcessAutomationRunOutcome.Failed) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(2),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(2),
@@ -2598,7 +2599,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var recoverableRunId = ProcessRunAutomationDispatchService.ResolveRecoverableAutomationExecutionRunId(
             CreateStepRun(ProcessStepRunStatus.Ready, null),
             [
-                CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded)
+                CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded)
             ]);
 
         Assert.Null(recoverableRunId);
@@ -2609,12 +2610,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var olderSessionId = Guid.NewGuid();
         var latestSessionId = Guid.NewGuid();
-        var olderRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded) with
+        var olderRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
         {
             ChatSessionId = olderSessionId,
             UpdatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-5)
         };
-        var latestRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+        var latestRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
         {
             ChatSessionId = latestSessionId,
             UpdatedAtUtc = DateTimeOffset.UtcNow
@@ -2631,12 +2632,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var chatSessionId = ProcessRunAutomationDispatchService.ResolveReusableAutomationChatSessionId(
         [
-            CreateExecutionRun("agent-run-debug", ExecutionState.Running, null) with
+            CreateExecutionRun("agent-run-debug", ProcessAutomationExecutionState.Running, null) with
             {
                 ChatSessionId = Guid.NewGuid(),
                 UpdatedAtUtc = DateTimeOffset.UtcNow
             },
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
             {
                 ChatSessionId = null,
                 UpdatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(1)
@@ -2651,12 +2652,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var completedSessionId = Guid.NewGuid();
         var activeSessionId = Guid.NewGuid();
-        var completedRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded) with
+        var completedRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
         {
             ChatSessionId = completedSessionId,
             UpdatedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-1)
         };
-        var activeRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Running, null) with
+        var activeRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
         {
             ChatSessionId = activeSessionId,
             UpdatedAtUtc = DateTimeOffset.UtcNow
@@ -2692,14 +2693,14 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     public void ResolveRecoverableAutomationExecutionRunId_returns_cancelled_current_attempt_restart_runs()
     {
         var attemptStartedAtUtc = DateTimeOffset.UtcNow.AddMinutes(-30);
-        var interruptedRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Failed, RunOutcome.Cancelled) with
+        var interruptedRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Failed, ProcessAutomationRunOutcome.Cancelled) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(20),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(20),
             UpdatedAtUtc = DateTimeOffset.UtcNow,
             CompletedAtUtc = DateTimeOffset.UtcNow
         };
-        var previousCompletedRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded) with
+        var previousCompletedRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(5),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(5),
@@ -2718,14 +2719,14 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     public void ResolveRecoverableAutomationExecutionRunId_ignores_terminal_runs_from_previous_attempt_windows()
     {
         var attemptStartedAtUtc = DateTimeOffset.UtcNow;
-        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded) with
+        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
             UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(-10),
             CompletedAtUtc = attemptStartedAtUtc.AddMinutes(-10)
         };
-        var currentAttemptRun = CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded) with
+        var currentAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
         {
             CreatedAtUtc = attemptStartedAtUtc.AddMinutes(1),
             StartedAtUtc = attemptStartedAtUtc.AddMinutes(1),
@@ -2848,7 +2849,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Must capture the clarified release boundary.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -2880,7 +2881,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Must capture no-go constraints, user or operational impact, and acceptance boundary in typed form.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -2926,7 +2927,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Must capture the clarified release boundary.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "tool-log",
@@ -2957,7 +2958,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Must be linked to tests, migration notes, and touched-surface inventory.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -2988,7 +2989,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Create this artifact at artifacts/process/feature-intake/scope-boundary-packet.md using workspace create/write file tools.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3023,7 +3024,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Imported browser screenshot is required.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3055,7 +3056,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Imported browser screenshot is required.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3086,7 +3087,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Must name repaired flows, assertion depth, runtime/API/browser evidence as applicable, screenshots for UI surfaces, and unresolved risks after the repair pass.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3135,7 +3136,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Capture browser navigation, URL, and console observations.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3176,7 +3177,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Capture a PNG screenshot of the inventory page using browser_take_screenshot.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3207,7 +3208,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Create this artifact at artifacts/showcases/blazor-ssr-workflow/evidence/process/implementation/implementation-change-set.md using workspace create/write file tools.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3239,7 +3240,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "Create this artifact at showcases/blazor-ssr-workflow/app/SimpleWorkflowApp/SimpleWorkflowApp.csproj using workspace create/write file tools.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3271,7 +3272,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "The durable screenshot must exist at artifacts/showcases/blazor-ssr-workflow/evidence/ui/qa-validation/workflow-proof.png.",
                 string.Empty)
         };
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -3509,8 +3510,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ?? throw new InvalidOperationException("ResolveSuccessfulWorkspaceFileMutationReceiptPaths method was not found.");
         var now = DateTimeOffset.UtcNow;
         const string artifactPath = "artifacts/process-runs/11111111-1111-1111-1111-111111111111/01-architecture-decision-record.md";
-        var detail = new ExecutionRunDetail(
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded),
+        var detail = new ProcessAutomationExecutionRunDetail(
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded),
             null,
             [],
             [])
@@ -6274,7 +6275,7 @@ Requirements from project-level planning context:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1
             ]) as string;
 
@@ -6458,8 +6459,8 @@ Requirements from project-level planning context:
         var candidate = CreateDispatchCandidate(
             "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -6477,8 +6478,8 @@ Requirements from project-level planning context:
                     "Implementation and required validation completed."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -6492,7 +6493,7 @@ Requirements from project-level planning context:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -6529,8 +6530,8 @@ Requirements from project-level planning context:
         var candidate = CreateDispatchCandidate(
             "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -6548,8 +6549,8 @@ Requirements from project-level planning context:
                     "Required tools succeeded across recovery attempts."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -6565,7 +6566,7 @@ Requirements from project-level planning context:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -6578,7 +6579,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -6591,7 +6592,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -6604,7 +6605,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -6617,7 +6618,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -6630,7 +6631,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -6682,8 +6683,8 @@ Requirements from project-level planning context:
         var candidate = CreateDispatchCandidate(
             "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -6701,8 +6702,8 @@ Requirements from project-level planning context:
                     "Required implementation tools succeeded."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -6717,7 +6718,7 @@ Requirements from project-level planning context:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -6730,7 +6731,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -6850,7 +6851,7 @@ Requirements from project-level planning context:
             BuildSerializedSessionStateWithMessages(
                 ("assistant", [CreateTextContent(responseText)])),
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -7124,7 +7125,7 @@ Requirements from project-level planning context:
             BuildSerializedSessionStateWithMessages(
                 ("assistant", [CreateTextContent(responseText)])),
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -7146,7 +7147,7 @@ Requirements from project-level planning context:
                     now.AddSeconds(1))
             ]);
 
-        var failures = Assert.IsAssignableFrom<IReadOnlyList<ToolExecutionReceiptRecord>>(
+        var failures = Assert.IsAssignableFrom<IReadOnlyList<ProcessAutomationToolExecutionReceipt>>(
             resolveCriticalFailures.Invoke(null, [candidate, detail]));
 
         Assert.Empty(failures);
@@ -7172,8 +7173,8 @@ Requirements from project-level planning context:
         var responseText = StructuredOutcome(
             ProcessStepOutcomeStatus.Completed,
             "Campus room booking implementation was updated.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7189,8 +7190,8 @@ Requirements from project-level planning context:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -7205,7 +7206,7 @@ Requirements from project-level planning context:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -7218,7 +7219,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -7231,7 +7232,7 @@ Requirements from project-level planning context:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -7528,8 +7529,8 @@ Touched modules or routes: workflow shell, keypad interactions, result display, 
 Dependency boundaries: keep the workflow self-contained and avoid billing/process module coupling.
 Downstream artifact expectations: implementation change set, migration checklist, peer review note, and browser-proof evidence.
 """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7545,8 +7546,8 @@ Downstream artifact expectations: implementation change set, migration checklist
                 responseText,
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -7608,8 +7609,8 @@ Result: Accepted
 Reason: Screenshot shows the requested inventory route.
 """);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7625,8 +7626,8 @@ Reason: Screenshot shows the requested inventory route.
                 responseText,
                 "OpenAI default",
                 "gpt-5-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -7696,8 +7697,8 @@ Reason: Screenshot shows the requested inventory route and is readable enough to
 File: artifacts/process-runs/run-001/03-inventory-page.png
 """);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7713,8 +7714,8 @@ File: artifacts/process-runs/run-001/03-inventory-page.png
                 responseText,
                 "OpenAI default",
                 "gpt-5-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -7775,8 +7776,8 @@ Build/test: passed
 Process artifacts: artifacts/process-runs/run-001/07-run-evidence-index.md
 """);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7792,8 +7793,8 @@ Process artifacts: artifacts/process-runs/run-001/07-run-evidence-index.md
                 responseText,
                 "OpenAI default",
                 "gpt-5.4-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -7848,8 +7849,8 @@ Process artifacts: artifacts/process-runs/run-001/07-run-evidence-index.md
 No node was created because project_structure_node_create failed or was unavailable.
 """);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7865,8 +7866,8 @@ No node was created because project_structure_node_create failed or was unavaila
                 responseText,
                 "OpenAI default",
                 "gpt-5.4-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -7976,8 +7977,8 @@ Escalation conditions: missing writable product root, unexpected package manager
 
 Use only the project-structure mindmap requirements as scope. Create the requested static files only, and return Blocked if a required architecture or tool boundary is missing.
 """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -7993,8 +7994,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "OpenAI default",
                 "gpt-5-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8036,8 +8037,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ProcessStepOutcomeStatus.Completed,
             "Architecture review completed and required files were written through workspace file tools.");
         var requiredBriefPath = "artifacts/scopes/organization/demo/process-runs/11111111-1111-1111-1111-111111111111/02-project-structure-context-brief.md";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8053,8 +8054,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8149,8 +8150,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var candidate = CreateDispatchCandidate("Implement the requested application and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8166,8 +8167,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "I bootstrapped the workspace and listed next steps.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8183,7 +8184,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -8196,7 +8197,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -8243,8 +8244,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var candidate = CreateDispatchCandidate("Implement the requested application and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8260,8 +8261,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "I could not write files or run the build.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8295,8 +8296,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             (ProcessArtifactKind.Deliverable, "Implementation change set", true, "Must identify concrete product source files changed under the current product root."));
 
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8312,8 +8313,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "I wrote the implementation note to a sibling product root but did not satisfy the current artifact contract.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8355,8 +8356,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var candidate = CreateDispatchCandidate("Implement the requested application and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8372,8 +8373,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "Implementation complete according to the assistant summary.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8387,7 +8388,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -8400,7 +8401,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -8502,8 +8503,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The architecture review is complete, but the assistant forgot the structured outcome.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8519,8 +8520,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8536,7 +8537,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -8549,7 +8550,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -8562,7 +8563,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -8607,8 +8608,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 - Stale sibling reference: external-target/C/programovani/dotnet/UnrelatedSample/Program.cs
                 """,
             evidenceRefs: ["execution://tool/workspace_read_file"]);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8624,8 +8625,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8669,8 +8670,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ProcessStepOutcomeStatus.Blocked,
             "Application is not running.",
             summaryMarkdown: "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8686,8 +8687,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8738,22 +8739,23 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ProcessStepOutcomeStatus.Completed,
             "Architecture decision recorded.",
             summaryMarkdown: "Review complete.");
-        var chatSession = new ChatSessionRecord(
+        var chatSession = new ProcessAutomationChatSession(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "Architecture review",
             now,
             now,
             [
-                new ChatMessageRecord(
+                new ProcessAutomationChatMessage(
                     Guid.NewGuid(),
-                    ChatMessageRole.Assistant,
+                    ProcessAutomationChatMessageRole.Assistant,
                     recoveredAssistantMessage,
                     now,
                     recoveredAssistantMessage.Length)
-            ]);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+            ],
+            LatestExecutionRunId: null);
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 chatSession.Id,
@@ -8769,8 +8771,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "Review complete, but the fresh provider summary omitted the structured outcome.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8805,8 +8807,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ProcessStepOutcomeStatus.Blocked,
             "Image asset storage failed.",
             summaryMarkdown: "## Project image asset storage receipt\r\nNo image assets stored.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8822,8 +8824,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 structuredResultSummary,
                 "OpenAI chat completions",
                 "gpt-5-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8853,8 +8855,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var candidate = CreateDispatchCandidate("Implement the requested application and prove the build passes.");
 
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -8870,8 +8872,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "I bootstrapped the workspace and listed next steps.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -8988,8 +8990,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 ParentNodeTitle = "Create basic app"
             },
             ProcessStepKind.Start);
-        var detail = new ExecutionRunDetail(
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded),
+        var detail = new ProcessAutomationExecutionRunDetail(
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded),
             null,
             [],
             []);
@@ -9030,8 +9032,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                             "Projected from the prior governed step.")
                     ])
             ]);
-        var detail = new ExecutionRunDetail(
-            CreateExecutionRun("process-automation-dispatch", ExecutionState.Completed, RunOutcome.Succeeded),
+        var detail = new ProcessAutomationExecutionRunDetail(
+            CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded),
             null,
             [],
             []);
@@ -9057,8 +9059,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var candidate = CreateDispatchCandidate(
             "Implement the requested application.\nInstructions: Call workspace_pwsh_run_script first and then call workspace_dotnet_build before you conclude. Do not use workspace_append_file for canonical deliverables.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9076,8 +9078,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required implementation tools succeeded without blocked follow-up."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9093,7 +9095,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -9106,7 +9108,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -9119,7 +9121,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -9168,8 +9170,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Review the implementation evidence and architecture decision record.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9187,8 +9189,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9204,7 +9206,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -9240,8 +9242,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var candidate = CreateDispatchCandidate("Review the implementation evidence and architecture decision record.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9259,8 +9261,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9274,7 +9276,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -9425,8 +9427,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Review the delivered application and block progression if the required feature is missing.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9445,8 +9447,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     summaryMarkdown: "Critical defect: the stock scaffold still renders and the units conversion flow does not exist."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9482,8 +9484,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Run QA validation and browser proof for the workflow app.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9502,8 +9504,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     summaryMarkdown: "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9542,8 +9544,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Run QA validation and browser proof for the requested app.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9562,8 +9564,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     summaryMarkdown: "Browser snapshot and screenshot captured the primary route, but the route shows an application error and needs implementation repair."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9599,8 +9601,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
 
         var candidate = CreateDispatchCandidate("Implement the workflow and prove the build passes.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9616,8 +9618,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "The run ended with an execution error.",
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -9645,7 +9647,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ?? throw new InvalidOperationException("BuildStorageRelativePath method was not found.");
 
         var candidate = CreateDispatchCandidate("Review the implementation evidence.");
-        var artifact = new ExecutionArtifactRecord(
+        var artifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             Guid.NewGuid(),
             "generated-output",
@@ -9674,8 +9676,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Validate the UI.\nInstructions: Call browser_take_screenshot, browser_snapshot, and browser_console_messages before you conclude.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -9693,8 +9695,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9713,7 +9715,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -9747,8 +9749,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var now = DateTimeOffset.UtcNow;
         var runId = Guid.NewGuid();
         var agentId = Guid.NewGuid();
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 runId,
                 agentId,
                 null,
@@ -9766,8 +9768,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -9800,8 +9802,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var runId = Guid.NewGuid();
         var agentId = Guid.NewGuid();
         var snapshotPath = $"artifacts/process-runs/{runId:D}/browser-snapshot.yml";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 runId,
                 agentId,
                 null,
@@ -9819,8 +9821,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -10220,8 +10222,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             var consoleFullPath = Path.Combine(tempWorkspace, consolePath.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(consoleFullPath)!);
             File.WriteAllText(consoleFullPath, "No active browser console errors.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     runId,
                     agentId,
                     null,
@@ -10239,8 +10241,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                         "Required browser evidence was captured."),
                     "OpenAI chat completions",
                     "gpt-4o-mini",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -10265,7 +10267,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 ]
             };
 
-            var failures = Assert.IsAssignableFrom<IReadOnlyList<ToolExecutionReceiptRecord>>(
+            var failures = Assert.IsAssignableFrom<IReadOnlyList<ProcessAutomationToolExecutionReceipt>>(
                 resolveFailures.Invoke(null, [detail]));
             var status = (ProcessStepRunStatus?)resolveCompletionStatus.Invoke(null, [candidate, detail]);
 
@@ -10294,22 +10296,23 @@ Use only the project-structure mindmap requirements as scope. Create the request
         var now = DateTimeOffset.UtcNow;
         var runId = Guid.NewGuid();
         var agentId = Guid.NewGuid();
-        var chatSession = new ChatSessionRecord(
+        var chatSession = new ProcessAutomationChatSession(
             Guid.NewGuid(),
             agentId,
             "Recovered scaffold run",
             now,
             now,
             [
-                new ChatMessageRecord(
+                new ProcessAutomationChatMessage(
                     Guid.NewGuid(),
-                    ChatMessageRole.Assistant,
+                    ProcessAutomationChatMessageRole.Assistant,
                     "The existing solution skeleton was inspected and validated.",
                     now.AddSeconds(5),
                     56)
-            ]);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+            ],
+            LatestExecutionRunId: null);
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 runId,
                 agentId,
                 chatSession.Id,
@@ -10327,8 +10330,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "The existing solution skeleton was inspected, built, and smoke-tested."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -10351,7 +10354,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ]
         };
 
-        var failures = Assert.IsAssignableFrom<IReadOnlyList<ToolExecutionReceiptRecord>>(
+        var failures = Assert.IsAssignableFrom<IReadOnlyList<ProcessAutomationToolExecutionReceipt>>(
             resolveFailures.Invoke(null, [detail]));
 
         Assert.Empty(failures);
@@ -10369,8 +10372,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Use workspace_dotnet_new when the scaffold is absent. If an existing scaffold is present, inspect it and prove it with workspace_dotnet_build, workspace_dotnet_test, and workspace_dotnet_run.",
             ProcessStepKind.Work);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -10388,8 +10391,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Existing .NET scaffold was inspected, built, tested, and smoke-tested."),
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -10429,8 +10432,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             "Validate the UI.\nInstructions: Use browser_resize, browser_navigate, browser_fill_form, browser_select_option, browser_take_screenshot, browser_snapshot, and browser_console_messages before you conclude.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -10448,8 +10451,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                     "Required browser evidence was captured."),
                 "OpenAI chat completions",
                 "gpt-4o-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -10468,7 +10471,7 @@ Use only the project-structure mindmap requirements as scope. Create the request
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -10578,13 +10581,13 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Theory]
-    [InlineData(ExecutionState.Completed, RunOutcome.Succeeded, true)]
-    [InlineData(ExecutionState.Completed, RunOutcome.Failed, false)]
-    [InlineData(ExecutionState.Failed, RunOutcome.Failed, false)]
-    [InlineData(ExecutionState.WaitingOnTool, null, false)]
+    [InlineData(ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded, true)]
+    [InlineData(ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Failed, false)]
+    [InlineData(ProcessAutomationExecutionState.Failed, ProcessAutomationRunOutcome.Failed, false)]
+    [InlineData(ProcessAutomationExecutionState.WaitingOnTool, null, false)]
     public void ShouldProjectFinalAssistantResponse_only_allows_completed_successful_runs(
-        ExecutionState state,
-        RunOutcome? outcome,
+        ProcessAutomationExecutionState state,
+        ProcessAutomationRunOutcome? outcome,
         bool expected)
     {
         var serviceType = typeof(ProcessRunAutomationDispatchService);
@@ -10597,13 +10600,13 @@ Use only the project-structure mindmap requirements as scope. Create the request
     }
 
     [Theory]
-    [InlineData(ExecutionState.Completed, RunOutcome.Succeeded, ProcessStepRunStatus.Completed, true)]
-    [InlineData(ExecutionState.Completed, RunOutcome.Succeeded, ProcessStepRunStatus.Failed, false)]
-    [InlineData(ExecutionState.Completed, RunOutcome.Succeeded, ProcessStepRunStatus.WaitingApproval, false)]
-    [InlineData(ExecutionState.Completed, RunOutcome.Failed, ProcessStepRunStatus.Completed, false)]
+    [InlineData(ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded, ProcessStepRunStatus.Completed, true)]
+    [InlineData(ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded, ProcessStepRunStatus.Failed, false)]
+    [InlineData(ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded, ProcessStepRunStatus.WaitingApproval, false)]
+    [InlineData(ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Failed, ProcessStepRunStatus.Completed, false)]
     public void ShouldProjectResponseTextArtifacts_requires_a_completed_process_step(
-        ExecutionState state,
-        RunOutcome? outcome,
+        ProcessAutomationExecutionState state,
+        ProcessAutomationRunOutcome? outcome,
         ProcessStepRunStatus completionStatus,
         bool expected)
     {
@@ -10805,8 +10808,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             ProcessStepKind.Start,
             (ProcessArtifactKind.Brief, "Scope boundary packet", true, "Must capture in-scope behavior, out-of-scope behavior, acceptance checks, and release boundary."));
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -10822,8 +10825,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 "I'm ready to help with the QA tasks. Please let me know what specific area or step you'd like me to review or test.",
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -10867,8 +10870,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             wire up queue, pause, resume, and complete buttons, and then run dotnet build. The executable or published output can
             be copied to the requested folder after the template is created.
             """;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -10884,8 +10887,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -10926,8 +10929,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
             Tenant impact: local single-user demo only; no tenant data, secrets, or external integrations are touched.
             Release boundary: runnable source and validation evidence are required before downstream review proceeds.
             """;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -10943,8 +10946,8 @@ Use only the project-structure mindmap requirements as scope. Create the request
                 responseText,
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -11620,8 +11623,8 @@ Ancestor path to the target work node:
             ProcessStepKind.Review,
             (ProcessArtifactKind.Evidence, "Peer review note", true, "Create this artifact at artifacts/deliveries/units/process/peer-review/peer-review-note.md."));
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -11637,8 +11640,8 @@ Ancestor path to the target work node:
                 "Peer review note written.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -11655,7 +11658,7 @@ Ancestor path to the target work node:
         {
             Artifacts =
             [
-                new ExecutionArtifactRecord(
+                new ProcessAutomationExecutionArtifact(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -11710,8 +11713,8 @@ Ancestor path to the target work node:
             ?? throw new InvalidOperationException("BuildCompletionReason method was not found.");
         var candidate = CreateDispatchCandidate("Implement the requested application and prove the build passes.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -11727,8 +11730,8 @@ Ancestor path to the target work node:
                 "Implementation complete.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -11744,7 +11747,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -11757,7 +11760,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -11804,8 +11807,8 @@ Ancestor path to the target work node:
 
             The main application is now scaffolded and buildable in the required location, ready for feature implementation.
             """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -11821,8 +11824,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -11838,7 +11841,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -11851,7 +11854,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -11864,7 +11867,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -11917,8 +11920,8 @@ Ancestor path to the target work node:
             Scaffolded a Blazor SSR app in the required location, verified the default pages, and wrote the implementation artifact.
             The main application is now scaffolded and buildable in the required location, ready for feature implementation.
             """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -11934,8 +11937,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -11951,7 +11954,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -11964,7 +11967,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -11977,7 +11980,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -12034,8 +12037,8 @@ Ancestor path to the target work node:
             ProcessStepOutcomeStatus.Blocked,
             "Runtime startup smoke failed with HTTP 500 before browser proof could be captured.",
             summaryMarkdown: "The validation step is blocked because the app did not start successfully.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -12051,8 +12054,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -12068,7 +12071,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -12109,8 +12112,8 @@ Ancestor path to the target work node:
             ProcessStepOutcomeStatus.Blocked,
             "Build failed, Home.razor was repaired afterward, but post-repair build proof was not captured.",
             summaryMarkdown: "Implementation changed product source after a failed build and still needs a post-repair build receipt.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -12126,8 +12129,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -12188,8 +12191,8 @@ Ancestor path to the target work node:
             ProcessStepOutcomeStatus.Blocked,
             "Build and tests passed, but workspace_dotnet_run failed because Home.razor requests UnitConversionService and Program.cs does not register it.",
             summaryMarkdown: "Implementation inspected the concrete product and found a startup smoke defect that needs repair.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -12205,8 +12208,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -12289,8 +12292,8 @@ Ancestor path to the target work node:
 
             **Proceeding to implement the workflow UI and logic, update tests, and write required artifacts.**
             """;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -12306,8 +12309,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -12323,7 +12326,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -12336,7 +12339,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -12349,7 +12352,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -12392,8 +12395,8 @@ Ancestor path to the target work node:
 
             Proceeding to implement the workflow UI and logic.
             """;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -12409,8 +12412,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -12426,7 +12429,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -12439,7 +12442,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     now,
                     now),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -12923,8 +12926,8 @@ Ancestor path to the target work node:
         var markdownArtifactPath = $"{rootAlias}/03-implementation-change-set.md";
         var now = DateTimeOffset.UtcNow;
         var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation markdown artifacts were reviewed.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -12940,8 +12943,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -13003,8 +13006,8 @@ Ancestor path to the target work node:
         var sourcePath = $"{rootAlias}/Program.cs";
         var now = DateTimeOffset.UtcNow;
         var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation source was created and inspected.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -13020,8 +13023,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -13116,8 +13119,8 @@ Ancestor path to the target work node:
 
             var rootAlias = ToExternalTargetAlias(productRoot);
             var now = DateTimeOffset.UtcNow;
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13133,8 +13136,8 @@ Ancestor path to the target work node:
                     "No host exists in the external target yet.",
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13200,8 +13203,8 @@ Ancestor path to the target work node:
             var candidate = CreateDispatchCandidate("Implement the requested Blazor application and prove build, tests, and startup smoke.");
             var now = DateTimeOffset.UtcNow;
             var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and tests passed.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13217,8 +13220,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13291,8 +13294,8 @@ Ancestor path to the target work node:
                 "Build a simple JavaScript browser application named Garden Plot Planner. This is JavaScript browser work, not .NET, not C#, and not Blazor. Use package scripts for lint, test, build, and preview.");
             var now = DateTimeOffset.UtcNow;
             var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "JavaScript implementation completed and npm validation passed.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13308,8 +13311,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13376,8 +13379,8 @@ Ancestor path to the target work node:
             var candidate = CreateDispatchCandidate("Implement the requested Blazor application and prove build, tests, and startup smoke.");
             var now = DateTimeOffset.UtcNow;
             var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and startup smoke passed.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13393,8 +13396,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13469,8 +13472,8 @@ Ancestor path to the target work node:
             var responseText = StructuredOutcome(
                 ProcessStepOutcomeStatus.Completed,
                 "Updated product files output/output.csproj and output/Program.cs, then build/test/startup validation passed.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13486,8 +13489,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13565,8 +13568,8 @@ Ancestor path to the target work node:
             var responseText = StructuredOutcome(
                 ProcessStepOutcomeStatus.Completed,
                 "Existing implementation was re-read and validated with build, tests, and startup smoke. Fresh implementation and rollout artifacts were written after validation.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13582,8 +13585,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13671,8 +13674,8 @@ Ancestor path to the target work node:
             var candidate = CreateDispatchCandidate("Implement the requested Blazor app and prove build, tests, and startup smoke.");
             var now = DateTimeOffset.UtcNow;
             var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and startup smoke passed.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13688,8 +13691,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13764,8 +13767,8 @@ Ancestor path to the target work node:
             var candidate = CreateDispatchCandidate("Implement the requested web application and prove build, tests, and startup smoke.");
             var now = DateTimeOffset.UtcNow;
             var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and startup smoke passed.");
-            var detail = new ExecutionRunDetail(
-                new ExecutionRunRecord(
+            var detail = new ProcessAutomationExecutionRunDetail(
+                new ProcessAutomationExecutionRunRecord(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     null,
@@ -13781,8 +13784,8 @@ Ancestor path to the target work node:
                     responseText,
                     "OpenAI chat completions",
                     "gpt-4.1",
-                    ExecutionState.Completed,
-                    RunOutcome.Succeeded,
+                    ProcessAutomationExecutionState.Completed,
+                    ProcessAutomationRunOutcome.Succeeded,
                     now,
                     now,
                     now,
@@ -13834,8 +13837,8 @@ Ancestor path to the target work node:
         var validationTime = now.AddSeconds(1);
         var mutationTime = now.AddSeconds(2);
         var readTime = now.AddSeconds(3);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -13851,8 +13854,8 @@ Ancestor path to the target work node:
                 "Validation ran before the final deliverable mutation.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -13869,7 +13872,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -13882,7 +13885,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     readTime,
                     readTime),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -13895,7 +13898,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     validationTime,
                     validationTime),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -13930,8 +13933,8 @@ Ancestor path to the target work node:
         var readTime = now.AddSeconds(2);
         var validationTime = now.AddSeconds(3);
         var workbookPath = "external-target/C/work/monthly-report/forecast.xlsx";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -13947,8 +13950,8 @@ Ancestor path to the target work node:
                 "Workbook was created and validated.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -13965,7 +13968,7 @@ Ancestor path to the target work node:
         {
             ToolReceipts =
             [
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -13978,7 +13981,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     mutationTime,
                     mutationTime),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-file",
@@ -13991,7 +13994,7 @@ Ancestor path to the target work node:
                     "Succeeded",
                     readTime,
                     readTime),
-                new ToolExecutionReceiptRecord(
+                new ProcessAutomationToolExecutionReceipt(
                     Guid.NewGuid(),
                     Guid.NewGuid(),
                     "workspace-process",
@@ -14023,8 +14026,8 @@ Ancestor path to the target work node:
         var rootAlias = "external-target/C/programovani/dotnet/output";
         var sourceAlias = $"{rootAlias}/Domain/UnitConversionTests.cs";
         var projectAlias = $"{rootAlias}/output.csproj";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -14040,8 +14043,8 @@ Ancestor path to the target work node:
                 "Source was inspected, repaired, built, and tested after the final mutation.",
                 "OpenAI chat completions",
                 "gpt-5.4-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -14090,8 +14093,8 @@ Ancestor path to the target work node:
                         "Approved architecture note.")
                 ]));
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -14107,8 +14110,8 @@ Ancestor path to the target work node:
                 "I added Razor files but only left a library project.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -14129,7 +14132,7 @@ Ancestor path to the target work node:
                 detail,
                 "I added Razor files but only left a library project.",
                 new List<string> { "workspace_dotnet_build" },
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1
             ]) as string;
 
@@ -14166,8 +14169,8 @@ Ancestor path to the target work node:
             ?? throw new InvalidOperationException("DispatchCandidate.ExpectedArtifacts property was not found.");
         var now = DateTimeOffset.UtcNow;
         var responseText = StructuredOutcome(ProcessStepOutcomeStatus.Completed, "Implementation completed and validation passed.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -14183,8 +14186,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-5.4-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -14266,8 +14269,8 @@ Ancestor path to the target work node:
         var reopenedAtUtc = DateTimeOffset.UtcNow;
         var priorTerminalRun = CreateExecutionRun(
             "process-automation-dispatch",
-            ExecutionState.Failed,
-            RunOutcome.Cancelled) with
+            ProcessAutomationExecutionState.Failed,
+            ProcessAutomationRunOutcome.Cancelled) with
         {
             StartedAtUtc = reopenedAtUtc.AddMinutes(-20),
             CompletedAtUtc = reopenedAtUtc.AddMinutes(-15),
@@ -14275,8 +14278,8 @@ Ancestor path to the target work node:
         };
         var manualDebugRun = CreateExecutionRun(
             "agent-run-debug",
-            ExecutionState.Completed,
-            RunOutcome.Succeeded) with
+            ProcessAutomationExecutionState.Completed,
+            ProcessAutomationRunOutcome.Succeeded) with
         {
             CompletedAtUtc = reopenedAtUtc
         };
@@ -14303,7 +14306,7 @@ Ancestor path to the target work node:
         var startedAtUtc = DateTimeOffset.Parse("2026-05-27T18:52:44+00:00");
         var staleWaitingRun = CreateExecutionRun(
             "process-automation-dispatch",
-            ExecutionState.WaitingOnTool,
+            ProcessAutomationExecutionState.WaitingOnTool,
             null) with
         {
             CreatedAtUtc = startedAtUtc,
@@ -14312,7 +14315,7 @@ Ancestor path to the target work node:
         };
         var freshWaitingRun = CreateExecutionRun(
             "process-automation-dispatch",
-            ExecutionState.WaitingOnTool,
+            ProcessAutomationExecutionState.WaitingOnTool,
             null) with
         {
             CreatedAtUtc = startedAtUtc.AddMinutes(20),
@@ -14376,7 +14379,7 @@ Ancestor path to the target work node:
         var startedAtUtc = DateTimeOffset.Parse("2026-05-27T18:52:44+00:00");
         var staleWaitingRun = CreateExecutionRun(
             "process-automation-dispatch",
-            ExecutionState.WaitingOnTool,
+            ProcessAutomationExecutionState.WaitingOnTool,
             null) with
         {
             CreatedAtUtc = startedAtUtc,
@@ -14385,8 +14388,8 @@ Ancestor path to the target work node:
         };
         var completedRun = CreateExecutionRun(
             "process-automation-dispatch",
-            ExecutionState.Failed,
-            RunOutcome.Failed);
+            ProcessAutomationExecutionState.Failed,
+            ProcessAutomationRunOutcome.Failed);
 
         Assert.True(ProcessRunAutomationDispatchService.ShouldAttemptStrandedDispositionArtifactFinalization(
             candidate,
@@ -16440,8 +16443,8 @@ Ancestor path to the target work node:
             "Run QA validation and browser proof for the generated application.",
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16457,8 +16460,8 @@ Ancestor path to the target work node:
                 "The browser proof is ready, but the response forgot the structured step outcome.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -16479,7 +16482,7 @@ Ancestor path to the target work node:
                 detail,
                 "The browser proof is ready, but the response forgot the structured step outcome.",
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 2
             ]) as string;
 
@@ -16507,8 +16510,8 @@ Ancestor path to the target work node:
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
         const string responseText = "QA validation and browser proof cannot proceed because the application is not running and no screenshots can be captured.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16524,8 +16527,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -16546,7 +16549,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1
             ]) as string;
 
@@ -16580,8 +16583,8 @@ Ancestor path to the target work node:
             ProcessStepKind.Review);
         var now = DateTimeOffset.UtcNow;
         const string responseText = "QA validation and browser proof cannot proceed because the JavaScript application is not running and no screenshots can be captured.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16597,8 +16600,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -16619,7 +16622,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1
             ]) as string;
 
@@ -16658,8 +16661,8 @@ Ancestor path to the target work node:
                 - Current product root: external-target/C/programovani/dotnet/ReadingTimeBudgeter
                 - Stale sibling reference: external-target/C/programovani/dotnet/UnrelatedSample/Program.cs
                 """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16675,8 +16678,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -16696,7 +16699,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1
             ]) as string;
 
@@ -16728,8 +16731,8 @@ Ancestor path to the target work node:
                 ParentNodeTitle = "Create main application"
             });
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16745,8 +16748,8 @@ Ancestor path to the target work node:
                 "The bootstrap failed because dotnet new reported an overwrite conflict.",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -16769,7 +16772,7 @@ Ancestor path to the target work node:
                 Array.Empty<string>(),
                 new[]
                 {
-                    new ToolExecutionReceiptRecord(
+                    new ProcessAutomationToolExecutionReceipt(
                         Id: Guid.NewGuid(),
                         ExecutionRunId: detail.Run.Id,
                         ToolFamily: "workspace-process",
@@ -16807,8 +16810,8 @@ Ancestor path to the target work node:
             ("approved", "Approved", "Continue to QA."),
             ("changes_requested", "Changes requested", "Route back to implementation."));
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16826,8 +16829,8 @@ Ancestor path to the target work node:
                     "Code review passed."),
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -16872,8 +16875,8 @@ Ancestor path to the target work node:
             - Status: repair-required
             - Reason: Browser interaction proof found a broken hard-drop keyboard binding.
             """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -16889,8 +16892,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -17095,8 +17098,8 @@ Ancestor path to the target work node:
         var responseText = StructuredOutcome(
             ProcessStepOutcomeStatus.Completed,
             "Architecture review found no source-of-truth conflict.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17112,8 +17115,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -17153,8 +17156,8 @@ Ancestor path to the target work node:
             ProcessStepOutcomeStatus.Completed,
             "Validation did not select a real governed disposition.",
             branchOutcomeKey: "__default__");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17170,8 +17173,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -17204,8 +17207,8 @@ Ancestor path to the target work node:
             ("approved", "Approved", "Continue to QA."),
             ("changes_requested", "Changes requested", "Route back to implementation."));
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17224,8 +17227,8 @@ Ancestor path to the target work node:
                     "approved"),
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -17576,8 +17579,8 @@ Ancestor path to the target work node:
             summaryMarkdown: """
             Upstream artifact is missing.
             """);
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17593,8 +17596,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -17697,8 +17700,8 @@ Ancestor path to the target work node:
         var method = serviceType.GetMethod("CreateObservedActiveAutomationExecutionOutcome", BindingFlags.NonPublic | BindingFlags.Static)
             ?? throw new InvalidOperationException("CreateObservedActiveAutomationExecutionOutcome method was not found.");
         var now = DateTimeOffset.UtcNow;
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17714,8 +17717,8 @@ Ancestor path to the target work node:
                 "Partial output",
                 "OpenAI chat completions",
                 "gpt-4.1",
-                ExecutionState.Running,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Running,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 null,
@@ -17886,8 +17889,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The provider completed without returning text.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17903,8 +17906,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -17937,8 +17940,8 @@ Ancestor path to the target work node:
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The implementation was updated and tests passed, but the governed finalizer was not emitted.";
         const string finalizerFailureSummary = "Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing: Required finalizer tool 'submit_process_step_outcome' was not called.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -17954,8 +17957,8 @@ Ancestor path to the target work node:
                 finalizerFailureSummary,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -17976,7 +17979,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1,
                 5
             ]);
@@ -18000,8 +18003,8 @@ Ancestor path to the target work node:
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The approach decision was drafted, but the governed finalizer was not emitted.";
         const string finalizerFailureSummary = "Finalizer tool 'submit_process_step_outcome' in Required mode failed validation. Errors: agent.finalizer.missing: Required finalizer tool 'submit_process_step_outcome' was not called.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18017,8 +18020,8 @@ Ancestor path to the target work node:
                 finalizerFailureSummary,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -18039,7 +18042,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1,
                 3
             ]);
@@ -18061,8 +18064,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The response ended prematurely. (ResponseEnded)";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18078,8 +18081,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -18100,7 +18103,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1,
                 3
             ]);
@@ -18122,8 +18125,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "Execution interrupted because the CanDoItAll host restarted before the run completed.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18139,8 +18142,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Failed,
-                RunOutcome.Cancelled,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Cancelled,
                 now,
                 now,
                 now,
@@ -18161,7 +18164,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1,
                 3
             ]);
@@ -18180,8 +18183,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "Execution interrupted because the CanDoItAll host restarted before the run completed.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18197,8 +18200,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -18219,7 +18222,7 @@ Ancestor path to the target work node:
                 detail,
                 responseText,
                 Array.Empty<string>(),
-                Array.Empty<ToolExecutionReceiptRecord>(),
+                Array.Empty<ProcessAutomationToolExecutionReceipt>(),
                 1,
                 3
             ]);
@@ -18238,8 +18241,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The provider completed without returning text.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18255,8 +18258,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -18287,8 +18290,8 @@ Ancestor path to the target work node:
             ProcessStepOutcomeStatus.Completed,
             "Reviewed successfully.",
             summaryMarkdown: "Architecture review complete.");
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18304,8 +18307,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -18342,8 +18345,8 @@ Ancestor path to the target work node:
             "QA blocked progression because the running app returned HTTP 500 during browser proof.",
             summaryMarkdown: "Browser evidence exists, but the target is returning HTTP 500 and needs repair.");
         const string staleProviderError = "The prompt was saved to the thread, but the run failed: Response status code does not indicate success: 500 (Internal Server Error).";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18359,8 +18362,8 @@ Ancestor path to the target work node:
                 staleProviderError,
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -18393,8 +18396,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "Environment variable 'OPENAI_API_KEY' is not set.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18410,8 +18413,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -18445,8 +18448,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The prompt was saved to the thread, but the run failed: Response status code does not indicate success: 500 (Internal Server Error).";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18462,8 +18465,8 @@ Ancestor path to the target work node:
                 responseText,
                 "Remote Ollama",
                 "gptoss32k:latest",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -18497,8 +18500,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "The response ended prematurely. (ResponseEnded)";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18514,8 +18517,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI default",
                 "gpt-4.1",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -18549,8 +18552,8 @@ Ancestor path to the target work node:
 
         var now = DateTimeOffset.UtcNow;
         const string responseText = "Provider 'Local Ollama' using transport 'ChatCompletions' cannot enforce structured output contract 'process_step_outcome_result'. Choose a structured-output capable OpenAI/Azure OpenAI provider or disable the machine-critical structured-output request.";
-        var detail = new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        var detail = new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -18566,8 +18569,8 @@ Ancestor path to the target work node:
                 responseText,
                 "Local Ollama",
                 "llama3.1",
-                ExecutionState.Failed,
-                RunOutcome.Failed,
+                ProcessAutomationExecutionState.Failed,
+                ProcessAutomationRunOutcome.Failed,
                 now,
                 now,
                 now,
@@ -18636,7 +18639,7 @@ Ancestor path to the target work node:
         var legacyRunId = Guid.NewGuid();
         var observedUsage = CreateCostUsageObservation(
             usageRunId,
-            ProviderUsageObservationStatus.Observed,
+            ProcessAutomationProviderUsageStatus.Observed,
             ProviderUsageSourcePhases.AgentRuntime,
             responseId: "resp-usage-001",
             inputTokens: 1_000_000,
@@ -18648,7 +18651,7 @@ Ancestor path to the target work node:
         };
         var unknownUsage = CreateCostUsageObservation(
             usageRunId,
-            ProviderUsageObservationStatus.MissingAfterProviderActivity,
+            ProcessAutomationProviderUsageStatus.MissingAfterProviderActivity,
             ProviderUsageSourcePhases.FinalizerShortCircuit,
             responseId: "resp-unknown-001",
             inputTokens: 0,
@@ -18702,15 +18705,15 @@ Ancestor path to the target work node:
             SuggestedModels: [defaultModel]);
     }
 
-    private static ExecutionRunDetail CreateCostedExecutionRunDetail(
+    private static ProcessAutomationExecutionRunDetail CreateCostedExecutionRunDetail(
         Guid executionRunId,
         Guid agentId,
-        IReadOnlyList<AgentRunMetric> metrics,
-        IReadOnlyList<ProviderUsageObservation> usageObservations)
+        IReadOnlyList<ProcessAutomationRunMetric> metrics,
+        IReadOnlyList<ProcessAutomationProviderUsageObservation> usageObservations)
     {
         var now = DateTimeOffset.UtcNow;
-        return new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        return new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 executionRunId,
                 agentId,
                 null,
@@ -18726,8 +18729,8 @@ Ancestor path to the target work node:
                 "Completed.",
                 "Provider A",
                 "model-a",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -18745,17 +18748,17 @@ Ancestor path to the target work node:
         };
     }
 
-    private static AgentRunMetric CreateCostMetric(
+    private static ProcessAutomationRunMetric CreateCostMetric(
         Guid executionRunId,
         Guid agentId,
         decimal costUsd)
     {
-        return new AgentRunMetric(
+        return new ProcessAutomationRunMetric(
             Id: Guid.NewGuid(),
             AgentId: agentId,
             ChatSessionId: null,
             CreatedAtUtc: DateTimeOffset.UtcNow,
-            Outcome: RunOutcome.Succeeded,
+            Outcome: ProcessAutomationRunOutcome.Succeeded,
             ProviderName: "Provider A",
             Model: "model-a",
             DurationMs: 100,
@@ -18768,22 +18771,22 @@ Ancestor path to the target work node:
         };
     }
 
-    private static ProviderUsageObservation CreateCostUsageObservation(
+    private static ProcessAutomationProviderUsageObservation CreateCostUsageObservation(
         Guid executionRunId,
-        ProviderUsageObservationStatus status,
+        ProcessAutomationProviderUsageStatus status,
         string sourcePhase,
         string responseId,
         int inputTokens,
         int cachedInputTokens,
         int outputTokens)
     {
-        return new ProviderUsageObservation(
+        return new ProcessAutomationProviderUsageObservation(
             Id: Guid.NewGuid(),
             CreatedAtUtc: DateTimeOffset.UtcNow,
             ProviderName: "Provider A",
-            ProviderKind: ProviderKind.OpenAi,
+            ProviderKind: ProviderKind.OpenAi.ToString(),
             Model: "model-a",
-            TransportKind: ProviderTransportKind.Responses,
+            TransportKind: ProviderTransportKind.Responses.ToString(),
             SourcePhase: sourcePhase,
             UsageStatus: status,
             InputTokens: inputTokens,
@@ -19278,16 +19281,16 @@ Ancestor path to the target work node:
                ?? throw new InvalidOperationException("DispatchCandidate could not be constructed.");
     }
 
-    private static ExecutionRunDetail CreateSuccessfulExecutionDetail(
+    private static ProcessAutomationExecutionRunDetail CreateSuccessfulExecutionDetail(
         string responseText,
         string? serializedSessionStateJson,
-        IReadOnlyList<ToolExecutionReceiptRecord>? toolReceipts = null,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt>? toolReceipts = null,
         string prompt = "Prompt",
         string serializedInvocationMetadataJson = "{}")
     {
         var now = DateTimeOffset.UtcNow;
-        return new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        return new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -19303,8 +19306,8 @@ Ancestor path to the target work node:
                 responseText,
                 "OpenAI chat completions",
                 "gpt-5.4-mini",
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -19353,7 +19356,7 @@ Ancestor path to the target work node:
         throw new InvalidOperationException($"Branch outcome '{branchOutcomeKey}' was not found.");
     }
 
-    private static ExecutionRunDetail CreateProcessMockExecutionDetail(
+    private static ProcessAutomationExecutionRunDetail CreateProcessMockExecutionDetail(
         string responseText,
         string roleKey,
         string artifactRoot = "artifacts/process-mock/mockrun001",
@@ -19361,8 +19364,8 @@ Ancestor path to the target work node:
         params (string RelativePath, string ContentSignalText)[] artifacts)
     {
         var now = DateTimeOffset.UtcNow;
-        return new ExecutionRunDetail(
-            new ExecutionRunRecord(
+        return new ProcessAutomationExecutionRunDetail(
+            new ProcessAutomationExecutionRunRecord(
                 Guid.NewGuid(),
                 Guid.NewGuid(),
                 null,
@@ -19378,8 +19381,8 @@ Ancestor path to the target work node:
                 responseText,
                 ProcessMockAgentCatalog.ProviderName,
                 ProcessMockAgentCatalog.Model,
-                ExecutionState.Completed,
-                RunOutcome.Succeeded,
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
                 now,
                 now,
                 now,
@@ -19405,10 +19408,10 @@ Ancestor path to the target work node:
             []);
     }
 
-    private static ExecutionRunRecord CreateExecutionRun(string requestedBy, ExecutionState state, RunOutcome? outcome)
+    private static ProcessAutomationExecutionRunRecord CreateExecutionRun(string requestedBy, ProcessAutomationExecutionState state, ProcessAutomationRunOutcome? outcome)
     {
         var now = DateTimeOffset.UtcNow;
-        return new ExecutionRunRecord(
+        return new ProcessAutomationExecutionRunRecord(
             Guid.NewGuid(),
             Guid.NewGuid(),
             null,
@@ -19429,7 +19432,7 @@ Ancestor path to the target work node:
             now,
             now,
             now,
-            state is ExecutionState.Completed or ExecutionState.Failed ? now : null,
+            state is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed ? now : null,
             string.Empty,
             null,
             []);
@@ -19549,7 +19552,7 @@ Ancestor path to the target work node:
             AgentOutputJson.SerializerOptions);
     }
 
-    private static ToolExecutionReceiptRecord CreateToolReceipt(
+    private static ProcessAutomationToolExecutionReceipt CreateToolReceipt(
         string toolFamily,
         string toolName,
         string requestSummary,
@@ -19557,7 +19560,7 @@ Ancestor path to the target work node:
         string exitSummary,
         DateTimeOffset timestamp)
     {
-        return new ToolExecutionReceiptRecord(
+        return new ProcessAutomationToolExecutionReceipt(
             Guid.NewGuid(),
             Guid.NewGuid(),
             toolFamily,
@@ -19572,35 +19575,35 @@ Ancestor path to the target work node:
             timestamp);
     }
 
-    private static ExecutionLogEntry CreateExecutionLogToolInvocation(
+    private static ProcessAutomationExecutionLogEntry CreateExecutionLogToolInvocation(
         Guid executionRunId,
         Guid agentId,
         DateTimeOffset timestamp,
         string toolName)
     {
-        return new ExecutionLogEntry(
+        return new ProcessAutomationExecutionLogEntry(
             Guid.NewGuid(),
             agentId,
             null,
             timestamp,
-            ExecutionState.Running,
+            ProcessAutomationExecutionState.Running,
             "Tool",
             $"Invoking tool '{toolName}' with test arguments.") { ExecutionRunId = executionRunId };
     }
 
-    private static ExecutionLogEntry CreateExecutionLogToolInvocationWithFilename(
+    private static ProcessAutomationExecutionLogEntry CreateExecutionLogToolInvocationWithFilename(
         Guid executionRunId,
         Guid agentId,
         DateTimeOffset timestamp,
         string toolName,
         string fileName)
     {
-        return new ExecutionLogEntry(
+        return new ProcessAutomationExecutionLogEntry(
             Guid.NewGuid(),
             agentId,
             null,
             timestamp,
-            ExecutionState.Running,
+            ProcessAutomationExecutionState.Running,
             "Tool",
             $"Invoking tool '{toolName}' with filename=\"{fileName}\".") { ExecutionRunId = executionRunId };
     }

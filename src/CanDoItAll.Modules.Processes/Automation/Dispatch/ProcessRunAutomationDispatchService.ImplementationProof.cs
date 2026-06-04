@@ -26,7 +26,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static string ResolveMissingConcreteImplementationProofSummary(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         if (!RequiresConcreteImplementationProof(candidate))
         {
@@ -103,7 +103,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveMissingRunnableApplicationProofSummary(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         if (!RequiresConcreteImplementationProof(candidate))
         {
@@ -170,7 +170,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static CarriedImplementationProof ResolveCarriedImplementationProof(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         CarriedImplementationProof previous)
     {
         if (!RequiresConcreteImplementationProof(candidate))
@@ -211,7 +211,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static CarriedImplementationProof ResolveHistoricalCarriedImplementationProof(
         DispatchCandidate candidate,
-        IEnumerable<ExecutionRunDetail> historicalDetails)
+        IEnumerable<ProcessAutomationExecutionRunDetail> historicalDetails)
     {
         ArgumentNullException.ThrowIfNull(historicalDetails);
 
@@ -227,15 +227,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : CarriedImplementationProof.None;
     }
 
-    private static bool IsHistoricalCarryForwardExecutionRun(ExecutionRunRecord executionRun)
+    private static bool IsHistoricalCarryForwardExecutionRun(ProcessAutomationExecutionRunRecord executionRun)
     {
         return string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase) &&
-               executionRun.State is ExecutionState.Completed or ExecutionState.Failed;
+               executionRun.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed;
     }
 
     private static string ResolveMissingConcreteImplementationProofSummaryWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         CarriedImplementationProof carriedProof)
     {
         var summary = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
@@ -263,7 +263,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveMissingRunnableApplicationProofSummaryWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         CarriedImplementationProof carriedProof)
     {
         var summary = ResolveMissingRunnableApplicationProofSummary(candidate, detail);
@@ -309,7 +309,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasConcreteImplementationProofEvidence(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         if (ResolveProcessMockArtifactProjections(detail.Run.SerializedSessionStateJson)
             .Any(projection => CanSatisfyConcreteImplementationProofWithProcessMock(candidate, projection)))
@@ -323,7 +323,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts) is not null;
     }
 
-    private static bool HasRunnableApplicationProofEvidence(ExecutionRunDetail detail)
+    private static bool HasRunnableApplicationProofEvidence(ProcessAutomationExecutionRunDetail detail)
     {
         var successfulReceipts = detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))
@@ -337,7 +337,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasSuccessfulConcreteProductMutation(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         return detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))
@@ -346,9 +346,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 IsConcreteProductMutationReceipt(candidate, detail, receipt));
     }
 
-    private static ToolExecutionReceiptRecord? ResolveLatestImplementationProofReadReceipt(
+    private static ProcessAutomationToolExecutionReceipt? ResolveLatestImplementationProofReadReceipt(
         DispatchCandidate candidate,
-        IEnumerable<ToolExecutionReceiptRecord> successfulReceipts)
+        IEnumerable<ProcessAutomationToolExecutionReceipt> successfulReceipts)
     {
         return successfulReceipts
             .Where(receipt => string.Equals(NormalizeToolToken(receipt.ToolName), "workspace_read_file", StringComparison.Ordinal))
@@ -359,7 +359,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .FirstOrDefault();
     }
 
-    private static bool HasBuildValidationReceipt(IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+    private static bool HasBuildValidationReceipt(IReadOnlyList<ProcessAutomationToolExecutionReceipt> successfulReceipts)
     {
         return successfulReceipts.Any(receipt =>
         {
@@ -638,11 +638,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static IReadOnlyList<string> ResolveRunnableDotNetHostProjectPaths(
-        ExecutionRunDetail detail,
-        IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+        ProcessAutomationExecutionRunDetail detail,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> successfulReceipts)
     {
         var candidatePaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var alias in ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run))
+        foreach (var alias in ResolveAllowedExternalTargetAliases(detail.Run))
         {
             AddResolvedPromptPathCandidates(candidatePaths, alias);
         }
@@ -832,9 +832,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : $"{ExternalTargetAliasRoot}/{driveLetter}/{suffix}";
     }
 
-    private static ToolExecutionReceiptRecord? ResolveLatestRequiredImplementationValidationReceipt(
+    private static ProcessAutomationToolExecutionReceipt? ResolveLatestRequiredImplementationValidationReceipt(
         DispatchCandidate candidate,
-        IReadOnlyList<ToolExecutionReceiptRecord> successfulReceipts)
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> successfulReceipts)
     {
         var requiredToolNames = ResolveRequiredToolNames(candidate)
             .ToHashSet(StringComparer.Ordinal);
@@ -855,8 +855,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .FirstOrDefault();
     }
 
-    private static ToolExecutionReceiptRecord? ResolveLatestReceipt(
-        IEnumerable<ToolExecutionReceiptRecord> receipts,
+    private static ProcessAutomationToolExecutionReceipt? ResolveLatestReceipt(
+        IEnumerable<ProcessAutomationToolExecutionReceipt> receipts,
         string normalizedToolName,
         bool requireConcreteProductPath,
         bool requireConcreteDeliverableOrSourcePath)
@@ -868,8 +868,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             requireConcreteDeliverableOrSourcePath);
     }
 
-    private static ToolExecutionReceiptRecord? ResolveLatestReceipt(
-        IEnumerable<ToolExecutionReceiptRecord> receipts,
+    private static ProcessAutomationToolExecutionReceipt? ResolveLatestReceipt(
+        IEnumerable<ProcessAutomationToolExecutionReceipt> receipts,
         Func<string, bool> matchesToolName,
         bool requireConcreteProductPath,
         bool requireConcreteDeliverableOrSourcePath)
@@ -885,8 +885,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsConcreteProductMutationReceipt(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
-        ToolExecutionReceiptRecord receipt)
+        ProcessAutomationExecutionRunDetail detail,
+        ProcessAutomationToolExecutionReceipt receipt)
     {
         return IsConcreteProductMutationReceipt(candidate, receipt) &&
                IsWithinCurrentRunExternalMutationBoundary(detail, receipt);
@@ -894,7 +894,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsConcreteProductMutationReceipt(
         DispatchCandidate candidate,
-        ToolExecutionReceiptRecord receipt)
+        ProcessAutomationToolExecutionReceipt receipt)
     {
         var toolName = NormalizeToolToken(receipt.ToolName);
         if (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
@@ -909,11 +909,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool IsWithinCurrentRunExternalMutationBoundary(
-        ExecutionRunDetail detail,
-        ToolExecutionReceiptRecord receipt)
+        ProcessAutomationExecutionRunDetail detail,
+        ProcessAutomationToolExecutionReceipt receipt)
     {
-        var allowedExternalTargetAliases = ExecutionInvocationMetadata
-            .ResolveAllowedExternalTargetAliases(detail.Run)
+        var allowedExternalTargetAliases = ResolveAllowedExternalTargetAliases(detail.Run)
             .Select(NormalizeExternalTargetAlias)
             .Where(alias => !string.IsNullOrWhiteSpace(alias))
             .ToArray();
@@ -958,13 +957,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                normalizedToolName.StartsWith("browser_", StringComparison.Ordinal);
     }
 
-    private static bool HasConcreteProductPath(ToolExecutionReceiptRecord receipt)
+    private static bool HasConcreteProductPath(ProcessAutomationToolExecutionReceipt receipt)
     {
         return ResolveWorkspacePathsFromReceipt(receipt)
             .Any(IsConcreteProductPath);
     }
 
-    private static bool HasConcreteProductDeliverableOrSourcePath(ToolExecutionReceiptRecord receipt)
+    private static bool HasConcreteProductDeliverableOrSourcePath(ProcessAutomationToolExecutionReceipt receipt)
     {
         return ResolveWorkspacePathsFromReceipt(receipt)
             .Any(IsConcreteProductDeliverableOrSourcePath);
@@ -972,20 +971,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasConcreteProductImplementationPath(
         DispatchCandidate candidate,
-        ToolExecutionReceiptRecord receipt)
+        ProcessAutomationToolExecutionReceipt receipt)
     {
         return RequiresSourceOrProjectImplementationProof(candidate)
             ? HasConcreteProductSourceOrProjectPath(receipt)
             : HasConcreteProductDeliverableOrSourcePath(receipt);
     }
 
-    private static bool HasConcreteProductSourceOrProjectPath(ToolExecutionReceiptRecord receipt)
+    private static bool HasConcreteProductSourceOrProjectPath(ProcessAutomationToolExecutionReceipt receipt)
     {
         return ResolveWorkspacePathsFromReceipt(receipt)
             .Any(IsConcreteProductSourceOrProjectPath);
     }
 
-    private static IReadOnlyList<string> ResolveWorkspacePathsFromReceipt(ToolExecutionReceiptRecord receipt)
+    private static IReadOnlyList<string> ResolveWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
         var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var path in ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary))
@@ -1212,7 +1211,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsReceiptAfter(ToolExecutionReceiptRecord candidate, ToolExecutionReceiptRecord baseline)
+    private static bool IsReceiptAfter(ProcessAutomationToolExecutionReceipt candidate, ProcessAutomationToolExecutionReceipt baseline)
     {
         return candidate.CompletedAtUtc > baseline.CompletedAtUtc ||
                candidate.CompletedAtUtc == baseline.CompletedAtUtc &&

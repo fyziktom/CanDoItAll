@@ -22,7 +22,7 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private static IReadOnlyList<ToolExecutionReceiptRecord> ResolveUnresolvedCriticalToolFailures(ExecutionRunDetail detail)
+    private static IReadOnlyList<ProcessAutomationToolExecutionReceipt> ResolveUnresolvedCriticalToolFailures(ProcessAutomationExecutionRunDetail detail)
     {
         var latestCriticalReceipts = detail.ToolReceipts
             .Where(IsCriticalToolReceipt)
@@ -45,9 +45,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
     }
 
-    private static IReadOnlyList<ToolExecutionReceiptRecord> ResolveUnresolvedCriticalToolFailures(
+    private static IReadOnlyList<ProcessAutomationToolExecutionReceipt> ResolveUnresolvedCriticalToolFailures(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         return ResolveUnresolvedCriticalToolFailures(detail)
             .Where(receipt => !ShouldIgnoreStackInapplicableCriticalToolFailure(candidate, receipt))
@@ -56,7 +56,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldIgnoreStackInapplicableCriticalToolFailure(
         DispatchCandidate candidate,
-        ToolExecutionReceiptRecord receipt)
+        ProcessAutomationToolExecutionReceipt receipt)
     {
         var toolName = NormalizeToolToken(receipt.ToolName);
         if (!toolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal) ||
@@ -72,14 +72,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveMissingRequiredToolExecutions(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         return ResolveMissingRequiredToolExecutionsWithCarryForward(candidate, detail, []);
     }
 
     private static IReadOnlyList<string> ResolveMissingRequiredToolExecutionsWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IEnumerable<string> successfulToolNamesFromPriorAttempts)
     {
         return ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
@@ -91,7 +91,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         CarriedImplementationProof carriedImplementationProof)
     {
@@ -151,9 +151,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveMetadataRequiredToolNames(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
-        if (!ExecutionInvocationMetadata.ResolveProcessBrowserToolsAllowed(detail.Run) ||
+        if (!ResolveProcessBrowserToolsAllowed(detail.Run) ||
             !RequiresGovernedStepOutcome(candidate.StepRun) ||
             !RequiresConcreteBrowserProof(candidate) ||
             IsDotNetSolutionSetupScaffoldMutationStep(candidate))
@@ -164,11 +164,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ImplicitBrowserProofToolNames;
     }
 
-    private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(ExecutionRunDetail detail)
+    private static bool CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(ProcessAutomationExecutionRunDetail detail)
     {
-        var successfulReceipts = detail.ToolReceipts
-            .Where(receipt => !IsFailedToolReceipt(receipt))
-            .ToList();
+        var successfulReceipts = ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail);
         if (successfulReceipts.Count == 0)
         {
             return false;
@@ -187,7 +185,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         });
     }
 
-    private static bool IsDotnetScaffoldInspectionReceipt(ToolExecutionReceiptRecord receipt)
+    private static bool IsDotnetScaffoldInspectionReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
         var toolName = NormalizeToolToken(receipt.ToolName);
         if (toolName is not "workspace_stat_path" and not "workspace_read_file")
@@ -207,7 +205,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanSatisfyImplementationProofToolsWithCarriedProof(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         CarriedImplementationProof carriedImplementationProof)
     {
         return RequiresConcreteImplementationProof(candidate) &&
@@ -217,7 +215,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         return RequiresConcreteImplementationProof(candidate) &&
                !HasSuccessfulConcreteProductMutation(candidate, detail) &&
@@ -232,7 +230,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveProcessMockSatisfiedToolNames(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyCollection<string> requiredToolNames)
     {
         var projections = ResolveProcessMockArtifactProjections(detail.Run.SerializedSessionStateJson);
@@ -308,7 +306,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IEnumerable<string> successfulToolNamesFromPriorAttempts)
     {
         return ResolveCompletionStatusWithCarryForward(
@@ -320,7 +318,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         string? responseText)
     {
@@ -334,7 +332,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         string? responseText,
         CarriedImplementationProof carriedImplementationProof)
@@ -345,11 +343,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             detail,
             successfulToolNamesFromPriorAttempts,
             carriedImplementationProof);
-        if (run.State != ExecutionState.Completed)
+        if (run.State != ProcessAutomationExecutionState.Completed)
         {
             return run.PendingApprovals.Count > 0
                 ? ProcessStepRunStatus.WaitingApproval
-                : run.State == ExecutionState.Failed
+                : run.State == ProcessAutomationExecutionState.Failed
                     ? ProcessStepRunStatus.Failed
                     : candidate.StepRun.Status == ProcessStepRunStatus.WaitingApproval
                         ? ProcessStepRunStatus.WaitingApproval
@@ -361,7 +359,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessStepRunStatus.WaitingApproval;
         }
 
-        if (run.Outcome != RunOutcome.Succeeded)
+        if (run.Outcome != ProcessAutomationRunOutcome.Succeeded)
         {
             return ProcessStepRunStatus.Failed;
         }
@@ -603,7 +601,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanCompleteExplicitDispositionOutcomeWithCriticalToolFailures(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         DeclaredStepOutcome declaredOutcome,
         ProcessStepOutcomeResult processOutcome,
         string? responseText,
@@ -677,7 +675,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildCompletionReasonWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string stepTitle,
         IEnumerable<string> successfulToolNamesFromPriorAttempts)
     {
@@ -691,7 +689,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildCompletionReasonWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string stepTitle,
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         string? responseText)
@@ -707,7 +705,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildCompletionReasonWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string stepTitle,
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         string? responseText,
@@ -780,7 +778,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DeclaredStepOutcome declaredOutcome,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
             missingRequiredTools.Count == 0 ||
@@ -805,7 +803,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool HasFailedReceiptForRequiredTool(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<string> requiredToolNames)
     {
         if (requiredToolNames.Count == 0)
@@ -846,13 +844,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         };
     }
 
-    private static ISet<string> ResolveSuccessfulToolNames(ExecutionRunDetail detail)
+    private static ISet<string> ResolveSuccessfulToolNames(ProcessAutomationExecutionRunDetail detail)
     {
-        var successfulToolNames = detail.ToolReceipts
-            .Where(receipt => !IsFailedToolReceipt(receipt))
-            .Select(receipt => NormalizeToolToken(receipt.ToolName))
-            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
-            .ToHashSet(StringComparer.Ordinal);
+        var successfulToolNames = ProcessAutomationReceiptObservationHelper.ResolveSuccessfulToolNames(detail);
 
         foreach (var toolName in ResolveSuccessfulSessionToolNames(detail.Run.SerializedSessionStateJson))
         {
@@ -867,7 +861,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return successfulToolNames;
     }
 
-    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(ExecutionRunDetail detail)
+    private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(ProcessAutomationExecutionRunDetail detail)
     {
         var executionLog = detail.ExecutionLog;
         if (executionLog.Count == 0)
@@ -876,14 +870,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var canTrustCompletedInternalToolLogs =
-            detail.Run.State == ExecutionState.Completed &&
-            detail.Run.Outcome == RunOutcome.Succeeded &&
+            detail.Run.State == ProcessAutomationExecutionState.Completed &&
+            detail.Run.Outcome == ProcessAutomationRunOutcome.Succeeded &&
             HasCompletedDeclaredStepOutcome(detail);
         var toolNames = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in executionLog)
         {
             if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
-                entry.State == ExecutionState.Failed ||
+                entry.State == ProcessAutomationExecutionState.Failed ||
                 !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
                 (!IsProviderNativeExecutionLogToolName(toolName) &&
                  !(canTrustCompletedInternalToolLogs && IsInternalMafExecutionLogToolName(toolName))))
@@ -897,7 +891,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return toolNames.ToList();
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ExecutionRunDetail detail)
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ProcessAutomationExecutionRunDetail detail)
     {
         var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         foreach (var pair in ResolveSuccessfulSessionToolOutputFiles(detail.Run.SerializedSessionStateJson ?? string.Empty))
@@ -950,7 +944,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveExecutionLogBrowserToolOutputFiles(IReadOnlyList<ExecutionLogEntry> executionLog)
+    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveExecutionLogBrowserToolOutputFiles(IReadOnlyList<ProcessAutomationExecutionLogEntry> executionLog)
     {
         if (executionLog.Count == 0)
         {
@@ -961,7 +955,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         foreach (var entry in executionLog)
         {
             if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
-                entry.State == ExecutionState.Failed ||
+                entry.State == ProcessAutomationExecutionState.Failed ||
                 !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
                 !toolName.StartsWith("browser_", StringComparison.Ordinal) ||
                 !TryResolveExecutionLogFilenameArgument(entry.Message, out var outputFileName))

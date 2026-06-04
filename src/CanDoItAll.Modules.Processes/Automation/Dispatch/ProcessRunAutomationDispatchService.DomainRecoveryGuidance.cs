@@ -7,11 +7,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static string BuildDomainRecoveryFocusGuidance(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         string missingConcreteImplementationProofSummary,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures)
     {
         return string.Empty;
     }
@@ -19,22 +19,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static void AppendDomainImplementationRecoveryGuidance(
         StringBuilder builder,
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         string missingConcreteImplementationProofSummary,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures)
     {
     }
 
     private static void AppendDomainBrowserRecoveryGuidance(
         StringBuilder builder,
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         string missingConcreteImplementationProofSummary,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures)
     {
     }
 }

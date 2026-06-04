@@ -106,7 +106,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task<DispatchExecutionOutcome?> TryRecoverStrandedDispositionArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail previousExecutionDetail,
+        ProcessAutomationExecutionRunDetail previousExecutionDetail,
         string responseText,
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
@@ -156,7 +156,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal static bool ShouldAttemptStrandedDispositionArtifactFinalization(
         DispatchCandidate candidate,
-        ExecutionRunRecord executionRun,
+        ProcessAutomationExecutionRunRecord executionRun,
         string? responseText,
         DateTimeOffset now)
     {
@@ -174,7 +174,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task<string> ResolveRecoveredExecutionResponseTextWithCurrentRunArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         CancellationToken cancellationToken)
     {
         var recoveredText = ResolveRecoveredExecutionResponseText(detail);
@@ -256,7 +256,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal static Guid? ResolveArtifactRecoveryExecutionRunId(
         ProcessStepRun stepRun,
-        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
         IReadOnlySet<Guid> recordedArtifactExpectationIds,
         DateTimeOffset? now = null)
@@ -276,7 +276,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return executionRuns
             .Where(executionRun =>
                 string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase) &&
-                (executionRun.State is ExecutionState.Completed or ExecutionState.Failed ||
+                (executionRun.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed ||
                  IsStaleAutomationExecutionRun(executionRun, resolvedNow)))
             .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
             .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)

@@ -25,7 +25,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private void CleanupKeptAliveDotnetRunProcesses(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         var startupReceipts = ResolveKeptAliveDotnetRunStartupReceipts(detail);
         if (startupReceipts.Count == 0)
@@ -56,7 +56,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private IReadOnlyList<DotnetRunStartupReceipt> ResolveKeptAliveDotnetRunStartupReceipts(ExecutionRunDetail detail)
+    private IReadOnlyList<DotnetRunStartupReceipt> ResolveKeptAliveDotnetRunStartupReceipts(ProcessAutomationExecutionRunDetail detail)
     {
         var workspaceRoot = workspacePathResolver.ResolveWorkspaceRoot();
         var receipts = new List<DotnetRunStartupReceipt>();
@@ -290,7 +290,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private void LogStaticWebAssetsAliasCleanupIssues(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<StaticWebAssetsAliasCleanupResult> cleanupResults)
     {
         foreach (var result in cleanupResults.Where(result => ShouldWarnStaticWebAssetsAliasCleanup(result.Status)))

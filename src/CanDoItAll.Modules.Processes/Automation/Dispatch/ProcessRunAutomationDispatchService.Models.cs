@@ -42,7 +42,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private sealed record ConcurrentAutomationExecution(
         Guid ExecutionRunId,
-        ExecutionRunDetail Detail,
+        ProcessAutomationExecutionRunDetail Detail,
         string ResponseText);
 
     private sealed record ArtifactProjectionLineage(
@@ -99,7 +99,7 @@ internal sealed record SubprocessCapabilityGapStep(
         IReadOnlyList<string> ReadPaths);
 
     private sealed record DispatchExecutionOutcome(
-        ExecutionRunDetail Detail,
+        ProcessAutomationExecutionRunDetail Detail,
         string ResponseText,
         ProcessStepRunStatus CompletionStatus,
         string CompletionReason,

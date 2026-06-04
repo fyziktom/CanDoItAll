@@ -1,0 +1,3 @@
+Command: recorded validation command for codex\bundles\process-dispatch-execution-snapshot-boundary-v1\proof\SB12\transcripts\bundle-prepared-validator.txt
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-execution-snapshot-boundary-v1
+ExitCode: 0

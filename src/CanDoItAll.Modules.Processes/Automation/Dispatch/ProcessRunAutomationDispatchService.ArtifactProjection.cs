@@ -25,7 +25,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private async Task ProjectExecutionArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         ProcessStepRunStatus completionStatus,
         ProcessStepDispatchClaim dispatchClaim,
@@ -203,7 +203,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task ProjectProcessMockArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         ProcessStepRunStatus completionStatus,
@@ -324,7 +324,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task ProjectWorkspaceWrittenArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         ProcessStepRunStatus completionStatus,
@@ -429,7 +429,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var syntheticArtifact = new ExecutionArtifactRecord(
+            var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                 Guid.NewGuid(),
                 detail.Run.Id,
                 "generated-output",
@@ -496,9 +496,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private static IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ExecutionRunDetail detail)
+    private static IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ProcessAutomationExecutionRunDetail detail)
     {
-        return detail.ToolReceipts
+        return ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail)
             .Where(IsSuccessfulWorkspaceFileMutationReceipt)
             .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -507,7 +507,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task ProjectExistingManagedArtifactFilesAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         ProcessStepRunStatus completionStatus,
@@ -593,7 +593,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     ProjectId: candidate.Run.ProjectId,
                     RelativePathHint: BuildStorageRelativePath(
                         candidate,
-                        new ExecutionArtifactRecord(
+                        new ProcessAutomationExecutionArtifact(
                             Guid.NewGuid(),
                             detail.Run.Id,
                             "generated-output",
@@ -713,7 +713,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             {
                 var bytes = File.ReadAllBytes(fullPath);
                 textContent = TryDecodeTextArtifactContent(
-                    new ExecutionArtifactRecord(
+                    new ProcessAutomationExecutionArtifact(
                         Guid.Empty,
                         Guid.Empty,
                         "generated-output",
@@ -732,7 +732,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             textContent = null;
         }
 
-        var syntheticArtifact = new ExecutionArtifactRecord(
+        var syntheticArtifact = new ProcessAutomationExecutionArtifact(
             Guid.Empty,
             Guid.Empty,
             "generated-output",
@@ -748,7 +748,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task EnsureDecisionArtifactsForCompletedStepAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken)
@@ -827,7 +827,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task ProjectResponseTextArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         string workspaceRoot,
         ProcessStepRunStatus completionStatus,
@@ -930,7 +930,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 await File.WriteAllTextAsync(targetFullPath, persistedResponseText, Encoding.UTF8, cancellationToken);
 
                 var content = Encoding.UTF8.GetBytes(persistedResponseText);
-                var syntheticArtifact = new ExecutionArtifactRecord(
+                var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                     Guid.NewGuid(),
                     detail.Run.Id,
                     "generated-output",
@@ -1008,7 +1008,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task<bool> TryRecordExistingManagedArtifactForResponseProjectionAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact,
         string workspaceRoot,
         string projectedRelativePath,
@@ -1041,7 +1041,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
         var content = await File.ReadAllBytesAsync(targetFullPath, cancellationToken);
         var contentType = GuessContentTypeFromPath(targetFullPath);
-        var syntheticArtifact = new ExecutionArtifactRecord(
+        var syntheticArtifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             detail.Run.Id,
             "generated-output",
@@ -1106,7 +1106,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task ProjectProviderNativeBrowserArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         ProcessStepRunStatus completionStatus,
         CancellationToken cancellationToken,
@@ -1197,7 +1197,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 }
 
                 var content = await File.ReadAllBytesAsync(targetFullPath, cancellationToken);
-                var syntheticArtifact = new ExecutionArtifactRecord(
+                var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                     Guid.NewGuid(),
                     detail.Run.Id,
                     "generated-output",
@@ -1295,7 +1295,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task ProjectProviderNativeBrowserOutputArtifactsAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         IReadOnlyDictionary<string, IReadOnlyList<string>> browserOutputsByToolName,
@@ -1371,7 +1371,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                     var content = await File.ReadAllBytesAsync(targetFullPath, cancellationToken);
                     var contentType = GuessContentTypeFromPath(targetFullPath);
-                    var syntheticArtifact = new ExecutionArtifactRecord(
+                    var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                         Guid.NewGuid(),
                         detail.Run.Id,
                         "generated-output",
@@ -1493,7 +1493,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string BuildProviderNativeBrowserArtifactTitle(ExecutionArtifactRecord artifact)
+    private static string BuildProviderNativeBrowserArtifactTitle(ProcessAutomationExecutionArtifact artifact)
     {
         var normalizedToolName = NormalizeToolToken(artifact.ProducedBy);
         return normalizedToolName switch

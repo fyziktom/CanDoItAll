@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -122,10 +123,78 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("public sealed record ProcessAutomationInvocationPolicy", source, StringComparison.Ordinal);
         Assert.Contains("public enum ProcessAutomationFinalizerMode", source, StringComparison.Ordinal);
         Assert.Contains("public enum ProcessAutomationStructuredOutputKind", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessAutomationExecutionRunQuery", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessAutomationExecutionRunResult", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessAutomationExecutionRunDetail", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessAutomationExecutionRunRecord", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessAutomationToolExecutionReceipt", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessAutomationProviderUsageObservation", source, StringComparison.Ordinal);
+        Assert.Contains("public sealed class ProcessAutomationExecutionFailedException", source, StringComparison.Ordinal);
+        Assert.Contains("public enum ProcessAutomationExecutionState", source, StringComparison.Ordinal);
+        Assert.Contains("public enum ProcessAutomationRunOutcome", source, StringComparison.Ordinal);
+        Assert.Contains("public enum ProcessAutomationProviderUsageStatus", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRun ", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessStepRun", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ViewModel", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ExecutionRunRequest", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Dispatcher_partials_excluding_execution_client_do_not_use_agent_framework_execution_snapshots()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var source = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(dispatchDirectory, "*.cs")
+                .Where(path => !string.Equals(
+                    Path.GetFileName(path),
+                    "ProcessAutomationExecutionClient.cs",
+                    StringComparison.OrdinalIgnoreCase))
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var forbiddenTokens = new[]
+        {
+            "ExecutionRunResult",
+            "ExecutionRunDetail",
+            "ExecutionRunRecord",
+            "ExecutionRunQuery",
+            "AgentChatRunFailedException",
+            "AgentRunFailedException",
+            "AgentStructuredOutputContracts"
+        };
+
+        foreach (var forbiddenToken in forbiddenTokens)
+        {
+            Assert.False(
+                Regex.IsMatch(source, $@"\b{Regex.Escape(forbiddenToken)}\b", RegexOptions.CultureInvariant),
+                forbiddenToken);
+        }
+    }
+
+    [Fact]
+    public void Receipt_observation_helper_uses_process_snapshots_without_agent_framework_references()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessAutomationReceiptObservationHelper.cs");
+
+        Assert.Contains("ProcessAutomationExecutionRunDetail", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationToolExecutionReceipt", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveSuccessfulToolNames", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveReceiptFamilies", source, StringComparison.Ordinal);
+        Assert.Contains("ResolveProviderMetadata", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.AgentFramework", source, StringComparison.Ordinal);
+        Assert.False(Regex.IsMatch(source, @"\bExecutionRunDetail\b", RegexOptions.CultureInvariant));
+        Assert.False(Regex.IsMatch(source, @"\bToolExecutionReceiptRecord\b", RegexOptions.CultureInvariant));
     }
 
     [Fact]
@@ -135,7 +204,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             FindRepositoryRoot(),
             "codex",
             "bundles",
-            "process-agent-execution-boundary-foundation-v1",
+            "process-dispatch-execution-snapshot-boundary-v1",
             "proof");
         var forbiddenPathTokens = new[]
         {

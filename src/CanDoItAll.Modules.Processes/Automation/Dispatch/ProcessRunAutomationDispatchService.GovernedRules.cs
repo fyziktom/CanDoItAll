@@ -134,7 +134,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanImplicitlyCompleteGovernedStep(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyCollection<string> missingRequiredTools,
         string? responseText)
     {
@@ -143,7 +143,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanImplicitlyCompleteGovernedImplementationStep(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyCollection<string> missingRequiredTools,
         string? responseText)
     {
@@ -151,9 +151,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             !RequiresConcreteImplementationProof(candidate) ||
             candidate.BranchOutcomes.Count > 0 ||
             candidate.RequiresExplicitBranchOutcomeSelection ||
-            detail.Run.State != ExecutionState.Completed ||
+            detail.Run.State != ProcessAutomationExecutionState.Completed ||
             detail.Run.PendingApprovals.Count > 0 ||
-            detail.Run.Outcome != RunOutcome.Succeeded ||
+            detail.Run.Outcome != ProcessAutomationRunOutcome.Succeeded ||
             missingRequiredTools.Count > 0)
         {
             return false;
@@ -180,7 +180,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanImplicitlyCompleteGovernedArtifactResponseStep(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyCollection<string> missingRequiredTools,
         string? responseText)
     {
@@ -189,9 +189,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.ExpectedArtifacts.Count == 0 ||
             candidate.BranchOutcomes.Count > 0 ||
             candidate.RequiresExplicitBranchOutcomeSelection ||
-            detail.Run.State != ExecutionState.Completed ||
+            detail.Run.State != ProcessAutomationExecutionState.Completed ||
             detail.Run.PendingApprovals.Count > 0 ||
-            detail.Run.Outcome != RunOutcome.Succeeded ||
+            detail.Run.Outcome != ProcessAutomationRunOutcome.Succeeded ||
             missingRequiredTools.Count > 0)
         {
             return false;

@@ -1,0 +1,8 @@
+## Receipt helper consumer migration assertions
+Command: rg -n "ProcessAutomationReceiptObservationHelper" src\CanDoItAll.Modules.Processes\Automation\Dispatch
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationReceiptObservationHelper.cs:3:internal static class ProcessAutomationReceiptObservationHelper
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1449:        return ProcessAutomationReceiptObservationHelper.IsFailedReceipt(receipt);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:501:        return ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs:169:        var successfulReceipts = ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs:849:        var successfulToolNames = ProcessAutomationReceiptObservationHelper.ResolveSuccessfulToolNames(detail);
+PASS: required-tool validation, artifact projection, and service failure receipt semantics route through the process snapshot helper.

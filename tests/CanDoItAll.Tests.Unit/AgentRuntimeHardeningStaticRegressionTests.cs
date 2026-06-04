@@ -41,7 +41,7 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
         Assert.DoesNotContain("MetadataJson: \"{}\"", source, StringComparison.Ordinal);
         Assert.Contains("AgentFinalizerMode.Required", source, StringComparison.Ordinal);
         Assert.Contains("ExecutionInvocationMetadata.DefaultGovernedRepairAttempts", source, StringComparison.Ordinal);
-        Assert.Contains("StructuredOutput: ProcessStepOutcomeStructuredOutputContract", source, StringComparison.Ordinal);
+        Assert.Contains("StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult", source, StringComparison.Ordinal);
     }
 
     [Fact]

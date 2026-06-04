@@ -31,7 +31,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var providers = await executionClient.ListProvidersAsync(cancellationToken);
         var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ExecutionRunQuery(
+            new ProcessAutomationExecutionRunQuery(
                 Take: ProcessRunCostExecutionRunLimit,
                 ProcessRunId: processRunId.ToString("D")),
             cancellationToken);
@@ -40,7 +40,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
-        var executionRunDetails = new List<ExecutionRunDetail>(executionRuns.Count);
+        var executionRunDetails = new List<ProcessAutomationExecutionRunDetail>(executionRuns.Count);
         foreach (var executionRun in executionRuns)
         {
             executionRunDetails.Add(await executionClient.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
@@ -67,7 +67,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     internal static decimal? ResolveProcessRunActualCost(
-        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        IReadOnlyList<ProcessAutomationExecutionRunDetail> executionRunDetails,
         IReadOnlyList<ProviderProfile> providers)
     {
         var usageCosts = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
@@ -84,7 +84,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         continue;
                     }
 
-                    if (ProviderPricingCalculator.TryResolveObservationCost(observation, providers, out var costUsd))
+                    if (TryResolveObservationCost(observation, providers, out var costUsd))
                     {
                         usageCosts[usageKey] = costUsd;
                     }
@@ -100,7 +100,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     continue;
                 }
 
-                if (ProviderPricingCalculator.TryResolveMetricCost(metric, providers, out var costUsd))
+                if (TryResolveMetricCost(metric, providers, out var costUsd))
                 {
                     legacyMetricCosts[metric.Id] = costUsd;
                 }
@@ -115,7 +115,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return decimal.Round(usageCosts.Values.Sum() + legacyMetricCosts.Values.Sum(), 6, MidpointRounding.AwayFromZero);
     }
 
-    private static string ResolveUsageCostKey(ProviderUsageObservation observation)
+    private static string ResolveUsageCostKey(ProcessAutomationProviderUsageObservation observation)
     {
         if (!string.IsNullOrWhiteSpace(observation.ProviderResponseId))
         {
@@ -123,5 +123,91 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return observation.Id.ToString("N");
+    }
+
+    private static bool TryResolveObservationCost(
+        ProcessAutomationProviderUsageObservation observation,
+        IEnumerable<ProviderProfile> providers,
+        out decimal costUsd)
+    {
+        ArgumentNullException.ThrowIfNull(observation);
+        ArgumentNullException.ThrowIfNull(providers);
+
+        if (!IsKnownUsageStatus(observation.UsageStatus))
+        {
+            costUsd = 0m;
+            return false;
+        }
+
+        if (observation.ProviderCostUsd is > 0m)
+        {
+            costUsd = observation.ProviderCostUsd.Value;
+            return true;
+        }
+
+        if (observation.CalculatedCostUsd is > 0m)
+        {
+            costUsd = observation.CalculatedCostUsd.Value;
+            return true;
+        }
+
+        var provider = providers.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, observation.ProviderName, StringComparison.OrdinalIgnoreCase));
+        if (provider is not null &&
+            ProviderPricingCalculator.TryCalculate(
+                provider.Name,
+                observation.Model,
+                observation.InputTokens,
+                observation.CachedInputTokens,
+                observation.OutputTokens,
+                provider.ModelPrices,
+                out var calculatedCost))
+        {
+            costUsd = calculatedCost.TotalUsd;
+            return true;
+        }
+
+        costUsd = 0m;
+        return false;
+    }
+
+    private static bool TryResolveMetricCost(
+        ProcessAutomationRunMetric metric,
+        IEnumerable<ProviderProfile> providers,
+        out decimal costUsd)
+    {
+        ArgumentNullException.ThrowIfNull(metric);
+        ArgumentNullException.ThrowIfNull(providers);
+
+        if (metric.CostUsd > 0m)
+        {
+            costUsd = metric.CostUsd;
+            return true;
+        }
+
+        var provider = providers.FirstOrDefault(candidate =>
+            string.Equals(candidate.Name, metric.ProviderName, StringComparison.OrdinalIgnoreCase));
+        if (provider is not null &&
+            ProviderPricingCalculator.TryCalculate(
+                provider.Name,
+                metric.Model,
+                metric.InputTokens,
+                metric.CachedInputTokens,
+                metric.OutputTokens,
+                provider.ModelPrices,
+                out var calculatedCost))
+        {
+            costUsd = calculatedCost.TotalUsd;
+            return true;
+        }
+
+        costUsd = 0m;
+        return false;
+    }
+
+    private static bool IsKnownUsageStatus(ProcessAutomationProviderUsageStatus status)
+    {
+        return status is ProcessAutomationProviderUsageStatus.Observed
+            or ProcessAutomationProviderUsageStatus.ObservedFromMetric;
     }
 }

@@ -31,22 +31,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string MutationDelta,
         string ProofDelta);
 
-    internal static bool HasBlockingAutomationExecutionRun(IReadOnlyList<ExecutionRunRecord> executionRuns)
+    internal static bool HasBlockingAutomationExecutionRun(IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns)
         => HasBlockingAutomationExecutionRun(executionRuns, DateTimeOffset.UtcNow);
 
     internal static bool HasBlockingAutomationExecutionRun(
-        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         DateTimeOffset now)
     {
         return ResolveBlockingAutomationExecutionRunId(executionRuns, now).HasValue;
     }
 
     internal static Guid? ResolveBlockingAutomationExecutionRunId(
-        IReadOnlyList<ExecutionRunRecord> executionRuns)
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns)
         => ResolveBlockingAutomationExecutionRunId(executionRuns, DateTimeOffset.UtcNow);
 
     internal static Guid? ResolveBlockingAutomationExecutionRunId(
-        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(executionRuns);
@@ -63,7 +63,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal static Guid? ResolveBlockingAutomationExecutionRunId(
         ProcessStepRun stepRun,
-        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
@@ -83,7 +83,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal static Guid? ResolveRecoverableAutomationExecutionRunId(
         ProcessStepRun stepRun,
-        IReadOnlyList<ExecutionRunRecord> executionRuns)
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
 
@@ -95,7 +95,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return executionRuns
             .Where(executionRun =>
                 string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase) &&
-                executionRun.State is ExecutionState.Completed or ExecutionState.Failed &&
+                executionRun.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed &&
                 IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
             .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
             .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
@@ -105,7 +105,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     internal static Guid? ResolveReusableAutomationChatSessionId(
-        IReadOnlyList<ExecutionRunRecord> executionRuns)
+        IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns)
     {
         ArgumentNullException.ThrowIfNull(executionRuns);
 
@@ -117,7 +117,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ExecutionRunQuery(
+            new ProcessAutomationExecutionRunQuery(
                 ProcessRunId: candidate.Run.Id.ToString("D"),
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
                 Take: 20),
@@ -141,13 +141,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ResolveRecoveredExecutionResponseText(detail));
     }
 
-    private async Task<ExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
+    private async Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
         DispatchCandidate candidate,
         DispatchExecutionOutcome executionOutcome,
         CancellationToken cancellationToken)
     {
         var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ExecutionRunQuery(
+            new ProcessAutomationExecutionRunQuery(
                 ProcessRunId: candidate.Run.Id.ToString("D"),
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
                 Take: 20),
@@ -216,17 +216,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool IsBlockingAutomationExecutionRun(
-        ExecutionRunRecord executionRun,
+        ProcessAutomationExecutionRunRecord executionRun,
         DateTimeOffset now)
     {
         return string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase)
-               && executionRun.State is not ExecutionState.Completed
-               and not ExecutionState.Failed
+               && executionRun.State is not ProcessAutomationExecutionState.Completed
+               and not ProcessAutomationExecutionState.Failed
                && !IsStaleAutomationExecutionRun(executionRun, now);
     }
 
     private static bool IsStaleAutomationExecutionRun(
-        ExecutionRunRecord executionRun,
+        ProcessAutomationExecutionRunRecord executionRun,
         DateTimeOffset now)
     {
         if (executionRun.PendingApprovals.Count > 0)
@@ -249,7 +249,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool IsRecoverableExecutionRunForCurrentAttempt(
-        ExecutionRunRecord executionRun,
+        ProcessAutomationExecutionRunRecord executionRun,
         DateTimeOffset? currentAttemptStartedAtUtc)
     {
         if (!currentAttemptStartedAtUtc.HasValue)
@@ -261,9 +261,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return executionAttemptStartedAtUtc >= currentAttemptStartedAtUtc.Value;
     }
 
-    private static string ResolveRecoveredExecutionResponseText(ExecutionRunDetail detail)
+    private static string ResolveRecoveredExecutionResponseText(ProcessAutomationExecutionRunDetail detail)
     {
-        var assistantMessage = detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant);
+        var assistantMessage = detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ProcessAutomationChatMessageRole.Assistant);
         if (!string.IsNullOrWhiteSpace(assistantMessage?.Content))
         {
             return assistantMessage.Content;
@@ -278,7 +278,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static string ResolvePreferredExecutionResponseText(
         DispatchCandidate candidate,
         string? responseText,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         var primaryResponse = string.IsNullOrWhiteSpace(responseText)
             ? string.Empty
@@ -311,13 +311,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool TryResolveRecoverableProviderFailure(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         out string failureSummary)
     {
         failureSummary = string.Empty;
-        if (detail.Run.State == ExecutionState.Completed &&
-            detail.Run.Outcome == RunOutcome.Succeeded &&
+        if (detail.Run.State == ProcessAutomationExecutionState.Completed &&
+            detail.Run.Outcome == ProcessAutomationRunOutcome.Succeeded &&
             TryReadProcessStepOutcome(responseText, out _, out _))
         {
             return false;
@@ -326,7 +326,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var candidateTexts = new[]
         {
             responseText,
-            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant)?.Content,
+            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ProcessAutomationChatMessageRole.Assistant)?.Content,
             ResolveLatestAssistantErrorSummary(detail.Run.SerializedSessionStateJson),
             ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson),
             detail.Run.ResultSummary
@@ -343,7 +343,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return false;
     }
 
-    private static ProcessStepRunStatus ResolveCompletionStatus(DispatchCandidate candidate, ExecutionRunDetail detail)
+    private static ProcessStepRunStatus ResolveCompletionStatus(DispatchCandidate candidate, ProcessAutomationExecutionRunDetail detail)
     {
         var dispatchDecision = DispatchDecisionEngine.Evaluate(new DispatchDecisionInput(
             candidate,
@@ -357,7 +357,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldRetryIncompleteSuccessfulRun(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         CarriedImplementationProof carriedImplementationProof,
@@ -412,9 +412,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             carriedImplementationProof);
 
         return attemptNumber < maxExecutionAttempts
-               && run.State == ExecutionState.Completed
+               && run.State == ProcessAutomationExecutionState.Completed
                 && run.PendingApprovals.Count == 0
-                && run.Outcome == RunOutcome.Succeeded
+                && run.Outcome == ProcessAutomationRunOutcome.Succeeded
                 && retryReasons.Count > 0
                 && !ShouldCompressNoProgressRetry(
                     candidate,
@@ -427,7 +427,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldCompressNoProgressRetry(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons,
@@ -490,7 +490,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasNewSatisfiedCurrentAttemptEvidence(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         return detail.Artifacts.Any(artifact =>
                    candidate.ExpectedArtifacts.Any(expectation =>
@@ -503,7 +503,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string? TryCreateNoProgressRetryFingerprint(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons,
@@ -534,7 +534,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static NoProgressRetrySignal? TryCreateNoProgressRetrySignal(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons)
@@ -621,7 +621,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveNoProgressMutationDelta(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         var mutationSignals = detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))
@@ -643,7 +643,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : $"mutation-delta:{CreateBoundedTextHash(string.Join("|", mutationSignals))}";
     }
 
-    private static string ResolveNoProgressProofDelta(ExecutionRunDetail detail)
+    private static string ResolveNoProgressProofDelta(ProcessAutomationExecutionRunDetail detail)
     {
         var proofSignals = detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))
@@ -700,9 +700,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private static bool IsTerminalAutomationExecutionRun(ExecutionRunRecord run)
+    private static bool IsTerminalAutomationExecutionRun(ProcessAutomationExecutionRunRecord run)
     {
-        return run.State is ExecutionState.Completed or ExecutionState.Failed;
+        return run.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed;
     }
 
     private static string CreateBoundedTextHash(string? value)
@@ -733,16 +733,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldRetryRepairableImplementationBlockedOutcome(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         int attemptNumber,
         int maxExecutionAttempts)
     {
         if (attemptNumber >= maxExecutionAttempts ||
-            detail.Run.State != ExecutionState.Completed ||
+            detail.Run.State != ProcessAutomationExecutionState.Completed ||
             detail.Run.PendingApprovals.Count > 0 ||
-            detail.Run.Outcome != RunOutcome.Succeeded ||
+            detail.Run.Outcome != ProcessAutomationRunOutcome.Succeeded ||
             !RequiresConcreteImplementationProof(candidate) ||
             !TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) ||
             declaredOutcome.Status != ProcessStepRunStatus.Blocked)
@@ -769,16 +769,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldRetryRecoverableBrowserProofBlockedOutcome(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         int attemptNumber,
         int maxExecutionAttempts)
     {
         if (attemptNumber >= maxExecutionAttempts ||
-            detail.Run.State != ExecutionState.Completed ||
+            detail.Run.State != ProcessAutomationExecutionState.Completed ||
             detail.Run.PendingApprovals.Count > 0 ||
-            detail.Run.Outcome != RunOutcome.Succeeded ||
+            detail.Run.Outcome != ProcessAutomationRunOutcome.Succeeded ||
             !RequiresConcreteBrowserProof(candidate) ||
             missingRequiredTools.Count == 0 ||
             !TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) ||
@@ -832,7 +832,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasRepairableImplementationValidationFailure(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
         if (!unresolvedCriticalToolFailures.Any(IsImplementationValidationFailure))
@@ -846,7 +846,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts) is not null;
     }
 
-    private static bool IsImplementationValidationFailure(ToolExecutionReceiptRecord receipt)
+    private static bool IsImplementationValidationFailure(ProcessAutomationToolExecutionReceipt receipt)
     {
         var toolName = NormalizeToolToken(receipt.ToolName);
         return IsBuildValidationToolName(toolName) ||
@@ -855,7 +855,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<string> ResolveIncompleteSuccessfulRunRetryReasons(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
         CarriedImplementationProof carriedImplementationProof)
@@ -920,7 +920,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             reasons.Add($"recoverable execution interruption: {interruptionSummary}");
         }
 
-        if (detail.Run.State == ExecutionState.Failed &&
+        if (detail.Run.State == ProcessAutomationExecutionState.Failed &&
             (MentionsRepeatedToolInvocation(responseText) || MentionsRepeatedToolInvocation(detail.Run.ResultSummary)))
         {
             reasons.Add("recoverable repeated tool invocation");
@@ -941,10 +941,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldRetryRecoverableFailedRun(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures,
         int attemptNumber,
         int maxExecutionAttempts)
     {
@@ -957,7 +957,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             MentionsRepeatedToolInvocation(responseText) ||
             MentionsRepeatedToolInvocation(run.ResultSummary);
         if (attemptNumber >= maxExecutionAttempts ||
-            run.State != ExecutionState.Failed ||
+            run.State != ProcessAutomationExecutionState.Failed ||
             run.PendingApprovals.Count > 0)
         {
             return false;
@@ -994,7 +994,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool TryResolveRecoverableFinalizerValidationFailure(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         out string failureSummary)
     {
@@ -1007,7 +1007,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var candidateTexts = new[]
         {
             responseText,
-            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant)?.Content,
+            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ProcessAutomationChatMessageRole.Assistant)?.Content,
             ResolveLatestAssistantErrorSummary(detail.Run.SerializedSessionStateJson),
             ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson),
             detail.Run.ResultSummary
@@ -1057,14 +1057,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool TryResolveRecoverableExecutionInterruption(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         out string interruptionSummary)
     {
         interruptionSummary = string.Empty;
         var run = detail.Run;
-        if (run.State != ExecutionState.Failed ||
-            run.Outcome is not (RunOutcome.Cancelled or RunOutcome.Failed))
+        if (run.State != ProcessAutomationExecutionState.Failed ||
+            run.Outcome is not (ProcessAutomationRunOutcome.Cancelled or ProcessAutomationRunOutcome.Failed))
         {
             return false;
         }
@@ -1072,7 +1072,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var candidateTexts = new[]
         {
             responseText,
-            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ChatMessageRole.Assistant)?.Content,
+            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ProcessAutomationChatMessageRole.Assistant)?.Content,
             ResolveLatestAssistantErrorSummary(run.SerializedSessionStateJson),
             ResolveLatestAssistantResponseText(run.SerializedSessionStateJson),
             run.ResultSummary
@@ -1099,7 +1099,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 text.Contains("before the run completed", StringComparison.OrdinalIgnoreCase));
     }
 
-    private static string BuildCompletionReason(DispatchCandidate candidate, ExecutionRunDetail detail, string stepTitle)
+    private static string BuildCompletionReason(DispatchCandidate candidate, ProcessAutomationExecutionRunDetail detail, string stepTitle)
     {
         return BuildCompletionReasonCore(
             candidate,
@@ -1111,7 +1111,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildCompletionReasonCore(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string stepTitle,
         IReadOnlyList<string> missingRequiredTools,
         string? responseText)
@@ -1127,19 +1127,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildCompletionReasonCoreWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string stepTitle,
         IReadOnlyList<string> missingRequiredTools,
         string? responseText,
         CarriedImplementationProof carriedImplementationProof)
     {
         var run = detail.Run;
-        if (run.State == ExecutionState.WaitingOnTool || run.PendingApprovals.Count > 0)
+        if (run.State == ProcessAutomationExecutionState.WaitingOnTool || run.PendingApprovals.Count > 0)
         {
             return $"AgentFramework run '{run.Title}' is waiting on approval before '{stepTitle}' can continue.";
         }
 
-        if (run.Outcome != RunOutcome.Succeeded)
+        if (run.Outcome != ProcessAutomationRunOutcome.Succeeded)
         {
             return string.IsNullOrWhiteSpace(run.ResultSummary)
                 ? $"AgentFramework run '{run.Title}' failed."
@@ -1442,7 +1442,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string BuildMissingRequiredToolsReason(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<string> missingRequiredTools)
     {
         var missingImplementationProofForRequiredTools = ResolveMissingConcreteImplementationProofSummary(candidate, detail);
@@ -1456,7 +1456,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool HasValidNonCompletedDeclaredOutcome(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText,
         string inspectionText)
     {

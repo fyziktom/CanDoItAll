@@ -929,7 +929,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return value?.ToString()?.Trim() ?? string.Empty;
     }
 
-    private static bool IsSuccessfulUpstreamValidationReceipt(ToolExecutionReceiptRecord receipt)
+    private static bool IsSuccessfulUpstreamValidationReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
         ArgumentNullException.ThrowIfNull(receipt);
 

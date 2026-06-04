@@ -24,7 +24,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static string ResolveInvalidBrowserProofSummary(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         if (!RequiresConcreteBrowserProof(candidate))
         {
@@ -111,7 +111,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveInvalidBrowserProofRecordSummary(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
     {
         var proofRecords = ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
@@ -217,7 +217,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static string ResolveInvalidBrowserConsoleEvidenceSummary(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? browserWorkingDirectory,
         IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
     {
@@ -234,7 +234,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveShallowRepresentativeBrowserInteractionSummary(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         if (!RequiresRepresentativeBrowserInteractionProof(candidate) ||
             HasRepresentativeBrowserInteractionProof(detail))
@@ -354,7 +354,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static IReadOnlyList<string> ResolveBrowserConsoleEvidenceTexts(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? browserWorkingDirectory,
         IReadOnlyDictionary<string, IReadOnlyList<string>> outputsByToolName)
     {
@@ -458,7 +458,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    private static bool HasRepresentativeBrowserInteractionProof(ExecutionRunDetail detail)
+    private static bool HasRepresentativeBrowserInteractionProof(ProcessAutomationExecutionRunDetail detail)
     {
         return ResolveSuccessfulToolNames(detail)
             .Any(IsRepresentativeBrowserInteractionToolName);

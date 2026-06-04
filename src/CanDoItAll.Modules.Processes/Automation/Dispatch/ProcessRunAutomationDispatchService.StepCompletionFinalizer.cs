@@ -318,7 +318,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepRunStatus CompletionStatus,
         string CompletionReason,
         Guid? SelectedBranchOutcomeId,
-        ExecutionRunDetail? ExecutionDetail,
+        ProcessAutomationExecutionRunDetail? ExecutionDetail,
         Guid? WorkflowRunId,
         Guid? SubprocessRunId,
         string ResponseText,
@@ -684,7 +684,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToListAsync(cancellationToken);
 
         if (context.ExecutionDetail is not null &&
-            !ExecutionInvocationMetadata.ResolveProcessAllowsProductMutation(context.ExecutionDetail.Run) &&
+            !ResolveProcessAllowsProductMutation(context.ExecutionDetail.Run) &&
             context.ExecutionDetail.ToolReceipts.Any(IsConcreteProductMutationReceipt))
         {
             violations.Add(new RuntimeInvariantViolation(
@@ -1787,7 +1787,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return false;
     }
 
-    private static bool IsConcreteProductMutationReceipt(ToolExecutionReceiptRecord receipt)
+    private static bool IsConcreteProductMutationReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
         if (!ConcreteProductMutationToolNames.Contains(receipt.ToolName))
         {

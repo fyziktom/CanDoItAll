@@ -52,7 +52,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 await renewLeaseAsync(cancellationToken);
             }
 
-            ExecutionRunDetail detail;
+            ProcessAutomationExecutionRunDetail detail;
             Guid executionRunId;
             string responseText;
 
@@ -88,9 +88,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 }
                 else
                 {
-                    ExecutionRunResult? executionResult = null;
+                    ProcessAutomationExecutionRunResult? executionResult = null;
                     ConcurrentAutomationExecution? adoptedConcurrentExecution = null;
-                    ExecutionRunDetail? failedExecutionDetail = null;
+                    ProcessAutomationExecutionRunDetail? failedExecutionDetail = null;
                     Guid? failedExecutionRunId = null;
                     string? failedResponseText = null;
                     var processInvocationPolicy = new ExecutionInvocationPolicy(
@@ -141,26 +141,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                 StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult),
                             cancellationToken);
                     }
-                    catch (AgentChatRunFailedException exception)
-                    {
-                        failedExecutionRunId = exception.ExecutionRunId;
-                        automationChatSessionId ??= exception.ChatSessionId;
-                        failedExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
-                            exception.ExecutionRunId,
-                            cancellationToken);
-                        failedResponseText = ResolvePreferredExecutionResponseText(
-                            candidate,
-                            exception.Message,
-                            failedExecutionDetail);
-
-                        logger.LogWarning(
-                            exception,
-                            "Continuing recovery inspection for failed AgentFramework execution run {ExecutionRunId} on process step {StepRunId} and run {RunId}.",
-                            exception.ExecutionRunId,
-                            candidate.StepRun.Id,
-                            candidate.Run.Id);
-                    }
-                    catch (AgentRunFailedException exception)
+                    catch (ProcessAutomationExecutionFailedException exception)
                     {
                         failedExecutionRunId = exception.ExecutionRunId;
                         automationChatSessionId ??= exception.ChatSessionId;
@@ -232,7 +213,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             if (!IsTerminalAutomationExecutionRun(detail.Run))
             {
                 logger.LogInformation(
-                    "Observed active AgentFramework execution run {ExecutionRunId} for process run {RunId}, step {StepRunId} in state {ExecutionState}; leaving the process step InProgress without finalization.",
+                    "Observed active AgentFramework execution run {ExecutionRunId} for process run {RunId}, step {StepRunId} in state {ProcessAutomationExecutionState}; leaving the process step InProgress without finalization.",
                     executionRunId,
                     candidate.Run.Id,
                     candidate.StepRun.Id,
@@ -499,7 +480,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static DispatchExecutionOutcome CreateObservedActiveAutomationExecutionOutcome(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         int attemptNumber)
     {
@@ -523,12 +504,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ExecutionRunQuery(
+            new ProcessAutomationExecutionRunQuery(
                 ProcessRunId: candidate.Run.Id.ToString("D"),
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
                 Take: 20),
             cancellationToken);
-        var historicalDetails = new List<ExecutionRunDetail>();
+        var historicalDetails = new List<ProcessAutomationExecutionRunDetail>();
         foreach (var executionRun in executionRuns
                      .Where(IsHistoricalCarryForwardExecutionRun)
                      .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
@@ -550,7 +531,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task<ProviderRepairOutcome?> TryRepairAssignedAgentProvidersAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         int attemptNumber,
         int maxExecutionAttempts,

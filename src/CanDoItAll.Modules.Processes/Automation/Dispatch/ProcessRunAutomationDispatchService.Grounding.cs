@@ -283,11 +283,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ExecutionRunQuery(
+            new ProcessAutomationExecutionRunQuery(
                 SourceKind: "process-step",
                 ProcessRunId: candidate.Run.Id.ToString("D"),
-                State: ExecutionState.Completed,
-                Outcome: RunOutcome.Succeeded,
+                State: ProcessAutomationExecutionState.Completed,
+                Outcome: ProcessAutomationRunOutcome.Succeeded,
                 Take: 24),
             cancellationToken);
         if (executionRuns.Count == 0)

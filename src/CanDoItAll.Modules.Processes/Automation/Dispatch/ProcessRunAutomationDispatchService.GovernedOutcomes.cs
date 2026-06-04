@@ -320,7 +320,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool TryResolveRepairBranchCompletionFromBlockedOutcome(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         DeclaredStepOutcome declaredOutcome,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,
@@ -366,7 +366,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool TryResolveTerminalEscalationCompletionFromBlockedOutcome(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         DeclaredStepOutcome declaredOutcome,
         string? responseText,
         IReadOnlyList<string> missingRequiredTools,

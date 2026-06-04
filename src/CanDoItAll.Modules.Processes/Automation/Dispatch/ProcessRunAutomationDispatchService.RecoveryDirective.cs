@@ -24,10 +24,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static string BuildRecoveryDirective(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures,
         int attemptNumber)
     {
         var builder = new StringBuilder();
@@ -127,7 +127,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             builder.AppendLine("Generated evidence referenced stale or ungrounded product paths outside the current grounded product root. Exact stale paths are omitted from this retry prompt to prevent reuse.");
             var allowedExternalTargetAliases = PruneAllowedExternalTargetAliasesForCurrentRun(
-                ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run));
+                ResolveAllowedExternalTargetAliases(detail.Run));
             if (allowedExternalTargetAliases.Count > 0)
             {
                 builder.AppendLine($"Current grounded external-target root(s): {FormatPromptPathList(allowedExternalTargetAliases)}.");
@@ -364,7 +364,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         {
             var promptSafePriorSummary = RedactUnallowedExternalTargetReferencesForPrompt(
                 priorSummary,
-                ExecutionInvocationMetadata.ResolveAllowedExternalTargetAliases(detail.Run));
+                ResolveAllowedExternalTargetAliases(detail.Run));
             builder.Append("Previous run summary: ");
             builder.AppendLine(TruncateForPrompt(promptSafePriorSummary, 400));
         }
@@ -378,7 +378,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => ProcessExternalTargetGroundingService.RedactUnallowedReferencesForPrompt(text, allowedAliases);
 
     private static bool HasScaffoldOverwriteConflict(
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string? responseText)
     {
         if (ContainsScaffoldOverwriteConflictSignal(responseText))

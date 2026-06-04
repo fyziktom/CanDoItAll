@@ -5,9 +5,6 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private static AgentStructuredOutputContract ProcessStepOutcomeStructuredOutputContract { get; } =
-        AgentStructuredOutputContracts.ProcessStepOutcomeResult;
-
     private static string ResolveOutputInspectionText(string? responseText)
     {
         return TryReadProcessStepOutcome(responseText, out var outcome, out _)
@@ -50,7 +47,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static AgentOutputValidationResult ValidateProcessStepOutcomeContext(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         ProcessStepOutcomeResult outcome,
         DeclaredStepOutcome declaredOutcome,
         string inspectionText)
@@ -66,7 +63,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static AgentOutputValidationResult ValidateProcessStepOutcomeContextWithCarryForward(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         ProcessStepOutcomeResult outcome,
         DeclaredStepOutcome declaredOutcome,
         string inspectionText,
@@ -125,7 +122,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool RequiresContextEvidenceReferences(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail)
+        ProcessAutomationExecutionRunDetail detail)
     {
         return detail.Artifacts.Count > 0 ||
                candidate.ExpectedArtifacts.Any(item => item.IsRequired) ||

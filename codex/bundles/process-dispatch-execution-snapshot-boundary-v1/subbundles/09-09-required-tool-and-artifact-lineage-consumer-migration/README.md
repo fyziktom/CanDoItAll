@@ -2,7 +2,9 @@
 
 ## Status
 
-Prepared. Implementation not started.
+- Status: Completed
+
+Completed.
 
 ## Objective
 
@@ -17,27 +19,27 @@ Move selected required-tool and artifact-lineage consumers to the receipt observ
 
 ## Prerequisites
 
-SB08 complete
+- SB08 complete
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
-- `src/CanDoItAll.Processes.Contracts/Automation/ProcessAutomationExecutionContracts.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationExecutionClient.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
+- `repo://src/CanDoItAll.Processes.Contracts/Automation/ProcessAutomationExecutionContracts.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs`
 
 ## Deliverables
 
-Targeted dispatcher partials only; no broad artifact subsystem rewrite.
+- Targeted dispatcher partials only; no broad artifact subsystem rewrite.
 
 ## Dependency Impact
 
-This subbundle is part of the staged execution-boundary reduction. If this subbundle fails, downstream subbundles must not continue because they may build on an unproven boundary.
+- This subbundle is part of the staged execution-boundary reduction. If this subbundle fails, downstream subbundles must not continue because they may build on an unproven boundary.
 
 ## Validation Depth
 
-Required-tool parity tests, artifact-lineage smoke, receipt provider metadata tests.
+- Required-tool parity tests, artifact-lineage smoke, receipt provider metadata tests.
 
 ## Implementation Steps
 
@@ -63,23 +65,23 @@ Required-tool parity tests, artifact-lineage smoke, receipt provider metadata te
 
 ## Acceptance Checklist
 
-- [ ] Scope remained within this subbundle.
-- [ ] Tests/source scans are recorded.
-- [ ] No prohibited viewport proof artifacts exist.
-- [ ] No hidden MAF/Tooling product dependency is introduced.
-- [ ] No Process Core or driver-pack project is introduced.
+- [x] Scope remained within this subbundle.
+- [x] Tests/source scans are recorded.
+- [x] No prohibited viewport proof artifacts exist.
+- [x] No hidden MAF/Tooling product dependency is introduced.
+- [x] No Process Core or driver-pack project is introduced.
 
 ## Proof Required
 
-Create proof manifest at `proof/SB09/manifest.md`, semantic invariants at `proof/SB09/semantic-invariants.md`, command transcripts under `proof/SB09/transcripts/`, and source assertions under `proof/SB09/source-assertions/`.
+- Create proof manifest at `proof/SB09/manifest.md`, semantic invariants at `proof/SB09/semantic-invariants.md`, command transcripts under `proof/SB09/transcripts/`, and source assertions under `proof/SB09/source-assertions/`.
 
 ## Browser Validation Logging
 
-N/A unless UI is unexpectedly touched. If UI is touched, use large-screen desktop proof only and record the route, viewport, assertions, and screenshots. Do not create small/medium/mobile proof.
+- N/A unless UI is unexpectedly touched. If UI is touched, use large-screen desktop proof only and record the route, viewport, assertions, and screenshots. Do not create small/medium/mobile proof.
 
 ## Progression Gate
 
-Do not continue to the next subbundle until all acceptance checklist items and proof requirements are complete.
+- Do not continue to the next subbundle until all acceptance checklist items and proof requirements are complete.
 
 ## Suggested Agent Prompt
 

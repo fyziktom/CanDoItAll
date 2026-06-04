@@ -1876,7 +1876,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             var executorPartyId = stepRun.CurrentExecutorPartyId.Value;
             var executionRuns = await executionClient.ListExecutionRunsAsync(
-                new ExecutionRunQuery(
+                new ProcessAutomationExecutionRunQuery(
                     ProcessRunId: processRunId.ToString("D"),
                     ProcessStepId: stepRun.Id.ToString("D"),
                     Take: 20),

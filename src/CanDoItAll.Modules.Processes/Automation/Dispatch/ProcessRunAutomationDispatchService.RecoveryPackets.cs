@@ -10,10 +10,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static AgentRecoveryDecision CreateRecoveryDecisionForRetry(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures,
         int attemptNumber,
         DateTimeOffset? nextAttemptAtUtc = null)
     {
@@ -40,10 +40,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static AgentReworkPacket? CreateReworkPacketForDecision(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         AgentRecoveryDecision decision,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures,
         DateTimeOffset createdAtUtc)
     {
         if (decision.Mode != AgentRecoveryMode.ReworkContinuation)
@@ -143,7 +143,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task PersistNoProgressRetryCompressedDiagnosticAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons,
         NoProgressRetrySignal signal,
@@ -174,7 +174,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task PersistNoProgressRetryObservedAsync(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons,
         NoProgressRetrySignal signal,
@@ -205,7 +205,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static object CreateNoProgressRetryJournalPayload(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons,
         NoProgressRetrySignal signal)
@@ -234,10 +234,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static AgentFailureCategory ResolveRecoveryFailureCategory(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures)
     {
         if (TryResolveRecoverableProviderFailure(detail, responseText, out _))
         {
@@ -320,10 +320,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveRecoveryFailureReason(
         DispatchCandidate candidate,
-        ExecutionRunDetail detail,
+        ProcessAutomationExecutionRunDetail detail,
         string responseText,
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures,
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures,
         AgentFailureCategory category)
     {
         if (TryResolveRecoverableProviderFailure(detail, responseText, out var providerFailureSummary))
@@ -408,7 +408,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyList<AgentProofRequirement> ResolveProofRequirementsToRerun(
         IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<ToolExecutionReceiptRecord> unresolvedCriticalToolFailures)
+        IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures)
     {
         var requirements = new List<AgentProofRequirement>();
         requirements.AddRange(missingRequiredTools.Select(toolName => new AgentProofRequirement(
@@ -429,7 +429,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
     }
 
-    private static IReadOnlyList<AgentReusableProofRef> ResolveReusableProofRefs(ExecutionRunDetail detail)
+    private static IReadOnlyList<AgentReusableProofRef> ResolveReusableProofRefs(ProcessAutomationExecutionRunDetail detail)
     {
         return detail.ToolReceipts
             .Where(receipt => !IsFailedToolReceipt(receipt))

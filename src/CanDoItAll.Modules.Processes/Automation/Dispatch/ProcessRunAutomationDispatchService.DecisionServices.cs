@@ -17,7 +17,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal interface IArtifactRequirementMatcher
     {
-        ArtifactRequirementMatch ResolveMissingRequiredArtifact(DispatchCandidate candidate, ExecutionRunDetail detail, string? inspectionText);
+        ArtifactRequirementMatch ResolveMissingRequiredArtifact(DispatchCandidate candidate, ProcessAutomationExecutionRunDetail detail, string? inspectionText);
     }
 
     internal interface IStepCompletionPolicy
@@ -57,7 +57,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal sealed record StepCompletionPolicyInput(
         DispatchCandidate Candidate,
-        ExecutionRunDetail Detail,
+        ProcessAutomationExecutionRunDetail Detail,
         IReadOnlyList<string> SuccessfulToolNamesFromPriorAttempts,
         string? ResponseText,
         CarriedImplementationProof CarriedImplementationProof);
@@ -68,7 +68,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal sealed record DispatchDecisionInput(
         DispatchCandidate Candidate,
-        ExecutionRunDetail Detail,
+        ProcessAutomationExecutionRunDetail Detail,
         IReadOnlyList<string> SuccessfulToolNamesFromPriorAttempts,
         string? ResponseText,
         CarriedImplementationProof CarriedImplementationProof,
@@ -138,11 +138,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private sealed class DelegatingArtifactRequirementMatcher(
-        Func<DispatchCandidate, ExecutionRunDetail, string?, string> resolve) : IArtifactRequirementMatcher
+        Func<DispatchCandidate, ProcessAutomationExecutionRunDetail, string?, string> resolve) : IArtifactRequirementMatcher
     {
         public ArtifactRequirementMatch ResolveMissingRequiredArtifact(
             DispatchCandidate candidate,
-            ExecutionRunDetail detail,
+            ProcessAutomationExecutionRunDetail detail,
             string? inspectionText)
         {
             var summary = resolve(candidate, detail, inspectionText);
@@ -167,7 +167,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private sealed class DelegatingStepCompletionPolicy(
-        Func<DispatchCandidate, ExecutionRunDetail, IEnumerable<string>, string?, CarriedImplementationProof, ProcessStepRunStatus> resolve)
+        Func<DispatchCandidate, ProcessAutomationExecutionRunDetail, IEnumerable<string>, string?, CarriedImplementationProof, ProcessStepRunStatus> resolve)
         : IStepCompletionPolicy
     {
         public StepCompletionPolicyDecision Resolve(StepCompletionPolicyInput input)

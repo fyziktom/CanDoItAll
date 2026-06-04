@@ -18,6 +18,7 @@ internal sealed class ProcessRunRecoveryService(
 {
     private const int MaxRunBatchSize = 10;
     private const string RecoveryTrigger = "runtime-recovery-scan";
+    private static readonly TimeSpan StaleAutomationExecutionRunTimeout = TimeSpan.FromMinutes(10);
 
     public Task<int> RecoverActiveRunsAsync(CancellationToken cancellationToken = default)
         => RecoverActiveRunsAsync(reclaimExpiredAutomationDispatchLeases: false, cancellationToken);
@@ -121,9 +122,35 @@ internal sealed class ProcessRunRecoveryService(
                 Take: 50),
             cancellationToken);
 
-        return ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
-            executionRuns,
-            clock.GetUtcNow());
+        return HasBlockingAutomationExecutionRun(executionRuns, clock.GetUtcNow());
+    }
+
+    private static bool HasBlockingAutomationExecutionRun(
+        IReadOnlyList<ExecutionRunRecord> executionRuns,
+        DateTimeOffset now)
+    {
+        return executionRuns.Any(executionRun =>
+            string.Equals(
+                executionRun.RequestedBy,
+                ProcessRunAutomationDispatchService.AutomationActor,
+                StringComparison.OrdinalIgnoreCase) &&
+            executionRun.State is not ExecutionState.Completed and not ExecutionState.Failed &&
+            !IsStaleAutomationExecutionRun(executionRun, now));
+    }
+
+    private static bool IsStaleAutomationExecutionRun(
+        ExecutionRunRecord executionRun,
+        DateTimeOffset now)
+    {
+        if (executionRun.PendingApprovals.Count > 0)
+        {
+            return false;
+        }
+
+        var lastProgressAtUtc = executionRun.UpdatedAtUtc == default
+            ? executionRun.CreatedAtUtc
+            : executionRun.UpdatedAtUtc;
+        return now - lastProgressAtUtc >= StaleAutomationExecutionRunTimeout;
     }
 
     private async Task<bool> ShouldSkipForRecoveryBackoffAsync(

@@ -1,0 +1,20 @@
+## Dispatcher partials exclude old AgentFramework execution snapshot tokens outside ProcessAutomationExecutionClient
+Command: rg -n \b(ExecutionRunResult|ExecutionRunDetail|ExecutionRunRecord|ExecutionRunQuery|AgentChatRunFailedException|AgentRunFailedException|AgentStructuredOutputContracts)\b src\CanDoItAll.Modules.Processes\Automation\Dispatch -g *.cs -g !ProcessAutomationExecutionClient.cs
+PASS: no matches.
+
+## Process contracts stay neutral
+Command: rg -n CanDoItAll\.AgentFramework|Microsoft\.EntityFrameworkCore|Microsoft\.AspNetCore\.Components|DbContext|ComponentBase|CanDoItAll\.Modules\. src\CanDoItAll.Processes.Contracts -g *.cs -g *.csproj
+PASS: no matches.
+
+## MAF/Core/Tooling have no product module source or project references
+Command: rg -n CanDoItAll\.Modules\.(Processes|Projects|Workbench)|CanDoItAll\.Projects|CanDoItAll\.Workbench src\CanDoItAll.AgentFramework.Maf src\CanDoItAll.AgentFramework.Tooling src\CanDoItAll.AgentFramework.Core -g *.cs -g *.csproj -g *.props -g *.targets
+PASS: no matches.
+
+## No premature Process Core or driver-pack project
+Command: Get-ChildItem -Path 'src' -Recurse -Filter '*.csproj' | Where-Object { $_.BaseName -match '(^CanDoItAll\.(Modules\.)?Processes\.Core$|ProcessDriver|DriverPack)' }
+PASS: no matching projects.
+
+## No prohibited viewport proof artifacts
+Command: Get-ChildItem -Path 'codex\\bundles\\process-dispatch-execution-snapshot-boundary-v1\\proof' -Recurse -File | Where-Object { FullName matches mobile/small/medium/phone/tablet tokens }
+PASS: no prohibited viewport proof artifacts.
+ExitCode: 0

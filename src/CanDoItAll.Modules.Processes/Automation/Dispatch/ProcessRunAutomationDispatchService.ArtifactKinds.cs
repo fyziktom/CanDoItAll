@@ -22,7 +22,7 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private static ProcessArtifactKind ResolveExpectedArtifactKind(ExecutionArtifactRecord artifact)
+    private static ProcessArtifactKind ResolveExpectedArtifactKind(ProcessAutomationExecutionArtifact artifact)
     {
         if (artifact.RelativePath.EndsWith("/response.md", StringComparison.OrdinalIgnoreCase))
         {
@@ -92,7 +92,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsTransientExecutionArtifact(ExecutionArtifactRecord artifact)
+    private static bool IsTransientExecutionArtifact(ProcessAutomationExecutionArtifact artifact)
     {
         var relativePath = artifact.RelativePath.Replace('\\', '/');
         return relativePath.StartsWith(".playwright-mcp/", StringComparison.OrdinalIgnoreCase) ||

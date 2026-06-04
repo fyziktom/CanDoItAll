@@ -394,6 +394,15 @@ public static class AgentReworkPacketFactory
             string.IsNullOrWhiteSpace(receipt.ExitSummary) ? receipt.RequestSummary : receipt.ExitSummary);
     }
 
+    public static AgentToolReceiptRef FromReceipt(ProcessAutomationToolExecutionReceipt receipt)
+    {
+        return new AgentToolReceiptRef(
+            receipt.Id,
+            receipt.ToolName,
+            IsReceiptSuccessful(receipt) ? "Succeeded" : "Failed",
+            string.IsNullOrWhiteSpace(receipt.ExitSummary) ? receipt.RequestSummary : receipt.ExitSummary);
+    }
+
     private static AgentReworkFinding CreateFinding(AgentRecoveryDecision decision)
     {
         return new AgentReworkFinding(
@@ -411,6 +420,13 @@ public static class AgentReworkPacketFactory
     }
 
     private static bool IsReceiptSuccessful(ToolExecutionReceiptRecord receipt)
+    {
+        return !receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) &&
+               !receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase) &&
+               !receipt.ExitSummary.StartsWith("TimedOut", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsReceiptSuccessful(ProcessAutomationToolExecutionReceipt receipt)
     {
         return !receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) &&
                !receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase) &&

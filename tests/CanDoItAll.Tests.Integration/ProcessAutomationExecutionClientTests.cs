@@ -20,7 +20,13 @@ public sealed class ProcessAutomationExecutionClientTests
 
         var result = await client.ExecuteRunAsync(request, cancellationToken);
 
-        Assert.Same(proxy.ExecutionRunResult, result);
+        Assert.NotSame(proxy.ExecutionRunResult, result);
+        Assert.Equal(proxy.ExecutionRunResult.ExecutionRunId, result.ExecutionRunId);
+        Assert.Equal(proxy.ExecutionRunResult.ChatSessionId, result.ChatSessionId);
+        Assert.Equal(proxy.ExecutionRunResult.ResponseText, result.ResponseText);
+        Assert.NotNull(result.Metric);
+        Assert.Equal(ProcessAutomationRunOutcome.Succeeded, result.Metric.Outcome);
+        Assert.Equal(proxy.ExecutionRunResult.Metric.ExecutionRunId, result.Metric.ExecutionRunId);
         var call = Assert.Single(proxy.Calls, item => item.MethodName == nameof(IAgentFrameworkWorkspaceService.ExecuteRunAsync));
         var executionRunRequest = Assert.IsType<ExecutionRunRequest>(call.Arguments[0]);
         Assert.Equal(request.AgentId, executionRunRequest.AgentId);
@@ -44,19 +50,67 @@ public sealed class ProcessAutomationExecutionClientTests
         var workspaceService = CreateWorkspaceService(out var proxy);
         var client = new ProcessAutomationExecutionClient(workspaceService);
         var executionRunId = proxy.ExecutionRunDetail.Run.Id;
-        var query = new ExecutionRunQuery(ProcessRunId: "process-run-001", Take: 12);
+        var query = new ProcessAutomationExecutionRunQuery(
+            ProcessRunId: "process-run-001",
+            Take: 12,
+            State: ProcessAutomationExecutionState.Completed,
+            Outcome: ProcessAutomationRunOutcome.Succeeded);
 
         var detail = await client.GetExecutionRunDetailAsync(executionRunId);
         var runs = await client.ListExecutionRunsAsync(query);
 
-        Assert.Same(proxy.ExecutionRunDetail, detail);
-        Assert.Same(proxy.ExecutionRuns, runs);
+        Assert.NotSame(proxy.ExecutionRunDetail, detail);
+        Assert.NotSame(proxy.ExecutionRuns, runs);
+        Assert.Equal(ProcessAutomationExecutionState.Completed, detail.Run.State);
+        Assert.Equal(ProcessAutomationRunOutcome.Succeeded, detail.Run.Outcome);
+        Assert.Equal(proxy.ExecutionRunDetail.Run.Id, detail.Run.Id);
+        Assert.Equal(proxy.ExecutionRunDetail.Run.ProcessRunId, detail.Run.ProcessRunId);
+        Assert.Equal(proxy.ExecutionRunDetail.Run.StructuredOutputContractKey, detail.Run.StructuredOutputContractKey);
+        Assert.Equal(proxy.ExecutionRunDetail.ChatSession!.LatestExecutionRunId, detail.ChatSession!.LatestExecutionRunId);
+        Assert.Equal(ProcessAutomationChatMessageRole.User, detail.ChatSession.Messages[0].Role);
+        Assert.Equal(ProcessAutomationExecutionState.Running, detail.ExecutionLog[0].State);
+        Assert.Equal(ProcessAutomationRunOutcome.Succeeded, detail.Metrics[0].Outcome);
+        Assert.Equal("design.md", detail.Artifacts[0].RelativePath);
+        Assert.Equal("workspace-write", detail.ToolReceipts[0].RuntimeToolProviderKey);
+        Assert.Equal(ProcessAutomationProviderUsageStatus.Observed, detail.UsageObservations[0].UsageStatus);
+        var run = Assert.Single(runs);
+        Assert.Equal(detail.Run.Id, run.Id);
+        Assert.Equal(ProcessAutomationExecutionState.Completed, run.State);
         Assert.Contains(proxy.Calls, call =>
             call.MethodName == nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) &&
             Equals(executionRunId, call.Arguments[0]));
-        Assert.Contains(proxy.Calls, call =>
-            call.MethodName == nameof(IAgentFrameworkWorkspaceService.ListExecutionRunsAsync) &&
-            ReferenceEquals(query, call.Arguments[0]));
+        var listCall = Assert.Single(proxy.Calls, call =>
+            call.MethodName == nameof(IAgentFrameworkWorkspaceService.ListExecutionRunsAsync));
+        var executionRunQuery = Assert.IsType<ExecutionRunQuery>(listCall.Arguments[0]);
+        Assert.Equal(query.ProcessRunId, executionRunQuery.ProcessRunId);
+        Assert.Equal(query.Take, executionRunQuery.Take);
+        Assert.Equal(ExecutionState.Completed, executionRunQuery.State);
+        Assert.Equal(RunOutcome.Succeeded, executionRunQuery.Outcome);
+    }
+
+    [Fact]
+    public async Task ExecuteRunAsync_SB06_INV_001_normalizes_agent_framework_execution_failures()
+    {
+        var workspaceService = CreateWorkspaceService(out var proxy);
+        var client = new ProcessAutomationExecutionClient(workspaceService);
+        proxy.ExecuteRunFailure = new AgentRunFailedException(
+            proxy.ExecutionRunDetail.Run.AgentId,
+            proxy.ExecutionRunDetail.Run.Id,
+            proxy.ExecutionRunDetail.Run.ChatSessionId,
+            "OpenAI",
+            "gpt-5-mini",
+            new InvalidOperationException("provider quota exceeded"));
+
+        var exception = await Assert.ThrowsAsync<ProcessAutomationExecutionFailedException>(() =>
+            client.ExecuteRunAsync(CreateProcessAutomationExecutionRequest()));
+
+        Assert.Equal(proxy.ExecutionRunDetail.Run.AgentId, exception.AgentId);
+        Assert.Equal(proxy.ExecutionRunDetail.Run.Id, exception.ExecutionRunId);
+        Assert.Equal(proxy.ExecutionRunDetail.Run.ChatSessionId, exception.ChatSessionId);
+        Assert.Equal("OpenAI", exception.ProviderName);
+        Assert.Equal("gpt-5-mini", exception.ModelName);
+        Assert.Equal("run", exception.FailureKind);
+        Assert.IsType<AgentRunFailedException>(exception.InnerException);
     }
 
     [Fact]
@@ -248,13 +302,103 @@ public sealed class ProcessAutomationExecutionClientTests
         {
             var run = CreateExecutionRunRecord(agentId, chatSessionId);
             var metric = CreateMetric(agentId, chatSessionId, run.Id);
+            var chatSession = new ChatSessionRecord(
+                chatSessionId,
+                agentId,
+                "Process execution chat",
+                run.CreatedAtUtc,
+                run.UpdatedAtUtc,
+                [
+                    new ChatMessageRecord(
+                        Guid.NewGuid(),
+                        ChatMessageRole.User,
+                        "Run the process step.",
+                        run.CreatedAtUtc,
+                        TokenEstimate: 4)
+                ],
+                LatestExecutionRunId: run.Id);
+            var log = new ExecutionLogEntry(
+                Guid.NewGuid(),
+                agentId,
+                chatSessionId,
+                run.UpdatedAtUtc,
+                ExecutionState.Running,
+                "Tool",
+                "Invoked workspace_write_file.")
+            {
+                ExecutionRunId = run.Id
+            };
+            var artifact = new ExecutionArtifactRecord(
+                Guid.NewGuid(),
+                run.Id,
+                "process-evidence",
+                "Design",
+                "design.md",
+                "text/markdown",
+                "agent",
+                "Created design artifact.",
+                run.UpdatedAtUtc);
+            var receipt = new ToolExecutionReceiptRecord(
+                Guid.NewGuid(),
+                run.Id,
+                "workspace-process",
+                "workspace_write_file",
+                "medium",
+                "auto",
+                "workspace",
+                "Write design.md",
+                "C:\\repo",
+                "Succeeded",
+                run.StartedAtUtc ?? run.CreatedAtUtc,
+                run.CompletedAtUtc ?? run.UpdatedAtUtc)
+            {
+                RuntimeToolProviderKey = "workspace-write",
+                RuntimeToolProviderName = "Workspace write"
+            };
+            var usageObservation = new ProviderUsageObservation(
+                Guid.NewGuid(),
+                run.UpdatedAtUtc,
+                "OpenAI",
+                ProviderKind.OpenAi,
+                "gpt-5-mini",
+                ProviderTransportKind.Responses,
+                ProviderUsageSourcePhases.AgentRuntime,
+                ProviderUsageObservationStatus.Observed,
+                InputTokens: 10,
+                CachedInputTokens: 2,
+                OutputTokens: 5,
+                ReasoningTokens: 0,
+                TotalTokens: 17,
+                ToolCallCount: 1)
+            {
+                ExecutionRunId = run.Id,
+                AgentId = agentId,
+                ChatSessionId = chatSessionId,
+                ProviderResponseId = "resp-001",
+                ProviderRequestId = "req-001",
+                RuntimeSessionKey = run.RuntimeSessionKey,
+                ProcessRunId = run.ProcessRunId,
+                ProcessStepId = run.ProcessStepId,
+                CorrelationId = run.CorrelationId,
+                ProviderCostUsd = 0.12m,
+                CalculatedCostUsd = 0.12m,
+                PricingProfileHash = "pricing-hash",
+                PricingVersion = "2026-06-04",
+                RawUsageJson = "{}",
+                DiagnosticsJson = "{}"
+            };
             ExecutionRunResult = new ExecutionRunResult(
                 run.Id,
                 chatSessionId,
                 "Completed.",
                 null,
                 metric);
-            ExecutionRunDetail = new ExecutionRunDetail(run, null, [], [metric]);
+            ExecutionRunDetail = new ExecutionRunDetail(run, chatSession, [log], [metric])
+            {
+                Artifacts = [artifact],
+                ToolReceipts = [receipt],
+                UsageObservations = [usageObservation]
+            };
             ExecutionRuns = [run];
             Agents = [CreateAgent(agentId)];
             Providers = [CreateProvider(providerId)];
@@ -285,6 +429,8 @@ public sealed class ProcessAutomationExecutionClientTests
 
         public Guid SavedAgentId { get; }
 
+        public Exception? ExecuteRunFailure { get; set; }
+
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
             if (targetMethod is null)
@@ -297,7 +443,9 @@ public sealed class ProcessAutomationExecutionClientTests
 
             return targetMethod.Name switch
             {
-                nameof(IAgentFrameworkWorkspaceService.ExecuteRunAsync) => Task.FromResult(ExecutionRunResult),
+                nameof(IAgentFrameworkWorkspaceService.ExecuteRunAsync) => ExecuteRunFailure is null
+                    ? Task.FromResult(ExecutionRunResult)
+                    : Task.FromException<ExecutionRunResult>(ExecuteRunFailure),
                 nameof(IAgentFrameworkWorkspaceService.GetExecutionRunDetailAsync) => Task.FromResult(ExecutionRunDetail),
                 nameof(IAgentFrameworkWorkspaceService.ListExecutionRunsAsync) => Task.FromResult(ExecutionRuns),
                 nameof(IAgentFrameworkWorkspaceService.ListAgentsAsync) => Task.FromResult(Agents),
