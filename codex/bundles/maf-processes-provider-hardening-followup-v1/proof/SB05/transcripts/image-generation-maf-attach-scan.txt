@@ -1,8 +1,0 @@
-Command: rg "CreateImageGenerationToolBuilder|AttachInternalImageGenerationToolsAsync" src tests
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB05
-TimestampUtc: 2026-06-04T02:27:39.8480072+00:00
----- Output ----
-No MAF image-generation attach helpers found in src or tests.
-SearchExitCode: 1
-AuditResultExitCode: 0

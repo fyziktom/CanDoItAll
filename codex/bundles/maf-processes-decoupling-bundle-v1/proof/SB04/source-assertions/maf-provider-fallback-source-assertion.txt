@@ -1,4 +1,0 @@
-62:        await AttachInternalProcessToolsAsync(composition, agent, progressCallback, suppressApprovalRequirements);
-111:        var processToolBuilder = runtimeToolProviders.Count == 0 ? CreateProcessToolBuilder() : null;
-353:    private async Task AttachInternalProcessToolsAsync(
-378:            "Attached internal process-module tools backed by the workspace services and current agent policy.");

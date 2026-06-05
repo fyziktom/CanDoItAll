@@ -1,2 +1,0 @@
-Weekly launch meeting: payment validation passed, inventory check is blocked by supplier ETA, shipment reservation needs owner confirmation.
-Send a concise recap and create follow-up tasks for blocked or owner-dependent items.

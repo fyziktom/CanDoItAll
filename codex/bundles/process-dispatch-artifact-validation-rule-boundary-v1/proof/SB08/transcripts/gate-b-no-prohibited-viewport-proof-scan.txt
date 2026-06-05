@@ -1,4 +1,0 @@
-﻿Command: rg --files codex/bundles/process-dispatch-artifact-validation-rule-boundary-v1/proof | rg -i "mobile|tablet|small|medium|phone|375x|390x|412x|768x|1024x768"
-No matches.
-ExitCode: 0
-Invariant: SB08-INV-001

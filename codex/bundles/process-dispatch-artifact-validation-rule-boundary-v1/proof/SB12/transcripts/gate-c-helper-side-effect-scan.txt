@@ -1,4 +1,0 @@
-﻿Command: rg -n "File\.|Directory\.|storagePlacementService|RecordArtifactAsync|DbContext|DispatchArtifactExpectation|ProcessDriver|DriverPack|TODO|NotImplemented|return default" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactPathValidationRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactTextMatchRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProviderNativeVisualValidationRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactQualityValidationRules.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectStructureRequirementValidationRules.cs
-No matches.
-ExitCode: 0
-Invariant: SB12-INV-001

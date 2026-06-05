@@ -1,6 +1,0 @@
-Command: rg -n '(TODO|NotImplemented|throw new NotImplementedException|fixture-specific)' codex/bundles/process-agent-execution-boundary-foundation-v1/inventories/02-agentframework-usage-in-processes.md
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB02 2026-06-04T06:31:14.4437868-04:00
-Invariant IDs: SB02-RQ003
-Output:
-Exit code: 1

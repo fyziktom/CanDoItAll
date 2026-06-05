@@ -1,6 +1,0 @@
-# SB14 completed-stage bundle validator
-Command: python 'C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py' 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-write-coordinator-expansion-v1' --profile initiative --stage completed --repo-root 'C:\repositories\CanDoItAll' --bundle-root 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-write-coordinator-expansion-v1'
-
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-write-coordinator-expansion-v1
-
-ExitCode: 0

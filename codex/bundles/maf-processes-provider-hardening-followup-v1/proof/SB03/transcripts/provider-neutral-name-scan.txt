@@ -1,8 +1,0 @@
-Command: rg -n 'WrapInternalProcessMutationTool|AttachInternalProcessToolsAsync|CreateProcessToolBuilder' src/CanDoItAll.AgentFramework.Maf
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB03
-TimestampUtc: 2026-06-04T01:50:09.3248206Z
-ExitCode: 0
----- Output ----
-SB03-INVARIANT-001
-No forbidden process-specific provider-composition names found in MAF source.

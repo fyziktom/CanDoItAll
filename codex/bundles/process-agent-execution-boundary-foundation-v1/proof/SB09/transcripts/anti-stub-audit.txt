@@ -1,6 +1,0 @@
-Command: git diff -- tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs 2>$null | rg -n 'TODO|NotImplemented|throw new NotImplementedException|Dummy|Stub|Fake|Moq|NSubstitute|fixture'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB09_INV_001 SB09_INV_002 SB09_INV_003
-Output:
-(no matches)
-Exit code: 1

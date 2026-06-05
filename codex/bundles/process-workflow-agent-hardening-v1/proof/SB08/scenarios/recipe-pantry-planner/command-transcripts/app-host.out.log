@@ -1,5 +1,0 @@
-Command: dotnet run --no-launch-profile --project C:\repositories\CanDoItAll\.artifacts\sb08-multidomain-e2e\20260602-013426\apps\recipe-pantry-planner --urls http://127.0.0.1:5205
-WorkingDirectory: C:\repositories\CanDoItAll
-ProcessId: 72884
-StartedAtUtc: 2026-06-02T05:38:03.6598770Z
-Output redirection disabled for long-running host stability.

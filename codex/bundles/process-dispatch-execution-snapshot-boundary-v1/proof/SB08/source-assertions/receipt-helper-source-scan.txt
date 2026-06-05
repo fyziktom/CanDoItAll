@@ -1,4 +1,0 @@
-## Receipt helper source assertions
-Command: rg -n "ProcessAutomationReceiptObservationHelper|CanDoItAll\.AgentFramework|ToolExecutionReceiptRecord|\bExecutionRunDetail\b" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationReceiptObservationHelper.cs
-3:internal static class ProcessAutomationReceiptObservationHelper
-PASS: helper contains process snapshot helper declarations and no AgentFramework or old execution snapshot tokens.

@@ -1,8 +1,0 @@
-Command: rg -n 'TODO|NotImplemented|throw new NotImplementedException|STUB|stub' src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.RuntimeToolProviders.cs tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB03
-TimestampUtc: 2026-06-04T01:50:44.2976620Z
-ExitCode: 0
----- Output ----
-SB03-INVARIANT-001
-No stub markers found in provider-composition source/tests.

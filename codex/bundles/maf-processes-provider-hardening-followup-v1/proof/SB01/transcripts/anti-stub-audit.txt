@@ -1,8 +1,0 @@
-Command: rg -n 'TODO|NotImplemented|throw new NotImplementedException|STUB|stub' src/CanDoItAll.AgentFramework.Tooling src/CanDoItAll.AgentFramework.Maf src/CanDoItAll.Modules.Processes/AgentTools
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB01
-TimestampUtc: 2026-06-04T01:32:15.6332901Z
-ExitCode: 0
----- Output ----
-SB01-INVARIANT-001
-No production TODO, NotImplemented, or stub markers found in the scoped provider/MAF production paths.

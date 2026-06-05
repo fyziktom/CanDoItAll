@@ -1,6 +1,0 @@
-Command: recorded validation command for codex\bundles\process-dispatch-execution-snapshot-boundary-v1\proof\SB12\transcripts\execution-client-tests.txt
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 2 s - CanDoItAll.Tests.Integration.dll (net10.0)
-ExitCode: 0

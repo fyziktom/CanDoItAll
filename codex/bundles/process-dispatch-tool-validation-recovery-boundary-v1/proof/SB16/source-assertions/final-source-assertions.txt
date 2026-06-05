@@ -1,5 +1,0 @@
-Source assertions
-- Helpers are module-local under repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/.
-- No Process Core or process driver-pack production surface was added.
-- Dispatcher methods delegate to ProcessToolReceiptFacts, ProcessRequiredToolValidationRules, ProcessCriticalToolFailureRules, ProcessCompletionBlockerRules, ProcessCompletionDecisionRules, and ProcessRecoveryRetryDecisionRules.
-- Behavior was validated through focused architecture and integration tests plus full solution build.

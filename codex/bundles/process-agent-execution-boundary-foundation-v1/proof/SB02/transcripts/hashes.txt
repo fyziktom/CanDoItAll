@@ -1,9 +1,0 @@
-Command: Get-FileHash SB02 inventory and dispatcher source files
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB02 2026-06-04T06:31:14.3918155-04:00
-Invariant IDs: SB02-RQ003, SB02-RQ013
-Output:
-F9400AC148ABC2007CCB6BECFFD8823FE954C39E58A09C147562798096E6B388  C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\inventories\02-agentframework-usage-in-processes.md
-2F510294170DB406DDA2918E336D2A926DBA633A5BB80F82925FCC1F2E315A7B  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs
-A2AA6DD900AE9034DEF22E311C19148157DB6261A9666411BFDB9F260B7B8867  C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
-Exit code: 0

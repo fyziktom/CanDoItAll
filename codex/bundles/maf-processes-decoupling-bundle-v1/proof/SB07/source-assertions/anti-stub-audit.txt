@@ -1,4 +1,0 @@
-# SB07 Anti-stub Audit
-
-Command: `rg -n 'TODO|NotImplementedException|throw new NotImplementedException|Pending implementation|stub' <SB07 source targets>`
-Result: no matches in the SB07 integration test, Processes DI registration file, or process provider file.

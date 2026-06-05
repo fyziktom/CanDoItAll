@@ -1,6 +1,0 @@
-Command: Get-ChildItem -Path codex/bundles/process-agent-execution-boundary-foundation-v1/proof -Recurse -File | Select-Object -ExpandProperty FullName | rg -i '(mobile|small|medium|iphone|android)'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB10_INV_003
-Output:
-(no matches)
-Exit code: 1

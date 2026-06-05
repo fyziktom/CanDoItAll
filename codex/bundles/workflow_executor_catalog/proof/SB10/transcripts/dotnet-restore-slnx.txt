@@ -1,7 +1,0 @@
-Command: dotnet restore CanDoItAll.slnx
-ExitCode: 0
-Invariant IDs: SB02-ARTIFACT-CONTENT-TRUTH; SB03-WORKSPACE-SCOPE; SB08-NO-SILENT-PASS-THROUGH; SB10-END-TO-END-CATALOG
-
-  Zjišťují se projekty, které se mají obnovit...
-  Všechny projekty jsou v aktuálním stavu pro obnovení.
-

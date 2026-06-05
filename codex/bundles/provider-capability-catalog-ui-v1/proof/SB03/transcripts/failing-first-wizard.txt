@@ -1,5 +1,0 @@
-Command: rg "CapabilitySetupWizardDialog|New MCP|New skill|InputFile" src/CanDoItAll.Modules.AgentFramework before implementation
-Exit code: 1
-
-SB03-MCP-SKILL-WIZARD failing-first: before this repair, the capability page did not contain a setup wizard for MCP servers or Skills.
-SB03-NO-CHAT-TAG-SHORTCUT failing-first: the requested boundary was to persist tags for later use without adding chat-time /skills-tag behavior in this change.

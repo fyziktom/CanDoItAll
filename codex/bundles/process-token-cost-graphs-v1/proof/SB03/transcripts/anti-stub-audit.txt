@@ -1,8 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture|test-only|template-only" <changed SB03 production files>
-Working directory: C:\repositories\CanDoItAll
-Run label: 2026-06-01 SB03 anti-stub audit
-Exit code: 1
-
-Result:
-- No matches in changed SB03 production files.
-- No TODO, NotImplemented, fixture-specific, test-only, or template-only markers were introduced in the graph tab UI flow.

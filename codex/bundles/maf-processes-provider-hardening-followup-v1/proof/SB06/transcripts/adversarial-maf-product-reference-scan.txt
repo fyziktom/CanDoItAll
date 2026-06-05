@@ -1,9 +1,0 @@
-Command: rg -n "CanDoItAll.Modules.(Processes|Projects|Workbench)" src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj src\CanDoItAll.AgentFramework.Maf --glob "*.cs"
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB06
-Invariant: SB06-INVARIANT-001
-TimestampUtc: 2026-06-04T06:51:52.4934114Z
-
-No direct MAF product-module reference found. This non-zero rg result is the expected adversarial negative proof for the provider-boundary checkpoint.
-
-ExitCode: 1

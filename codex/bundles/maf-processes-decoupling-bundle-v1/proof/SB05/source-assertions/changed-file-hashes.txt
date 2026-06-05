@@ -1,6 +1,0 @@
-SB05 changed file hashes
-E382A1B9D09400DA749997958F24FF3F6BA8B987D1CAC376E814D2DF307A3E42  src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj
-74EE50BF14DFD9B880A7D7E79CE3B3E8C2FB41A29EF3244326C5258793F472C3  src\CanDoItAll.AgentFramework.Maf\Runtime\Capabilities\MafAgentRuntime.Capabilities.cs
-9CF5C1DF5B265F7E47A44C7EC84FEC5BC8FC86FA08CA72A9D39AA764E626DDCD  src\CanDoItAll.AgentFramework.Maf\README.md
-23B38F06B148B01C33EE697101C9CB3A679BFA87C274FB065A72A2876604D2C4  tests\CanDoItAll.Tests.Unit\AgentRuntimeHardeningStaticRegressionTests.cs
-DELETED  src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs

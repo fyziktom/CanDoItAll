@@ -1,9 +1,0 @@
-Command: Get-FileHash SB07 changed files
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB07_INV_001 SB07_INV_002 SB07_INV_003
-Output:
-SHA-256 codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB07/source-assertions/gate-b-coupling-review.md 154D26D2494F04A98A0844E694098014631214A18A9B030EE13B87C121E7F407
-SHA-256 codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB07/semantic-invariants.md 0B2C58C41AE07A9874CBC2C56999EA0FC79FF428783A38D3A45440121B1C978E
-SHA-256 codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/07-07-refactor-gate-b-coupling-reduction-proof/README.md F6D9BDF4A1A121CF6F62FF84598E86282BFCBDAE34F513BAE9106D29AC4D7063
-SHA-256 codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md 37B03308DFF76362517735F59B22ECD350E05FF7D798127F2E8872E49F51F57B
-Exit code: 0

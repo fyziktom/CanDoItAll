@@ -1,9 +1,0 @@
-# SB12 Changed File Hashes
-
-- CanDoItAll.slnx 601747BB49043C5120FC69CC1485F16D58B023E6F471BCB168FB9154A9B7DB0C
-- src/CanDoItAll.AgentFramework.Maf/CanDoItAll.AgentFramework.Maf.csproj 042FAFAA73C70B37D74F7EAE1FE51E6CCCAFB3FD41C818622ECC0174E11B02E1
-- src/CanDoItAll.AgentFramework.Tooling/CanDoItAll.AgentFramework.Tooling.csproj 88EC273AF9F37484EC73992AEDDA353C56604B25E9026207CCFCEE3A9AC8EDFA
-- src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs 9D13CFE641631AF70168A124E71F7784ADE629F6ED6B338DEBAACEF32EA76BE2
-- codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB12/source-assertions/final-red-team-source-assertions.txt 124EE237F6A57BE7E483966ACEEF3E0B1CB163EE9BC37A4774C834E6A9A5A7CF
-- codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB12/source-assertions/manual-red-team-checklist.md A50AC23E7D836D05B50612B7DBC4333E4DE85D55662F0A9B8A36AA68841731DC
-- codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB12/source-assertions/next-phase-cutline.md 0FC453976F364B37892B47AB4DA7797A1E03160DB6828ABA509EF2D53EA8078F

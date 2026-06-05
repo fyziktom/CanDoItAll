@@ -1,8 +1,0 @@
-Command: dotnet build CanDoItAll.sln --no-restore
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTime: 2026-05-29T06:33:30.8889585-04:00
-
-MSBUILD : error MSB1009: Soubor projektu neexistuje.
-Přepínač: CanDoItAll.sln
-
-ExitCode: 1

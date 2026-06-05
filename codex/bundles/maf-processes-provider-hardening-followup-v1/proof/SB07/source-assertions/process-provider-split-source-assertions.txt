@@ -1,8 +1,0 @@
-SB07 source assertions
-
-- ProcessAgentRuntimeToolProvider was split into catalog/factory, definitions, runs, templates, access guard, and DTO partial/source files.
-- Public process tool names remain exactly stable: 23 old names, 23 current names, no missing names, no added names.
-- Consumer registration remains ProcessAgentRuntimeToolProvider through IAgentRuntimeToolProvider in ProcessesModuleServiceCollectionExtensions.
-- Maintainability guard added: AgentRuntimeToolProviderArchitectureTests.ProcessAgentRuntimeToolProvider_split_files_stay_below_monolith_threshold.
-- The main provider file is below 250 lines and every ProcessAgentRuntimeTool*.cs file is below 500 lines.
-- No rendered UI route changed; browser validation is N/A.

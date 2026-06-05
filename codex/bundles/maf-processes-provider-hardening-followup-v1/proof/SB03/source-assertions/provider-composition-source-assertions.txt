@@ -1,6 +1,0 @@
-SB03-INVARIANT-001
-
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.RuntimeToolProviders.cs` owns registered runtime-provider attachment, descriptor validation, duplicate tool-name policy, metadata inference, approval wrapping, and provider diagnostics.
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs` no longer contains the runtime-provider policy block and no longer uses `WrapInternalProcessMutationTool`.
-- The remaining approval wrapper is named `WrapRuntimeProviderToolForApproval`, and it still delegates approval classification to `AgentToolInvocationPolicyMetadata.RequiresApprovalByDefault`.
-- `repo://tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs` proves no-provider behavior, deterministic provider order, duplicate provider keys, duplicate provider tool names, failure diagnostics, metadata classification, legacy descriptors, and approval wrapping.

@@ -1,9 +1,0 @@
-# SB09 Receipt, Required-Tool, And Artifact-Lineage Source Assertions
-
-- `AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests` now verifies provider-native `browser_*` receipts preserve `RuntimeToolProviderKey` and `RuntimeToolProviderName` in both projected run detail receipts and persisted receipt listing.
-- `ProcessRunAutomationDispatchServiceTests` now includes one consolidated required-tool guard covering workspace file tools, browser proof tools, project-structure read/writeback tools, and `image_generation_create`.
-- Artifact-lineage production code was not changed. Existing tests cover compact recovery keys, SB09 workflow output disambiguation, normalized projection identity, and current-run typed lineage validation.
-- `IProcessAutomationExecutionClient` remains the dispatcher execution facade introduced earlier; SB09 did not add direct dispatcher `IAgentFrameworkWorkspaceService` calls.
-- MAF and tooling projects remain free of product-module references in the SB09 scan.
-- No Process Core project, process driver pack, EF entity move, UI model move, or browser/mobile proof artifact was introduced by SB09.
-- Browser validation is N/A because SB09 changed integration tests and bundle proof only; no rendered UI route changed.

@@ -1,13 +1,0 @@
-SB01-INVARIANT-001
-
-| Path | SHA-256 |
-| --- | --- |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/README.md | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/reviews/01-execution-report.md | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/inventories/05-sb01-branch-hygiene-inventory.md | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB01/source-assertions/branch-hygiene-source-assertions.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB01/transcripts/branch-diff-baseline.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB01/transcripts/historical-bundle-restore-audit.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB01/transcripts/maf-hidden-dependency-scan.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB01/transcripts/solution-build.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB01/transcripts/anti-stub-audit.txt | $hash |

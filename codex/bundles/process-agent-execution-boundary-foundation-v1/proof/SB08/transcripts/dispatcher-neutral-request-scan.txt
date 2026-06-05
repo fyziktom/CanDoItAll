@@ -1,9 +1,0 @@
-Command: rg -n 'ProcessAutomationExecutionRequest|ProcessAutomationInvocationSource|ProcessAutomationInvocationPolicy|ExecutionRunRequest' src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB08_INV_002
-Output:
-113:                            new ProcessAutomationExecutionRequest(
-124:                                new ProcessAutomationInvocationSource(
-136:                                new ProcessAutomationInvocationPolicy(
-
-Exit code: 0

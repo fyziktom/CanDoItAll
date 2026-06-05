@@ -1,6 +1,0 @@
-Command: PowerShell assertion: Tooling source contains no CanDoItAll.Modules.*, ProcessesService, or ProcessTool references
-Working directory: C:\repositories\CanDoItAll
-Run label: 2026-06-03T22:52:03Z
-
-No forbidden Tooling source references found.
-Exit code: 0

@@ -1,1 +1,0 @@
-No stub markers found in SB02 touched production files.

@@ -1,9 +1,0 @@
-Command: Get-Content codex\bundles\maf-processes-decoupling-bundle-v1\proof\SB07\source-assertions\anti-stub-audit.txt
-ExitCode: 0
-Invariant: SB07-INV-001
-Result: Anti-stub source assertion reviewed for SB07.
-
-# SB07 Anti-stub Audit
-
-Command: `rg -n 'TODO|NotImplementedException|throw new NotImplementedException|Pending implementation|stub' <SB07 source targets>`
-Result: no matches in the SB07 integration test, Processes DI registration file, or process provider file.

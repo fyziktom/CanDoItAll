@@ -1,6 +1,0 @@
-Command: rg -n "CanDoItAll\.Modules\.Processes|ProcessToolBuilder|CreateProcessToolBuilder|MafAgentRuntime\.ProcessTools" src\CanDoItAll.AgentFramework.Maf
-Raw exit code: 1
-ExitCode: 0
-Result: no forbidden MAF process dependency markers found; rg no-match exit is normalized to proof success.
-Invariant: SB05-INV-001
---- Captured output ---

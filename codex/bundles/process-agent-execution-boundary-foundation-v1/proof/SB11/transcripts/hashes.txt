@@ -1,9 +1,0 @@
-Command: Get-FileHash -Algorithm SHA256 <SB11 proof/report files>
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB11_INV_001 SB11_INV_002 SB11_INV_003
-Output:
-codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB11/source-assertions/runtime-smoke-large-screen-policy.txt	027495460E1BB6DD95AE64B4D29F1B2F77B29EC90093D30A9CA7963B7F56DD09
-codex/bundles/process-agent-execution-boundary-foundation-v1/proof/SB11/semantic-invariants.md	A5F9DBF2B5ABABFE43B790DA8520AE738DC45485726BA9B3DC2A0FD48168B210
-codex/bundles/process-agent-execution-boundary-foundation-v1/subbundles/11-11-runtime-smoke-large-screen-policy-check/README.md	8D0188A27CDBF37D5FDE7664B34BD2A15FA447B82AA435C35914072E98D9AA6C
-codex/bundles/process-agent-execution-boundary-foundation-v1/reviews/01-execution-report.md	5B4179F4EEFB59FE954E477E0E3F4454C1BAA4BF2B4E24C7CEA8404B85157C86
-Exit code: 0

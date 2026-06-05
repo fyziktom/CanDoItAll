@@ -1,2 +1,0 @@
-Command: (Get-Content -LiteralPath src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs).Count
-ArtifactValidation.cs line count: 3394

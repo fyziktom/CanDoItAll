@@ -1,3 +1,0 @@
-# SB07 changed file hashes
-4F9EA7628E10B126410DD238A3B94625DDE4800FE1FC25622616ADFC2C7A8234  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs
-081F5CDADF0F3EFCF8A643775DAE4F5C4216D7CB0FBDCF675CC33212F21BD4D4  tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs

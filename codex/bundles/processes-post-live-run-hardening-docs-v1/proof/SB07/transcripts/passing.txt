@@ -1,6 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --no-restore -p:OutputPath=C:\repositories\CanDoItAll\artifacts\codex-sb07-integration-bin\ -p:CopyRepositoryTemplatesToOutput=false --filter "FullyQualifiedName~ProcessObservationIntentResolverTests|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessManagerAgentResolver" -v minimal
-Testovací běh pro C:\repositories\CanDoItAll\artifacts\codex-sb07-integration-bin\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     7, Přeskočeno:     0, Celkem:     7, Doba trvání: 24 s - CanDoItAll.Tests.Integration.dll (net10.0)
-ExitCode: 0

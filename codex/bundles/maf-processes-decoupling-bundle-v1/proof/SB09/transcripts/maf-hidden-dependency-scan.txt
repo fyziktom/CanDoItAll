@@ -1,3 +1,0 @@
-Command: rg -n "CanDoItAll\.Modules\.Processes|ProcessToolBuilder|CreateProcessToolBuilder|MafAgentRuntime\.ProcessTools" src\CanDoItAll.AgentFramework.Maf -g "*.cs" -g "*.csproj" -g "*.props" -g "*.targets" -g "*.md" -g "*.razor"
-Raw exit code: 1
-Result: no hidden MAF -> Processes dependency markers found in MAF source/project/docs.

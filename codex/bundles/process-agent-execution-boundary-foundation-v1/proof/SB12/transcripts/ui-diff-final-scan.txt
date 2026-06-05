@@ -1,6 +1,0 @@
-Command: git diff --name-only -- src tests 2>$null | rg -i '(\.razor$|\.css$|\.scss$|\.js$|wwwroot|Components/)'; git ls-files --others --exclude-standard src tests | rg -i '(\.razor$|\.css$|\.scss$|\.js$|wwwroot|Components/)'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB12_INV_003
-Output:
-(no matches)
-Exit code: 1

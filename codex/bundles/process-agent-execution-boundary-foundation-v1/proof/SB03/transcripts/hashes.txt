@@ -1,9 +1,0 @@
-Command: Get-FileHash SB03 design and inventory files
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB03 2026-06-04T06:33:44.3217555-04:00
-Invariant IDs: SB03-RQ004, SB03-RQ011, SB03-RQ013
-Output:
-CD1E3BD4C9D6FCA793A51BC962EDF4949D11EF439E36DB55FD5265A1D94E0EE2  C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md
-F9400AC148ABC2007CCB6BECFFD8823FE954C39E58A09C147562798096E6B388  C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\inventories\02-agentframework-usage-in-processes.md
-1E128D65A6BE27A9B139EEAEC3DED8440175CF3D0BF1C6AE8DABA07842E5BE22  C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\subbundles\03-03-execution-seam-design-and-cutline\README.md
-Exit code: 0

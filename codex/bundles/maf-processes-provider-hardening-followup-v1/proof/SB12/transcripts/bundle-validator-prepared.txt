@@ -1,9 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\maf-processes-provider-hardening-followup-v1 --profile initiative --stage prepared --repo-root C:\repositories\CanDoItAll --bundle-root C:\repositories\CanDoItAll\codex\bundles\maf-processes-provider-hardening-followup-v1
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB12
-Invariant: SB12-INVARIANT-001
-TimestampUtc: 2026-06-04T06:54:52.2884625Z
-
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\maf-processes-provider-hardening-followup-v1
-
-ExitCode: 0

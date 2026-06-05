@@ -1,2 +1,0 @@
-# SB08 Gate B anti-stub audit
-No anti-stub markers found in Gate B changed source/test files.

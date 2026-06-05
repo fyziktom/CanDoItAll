@@ -1,6 +1,0 @@
-Command: rg -n 'workspaceService\.|IAgentFrameworkWorkspaceService|new ExecutionRunRequest' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g 'ProcessRunAutomationDispatchService*.cs'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB10_INV_001 SB10_INV_002
-Output:
-(no matches)
-Exit code: 1

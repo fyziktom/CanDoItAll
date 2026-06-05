@@ -1,4 +1,0 @@
-src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:3:using CanDoItAll.AgentFramework.Tooling;
-src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:10:public sealed class ProcessAgentRuntimeToolProvider(
-src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:2:using CanDoItAll.AgentFramework.Tooling;
-src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:74:        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProcessAgentRuntimeToolProvider>());

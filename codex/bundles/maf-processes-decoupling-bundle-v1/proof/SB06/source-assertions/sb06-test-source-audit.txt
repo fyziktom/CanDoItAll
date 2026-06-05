@@ -1,3 +1,0 @@
-tests\CanDoItAll.Tests.Unit\AgentRuntimeToolProviderArchitectureTests.cs:37:    public void Maf_and_processes_reference_tooling_without_maf_processes_reference()
-tests\CanDoItAll.Tests.Unit\AgentToolInvocationPolicyTests.cs:1845:    public void ProcessToolInventory_SB06_INV_001_registers_every_process_tool_in_catalog_and_capability_registry()
-tests\CanDoItAll.Tests.Unit\MafAgentRuntimeToolProviderCompositionTests.cs:14:    public async Task MafAgentRuntimeToolProviderComposition_zero_registered_providers_does_not_attach_process_tools()

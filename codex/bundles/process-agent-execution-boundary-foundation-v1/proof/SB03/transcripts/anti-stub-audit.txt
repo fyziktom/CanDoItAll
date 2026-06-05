@@ -1,6 +1,0 @@
-Command: rg -n '(TODO|NotImplemented|throw new NotImplementedException|fixture-specific)' codex/bundles/process-agent-execution-boundary-foundation-v1/architecture/02-execution-boundary-staging.md
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB03 2026-06-04T06:33:44.2859444-04:00
-Invariant IDs: SB03-RQ004
-Output:
-Exit code: 1

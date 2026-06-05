@@ -1,2 +1,0 @@
-Command: rg -n "CanDoItAll\.Processes\.Core|CanDoItAll\.Modules\.Processes\.Core|IProcessDriverPack|DriverPack|ProcessDriver" src
-No matches.

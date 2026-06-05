@@ -1,9 +1,0 @@
-Command: PowerShell assert old ProcessAgentRuntimeToolProvider monolith threshold is absent
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB07
-Invariant: SB07-INVARIANT-001
-TimestampUtc: 2026-06-04T06:51:52.5750699Z
-
-Main provider file is below old monolith threshold: 158 lines. This non-zero result is expected for the adversarial old-shape check.
-
-ExitCode: 1

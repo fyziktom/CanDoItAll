@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB07/unit-workflow-backend-class-slices-after-implementation.txt
-ExitCode: 0
-Result: 40 broader unit tests passed.
-Source transcript: bundle://proof/SB07/unit-workflow-backend-class-slices-after-implementation.txt

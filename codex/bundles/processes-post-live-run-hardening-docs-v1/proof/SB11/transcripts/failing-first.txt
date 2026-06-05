@@ -1,8 +1,0 @@
-# SB11 Failing-first And Adversarial Proof
-
-Invariant IDs: SB11-INV-001, SB11-INV-002, SB11-INV-003
-This check rejects the stale SB09-to-SB11 drift shape: live-run profile summaries that jump directly from trigger reason to counts without a typed fresh-run policy.
-
-Command: rg -n -U "string TriggerReasonTemplate,\r?\n\s*int AssignmentCount" src\CanDoItAll.Modules.Processes\Templates\ProcessTemplatePackScenarios.cs
-ExitCode: 1
-ExpectedExitCode: 1

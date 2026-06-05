@@ -1,8 +1,0 @@
-Command: rg -n "CanDoItAll\.Modules\.Processes" src/CanDoItAll.AgentFramework.Maf
-Working directory: C:\repositories\CanDoItAll
-Run label: 2026-06-03T22:36:40Z
-
-src/CanDoItAll.AgentFramework.Maf\README.md:24:- `../CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj`
-src/CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj:7:    <ProjectReference Include="..\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj" />
-src/CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs:3:using CanDoItAll.Modules.Processes;
-Exit code: 0

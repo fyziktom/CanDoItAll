@@ -1,4 +1,0 @@
-﻿Command: (Get-Content -LiteralPath src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs).Count
-ArtifactValidation.cs line count: 3223
-ExitCode: 0
-Invariant: SB12-INV-001

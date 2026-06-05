@@ -1,6 +1,0 @@
-Command: Get-ChildItem bundle/proof paths for mobile/small/medium proof artifact labels
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB04 2026-06-04T06:37:56.0444877-04:00
-Invariant IDs: SB04-RQ013
-Output:
-Exit code: 0

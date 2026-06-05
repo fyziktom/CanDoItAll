@@ -1,8 +1,0 @@
-# SB12 line-count review
-1465  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs
-115  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs
-339  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs
-129  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs
-3434  src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs
-
-- ArtifactProjection.cs is 1465 lines after Gate C. SB04 baseline was 1526 lines; SB12 remains below that baseline while all storage-backed projection writes use the coordinator and the completed decision path uses the record-only coordinator.

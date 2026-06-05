@@ -1,5 +1,0 @@
-Command: git diff --name-only -- src/CanDoItAll.Modules.Processes/Automation/Dispatch
-Working directory: C:\repositories\CanDoItAll
-Run label: 2026-06-03T22:59:02Z
-
-Exit code: 0

@@ -1,4 +1,0 @@
-Command: rg -n "ProcessToolBuilder|MafAgentRuntime\.ProcessTools" README.md docs src -g "*.md" -g "*.cs" -g "*.razor"
-Raw exit code: 1
-ExitCode: 0
-Result: no live README/docs/src matches.

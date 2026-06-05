@@ -1,9 +1,0 @@
-Command: rg -n "CanDoItAll.Modules.Processes" src\CanDoItAll.AgentFramework.Maf\CanDoItAll.AgentFramework.Maf.csproj src\CanDoItAll.AgentFramework.Maf --glob "*.cs"
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB12
-Invariant: SB12-INVARIANT-001
-TimestampUtc: 2026-06-04T06:38:38.5797686Z
-
-No direct MAF production-code or project reference to CanDoItAll.Modules.Processes found. This non-zero rg result is the expected adversarial negative proof for the original hidden-coupling risk.
-
-ExitCode: 1

@@ -1,9 +1,0 @@
-SB12 source assertions
-
-- `CanDoItAll.AgentFramework.Maf` references `CanDoItAll.AgentFramework.Tooling`, `CanDoItAll.Modules.Security`, and `CanDoItAll.Modules.Workspace`; it does not reference `CanDoItAll.Modules.Processes`, `CanDoItAll.Modules.Projects`, or `CanDoItAll.Modules.Workbench`.
-- MAF source/project files do not contain the removed project-structure or image-generation hard-coded attach helper names.
-- MAF source/project files do not contain product provider implementation types such as `ProcessAgentRuntimeToolProvider` or `ProjectStructureAgentRuntimeToolProvider`.
-- `CanDoItAll.AgentFramework.Tooling` stays product-neutral and does not reference Processes, Projects, Workbench, or MAF.
-- `ProcessAgentRuntimeToolProvider` remains a Processes-owned runtime provider with descriptor metadata and purpose-aware read/write exposure.
-- No `CanDoItAll.Processes.Core`, process-core project, process driver pack, or driver-pack implementation was introduced in this bundle.
-- No rendered UI route changed; browser validation is N/A.

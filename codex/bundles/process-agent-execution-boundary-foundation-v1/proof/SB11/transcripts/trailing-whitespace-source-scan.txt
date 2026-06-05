@@ -1,6 +1,0 @@
-Command: rg -n '[ \t]+$' CanDoItAll.slnx src/CanDoItAll.Processes.Contracts src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs tests/CanDoItAll.Tests.Integration/AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs -g '*.cs' -g '*.csproj' -g '*.slnx'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB11_INV_001
-Output:
-(no matches)
-Exit code: 1

@@ -1,9 +1,0 @@
-Command: git grep -n -E "office365\.message-by-address-unprocessed|Office365MessageAddressWorkflowExecutorSettings|DownloadOneUnprocessedMessageByAddressAsync" HEAD -- src/plugins/CanDoItAll.Plugin.Office365 tests/CanDoItAll.Tests.Integration
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 
-2026-05-29T18:43:35.3295023Z
-ExpectedExitCode: 1
-ExitCode: 
-1
-EndTimeUtc: 
-2026-05-29T18:43:35.5011423Z

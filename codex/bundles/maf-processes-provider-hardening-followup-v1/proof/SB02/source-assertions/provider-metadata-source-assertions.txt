@@ -1,8 +1,0 @@
-SB02-INVARIANT-001
-
-- `repo://src/CanDoItAll.AgentFramework.Tooling/IAgentRuntimeToolProvider.cs` exposes optional descriptor and tool metadata members with default implementations so legacy raw `AITool` providers continue to compile and run.
-- `repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolProviderDescriptor.cs` validates provider keys/display names and carries domain tags plus supported purposes.
-- `repo://src/CanDoItAll.AgentFramework.Tooling/AgentRuntimeToolMetadata.cs` validates provider/tool ownership and carries operation kind plus approval expectation.
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs` resolves descriptors, creates legacy adapter descriptors, rejects duplicate explicit provider keys, infers operation kind from `AgentToolInvocationPolicyMetadata`, and rejects metadata for unknown tools.
-- `repo://src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.AgentFactory.cs` records runtime provider descriptors and tool metadata in capability state for downstream observability work.
-- `repo://src/CanDoItAll.Modules.Processes/AgentTools/ProcessAgentRuntimeToolProvider.cs` declares first-party descriptor metadata for the Processes runtime provider without changing tool names or access policy.

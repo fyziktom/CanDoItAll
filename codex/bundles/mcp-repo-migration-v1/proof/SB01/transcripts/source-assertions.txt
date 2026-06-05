@@ -1,6 +1,0 @@
-Command: PowerShell source assertions for MCP solution boundary and component package references
-Invariant ID: SB01-MCP-SOLUTION-BOUNDARY
-Invariant ID: SB01-COMPONENT-PACKAGE-DEPENDENCY
---- output ---
-SB01 source assertion passed: MCP solution owns MCP projects and MCP tests; main solution/unit project exclude migrated MCP projects; Components MCP uses package references.
-ExitCode: 0

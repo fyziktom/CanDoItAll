@@ -1,8 +1,0 @@
-Command: ArtifactValidation line count after SB07
-3720
-
-Command: rg side-effect/prohibited/nested tokens in ProcessArtifactTextMatchRules.cs
-No matches.
-
-Command: rg old artifact noise-token fields in ProcessRunAutomationDispatchService.cs
-No matches.

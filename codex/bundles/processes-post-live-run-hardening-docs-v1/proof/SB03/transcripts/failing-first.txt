@@ -1,3 +1,0 @@
-# SB03 failing-first.txt
-
-Pending.

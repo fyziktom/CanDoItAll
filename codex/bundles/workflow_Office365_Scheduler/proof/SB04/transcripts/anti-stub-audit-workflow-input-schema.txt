@@ -1,8 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific" src/CanDoItAll.AgentFramework.Models src/CanDoItAll.AgentFramework.Core src/CanDoItAll.Modules.AgentFramework src/CanDoItAll.Modules.SchedulerPlanner Templates/Workflows/workflows/office365-email-watch-workflows.yaml
-ExpectedExitCode: 1 when no stub markers are present
-ActualExitCode: 1
-StartedUtc: 2026-05-29T19:22:38.5151128Z
-
-
-Finding: no TODO, NotImplemented, or fixture-specific markers found in scoped workflow schema production files.
-FinishedUtc: 2026-05-29T19:22:38.5222326Z

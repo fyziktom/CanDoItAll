@@ -1,5 +1,0 @@
-Prepared validation:
-PASS: bundle validation succeeded for stage prepared
-
-Completed validation:
-PASS: bundle validation succeeded for stage completed

@@ -1,3 +1,0 @@
-Command:  = python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\processes-post-live-run-hardening-docs-v1 --stage completed --repo-root C:\repositories\CanDoItAll | Select-String -Pattern 'SB11|RN11|semantic-invariants|manifest|Production Behavior Artifact Matrix|Failing-first|Adversarial'; if ($matches) { $matches; exit 1 } else { 'No SB11 validator findings.'; exit 0 }
-No SB11 validator findings.
-ExitCode: 0

@@ -1,6 +1,0 @@
-Command: rg -n -i TODO|NotImplementedException|throw new NotImplementedException|return default|return null;|stub|placeholder|HACK src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs
-
-Invariant ID: SB05-INV-001
-
-No anti-stub pattern matches found in SB05 changed source/test files.
-ExitCode: 0

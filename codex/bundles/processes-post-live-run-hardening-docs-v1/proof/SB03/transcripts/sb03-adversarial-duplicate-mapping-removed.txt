@@ -1,3 +1,0 @@
-Invariant: SB03-INV-002 old duplicate local mapping helpers must not remain after centralization.
-Command: rg -n "private static ProcessArtifactExpectationSatisfactionStatus ResolveRejectedArtifactSatisfactionStatus|private static ProcessArtifactExpectationValidationStatus ResolveArtifactValidationStatus|private static bool IsUnsatisfiedRequiredArtifactStatus" src\CanDoItAll.Modules.Processes
-ExitCode: 1

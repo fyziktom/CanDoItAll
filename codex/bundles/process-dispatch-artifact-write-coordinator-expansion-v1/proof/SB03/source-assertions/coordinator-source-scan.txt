@@ -1,5 +1,0 @@
-Run label: SB03 coordinator source scan
-Working directory: C:\repositories\CanDoItAll
-Command: rg -n "DispatchCandidate|ProcessMock|WorkspaceWritten|ExistingManaged|ResponseText|ProviderNativeBrowser|SourceAdapter|\.Plan\(" ProcessArtifactProjectionWriteCoordinator.cs
-No source semantics or source-adapter planning references found in the write coordinator.
-Exit code: 0

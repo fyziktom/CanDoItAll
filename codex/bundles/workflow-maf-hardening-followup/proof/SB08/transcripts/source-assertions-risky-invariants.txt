@@ -1,4 +1,0 @@
-Command: wrapper transcript for bundle://proof/SB08/source-assertions-risky-invariants.txt
-ExitCode: 0
-Result: Risky invariant source assertions found expected boundaries.
-Source transcript: bundle://proof/SB08/source-assertions-risky-invariants.txt

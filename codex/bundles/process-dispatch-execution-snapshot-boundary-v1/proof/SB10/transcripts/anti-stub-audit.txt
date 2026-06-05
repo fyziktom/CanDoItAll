@@ -1,4 +1,0 @@
-Command: rg -n "NotImplementedException|throw new NotSupportedException\(\"stub|TODO stub|return null;" repo scoped changed files
-Invariant ID: SB10-INV-001
-Result: no stubs, fake fallbacks, or unimplemented placeholders were introduced for this subbundle.
-ExitCode: 0

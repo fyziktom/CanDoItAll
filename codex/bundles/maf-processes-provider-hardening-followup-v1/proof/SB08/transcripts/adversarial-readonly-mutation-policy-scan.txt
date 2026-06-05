@@ -1,9 +1,0 @@
-Command: rg -n "return purposePolicy.AllowMutationTools;|return accessState.CanRead;" src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Policy.cs
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB08
-Invariant: SB08-INVARIANT-001
-TimestampUtc: 2026-06-04T06:51:52.6018665Z
-
-No mutation-exposure shortcut found. This non-zero rg result is the expected adversarial negative proof for the read-only mutation exposure risk.
-
-ExitCode: 1

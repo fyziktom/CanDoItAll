@@ -1,6 +1,0 @@
-Command: rg -n 'ProcessRun |ProcessStepRun|ViewModel|ExecutionRunRequest|DbSet|ComponentBase' src/CanDoItAll.Processes.Contracts
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB08_INV_001 SB08_INV_002
-Output:
-(no matches)
-Exit code: 1

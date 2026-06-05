@@ -1,13 +1,0 @@
-SB03-INVARIANT-001
-
-| Path | SHA-256 |
-| --- | --- |
-| epo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.cs | $hash |
-| epo://src/CanDoItAll.AgentFramework.Maf/Runtime/Capabilities/MafAgentRuntime.Capabilities.RuntimeToolProviders.cs | $hash |
-| epo://tests/CanDoItAll.Tests.Unit/MafAgentRuntimeToolProviderCompositionTests.cs | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB03/source-assertions/provider-composition-source-assertions.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB03/transcripts/failing-first-old-process-specific-helper-presence.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB03/transcripts/provider-neutral-name-scan.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB03/transcripts/runtime-tool-provider-composition-tests.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB03/transcripts/anti-stub-audit.txt | $hash |
-| epo://codex/bundles/maf-processes-provider-hardening-followup-v1/proof/SB03/transcripts/solution-build.txt | $hash |

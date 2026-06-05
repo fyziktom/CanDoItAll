@@ -1,2 +1,0 @@
-Legacy process tool file deleted
-src\CanDoItAll.AgentFramework.Maf\Runtime\Tools\MafAgentRuntime.ProcessTools.cs does not exist.
