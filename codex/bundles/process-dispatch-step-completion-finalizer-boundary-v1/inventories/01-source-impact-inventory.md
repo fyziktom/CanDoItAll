@@ -2,7 +2,7 @@
 
 | Source | Current role | Planned treatment |
 | --- | --- | --- |
-| `ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs` | Main target, 1876 lines in prior scan | Gradually reduce through local helpers |
+| `ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs` | Main target, 2091 lines in SB01 baseline scan | Gradually reduce through local helpers |
 | `ProcessRunAutomationDispatchService.ArtifactValidation.cs` | Existing artifact rules extracted earlier | Consumer proof only |
 | `ProcessRunAutomationDispatchService.ArtifactProjection.cs` | Projection write coordinator already extracted | Consumer proof only |
 | `ProcessRunAutomationDispatchService.ToolValidation.cs` | Tool/recovery helper extraction completed | Consumer proof only |

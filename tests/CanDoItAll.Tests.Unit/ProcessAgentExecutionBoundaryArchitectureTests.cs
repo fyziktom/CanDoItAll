@@ -475,6 +475,205 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Step_completion_finalizer_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift()
+    {
+        var root = FindRepositoryRoot();
+        var inventory = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-step-completion-finalizer-boundary-v1",
+            "inventories",
+            "02-finalizer-method-classification-template.md");
+        var targetSolution = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-step-completion-finalizer-boundary-v1",
+            "architecture",
+            "01-target-solution.md");
+        var mafProject = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "CanDoItAll.AgentFramework.Maf.csproj");
+        var sourceText = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(Path.Combine(root, "src"), "*.*", SearchOption.AllDirectories)
+                .Where(path => Path.GetExtension(path) is ".cs" or ".csproj")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var proofRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-step-completion-finalizer-boundary-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet",
+            "android",
+            "iphone",
+            "responsive"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.Contains("2091 lines", ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-step-completion-finalizer-boundary-v1",
+            "inventories",
+            "01-source-impact-inventory.md"), StringComparison.Ordinal);
+        Assert.Contains("StorageBackedProcessArtifactContentReader", inventory, StringComparison.Ordinal);
+        Assert.Contains("PersistRuntimeInvariantAuditAsync", inventory, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepTransitionRequest", inventory, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs", targetSolution, StringComparison.Ordinal);
+        Assert.Contains("No Process Core extraction", targetSolution, StringComparison.Ordinal);
+        Assert.Contains("No public type promotion", targetSolution, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Processes", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Projects", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Workbench", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("interface IProcessDriverPack", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("class ProcessDriverPack", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public void Step_completion_finalizer_gate_a_SB04_INV_002_preserves_nested_type_surface_before_movement()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var source = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(dispatchDirectory, "ProcessRunAutomationDispatchService.StepCompletionFinalizer*.cs")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+
+        Assert.Contains("internal enum ProcessStepCompletionExecutorKind", source, StringComparison.Ordinal);
+        Assert.Contains("internal enum ProcessArtifactExpectationMode", source, StringComparison.Ordinal);
+        Assert.Contains("internal enum ProcessArtifactValidationStatus", source, StringComparison.Ordinal);
+        Assert.Contains("internal enum ProcessArtifactFailureOwnership", source, StringComparison.Ordinal);
+        Assert.Contains("internal enum ProcessArtifactProducerKind", source, StringComparison.Ordinal);
+        Assert.Contains("internal interface IProcessArtifactContentReader", source, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class WorkspaceProcessArtifactContentReader", source, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class StorageBackedProcessArtifactContentReader", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionFinalizerContext", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionFinalizerResult", source, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepTransitionArtifactValidationContext", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Step_completion_finalizer_gate_b_SB08_INV_001_extracts_types_and_readers_without_surface_or_stub_drift()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var mainSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs"));
+        var typeSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs"));
+        var readerSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.ArtifactContentReaders.cs"));
+        var extractedSource = string.Join(Environment.NewLine, typeSource, readerSource);
+
+        Assert.True(mainSource.Split(Environment.NewLine).Length < 2091);
+        Assert.DoesNotContain("internal enum ProcessStepCompletionExecutorKind", mainSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("internal interface IProcessArtifactContentReader", mainSource, StringComparison.Ordinal);
+        Assert.Contains("internal enum ProcessStepCompletionExecutorKind", typeSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessArtifactExpectationValidationResult", typeSource, StringComparison.Ordinal);
+        Assert.Contains("private sealed record ProcessStepCompletionFinalizerContext", typeSource, StringComparison.Ordinal);
+        Assert.Contains("internal interface IProcessArtifactContentReader", readerSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class WorkspaceProcessArtifactContentReader", readerSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class StorageBackedProcessArtifactContentReader", readerSource, StringComparison.Ordinal);
+        Assert.Contains("WorkspaceScopeDescriptor.NormalizeRelativePath", readerSource, StringComparison.Ordinal);
+        Assert.Contains("StorageJson.TryParseReference", readerSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("public enum ProcessStepCompletionExecutorKind", extractedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TODO", extractedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("NotImplementedException", extractedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", extractedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", extractedSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Step_completion_finalizer_gate_c_SB12_INV_001_extracts_validation_invariant_and_transition_helpers_with_field_parity()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var mainSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs"));
+        var validationSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs"));
+        var invariantSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs"));
+        var transitionSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.StepCompletionFinalizer.TransitionRequestBuilder.cs"));
+        var helperSource = string.Join(Environment.NewLine, validationSource, invariantSource, transitionSource);
+
+        Assert.Contains("ValidateRequiredCompletionArtifactsAsync", validationSource, StringComparison.Ordinal);
+        Assert.Contains("StorageBackedProcessArtifactContentReader", validationSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveWorkflowRunIdForStep", validationSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveSubprocessRunIdForStep", validationSource, StringComparison.Ordinal);
+        Assert.Contains("PersistRuntimeInvariantAuditAsync", invariantSource, StringComparison.Ordinal);
+        Assert.Contains("RuntimeInvariantViolationRecorded", invariantSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessConformanceSeverity.High or ProcessConformanceSeverity.Critical", mainSource, StringComparison.Ordinal);
+        Assert.Contains("BuildFinalizedStepTransitionRequest", transitionSource, StringComparison.Ordinal);
+        Assert.Contains("BuildStepTransitionArtifactValidationContext", transitionSource, StringComparison.Ordinal);
+        Assert.Contains("BuildFinalizedStepTransitionRequest(candidate, finalizerResult)", mainSource, StringComparison.Ordinal);
+
+        var requiredTransitionFields = new[]
+        {
+            "ArtifactValidationExecutorKind",
+            "ArtifactValidationExecutionRunId",
+            "ArtifactValidationWorkflowRunId",
+            "ArtifactValidationSubprocessRunId",
+            "ArtifactValidationRecoveryExecutionRunId",
+            "ArtifactValidationRecoveredForExecutionRunId"
+        };
+
+        foreach (var field in requiredTransitionFields)
+        {
+            Assert.Contains(field, transitionSource, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("private async Task<IReadOnlyList<ProcessArtifactExpectationValidationResult>> ValidateRequiredCompletionArtifactsAsync", mainSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private async Task<IReadOnlyList<RuntimeInvariantViolation>> PersistRuntimeInvariantAuditAsync", mainSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static void ApplyArtifactValidationContext", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Artifact_validation_matcher_core_uses_validation_snapshot_expectations()
     {
         var source = ReadRepositoryFile(

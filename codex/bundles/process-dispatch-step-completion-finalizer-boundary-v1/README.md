@@ -36,31 +36,29 @@ By the end of this bundle:
 
 ## Recommended Execution Order
 
-1. `subbundles/01-entry-audit-and-current-boundary-smoke`
-2. `subbundles/02-step-finalizer-source-inventory`
-3. `subbundles/03-finalizer-boundary-design-and-cutline`
-4. `subbundles/04-refactor-gate-a-architecture-guardrails`
-5. `subbundles/05-finalizer-type-snapshot-extraction`
-6. `subbundles/06-artifact-content-reader-extraction`
-7. `subbundles/07-validation-context-and-result-builder`
-8. `subbundles/08-refactor-gate-b-type-reader-parity`
-9. `subbundles/09-artifact-validation-orchestration-helper`
-10. `subbundles/10-runtime-invariant-audit-helper`
-11. `subbundles/11-step-transition-request-builder`
-12. `subbundles/12-refactor-gate-c-finalizer-parity`
-13. `subbundles/13-driver-readiness-finalizer-map`
-14. `subbundles/14-line-count-and-hotspot-rebalance`
-15. `subbundles/15-runtime-smoke-and-large-screen-policy-check`
-16. `subbundles/16-final-red-team-and-next-cutline`
+1. `subbundles/01-01-entry-audit-and-current-boundary-smoke`
+2. `subbundles/02-02-step-finalizer-source-inventory`
+3. `subbundles/03-03-finalizer-boundary-design-and-cutline`
+4. `subbundles/04-04-refactor-gate-a-architecture-guardrails`
+5. `subbundles/05-05-finalizer-type-snapshot-extraction`
+6. `subbundles/06-06-artifact-content-reader-extraction`
+7. `subbundles/07-07-validation-context-and-result-builder`
+8. `subbundles/08-08-refactor-gate-b-type-reader-parity`
+9. `subbundles/09-09-artifact-validation-orchestration-helper`
+10. `subbundles/10-10-runtime-invariant-audit-helper`
+11. `subbundles/11-11-step-transition-request-builder`
+12. `subbundles/12-12-refactor-gate-c-finalizer-parity`
+13. `subbundles/13-13-driver-readiness-finalizer-map`
+14. `subbundles/14-14-line-count-and-hotspot-rebalance`
+15. `subbundles/15-15-runtime-smoke-and-large-screen-policy-check`
+16. `subbundles/16-16-final-red-team-and-next-cutline`
 
-## Validation Summary Template
+## Validation Summary
 
-Codex must fill this after execution:
-
-- Bundle preparation status:
-- Execution status:
-- Subbundle gate review:
-- Final closure gate:
-- Browser validation analytics:
-- Final line count for `StepCompletionFinalizer.cs`:
-- Next safe dispatcher seam:
+- Bundle preparation status: `Completed`
+- Execution status: `Completed`
+- Subbundle gate review: `Completed`
+- Final closure gate: `Completed`
+- Browser validation analytics: `N/A - runtime/service refactor only; no UI files changed`
+- Final line count for `StepCompletionFinalizer.cs`: `1433`
+- Next safe dispatcher seam: documentation-only driver readiness map in `inventories/03-driver-readiness-finalizer-map.md`; no Process Core or production driver API was introduced.

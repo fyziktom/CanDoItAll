@@ -1,0 +1,8 @@
+Command: SB01 source scans: line count, no core/driver projects, no MAF dependency broadening, no prohibited viewport proof paths
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-05T00:39:11.2868703Z
+SB01-BASELINE-LINECOUNT 2091 src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+SB01-NO-CORE-PROJECT-SCAN
+SB01-MAF-PROJECT-REFERENCES
+SB01-PROHIBITED-VIEWPORT-PROOF-PATHS
+ExitCode: 0

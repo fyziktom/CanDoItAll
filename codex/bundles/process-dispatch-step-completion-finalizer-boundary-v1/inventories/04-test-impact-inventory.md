@@ -3,7 +3,12 @@
 Expected affected slices:
 
 - `ProcessAgentExecutionBoundaryArchitectureTests`
-- `ProcessRunAutomationDispatchServiceTests` finalizer/artifact validation slices
+- `ProcessRunAutomationDispatchServiceTests` finalizer/artifact validation slices:
+  - `ArtifactContractValidation_*`
+  - `ProcessCompletionArtifactValidator_*`
+  - `ProcessStepRunBlockState_*`
+  - `ArtifactDispositionRouter_*`
+  - `SatisfiedArtifactDispositionCompletion_recovers_failed_writeback_with_explicit_repair_branch`
 - artifact validation/projection regression filters
 - manager artifact recovery tests
 - runtime invariant tests

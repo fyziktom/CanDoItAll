@@ -16,13 +16,14 @@ The target is a module-local finalizer boundary, not Process Core.
 
 Supporting responsibilities should move into small module-local files:
 
-- `ProcessStepCompletionFinalizerTypes.cs`
-- `ProcessArtifactContentReaders.cs`
-- `ProcessStepCompletionValidationContextBuilder.cs`
-- `ProcessStepCompletionValidationOrchestrator.cs`
-- `ProcessRuntimeInvariantAuditRules.cs`
-- `ProcessStepTransitionRequestBuilder.cs`
+- `ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs`
+- `ProcessRunAutomationDispatchService.StepCompletionFinalizer.ArtifactContentReaders.cs`
+- `ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs`
+- `ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs`
+- `ProcessRunAutomationDispatchService.StepCompletionFinalizer.TransitionRequestBuilder.cs`
 - `ProcessFinalizerDriverReadinessMap.md` under bundle architecture/inventories, documentation-only.
+
+The extracted source files remain `internal` members of the existing `ProcessRunAutomationDispatchService` partial. This preserves the current nested type names used by tests and runtime callers while reducing the orchestration file.
 
 ## Non-goals
 
@@ -30,3 +31,4 @@ Supporting responsibilities should move into small module-local files:
 - No driver-pack implementation.
 - No public contracts or API exposure.
 - No migration of EF or storage implementation out of the module.
+- No public type promotion for finalizer vocabulary.

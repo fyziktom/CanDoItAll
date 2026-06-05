@@ -1,0 +1,25 @@
+Invariant: SB16-INV-001
+Command: final source red-team scan for helper presence, line rebalance, anti-stub, transition field parity, validation/runtime helper content, and boundary drift
+Started: 2026-06-04T21:03:27.4793214-04:00
+Main finalizer line count: 1433
+Helper line counts:
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs: 139
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ArtifactContentReaders.cs: 230
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs: 129
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs: 149
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.TransitionRequestBuilder.cs: 39
+Missing helper files:
+- none
+Anti-stub hits in production finalizer sources:
+- none
+Missing transition request fields:
+- none
+Missing validation helper concepts:
+- none
+Missing runtime invariant helper concepts:
+- none
+Core production references:
+- none
+Driver API production broadening hits:
+- none
+ExitCode: 0

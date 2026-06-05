@@ -7,7 +7,7 @@ Run runtime smoke, build, and proof-path scans; browser proof remains N/A.
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Covered Inputs
 
@@ -34,12 +34,10 @@ Prepared.
 
 ## Dependency Impact
 
-Downstream subbundles must not proceed if this subbundle changes behavior without parity proof.
-
+- Downstream subbundles must not proceed if this subbundle changes behavior without parity proof.
 ## Validation Depth
 
-Use source scans, focused unit/integration tests, and build. Compile-only proof is not sufficient for production movement.
-
+- Use source scans, focused unit/integration tests, and build. Compile-only proof is not sufficient for production movement.
 ## Scope Exceptions
 
 Process Core and production driver APIs are explicitly out of scope.
@@ -55,8 +53,7 @@ Process Core and production driver APIs are explicitly out of scope.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If UI unexpectedly changes, stop and record a scope exception. Large desktop/PC proof only after explicit justification.
-
+- N/A expected. Runtime/service refactor only. If UI unexpectedly changes, stop and record a scope exception. Large desktop/PC proof only after explicit justification.
 ## Suggested Agent Prompt
 
 Execute this subbundle only. Preserve all prior behavior, record proof, update execution report, and stop at the progression gate.
@@ -80,13 +77,13 @@ Execute this subbundle only. Preserve all prior behavior, record proof, update e
 
 ## Acceptance Checklist
 
-- [ ] Scope stayed within SB15.
-- [ ] No Process Core or driver production API was added.
-- [ ] Behavior parity was proven.
-- [ ] Source scans are recorded.
-- [ ] Tests/build are recorded.
-- [ ] No prohibited viewport proof artifacts exist.
-- [ ] Execution report was updated.
+- [x] Scope stayed within SB15.
+- [x] No Process Core or driver production API was added.
+- [x] Behavior parity was proven.
+- [x] Source scans are recorded.
+- [x] Tests/build are recorded.
+- [x] No prohibited viewport proof artifacts exist.
+- [x] Execution report was updated.
 
 ## Proof Required
 
@@ -98,4 +95,4 @@ Execute this subbundle only. Preserve all prior behavior, record proof, update e
 
 ## Progression Gate
 
-Downstream work may continue only after acceptance checklist is complete and no scope exception is open.
+- Downstream work may continue only after acceptance checklist is complete and no scope exception is open.

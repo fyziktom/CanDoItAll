@@ -1,0 +1,8 @@
+Invariant: SB10-INV-001
+Command: Select-String -Pattern 'throw\s+new\s+NotImplementedException|throw\s+new\s+Exception\(|//\s*TODO|/\*\s*TODO|\bTODO:\b' over scoped SB10 targets
+Started: 2026-06-04T21:06:04.1931856-04:00
+Targets:
+- repo://src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs
+Anti-stub hits:
+- none
+ExitCode: 0
