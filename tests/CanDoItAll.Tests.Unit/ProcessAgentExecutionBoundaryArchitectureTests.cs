@@ -323,7 +323,11 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "ProcessCriticalToolFailureRules.cs",
             "ProcessCompletionBlockerRules.cs",
             "ProcessCompletionDecisionRules.cs",
-            "ProcessRecoveryRetryDecisionRules.cs"
+            "ProcessRecoveryRetryDecisionRules.cs",
+            "ProcessAutomationSessionObservation.cs",
+            "ProcessAutomationExecutionLogObservation.cs",
+            "ProcessAutomationObservationSnapshot.cs",
+            "ProcessDeclaredStepOutcomeRules.cs"
         };
         var helperSource = string.Join(
             Environment.NewLine,
@@ -340,6 +344,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("internal sealed record ProcessCompletionBlockerSummary", helperSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed record ProcessCompletionDecisionInput", helperSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed record ProcessRecoveryRetryFacts", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessAutomationSessionObservation", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessAutomationExecutionLogObservation", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessAutomationObservationSnapshot", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessDeclaredStepOutcomeRules", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);

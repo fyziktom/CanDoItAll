@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -24,12 +24,12 @@ Run focused parser tests and source scans.
 ## Exact Source References
 
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -40,11 +40,11 @@ Run focused parser tests and source scans.
 
 ## Dependency Impact
 
-This subbundle feeds later observation/outcome/completion boundaries. If it is wrong, downstream completion/retry proof is untrustworthy.
+- This subbundle feeds later observation/outcome/completion boundaries. If it is wrong, downstream completion/retry proof is untrustworthy.
 
 ## Validation Depth
 
-Deep gate validation: build, focused tests, source assertions, no-core/no-driver/no-UI/stub scans.
+- Deep gate validation: build, focused tests, source assertions, no-core/no-driver/no-UI/stub scans.
 
 ## Implementation Steps
 
@@ -71,12 +71,12 @@ Deep gate validation: build, focused tests, source assertions, no-core/no-driver
 
 ## Acceptance Checklist
 
-- [ ] Source change is scoped.
-- [ ] Existing behavior is preserved.
-- [ ] New helper is internal/module-local.
-- [ ] No forbidden API or project introduced.
-- [ ] Proof transcripts recorded.
-- [ ] Downstream continuation decision recorded.
+- [x] Source change is scoped.
+- [x] Existing behavior is preserved.
+- [x] New helper is internal/module-local.
+- [x] No forbidden API or project introduced.
+- [x] Proof transcripts recorded.
+- [x] Downstream continuation decision recorded.
 
 ## Proof Required
 
@@ -88,11 +88,11 @@ Deep gate validation: build, focused tests, source assertions, no-core/no-driver
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If any UI file changes, revert it unless explicitly justified; large desktop/PC proof only if unavoidable.
+- N/A expected. Runtime/service refactor only. If any UI file changes, revert it unless explicitly justified; large desktop/PC proof only if unavoidable.
 
 ## Progression Gate
 
-Critical refactor gate. Do not continue downstream until all proof passes.
+- Critical refactor gate. Do not continue downstream until all proof passes.
 
 ## Suggested Agent Prompt
 

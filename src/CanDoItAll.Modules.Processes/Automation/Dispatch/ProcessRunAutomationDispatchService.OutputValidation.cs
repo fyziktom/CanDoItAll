@@ -34,15 +34,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessStepRunStatus MapProcessStepOutcomeStatus(ProcessStepOutcomeStatus status)
     {
-        return status switch
-        {
-            ProcessStepOutcomeStatus.Completed => ProcessStepRunStatus.Completed,
-            ProcessStepOutcomeStatus.Blocked => ProcessStepRunStatus.Blocked,
-            ProcessStepOutcomeStatus.Failed => ProcessStepRunStatus.Failed,
-            ProcessStepOutcomeStatus.WaitingApproval => ProcessStepRunStatus.WaitingApproval,
-            ProcessStepOutcomeStatus.Refused => ProcessStepRunStatus.Refused,
-            _ => ProcessStepRunStatus.Failed
-        };
+        return ProcessDeclaredStepOutcomeRules.MapStatus(status);
     }
 
     private static AgentOutputValidationResult ValidateProcessStepOutcomeContext(

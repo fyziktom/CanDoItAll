@@ -141,8 +141,6 @@ internal sealed record ProjectStructureRequiredArtifactPath(
         string RelativePath,
         string ContentSignalText);
 
-    private sealed record SessionToolCall(string ToolName, string OutputFileName);
-
     private sealed record SessionToolResultText(string ToolName, string Text);
 
     private sealed record SessionFileContent(string Path, string Content);

@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -24,12 +24,12 @@ Ensure no-progress fingerprints keep old fields/order through adapter tests.
 ## Exact Source References
 
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -40,11 +40,11 @@ Ensure no-progress fingerprints keep old fields/order through adapter tests.
 
 ## Dependency Impact
 
-This subbundle feeds later observation/outcome/completion boundaries. If it is wrong, downstream completion/retry proof is untrustworthy.
+- This subbundle feeds later observation/outcome/completion boundaries. If it is wrong, downstream completion/retry proof is untrustworthy.
 
 ## Validation Depth
 
-Focused validation: build where relevant, targeted tests or source scans, anti-stub proof.
+- Focused validation: build where relevant, targeted tests or source scans, anti-stub proof.
 
 ## Implementation Steps
 
@@ -71,12 +71,12 @@ Focused validation: build where relevant, targeted tests or source scans, anti-s
 
 ## Acceptance Checklist
 
-- [ ] Source change is scoped.
-- [ ] Existing behavior is preserved.
-- [ ] New helper is internal/module-local.
-- [ ] No forbidden API or project introduced.
-- [ ] Proof transcripts recorded.
-- [ ] Downstream continuation decision recorded.
+- [x] Source change is scoped.
+- [x] Existing behavior is preserved.
+- [x] New helper is internal/module-local.
+- [x] No forbidden API or project introduced.
+- [x] Proof transcripts recorded.
+- [x] Downstream continuation decision recorded.
 
 ## Proof Required
 
@@ -88,11 +88,11 @@ Focused validation: build where relevant, targeted tests or source scans, anti-s
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If any UI file changes, revert it unless explicitly justified; large desktop/PC proof only if unavoidable.
+- N/A expected. Runtime/service refactor only. If any UI file changes, revert it unless explicitly justified; large desktop/PC proof only if unavoidable.
 
 ## Progression Gate
 
-Local closure gate. Downstream subbundle may continue only if focused proof passes.
+- Local closure gate. Downstream subbundle may continue only if focused proof passes.
 
 ## Suggested Agent Prompt
 

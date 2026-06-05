@@ -1,20 +1,26 @@
 # Assumptions And Risks
 
+## Working Assumptions
+
+- The current branch is maf-processes-refactor or an equivalent continuation branch carrying the previous dispatcher refactor work.
+- Existing dispatch behavior is the compatibility baseline; helper extraction must preserve wrapper entry points and observed outcomes.
+- Browser validation remains N/A unless source inspection shows an unexpected UI change.
+
 ## Critical Path Risks
 
-1. **Session JSON shape drift**  
+- **Session JSON shape drift**
    Existing code manually parses `stateBag -> InMemoryChatHistoryProvider -> messages`. A shallow extraction can change behavior by losing call/result pairing or tool-name normalization.
 
-2. **Declared outcome branch-order drift**  
+- **Declared outcome branch-order drift**
    Completion decisions are sensitive to declared status, selected branch outcome, repair branch recovery, terminal escalation, missing tools, and context validation errors.
 
-3. **No-progress retry fingerprint drift**  
+- **No-progress retry fingerprint drift**
    Changing evidence signals can create either retry loops or premature compression.
 
-4. **Hidden side effects in pure helpers**  
+- **Hidden side effects in pure helpers**
    New helpers must not write EF/storage, call execution clients, mutate agents, launch workflows, or transition steps.
 
-5. **Driver-readiness overreach**  
+- **Driver-readiness overreach**
    Driver vocabulary can be documented, but production driver contracts must wait until process runtime vocabulary stabilizes.
 
 ## Validation Risks

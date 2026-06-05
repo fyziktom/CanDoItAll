@@ -5,7 +5,6 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
-using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,8 +14,6 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Text.Json;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -663,18 +660,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         declaredOutcome = default;
         outcome = default!;
-        if (!TryReadProcessStepOutcome(responseText, out var parsedOutcome, out _))
+        if (!ProcessDeclaredStepOutcomeRules.TryResolve(responseText, out var parsedOutcome, out outcome))
         {
             return false;
         }
 
-        outcome = parsedOutcome;
         declaredOutcome = new DeclaredStepOutcome(
-            MapProcessStepOutcomeStatus(parsedOutcome.Status),
-            parsedOutcome.Reason.Trim(),
+            parsedOutcome.Status,
+            parsedOutcome.Reason,
             null,
-            parsedOutcome.BranchOutcomeKey.Trim(),
-            parsedOutcome.BranchOutcomeTitle.Trim());
+            parsedOutcome.BranchOutcomeKey,
+            parsedOutcome.BranchOutcomeTitle);
         return true;
     }
 
@@ -707,930 +703,154 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> missingRequiredTools,
         ProcessAutomationExecutionRunDetail detail)
     {
-        if (declaredOutcome.Status != ProcessStepRunStatus.Blocked ||
-            missingRequiredTools.Count == 0 ||
-            HasFailedReceiptForRequiredTool(detail, missingRequiredTools))
-        {
-            return false;
-        }
-
-        var normalizedText = CollapsePromptWhitespace($"{declaredOutcome.Reason} {ResolveOutputInspectionText(responseText)}");
-        if (string.IsNullOrWhiteSpace(normalizedText))
-        {
-            return false;
-        }
-
-        return missingRequiredTools.Any(toolName =>
-            normalizedText.Contains(toolName, StringComparison.OrdinalIgnoreCase)) ||
-               (normalizedText.Contains("tool", StringComparison.OrdinalIgnoreCase) &&
-                (normalizedText.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
-                 normalizedText.Contains("failure", StringComparison.OrdinalIgnoreCase) ||
-                 normalizedText.Contains("unavailable", StringComparison.OrdinalIgnoreCase) ||
-                 normalizedText.Contains("denied", StringComparison.OrdinalIgnoreCase)));
+        return ProcessDeclaredStepOutcomeRules.BlockedOutcomeClaimsRequiredToolFailureWithoutReceipt(
+            declaredOutcome.Status,
+            declaredOutcome.Reason,
+            ResolveOutputInspectionText(responseText),
+            missingRequiredTools,
+            detail.ToolReceipts);
     }
 
     private static bool HasFailedReceiptForRequiredTool(
         ProcessAutomationExecutionRunDetail detail,
         IReadOnlyList<string> requiredToolNames)
     {
-        if (requiredToolNames.Count == 0)
-        {
-            return false;
-        }
-
-        var required = requiredToolNames
-            .Select(NormalizeToolToken)
-            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
-            .ToHashSet(StringComparer.Ordinal);
-
-        return detail.ToolReceipts.Any(receipt =>
-            required.Contains(NormalizeToolToken(receipt.ToolName)) &&
-            IsFailedToolReceipt(receipt));
+        return ProcessDeclaredStepOutcomeRules.HasFailedReceiptForRequiredTool(detail.ToolReceipts, requiredToolNames);
     }
 
     private static string BuildDeclaredStepOutcomeReason(string runTitle, string stepTitle, DeclaredStepOutcome declaredOutcome)
     {
-        var trimmedReason = declaredOutcome.Reason.Trim();
-        return declaredOutcome.Status switch
-        {
-            ProcessStepRunStatus.Completed => string.IsNullOrWhiteSpace(trimmedReason)
-                ? $"AgentFramework run '{runTitle}' completed step '{stepTitle}' with an explicit governed outcome."
-                : $"AgentFramework run '{runTitle}' completed step '{stepTitle}': {trimmedReason}",
-            ProcessStepRunStatus.Blocked => string.IsNullOrWhiteSpace(trimmedReason)
-                ? $"AgentFramework run '{runTitle}' blocked step '{stepTitle}' pending remediation."
-                : $"AgentFramework run '{runTitle}' blocked step '{stepTitle}': {trimmedReason}",
-            ProcessStepRunStatus.WaitingApproval => string.IsNullOrWhiteSpace(trimmedReason)
-                ? $"AgentFramework run '{runTitle}' is waiting on approval before '{stepTitle}' can continue."
-                : $"AgentFramework run '{runTitle}' is waiting on approval before '{stepTitle}' can continue: {trimmedReason}",
-            ProcessStepRunStatus.Refused => string.IsNullOrWhiteSpace(trimmedReason)
-                ? $"AgentFramework run '{runTitle}' refused step '{stepTitle}'."
-                : $"AgentFramework run '{runTitle}' refused step '{stepTitle}': {trimmedReason}",
-            _ => string.IsNullOrWhiteSpace(trimmedReason)
-                ? $"AgentFramework run '{runTitle}' failed step '{stepTitle}'."
-                : $"AgentFramework run '{runTitle}' failed step '{stepTitle}': {trimmedReason}"
-        };
+        return ProcessDeclaredStepOutcomeRules.BuildReason(
+            runTitle,
+            stepTitle,
+            declaredOutcome.Status,
+            declaredOutcome.Reason);
+    }
+
+    private static ProcessAutomationObservationSnapshot CreateAutomationObservationSnapshot(ProcessAutomationExecutionRunDetail detail)
+    {
+        return ProcessAutomationObservationSnapshot.Create(detail, CanTrustCompletedInternalToolLogs(detail));
+    }
+
+    private static bool CanTrustCompletedInternalToolLogs(ProcessAutomationExecutionRunDetail detail)
+    {
+        return detail.Run.State == ProcessAutomationExecutionState.Completed &&
+               detail.Run.Outcome == ProcessAutomationRunOutcome.Succeeded &&
+               HasCompletedDeclaredStepOutcome(detail);
     }
 
     private static ISet<string> ResolveSuccessfulToolNames(ProcessAutomationExecutionRunDetail detail)
     {
-        var successfulToolNames = ProcessAutomationReceiptObservationHelper.ResolveSuccessfulToolNames(detail);
-
-        foreach (var toolName in ResolveSuccessfulSessionToolNames(detail.Run.SerializedSessionStateJson))
-        {
-            successfulToolNames.Add(toolName);
-        }
-
-        foreach (var toolName in ResolveSuccessfulExecutionLogToolNames(detail))
-        {
-            successfulToolNames.Add(toolName);
-        }
-
-        return successfulToolNames;
+        return CreateAutomationObservationSnapshot(detail).SuccessfulToolNames.ToHashSet(StringComparer.Ordinal);
     }
 
     private static IReadOnlyList<string> ResolveSuccessfulExecutionLogToolNames(ProcessAutomationExecutionRunDetail detail)
     {
-        var executionLog = detail.ExecutionLog;
-        if (executionLog.Count == 0)
-        {
-            return [];
-        }
-
-        var canTrustCompletedInternalToolLogs =
-            detail.Run.State == ProcessAutomationExecutionState.Completed &&
-            detail.Run.Outcome == ProcessAutomationRunOutcome.Succeeded &&
-            HasCompletedDeclaredStepOutcome(detail);
-        var toolNames = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var entry in executionLog)
-        {
-            if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
-                entry.State == ProcessAutomationExecutionState.Failed ||
-                !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
-                (!IsProviderNativeExecutionLogToolName(toolName) &&
-                 !(canTrustCompletedInternalToolLogs && IsInternalMafExecutionLogToolName(toolName))))
-            {
-                continue;
-            }
-
-            toolNames.Add(toolName);
-        }
-
-        return toolNames.ToList();
+        return ProcessAutomationExecutionLogObservation
+            .Create(detail.ExecutionLog, CanTrustCompletedInternalToolLogs(detail))
+            .SuccessfulToolNames
+            .ToList();
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ProcessAutomationExecutionRunDetail detail)
     {
-        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var pair in ResolveSuccessfulSessionToolOutputFiles(detail.Run.SerializedSessionStateJson ?? string.Empty))
-        {
-            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
-        }
-
-        foreach (var pair in ResolveExecutionLogBrowserToolOutputFiles(detail.ExecutionLog))
-        {
-            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
-        }
-
-        foreach (var pair in ResolveBrowserEvidenceReferenceOutputFiles(detail.Run.ResultSummary))
-        {
-            AddBrowserOutputFiles(outputFilesByToolName, pair.Key, pair.Value);
-        }
-
-        return outputFilesByToolName.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<string>)pair.Value
-                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-                .ToList(),
-            StringComparer.Ordinal);
-    }
-
-    private static void AddBrowserOutputFiles(
-        IDictionary<string, HashSet<string>> outputFilesByToolName,
-        string toolName,
-        IEnumerable<string> outputFiles)
-    {
-        var normalizedToolName = NormalizeToolToken(toolName);
-        if (string.IsNullOrWhiteSpace(normalizedToolName) ||
-            !normalizedToolName.StartsWith("browser_", StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        if (!outputFilesByToolName.TryGetValue(normalizedToolName, out var files))
-        {
-            files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            outputFilesByToolName[normalizedToolName] = files;
-        }
-
-        foreach (var outputFile in outputFiles)
-        {
-            if (!string.IsNullOrWhiteSpace(outputFile))
-            {
-                files.Add(WorkspaceScopeDescriptor.NormalizeRelativePath(outputFile));
-            }
-        }
+        return CreateAutomationObservationSnapshot(detail).BrowserToolOutputFiles;
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveExecutionLogBrowserToolOutputFiles(IReadOnlyList<ProcessAutomationExecutionLogEntry> executionLog)
     {
-        if (executionLog.Count == 0)
-        {
-            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        }
-
-        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var entry in executionLog)
-        {
-            if (!string.Equals(entry.Phase, "Tool", StringComparison.OrdinalIgnoreCase) ||
-                entry.State == ProcessAutomationExecutionState.Failed ||
-                !TryResolveExecutionLogInvokedToolName(entry.Message, out var toolName) ||
-                !toolName.StartsWith("browser_", StringComparison.Ordinal) ||
-                !TryResolveExecutionLogFilenameArgument(entry.Message, out var outputFileName))
-            {
-                continue;
-            }
-
-            if (!outputFilesByToolName.TryGetValue(toolName, out var outputFiles))
-            {
-                outputFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                outputFilesByToolName[toolName] = outputFiles;
-            }
-
-            outputFiles.Add(WorkspaceScopeDescriptor.NormalizeRelativePath(outputFileName));
-        }
-
-        return outputFilesByToolName.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<string>)pair.Value
-                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-                .ToList(),
-            StringComparer.Ordinal);
+        return ProcessAutomationExecutionLogObservation.Create(executionLog, false).BrowserToolOutputFiles;
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveBrowserEvidenceReferenceOutputFiles(string? resultSummary)
     {
-        if (string.IsNullOrWhiteSpace(resultSummary))
-        {
-            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        }
-
-        var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-        foreach (var evidenceRef in ResolveBrowserEvidenceReferences(resultSummary))
-        {
-            var normalizedRef = WorkspaceScopeDescriptor.NormalizeRelativePath(evidenceRef);
-            if (!IsProviderNativeBrowserEvidenceReferencePath(normalizedRef))
-            {
-                continue;
-            }
-
-            var toolName = ResolveProviderNativeBrowserToolName(normalizedRef);
-            if (string.IsNullOrWhiteSpace(toolName))
-            {
-                continue;
-            }
-
-            if (!outputFilesByToolName.TryGetValue(toolName, out var outputFiles))
-            {
-                outputFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                outputFilesByToolName[toolName] = outputFiles;
-            }
-
-            outputFiles.Add(normalizedRef);
-        }
-
-        return outputFilesByToolName.ToDictionary(
-            pair => pair.Key,
-            pair => (IReadOnlyList<string>)pair.Value
-                .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-                .ToList(),
-            StringComparer.Ordinal);
+        return ProcessAutomationObservationSnapshot.ResolveBrowserEvidenceReferenceOutputFiles(resultSummary);
     }
 
     private static IReadOnlyList<string> ResolveBrowserEvidenceReferences(string resultSummary)
     {
-        var references = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        TryAddStructuredEvidenceReferences(resultSummary, references);
-
-        foreach (Match match in Regex.Matches(
-                     resultSummary,
-                     @"(?:\.playwright-mcp|artifacts[\\/](?:scopes[\\/][^\s`""',\]\)]+[\\/])?process-runs)[\\/][^\s`""',\]\)]+\.(?:png|jpe?g|yml|yaml|log|txt|json)",
-                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            references.Add(match.Value.Trim().TrimEnd('.', ',', ';', ':'));
-        }
-
-        return references.ToList();
-    }
-
-    private static void TryAddStructuredEvidenceReferences(
-        string resultSummary,
-        ISet<string> references)
-    {
-        try
-        {
-            using var document = JsonDocument.Parse(resultSummary);
-            if (!document.RootElement.TryGetProperty("evidenceRefs", out var evidenceRefs) ||
-                evidenceRefs.ValueKind != JsonValueKind.Array)
-            {
-                return;
-            }
-
-            foreach (var item in evidenceRefs.EnumerateArray())
-            {
-                if (item.ValueKind == JsonValueKind.String &&
-                    !string.IsNullOrWhiteSpace(item.GetString()))
-                {
-                    references.Add(item.GetString()!.Trim());
-                }
-            }
-        }
-        catch (JsonException)
-        {
-        }
+        return ProcessAutomationObservationSnapshot.ResolveBrowserEvidenceReferences(resultSummary);
     }
 
     private static bool TryResolveExecutionLogFilenameArgument(string message, out string fileName)
     {
-        fileName = string.Empty;
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return false;
-        }
-
-        const string marker = "filename=\"";
-        var start = message.IndexOf(marker, StringComparison.Ordinal);
-        if (start < 0)
-        {
-            return false;
-        }
-
-        start += marker.Length;
-        var end = message.IndexOf('"', start);
-        if (end <= start)
-        {
-            return false;
-        }
-
-        fileName = message[start..end].Trim();
-        return !string.IsNullOrWhiteSpace(fileName);
+        return ProcessAutomationExecutionLogObservation.TryResolveFilenameArgument(message, out fileName);
     }
 
     private static bool TryResolveExecutionLogInvokedToolName(string message, out string toolName)
     {
-        toolName = string.Empty;
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return false;
-        }
-
-        const string prefix = "Invoking tool '";
-        var start = message.IndexOf(prefix, StringComparison.Ordinal);
-        if (start < 0)
-        {
-            return false;
-        }
-
-        start += prefix.Length;
-        var end = message.IndexOf('\'', start);
-        if (end <= start)
-        {
-            return false;
-        }
-
-        toolName = NormalizeToolToken(message[start..end]);
-        return !string.IsNullOrWhiteSpace(toolName);
+        return ProcessAutomationExecutionLogObservation.TryResolveInvokedToolName(message, out toolName);
     }
 
     private static bool IsProviderNativeExecutionLogToolName(string toolName)
     {
-        return toolName.StartsWith("browser_", StringComparison.Ordinal);
+        return ProcessAutomationExecutionLogObservation.IsProviderNativeToolName(toolName);
     }
 
     private static bool IsInternalMafExecutionLogToolName(string toolName)
     {
-        return toolName.StartsWith("project_structure_", StringComparison.Ordinal) ||
-               toolName.StartsWith("process_", StringComparison.Ordinal) ||
-               toolName.StartsWith("image_generation_", StringComparison.Ordinal);
+        return ProcessAutomationExecutionLogObservation.IsInternalMafToolName(toolName);
     }
 
     private static IReadOnlyList<string> ResolveSuccessfulSessionToolNames(string? serializedSessionStateJson)
     {
-        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(serializedSessionStateJson);
-            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
-                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
-                !historyProvider.TryGetProperty("messages", out var messages) ||
-                messages.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-
-            var toolNamesByCallId = new Dictionary<string, string>(StringComparer.Ordinal);
-            var successfulToolNames = new HashSet<string>(StringComparer.Ordinal);
-
-            foreach (var message in messages.EnumerateArray())
-            {
-                if (!message.TryGetProperty("contents", out var contents) ||
-                    contents.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (var content in contents.EnumerateArray())
-                {
-                    if (!content.TryGetProperty("$type", out var typeElement))
-                    {
-                        continue;
-                    }
-
-                    var contentType = typeElement.GetString();
-                    if (string.Equals(contentType, "functionCall", StringComparison.Ordinal))
-                    {
-                        var callId = content.TryGetProperty("callId", out var callIdElement)
-                            ? callIdElement.GetString()
-                            : null;
-                        var toolName = content.TryGetProperty("name", out var nameElement)
-                            ? NormalizeToolToken(nameElement.GetString() ?? string.Empty)
-                            : string.Empty;
-                        if (!string.IsNullOrWhiteSpace(callId) && !string.IsNullOrWhiteSpace(toolName))
-                        {
-                            toolNamesByCallId[callId] = toolName;
-                        }
-
-                        continue;
-                    }
-
-                    if (!string.Equals(contentType, "functionResult", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
-                        ? resultCallIdElement.GetString()
-                        : null;
-                    if (string.IsNullOrWhiteSpace(resultCallId) ||
-                        !toolNamesByCallId.TryGetValue(resultCallId, out var recordedToolName) ||
-                        !content.TryGetProperty("result", out var resultElement) ||
-                        !IsSuccessfulSessionFunctionResult(resultElement))
-                    {
-                        continue;
-                    }
-
-                    successfulToolNames.Add(recordedToolName);
-                }
-            }
-
-            return successfulToolNames.ToList();
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
+        return ProcessAutomationSessionObservation
+            .Create(serializedSessionStateJson)
+            .SuccessfulToolNames
+            .ToList();
     }
 
     private static IReadOnlyList<SessionToolResultText> ResolveSuccessfulSessionToolResultTexts(string? serializedSessionStateJson)
     {
-        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(serializedSessionStateJson);
-            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
-                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
-                !historyProvider.TryGetProperty("messages", out var messages) ||
-                messages.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-
-            var toolNamesByCallId = new Dictionary<string, string>(StringComparer.Ordinal);
-            var resultTexts = new List<SessionToolResultText>();
-
-            foreach (var message in messages.EnumerateArray())
-            {
-                if (!message.TryGetProperty("contents", out var contents) ||
-                    contents.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (var content in contents.EnumerateArray())
-                {
-                    if (!content.TryGetProperty("$type", out var typeElement))
-                    {
-                        continue;
-                    }
-
-                    var contentType = typeElement.GetString();
-                    if (string.Equals(contentType, "functionCall", StringComparison.Ordinal))
-                    {
-                        var callId = content.TryGetProperty("callId", out var callIdElement)
-                            ? callIdElement.GetString()
-                            : null;
-                        var toolName = content.TryGetProperty("name", out var nameElement)
-                            ? NormalizeToolToken(nameElement.GetString() ?? string.Empty)
-                            : string.Empty;
-                        if (!string.IsNullOrWhiteSpace(callId) && !string.IsNullOrWhiteSpace(toolName))
-                        {
-                            toolNamesByCallId[callId] = toolName;
-                        }
-
-                        continue;
-                    }
-
-                    if (!string.Equals(contentType, "functionResult", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
-                        ? resultCallIdElement.GetString()
-                        : null;
-                    if (string.IsNullOrWhiteSpace(resultCallId) ||
-                        !toolNamesByCallId.TryGetValue(resultCallId, out var recordedToolName) ||
-                        !content.TryGetProperty("result", out var resultElement) ||
-                        !IsSuccessfulSessionFunctionResult(resultElement))
-                    {
-                        continue;
-                    }
-
-                    var resultText = ExtractSessionToolResultText(resultElement);
-                    if (!string.IsNullOrWhiteSpace(resultText))
-                    {
-                        resultTexts.Add(new SessionToolResultText(recordedToolName, resultText));
-                    }
-                }
-            }
-
-            return resultTexts;
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
-    }
-
-    private static string ExtractSessionToolResultText(JsonElement result)
-    {
-        var builder = new StringBuilder();
-        AppendSessionToolResultText(builder, result, 0);
-        return builder.ToString();
-    }
-
-    private static void AppendSessionToolResultText(StringBuilder builder, JsonElement element, int depth)
-    {
-        if (depth > 4)
-        {
-            return;
-        }
-
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.String:
-            {
-                AppendSessionToolResultTextPart(builder, element.GetString());
-                return;
-            }
-            case JsonValueKind.Number:
-            case JsonValueKind.True:
-            case JsonValueKind.False:
-            {
-                AppendSessionToolResultTextPart(builder, element.ToString());
-                return;
-            }
-            case JsonValueKind.Array:
-            {
-                foreach (var item in element.EnumerateArray())
-                {
-                    AppendSessionToolResultText(builder, item, depth + 1);
-                }
-
-                return;
-            }
-            case JsonValueKind.Object:
-            {
-                foreach (var property in element.EnumerateObject())
-                {
-                    if (property.Value.ValueKind == JsonValueKind.String &&
-                        IsDiagnosticSessionToolResultProperty(property.Name))
-                    {
-                        AppendSessionToolResultTextPart(builder, property.Value.GetString());
-                        continue;
-                    }
-
-                    if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
-                    {
-                        AppendSessionToolResultText(builder, property.Value, depth + 1);
-                    }
-                }
-
-                return;
-            }
-        }
-    }
-
-    private static bool IsDiagnosticSessionToolResultProperty(string propertyName)
-    {
-        return propertyName.Equals("text", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("content", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("message", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("summary", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("output", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("stdout", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("stderr", StringComparison.OrdinalIgnoreCase) ||
-               propertyName.Equals("exitSummary", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static void AppendSessionToolResultTextPart(StringBuilder builder, string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return;
-        }
-
-        if (builder.Length > 0)
-        {
-            builder.AppendLine();
-        }
-
-        builder.Append(value.Trim());
+        return ProcessAutomationSessionObservation
+            .Create(serializedSessionStateJson)
+            .SuccessfulToolResultTexts
+            .Select(item => new SessionToolResultText(item.ToolName, item.Text))
+            .ToList();
     }
 
     private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson)
     {
-        return ResolveSuccessfulSessionFileContents(
-            serializedSessionStateJson,
-            static toolName => string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
-                               string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal),
-            static callContent =>
-            {
-                if (!callContent.TryGetProperty("arguments", out var arguments) ||
-                    arguments.ValueKind != JsonValueKind.Object)
-                {
-                    return null;
-                }
-
-                var path = TryResolveStringProperty(arguments, "path");
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    return null;
-                }
-
-                var content = TryResolveStringProperty(arguments, "content") ?? string.Empty;
-                return new SessionFileContent(path.Trim(), content);
-            },
-            static _ => null);
+        return ProcessAutomationSessionObservation
+            .Create(serializedSessionStateJson)
+            .FileWrites
+            .Select(item => new SessionFileContent(item.Path, item.Content))
+            .ToList();
     }
 
     private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileReads(string? serializedSessionStateJson)
     {
-        return ResolveSuccessfulSessionFileContents(
-            serializedSessionStateJson,
-            static toolName => string.Equals(toolName, "workspace_read_file", StringComparison.Ordinal),
-            static callContent =>
-            {
-                if (!callContent.TryGetProperty("arguments", out var arguments) ||
-                    arguments.ValueKind != JsonValueKind.Object)
-                {
-                    return null;
-                }
-
-                var path = TryResolveStringProperty(arguments, "path");
-                return string.IsNullOrWhiteSpace(path)
-                    ? null
-                    : new SessionFileContent(path.Trim(), string.Empty);
-            },
-            static resultContent =>
-            {
-                var path = TryResolveStringProperty(resultContent, "path");
-                if (string.IsNullOrWhiteSpace(path))
-                {
-                    return null;
-                }
-
-                var content = TryResolveStringProperty(resultContent, "content") ?? string.Empty;
-                return new SessionFileContent(path.Trim(), content);
-            });
+        return ProcessAutomationSessionObservation
+            .Create(serializedSessionStateJson)
+            .FileReads
+            .Select(item => new SessionFileContent(item.Path, item.Content))
+            .ToList();
     }
 
     private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionPathStats(string? serializedSessionStateJson)
     {
-        return ResolveSuccessfulSessionFileContents(
-            serializedSessionStateJson,
-            static toolName => string.Equals(toolName, "workspace_stat_path", StringComparison.Ordinal),
-            static callContent =>
-            {
-                if (!callContent.TryGetProperty("arguments", out var arguments) ||
-                    arguments.ValueKind != JsonValueKind.Object)
-                {
-                    return null;
-                }
-
-                var path = TryResolveStringProperty(arguments, "path");
-                return string.IsNullOrWhiteSpace(path)
-                    ? null
-                    : new SessionFileContent(path.Trim(), string.Empty);
-            },
-            static resultContent =>
-            {
-                var path = TryResolveStringProperty(resultContent, "path");
-                return string.IsNullOrWhiteSpace(path)
-                    ? null
-                    : new SessionFileContent(path.Trim(), string.Empty);
-            });
-    }
-
-    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileContents(
-        string? serializedSessionStateJson,
-        Func<string, bool> isTargetTool,
-        Func<JsonElement, SessionFileContent?> resolveCallContent,
-        Func<JsonElement, SessionFileContent?> resolveResultContent)
-    {
-        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
-        {
-            return [];
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(serializedSessionStateJson);
-            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
-                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
-                !historyProvider.TryGetProperty("messages", out var messages) ||
-                messages.ValueKind != JsonValueKind.Array)
-            {
-                return [];
-            }
-
-            var callsById = new Dictionary<string, SessionFileContent>(StringComparer.Ordinal);
-            var successfulContents = new List<SessionFileContent>();
-
-            foreach (var message in messages.EnumerateArray())
-            {
-                if (!message.TryGetProperty("contents", out var contents) ||
-                    contents.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (var content in contents.EnumerateArray())
-                {
-                    if (!content.TryGetProperty("$type", out var typeElement))
-                    {
-                        continue;
-                    }
-
-                    var contentType = typeElement.GetString();
-                    if (string.Equals(contentType, "functionCall", StringComparison.Ordinal))
-                    {
-                        var callId = content.TryGetProperty("callId", out var callIdElement)
-                            ? callIdElement.GetString()
-                            : null;
-                        var toolName = content.TryGetProperty("name", out var nameElement)
-                            ? NormalizeToolToken(nameElement.GetString() ?? string.Empty)
-                            : string.Empty;
-                        if (string.IsNullOrWhiteSpace(callId) ||
-                            string.IsNullOrWhiteSpace(toolName) ||
-                            !isTargetTool(toolName))
-                        {
-                            continue;
-                        }
-
-                        var fileContent = resolveCallContent(content);
-                        if (fileContent is not null)
-                        {
-                            callsById[callId] = fileContent;
-                        }
-
-                        continue;
-                    }
-
-                    if (!string.Equals(contentType, "functionResult", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
-                        ? resultCallIdElement.GetString()
-                        : null;
-                    if (string.IsNullOrWhiteSpace(resultCallId) ||
-                        !callsById.TryGetValue(resultCallId, out var callFileContent) ||
-                        !content.TryGetProperty("result", out var resultElement) ||
-                        !IsSuccessfulSessionFunctionResult(resultElement))
-                    {
-                        continue;
-                    }
-
-                    var resultFileContent = resolveResultContent(resultElement);
-                    successfulContents.Add(resultFileContent ?? callFileContent);
-                }
-            }
-
-            return successfulContents;
-        }
-        catch (JsonException)
-        {
-            return [];
-        }
+        return ProcessAutomationSessionObservation
+            .Create(serializedSessionStateJson)
+            .PathStats
+            .Select(item => new SessionFileContent(item.Path, item.Content))
+            .ToList();
     }
 
     private static string? ResolveLatestAssistantResponseText(string? serializedSessionStateJson)
     {
-        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(serializedSessionStateJson);
-            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
-                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
-                !historyProvider.TryGetProperty("messages", out var messages) ||
-                messages.ValueKind != JsonValueKind.Array)
-            {
-                return null;
-            }
-
-            string? latestAssistantText = null;
-
-            foreach (var message in messages.EnumerateArray())
-            {
-                if (!message.TryGetProperty("role", out var roleElement) ||
-                    !string.Equals(roleElement.GetString(), "assistant", StringComparison.OrdinalIgnoreCase) ||
-                    !message.TryGetProperty("contents", out var contents) ||
-                    contents.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                var assistantParts = new List<string>();
-                foreach (var content in contents.EnumerateArray())
-                {
-                    if (!content.TryGetProperty("$type", out var typeElement) ||
-                        !string.Equals(typeElement.GetString(), "text", StringComparison.OrdinalIgnoreCase) ||
-                        !content.TryGetProperty("text", out var textElement))
-                    {
-                        continue;
-                    }
-
-                    var text = textElement.GetString();
-                    if (!string.IsNullOrWhiteSpace(text))
-                    {
-                        assistantParts.Add(text.Trim());
-                    }
-                }
-
-                if (assistantParts.Count > 0)
-                {
-                    latestAssistantText = string.Join(Environment.NewLine, assistantParts);
-                }
-            }
-
-            return latestAssistantText;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return ProcessAutomationSessionObservation.Create(serializedSessionStateJson).LatestAssistantResponseText;
     }
 
     private static string? ResolveLatestAssistantErrorSummary(string? serializedSessionStateJson)
     {
-        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
-        {
-            return null;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(serializedSessionStateJson);
-            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
-                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
-                !historyProvider.TryGetProperty("messages", out var messages) ||
-                messages.ValueKind != JsonValueKind.Array)
-            {
-                return null;
-            }
-
-            string? latestAssistantError = null;
-            foreach (var message in messages.EnumerateArray())
-            {
-                if (!message.TryGetProperty("role", out var roleElement) ||
-                    !string.Equals(roleElement.GetString(), "assistant", StringComparison.OrdinalIgnoreCase) ||
-                    !message.TryGetProperty("contents", out var contents) ||
-                    contents.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (var content in contents.EnumerateArray())
-                {
-                    if (!TryResolveAssistantErrorSummary(content, out var assistantError))
-                    {
-                        continue;
-                    }
-
-                    latestAssistantError = assistantError;
-                }
-            }
-
-            return latestAssistantError;
-        }
-        catch (JsonException)
-        {
-            return null;
-        }
+        return ProcessAutomationSessionObservation.Create(serializedSessionStateJson).LatestAssistantErrorSummary;
     }
 
     private static bool TryResolveAssistantErrorSummary(
         JsonElement content,
         out string assistantError)
     {
-        assistantError = string.Empty;
-        var hasErrorCode = content.TryGetProperty("errorCode", out var errorCodeElement) &&
-            errorCodeElement.ValueKind == JsonValueKind.String &&
-            !string.IsNullOrWhiteSpace(errorCodeElement.GetString());
-        var contentType = content.TryGetProperty("$type", out var typeElement)
-            ? typeElement.GetString()
-            : string.Empty;
-        if (!hasErrorCode &&
-            !string.Equals(contentType, "error", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var errorCode = hasErrorCode
-            ? errorCodeElement.GetString()!.Trim()
-            : string.Empty;
-        var message = TryResolveStringProperty(content, "message")
-            ?? TryResolveStringProperty(content, "errorMessage")
-            ?? TryResolveStringProperty(content, "text")
-            ?? TryResolveStringProperty(content, "content")
-            ?? string.Empty;
-        assistantError = string.IsNullOrWhiteSpace(errorCode)
-            ? message.Trim()
-            : string.IsNullOrWhiteSpace(message)
-                ? errorCode
-                : $"{errorCode}: {message.Trim()}";
-        return !string.IsNullOrWhiteSpace(assistantError);
-    }
-
-    private static string? TryResolveStringProperty(JsonElement element, string propertyName)
-    {
-        return element.TryGetProperty(propertyName, out var propertyValue) &&
-               propertyValue.ValueKind == JsonValueKind.String
-            ? propertyValue.GetString()
-            : null;
+        return ProcessAutomationSessionObservation.TryResolveAssistantErrorSummary(content, out assistantError);
     }
 
     private static bool TryMapRecoverableProviderFailureSummary(
@@ -1652,179 +872,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulSessionToolOutputFiles(string serializedSessionStateJson)
     {
-        if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
-        {
-            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(serializedSessionStateJson);
-            if (!document.RootElement.TryGetProperty("stateBag", out var stateBag) ||
-                !stateBag.TryGetProperty("InMemoryChatHistoryProvider", out var historyProvider) ||
-                !historyProvider.TryGetProperty("messages", out var messages) ||
-                messages.ValueKind != JsonValueKind.Array)
-            {
-                return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-            }
-
-            var callsById = new Dictionary<string, SessionToolCall>(StringComparer.Ordinal);
-            var outputFilesByToolName = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
-
-            foreach (var message in messages.EnumerateArray())
-            {
-                if (!message.TryGetProperty("contents", out var contents) ||
-                    contents.ValueKind != JsonValueKind.Array)
-                {
-                    continue;
-                }
-
-                foreach (var content in contents.EnumerateArray())
-                {
-                    if (!content.TryGetProperty("$type", out var typeElement))
-                    {
-                        continue;
-                    }
-
-                    var contentType = typeElement.GetString();
-                    if (string.Equals(contentType, "functionCall", StringComparison.Ordinal))
-                    {
-                        var callId = content.TryGetProperty("callId", out var callIdElement)
-                            ? callIdElement.GetString()
-                            : null;
-                        var toolName = content.TryGetProperty("name", out var nameElement)
-                            ? NormalizeToolToken(nameElement.GetString() ?? string.Empty)
-                            : string.Empty;
-                        var outputFileName = TryResolveSessionToolOutputFileName(content);
-                        if (!string.IsNullOrWhiteSpace(callId) &&
-                            !string.IsNullOrWhiteSpace(toolName) &&
-                            !string.IsNullOrWhiteSpace(outputFileName))
-                        {
-                            callsById[callId] = new SessionToolCall(toolName, outputFileName);
-                        }
-
-                        continue;
-                    }
-
-                    if (!string.Equals(contentType, "functionResult", StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-
-                    var resultCallId = content.TryGetProperty("callId", out var resultCallIdElement)
-                        ? resultCallIdElement.GetString()
-                        : null;
-                    if (string.IsNullOrWhiteSpace(resultCallId) ||
-                        !callsById.TryGetValue(resultCallId, out var call) ||
-                        !content.TryGetProperty("result", out var resultElement) ||
-                        !IsSuccessfulSessionFunctionResult(resultElement))
-                    {
-                        continue;
-                    }
-
-                    if (!outputFilesByToolName.TryGetValue(call.ToolName, out var outputFiles))
-                    {
-                        outputFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                        outputFilesByToolName[call.ToolName] = outputFiles;
-                    }
-
-                    outputFiles.Add(WorkspaceScopeDescriptor.NormalizeRelativePath(call.OutputFileName));
-                }
-            }
-
-            return outputFilesByToolName.ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<string>)pair.Value
-                    .OrderBy(item => item, StringComparer.OrdinalIgnoreCase)
-                    .ToList(),
-                StringComparer.Ordinal);
-        }
-        catch (JsonException)
-        {
-            return new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-        }
+        return ProcessAutomationSessionObservation.Create(serializedSessionStateJson).BrowserToolOutputFiles;
     }
 
     private static bool IsSuccessfulSessionFunctionResult(JsonElement result)
     {
-        switch (result.ValueKind)
-        {
-            case JsonValueKind.Null:
-            case JsonValueKind.Undefined:
-            {
-                return false;
-            }
-            case JsonValueKind.False:
-            {
-                return false;
-            }
-            case JsonValueKind.True:
-            case JsonValueKind.Number:
-            {
-                return true;
-            }
-            case JsonValueKind.String:
-            {
-                var text = result.GetString();
-                return !string.IsNullOrWhiteSpace(text) &&
-                       !text.TrimStart().StartsWith("Error", StringComparison.OrdinalIgnoreCase);
-            }
-            case JsonValueKind.Array:
-            {
-                return result.GetArrayLength() > 0;
-            }
-            case JsonValueKind.Object:
-            {
-                if (result.TryGetProperty("succeeded", out var succeededElement))
-                {
-                    return succeededElement.ValueKind switch
-                    {
-                        JsonValueKind.True => true,
-                        JsonValueKind.False => false,
-                        JsonValueKind.String when bool.TryParse(succeededElement.GetString(), out var succeeded) => succeeded,
-                        _ => false
-                    };
-                }
-
-                if (result.TryGetProperty("receipt", out var receiptElement) &&
-                    receiptElement.ValueKind == JsonValueKind.Object &&
-                    receiptElement.TryGetProperty("outcome", out var outcomeElement))
-                {
-                    var outcome = outcomeElement.GetString();
-                    return !string.IsNullOrWhiteSpace(outcome) &&
-                           !outcome.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) &&
-                           !outcome.StartsWith("Denied", StringComparison.OrdinalIgnoreCase) &&
-                           !outcome.StartsWith("TimedOut", StringComparison.OrdinalIgnoreCase);
-                }
-
-                if (result.TryGetProperty("$type", out _))
-                {
-                    return true;
-                }
-
-                return result.EnumerateObject().Any();
-            }
-            default:
-            {
-                return false;
-            }
-        }
+        return ProcessAutomationSessionObservation.IsSuccessfulFunctionResult(result);
     }
 
     private static string? TryResolveSessionToolOutputFileName(JsonElement functionCallContent)
     {
-        if (!functionCallContent.TryGetProperty("arguments", out var argumentsElement) ||
-            argumentsElement.ValueKind != JsonValueKind.Object ||
-            !argumentsElement.TryGetProperty("filename", out var fileNameElement) ||
-            fileNameElement.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        var fileName = fileNameElement.GetString();
-        return string.IsNullOrWhiteSpace(fileName)
-            ? null
-            : fileName.Trim();
+        return ProcessAutomationSessionObservation.TryResolveToolOutputFileName(functionCallContent);
     }
 
 }
