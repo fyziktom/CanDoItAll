@@ -1,0 +1,30 @@
+Assertion: SB04-INV-001 source contains SB04 guard method
+Command: rg -n 'Process_dispatch_execution_retry_provider_gate_a_SB04_INV_001' tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+ExitCode: 0
+Output:
+1944:    public void Process_dispatch_execution_retry_provider_gate_a_SB04_INV_001_keeps_refactor_module_local_without_driver_or_ui_proof()
+---
+Assertion: SB04-INV-001 no Process Core project or process driver project names
+Command: Get-ChildItem -Path src -Recurse -Filter *.csproj | Select-Object -ExpandProperty FullName | Select-String -Pattern 'CanDoItAll\\.Processes\\.Core|CanDoItAll\\.Modules\\.Processes\\.Core|ProcessDriver|DriverPack'
+ExitCode: 0
+Output:
+<no output>
+---
+Assertion: SB04-INV-001 dispatch source has no production driver API tokens
+Command: rg -n 'IProcessDriverPack|IProcessDriverRegistry|IProcessHelperDriver|ProcessDriverRegistry|CanDoItAll\\.Processes\\.Core' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB04-INV-001 anti-stub scan over process dispatch source
+Command: rg -n 'TODO|NotImplementedException|return default' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB04-INV-001 no prohibited viewport/browser proof paths in this bundle proof
+Command: Get-ChildItem -Path 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-execution-retry-provider-boundary-v1\proof' -Recurse -File | Select-Object -ExpandProperty FullName | Select-String -Pattern 'mobile|small-screen|small_screen|medium-screen|medium_screen|phone|tablet'
+ExitCode: 1
+Output:
+<no output>
+---

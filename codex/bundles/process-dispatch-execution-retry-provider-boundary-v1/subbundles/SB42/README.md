@@ -1,7 +1,7 @@
 # SB42 - Broad focused smoke matrix
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Run focused matrix across artifact, retry, provider, no-progress, subprocess, materialization, and finalizer flows.
@@ -23,10 +23,10 @@ Run focused matrix across artifact, retry, provider, no-progress, subprocess, ma
 - Smoke matrix transcript
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Focused build/source proof. Add tests if behavior is moved or branch order can drift.
+- Focused build/source proof. Add tests if behavior is moved or branch order can drift.
 
 ## Implementation Steps
 1. Implement or document: Smoke matrix transcript
@@ -41,19 +41,21 @@ Focused build/source proof. Add tests if behavior is moved or branch order can d
 - Do not create small/medium/mobile/browser screenshots; runtime/service refactor should keep browser proof N/A.
 
 ## Acceptance Checklist
-- [ ] Existing wrappers remain unless explicitly removed by a gate.
-- [ ] No behavior drift is introduced.
-- [ ] New helpers are module-local under `CanDoItAll.Modules.Processes`.
-- [ ] Source scans show no Process Core or production driver API.
+- [x] Existing wrappers remain unless explicitly removed by a gate.
+- [x] No behavior drift is introduced.
+- [x] New helpers are module-local under `CanDoItAll.Modules.Processes`.
+- [x] Source scans show no Process Core or production driver API.
 
 ## Proof Required
 - Focused integration/unit test transcripts
+- `bundle://proof/SB42/transcripts/broad-focused-smoke-matrix.txt`
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB42 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

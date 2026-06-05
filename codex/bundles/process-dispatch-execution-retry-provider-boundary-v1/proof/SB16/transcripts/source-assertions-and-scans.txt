@@ -1,0 +1,63 @@
+Assertion: SB16-INV-001 launch/failure helpers exist and dispatcher delegates
+Command: rg -n 'ProcessExecutionInvocationRequestBuilder|ProcessExecutionAttemptResultNormalizer|ProcessFailedExecutionInspectionCoordinator|ProcessExecutionAttemptResult|NormalizeAsync\(|InspectAsync\(' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 0
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs:5:internal static class ProcessExecutionAttemptResultNormalizer
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs:7:    internal static async Task<ProcessExecutionAttemptResult> NormalizeAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs:12:        ProcessExecutionAttemptResult? failedExecution,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs:22:            return new ProcessExecutionAttemptResult(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs:41:        return new ProcessExecutionAttemptResult(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs:49:internal sealed record ProcessExecutionAttemptResult(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionInvocationRequestBuilder.cs:7:internal static class ProcessExecutionInvocationRequestBuilder
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessFailedExecutionInspectionCoordinator.cs:5:internal static class ProcessFailedExecutionInspectionCoordinator
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessFailedExecutionInspectionCoordinator.cs:7:    internal static async Task<ProcessExecutionAttemptResult> InspectAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessFailedExecutionInspectionCoordinator.cs:22:        return new ProcessExecutionAttemptResult(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:98:                    ProcessExecutionAttemptResult? failedExecution = null;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:116:                            ProcessExecutionInvocationRequestBuilder.Build(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:135:                        failedExecution = await ProcessFailedExecutionInspectionCoordinator.InspectAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:176:                    var attemptResult = await ProcessExecutionAttemptResultNormalizer.NormalizeAsync(
+---
+Assertion: SB16-INV-001 request builder preserves policy and source fields
+Command: Select request-builder source tokens for policy, source, and structured output fields
+ExitCode: 0
+Output:
+41:AutoApprovePendingToolCalls: true,
+42:StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult);
+38:ProcessAutomationFinalizerMode.Required,
+33:RequestedByKind: "system",
+26:SourceKind: "process-step",
+---
+Assertion: SB16-INV-001 line counts after SB16
+Command: Count lines for Execution.cs and SB13-SB15 helper files
+ExitCode: 0
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs	633
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs	1210
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionInvocationRequestBuilder.cs	41
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionAttemptResultNormalizer.cs	46
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessFailedExecutionInspectionCoordinator.cs	25
+---
+Assertion: SB16-INV-001 no Process Core or production driver API tokens in dispatch source
+Command: rg -n 'IProcessDriverPack|IProcessDriverRegistry|IProcessHelperDriver|ProcessDriverRegistry|CanDoItAll\\.Processes\\.Core' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB16-INV-001 no hidden side-effect calls in pure launch helpers
+Command: rg -n 'SaveChangesAsync|SaveAgentAsync|CreateDbContextAsync|TransitionStepWithClaimAsync|PersistRecoveryJournalAsync' src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionInvocationRequestBuilder.cs src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionAttemptResultNormalizer.cs src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessFailedExecutionInspectionCoordinator.cs
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB16-INV-001 anti-stub scan over process dispatch source
+Command: rg -n 'TODO|NotImplementedException|return default' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB16-INV-001 no prohibited viewport/browser proof paths in this bundle proof
+Command: Get-ChildItem -Path 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-execution-retry-provider-boundary-v1\proof' -Recurse -File | Select-Object -ExpandProperty FullName | Select-String -Pattern 'mobile|small-screen|small_screen|medium-screen|medium_screen|phone|tablet'
+ExitCode: 1
+Output:
+<no output>
+---

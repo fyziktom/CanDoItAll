@@ -1,0 +1,37 @@
+SB43-INV-001 final source hardening scans pass for execution/retry/provider boundary refactor.
+
+CHECK directory absence: src\CanDoItAll.Processes.Core
+PASS: directory does not exist.
+
+CHECK production CanDoItAll.Processes.Core references
+PASS: no matches.
+
+CHECK production IProcessDriverPack references
+PASS: no matches.
+
+CHECK production IProcessDriverRegistry references
+PASS: no matches.
+
+CHECK production ProcessDriverRegistry references
+PASS: no matches.
+
+CHECK dispatch stubs or placeholder markers
+PASS: no matches.
+
+CHECK working-tree UI drift
+PASS: no UI files changed in working tree.
+
+CHECK line counts
+PASS: src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs line count 506 <= 520.
+PASS: src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs line count 975 <= 1100.
+
+CHECK provider recovery helper side-effect boundary
+PASS: provider recovery helper SaveAgentAsync call is isolated to ProcessAssignedAgentProviderRepairCoordinator.cs.
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs:55:                await executionClient.SaveAgentAsync(editor, cancellationToken);
+
+CHECK helper files are module-local
+PASS: 27 extracted helper files are present under the module-local dispatch directory.
+
+Known unrelated scan note: existing dispatch execution client and technical-agent binding coordinator still reference SaveAgentAsync outside provider recovery helpers; these predate and sit outside this bundle cutline.
+
+Result: PASSED

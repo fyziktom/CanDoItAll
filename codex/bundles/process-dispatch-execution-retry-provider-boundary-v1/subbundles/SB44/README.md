@@ -1,7 +1,7 @@
 # SB44 - Final red-team and completed validator
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Final closure; prepare next cutline based on resulting hotspots.
@@ -25,10 +25,10 @@ Final closure; prepare next cutline based on resulting hotspots.
 - Completed validator transcript
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Critical gate. Requires focused tests, source assertions, anti-stub scan, and no-core/no-driver scan.
+- Critical gate. Requires focused tests, source assertions, anti-stub scan, and no-core/no-driver scan.
 
 ## Implementation Steps
 1. Implement or document: Final red-team report
@@ -45,21 +45,28 @@ Critical gate. Requires focused tests, source assertions, anti-stub scan, and no
 - Do not create small/medium/mobile/browser screenshots; runtime/service refactor should keep browser proof N/A.
 
 ## Acceptance Checklist
-- [ ] Existing wrappers remain unless explicitly removed by a gate.
-- [ ] No behavior drift is introduced.
-- [ ] New helpers are module-local under `CanDoItAll.Modules.Processes`.
-- [ ] Source scans show no Process Core or production driver API.
-- [ ] Critical gate manifest and semantic invariants are written.
-- [ ] Focused tests pass.
+- [x] Existing wrappers remain unless explicitly removed by a gate.
+- [x] No behavior drift is introduced.
+- [x] New helpers are module-local under `CanDoItAll.Modules.Processes`.
+- [x] Source scans show no Process Core or production driver API.
+- [x] Critical gate manifest and semantic invariants are written.
+- [x] Focused tests pass.
 
 ## Proof Required
 - Completed validator must pass
+- `bundle://proof/SB44/manifest.md`
+- `bundle://proof/SB44/semantic-invariants.md`
+- `bundle://proof/SB44/transcripts/final-closure-source-assertions.txt`
+- `bundle://proof/SB44/transcripts/completed-validator.txt`
+- `bundle://reviews/02-final-red-team.md`
+- `bundle://reviews/03-next-cutline.md`
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB44 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

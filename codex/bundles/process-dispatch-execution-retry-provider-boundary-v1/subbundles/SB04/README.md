@@ -1,7 +1,7 @@
 # SB04 - Gate A architecture guardrails
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Add/repair focused architecture tests before moving production logic.
@@ -25,10 +25,10 @@ Add/repair focused architecture tests before moving production logic.
 - Helper namespace guard
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Critical gate. Requires focused tests, source assertions, anti-stub scan, and no-core/no-driver scan.
+- Critical gate. Requires focused tests, source assertions, anti-stub scan, and no-core/no-driver scan.
 
 ## Implementation Steps
 1. Implement or document: No Core/driver guard
@@ -57,10 +57,11 @@ Critical gate. Requires focused tests, source assertions, anti-stub scan, and no
 - No-core/no-driver scan
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB04 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

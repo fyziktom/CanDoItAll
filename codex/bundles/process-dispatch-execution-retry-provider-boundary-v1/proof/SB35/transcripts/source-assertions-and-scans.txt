@@ -1,0 +1,62 @@
+Assertion: SB35-INV-001 provider recovery helpers are module-local, provider repair side effects are explicit, and pure provider helpers contain no SaveAgentAsync or stubs.
+Command: file/token/side-effect/line-count source assertions for SB35 provider recovery extraction
+Token: ProcessRecoverableProviderFailureRules
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRecoverableProviderFailureRules.cs:8:private static class ProcessRecoverableProviderFailureRules
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:197:return ProcessRecoverableProviderFailureRules.TryResolve(detail, responseText, out failureSummary);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs:1640:return ProcessRecoverableProviderFailureRules.TryMapSummary(candidateText, out failureSummary);
+Token: ProcessProviderFallbackSelectionRules
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderFallbackSelectionRules.cs:6:internal static class ProcessProviderFallbackSelectionRules
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:17:foreach (var provider in ProcessProviderFallbackSelectionRules.OrderFallbackProviders(providers, failedProviderId))
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:54:ProcessProviderFallbackSelectionRules.ResolveFallbackProviderModel(provider, healthResult),
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs:45:var resolvedEditorModel = ProcessProviderFallbackSelectionRules.NormalizeFallbackEditorModel(fallbackResolution);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProviderRecovery.cs:36:return ProcessProviderFallbackSelectionRules.OrderFallbackProviders(providers, failedProviderId);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProviderRecovery.cs:43:return ProcessProviderFallbackSelectionRules.ResolveFallbackProviderModel(provider, healthResult);
+Token: ProcessProviderHealthProbeCoordinator
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:7:internal sealed class ProcessProviderHealthProbeCoordinator(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:8:ProcessProviderHealthProbeCoordinator healthProbeCoordinator,
+Token: ProcessAssignedAgentProviderRepairCoordinator
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs:9:internal sealed class ProcessAssignedAgentProviderRepairCoordinator(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:9:ProcessAssignedAgentProviderRepairCoordinator assignedAgentRepairCoordinator,
+Token: ProcessProviderRecoveryDirectiveBuilder
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRecoveryDirectiveBuilder.cs:6:internal static class ProcessProviderRecoveryDirectiveBuilder
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:271:var providerRecoveryDecision = ProcessProviderRecoveryDirectiveBuilder.CreateRecoveryDecision(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProviderRecovery.cs:29:return ProcessProviderRecoveryDirectiveBuilder.BuildDirective(recoveryDirective, repairOutcome);
+Token: ProcessProviderRepairCoordinator
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:6:internal sealed class ProcessProviderRepairCoordinator(
+Token: ProcessRecoverableProviderFailureRules.TryResolve
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:197:return ProcessRecoverableProviderFailureRules.TryResolve(detail, responseText, out failureSummary);
+Token: ProcessProviderFallbackSelectionRules.OrderFallbackProviders
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:17:foreach (var provider in ProcessProviderFallbackSelectionRules.OrderFallbackProviders(providers, failedProviderId))
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProviderRecovery.cs:36:return ProcessProviderFallbackSelectionRules.OrderFallbackProviders(providers, failedProviderId);
+Token: ProcessProviderRecoveryDirectiveBuilder.CreateRecoveryDecision
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:271:var providerRecoveryDecision = ProcessProviderRecoveryDirectiveBuilder.CreateRecoveryDecision(
+Token: ProcessProviderRepairCoordinator(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:6:internal sealed class ProcessProviderRepairCoordinator(
+Forbidden scan: CanDoItAll\.Processes\.Core
+
+Forbidden scan: IProcessDriverPack
+
+Forbidden scan: ProcessDriverRegistry
+
+Forbidden scan: TODO
+
+Forbidden scan: NotImplementedException
+
+Forbidden scan: return default
+
+Pure helper SaveAgentAsync scan:
+
+Side-effect coordinator SaveAgentAsync scan:
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs:55:await executionClient.SaveAgentAsync(editor, cancellationToken);
+Line counts:
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRecoverableProviderFailureRules.cs: 133
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderFallbackSelectionRules.cs: 57
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs: 60
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs: 97
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRecoveryDirectiveBuilder.cs: 44
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs: 62
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs: 506
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs: 975
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProviderRecovery.cs: 46
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs: 1830
+ExitCode: 0

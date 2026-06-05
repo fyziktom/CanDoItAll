@@ -1,12 +1,19 @@
 # Assumptions And Risks
 
+## Working Assumptions
+
+- The branch starts from the post-`process-dispatch-artifact-validation-residual-boundary-v1` implementation state described in `inputs/01-branch-review-summary.md`.
+- Execution/retry/provider work remains module-local under `src/CanDoItAll.Modules.Processes/Automation/Dispatch/`.
+- Runtime/service-only refactoring keeps browser validation N/A unless UI files unexpectedly change.
+- Existing focused process dispatch tests are the preferred proof path; broad unrelated historical failures must be recorded rather than hidden.
+
 ## Critical Path Risks
 
-1. **Retry behavior drift**: A small change in no-progress compression, retry reasons, or carried proof can cause the dispatcher to stop too early or retry forever.
-2. **Provider repair side effects hidden in pure helpers**: Provider fallback may mutate technical agents through `SaveAgentAsync`; this must remain explicit in a coordinator, not a pure rule class.
-3. **Recovered execution adoption drift**: Recovered or concurrent execution runs must preserve chat session, response text, and attempt-number behavior.
-4. **Recovery journal drift**: Retry/rework/provider recovery journal records must retain original mode, packet, next-attempt, and correlation semantics.
-5. **Premature Process Core pressure**: Extracting these concepts into public Core contracts before they are stable would freeze unstable implementation details.
+- **Retry behavior drift**: A small change in no-progress compression, retry reasons, or carried proof can cause the dispatcher to stop too early or retry forever.
+- **Provider repair side effects hidden in pure helpers**: Provider fallback may mutate technical agents through `SaveAgentAsync`; this must remain explicit in a coordinator, not a pure rule class.
+- **Recovered execution adoption drift**: Recovered or concurrent execution runs must preserve chat session, response text, and attempt-number behavior.
+- **Recovery journal drift**: Retry/rework/provider recovery journal records must retain original mode, packet, next-attempt, and correlation semantics.
+- **Premature Process Core pressure**: Extracting these concepts into public Core contracts before they are stable would freeze unstable implementation details.
 
 ## Validation Risks
 

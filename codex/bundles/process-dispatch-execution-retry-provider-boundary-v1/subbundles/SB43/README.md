@@ -1,7 +1,7 @@
 # SB43 - Final source hardening and cleanup
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Anti-stub, no-core/no-driver, no UI, line-count, and dependency scans.
@@ -24,10 +24,10 @@ Anti-stub, no-core/no-driver, no UI, line-count, and dependency scans.
 - Known unrelated failure notes
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Focused build/source proof. Add tests if behavior is moved or branch order can drift.
+- Focused build/source proof. Add tests if behavior is moved or branch order can drift.
 
 ## Implementation Steps
 1. Implement or document: Final source scan transcripts
@@ -43,19 +43,22 @@ Focused build/source proof. Add tests if behavior is moved or branch order can d
 - Do not create small/medium/mobile/browser screenshots; runtime/service refactor should keep browser proof N/A.
 
 ## Acceptance Checklist
-- [ ] Existing wrappers remain unless explicitly removed by a gate.
-- [ ] No behavior drift is introduced.
-- [ ] New helpers are module-local under `CanDoItAll.Modules.Processes`.
-- [ ] Source scans show no Process Core or production driver API.
+- [x] Existing wrappers remain unless explicitly removed by a gate.
+- [x] No behavior drift is introduced.
+- [x] New helpers are module-local under `CanDoItAll.Modules.Processes`.
+- [x] Source scans show no Process Core or production driver API.
 
 ## Proof Required
 - All scans pass
+- `bundle://proof/SB43/transcripts/final-source-hardening-scans.txt`
+- `bundle://reviews/04-known-unrelated-failures.md`
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB43 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

@@ -58,10 +58,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             if (attemptNumber == 1 && recoverableExecutionRunId.HasValue)
             {
-                executionRunId = recoverableExecutionRunId.Value;
-                detail = await executionClient.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
-                responseText = ResolveRecoveredExecutionResponseText(detail);
-                automationChatSessionId ??= detail.Run.ChatSessionId;
+                var recoveredExecution = await ProcessRecoveredExecutionAdoptionCoordinator.AdoptAsync(
+                    executionClient,
+                    recoverableExecutionRunId.Value,
+                    ResolveRecoveredExecutionResponseText,
+                    cancellationToken);
+                executionRunId = recoveredExecution.ExecutionRunId;
+                detail = recoveredExecution.Detail;
+                responseText = recoveredExecution.ResponseText;
+                automationChatSessionId ??= recoveredExecution.ChatSessionId;
                 recoverableExecutionRunId = null;
 
                 logger.LogInformation(
@@ -90,9 +95,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 {
                     ProcessAutomationExecutionRunResult? executionResult = null;
                     ConcurrentAutomationExecution? adoptedConcurrentExecution = null;
-                    ProcessAutomationExecutionRunDetail? failedExecutionDetail = null;
-                    Guid? failedExecutionRunId = null;
-                    string? failedResponseText = null;
+                    ProcessExecutionAttemptResult? failedExecution = null;
                     var processInvocationPolicy = new ExecutionInvocationPolicy(
                         FinalizerMode: AgentFinalizerMode.Required,
                         MaxStructuredOutputRepairAttempts: ExecutionInvocationMetadata.DefaultGovernedRepairAttempts,
@@ -110,8 +113,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     try
                     {
                         executionResult = await executionClient.ExecuteRunAsync(
-                            new ProcessAutomationExecutionRequest(
-                                candidate.TechnicalAgentId,
+                            ProcessExecutionInvocationRequestBuilder.Build(
+                                candidate,
                                 BuildExecutionPromptCore(
                                     candidate,
                                     recoveryDirective,
@@ -121,37 +124,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                                     prefetchedArtifactInspectionGrounding.HasPromptSummary
                                         ? prefetchedArtifactInspectionGrounding.PromptSummary
                                         : null),
-                                new ProcessAutomationInvocationSource(
-                                    SourceKind: "process-step",
-                                    SourceId: candidate.StepRun.Id.ToString("D"),
-                                    CorrelationId: BuildCorrelationId(candidate.StepRun.Id),
-                                    CausationId: string.IsNullOrWhiteSpace(trigger)
-                                        ? string.Empty
-                                        : trigger.Trim(),
-                                    RequestedBy: AutomationActor,
-                                    RequestedByKind: "system",
-                                    MetadataJson: processInvocationMetadataJson,
-                                    ProcessRunId: candidate.Run.Id.ToString("D"),
-                                    ProcessStepId: candidate.StepRun.Id.ToString("D")),
-                                new ProcessAutomationInvocationPolicy(
-                                    ProcessAutomationFinalizerMode.Required,
-                                    processInvocationPolicy.MaxStructuredOutputRepairAttempts,
-                                    processInvocationPolicy.RequireStructuredOutputValidation),
-                                AutoApprovePendingToolCalls: true,
-                                StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult),
+                                trigger,
+                                BuildCorrelationId(candidate.StepRun.Id),
+                                processInvocationMetadataJson,
+                                processInvocationPolicy),
                             cancellationToken);
                     }
                     catch (ProcessAutomationExecutionFailedException exception)
                     {
-                        failedExecutionRunId = exception.ExecutionRunId;
-                        automationChatSessionId ??= exception.ChatSessionId;
-                        failedExecutionDetail = await executionClient.GetExecutionRunDetailAsync(
-                            exception.ExecutionRunId,
-                            cancellationToken);
-                        failedResponseText = ResolvePreferredExecutionResponseText(
+                        failedExecution = await ProcessFailedExecutionInspectionCoordinator.InspectAsync(
+                            executionClient,
                             candidate,
-                            exception.Message,
-                            failedExecutionDetail);
+                            exception,
+                            ResolvePreferredExecutionResponseText,
+                            cancellationToken);
+                        automationChatSessionId ??= failedExecution.ChatSessionId;
 
                         logger.LogWarning(
                             exception,
@@ -183,30 +170,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
                     if (adoptedConcurrentExecution is not null)
                     {
-                        executionRunId = adoptedConcurrentExecution.ExecutionRunId;
-                        detail = adoptedConcurrentExecution.Detail;
-                        responseText = adoptedConcurrentExecution.ResponseText;
-                        automationChatSessionId ??= detail.Run.ChatSessionId;
+                        // Normalization below handles the adopted execution snapshot.
                     }
-                    else if (failedExecutionDetail is not null && failedExecutionRunId.HasValue)
-                    {
-                        executionRunId = failedExecutionRunId.Value;
-                        detail = failedExecutionDetail;
-                        responseText = failedResponseText ?? ResolveRecoveredExecutionResponseText(detail);
-                    }
-                    else
-                    {
-                        if (executionResult is null)
-                        {
-                            throw new InvalidOperationException(
-                                $"AgentFramework execution start did not return a result for process step '{candidate.StepRun.Id:D}'.");
-                        }
 
-                        executionRunId = executionResult.ExecutionRunId;
-                        automationChatSessionId ??= executionResult.ChatSessionId;
-                        detail = await executionClient.GetExecutionRunDetailAsync(executionRunId, cancellationToken);
-                        responseText = ResolvePreferredExecutionResponseText(candidate, executionResult.ResponseText, detail);
-                    }
+                    var attemptResult = await ProcessExecutionAttemptResultNormalizer.NormalizeAsync(
+                        executionClient,
+                        candidate,
+                        executionResult,
+                        adoptedConcurrentExecution,
+                        failedExecution,
+                        ResolvePreferredExecutionResponseText,
+                        cancellationToken);
+                    executionRunId = attemptResult.ExecutionRunId;
+                    detail = attemptResult.Detail;
+                    responseText = attemptResult.ResponseText;
+                    automationChatSessionId ??= attemptResult.ChatSessionId;
                 }
             }
 
@@ -246,48 +224,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 await renewLeaseAsync(cancellationToken);
             }
 
-            var missingRequiredTools = ResolveMissingRequiredToolExecutionsWithCarriedImplementationProof(
-                candidate,
-                detail,
-                successfulToolNamesAcrossAttempts,
-                carriedImplementationProof);
-            var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
-            var completionStatus = ResolveCompletionStatusWithCarryForward(
+            var postAttemptFacts = ProcessExecutionPostAttemptFactsBuilder.Create(
                 candidate,
                 detail,
                 successfulToolNamesAcrossAttempts,
                 responseText,
-                carriedImplementationProof);
-            var completionReason = BuildCompletionReasonWithCarryForward(
-                candidate,
-                detail,
-                candidate.StepRun.Title,
-                successfulToolNamesAcrossAttempts,
-                responseText,
-                carriedImplementationProof);
-            var selectedBranchOutcomeId = ResolveSelectedBranchOutcomeId(
-                candidate,
-                completionStatus,
-                responseText);
-
-            if (attemptNumber > 1)
-            {
-                completionReason = completionStatus == ProcessStepRunStatus.Completed
-                    ? $"{completionReason} Recovered on attempt {attemptNumber} of {maxExecutionAttempts}."
-                    : $"{completionReason} Recovery attempt {attemptNumber} of {maxExecutionAttempts}.";
-            }
+                carriedImplementationProof,
+                attemptNumber,
+                maxExecutionAttempts);
+            carriedImplementationProof = postAttemptFacts.CarriedImplementationProof;
 
             finalOutcome = new DispatchExecutionOutcome(
                 detail,
                 responseText,
-                completionStatus,
-                completionReason,
-                missingRequiredTools,
+                postAttemptFacts.CompletionStatus,
+                postAttemptFacts.CompletionReason,
+                postAttemptFacts.MissingRequiredTools,
                 attemptNumber,
-                selectedBranchOutcomeId);
+                postAttemptFacts.SelectedBranchOutcomeId);
             CleanupKeptAliveDotnetRunProcesses(candidate, detail);
 
-            if (completionStatus == ProcessStepRunStatus.Completed)
+            if (postAttemptFacts.CompletionStatus == ProcessStepRunStatus.Completed)
             {
                 return finalOutcome;
             }
@@ -311,12 +268,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     providerRepair.FallbackModel,
                     providerRepair.FailureSummary);
 
-                var providerRecoveryDecision = AgentRecoveryDecisionFactory.Create(
-                    AgentFailureCategory.ProviderFailure,
-                    providerRepair.FailureSummary,
+                var providerRecoveryDecision = ProcessProviderRecoveryDirectiveBuilder.CreateRecoveryDecision(
+                    providerRepair,
                     attemptNumber,
-                    executionRunId.ToString("D"),
-                    nextAttemptAtUtc: clock.GetUtcNow().AddSeconds(Math.Min(60, attemptNumber * 5)));
+                    executionRunId,
+                    clock.GetUtcNow().AddSeconds(Math.Min(60, attemptNumber * 5)));
                 await PersistRecoveryJournalAsync(
                     candidate,
                     providerRecoveryDecision,
@@ -330,8 +286,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         candidate,
                         detail,
                         responseText,
-                        missingRequiredTools,
-                        unresolvedCriticalToolFailures,
+                        postAttemptFacts.MissingRequiredTools,
+                        postAttemptFacts.UnresolvedCriticalToolFailures,
                         attemptNumber),
                     providerRepair);
                 recoveryDirective = BuildTypedRecoveryDirective(
@@ -346,7 +302,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     candidate,
                     detail,
                     responseText,
-                    missingRequiredTools,
+                    postAttemptFacts.MissingRequiredTools,
                     carriedImplementationProof,
                     attemptNumber,
                     maxExecutionAttempts) ||
@@ -354,8 +310,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     candidate,
                     detail,
                     responseText,
-                    missingRequiredTools,
-                    unresolvedCriticalToolFailures,
+                    postAttemptFacts.MissingRequiredTools,
+                    postAttemptFacts.UnresolvedCriticalToolFailures,
                     attemptNumber,
                     maxExecutionAttempts);
 
@@ -363,13 +319,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate,
                 detail,
                 responseText,
-                missingRequiredTools,
+                postAttemptFacts.MissingRequiredTools,
                 carriedImplementationProof);
             var noProgressSignal = TryCreateNoProgressRetrySignal(
                 candidate,
                 detail,
                 responseText,
-                missingRequiredTools,
+                postAttemptFacts.MissingRequiredTools,
                 retryReasons);
 
             if (shouldRetry &&
@@ -386,7 +342,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     await PersistNoProgressRetryCompressedDiagnosticAsync(
                         candidate,
                         detail,
-                        missingRequiredTools,
+                        postAttemptFacts.MissingRequiredTools,
                         retryReasons,
                         noProgressSignal,
                         cancellationToken);
@@ -403,14 +359,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 retryReasons.Count == 0
                     ? "unspecified recoverable failure"
                     : string.Join(" | ", retryReasons),
-                missingRequiredTools.Count == 0
+                postAttemptFacts.MissingRequiredTools.Count == 0
                     ? "none"
-                    : string.Join(", ", missingRequiredTools),
-                unresolvedCriticalToolFailures.Count == 0
+                    : string.Join(", ", postAttemptFacts.MissingRequiredTools),
+                postAttemptFacts.UnresolvedCriticalToolFailures.Count == 0
                     ? "none"
                     : string.Join(
                         "; ",
-                        unresolvedCriticalToolFailures
+                        postAttemptFacts.UnresolvedCriticalToolFailures
                             .Take(2)
                             .Select(item => $"{item.ToolName}: {item.ExitSummary}")),
                 attemptNumber + 1,
@@ -420,16 +376,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate,
                 detail,
                 responseText,
-                missingRequiredTools,
-                unresolvedCriticalToolFailures,
+                postAttemptFacts.MissingRequiredTools,
+                postAttemptFacts.UnresolvedCriticalToolFailures,
                 attemptNumber,
                 nextAttemptAtUtc: clock.GetUtcNow().AddSeconds(Math.Min(60, attemptNumber * 5)));
             var reworkPacket = CreateReworkPacketForDecision(
                 candidate,
                 detail,
                 recoveryDecision,
-                missingRequiredTools,
-                unresolvedCriticalToolFailures,
+                postAttemptFacts.MissingRequiredTools,
+                postAttemptFacts.UnresolvedCriticalToolFailures,
                 clock.GetUtcNow());
             if (reworkPacket is not null)
             {
@@ -445,7 +401,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 await PersistNoProgressRetryObservedAsync(
                     candidate,
                     detail,
-                    missingRequiredTools,
+                    postAttemptFacts.MissingRequiredTools,
                     retryReasons,
                     noProgressSignal,
                     cancellationToken);
@@ -466,8 +422,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 candidate,
                 detail,
                 responseText,
-                missingRequiredTools,
-                unresolvedCriticalToolFailures,
+                postAttemptFacts.MissingRequiredTools,
+                postAttemptFacts.UnresolvedCriticalToolFailures,
                 attemptNumber);
             recoveryDirective = BuildTypedRecoveryDirective(
                 recoveryDecision,
@@ -484,14 +440,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string responseText,
         int attemptNumber)
     {
-        return new DispatchExecutionOutcome(
+        return ProcessObservedExecutionOutcomeBuilder.Create(
             detail,
             responseText,
-            ProcessStepRunStatus.InProgress,
-            $"AgentFramework run '{detail.Run.Title}' is still {detail.Run.State}; automation will observe it again after it becomes terminal or stale.",
-            [],
-            attemptNumber,
-            null);
+            attemptNumber);
     }
 
     private async Task<CarriedImplementationProof> ResolveHistoricalCarriedImplementationProofAsync(
@@ -503,21 +455,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return CarriedImplementationProof.None;
         }
 
-        var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ProcessAutomationExecutionRunQuery(
-                ProcessRunId: candidate.Run.Id.ToString("D"),
-                ProcessStepId: candidate.StepRun.Id.ToString("D"),
-                Take: 20),
-            cancellationToken);
-        var historicalDetails = new List<ProcessAutomationExecutionRunDetail>();
-        foreach (var executionRun in executionRuns
-                     .Where(IsHistoricalCarryForwardExecutionRun)
-                     .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
-                     .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
-                     .ThenByDescending(executionRun => executionRun.CreatedAtUtc))
-        {
-            historicalDetails.Add(await executionClient.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
-        }
+        var historicalDetails = await CreateExecutionAttemptLoopFacade().HistoricalCarriedProof
+            .LoadHistoricalDetailsAsync(
+                candidate,
+                IsHistoricalCarryForwardExecutionRun,
+                cancellationToken);
 
         return ResolveHistoricalCarriedImplementationProof(candidate, historicalDetails);
     }
@@ -543,179 +485,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return null;
         }
 
-        var agents = await executionClient.ListAgentsAsync(includeTemplates: false, cancellationToken);
-        var agentsById = agents.ToDictionary(item => item.Id);
-        if (!agentsById.TryGetValue(candidate.TechnicalAgentId, out var currentAgent) ||
-            !currentAgent.ProviderProfileId.HasValue)
-        {
-            return null;
-        }
-
-        var failedProviderId = currentAgent.ProviderProfileId.Value;
-        var providers = await executionClient.ListProvidersAsync(cancellationToken);
-        var failedProviderName = providers.FirstOrDefault(item => item.Id == failedProviderId)?.Name;
-        var fallbackResolution = await ResolveHealthyFallbackProviderAsync(
-            providers,
-            failedProviderId,
-            cancellationToken);
-        if (fallbackResolution is null)
-        {
-            logger.LogWarning(
-                "Process run {RunId}, step {StepRunId} detected a recoverable provider failure, but no healthy fallback provider was available for technical agent {TechnicalAgentId}. Failure summary: {FailureSummary}",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                candidate.TechnicalAgentId,
-                failureSummary);
-            return null;
-        }
-
-        var assignedPartyIds = await LoadAssignedPartyIdsAsync(
-            candidate.Run.Id,
-            candidate.StepRun.CurrentExecutorPartyId,
-            cancellationToken);
-        var assignedSummaries = assignedPartyIds.Count == 0
-            ? new Dictionary<Guid, AiTechnicalAgentDirectorySummary>()
-            : await technicalAgentBridge.GetDirectorySummariesAsync(assignedPartyIds, cancellationToken);
-        var technicalAgentIdsToRepair = assignedSummaries.Values
-            .Where(summary => summary.TechnicalAgentId.HasValue)
-            .Select(summary => summary.TechnicalAgentId!.Value)
-            .Distinct()
-            .Where(agentId =>
-                agentsById.TryGetValue(agentId, out var assignedAgent) &&
-                assignedAgent.ProviderProfileId == failedProviderId)
-            .ToHashSet();
-        technicalAgentIdsToRepair.Add(candidate.TechnicalAgentId);
-
-        var affectedAgentCount = 0;
-        foreach (var technicalAgentId in technicalAgentIdsToRepair)
-        {
-            try
-            {
-                var editor = await executionClient.GetAgentEditorAsync(technicalAgentId, cancellationToken);
-                var resolvedEditorModel = NormalizeFallbackEditorModel(fallbackResolution);
-                if (editor.ProviderProfileId == fallbackResolution.Provider.Id &&
-                    string.Equals(editor.Model, resolvedEditorModel, StringComparison.Ordinal))
-                {
-                    affectedAgentCount++;
-                    continue;
-                }
-
-                editor.ProviderProfileId = fallbackResolution.Provider.Id;
-                editor.Model = resolvedEditorModel;
-                await executionClient.SaveAgentAsync(editor, cancellationToken);
-                affectedAgentCount++;
-            }
-            catch (Exception exception)
-            {
-                logger.LogWarning(
-                    exception,
-                    "Failed to switch technical agent {TechnicalAgentId} to fallback provider '{ProviderName}' while recovering process run {RunId}, step {StepRunId}.",
-                    technicalAgentId,
-                    fallbackResolution.Provider.Name,
-                    candidate.Run.Id,
-                    candidate.StepRun.Id);
-
-                if (technicalAgentId == candidate.TechnicalAgentId)
-                {
-                    return null;
-                }
-            }
-        }
-
-        if (affectedAgentCount == 0)
-        {
-            return null;
-        }
-
-        return new ProviderRepairOutcome(
-            failedProviderName ?? detail.Run.ProviderName,
-            fallbackResolution.Provider.Name,
-            fallbackResolution.Model,
-            affectedAgentCount,
-            failureSummary);
+        return await CreateExecutionAttemptLoopFacade().ProviderRepair
+            .TryRepairAsync(
+                candidate,
+                detail,
+                failureSummary,
+                cancellationToken);
     }
 
-    private async Task<ProviderFallbackResolution?> ResolveHealthyFallbackProviderAsync(
-        IReadOnlyList<ProviderProfile> providers,
-        Guid failedProviderId,
-        CancellationToken cancellationToken)
+    private ProcessExecutionAttemptLoopFacade CreateExecutionAttemptLoopFacade()
     {
-        foreach (var provider in OrderFallbackProviders(providers, failedProviderId))
-        {
-            ProviderHealthResult healthResult;
-            try
-            {
-                using var probeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                probeCancellation.CancelAfter(ProviderFallbackHealthProbeTimeout);
-                healthResult = await executionClient.TestProviderAsync(provider.Id, probeCancellation.Token);
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                logger.LogInformation(
-                    "Skipping fallback provider '{ProviderName}' because its health probe exceeded {TimeoutSeconds} seconds.",
-                    provider.Name,
-                    ProviderFallbackHealthProbeTimeout.TotalSeconds);
-                continue;
-            }
-            catch (Exception exception)
-            {
-                logger.LogInformation(
-                    exception,
-                    "Fallback provider probe for '{ProviderName}' failed while evaluating process execution recovery.",
-                    provider.Name);
-                continue;
-            }
-
-            if (!healthResult.Success)
-            {
-                logger.LogInformation(
-                    "Skipping fallback provider '{ProviderName}' because its health probe failed: {Summary}",
-                    provider.Name,
-                    healthResult.Summary);
-                continue;
-            }
-
-            return new ProviderFallbackResolution(
-                provider,
-                ResolveFallbackProviderModel(provider, healthResult),
-                healthResult.Summary);
-        }
-
-        return null;
-    }
-
-    private async Task<IReadOnlyList<Guid>> LoadAssignedPartyIdsAsync(
-        Guid processRunId,
-        Guid? currentExecutorPartyId,
-        CancellationToken cancellationToken)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var partyIds = await dbContext.Set<ProcessRunAssignment>()
-            .AsNoTracking()
-            .Where(item => item.ProcessRunId == processRunId && item.PartyId.HasValue && !item.IsCapabilityGap)
-            .Select(item => item.PartyId!.Value)
-            .Distinct()
-            .ToListAsync(cancellationToken);
-        if (currentExecutorPartyId.HasValue && !partyIds.Contains(currentExecutorPartyId.Value))
-        {
-            partyIds.Add(currentExecutorPartyId.Value);
-        }
-
-        return partyIds;
-    }
-
-    private static string NormalizeFallbackEditorModel(ProviderFallbackResolution fallbackResolution)
-    {
-        if (!string.IsNullOrWhiteSpace(fallbackResolution.Provider.DefaultModel) &&
-            string.Equals(
-                fallbackResolution.Model,
-                fallbackResolution.Provider.DefaultModel,
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
-
-        return fallbackResolution.Model;
+        return new ProcessExecutionAttemptLoopFacade(
+            executionClient,
+            dbContextFactory,
+            technicalAgentBridge,
+            logger,
+            ProviderFallbackHealthProbeTimeout);
     }
 
 }

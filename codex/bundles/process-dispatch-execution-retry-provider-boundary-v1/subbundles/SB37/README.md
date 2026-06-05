@@ -1,7 +1,7 @@
 # SB37 - Execution loop facade staging
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Introduce a thin ProcessExecutionAttemptLoopFacade but do not move route/finalizer ownership.
@@ -24,10 +24,10 @@ Introduce a thin ProcessExecutionAttemptLoopFacade but do not move route/finaliz
 - No public contracts
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Focused build/source proof. Add tests if behavior is moved or branch order can drift.
+- Focused build/source proof. Add tests if behavior is moved or branch order can drift.
 
 ## Implementation Steps
 1. Implement or document: Facade with injected coordinators
@@ -52,10 +52,12 @@ Focused build/source proof. Add tests if behavior is moved or branch order can d
 - Build proof and no-core/no-driver scan
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB37 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+
+

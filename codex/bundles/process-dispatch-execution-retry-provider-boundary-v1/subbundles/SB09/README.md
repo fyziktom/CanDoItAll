@@ -1,7 +1,7 @@
 # SB09 - Execution run query request helpers
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Centralize process-run/step execution query request construction.
@@ -23,10 +23,10 @@ Centralize process-run/step execution query request construction.
 - ProcessExecutionRunQueryBuilder
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Focused build/source proof. Add tests if behavior is moved or branch order can drift.
+- Focused build/source proof. Add tests if behavior is moved or branch order can drift.
 
 ## Implementation Steps
 1. Implement or document: ProcessExecutionRunQueryBuilder
@@ -50,10 +50,11 @@ Focused build/source proof. Add tests if behavior is moved or branch order can d
 - Tests for ProcessRunId/ProcessStepId/Take fields
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB09 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

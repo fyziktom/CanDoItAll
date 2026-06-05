@@ -149,27 +149,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         NoProgressRetrySignal signal,
         CancellationToken cancellationToken)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var recordedAtUtc = clock.GetUtcNow();
-        await dbContext.Set<ProcessJournalEntry>().AddAsync(
-            new ProcessJournalEntry
-            {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
-                EventType = ProcessRuntimeEventTypes.NoProgressRetryCompressed,
-                Title = "No-progress retry compressed",
-                Description = $"Execution run '{detail.Run.Id:D}' repeated the same unsatisfied process requirements without new satisfied evidence. Fingerprint: {signal.Fingerprint}.",
-                CorrelationId = signal.Fingerprint,
-                OperatingMode = candidate.Run.OperatingMode,
-                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
-                ReplayContextJson = JsonSerializer.Serialize(
-                    CreateNoProgressRetryJournalPayload(candidate, detail, missingRequiredTools, retryReasons, signal),
-                    AgentOutputJson.SerializerOptions),
-                OccurredAtUtc = recordedAtUtc
-            },
-            cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await new ProcessNoProgressRetryJournalWriter(dbContextFactory, clock)
+            .RecordCompressedDiagnosticAsync(
+                candidate,
+                detail,
+                missingRequiredTools,
+                retryReasons,
+                signal,
+                cancellationToken);
     }
 
     private async Task PersistNoProgressRetryObservedAsync(
@@ -180,54 +167,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         NoProgressRetrySignal signal,
         CancellationToken cancellationToken)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var recordedAtUtc = clock.GetUtcNow();
-        await dbContext.Set<ProcessJournalEntry>().AddAsync(
-            new ProcessJournalEntry
-            {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
-                EventType = ProcessRuntimeEventTypes.NoProgressRetryObserved,
-                Title = "No-progress retry observed",
-                Description = $"Execution run '{detail.Run.Id:D}' produced an unsatisfied no-progress retry fingerprint before another governed attempt. Fingerprint: {signal.Fingerprint}.",
-                CorrelationId = signal.Fingerprint,
-                OperatingMode = candidate.Run.OperatingMode,
-                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
-                ReplayContextJson = JsonSerializer.Serialize(
-                    CreateNoProgressRetryJournalPayload(candidate, detail, missingRequiredTools, retryReasons, signal),
-                    AgentOutputJson.SerializerOptions),
-                OccurredAtUtc = recordedAtUtc
-            },
-            cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private static object CreateNoProgressRetryJournalPayload(
-        DispatchCandidate candidate,
-        ProcessAutomationExecutionRunDetail detail,
-        IReadOnlyList<string> missingRequiredTools,
-        IReadOnlyList<string> retryReasons,
-        NoProgressRetrySignal signal)
-    {
-        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
-            detail,
-            missingRequiredTools,
-            []);
-        return new
-        {
-            ProcessRunId = candidate.Run.Id,
-            StepRunId = candidate.StepRun.Id,
-            signal.ExecutionRunId,
-            signal.Fingerprint,
-            signal.ToolSignature,
-            signal.ArtifactValidationFingerprint,
-            signal.MutationDelta,
-            signal.ProofDelta,
-            MissingRequiredTools = missingRequiredTools,
-            RetryReasons = retryReasons,
-            retryFacts.FailedToolNames
-        };
+        await new ProcessNoProgressRetryJournalWriter(dbContextFactory, clock)
+            .RecordObservedAsync(
+                candidate,
+                detail,
+                missingRequiredTools,
+                retryReasons,
+                signal,
+                cancellationToken);
     }
 
     private static AgentFailureCategory ResolveRecoveryFailureCategory(

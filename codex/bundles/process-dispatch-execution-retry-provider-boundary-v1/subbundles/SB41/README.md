@@ -1,7 +1,7 @@
 # SB41 - Documentation-only driver readiness map
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Update evidence-family map for future drivers without production API.
@@ -23,10 +23,10 @@ Update evidence-family map for future drivers without production API.
 - Driver readiness map for retry/provider/execution evidence
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Focused build/source proof. Add tests if behavior is moved or branch order can drift.
+- Focused build/source proof. Add tests if behavior is moved or branch order can drift.
 
 ## Implementation Steps
 1. Implement or document: Driver readiness map for retry/provider/execution evidence
@@ -41,19 +41,21 @@ Focused build/source proof. Add tests if behavior is moved or branch order can d
 - Do not create small/medium/mobile/browser screenshots; runtime/service refactor should keep browser proof N/A.
 
 ## Acceptance Checklist
-- [ ] Existing wrappers remain unless explicitly removed by a gate.
-- [ ] No behavior drift is introduced.
-- [ ] New helpers are module-local under `CanDoItAll.Modules.Processes`.
-- [ ] Source scans show no Process Core or production driver API.
+- [x] Existing wrappers remain unless explicitly removed by a gate.
+- [x] No behavior drift is introduced.
+- [x] New helpers are module-local under `CanDoItAll.Modules.Processes`.
+- [x] Source scans show no Process Core or production driver API.
 
 ## Proof Required
 - No driver API scan
+- `bundle://proof/SB41/transcripts/no-driver-api-scan.txt`
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB41 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

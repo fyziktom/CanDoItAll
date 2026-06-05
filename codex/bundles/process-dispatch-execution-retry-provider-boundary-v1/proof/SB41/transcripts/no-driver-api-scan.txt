@@ -1,0 +1,33 @@
+SB41-INV-001 no production Process Core or driver API introduced.
+Scope: production source boundary. Tests and bundle docs may contain forbidden names only as negative assertions or documentation-only future vocabulary.
+
+CHECK directory absence: src\CanDoItAll.Processes.Core
+PASS: directory does not exist.
+
+CHECK CanDoItAll.Processes.Core namespace/package reference
+PASS: no production matches.
+
+CHECK IProcessDriverPack production interface
+PASS: no production matches.
+
+CHECK IProcessDriverRegistry production interface
+PASS: no production matches.
+
+CHECK ProcessDriverRegistry production registry
+PASS: no production matches.
+
+CHECK Process driver package naming
+PASS: no production matches.
+
+Documentation map checks:
+PASS: ExecutionAttemptEvidence mapped.
+PASS: PostAttemptFactEvidence mapped.
+PASS: RetryDecisionEvidence mapped.
+PASS: NoProgressRetryEvidence mapped.
+PASS: ProviderFallbackEvidence mapped.
+PASS: ProviderHealthProbeEvidence mapped.
+PASS: HistoricalCarryForwardEvidence mapped.
+PASS: ExecutionLoopOrchestrationEvidence mapped.
+PASS: RecoveryDirectiveEvidence mapped.
+
+Result: PASSED

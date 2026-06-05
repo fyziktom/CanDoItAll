@@ -1,0 +1,6 @@
+Assertion: Prepared-stage bundle validator passes after SB29-SB40 provider and execution-loop gates.
+Command: python 'C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py' --stage prepared --repo-root 'C:\repositories\CanDoItAll' 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-execution-retry-provider-boundary-v1'
+ExitCode: 0
+Output:
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-execution-retry-provider-boundary-v1
+

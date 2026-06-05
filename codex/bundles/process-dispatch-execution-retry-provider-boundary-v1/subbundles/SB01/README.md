@@ -1,7 +1,7 @@
 # SB01 - Entry branch audit
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Capture current line counts, changed files, previous bundle proof state, and known unrelated test failures.
@@ -25,10 +25,10 @@ Capture current line counts, changed files, previous bundle proof state, and kno
 - Record previous residual bundle status and known test limitations.
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Focused build/source proof. Add tests if behavior is moved or branch order can drift.
+- Focused build/source proof. Add tests if behavior is moved or branch order can drift.
 
 ## Implementation Steps
 1. Implement or document: Inventory file with current line counts for Execution.cs, Concurrency.cs, Dispatch.cs, ArtifactValidation.cs, ToolValidation.cs, StepCompletionFinalizer.cs.
@@ -54,10 +54,11 @@ Focused build/source proof. Add tests if behavior is moved or branch order can d
 - Source inventory transcript
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB01 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+

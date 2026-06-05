@@ -1,7 +1,7 @@
 # SB40 - Gate H execution loop parity
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Prove full execution loop behavior is preserved after facade wiring.
@@ -23,10 +23,10 @@ Prove full execution loop behavior is preserved after facade wiring.
 - Gate H manifest
 
 ## Dependency Impact
-This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
+- This subbundle affects downstream execution/retry/provider recovery proof. If it fails, reopen this subbundle before continuing.
 
 ## Validation Depth
-Critical gate. Requires focused tests, source assertions, anti-stub scan, and no-core/no-driver scan.
+- Critical gate. Requires focused tests, source assertions, anti-stub scan, and no-core/no-driver scan.
 
 ## Implementation Steps
 1. Implement or document: Gate H manifest
@@ -54,10 +54,12 @@ Critical gate. Requires focused tests, source assertions, anti-stub scan, and no
 - Line-count scan
 
 ## Browser Validation Logging
-N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
+- N/A expected. Runtime/service refactor only. If UI files unexpectedly change, stop and record only large desktop/PC proof after explicit review.
 
 ## Progression Gate
-Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
+- Downstream work may continue only after proof files are committed and the subbundle row in `reviews/01-execution-report.md` is updated.
 
 ## Suggested Agent Prompt
 Implement SB40 only. Keep work module-local, preserve behavior, update proof, and do not start later subbundles until this gate is closed.
+
+

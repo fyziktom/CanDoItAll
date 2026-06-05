@@ -14,23 +14,12 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
-using System.Security.Cryptography;
-using System.Text.Json;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    internal sealed record NoProgressRetrySignal(
-        string Fingerprint,
-        Guid ExecutionRunId,
-        string ToolSignature,
-        string ArtifactValidationFingerprint,
-        string MutationDelta,
-        string ProofDelta);
-
     internal static bool HasBlockingAutomationExecutionRun(IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns)
         => HasBlockingAutomationExecutionRun(executionRuns, DateTimeOffset.UtcNow);
 
@@ -100,29 +89,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         CancellationToken cancellationToken)
     {
-        var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ProcessAutomationExecutionRunQuery(
-                ProcessRunId: candidate.Run.Id.ToString("D"),
-                ProcessStepId: candidate.StepRun.Id.ToString("D"),
-                Take: 20),
+        return await ProcessConcurrentExecutionAdoptionCoordinator.TryAdoptAsync(
+            executionClient,
+            candidate,
+            clock.GetUtcNow(),
+            AutomationActor,
+            StaleAutomationExecutionRunTimeout,
+            ResolveRecoveredExecutionResponseText,
             cancellationToken);
-        var blockingExecutionRunId = ResolveBlockingAutomationExecutionRunId(candidate.StepRun, executionRuns, clock.GetUtcNow());
-        if (!blockingExecutionRunId.HasValue)
-        {
-            return null;
-        }
-
-        var detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
-        for (var pollIndex = 0; pollIndex < 2 && !IsTerminalAutomationExecutionRun(detail.Run); pollIndex++)
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
-            detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
-        }
-
-        return new ConcurrentAutomationExecution(
-            blockingExecutionRunId.Value,
-            detail,
-            ResolveRecoveredExecutionResponseText(detail));
     }
 
     private async Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
@@ -131,10 +105,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         var executionRuns = await executionClient.ListExecutionRunsAsync(
-            new ProcessAutomationExecutionRunQuery(
-                ProcessRunId: candidate.Run.Id.ToString("D"),
-                ProcessStepId: candidate.StepRun.Id.ToString("D"),
-                Take: 20),
+            ProcessExecutionRunQueryBuilder.ForCandidate(candidate),
             cancellationToken);
 
         return ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun(
@@ -200,16 +171,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string ResolveRecoveredExecutionResponseText(ProcessAutomationExecutionRunDetail detail)
     {
-        var assistantMessage = detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ProcessAutomationChatMessageRole.Assistant);
-        if (!string.IsNullOrWhiteSpace(assistantMessage?.Content))
-        {
-            return assistantMessage.Content;
-        }
-
-        var serializedResponseText = ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson);
-        return string.IsNullOrWhiteSpace(serializedResponseText)
-            ? detail.Run.ResultSummary
-            : serializedResponseText;
+        return ProcessExecutionResponseTextResolver.ResolveRecovered(
+            detail,
+            ResolveLatestAssistantResponseText);
     }
 
     private static string ResolvePreferredExecutionResponseText(
@@ -217,34 +181,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string? responseText,
         ProcessAutomationExecutionRunDetail detail)
     {
-        var primaryResponse = string.IsNullOrWhiteSpace(responseText)
-            ? string.Empty
-            : responseText.Trim();
-        var recoveredResponse = ResolveRecoveredExecutionResponseText(detail).Trim();
-        if (string.IsNullOrWhiteSpace(primaryResponse))
-        {
-            return recoveredResponse;
-        }
-
-        if (!RequiresGovernedStepOutcome(candidate.StepRun))
-        {
-            return primaryResponse;
-        }
-
-        var primaryHasDeclaredOutcome = TryResolveDeclaredStepOutcome(primaryResponse, out _);
-        var resultSummary = string.IsNullOrWhiteSpace(detail.Run.ResultSummary)
-            ? string.Empty
-            : detail.Run.ResultSummary.Trim();
-        var resultSummaryHasDeclaredOutcome = TryResolveDeclaredStepOutcome(resultSummary, out _);
-        var recoveredHasDeclaredOutcome = TryResolveDeclaredStepOutcome(recoveredResponse, out _);
-        if (resultSummaryHasDeclaredOutcome)
-        {
-            return resultSummary;
-        }
-
-        return !primaryHasDeclaredOutcome && recoveredHasDeclaredOutcome
-            ? recoveredResponse
-            : primaryResponse;
+        return ProcessExecutionResponseTextResolver.ResolvePreferred(
+            RequiresGovernedStepOutcome(candidate.StepRun),
+            responseText,
+            detail,
+            static value => TryResolveDeclaredStepOutcome(value, out _),
+            ResolveRecoveredExecutionResponseText);
     }
 
     private static bool TryResolveRecoverableProviderFailure(
@@ -252,32 +194,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string? responseText,
         out string failureSummary)
     {
-        failureSummary = string.Empty;
-        if (detail.Run.State == ProcessAutomationExecutionState.Completed &&
-            detail.Run.Outcome == ProcessAutomationRunOutcome.Succeeded &&
-            TryReadProcessStepOutcome(responseText, out _, out _))
-        {
-            return false;
-        }
-
-        var candidateTexts = new[]
-        {
-            responseText,
-            detail.ChatSession?.Messages.LastOrDefault(item => item.Role == ProcessAutomationChatMessageRole.Assistant)?.Content,
-            ResolveLatestAssistantErrorSummary(detail.Run.SerializedSessionStateJson),
-            ResolveLatestAssistantResponseText(detail.Run.SerializedSessionStateJson),
-            detail.Run.ResultSummary
-        };
-
-        foreach (var candidateText in candidateTexts)
-        {
-            if (TryMapRecoverableProviderFailureSummary(candidateText, out failureSummary))
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return ProcessRecoverableProviderFailureRules.TryResolve(detail, responseText, out failureSummary);
     }
 
     private static ProcessStepRunStatus ResolveCompletionStatus(DispatchCandidate candidate, ProcessAutomationExecutionRunDetail detail)
@@ -301,65 +218,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         int attemptNumber,
         int maxExecutionAttempts)
     {
-        var run = detail.Run;
-        var inspectionText = ResolveOutputInspectionText(responseText);
-        if (HasValidNonCompletedDeclaredOutcome(candidate, detail, responseText, inspectionText))
-        {
-            return ShouldRetryRepairableImplementationBlockedOutcome(
-                       candidate,
-                       detail,
-                       responseText,
-                       missingRequiredTools,
-                       attemptNumber,
-                       maxExecutionAttempts) ||
-                   ShouldRetryRecoverableBrowserProofBlockedOutcome(
-                       candidate,
-                       detail,
-                       responseText,
-                       missingRequiredTools,
-                       attemptNumber,
-                       maxExecutionAttempts);
-        }
-
-        if (!string.IsNullOrWhiteSpace(ResolveMissingUpstreamArtifactInputSummary(candidate)) &&
-            TryResolveDeclaredStepOutcome(candidate, responseText, out var declaredOutcome) &&
-            declaredOutcome.Status == ProcessStepRunStatus.Blocked)
-        {
-            return false;
-        }
-
-        if (TryResolveDeclaredStepOutcome(candidate, responseText, out declaredOutcome, out var processOutcome) &&
-            CanCompleteExplicitDispositionOutcomeWithCriticalToolFailures(
-                candidate,
-                detail,
-                declaredOutcome,
-                processOutcome,
-                responseText,
-                missingRequiredTools,
-                carriedImplementationProof))
-        {
-            return false;
-        }
-
-        var retryReasons = ResolveIncompleteSuccessfulRunRetryReasons(
+        return ProcessIncompleteSuccessfulRunRetryRules.ShouldRetry(
             candidate,
             detail,
             responseText,
             missingRequiredTools,
-            carriedImplementationProof);
-
-        return attemptNumber < maxExecutionAttempts
-               && run.State == ProcessAutomationExecutionState.Completed
-                && run.PendingApprovals.Count == 0
-                && run.Outcome == ProcessAutomationRunOutcome.Succeeded
-                && retryReasons.Count > 0
-                && !ShouldCompressNoProgressRetry(
-                    candidate,
-                    detail,
-                    responseText,
-                    missingRequiredTools,
-                    retryReasons,
-                    attemptNumber);
+            carriedImplementationProof,
+            attemptNumber,
+            maxExecutionAttempts);
     }
 
     private static bool ShouldCompressNoProgressRetry(
@@ -370,40 +236,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> retryReasons,
         int attemptNumber)
     {
-        if (attemptNumber <= 1)
-        {
-            return false;
-        }
-
-        if (!string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
-            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
-            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
-        {
-            return false;
-        }
-
-        var fingerprint = TryCreateNoProgressRetryFingerprint(candidate, detail, responseText, missingRequiredTools, retryReasons, attemptNumber);
-        if (!string.IsNullOrWhiteSpace(fingerprint))
-        {
-            return true;
-        }
-
-        return missingRequiredTools.Count > 0 ||
-               retryReasons.Any(IsNoProgressRetryReason);
+        return ProcessNoProgressRetrySignalBuilder.ShouldCompress(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            retryReasons,
+            attemptNumber);
     }
 
     internal static bool HasPriorNoProgressRetrySignal(
         IEnumerable<ProcessJournalEntry> journalEntries,
         NoProgressRetrySignal signal)
     {
-        ArgumentNullException.ThrowIfNull(journalEntries);
-        ArgumentNullException.ThrowIfNull(signal);
-
-        return journalEntries.Any(entry =>
-            IsNoProgressRetryLedgerEvent(entry.EventType) &&
-            string.Equals(entry.CorrelationId, signal.Fingerprint, StringComparison.Ordinal) &&
-            TryResolveNoProgressRetryLedgerExecutionRunId(entry.ReplayContextJson, out var priorExecutionRunId) &&
-            priorExecutionRunId != signal.ExecutionRunId);
+        return ProcessNoProgressRetryLedgerRules.HasPriorSignal(journalEntries, signal);
     }
 
     private async Task<bool> HasPriorNoProgressRetrySignalAsync(
@@ -411,31 +257,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
         NoProgressRetrySignal signal,
         CancellationToken cancellationToken)
     {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var entries = await dbContext.Set<ProcessJournalEntry>()
-            .AsNoTracking()
-            .Where(entry =>
-                entry.ProcessRunId == candidate.Run.Id &&
-                entry.StepRunId == candidate.StepRun.Id &&
-                entry.CorrelationId == signal.Fingerprint &&
-                (entry.EventType == ProcessRuntimeEventTypes.NoProgressRetryObserved ||
-                 entry.EventType == ProcessRuntimeEventTypes.NoProgressRetryCompressed))
-            .ToListAsync(cancellationToken);
-
-        return HasPriorNoProgressRetrySignal(entries, signal);
+        return await new ProcessNoProgressRetryJournalQueryCoordinator(dbContextFactory)
+            .HasPriorSignalAsync(candidate, signal, cancellationToken);
     }
 
     private static bool HasNewSatisfiedCurrentAttemptEvidence(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail)
     {
-        return detail.Artifacts.Any(artifact =>
-                   candidate.ExpectedArtifacts.Any(expectation =>
-                       !candidate.RecordedArtifactExpectationIds.Contains(expectation.Id) &&
-                       ResolveArtifactExpectation(candidate, artifact)?.Id == expectation.Id)) ||
-               detail.ToolReceipts.Any(receipt =>
-                   !IsFailedToolReceipt(receipt) &&
-                   ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal));
+        return ProcessNoProgressEvidenceDeltaRules.HasNewSatisfiedCurrentAttemptEvidence(candidate, detail);
     }
 
     private static string? TryCreateNoProgressRetryFingerprint(
@@ -446,27 +276,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> retryReasons,
         int attemptNumber)
     {
-        ArgumentNullException.ThrowIfNull(candidate);
-        ArgumentNullException.ThrowIfNull(detail);
-        ArgumentNullException.ThrowIfNull(missingRequiredTools);
-        ArgumentNullException.ThrowIfNull(retryReasons);
-
-        if (attemptNumber <= 1 ||
-            !string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
-            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
-            HasSuccessfulConcreteProductMutation(candidate, detail) ||
-            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
-        {
-            return null;
-        }
-
-        if (missingRequiredTools.Count == 0 &&
-            !retryReasons.Any(IsNoProgressRetryReason))
-        {
-            return null;
-        }
-
-        return TryCreateNoProgressRetrySignal(candidate, detail, responseText, missingRequiredTools, retryReasons)?.Fingerprint;
+        return ProcessNoProgressRetrySignalBuilder.TryCreateFingerprint(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            retryReasons,
+            attemptNumber);
     }
 
     private static NoProgressRetrySignal? TryCreateNoProgressRetrySignal(
@@ -476,165 +292,36 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<string> retryReasons)
     {
-        ArgumentNullException.ThrowIfNull(candidate);
-        ArgumentNullException.ThrowIfNull(detail);
-        ArgumentNullException.ThrowIfNull(missingRequiredTools);
-        ArgumentNullException.ThrowIfNull(retryReasons);
-
-        if (!string.IsNullOrWhiteSpace(candidate.ManualRecoveryDirective) ||
-            TryResolveRecoverableProviderFailure(detail, responseText, out _) ||
-            HasSuccessfulConcreteProductMutation(candidate, detail) ||
-            HasNewSatisfiedCurrentAttemptEvidence(candidate, detail))
-        {
-            return null;
-        }
-
-        if (missingRequiredTools.Count == 0 &&
-            !retryReasons.Any(IsNoProgressRetryReason))
-        {
-            return null;
-        }
-
-        var failedToolNames = detail.ToolReceipts
-            .Where(IsFailedToolReceipt)
-            .Select(receipt => NormalizeToolToken(receipt.ToolName))
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-        var artifactSignals = detail.Artifacts
-            .Select(artifact => string.Join(
-                ":",
-                NormalizeManagedRelativePathForComparison(artifact.RelativePath),
-                CollapsePromptWhitespace(artifact.DisplayName).ToLowerInvariant(),
-                CollapsePromptWhitespace(artifact.ContentType).ToLowerInvariant(),
-                CreateBoundedTextHash(artifact.Summary)))
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-        var receiptSignals = detail.ToolReceipts
-            .Select(receipt => string.Join(
-                ":",
-                NormalizeToolToken(receipt.ToolName),
-                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
-                CreateBoundedTextHash(receipt.RequestSummary),
-                CreateBoundedTextHash(receipt.ExitSummary),
-                IsFailedToolReceipt(receipt) ? "failed" : "succeeded"))
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-        var unsatisfiedExpectationIds = candidate.ExpectedArtifacts
-            .Where(expectation => expectation.IsRequired && !candidate.RecordedArtifactExpectationIds.Contains(expectation.Id))
-            .Select(expectation => expectation.Id.ToString("D"))
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-        var toolSignature = CreateBoundedTextHash(string.Join(
-            "|",
-            string.Join(",", missingRequiredTools.OrderBy(item => item, StringComparer.OrdinalIgnoreCase)),
-            string.Join(",", failedToolNames),
-            string.Join(",", receiptSignals)));
-        var artifactValidationFingerprint = CreateBoundedTextHash(string.Join(
-            "|",
-            string.Join(",", unsatisfiedExpectationIds),
-            string.Join(",", artifactSignals)));
-        var mutationDelta = ResolveNoProgressMutationDelta(candidate, detail);
-        var proofDelta = ResolveNoProgressProofDelta(detail);
-        var normalized = string.Join(
-            "|",
-            "no-progress-retry",
-            candidate.Run.Id.ToString("D"),
-            candidate.StepRun.Id.ToString("D"),
-            toolSignature,
-            artifactValidationFingerprint,
-            mutationDelta,
-            proofDelta,
-            string.Join(",", retryReasons.Select(reason => CollapsePromptWhitespace(reason).ToLowerInvariant()).OrderBy(item => item, StringComparer.Ordinal)));
-        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
-        return new NoProgressRetrySignal(
-            fingerprint,
-            detail.Run.Id,
-            toolSignature,
-            artifactValidationFingerprint,
-            mutationDelta,
-            proofDelta);
+        return ProcessNoProgressRetrySignalBuilder.TryCreateSignal(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            retryReasons);
     }
 
     private static string ResolveNoProgressMutationDelta(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail)
     {
-        var mutationSignals = detail.ToolReceipts
-            .Where(receipt => !IsFailedToolReceipt(receipt))
-            .Where(receipt => IsConcreteProductMutationToolName(NormalizeToolToken(receipt.ToolName)))
-            .Select(receipt => string.Join(
-                ":",
-                NormalizeToolToken(receipt.ToolName),
-                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
-                IsConcreteProductMutationReceipt(candidate, detail, receipt)
-                    ? "concrete"
-                    : "non-concrete",
-                CreateBoundedTextHash(receipt.RequestSummary),
-                CreateBoundedTextHash(receipt.ExitSummary)))
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-
-        return mutationSignals.Length == 0
-            ? "mutation-delta:none"
-            : $"mutation-delta:{CreateBoundedTextHash(string.Join("|", mutationSignals))}";
+        return ProcessNoProgressRetrySignalBuilder.ResolveMutationDelta(candidate, detail);
     }
 
     private static string ResolveNoProgressProofDelta(ProcessAutomationExecutionRunDetail detail)
     {
-        var proofSignals = detail.ToolReceipts
-            .Where(receipt => !IsFailedToolReceipt(receipt))
-            .Where(receipt => ImplementationProofToolNames.Contains(NormalizeToolToken(receipt.ToolName), StringComparer.Ordinal))
-            .Select(receipt => string.Join(
-                ":",
-                NormalizeToolToken(receipt.ToolName),
-                NormalizeManagedRelativePathForComparison(receipt.WorkingDirectory),
-                CreateBoundedTextHash(receipt.RequestSummary),
-                CreateBoundedTextHash(receipt.ExitSummary)))
-            .OrderBy(item => item, StringComparer.Ordinal)
-            .ToArray();
-
-        return proofSignals.Length == 0
-            ? "proof-delta:none"
-            : $"proof-delta:{CreateBoundedTextHash(string.Join("|", proofSignals))}";
+        return ProcessNoProgressRetrySignalBuilder.ResolveProofDelta(detail);
     }
 
     private static bool IsNoProgressRetryLedgerEvent(string eventType)
     {
-        return string.Equals(eventType, ProcessRuntimeEventTypes.NoProgressRetryObserved, StringComparison.Ordinal) ||
-               string.Equals(eventType, ProcessRuntimeEventTypes.NoProgressRetryCompressed, StringComparison.Ordinal);
+        return ProcessNoProgressRetryLedgerRules.IsLedgerEvent(eventType);
     }
 
     private static bool TryResolveNoProgressRetryLedgerExecutionRunId(
         string? replayContextJson,
         out Guid executionRunId)
     {
-        executionRunId = default;
-        if (string.IsNullOrWhiteSpace(replayContextJson))
-        {
-            return false;
-        }
-
-        try
-        {
-            using var document = JsonDocument.Parse(replayContextJson);
-            if (!document.RootElement.TryGetProperty(nameof(NoProgressRetrySignal.ExecutionRunId), out var executionRunIdElement))
-            {
-                return false;
-            }
-
-            if (executionRunIdElement.ValueKind == JsonValueKind.String &&
-                Guid.TryParse(executionRunIdElement.GetString(), out executionRunId))
-            {
-                return true;
-            }
-
-            return executionRunIdElement.TryGetGuid(out executionRunId);
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
+        return ProcessNoProgressRetryLedgerRules.TryResolveExecutionRunId(replayContextJson, out executionRunId);
     }
 
     private static bool IsTerminalAutomationExecutionRun(ProcessAutomationExecutionRunRecord run)
@@ -642,30 +329,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return run.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed;
     }
 
-    private static string CreateBoundedTextHash(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(CollapsePromptWhitespace(value)))).ToLowerInvariant();
-    }
-
     private static bool IsNoProgressRetryReason(string retryReason)
     {
-        return retryReason.StartsWith("missing required tools:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("unresolved critical tool failures:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("missing concrete proof:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("missing concrete implementation proof:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("missing runnable application proof:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("invalid browser proof:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("invalid quality validation proof:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("missing required artifact:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("missing upstream artifact inspection:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("stale or ungrounded product path reference:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("shared managed artifact collision risk:", StringComparison.OrdinalIgnoreCase) ||
-               retryReason.StartsWith("recoverable finalizer validation failure:", StringComparison.OrdinalIgnoreCase);
+        return ProcessExecutionRetryReasonAggregator.IsNoProgressRetryReason(retryReason);
     }
 
     private static bool ShouldRetryRepairableImplementationBlockedOutcome(
@@ -797,83 +463,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> missingRequiredTools,
         CarriedImplementationProof carriedImplementationProof)
     {
-        var reasons = new List<string>();
-        if (missingRequiredTools.Count > 0)
-        {
-            reasons.Add($"missing required tools: {string.Join(", ", missingRequiredTools)}");
-        }
-
-        var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
-        if (unresolvedCriticalToolFailures.Count > 0)
-        {
-            reasons.Add(
-                "unresolved critical tool failures: " +
-                string.Join(
-                    "; ",
-                    unresolvedCriticalToolFailures
-                        .Take(2)
-                        .Select(item => $"{item.ToolName}: {item.ExitSummary}")));
-        }
-
-        if (IsRecoverableImplementationPunt(candidate, responseText))
-        {
-            reasons.Add("recoverable implementation punt");
-        }
-
-        var inspectionText = ResolveOutputInspectionText(responseText);
-        AddRetryReason(reasons, "incomplete implementation", ResolveIncompleteImplementationSummary(candidate, inspectionText));
-        AddRetryReason(reasons, "missing concrete proof", ResolveMissingConcreteProofSummary(candidate, inspectionText));
-        AddRetryReason(
-            reasons,
-            "missing concrete implementation proof",
-            ResolveMissingConcreteImplementationProofSummaryWithCarryForward(candidate, detail, carriedImplementationProof));
-        AddRetryReason(reasons, "missing runnable application proof", ResolveMissingRunnableApplicationProofSummary(candidate, detail));
-        AddRetryReason(reasons, "invalid browser proof", ResolveInvalidBrowserProofSummary(candidate, detail));
-        AddRetryReason(reasons, "invalid quality validation proof", ResolveInvalidQualityValidationProofSummary(candidate, detail, inspectionText));
-        AddRetryReason(reasons, "missing required artifact", ResolveMissingRequiredArtifactSummary(candidate, detail, inspectionText));
-        AddRetryReason(reasons, "downgraded project-structure requirement", ResolveDowngradedProjectStructureRequirementSummary(candidate, detail, inspectionText));
-        AddRetryReason(reasons, "missing upstream artifact inspection", ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail));
-        AddRetryReason(reasons, "stale or ungrounded product path reference", ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText));
-        AddRetryReason(reasons, "shared managed artifact collision risk", ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText));
-
-        if (IsRecoverableGovernedOutcomeGap(candidate, responseText) &&
-            !CanImplicitlyCompleteGovernedStep(candidate, detail, missingRequiredTools, inspectionText))
-        {
-            reasons.Add("recoverable governed outcome gap");
-        }
-
-        if (TryResolveRecoverableProviderFailure(detail, responseText, out var providerFailureSummary))
-        {
-            reasons.Add($"recoverable provider failure: {providerFailureSummary}");
-        }
-
-        if (TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out var finalizerFailureSummary))
-        {
-            reasons.Add($"recoverable finalizer validation failure: {finalizerFailureSummary}");
-        }
-
-        if (TryResolveRecoverableExecutionInterruption(detail, responseText, out var interruptionSummary))
-        {
-            reasons.Add($"recoverable execution interruption: {interruptionSummary}");
-        }
-
-        if (detail.Run.State == ProcessAutomationExecutionState.Failed &&
-            (MentionsRepeatedToolInvocation(responseText) || MentionsRepeatedToolInvocation(detail.Run.ResultSummary)))
-        {
-            reasons.Add("recoverable repeated tool invocation");
-        }
-
-        return reasons;
-    }
-
-    private static void AddRetryReason(List<string> reasons, string label, string summary)
-    {
-        if (string.IsNullOrWhiteSpace(summary))
-        {
-            return;
-        }
-
-        reasons.Add($"{label}: {summary}");
+        return ProcessExecutionRetryReasonAggregator.ResolveIncompleteSuccessfulRunRetryReasons(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            carriedImplementationProof);
     }
 
     private static bool ShouldRetryRecoverableFailedRun(
@@ -885,48 +480,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         int attemptNumber,
         int maxExecutionAttempts)
     {
-        var run = detail.Run;
-        var recoverableGovernedOutcomeGap = IsRecoverableGovernedOutcomeGap(candidate, responseText);
-        var recoverableProviderFailure = TryResolveRecoverableProviderFailure(detail, responseText, out _);
-        var recoverableFinalizerValidationFailure = TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out _);
-        var recoverableExecutionInterruption = TryResolveRecoverableExecutionInterruption(detail, responseText, out _);
-        var recoverableRepeatedToolInvocation =
-            MentionsRepeatedToolInvocation(responseText) ||
-            MentionsRepeatedToolInvocation(run.ResultSummary);
-        if (attemptNumber >= maxExecutionAttempts ||
-            run.State != ProcessAutomationExecutionState.Failed ||
-            run.PendingApprovals.Count > 0)
-        {
-            return false;
-        }
-
-        if (!RequiresConcreteImplementationProof(candidate) &&
-            !RequiresConcreteBrowserProof(candidate) &&
-            !recoverableProviderFailure &&
-            !recoverableFinalizerValidationFailure &&
-            !recoverableExecutionInterruption &&
-            !recoverableRepeatedToolInvocation)
-        {
-            return false;
-        }
-
-        if (!recoverableFinalizerValidationFailure &&
-            HasValidNonCompletedDeclaredOutcome(
-                candidate,
-                detail,
-                responseText,
-                ResolveOutputInspectionText(responseText)))
-        {
-            return false;
-        }
-
-        return missingRequiredTools.Count > 0 ||
-               unresolvedCriticalToolFailures.Count > 0 ||
-               recoverableGovernedOutcomeGap ||
-               recoverableProviderFailure ||
-               recoverableFinalizerValidationFailure ||
-               recoverableExecutionInterruption ||
-               recoverableRepeatedToolInvocation;
+        return ProcessRecoverableFailedRunRetryRules.ShouldRetry(
+            candidate,
+            detail,
+            responseText,
+            missingRequiredTools,
+            unresolvedCriticalToolFailures,
+            attemptNumber,
+            maxExecutionAttempts);
     }
 
     private static bool TryResolveRecoverableFinalizerValidationFailure(

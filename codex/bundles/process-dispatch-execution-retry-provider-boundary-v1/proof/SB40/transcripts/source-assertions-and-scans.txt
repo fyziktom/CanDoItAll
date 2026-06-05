@@ -1,0 +1,73 @@
+Assertion: SB40-INV-001 execution loop remains orchestration-only, provider/historical/post-attempt helpers are facade-owned, and Execution.cs is under the SB39 520-line target.
+Command: file/token/line-count source assertions for SB40 execution loop parity
+Token: ProcessExecutionAttemptLoopFacade
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:496:private ProcessExecutionAttemptLoopFacade CreateExecutionAttemptLoopFacade()
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:498:return new ProcessExecutionAttemptLoopFacade(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:8:internal sealed class ProcessExecutionAttemptLoopFacade
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:10:public ProcessExecutionAttemptLoopFacade(
+Token: HistoricalCarriedProof
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:458:var historicalDetails = await CreateExecutionAttemptLoopFacade().HistoricalCarriedProof
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:17:HistoricalCarriedProof = new ProcessHistoricalCarriedProofQueryCoordinator(executionClient);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:32:public ProcessHistoricalCarriedProofQueryCoordinator HistoricalCarriedProof { get; }
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessHistoricalCarriedProofQueryCoordinator.cs:5:internal sealed class ProcessHistoricalCarriedProofQueryCoordinator(
+Token: ProviderRepair
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:252:var providerRepair = await TryRepairAssignedAgentProvidersAsync(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:259:if (providerRepair is not null)
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:265:providerRepair.AffectedAgentCount,
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:266:providerRepair.FailedProviderName,
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:267:providerRepair.FallbackProviderName,
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:268:providerRepair.FallbackModel,
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:269:providerRepair.FailureSummary);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:272:providerRepair,
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:284:var providerRecoveryDirective = BuildProviderRepairRecoveryDirective(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:292:providerRepair);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:474:private async Task<ProviderRepairOutcome?> TryRepairAssignedAgentProvidersAsync(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:488:return await CreateExecutionAttemptLoopFacade().ProviderRepair
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:18:ProviderRepair = new ProcessProviderRepairCoordinator(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:24:new ProcessAssignedAgentProviderRepairCoordinator(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:34:public ProcessProviderRepairCoordinator ProviderRepair { get; }
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:6:internal sealed class ProcessProviderRepairCoordinator(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:9:ProcessAssignedAgentProviderRepairCoordinator assignedAgentRepairCoordinator,
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:12:public async Task<ProcessRunAutomationDispatchService.ProviderRepairOutcome?> TryRepairAsync(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:55:return new ProcessRunAutomationDispatchService.ProviderRepairOutcome(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs:9:internal sealed class ProcessAssignedAgentProviderRepairCoordinator(
+Token: ProcessHistoricalCarriedProofQueryCoordinator
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:17:HistoricalCarriedProof = new ProcessHistoricalCarriedProofQueryCoordinator(executionClient);
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs:32:public ProcessHistoricalCarriedProofQueryCoordinator HistoricalCarriedProof { get; }
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessHistoricalCarriedProofQueryCoordinator.cs:5:internal sealed class ProcessHistoricalCarriedProofQueryCoordinator(
+Token: ProcessExecutionPostAttemptFactsBuilder.Create
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:227:var postAttemptFacts = ProcessExecutionPostAttemptFactsBuilder.Create(
+Token: TryRepairAssignedAgentProvidersAsync
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:252:var providerRepair = await TryRepairAssignedAgentProvidersAsync(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:474:private async Task<ProviderRepairOutcome?> TryRepairAssignedAgentProvidersAsync(
+Token: ProcessProviderRecoveryDirectiveBuilder.CreateRecoveryDecision
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:271:var providerRecoveryDecision = ProcessProviderRecoveryDirectiveBuilder.CreateRecoveryDecision(
+Token: PersistRecoveryJournalAsync
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:276:await PersistRecoveryJournalAsync(
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:410:await PersistRecoveryJournalAsync(
+Token: ProcessExecutionInvocationRequestBuilder.Build
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:116:ProcessExecutionInvocationRequestBuilder.Build(
+Token: ProcessExecutionAttemptResultNormalizer.NormalizeAsync
+C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:176:var attemptResult = await ProcessExecutionAttemptResultNormalizer.NormalizeAsync(
+Execution.cs line count: 506
+Forbidden scan: CanDoItAll\.Processes\.Core
+
+Forbidden scan: IProcessDriverPack
+
+Forbidden scan: ProcessDriverRegistry
+
+Forbidden scan: TODO
+
+Forbidden scan: NotImplementedException
+
+Forbidden scan: return default
+
+Line counts:
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs: 506
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs: 35
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessHistoricalCarriedProofQueryCoordinator.cs: 28
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionPostAttemptFactsBuilder.cs: 50
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs: 62
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs: 97
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs: 60
+ExitCode: 0

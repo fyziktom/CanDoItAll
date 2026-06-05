@@ -40,7 +40,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         bool RequiresExplicitBranchOutcomeSelection,
         AgentProcessCooperationMetadata CooperationMetadata);
 
-    private sealed record ConcurrentAutomationExecution(
+    internal sealed record ConcurrentAutomationExecution(
         Guid ExecutionRunId,
         ProcessAutomationExecutionRunDetail Detail,
         string ResponseText);
@@ -91,7 +91,7 @@ internal sealed record ProjectStructureRequiredArtifactPath(
         IReadOnlyList<string> StatPaths,
         IReadOnlyList<string> ReadPaths);
 
-    private sealed record DispatchExecutionOutcome(
+    internal sealed record DispatchExecutionOutcome(
         ProcessAutomationExecutionRunDetail Detail,
         string ResponseText,
         ProcessStepRunStatus CompletionStatus,
@@ -108,12 +108,12 @@ internal sealed record ProjectStructureRequiredArtifactPath(
         public static CarriedImplementationProof None { get; } = new(false, false, false);
     }
 
-    private sealed record ProviderFallbackResolution(
+    internal sealed record ProviderFallbackResolution(
         ProviderProfile Provider,
         string Model,
         string HealthSummary);
 
-    private sealed record ProviderRepairOutcome(
+    internal sealed record ProviderRepairOutcome(
         string FailedProviderName,
         string FallbackProviderName,
         string FallbackModel,

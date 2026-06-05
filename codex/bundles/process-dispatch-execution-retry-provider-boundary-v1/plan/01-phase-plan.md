@@ -1,5 +1,11 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute SB01-SB44 in numeric order.
+- Stop at every critical gate until focused tests, source assertions, anti-stub scan, no-core/no-driver scan, no prohibited viewport scan, and proof manifests pass.
+- Reopen the most recent affected production movement subbundle if later proof weakens an earlier dependency or branch-order assumption.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -65,8 +71,18 @@ graph TD
 
 ## Critical Subbundles
 
-SB04, SB08, SB12, SB16, SB22, SB28, SB35, SB40, and SB44 are critical gates. A failed gate reopens the most recent production movement subbundle and blocks downstream work.
+- SB04: Gate A architecture guardrails.
+- SB08: Gate B response/active parity.
+- SB12: Gate C adoption parity.
+- SB16: Gate D launch/failure parity.
+- SB22: Gate E retry-decision parity.
+- SB28: Gate F no-progress parity.
+- SB35: Gate G provider recovery parity.
+- SB40: Gate H execution loop parity.
+- SB44: Final red-team and completed validator.
 
 ## Phase Gates
 
-Every critical gate must include: build or focused test proof, source assertions, anti-stub scan, no-core/no-driver scan, no UI/prohibited viewport scan, and a line-count or delegation proof where relevant.
+- Every critical gate must include build or focused test proof, source assertions, anti-stub scan, no-core/no-driver scan, no UI/prohibited viewport scan, and line-count or delegation proof where relevant.
+- Downstream subbundles may proceed only after the previous critical gate row in `reviews/01-execution-report.md` is updated with passing entry and closure decisions.
+- If a critical gate fails, reopen the most recent production movement subbundle and stop downstream execution until the bundle and proof are repaired.

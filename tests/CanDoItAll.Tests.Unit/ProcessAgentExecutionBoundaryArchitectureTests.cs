@@ -1940,6 +1940,65 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("CanDoItAll.Processes.Core", resolverSource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Process_dispatch_execution_retry_provider_gate_a_SB04_INV_001_keeps_refactor_module_local_without_driver_or_ui_proof()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var bundleRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-execution-retry-provider-boundary-v1");
+        var productionProjectNames = Directory
+            .EnumerateFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
+            .Select(Path.GetFileNameWithoutExtension)
+            .ToArray();
+        var dispatchSource = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(dispatchDirectory, "*.cs")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var proofPaths = Directory.Exists(Path.Combine(bundleRoot, "proof"))
+            ? Directory.EnumerateFiles(Path.Combine(bundleRoot, "proof"), "*", SearchOption.AllDirectories)
+            : [];
+        var forbiddenProofPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet"
+        };
+
+        Assert.DoesNotContain(productionProjectNames, name =>
+            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
+            name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
+        Assert.DoesNotContain("IProcessDriverPack", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessHelperDriver", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSource, StringComparison.Ordinal);
+        Assert.All(proofPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(bundleRoot, path);
+            Assert.DoesNotContain(forbiddenProofPathTokens, token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));

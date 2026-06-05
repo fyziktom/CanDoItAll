@@ -1,0 +1,42 @@
+Assertion: SB08-INV-001 helper types exist and wrappers delegate
+Command: rg -n 'ProcessExecutionAttemptContext|ProcessExecutionLoopState|ProcessExecutionResponseTextResolver|ProcessObservedExecutionOutcomeBuilder|ResolveRecovered\(|ResolvePreferred\(|ProcessObservedExecutionOutcomeBuilder\.Create' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 0
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptContext.cs:5:internal sealed record ProcessExecutionAttemptContext(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptContext.cs:12:internal sealed record ProcessExecutionLoopState(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionResponseTextResolver.cs:5:internal static class ProcessExecutionResponseTextResolver
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionResponseTextResolver.cs:7:    internal static string ResolveRecovered(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionResponseTextResolver.cs:26:    internal static string ResolvePreferred(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessObservedExecutionOutcomeBuilder.cs:5:internal static class ProcessObservedExecutionOutcomeBuilder
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:203:        return ProcessExecutionResponseTextResolver.ResolveRecovered(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:213:        return ProcessExecutionResponseTextResolver.ResolvePreferred(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs:487:        return ProcessObservedExecutionOutcomeBuilder.Create(
+---
+Assertion: SB08-INV-001 line counts after SB08
+Command: Count lines for Execution.cs, Concurrency.cs, and SB05-SB07 helper files
+ExitCode: 0
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs	658
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs	1226
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionAttemptContext.cs	15
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionResponseTextResolver.cs	57
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessObservedExecutionOutcomeBuilder.cs	25
+---
+Assertion: SB08-INV-001 no Process Core or production driver API tokens in dispatch source
+Command: rg -n 'IProcessDriverPack|IProcessDriverRegistry|IProcessHelperDriver|ProcessDriverRegistry|CanDoItAll\\.Processes\\.Core' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB08-INV-001 anti-stub scan over process dispatch source
+Command: rg -n 'TODO|NotImplementedException|return default' src/CanDoItAll.Modules.Processes/Automation/Dispatch -g '*.cs'
+ExitCode: 1
+Output:
+<no output>
+---
+Assertion: SB08-INV-001 no prohibited viewport/browser proof paths in this bundle proof
+Command: Get-ChildItem -Path 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-execution-retry-provider-boundary-v1\proof' -Recurse -File | Select-Object -ExpandProperty FullName | Select-String -Pattern 'mobile|small-screen|small_screen|medium-screen|medium_screen|phone|tablet'
+ExitCode: 1
+Output:
+<no output>
+---
