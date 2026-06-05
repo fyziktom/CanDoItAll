@@ -9,6 +9,7 @@ using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
@@ -401,6 +402,62 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessDispatchRouteSnapshot_SB05_INV_001_captures_trigger_status_and_current_attempt_facts()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var technicalAgentId = Guid.NewGuid();
+        var recoveryExecutionRunId = Guid.NewGuid();
+        var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
+        var triggerStepRunId = Guid.NewGuid();
+
+        var snapshot = ProcessDispatchRouteSnapshot.Create(
+            processRunId,
+            stepRunId,
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Work,
+            technicalAgentId,
+            recoveryExecutionRunId,
+            currentAttemptStartedAtUtc,
+            " runtime-recovery-scan ",
+            triggerStepRunId);
+
+        Assert.Equal(processRunId, snapshot.ProcessRunId);
+        Assert.Equal(stepRunId, snapshot.StepRunId);
+        Assert.Equal(ProcessRunStatus.Active, snapshot.RunStatus);
+        Assert.Equal(ProcessStepRunStatus.Ready, snapshot.StepStatus);
+        Assert.Equal(ProcessStepKind.Work, snapshot.StepKind);
+        Assert.Equal(technicalAgentId, snapshot.TechnicalAgentId);
+        Assert.Equal(recoveryExecutionRunId, snapshot.RecoveryExecutionRunId);
+        Assert.Equal(currentAttemptStartedAtUtc, snapshot.CurrentAttemptStartedAtUtc);
+        Assert.Equal(" runtime-recovery-scan ", snapshot.Trigger.RawTrigger);
+        Assert.Equal("runtime-recovery-scan", snapshot.Trigger.NormalizedTrigger);
+        Assert.Equal(triggerStepRunId, snapshot.Trigger.TriggerStepRunId);
+        Assert.True(snapshot.UsesAgentAutomation);
+        Assert.False(snapshot.IsSubprocess);
+        Assert.True(snapshot.HasRecoverableExecutionRun);
+        Assert.True(snapshot.RequiresStartTransition);
+        Assert.True(snapshot.IsRunEligibleForDispatchCandidate);
+        Assert.True(snapshot.IsStepStatusDispatchableForRun);
+    }
+
+    [Theory]
+    [InlineData(ProcessRunStatus.Failed, ProcessStepRunStatus.InProgress, true, false)]
+    [InlineData(ProcessRunStatus.Failed, ProcessStepRunStatus.Ready, false, true)]
+    [InlineData(ProcessRunStatus.Completed, ProcessStepRunStatus.InProgress, true, true)]
+    [InlineData(ProcessRunStatus.Active, ProcessStepRunStatus.WaitingApproval, true, false)]
+    public void ProcessDispatchRouteEligibility_SB05_INV_002_preserves_run_and_step_dispatch_rules(
+        ProcessRunStatus runStatus,
+        ProcessStepRunStatus stepStatus,
+        bool expectedDispatchable,
+        bool expectedClosed)
+    {
+        Assert.Equal(expectedDispatchable, ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(runStatus, stepStatus));
+        Assert.Equal(expectedClosed, ProcessDispatchRouteEligibility.IsRunClosedToAutomation(runStatus, stepStatus));
+    }
+
+    [Fact]
     public void ApplyProjectStructureReadAccess_adds_project_scoped_read_access()
     {
         var projectId = Guid.NewGuid();
@@ -515,6 +572,384 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessAutomationExecutionRunSelection_SB06_INV_001_selects_latest_current_attempt_competing_run()
+    {
+        var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
+        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(2)
+        };
+        var currentOlderRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Preparing, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(1),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(1),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(2)
+        };
+        var currentLatestRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(2),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(2),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(3)
+        };
+
+        var competingRun = ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun(
+            [previousAttemptRun, currentOlderRun, currentLatestRun],
+            Guid.NewGuid(),
+            attemptStartedAtUtc,
+            attemptStartedAtUtc.AddMinutes(4),
+            ProcessRunAutomationDispatchService.AutomationActor,
+            TimeSpan.FromMinutes(10));
+
+        Assert.NotNull(competingRun);
+        Assert.Equal(currentLatestRun.Id, competingRun.Id);
+    }
+
+    [Fact]
+    public void ProcessAutomationExecutionRunSelection_SB06_INV_002_preserves_stale_and_approval_blocking_rules()
+    {
+        var createdAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
+        var now = createdAtUtc.AddMinutes(11);
+        var staleRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
+        {
+            CreatedAtUtc = createdAtUtc,
+            StartedAtUtc = createdAtUtc,
+            UpdatedAtUtc = createdAtUtc
+        };
+        var approvalWaitingRun = staleRun with
+        {
+            Id = Guid.NewGuid(),
+            PendingApprovals =
+            [
+                new ProcessAutomationPendingToolApproval(
+                    "approval-1",
+                    "call-1",
+                    "workspace_read_file",
+                    "workspace",
+                    "Read file",
+                    "{}")
+            ]
+        };
+
+        Assert.True(ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun(
+            staleRun,
+            now,
+            TimeSpan.FromMinutes(10)));
+        Assert.False(ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun(
+            approvalWaitingRun,
+            now,
+            TimeSpan.FromMinutes(10)));
+        Assert.False(ProcessAutomationExecutionRunSelection.IsBlockingAutomationExecutionRun(
+            staleRun,
+            now,
+            ProcessRunAutomationDispatchService.AutomationActor,
+            TimeSpan.FromMinutes(10)));
+        Assert.True(ProcessAutomationExecutionRunSelection.IsBlockingAutomationExecutionRun(
+            approvalWaitingRun,
+            now,
+            ProcessRunAutomationDispatchService.AutomationActor,
+            TimeSpan.FromMinutes(10)));
+    }
+
+    [Fact]
+    public void ProcessAutomationExecutionRunSelection_SB06_INV_003_preserves_completion_and_fresh_recovery_skip_rules()
+    {
+        var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
+
+        Assert.True(ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+            ProcessStepRunStatus.InProgress,
+            null,
+            currentAttemptStartedAtUtc,
+            currentAttemptStartedAtUtc.AddMinutes(1),
+            " runtime-recovery-scan ",
+            TimeSpan.FromMinutes(10)));
+        Assert.False(ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+            ProcessStepRunStatus.InProgress,
+            Guid.NewGuid(),
+            currentAttemptStartedAtUtc,
+            currentAttemptStartedAtUtc.AddMinutes(1),
+            "runtime-recovery-scan",
+            TimeSpan.FromMinutes(10)));
+        Assert.True(ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+            ProcessStepRunStatus.Completed,
+            ProcessStepRunStatus.Failed));
+        Assert.False(ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+            ProcessStepRunStatus.InProgress,
+            ProcessStepRunStatus.Completed));
+    }
+
+    [Fact]
+    public void ProcessRunAutomationDispatchService_SB07_INV_001_preserves_execution_run_selection_wrapper_parity()
+    {
+        var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
+        var now = attemptStartedAtUtc.AddMinutes(4);
+        var previousAttemptRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(-20),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(2)
+        };
+        var currentBlockingRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Running, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(1),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(1),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(3)
+        };
+        var manualRun = CreateExecutionRun("agent-run-debug", ProcessAutomationExecutionState.Running, null) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(2),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(2),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(4)
+        };
+        var recoverableRun = CreateExecutionRun("process-automation-dispatch", ProcessAutomationExecutionState.Completed, ProcessAutomationRunOutcome.Succeeded) with
+        {
+            CreatedAtUtc = attemptStartedAtUtc.AddMinutes(2),
+            StartedAtUtc = attemptStartedAtUtc.AddMinutes(2),
+            UpdatedAtUtc = attemptStartedAtUtc.AddMinutes(3),
+            CompletedAtUtc = attemptStartedAtUtc.AddMinutes(3)
+        };
+        var executionRuns = new[]
+        {
+            previousAttemptRun,
+            currentBlockingRun,
+            manualRun,
+            recoverableRun
+        };
+        var stepRun = CreateStepRun(ProcessStepRunStatus.InProgress, attemptStartedAtUtc);
+
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.HasBlockingAutomationExecutionRun(
+                executionRuns,
+                now,
+                ProcessRunAutomationDispatchService.AutomationActor,
+                TimeSpan.FromMinutes(10)),
+            ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(executionRuns, now));
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId(
+                executionRuns,
+                now,
+                ProcessRunAutomationDispatchService.AutomationActor,
+                TimeSpan.FromMinutes(10)),
+            ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(executionRuns, now));
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId(
+                stepRun.StartedAtUtc,
+                executionRuns,
+                now,
+                ProcessRunAutomationDispatchService.AutomationActor,
+                TimeSpan.FromMinutes(10)),
+            ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(stepRun, executionRuns, now));
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.ResolveRecoverableAutomationExecutionRunId(
+                stepRun.Status,
+                stepRun.StartedAtUtc,
+                executionRuns,
+                ProcessRunAutomationDispatchService.AutomationActor),
+            ProcessRunAutomationDispatchService.ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns));
+    }
+
+    [Fact]
+    public void ProcessRunAutomationDispatchService_SB07_INV_002_preserves_transition_busy_and_fresh_skip_wrapper_parity()
+    {
+        var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
+        var now = currentAttemptStartedAtUtc.AddMinutes(1);
+        var busyMessages = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "This session already has an active execution run. Wait for it to finish before sending a new prompt.",
+            "This session has pending tool approvals. Approve or reject them before sending a new prompt."
+        };
+        var busyException = new InvalidOperationException("  This session already has an active execution run. Wait for it to finish before sending a new prompt.  ");
+
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+                ProcessStepRunStatus.InProgress,
+                null,
+                currentAttemptStartedAtUtc,
+                now,
+                "runtime-recovery-scan",
+                TimeSpan.FromMinutes(10)),
+            ProcessRunAutomationDispatchService.ShouldSkipFreshAutomationDispatch(
+                ProcessStepRunStatus.InProgress,
+                null,
+                currentAttemptStartedAtUtc,
+                now,
+                "runtime-recovery-scan"));
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+                ProcessStepRunStatus.Completed,
+                ProcessStepRunStatus.Failed),
+            ProcessRunAutomationDispatchService.ShouldSkipAutomationCompletionTransition(
+                ProcessStepRunStatus.Completed,
+                ProcessStepRunStatus.Failed));
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.IsConcurrentAutomationSessionBusyException(
+                busyException,
+                busyMessages),
+            ProcessRunAutomationDispatchService.IsConcurrentAutomationSessionBusyException(busyException));
+    }
+
+    [Fact]
+    public void ProcessDispatchStartTransitionPlanner_SB10_INV_001_builds_start_request_without_executing_transition()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var triggerStepRunId = Guid.NewGuid();
+        var concurrencyToken = Guid.NewGuid();
+        var routeSnapshot = ProcessDispatchRouteSnapshot.Create(
+            processRunId,
+            stepRunId,
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Work,
+            Guid.NewGuid(),
+            null,
+            null,
+            " ",
+            triggerStepRunId);
+
+        var request = ProcessDispatchStartTransitionPlanner.BuildStartTransitionRequest(
+            routeSnapshot,
+            concurrencyToken,
+            ProcessRunAutomationDispatchService.AutomationActor);
+
+        Assert.Equal(stepRunId, request.StepRunId);
+        Assert.Equal(concurrencyToken, request.StepRunConcurrencyToken);
+        Assert.Equal(ProcessStepRunStatus.InProgress, request.TargetStatus);
+        Assert.Equal(
+            $"Started by the durable process automation dispatcher (step:{triggerStepRunId:D}).",
+            request.Reason);
+        Assert.Equal(ProcessRunAutomationDispatchService.AutomationActor, request.DecidedBy);
+        Assert.True(request.SuppressAutomationDispatch);
+    }
+
+    [Fact]
+    public void ProcessDispatchStartTransitionPlanner_SB10_INV_002_preserves_fresh_skip_wrapper_parity()
+    {
+        var currentAttemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T02:00:00+00:00");
+        var now = currentAttemptStartedAtUtc.AddMinutes(1);
+        var routeSnapshot = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.InProgress,
+            ProcessStepKind.Work,
+            Guid.NewGuid(),
+            null,
+            currentAttemptStartedAtUtc,
+            " runtime-recovery-scan ",
+            null);
+
+        Assert.Equal(
+            ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+                routeSnapshot.StepStatus,
+                routeSnapshot.RecoveryExecutionRunId,
+                routeSnapshot.CurrentAttemptStartedAtUtc,
+                now,
+                routeSnapshot.Trigger.RawTrigger,
+                TimeSpan.FromMinutes(10)),
+            ProcessDispatchStartTransitionPlanner.ShouldSkipFreshAutomationDispatch(
+                routeSnapshot,
+                now,
+                TimeSpan.FromMinutes(10)));
+        Assert.Equal(
+            ProcessDispatchStartTransitionPlanner.ShouldSkipFreshAutomationDispatch(
+                routeSnapshot,
+                now,
+                TimeSpan.FromMinutes(10)),
+            ProcessRunAutomationDispatchService.ShouldSkipFreshAutomationDispatch(routeSnapshot, now));
+    }
+
+    [Fact]
+    public void ProcessDispatchRoutePlanner_SB11_INV_001_classifies_database_upstream_and_recovery_routes_without_side_effects()
+    {
+        var agentRoute = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Work,
+            Guid.NewGuid(),
+            null,
+            null,
+            "step-transition:Completed",
+            null);
+        var subprocessRoute = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Subprocess,
+            Guid.Empty,
+            null,
+            null,
+            "step-transition:Completed",
+            null);
+
+        Assert.Equal(
+            ProcessDispatchRouteKind.DatabaseRequirement,
+            ProcessDispatchRoutePlanner.ResolveDatabaseRequirement(agentRoute, hasDatabaseRequirementFailure: true).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.Continue,
+            ProcessDispatchRoutePlanner.ResolveDatabaseRequirement(agentRoute, hasDatabaseRequirementFailure: false).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.Continue,
+            ProcessDispatchRoutePlanner.ResolveDatabaseRequirement(subprocessRoute, hasDatabaseRequirementFailure: true).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.UpstreamMaterialization,
+            ProcessDispatchRoutePlanner.ResolveUpstreamMaterialization(materializationRequested: true).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.Continue,
+            ProcessDispatchRoutePlanner.ResolveUpstreamMaterialization(materializationRequested: false).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.StrandedRecovery,
+            ProcessDispatchRoutePlanner.ResolveStrandedRecovery(recoveryCompleted: true).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.Continue,
+            ProcessDispatchRoutePlanner.ResolveStrandedRecovery(recoveryCompleted: false).Kind);
+    }
+
+    [Fact]
+    public void ProcessDispatchRoutePlanner_SB11_INV_002_routes_subprocess_workflow_and_agent_execution()
+    {
+        var agentRoute = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.InProgress,
+            ProcessStepKind.Work,
+            Guid.NewGuid(),
+            null,
+            DateTimeOffset.Parse("2026-04-19T02:00:00+00:00"),
+            "process-runtime",
+            null);
+        var subprocessRoute = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Subprocess,
+            Guid.Empty,
+            null,
+            null,
+            "process-runtime",
+            null);
+
+        Assert.Equal(
+            ProcessDispatchRouteKind.Subprocess,
+            ProcessDispatchRoutePlanner.ResolveSubprocess(subprocessRoute).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.Continue,
+            ProcessDispatchRoutePlanner.ResolveSubprocess(agentRoute).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.Workflow,
+            ProcessDispatchRoutePlanner.ResolveWorkflow(workflowHandled: true).Kind);
+        Assert.Equal(
+            ProcessDispatchRouteKind.AgentExecution,
+            ProcessDispatchRoutePlanner.ResolveWorkflow(workflowHandled: false).Kind);
+    }
+
+    [Fact]
     public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
     {
         var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");
@@ -626,6 +1061,40 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var exception = Assert.Throws<ProcessDispatchClaimLostException>(heartbeat.ThrowIfClaimLost);
         Assert.Equal(stepRunId, exception.StepRunId);
         Assert.IsType<InvalidOperationException>(exception.InnerException);
+    }
+
+    [Fact]
+    public async Task ProcessDispatchGuardLease_SB09_INV_001_serializes_same_step_and_removes_released_guard()
+    {
+        var stepRunId = Guid.NewGuid();
+        var dispatchGuards = new ConcurrentDictionary<Guid, SemaphoreSlim>();
+        var firstLease = await ProcessDispatchGuardLease.WaitAsync(stepRunId, dispatchGuards, CancellationToken.None);
+        var secondLeaseEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var secondLeaseTask = Task.Run(async () =>
+        {
+            using var secondLease = await ProcessDispatchGuardLease.WaitAsync(stepRunId, dispatchGuards, CancellationToken.None);
+            secondLeaseEntered.SetResult();
+        });
+
+        await Task.Delay(50);
+
+        Assert.False(secondLeaseEntered.Task.IsCompleted);
+        firstLease.Release();
+        await secondLeaseEntered.Task.WaitAsync(TimeSpan.FromSeconds(1));
+        await secondLeaseTask.WaitAsync(TimeSpan.FromSeconds(1));
+        firstLease.Dispose();
+        Assert.Empty(dispatchGuards);
+    }
+
+    [Fact]
+    public async Task ProcessDispatchGuardLease_SB09_INV_002_rejects_empty_step_id()
+    {
+        var dispatchGuards = new ConcurrentDictionary<Guid, SemaphoreSlim>();
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            ProcessDispatchGuardLease.WaitAsync(Guid.Empty, dispatchGuards, CancellationToken.None));
+
+        Assert.Equal("stepRunId", exception.ParamName);
     }
 
     [Fact]

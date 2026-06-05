@@ -1,0 +1,44 @@
+Command: rg -n "TryClaimStepDispatchAsync|ProcessDispatchLeaseHeartbeat|ShouldSkipFreshAutomationDispatch|BlockDispatchForDatabaseRequirementAsync|TryRequestMissingUpstreamArtifactMaterializationAsync|TryRecoverStrandedMissingCompletionArtifactsAsync|HandleSubprocessDispatchAsync|TransitionStepWithClaimAsync|TryRunOrObserveAsync|ExecuteUntilSettledAsync|ResolveCompetingActiveAutomationExecutionAsync|IsRunClosedToAutomationAsync|FinalizeStepCompletionAsync|ApplyFinalizedStepTransitionAsync|ProcessDispatchClaimLostException|ReleaseStepDispatchClaimAsync" src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:31:06.6846250-04:00
+Exit code: 0
+Output:
+59:                    var dispatchClaim = await TryClaimStepDispatchAsync(
+74:                    ProcessDispatchLeaseHeartbeat? dispatchHeartbeat = null;
+79:                        dispatchHeartbeat = ProcessDispatchLeaseHeartbeat.Start(
+98:                        if (ShouldSkipFreshAutomationDispatch(
+121:                            await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, dispatchClaim, dispatchCancellationToken);
+125:                        if (await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, dispatchClaim, dispatchCancellationToken))
+130:                        var strandedArtifactRecoveryOutcome = await TryRecoverStrandedMissingCompletionArtifactsAsync(
+138:                            var finalizedRecoveryCompletion = await FinalizeStepCompletionAsync(
+159:                                await ApplyFinalizedStepTransitionAsync(candidate, finalizedRecoveryCompletion, dispatchClaim, dispatchCancellationToken);
+167:                            await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, dispatchClaim, dispatchCancellationToken);
+173:                            var startResult = await TransitionStepWithClaimAsync(
+208:                        var workflowOutcome = await workflowRunCoordinator.TryRunOrObserveAsync(
+219:                        var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, dispatchRenewLeaseAsync, dispatchCancellationToken);
+222:                            ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, dispatchCancellationToken)
+235:                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
+244:                        var finalizedCompletion = await FinalizeStepCompletionAsync(
+264:                            await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, dispatchCancellationToken);
+293:                    catch (ProcessDispatchClaimLostException exception)
+361:                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
+379:                        var failResult = await TransitionStepWithClaimAsync(
+407:                        await ReleaseStepDispatchClaimAsync(dispatchClaim, cancellationToken);
+472:        var finalizedCompletion = await FinalizeStepCompletionAsync(
+494:        await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
+497:    private async Task<ProcessStepDispatchClaim?> TryClaimStepDispatchAsync(
+558:                throw new ProcessDispatchClaimLostException(dispatchClaim.StepRunId);
+598:        throw new ProcessDispatchClaimLostException(dispatchClaim.StepRunId);
+615:    private async Task ReleaseStepDispatchClaimAsync(
+642:    private async Task<bool> IsRunClosedToAutomationAsync(
+704:    private async Task HandleSubprocessDispatchAsync(
+714:            var startResult = await TransitionStepWithClaimAsync(
+742:            await TransitionStepWithClaimAsync(
+765:                var blockResult = await TransitionStepWithClaimAsync(
+802:            var finalizedCompletion = await FinalizeStepCompletionAsync(
+821:                await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
+827:        var transitionResult = await TransitionStepWithClaimAsync(
+1295:    private async Task BlockDispatchForDatabaseRequirementAsync(
+1332:        var transitionResult = await TransitionStepWithClaimAsync(
+1361:    private async Task<bool> TryRequestMissingUpstreamArtifactMaterializationAsync(
+1380:                var blockResult = await TransitionStepWithClaimAsync(

@@ -38,7 +38,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         DateTimeOffset now)
     {
-        return ResolveBlockingAutomationExecutionRunId(executionRuns, now).HasValue;
+        return ProcessAutomationExecutionRunSelection.HasBlockingAutomationExecutionRun(
+            executionRuns,
+            now,
+            AutomationActor,
+            StaleAutomationExecutionRunTimeout);
     }
 
     internal static Guid? ResolveBlockingAutomationExecutionRunId(
@@ -49,16 +53,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns,
         DateTimeOffset now)
     {
-        ArgumentNullException.ThrowIfNull(executionRuns);
-
-        return executionRuns
-            .Where(executionRun => IsBlockingAutomationExecutionRun(executionRun, now))
-            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
-                ? executionRun.CreatedAtUtc
-                : executionRun.UpdatedAtUtc)
-            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
-            .Select(executionRun => (Guid?)executionRun.Id)
-            .FirstOrDefault();
+        return ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId(
+            executionRuns,
+            now,
+            AutomationActor,
+            StaleAutomationExecutionRunTimeout);
     }
 
     internal static Guid? ResolveBlockingAutomationExecutionRunId(
@@ -67,18 +66,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
-        ArgumentNullException.ThrowIfNull(executionRuns);
 
-        return executionRuns
-            .Where(executionRun =>
-                IsBlockingAutomationExecutionRun(executionRun, now) &&
-                IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
-            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
-                ? executionRun.CreatedAtUtc
-                : executionRun.UpdatedAtUtc)
-            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
-            .Select(executionRun => (Guid?)executionRun.Id)
-            .FirstOrDefault();
+        return ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId(
+            stepRun.StartedAtUtc,
+            executionRuns,
+            now,
+            AutomationActor,
+            StaleAutomationExecutionRunTimeout);
     }
 
     internal static Guid? ResolveRecoverableAutomationExecutionRunId(
@@ -87,21 +81,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         ArgumentNullException.ThrowIfNull(stepRun);
 
-        if (stepRun.Status != ProcessStepRunStatus.InProgress)
-        {
-            return null;
-        }
-
-        return executionRuns
-            .Where(executionRun =>
-                string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase) &&
-                executionRun.State is ProcessAutomationExecutionState.Completed or ProcessAutomationExecutionState.Failed &&
-                IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
-            .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
-            .ThenByDescending(executionRun => executionRun.UpdatedAtUtc)
-            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
-            .Select(executionRun => (Guid?)executionRun.Id)
-            .FirstOrDefault();
+        return ProcessAutomationExecutionRunSelection.ResolveRecoverableAutomationExecutionRunId(
+            stepRun.Status,
+            stepRun.StartedAtUtc,
+            executionRuns,
+            AutomationActor);
     }
 
     internal static Guid? ResolveReusableAutomationChatSessionId(
@@ -152,37 +136,30 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 ProcessStepId: candidate.StepRun.Id.ToString("D"),
                 Take: 20),
             cancellationToken);
-        var now = clock.GetUtcNow();
-        return executionRuns
-            .Where(executionRun => executionRun.Id != executionOutcome.Detail.Run.Id)
-            .Where(executionRun =>
-                IsBlockingAutomationExecutionRun(executionRun, now) &&
-                IsRecoverableExecutionRunForCurrentAttempt(executionRun, candidate.StepRun.StartedAtUtc))
-            .OrderByDescending(executionRun => executionRun.UpdatedAtUtc == default
-                ? executionRun.CreatedAtUtc
-                : executionRun.UpdatedAtUtc)
-            .ThenByDescending(executionRun => executionRun.CreatedAtUtc)
-            .FirstOrDefault();
+
+        return ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun(
+            executionRuns,
+            executionOutcome.Detail.Run.Id,
+            candidate.StepRun.StartedAtUtc,
+            clock.GetUtcNow(),
+            AutomationActor,
+            StaleAutomationExecutionRunTimeout);
     }
 
     internal static bool ShouldSkipAutomationCompletionTransition(
         ProcessStepRunStatus currentStatus,
         ProcessStepRunStatus requestedStatus)
     {
-        if (currentStatus == requestedStatus)
-        {
-            return true;
-        }
-
-        return currentStatus is not ProcessStepRunStatus.InProgress and not ProcessStepRunStatus.WaitingApproval;
+        return ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+            currentStatus,
+            requestedStatus);
     }
 
     internal static bool IsConcurrentAutomationSessionBusyException(Exception exception)
     {
-        ArgumentNullException.ThrowIfNull(exception);
-
-        return exception is InvalidOperationException &&
-               ConcurrentAutomationSessionBusyMessages.Contains(exception.Message.Trim());
+        return ProcessAutomationExecutionRunSelection.IsConcurrentAutomationSessionBusyException(
+            exception,
+            ConcurrentAutomationSessionBusyMessages);
     }
 
     internal static bool ShouldSkipFreshAutomationDispatch(
@@ -192,73 +169,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DateTimeOffset now,
         string trigger)
     {
-        if (currentStatus != ProcessStepRunStatus.InProgress)
-        {
-            return false;
-        }
-
-        if (!IsRecoveryTrigger(trigger))
-        {
-            return false;
-        }
-
-        if (recoverableExecutionRunId.HasValue)
-        {
-            return false;
-        }
-
-        if (!currentAttemptStartedAtUtc.HasValue)
-        {
-            return false;
-        }
-
-        return now - currentAttemptStartedAtUtc.Value < FreshInProgressRecoveryGracePeriod;
+        return ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+            currentStatus,
+            recoverableExecutionRunId,
+            currentAttemptStartedAtUtc,
+            now,
+            trigger,
+            FreshInProgressRecoveryGracePeriod);
     }
 
-    private static bool IsBlockingAutomationExecutionRun(
-        ProcessAutomationExecutionRunRecord executionRun,
+    internal static bool ShouldSkipFreshAutomationDispatch(
+        ProcessDispatchRouteSnapshot routeSnapshot,
         DateTimeOffset now)
     {
-        return string.Equals(executionRun.RequestedBy, AutomationActor, StringComparison.OrdinalIgnoreCase)
-               && executionRun.State is not ProcessAutomationExecutionState.Completed
-               and not ProcessAutomationExecutionState.Failed
-               && !IsStaleAutomationExecutionRun(executionRun, now);
+        return ProcessDispatchStartTransitionPlanner.ShouldSkipFreshAutomationDispatch(
+            routeSnapshot,
+            now,
+            FreshInProgressRecoveryGracePeriod);
     }
 
     private static bool IsStaleAutomationExecutionRun(
         ProcessAutomationExecutionRunRecord executionRun,
         DateTimeOffset now)
     {
-        if (executionRun.PendingApprovals.Count > 0)
-        {
-            return false;
-        }
-
-        var lastProgressAtUtc = executionRun.UpdatedAtUtc == default
-            ? executionRun.CreatedAtUtc
-            : executionRun.UpdatedAtUtc;
-        return now - lastProgressAtUtc >= StaleAutomationExecutionRunTimeout;
-    }
-
-    private static bool IsRecoveryTrigger(string trigger)
-    {
-        return string.Equals(
-            trigger?.Trim(),
-            "runtime-recovery-scan",
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsRecoverableExecutionRunForCurrentAttempt(
-        ProcessAutomationExecutionRunRecord executionRun,
-        DateTimeOffset? currentAttemptStartedAtUtc)
-    {
-        if (!currentAttemptStartedAtUtc.HasValue)
-        {
-            return true;
-        }
-
-        var executionAttemptStartedAtUtc = executionRun.StartedAtUtc ?? executionRun.CreatedAtUtc;
-        return executionAttemptStartedAtUtc >= currentAttemptStartedAtUtc.Value;
+        return ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun(
+            executionRun,
+            now,
+            StaleAutomationExecutionRunTimeout);
     }
 
     private static string ResolveRecoveredExecutionResponseText(ProcessAutomationExecutionRunDetail detail)

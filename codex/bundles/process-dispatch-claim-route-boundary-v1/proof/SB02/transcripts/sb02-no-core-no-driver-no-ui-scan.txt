@@ -1,0 +1,13 @@
+Command: if (Test-Path -LiteralPath 'src/CanDoItAll.Processes.Core') { throw 'Forbidden src/CanDoItAll.Processes.Core exists.' }
+if (Test-Path -LiteralPath 'src/CanDoItAll.Modules.Processes.Core') { throw 'Forbidden src/CanDoItAll.Modules.Processes.Core exists.' }
+$matches = rg -n "IProcessDriverPack|interface\s+IProcessDriverPack|class\s+ProcessDriverPack|CanDoItAll\.Processes\.Core|CanDoItAll\.Modules\.Processes\.Core" src/CanDoItAll.Modules.Processes -g "*.cs" 2>&1
+if ($LASTEXITCODE -eq 0) { $matches; throw 'Forbidden production driver/core token found.' }
+if ($LASTEXITCODE -gt 1) { $matches; exit $LASTEXITCODE }
+$uiChanges = git diff --name-only -- "*.razor" "*.css" "*.js" "*.ts" "*.tsx"
+if ($uiChanges) { $uiChanges; throw 'Unexpected UI file changes found.' }
+'Scope scans passed.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:31:10.3021259-04:00
+Exit code: 0
+Output:
+Scope scans passed.

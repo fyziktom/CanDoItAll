@@ -1,0 +1,15 @@
+Command: $oldRouteInventory = git show HEAD:codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/02-current-dispatch-route-map.md
+$oldConcurrencyInventory = git show HEAD:codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/03-concurrency-rule-inventory.md
+$oldCombined = ($oldRouteInventory + $oldConcurrencyInventory) -join "`n"
+$missingLiveRoute = -not $oldCombined.Contains('Live source captured in SB02')
+$missingLiveConcurrency = -not $oldCombined.Contains('Live source captured in SB03')
+$hasPlaceholder = $oldCombined.Contains('Codex must fill this') -or $oldCombined.Contains('Codex must update this')
+if (!$missingLiveRoute -or !$missingLiveConcurrency -or !$hasPlaceholder) {
+  throw 'Old inventories unexpectedly satisfy the new live-inventory gate.'
+}
+'Failing-first confirmed: HEAD inventories contain placeholders and miss live SB02/SB03 markers.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:36:35.7136839-04:00
+Exit code: 1
+Output:
+Failing-first confirmed: HEAD inventories contain placeholders and miss live SB02/SB03 markers.

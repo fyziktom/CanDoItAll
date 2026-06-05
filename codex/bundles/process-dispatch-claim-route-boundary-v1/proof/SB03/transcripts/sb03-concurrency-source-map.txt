@@ -1,0 +1,77 @@
+Command: rg -n "HasBlockingAutomationExecutionRun|ResolveBlockingAutomationExecutionRunId|ResolveRecoverableAutomationExecutionRunId|ResolveReusableAutomationChatSessionId|TryAdoptConcurrentAutomationExecutionAsync|ResolveCompetingActiveAutomationExecutionAsync|ShouldSkipAutomationCompletionTransition|IsConcurrentAutomationSessionBusyException|ShouldSkipFreshAutomationDispatch|IsBlockingAutomationExecutionRun|IsStaleAutomationExecutionRun|IsRecoveryTrigger|IsRecoverableExecutionRunForCurrentAttempt|ResolveRecoveredExecutionResponseText" src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:33:40.7305765-04:00
+Exit code: 0
+Output:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:34:    internal static bool HasBlockingAutomationExecutionRun(IReadOnlyList<ProcessAutomationExecutionRunRecord> executionRuns)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:35:        => HasBlockingAutomationExecutionRun(executionRuns, DateTimeOffset.UtcNow);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:37:    internal static bool HasBlockingAutomationExecutionRun(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:41:        return ResolveBlockingAutomationExecutionRunId(executionRuns, now).HasValue;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:44:    internal static Guid? ResolveBlockingAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:46:        => ResolveBlockingAutomationExecutionRunId(executionRuns, DateTimeOffset.UtcNow);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:48:    internal static Guid? ResolveBlockingAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:55:            .Where(executionRun => IsBlockingAutomationExecutionRun(executionRun, now))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:64:    internal static Guid? ResolveBlockingAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:74:                IsBlockingAutomationExecutionRun(executionRun, now) &&
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:75:                IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:84:    internal static Guid? ResolveRecoverableAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:99:                IsRecoverableExecutionRunForCurrentAttempt(executionRun, stepRun.StartedAtUtc))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:107:    internal static Guid? ResolveReusableAutomationChatSessionId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:115:    private async Task<ConcurrentAutomationExecution?> TryAdoptConcurrentAutomationExecutionAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:125:        var blockingExecutionRunId = ResolveBlockingAutomationExecutionRunId(candidate.StepRun, executionRuns, clock.GetUtcNow());
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:141:            ResolveRecoveredExecutionResponseText(detail));
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:144:    private async Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:159:                IsBlockingAutomationExecutionRun(executionRun, now) &&
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:160:                IsRecoverableExecutionRunForCurrentAttempt(executionRun, candidate.StepRun.StartedAtUtc))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:168:    internal static bool ShouldSkipAutomationCompletionTransition(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:180:    internal static bool IsConcurrentAutomationSessionBusyException(Exception exception)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:188:    internal static bool ShouldSkipFreshAutomationDispatch(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:200:        if (!IsRecoveryTrigger(trigger))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:218:    private static bool IsBlockingAutomationExecutionRun(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:225:               && !IsStaleAutomationExecutionRun(executionRun, now);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:228:    private static bool IsStaleAutomationExecutionRun(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:243:    private static bool IsRecoveryTrigger(string trigger)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:251:    private static bool IsRecoverableExecutionRunForCurrentAttempt(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:264:    private static string ResolveRecoveredExecutionResponseText(ProcessAutomationExecutionRunDetail detail)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs:286:        var recoveredResponse = ResolveRecoveredExecutionResponseText(detail).Trim();
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:63:    public void HasBlockingAutomationExecutionRun_ignores_failed_manual_debug_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:65:        var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:74:    public void HasBlockingAutomationExecutionRun_ignores_completed_automation_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:76:        var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:85:    public void HasBlockingAutomationExecutionRun_blocks_active_automation_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:87:        var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:439:    public void ResolveBlockingAutomationExecutionRunId_returns_latest_fresh_active_automation_run()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:452:        var blockingRunId = ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:460:    public void ResolveBlockingAutomationExecutionRunId_ignores_manual_or_stale_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:463:        var blockingRunId = ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:482:    public void HasBlockingAutomationExecutionRun_ignores_stale_active_automation_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:492:        var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:500:    public void HasBlockingAutomationExecutionRun_keeps_silent_automation_runs_blocking_for_longer_recovery_window()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:510:        var hasBlockingRun = ProcessRunAutomationDispatchService.HasBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:518:    public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:528:        var blockingRunId = ProcessRunAutomationDispatchService.ResolveBlockingAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2432:    public void ResolveRecoverableAutomationExecutionRunId_returns_latest_terminal_automation_run_for_in_progress_step()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2450:        var recoverableRunId = ProcessRunAutomationDispatchService.ResolveRecoverableAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2597:    public void ResolveRecoverableAutomationExecutionRunId_ignores_terminal_runs_when_step_is_not_in_progress()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2599:        var recoverableRunId = ProcessRunAutomationDispatchService.ResolveRecoverableAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2609:    public void ResolveReusableAutomationChatSessionId_does_not_reuse_terminal_chat_backed_automation_run()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2624:        var chatSessionId = ProcessRunAutomationDispatchService.ResolveReusableAutomationChatSessionId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2631:    public void ResolveReusableAutomationChatSessionId_ignores_manual_or_sessionless_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2633:        var chatSessionId = ProcessRunAutomationDispatchService.ResolveReusableAutomationChatSessionId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2651:    public void ResolveReusableAutomationChatSessionId_ignores_active_automation_runs_to_avoid_session_collisions()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2666:        var chatSessionId = ProcessRunAutomationDispatchService.ResolveReusableAutomationChatSessionId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2675:    public void IsConcurrentAutomationSessionBusyException_recognizes_workspace_execution_session_collision_messages(string message)
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2677:        var isSessionBusy = ProcessRunAutomationDispatchService.IsConcurrentAutomationSessionBusyException(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2684:    public void IsConcurrentAutomationSessionBusyException_ignores_unrelated_failures()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2686:        Assert.False(ProcessRunAutomationDispatchService.IsConcurrentAutomationSessionBusyException(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2688:        Assert.False(ProcessRunAutomationDispatchService.IsConcurrentAutomationSessionBusyException(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2693:    public void ResolveRecoverableAutomationExecutionRunId_returns_cancelled_current_attempt_restart_runs()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2711:        var recoverableRunId = ProcessRunAutomationDispatchService.ResolveRecoverableAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2719:    public void ResolveRecoverableAutomationExecutionRunId_ignores_terminal_runs_from_previous_attempt_windows()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2737:        var recoverableRunId = ProcessRunAutomationDispatchService.ResolveRecoverableAutomationExecutionRunId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2751:    public void ShouldSkipAutomationCompletionTransition_skips_only_after_step_leaves_active_execution_lane(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2756:        var shouldSkip = ProcessRunAutomationDispatchService.ShouldSkipAutomationCompletionTransition(currentStatus, requestedStatus);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2768:    public void ShouldSkipFreshAutomationDispatch_skips_early_redispatches_for_fresh_inprogress_steps(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2784:        var shouldSkip = ProcessRunAutomationDispatchService.ShouldSkipFreshAutomationDispatch(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2795:    public void ShouldSkipFreshAutomationDispatch_allows_recovery_of_existing_execution_run()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:2797:        var shouldSkip = ProcessRunAutomationDispatchService.ShouldSkipFreshAutomationDispatch(

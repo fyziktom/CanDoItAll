@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -16,23 +16,23 @@ Dispatch route and side-effect inventory.
 
 ## Prerequisites
 
-Previous gate must pass before this subbundle starts.
+- Previous gate must pass before this subbundle starts.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 ## Deliverables
 
-Classify each branch in DispatchAsync by decision, side effect, helper candidate, and proof.
+- Classify each branch in DispatchAsync by decision, side effect, helper candidate, and proof.
 
 ## Dependency Impact
 
-Downstream subbundles depend on this source shape and must re-run targeted scans.
+- Downstream subbundles depend on this source shape and must re-run targeted scans.
 
 ## Validation Depth
 
@@ -66,12 +66,12 @@ Downstream subbundles depend on this source shape and must re-run targeted scans
 
 ## Acceptance Checklist
 
-- [ ] Scope remains limited to this subbundle.
-- [ ] Existing behavior is preserved.
-- [ ] Required tests and scans are recorded.
-- [ ] No Process Core or production driver API exists.
-- [ ] No prohibited viewport proof artifacts exist.
-- [ ] Downstream dependency impact is updated.
+- [x] Scope remains limited to this subbundle.
+- [x] Existing behavior is preserved.
+- [x] Required tests and scans are recorded.
+- [x] No Process Core or production driver API exists.
+- [x] No prohibited viewport proof artifacts exist.
+- [x] Downstream dependency impact is updated.
 
 ## Proof Required
 
@@ -82,12 +82,13 @@ Downstream subbundles depend on this source shape and must re-run targeted scans
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If UI changes appear, stop and escalate. If proof becomes unavoidable, use large desktop/PC only.
+- N/A expected. Runtime/service refactor only. If UI changes appear, stop and escalate. If proof becomes unavoidable, use large desktop/PC only.
 
 ## Progression Gate
 
-Do not start SB03 until this subbundle's closure gate passes.
+- Do not start SB03 until this subbundle's closure gate passes.
 
 ## Suggested Agent Prompt
 
 Implement SB02 of `process-dispatch-claim-route-boundary-v1`. Preserve behavior, record proof, and do not broaden scope.
+

@@ -1,0 +1,25 @@
+Command: $inventory = Get-Content -LiteralPath 'codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/03-concurrency-rule-inventory.md' -Raw
+$required = @(
+  'ResolveBlockingAutomationExecutionRunId(stepRun, executionRuns, now)',
+  'ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns)',
+  'ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, cancellationToken)',
+  'ShouldSkipAutomationCompletionTransition(currentStatus, requestedStatus)',
+  'IsConcurrentAutomationSessionBusyException(exception)',
+  'ShouldSkipFreshAutomationDispatch(currentStatus, recoverableExecutionRunId, currentAttemptStartedAtUtc, now, trigger)',
+  'Keep `executionClient.ListExecutionRunsAsync`',
+  'Move pure selection/classification logic only after SB04 guardrails pass'
+)
+foreach ($token in $required) {
+  if (!$inventory.Contains($token)) {
+    throw "Missing concurrency inventory token: $token"
+  }
+}
+if ($inventory.Contains('Codex must update this')) {
+  throw 'Placeholder text remains in concurrency inventory.'
+}
+'Concurrency inventory contains required method coverage and design cutline.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:33:43.0614086-04:00
+Exit code: 0
+Output:
+Concurrency inventory contains required method coverage and design cutline.

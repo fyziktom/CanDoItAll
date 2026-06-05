@@ -1,0 +1,20 @@
+Command: $targetFiles = @(
+  'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs',
+  'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs',
+  'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs'
+)
+$matches = rg -n "TODO|NotImplemented|throw\s+new\s+NotImplementedException|fixture-specific|template-only" $targetFiles 2>&1
+if ($LASTEXITCODE -eq 0) {
+  $matches
+  throw 'Anti-stub scan found target-file stub markers.'
+}
+if ($LASTEXITCODE -gt 1) {
+  $matches
+  exit $LASTEXITCODE
+}
+'No target-file stub markers found.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:25:07.7429365-04:00
+Exit code: 0
+Output:
+No target-file stub markers found.

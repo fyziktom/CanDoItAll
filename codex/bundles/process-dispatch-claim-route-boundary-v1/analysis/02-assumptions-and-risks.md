@@ -9,11 +9,11 @@
 
 ## Critical Path Risks
 
-1. Moving too much from `Dispatch.cs` can silently alter lifecycle behavior.
-2. Claim/heartbeat code is safety-critical; a shallow extraction can create duplicate or lost transitions.
-3. Concurrency selection rules can introduce races if stale/recoverable/competing execution semantics drift.
-4. Route planning must not become a fake state machine that bypasses existing finalizer and workflow behavior.
-5. Driver-readiness work must stay documentation-only.
+- Moving too much from `Dispatch.cs` can silently alter lifecycle behavior.
+- Claim/heartbeat code is safety-critical; a shallow extraction can create duplicate or lost transitions.
+- Concurrency selection rules can introduce races if stale/recoverable/competing execution semantics drift.
+- Route planning must not become a fake state machine that bypasses existing finalizer and workflow behavior.
+- Driver-readiness work must stay documentation-only.
 
 ## Validation Risks
 

@@ -1,0 +1,26 @@
+Command: $uiChanges = git diff --name-only -- "*.razor" "*.css" "*.js" "*.ts" "*.tsx"
+if ($uiChanges) {
+  $uiChanges
+  throw 'Unexpected UI file changes found.'
+}
+'No UI file changes found.'
+$proofRoot = 'codex/bundles/process-dispatch-claim-route-boundary-v1/proof'
+$forbiddenPathTokens = @('mobile','small-screen','small_screen','medium-screen','medium_screen','phone','tablet')
+if (Test-Path -LiteralPath $proofRoot) {
+  $paths = Get-ChildItem -LiteralPath $proofRoot -Recurse -File | ForEach-Object { Resolve-Path -LiteralPath $_.FullName -Relative }
+  $badPaths = $paths | Where-Object {
+    $path = $_
+    $forbiddenPathTokens | Where-Object { $path -like "*$_*" }
+  }
+  if ($badPaths) {
+    $badPaths
+    throw 'Forbidden viewport proof artifact path found.'
+  }
+}
+'No prohibited viewport proof artifact paths found.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:25:05.6159630-04:00
+Exit code: 0
+Output:
+No UI file changes found.
+No prohibited viewport proof artifact paths found.

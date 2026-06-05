@@ -1,0 +1,35 @@
+Command: $oldRouteInventory = git show HEAD:codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/02-current-dispatch-route-map.md
+$oldConcurrencyInventory = git show HEAD:codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/03-concurrency-rule-inventory.md
+$oldCombined = ($oldRouteInventory + $oldConcurrencyInventory) -join "`n"
+if (!$oldCombined.Contains('Live source captured in SB02') -or !$oldCombined.Contains('Live source captured in SB03')) {
+  Write-Error 'SB04_INV_001 failing-first: old inventories miss live source markers.'
+  exit 1
+}
+if ($oldCombined.Contains('Codex must fill this') -or $oldCombined.Contains('Codex must update this')) {
+  Write-Error 'SB04_INV_002 failing-first: old inventories still contain placeholders.'
+  exit 1
+}
+'Old inventories unexpectedly passed live-inventory gate.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:38:53.0713173-04:00
+Exit code: 1
+Output:
+$oldRouteInventory = git show HEAD:codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/02-current-dispat
+ch-route-map.md
+$oldConcurrencyInventory = git show HEAD:codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/03-concurre
+ncy-rule-inventory.md
+$oldCombined = ($oldRouteInventory + $oldConcurrencyInventory) -join "`n"
+if (!$oldCombined.Contains('Live source captured in SB02') -or !$oldCombined.Contains('Live source captured in SB03')) 
+{
+  Write-Error 'SB04_INV_001 failing-first: old inventories miss live source markers.'
+  exit 1
+}
+if ($oldCombined.Contains('Codex must fill this') -or $oldCombined.Contains('Codex must update this')) {
+  Write-Error 'SB04_INV_002 failing-first: old inventories still contain placeholders.'
+  exit 1
+}
+'Old inventories unexpectedly passed live-inventory gate.' : SB04_INV_001 failing-first: old inventories miss live sour
+ce markers.
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException
+ 

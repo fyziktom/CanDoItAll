@@ -1,0 +1,15 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --list-tests --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests&(FullyQualifiedName~ProcessDispatchGuardLease_SB09|FullyQualifiedName~ProcessDispatchLeaseHeartbeat)"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests&(FullyQualifiedName~ProcessDispatchGuardLease_SB09|FullyQualifiedName~ProcessDispatchLeaseHeartbeat)"; exit $LASTEXITCODE
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T07:18:24.0727322-04:00
+Exit code: 0
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessDispatchLeaseHeartbeat_renews_outer_and_step_claims_during_long_work
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessDispatchLeaseHeartbeat_cancels_dispatch_when_renewal_fails
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessDispatchGuardLease_SB09_INV_001_serializes_same_step_and_removes_released_guard
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessDispatchGuardLease_SB09_INV_002_rejects_empty_step_id
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 314 ms - CanDoItAll.Tests.Integration.dll (net10.0)

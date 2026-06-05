@@ -1,0 +1,14 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --list-tests --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests&FullyQualifiedName~SB06"; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessRunAutomationDispatchServiceTests&(FullyQualifiedName~SB06|FullyQualifiedName~ResolveBlockingAutomationExecutionRunId|FullyQualifiedName~HasBlockingAutomationExecutionRun|FullyQualifiedName~ResolveRecoverableAutomationExecutionRunId|FullyQualifiedName~ShouldSkipAutomationCompletionTransition|FullyQualifiedName~ShouldSkipFreshAutomationDispatch|FullyQualifiedName~IsConcurrentAutomationSessionBusyException|FullyQualifiedName~ResolveReusableAutomationChatSessionId)"; exit $LASTEXITCODE
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:59:51.6147462-04:00
+Exit code: 0
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Jsou k dispozici následující testy:
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessAutomationExecutionRunSelection_SB06_INV_001_selects_latest_current_attempt_competing_run
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessAutomationExecutionRunSelection_SB06_INV_002_preserves_stale_and_approval_blocking_rules
+    CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessAutomationExecutionRunSelection_SB06_INV_003_preserves_completion_and_fresh_recovery_skip_rules
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    34, Přeskočeno:     0, Celkem:    34, Doba trvání: 78 ms - CanDoItAll.Tests.Integration.dll (net10.0)

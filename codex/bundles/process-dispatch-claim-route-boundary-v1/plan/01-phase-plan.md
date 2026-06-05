@@ -1,5 +1,11 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute SB01 through SB16 in numeric order.
+- Do not start a downstream subbundle until the prior closure gate passes and the execution report records the result.
+- Reopen the earliest affected subbundle if later source observations weaken a critical foundation.
+
 ## Subbundle Dependency Map
 
 ```mermaid

@@ -1,0 +1,32 @@
+Command: $inventory = Get-Content -LiteralPath 'codex/bundles/process-dispatch-claim-route-boundary-v1/inventories/02-current-dispatch-route-map.md' -Raw
+$required = @(
+  'Candidate header load',
+  'Durable dispatch claim',
+  'Heartbeat session',
+  'Fresh recovery skip',
+  'Database requirement block',
+  'Missing upstream materialization',
+  'Stranded completion artifact recovery',
+  'Subprocess route',
+  'Start transition',
+  'Workflow route',
+  'Direct agent execution',
+  'Claim lost and cancellation',
+  'Exception failure transition',
+  'Final cleanup',
+  'Route planners must not execute EF writes'
+)
+foreach ($token in $required) {
+  if (!$inventory.Contains($token)) {
+    throw "Missing required inventory token: $token"
+  }
+}
+if ($inventory.Contains('Codex must fill this')) {
+  throw 'Placeholder text remains in route inventory.'
+}
+'Route inventory contains required branch and cutline entries.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:31:08.1928920-04:00
+Exit code: 0
+Output:
+Route inventory contains required branch and cutline entries.

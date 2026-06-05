@@ -1,0 +1,34 @@
+Command: SB06 anti-stub/no-core/no-driver/no-viewport/no-UI scope scan
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:57:13.9446310-04:00
+Exit code: 0
+Output:
+PASS: anti-stub scan found no placeholders or NotImplementedException markers in SB06 production target files.
+PASS: no Process Core project or directory exists.
+PASS: no production Process Core or process driver API tokens were introduced in Processes module source.
+PASS: proof paths contain no small, medium, or mobile artifacts.
+PASS: git diff contains no UI file changes.
+PASS: SB06 selector and invariant IDs are present in source.
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:574:    public void ProcessAutomationExecutionRunSelection_SB06_INV_001_selects_latest_current_attempt_competing_run()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:596:        var competingRun = ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:609:    public void ProcessAutomationExecutionRunSelection_SB06_INV_002_preserves_stale_and_approval_blocking_rules()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:634:        Assert.True(ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:638:        Assert.False(ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:642:        Assert.False(ProcessAutomationExecutionRunSelection.IsBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:647:        Assert.True(ProcessAutomationExecutionRunSelection.IsBlockingAutomationExecutionRun(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:655:    public void ProcessAutomationExecutionRunSelection_SB06_INV_003_preserves_completion_and_fresh_recovery_skip_rules()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:659:        Assert.True(ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:666:        Assert.False(ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:673:        Assert.True(ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:676:        Assert.False(ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessAutomationExecutionRunSelection.cs:3:internal static class ProcessAutomationExecutionRunSelection
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessAutomationExecutionRunSelection.cs:86:    public static ProcessAutomationExecutionRunRecord? ResolveCompetingActiveAutomationExecutionRun(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:41:        return ProcessAutomationExecutionRunSelection.HasBlockingAutomationExecutionRun(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:56:        return ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:70:        return ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:84:        return ProcessAutomationExecutionRunSelection.ResolveRecoverableAutomationExecutionRunId(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:140:        return ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:153:        return ProcessAutomationExecutionRunSelection.ShouldSkipAutomationCompletionTransition(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:160:        return ProcessAutomationExecutionRunSelection.IsConcurrentAutomationSessionBusyException(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:172:        return ProcessAutomationExecutionRunSelection.ShouldSkipFreshAutomationDispatch(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs:185:        return ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun(

@@ -1,0 +1,7 @@
+Command: SB14 documentation-only driver-readiness map scan
+
+Driver readiness map SHA-256: 56D69DF24BCBA435D04BB9BBDC02A3EDD1B3B087869BE040BFED0A9B0CCC3A96
+
+Result: Passed
+Driver-readiness map is documentation-only and no Process Core/driver API, UI diff, or prohibited proof artifact was found.
+Exit code: 0

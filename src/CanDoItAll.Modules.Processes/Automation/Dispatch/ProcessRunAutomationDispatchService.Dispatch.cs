@@ -51,226 +51,240 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
             foreach (var candidateHeader in candidateHeaders)
             {
-                var dispatchGuard = StepDispatchGuards.GetOrAdd(candidateHeader.StepRunId, static _ => new SemaphoreSlim(1, 1));
-                await dispatchGuard.WaitAsync(cancellationToken);
-                var dispatchGuardHeld = true;
+                using var dispatchGuard = await ProcessDispatchGuardLease.WaitAsync(
+                    candidateHeader.StepRunId,
+                    StepDispatchGuards,
+                    cancellationToken);
+                var dispatchClaim = await TryClaimStepDispatchAsync(
+                    processRunId,
+                    candidateHeader.StepRunId,
+                    trigger,
+                    triggerStepRunId,
+                    cancellationToken);
+                if (dispatchClaim is null)
+                {
+                    continue;
+                }
+
+                dispatchGuard.Release();
+
+                DispatchCandidate? candidate = null;
+                ProcessDispatchLeaseHeartbeat? dispatchHeartbeat = null;
+                var dispatchCancellationToken = cancellationToken;
                 try
                 {
-                    var dispatchClaim = await TryClaimStepDispatchAsync(
-                        processRunId,
-                        candidateHeader.StepRunId,
-                        trigger,
-                        triggerStepRunId,
+                    var dispatchRenewLeaseAsync = CreateDispatchRenewLeaseCallback(dispatchClaim, renewLeaseAsync);
+                    dispatchHeartbeat = ProcessDispatchLeaseHeartbeat.Start(
+                        dispatchClaim.StepRunId,
+                        ResolveStepDispatchHeartbeatInterval(),
+                        dispatchRenewLeaseAsync,
                         cancellationToken);
-                    if (dispatchClaim is null)
+                    dispatchCancellationToken = dispatchHeartbeat.DispatchCancellationToken;
+                    var candidateHydrationStarted = Stopwatch.GetTimestamp();
+                    candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
+                    logger.LogDebug(
+                        "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
+                        processRunId,
+                        dispatchClaim.StepRunId,
+                        candidate is not null,
+                        GetElapsedMilliseconds(candidateHydrationStarted));
+                    if (candidate is null)
                     {
                         continue;
                     }
 
-                    dispatchGuard.Release();
-                    dispatchGuardHeld = false;
-
-                    DispatchCandidate? candidate = null;
-                    ProcessDispatchLeaseHeartbeat? dispatchHeartbeat = null;
-                    var dispatchCancellationToken = cancellationToken;
-                    try
+                    var routeSnapshot = ProcessDispatchRouteSnapshot.Create(candidate, trigger, triggerStepRunId);
+                    if (ShouldSkipFreshAutomationDispatch(routeSnapshot, clock.GetUtcNow()))
                     {
-                        var dispatchRenewLeaseAsync = CreateDispatchRenewLeaseCallback(dispatchClaim, renewLeaseAsync);
-                        dispatchHeartbeat = ProcessDispatchLeaseHeartbeat.Start(
-                            dispatchClaim.StepRunId,
-                            ResolveStepDispatchHeartbeatInterval(),
-                            dispatchRenewLeaseAsync,
-                            cancellationToken);
-                        dispatchCancellationToken = dispatchHeartbeat.DispatchCancellationToken;
-                        var candidateHydrationStarted = Stopwatch.GetTimestamp();
-                        candidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
-                        logger.LogDebug(
-                            "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
-                            processRunId,
-                            dispatchClaim.StepRunId,
-                            candidate is not null,
-                            GetElapsedMilliseconds(candidateHydrationStarted));
-                        if (candidate is null)
-                        {
-                            continue;
-                        }
-
-                        if (ShouldSkipFreshAutomationDispatch(
-                            candidate.StepRun.Status,
-                            candidate.RecoveryExecutionRunId,
-                            candidate.StepRun.StartedAtUtc,
-                            clock.GetUtcNow(),
-                            trigger))
-                        {
-                            logger.LogInformation(
-                                "Skipping recovery redispatch within the fresh-step grace period for run {RunId}, step {StepRunId}, status {Status}, trigger {Trigger}. Recovery worker will retry if the execution remains stranded.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id,
-                                candidate.StepRun.Status,
-                                NormalizeTrigger(trigger, triggerStepRunId));
-                            return;
-                        }
-
-                        var usesAgentAutomation = candidate.TechnicalAgentId != Guid.Empty &&
-                            candidate.StepRun.StepKind != ProcessStepKind.Subprocess;
-                        var databaseRequirementFailure = usesAgentAutomation
-                            ? ResolveAutomationDatabaseRequirementFailure()
-                            : null;
-                        if (databaseRequirementFailure is not null)
-                        {
-                            await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, dispatchClaim, dispatchCancellationToken);
-                            return;
-                        }
-
-                        if (await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, dispatchClaim, dispatchCancellationToken))
-                        {
-                            return;
-                        }
-
-                        var strandedArtifactRecoveryOutcome = await TryRecoverStrandedMissingCompletionArtifactsAsync(
-                            candidate,
-                            trigger,
-                            dispatchClaim,
-                            dispatchRenewLeaseAsync,
-                            dispatchCancellationToken);
-                        if (strandedArtifactRecoveryOutcome is not null)
-                        {
-                            var finalizedRecoveryCompletion = await FinalizeStepCompletionAsync(
-                                new ProcessStepCompletionFinalizerContext(
-                                    ExecutorKind: ProcessStepCompletionExecutorKind.ManagerArtifactRecovery,
-                                    Candidate: candidate,
-                                    CompletionStatus: strandedArtifactRecoveryOutcome.CompletionStatus,
-                                    CompletionReason: strandedArtifactRecoveryOutcome.CompletionReason,
-                                    SelectedBranchOutcomeId: strandedArtifactRecoveryOutcome.SelectedBranchOutcomeId,
-                                    ExecutionDetail: strandedArtifactRecoveryOutcome.Detail,
-                                    WorkflowRunId: null,
-                                    SubprocessRunId: null,
-                                    ResponseText: strandedArtifactRecoveryOutcome.ResponseText,
-                                    ProjectExecutionArtifacts: false,
-                                    AllowManagerArtifactRecovery: false,
-                                    Trigger: trigger,
-                                    RenewLeaseAsync: dispatchRenewLeaseAsync,
-                                    RecoveryExecutionRunId: strandedArtifactRecoveryOutcome.Detail.Run.Id,
-                                    RecoveredForExecutionRunId: candidate.RecoveryExecutionRunId),
-                                dispatchClaim,
-                                dispatchCancellationToken);
-                            if (finalizedRecoveryCompletion is not null)
-                            {
-                                await ApplyFinalizedStepTransitionAsync(candidate, finalizedRecoveryCompletion, dispatchClaim, dispatchCancellationToken);
-                            }
-
-                            return;
-                        }
-
-                        if (candidate.StepRun.StepKind == ProcessStepKind.Subprocess)
-                        {
-                            await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, dispatchClaim, dispatchCancellationToken);
-                            return;
-                        }
-
-                        if (candidate.StepRun.Status != ProcessStepRunStatus.InProgress)
-                        {
-                            var startResult = await TransitionStepWithClaimAsync(
-                                new ProcessStepTransitionRequest
-                                {
-                                    StepRunId = candidate.StepRun.Id,
-                                    StepRunConcurrencyToken = candidate.StepRun.ConcurrencyToken,
-                                    TargetStatus = ProcessStepRunStatus.InProgress,
-                                    Reason = $"Started by the durable process automation dispatcher ({NormalizeTrigger(trigger, triggerStepRunId)}).",
-                                    DecidedBy = AutomationActor,
-                                    SuppressAutomationDispatch = true
-                                },
-                                dispatchClaim,
-                                dispatchCancellationToken);
-                            if (startResult.IsFailure)
-                            {
-                                logger.LogInformation(
-                                    "Process step {StepRunId} could not be claimed for automation dispatch on run {RunId}. Errors: {Errors}",
-                                    candidate.StepRun.Id,
-                                    processRunId,
-                                    string.Join(" | ", startResult.Errors.Select(error => error.Message)));
-                                var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
-                                if (refreshedCandidate is null ||
-                                    refreshedCandidate.StepRun.Id != candidate.StepRun.Id ||
-                                    refreshedCandidate.StepRun.Status != ProcessStepRunStatus.InProgress)
-                                {
-                                    continue;
-                                }
-
-                                logger.LogInformation(
-                                    "Continuing process automation dispatch for run {RunId}, step {StepRunId} after reload confirmed the step is already InProgress.",
-                                    refreshedCandidate.Run.Id,
-                                    refreshedCandidate.StepRun.Id);
-                                candidate = refreshedCandidate;
-                            }
-                        }
-
-                        var workflowOutcome = await workflowRunCoordinator.TryRunOrObserveAsync(
+                        logger.LogInformation(
+                            "Skipping recovery redispatch within the fresh-step grace period for run {RunId}, step {StepRunId}, status {Status}, trigger {Trigger}. Recovery worker will retry if the execution remains stranded.",
                             candidate.Run.Id,
                             candidate.StepRun.Id,
-                            NormalizeTrigger(trigger, triggerStepRunId),
-                            dispatchCancellationToken);
-                        if (workflowOutcome.Handled)
-                        {
-                            await HandleWorkflowExecutionOutcomeAsync(candidate, workflowOutcome, dispatchClaim, dispatchCancellationToken);
-                            return;
-                        }
+                            candidate.StepRun.Status,
+                            NormalizeTrigger(trigger, triggerStepRunId));
+                        return;
+                    }
 
-                        var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, dispatchRenewLeaseAsync, dispatchCancellationToken);
-                        dispatchHeartbeat.ThrowIfClaimLost();
-                        var competingExecution = executionOutcome.CompletionStatus is not ProcessStepRunStatus.Completed
-                            ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, dispatchCancellationToken)
-                            : null;
-                        if (competingExecution is not null)
-                        {
-                            logger.LogInformation(
-                                "Skipping non-successful automation completion transition for run {RunId}, step {StepRunId}, execution run {ExecutionRunId} because execution run {CompetingExecutionRunId} is still active for the same process step.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id,
-                                executionOutcome.Detail.Run.Id,
-                                competingExecution.Id);
-                            return;
-                        }
+                    var databaseRequirementFailure = routeSnapshot.UsesAgentAutomation
+                        ? ResolveAutomationDatabaseRequirementFailure()
+                        : null;
+                    if (ProcessDispatchRoutePlanner.ResolveDatabaseRequirement(
+                            routeSnapshot,
+                            databaseRequirementFailure is not null).Kind == ProcessDispatchRouteKind.DatabaseRequirement &&
+                        databaseRequirementFailure is not null)
+                    {
+                        await BlockDispatchForDatabaseRequirementAsync(candidate, databaseRequirementFailure, dispatchClaim, dispatchCancellationToken);
+                        return;
+                    }
 
-                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
-                        {
-                            logger.LogInformation(
-                                "Skipping automation completion projection for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id);
-                            return;
-                        }
+                    var materializationRequested = await TryRequestMissingUpstreamArtifactMaterializationAsync(candidate, dispatchClaim, dispatchCancellationToken);
+                    if (ProcessDispatchRoutePlanner.ResolveUpstreamMaterialization(materializationRequested).Kind == ProcessDispatchRouteKind.UpstreamMaterialization)
+                    {
+                        return;
+                    }
 
-                        var finalizedCompletion = await FinalizeStepCompletionAsync(
-                            new ProcessStepCompletionFinalizerContext(
-                                ExecutorKind: ProcessStepCompletionExecutorKind.DirectAgent,
-                                Candidate: candidate,
-                                CompletionStatus: executionOutcome.CompletionStatus,
-                                CompletionReason: executionOutcome.CompletionReason,
-                                SelectedBranchOutcomeId: executionOutcome.SelectedBranchOutcomeId,
-                                ExecutionDetail: executionOutcome.Detail,
-                                WorkflowRunId: null,
-                                SubprocessRunId: null,
-                                ResponseText: executionOutcome.ResponseText,
-                                ProjectExecutionArtifacts: true,
-                                AllowManagerArtifactRecovery: true,
-                                Trigger: trigger,
-                                RenewLeaseAsync: dispatchRenewLeaseAsync),
+                    var strandedArtifactRecoveryOutcome = await TryRecoverStrandedMissingCompletionArtifactsAsync(
+                        candidate,
+                        trigger,
+                        dispatchClaim,
+                        dispatchRenewLeaseAsync,
+                        dispatchCancellationToken);
+                    if (ProcessDispatchRoutePlanner.ResolveStrandedRecovery(strandedArtifactRecoveryOutcome is not null).Kind == ProcessDispatchRouteKind.StrandedRecovery &&
+                        strandedArtifactRecoveryOutcome is not null)
+                    {
+                        var finalizedRecoveryCompletion = await FinalizeStepCompletionAsync(
+                            ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery(
+                                candidate,
+                                strandedArtifactRecoveryOutcome,
+                                trigger,
+                                dispatchRenewLeaseAsync),
                             dispatchClaim,
                             dispatchCancellationToken);
-                        dispatchHeartbeat.ThrowIfClaimLost();
-                        if (finalizedCompletion is not null)
+                        if (finalizedRecoveryCompletion is not null)
                         {
-                            await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, dispatchCancellationToken);
+                            await ApplyFinalizedStepTransitionAsync(candidate, finalizedRecoveryCompletion, dispatchClaim, dispatchCancellationToken);
                         }
 
                         return;
                     }
-                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+
+                    if (ProcessDispatchRoutePlanner.ResolveSubprocess(routeSnapshot).Kind == ProcessDispatchRouteKind.Subprocess)
                     {
-                        throw;
+                        await HandleSubprocessDispatchAsync(candidate, trigger, triggerStepRunId, dispatchClaim, dispatchCancellationToken);
+                        return;
                     }
-                    catch (OperationCanceledException) when (dispatchHeartbeat?.ClaimLost == true)
+
+                    if (routeSnapshot.RequiresStartTransition)
+                    {
+                        var startResult = await TransitionStepWithClaimAsync(
+                            ProcessDispatchStartTransitionPlanner.BuildStartTransitionRequest(
+                                routeSnapshot,
+                                candidate.StepRun.ConcurrencyToken,
+                                AutomationActor),
+                            dispatchClaim,
+                            dispatchCancellationToken);
+                        if (startResult.IsFailure)
+                        {
+                            logger.LogInformation(
+                                "Process step {StepRunId} could not be claimed for automation dispatch on run {RunId}. Errors: {Errors}",
+                                candidate.StepRun.Id,
+                                processRunId,
+                                string.Join(" | ", startResult.Errors.Select(error => error.Message)));
+                            var refreshedCandidate = await LoadDispatchCandidateAsync(processRunId, dispatchClaim.StepRunId, trigger, dispatchCancellationToken);
+                            if (refreshedCandidate is null ||
+                                refreshedCandidate.StepRun.Id != candidate.StepRun.Id ||
+                                refreshedCandidate.StepRun.Status != ProcessStepRunStatus.InProgress)
+                            {
+                                continue;
+                            }
+
+                            logger.LogInformation(
+                                "Continuing process automation dispatch for run {RunId}, step {StepRunId} after reload confirmed the step is already InProgress.",
+                                refreshedCandidate.Run.Id,
+                                refreshedCandidate.StepRun.Id);
+                            candidate = refreshedCandidate;
+                        }
+                    }
+
+                    var workflowOutcome = await workflowRunCoordinator.TryRunOrObserveAsync(
+                        candidate.Run.Id,
+                        candidate.StepRun.Id,
+                        NormalizeTrigger(trigger, triggerStepRunId),
+                        dispatchCancellationToken);
+                    var workflowRoute = ProcessDispatchRoutePlanner.ResolveWorkflow(workflowOutcome.Handled);
+                    if (workflowRoute.Kind == ProcessDispatchRouteKind.Workflow)
+                    {
+                        await HandleWorkflowExecutionOutcomeAsync(candidate, workflowOutcome, dispatchClaim, dispatchCancellationToken);
+                        return;
+                    }
+
+                    var executionOutcome = await ExecuteUntilSettledAsync(candidate, trigger, dispatchRenewLeaseAsync, dispatchCancellationToken);
+                    dispatchHeartbeat.ThrowIfClaimLost();
+                    var competingExecution = executionOutcome.CompletionStatus is not ProcessStepRunStatus.Completed
+                        ? await ResolveCompetingActiveAutomationExecutionAsync(candidate, executionOutcome, dispatchCancellationToken)
+                        : null;
+                    if (competingExecution is not null)
+                    {
+                        logger.LogInformation(
+                            "Skipping non-successful automation completion transition for run {RunId}, step {StepRunId}, execution run {ExecutionRunId} because execution run {CompetingExecutionRunId} is still active for the same process step.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id,
+                            executionOutcome.Detail.Run.Id,
+                            competingExecution.Id);
+                        return;
+                    }
+
+                    if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
+                    {
+                        logger.LogInformation(
+                            "Skipping automation completion projection for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
+                        return;
+                    }
+
+                    var finalizedCompletion = await FinalizeStepCompletionAsync(
+                        ProcessDispatchFinalizerContextFactory.ForDirectAgent(
+                            candidate,
+                            executionOutcome,
+                            trigger,
+                            dispatchRenewLeaseAsync),
+                        dispatchClaim,
+                        dispatchCancellationToken);
+                    dispatchHeartbeat.ThrowIfClaimLost();
+                    if (finalizedCompletion is not null)
+                    {
+                        await ApplyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, dispatchCancellationToken);
+                    }
+
+                    return;
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (OperationCanceledException) when (dispatchHeartbeat?.ClaimLost == true)
+                {
+                    var claimLostException = dispatchHeartbeat.CreateClaimLostException();
+                    if (candidate is null)
+                    {
+                        logger.LogWarning(
+                            claimLostException,
+                            "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost before candidate hydration completed.",
+                            processRunId,
+                            dispatchClaim.StepRunId);
+                        return;
+                    }
+
+                    logger.LogWarning(
+                        claimLostException,
+                        "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
+                        candidate.Run.Id,
+                        candidate.StepRun.Id);
+                    return;
+                }
+                catch (ProcessDispatchClaimLostException exception)
+                {
+                    if (candidate is null)
+                    {
+                        logger.LogWarning(
+                            exception,
+                            "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch claim was lost before candidate hydration completed.",
+                            processRunId,
+                            dispatchClaim.StepRunId);
+                        return;
+                    }
+
+                    logger.LogWarning(
+                        exception,
+                        "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch claim was lost.",
+                        candidate.Run.Id,
+                        candidate.StepRun.Id);
+                    return;
+                }
+                catch (Exception exception)
+                {
+                    if (dispatchHeartbeat?.ClaimLost == true)
                     {
                         var claimLostException = dispatchHeartbeat.CreateClaimLostException();
                         if (candidate is null)
@@ -290,131 +304,80 @@ internal sealed partial class ProcessRunAutomationDispatchService
                             candidate.StepRun.Id);
                         return;
                     }
-                    catch (ProcessDispatchClaimLostException exception)
+
+                    if (candidate is null)
                     {
-                        if (candidate is null)
-                        {
-                            logger.LogWarning(
-                                exception,
-                                "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch claim was lost before candidate hydration completed.",
-                                processRunId,
-                                dispatchClaim.StepRunId);
-                            return;
-                        }
-
-                        logger.LogWarning(
-                            exception,
-                            "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch claim was lost.",
-                            candidate.Run.Id,
-                            candidate.StepRun.Id);
-                        return;
-                    }
-                    catch (Exception exception)
-                    {
-                        if (dispatchHeartbeat?.ClaimLost == true)
-                        {
-                            var claimLostException = dispatchHeartbeat.CreateClaimLostException();
-                            if (candidate is null)
-                            {
-                                logger.LogWarning(
-                                    claimLostException,
-                                    "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost before candidate hydration completed.",
-                                    processRunId,
-                                    dispatchClaim.StepRunId);
-                                return;
-                            }
-
-                            logger.LogWarning(
-                                claimLostException,
-                                "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id);
-                            return;
-                        }
-
-                        if (candidate is null)
-                        {
-                            logger.LogError(
-                                exception,
-                                "Process automation dispatch failed for run {RunId}, step {StepRunId} before candidate hydration completed.",
-                                processRunId,
-                                dispatchClaim.StepRunId);
-                            return;
-                        }
-
                         logger.LogError(
                             exception,
-                            "Process automation dispatch failed for run {RunId}, step {StepRunId}.",
-                            candidate.Run.Id,
-                            candidate.StepRun.Id);
-
-                        if (dispatchHeartbeat?.ClaimLost == true)
-                        {
-                            logger.LogWarning(
-                                dispatchHeartbeat.CreateClaimLostException(),
-                                "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id);
-                            return;
-                        }
-
-                        if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
-                        {
-                            logger.LogInformation(
-                                "Skipping automation failure transition for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id);
-                            return;
-                        }
-
-                        if (!await IsStepDispatchClaimHeldAsync(dispatchClaim, dispatchCancellationToken))
-                        {
-                            logger.LogWarning(
-                                "Skipping automation failure transition for run {RunId}, step {StepRunId} because the durable dispatch claim is no longer held.",
-                                candidate.Run.Id,
-                                candidate.StepRun.Id);
-                            return;
-                        }
-
-                        var failResult = await TransitionStepWithClaimAsync(
-                            new ProcessStepTransitionRequest
-                            {
-                                StepRunId = candidate.StepRun.Id,
-                                TargetStatus = ProcessStepRunStatus.Failed,
-                                Reason = $"AgentFramework execution failed: {exception.Message}",
-                                DecidedBy = AutomationActor,
-                                SuppressAutomationDispatch = true
-                            },
-                            dispatchClaim,
-                            dispatchCancellationToken);
-                        if (failResult.IsFailure)
-                        {
-                            logger.LogWarning(
-                                "Process step {StepRunId} could not be moved to Failed after an execution exception. Errors: {Errors}",
-                                candidate.StepRun.Id,
-                                string.Join(" | ", failResult.Errors.Select(error => error.Message)));
-                        }
-
+                            "Process automation dispatch failed for run {RunId}, step {StepRunId} before candidate hydration completed.",
+                            processRunId,
+                            dispatchClaim.StepRunId);
                         return;
                     }
-                    finally
-                    {
-                        if (dispatchHeartbeat is not null)
-                        {
-                            await dispatchHeartbeat.DisposeAsync();
-                        }
 
-                        await ReleaseStepDispatchClaimAsync(dispatchClaim, cancellationToken);
+                    logger.LogError(
+                        exception,
+                        "Process automation dispatch failed for run {RunId}, step {StepRunId}.",
+                        candidate.Run.Id,
+                        candidate.StepRun.Id);
+
+                    if (dispatchHeartbeat?.ClaimLost == true)
+                    {
+                        logger.LogWarning(
+                            dispatchHeartbeat.CreateClaimLostException(),
+                            "Stopping process automation dispatch for run {RunId}, step {StepRunId} because the durable dispatch heartbeat was lost.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
+                        return;
                     }
+
+                    if (await IsRunClosedToAutomationAsync(candidate.Run.Id, candidate.StepRun.Id, dispatchCancellationToken))
+                    {
+                        logger.LogInformation(
+                            "Skipping automation failure transition for run {RunId}, step {StepRunId} because the process run became terminal while agent execution was in flight.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
+                        return;
+                    }
+
+                    if (!await IsStepDispatchClaimHeldAsync(dispatchClaim, dispatchCancellationToken))
+                    {
+                        logger.LogWarning(
+                            "Skipping automation failure transition for run {RunId}, step {StepRunId} because the durable dispatch claim is no longer held.",
+                            candidate.Run.Id,
+                            candidate.StepRun.Id);
+                        return;
+                    }
+
+                    var failResult = await TransitionStepWithClaimAsync(
+                        new ProcessStepTransitionRequest
+                        {
+                            StepRunId = candidate.StepRun.Id,
+                            TargetStatus = ProcessStepRunStatus.Failed,
+                            Reason = $"AgentFramework execution failed: {exception.Message}",
+                            DecidedBy = AutomationActor,
+                            SuppressAutomationDispatch = true
+                        },
+                        dispatchClaim,
+                        dispatchCancellationToken);
+                    if (failResult.IsFailure)
+                    {
+                        logger.LogWarning(
+                            "Process step {StepRunId} could not be moved to Failed after an execution exception. Errors: {Errors}",
+                            candidate.StepRun.Id,
+                            string.Join(" | ", failResult.Errors.Select(error => error.Message)));
+                    }
+
+                    return;
                 }
                 finally
                 {
-                    if (dispatchGuardHeld)
+                    if (dispatchHeartbeat is not null)
                     {
-                        dispatchGuard.Release();
+                        await dispatchHeartbeat.DisposeAsync();
                     }
 
-                    TryRemoveReleasedDispatchGuard(candidateHeader.StepRunId, dispatchGuard);
+                    await ReleaseStepDispatchClaimAsync(dispatchClaim, cancellationToken);
                 }
             }
 
@@ -452,17 +415,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return heartbeatInterval;
     }
 
-    private static void TryRemoveReleasedDispatchGuard(Guid stepRunId, SemaphoreSlim dispatchGuard)
-    {
-        if (dispatchGuard.CurrentCount != 1)
-        {
-            return;
-        }
-
-        ((ICollection<KeyValuePair<Guid, SemaphoreSlim>>)StepDispatchGuards)
-            .Remove(new KeyValuePair<Guid, SemaphoreSlim>(stepRunId, dispatchGuard));
-    }
-
     private async Task HandleWorkflowExecutionOutcomeAsync(
         DispatchCandidate candidate,
         ProcessWorkflowExecutionOutcome workflowOutcome,
@@ -470,20 +422,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         var finalizedCompletion = await FinalizeStepCompletionAsync(
-            new ProcessStepCompletionFinalizerContext(
-                ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+            ProcessDispatchFinalizerContextFactory.ForWorkflow(
                 candidate,
-                workflowOutcome.CompletionStatus,
-                workflowOutcome.CompletionReason,
-                SelectedBranchOutcomeId: null,
-                ExecutionDetail: null,
-                WorkflowRunId: workflowOutcome.Link?.WorkflowRunId,
-                SubprocessRunId: null,
-                ResponseText: workflowOutcome.CompletionReason,
-                ProjectExecutionArtifacts: false,
-                AllowManagerArtifactRecovery: false,
-                Trigger: "workflow-execution-outcome",
-                RenewLeaseAsync: null),
+                workflowOutcome),
             dispatchClaim,
             cancellationToken);
         if (finalizedCompletion is null)
@@ -666,22 +607,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessRunStatus? runStatus,
         ProcessStepRunStatus? stepStatus)
     {
-        return runStatus is null or ProcessRunStatus.Completed or ProcessRunStatus.Cancelled ||
-            runStatus == ProcessRunStatus.Failed && stepStatus != ProcessStepRunStatus.InProgress;
+        return ProcessDispatchRouteEligibility.IsRunClosedToAutomation(runStatus, stepStatus);
     }
 
     internal static bool IsRunEligibleForDispatchCandidate(ProcessRunStatus? runStatus)
     {
-        return runStatus is not null and not ProcessRunStatus.Completed and not ProcessRunStatus.Cancelled;
+        return ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate(runStatus);
     }
 
     internal static bool IsStepStatusDispatchableForRun(
         ProcessRunStatus runStatus,
         ProcessStepRunStatus stepStatus)
     {
-        return runStatus == ProcessRunStatus.Failed
-            ? stepStatus == ProcessStepRunStatus.InProgress
-            : stepStatus is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.InProgress;
+        return ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(runStatus, stepStatus);
     }
 
     private ProcessAutomationDatabaseRequirementFailure? ResolveAutomationDatabaseRequirementFailure()
@@ -800,20 +738,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             await ProjectCompletedSubprocessArtifactsAsync(candidate, subprocessRun, dispatchClaim, cancellationToken);
             var transitionReason = BuildSubprocessParentTransitionReason(subprocessRun);
             var finalizedCompletion = await FinalizeStepCompletionAsync(
-                new ProcessStepCompletionFinalizerContext(
-                    ProcessStepCompletionExecutorKind.SubprocessParent,
+                ProcessDispatchFinalizerContextFactory.ForSubprocess(
                     candidate,
+                    subprocessRun.RunId,
                     terminalStatus.Value,
-                    transitionReason,
-                    SelectedBranchOutcomeId: null,
-                    ExecutionDetail: null,
-                    WorkflowRunId: null,
-                    SubprocessRunId: subprocessRun.RunId,
-                    ResponseText: transitionReason,
-                    ProjectExecutionArtifacts: false,
-                    AllowManagerArtifactRecovery: false,
-                    Trigger: "subprocess-execution-outcome",
-                    RenewLeaseAsync: null),
+                    transitionReason),
                 dispatchClaim,
                 cancellationToken);
             if (finalizedCompletion is not null)
@@ -1017,7 +946,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     OperatingMode = candidate.Run.OperatingMode,
                     PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
                     EnvironmentMode = candidate.Run.OperatingMode.ToString(),
-                    ReplayContextJson = JsonSerializer.Serialize(new {
+                    ReplayContextJson = JsonSerializer.Serialize(new
+                    {
                         RunId = candidate.Run.Id,
                         StepRunId = candidate.StepRun.Id,
                         SubprocessRunId = subprocessRun.RunId,
@@ -1184,16 +1114,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool SatisfiesArtifactExpectation(
         ProcessArtifactRecord artifact,
-        ProcessArtifactExpectation expectation) {
-        if (artifact.ArtifactKind != expectation.ArtifactKind) {
+        ProcessArtifactExpectation expectation)
+    {
+        if (artifact.ArtifactKind != expectation.ArtifactKind)
+        {
             return false;
         }
 
-        if (artifact.SensitivityLevel < expectation.SensitivityLevel) {
+        if (artifact.SensitivityLevel < expectation.SensitivityLevel)
+        {
             return false;
         }
 
-        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement)) {
+        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
+        {
             return false;
         }
 
@@ -1214,8 +1148,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool SatisfiesTrustRequirement(
         ProcessArtifactTrustStatus trustStatus,
-        ProcessArtifactTrustRequirement trustRequirement) {
-        return trustRequirement switch {
+        ProcessArtifactTrustRequirement trustRequirement)
+    {
+        return trustRequirement switch
+        {
             ProcessArtifactTrustRequirement.None => true,
             ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
                 ProcessArtifactTrustStatus.ReviewRequired or
@@ -1230,8 +1166,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessSensitivityLevel ResolveProjectedSubprocessSensitivity(
         ProcessArtifactExpectation expectation,
-        ProcessArtifactRecord? sourceArtifact) {
-        if (sourceArtifact is null || sourceArtifact.SensitivityLevel < expectation.SensitivityLevel) {
+        ProcessArtifactRecord? sourceArtifact)
+    {
+        if (sourceArtifact is null || sourceArtifact.SensitivityLevel < expectation.SensitivityLevel)
+        {
             return expectation.SensitivityLevel;
         }
 
@@ -1241,7 +1179,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static string BuildSubprocessArtifactProjectionProvenance(
         DispatchCandidate candidate,
         ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactRecord? sourceArtifact) {
+        ProcessArtifactRecord? sourceArtifact)
+    {
         var sourceSummary = sourceArtifact is null
             ? "No child artifact with the same kind was available; inspect the child run ledger for detailed evidence."
             : $"Source subprocess artifact '{sourceArtifact.Title}' ({sourceArtifact.Id:D}).";
@@ -1251,11 +1190,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static string BuildSubprocessArtifactProjectionReviewSummary(
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessArtifactRecord? sourceArtifact,
-        string projectionDiagnostic) {
+        string projectionDiagnostic)
+    {
         var diagnosticSuffix = string.IsNullOrWhiteSpace(projectionDiagnostic)
             ? string.Empty
             : $" Mapping diagnostic: {projectionDiagnostic}";
-        if (sourceArtifact is null) {
+        if (sourceArtifact is null)
+        {
             return $"Subprocess run '{subprocessRun.RunName}' completed. Review the child run artifact ledger before reusing this parent evidence outside the process.{diagnosticSuffix}";
         }
 
@@ -1265,7 +1206,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return $"{summary}{diagnosticSuffix}";
     }
 
-    private static string BuildSubprocessArtifactProjectionReferenceKey(Guid subprocessRunId, Guid expectationId) {
+    private static string BuildSubprocessArtifactProjectionReferenceKey(Guid subprocessRunId, Guid expectationId)
+    {
         return $"subprocess-run:{subprocessRunId:D}:artifact:{expectationId:D}";
     }
 

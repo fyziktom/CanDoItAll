@@ -1,0 +1,39 @@
+Command: git status --short --branch
+$files = @(
+  'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs',
+  'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs',
+  'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs'
+)
+foreach ($file in $files) {
+  $count = (Get-Content -LiteralPath $file).Count
+  "$file`t$count"
+}
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:25:00.0399727-04:00
+Exit code: 0
+Output:
+## maf-processes-refactor...origin/maf-processes-refactor [ahead 1]
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/analysis/02-assumptions-and-risks.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/plan/01-phase-plan.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/reviews/01-execution-report.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/01-entry-audit-branch-hygiene-and-boundary-smoke/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/02-dispatch-route-and-side-effect-inventory/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/03-concurrency-selection-rule-inventory-and-design/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/04-refactor-gate-a-architecture-guardrails/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/05-dispatch-route-facts-and-snapshot-foundation/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/06-execution-run-selection-helper-foundation/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/07-migrate-concurrency-selection-wrappers/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/08-refactor-gate-b-concurrency-parity/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/09-claim-heartbeat-session-boundary-foundation/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/10-start-transition-and-fresh-skip-planner/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/11-dispatch-route-planner-for-pre-execution-branches/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/12-refactor-gate-c-route-parity-and-line-count-review/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/13-finalizer-context-factory-for-dispatch-routes/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/14-driver-readiness-dispatch-intent-map-documentation/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/15-runtime-smoke-large-screen-policy-check/README.md
+ M codex/bundles/process-dispatch-claim-route-boundary-v1/subbundles/16-final-red-team-and-next-dispatch-cutline/README.md
+?? codex/bundles/process-dispatch-claim-route-boundary-v1/inputs/01-source-artifacts.md
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs	2056
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs	1477
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs	1433

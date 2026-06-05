@@ -1,0 +1,26 @@
+Command: $matches = rg -n "TODO|NotImplemented|throw\s+new\s+NotImplementedException|fixture-specific|template-only" src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs 2>&1
+if ($LASTEXITCODE -eq 0) { $matches; throw 'Stub marker found in guarded source/test scope.' }
+if ($LASTEXITCODE -gt 1) { $matches; exit $LASTEXITCODE }
+if (Test-Path -LiteralPath 'src/CanDoItAll.Processes.Core') { throw 'Forbidden src/CanDoItAll.Processes.Core exists.' }
+if (Test-Path -LiteralPath 'src/CanDoItAll.Modules.Processes.Core') { throw 'Forbidden src/CanDoItAll.Modules.Processes.Core exists.' }
+$coreMatches = rg -n "IProcessDriverPack|interface\s+IProcessDriverPack|class\s+ProcessDriverPack|CanDoItAll\.Processes\.Core|CanDoItAll\.Modules\.Processes\.Core" src/CanDoItAll.Modules.Processes -g "*.cs" 2>&1
+if ($LASTEXITCODE -eq 0) { $coreMatches; throw 'Forbidden production driver/core token found.' }
+if ($LASTEXITCODE -gt 1) { $coreMatches; exit $LASTEXITCODE }
+$uiChanges = git diff --name-only -- "*.razor" "*.css" "*.js" "*.ts" "*.tsx"
+if ($uiChanges) { $uiChanges; throw 'Unexpected UI file changes found.' }
+'SB04 anti-stub and scope scans passed.'
+Working directory: C:\repositories\CanDoItAll
+Start: 2026-06-05T06:37:28.8132205-04:00
+Exit code: 1
+Output:
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:707:        Assert.DoesNotContain("TODO", extractedSource, StringComparison.OrdinalIgnoreCase);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:708:        Assert.DoesNotContain("NotImplementedException", extractedSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:765:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:766:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+Stub marker found in guarded source/test scope.
+At line:2 char:38
++ ... { $matches; throw 'Stub marker found in guarded source/test scope.' } ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : OperationStopped: (Stub marker fou...rce/test scope.:String) [], RuntimeException
+    + FullyQualifiedErrorId : Stub marker found in guarded source/test scope.
+ 

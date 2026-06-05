@@ -1,0 +1,8 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessAutomationExecutionRunSelection_SB06|FullyQualifiedName~ProcessRunAutomationDispatchService_SB07|FullyQualifiedName~ProcessDispatchGuardLease_SB09|FullyQualifiedName~ProcessDispatchLeaseHeartbeat|FullyQualifiedName~ProcessDispatchStartTransitionPlanner_SB10|FullyQualifiedName~ProcessDispatchRoutePlanner_SB11|FullyQualifiedName~ShouldSkipFreshAutomationDispatch"
+Exit code: 0
+Invariant IDs: SB15_INV_001
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    20, Přeskočeno:     0, Celkem:    20, Doba trvání: 348 ms - CanDoItAll.Tests.Integration.dll (net10.0)

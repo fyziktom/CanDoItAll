@@ -475,6 +475,390 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Process_dispatch_claim_route_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift()
+    {
+        var root = FindRepositoryRoot();
+        var routeInventory = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "inventories",
+            "02-current-dispatch-route-map.md");
+        var concurrencyInventory = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "inventories",
+            "03-concurrency-rule-inventory.md");
+        var mafProject = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.AgentFramework.Maf",
+            "CanDoItAll.AgentFramework.Maf.csproj");
+        var processesModuleSource = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(Path.Combine(root, "src", "CanDoItAll.Modules.Processes"), "*.*", SearchOption.AllDirectories)
+                .Where(path => Path.GetExtension(path) is ".cs" or ".csproj")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var proofRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.Contains("Durable dispatch claim", routeInventory, StringComparison.Ordinal);
+        Assert.Contains("Heartbeat session", routeInventory, StringComparison.Ordinal);
+        Assert.Contains("Route planners must not execute EF writes", routeInventory, StringComparison.Ordinal);
+        Assert.Contains("ResolveBlockingAutomationExecutionRunId(stepRun, executionRuns, now)", concurrencyInventory, StringComparison.Ordinal);
+        Assert.Contains("ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns)", concurrencyInventory, StringComparison.Ordinal);
+        Assert.Contains("Keep `executionClient.ListExecutionRunsAsync`", concurrencyInventory, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Processes", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Projects", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Workbench", mafProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("interface IProcessDriverPack", processesModuleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("class ProcessDriverPack", processesModuleSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", processesModuleSource, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public void Process_dispatch_claim_route_gate_a_SB04_INV_002_rejects_placeholder_or_stale_inventories()
+    {
+        var routeInventory = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "inventories",
+            "02-current-dispatch-route-map.md");
+        var concurrencyInventory = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "inventories",
+            "03-concurrency-rule-inventory.md");
+
+        Assert.DoesNotContain("Codex must fill this", routeInventory, StringComparison.Ordinal);
+        Assert.DoesNotContain("Initial observed route sequence", routeInventory, StringComparison.Ordinal);
+        Assert.DoesNotContain("Codex must update this", concurrencyInventory, StringComparison.Ordinal);
+        Assert.DoesNotContain("Initial candidate methods", concurrencyInventory, StringComparison.Ordinal);
+        Assert.Contains("Live source captured in SB02", routeInventory, StringComparison.Ordinal);
+        Assert.Contains("Live source captured in SB03", concurrencyInventory, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_claim_route_gate_b_SB08_INV_001_records_concurrency_helper_parity_and_blocks_side_effect_drift()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var helperSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessAutomationExecutionRunSelection.cs"));
+        var concurrencySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Concurrency.cs"));
+        var integrationTestSource = ReadRepositoryFile(
+            "tests",
+            "CanDoItAll.Tests.Integration",
+            "ProcessRunAutomationDispatchServiceTests.cs");
+        var proofRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.Contains("internal static class ProcessAutomationExecutionRunSelection", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveBlockingAutomationExecutionRunId", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveRecoverableAutomationExecutionRunId", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveCompetingActiveAutomationExecutionRun", helperSource, StringComparison.Ordinal);
+        Assert.Contains("IsStaleAutomationExecutionRun", helperSource, StringComparison.Ordinal);
+        Assert.Contains("IsConcurrentAutomationSessionBusyException", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ShouldSkipFreshAutomationDispatch", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("executionClient.", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Task.Delay", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ConcurrentAutomationExecution", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessAutomationExecutionRunSelection.ResolveBlockingAutomationExecutionRunId", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection.ResolveRecoverableAutomationExecutionRunId", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection.IsConcurrentAutomationSessionBusyException", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("executionClient.ListExecutionRunsAsync", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("executionClient.GetExecutionRunDetailAsync", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("Task.Delay", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("new ConcurrentAutomationExecution", concurrencySource, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_001", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_002", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_003", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService_SB07_INV_001", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService_SB07_INV_002", integrationTestSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public void Process_dispatch_claim_route_gate_b_SB08_INV_002_rejects_shallow_wrapper_migration_with_duplicate_selection_logic()
+    {
+        var concurrencySource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.Concurrency.cs");
+        var helperDelegationCount = Regex.Matches(
+            concurrencySource,
+            "ProcessAutomationExecutionRunSelection\\.",
+            RegexOptions.CultureInvariant).Count;
+
+        Assert.True(helperDelegationCount >= 8);
+        Assert.DoesNotContain("private static bool IsBlockingAutomationExecutionRun", concurrencySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static bool IsRecoveryTrigger", concurrencySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static bool IsRecoverableExecutionRunForCurrentAttempt", concurrencySource, StringComparison.Ordinal);
+        Assert.DoesNotContain(".Where(executionRun => IsBlockingAutomationExecutionRun", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("private static bool IsStaleAutomationExecutionRun", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessAutomationExecutionRunSelection.IsStaleAutomationExecutionRun", concurrencySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_claim_route_gate_c_SB12_INV_001_proves_route_claim_start_and_heartbeat_boundaries_without_side_effect_drift()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var routePlannerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePlanner.cs"));
+        var startTransitionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchStartTransitionPlanner.cs"));
+        var guardLeaseSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchGuardLease.cs"));
+        var heartbeatSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchLeaseHeartbeat.cs"));
+        var integrationTestSource = ReadRepositoryFile(
+            "tests",
+            "CanDoItAll.Tests.Integration",
+            "ProcessRunAutomationDispatchServiceTests.cs");
+
+        Assert.Contains("internal static class ProcessDispatchRoutePlanner", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteKind.DatabaseRequirement", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteKind.UpstreamMaterialization", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteKind.StrandedRecovery", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteKind.Subprocess", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteKind.Workflow", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteKind.AgentExecution", routePlannerSource, StringComparison.Ordinal);
+
+        var routePlannerForbiddenTokens = new[]
+        {
+            "await ",
+            "Task<",
+            "DbContext",
+            "ExecuteUpdateAsync",
+            "SaveChangesAsync",
+            "serviceScopeFactory",
+            "workflowRunCoordinator",
+            "executionClient",
+            "TransitionStepWithClaimAsync",
+            "ExecuteUntilSettledAsync",
+            "FinalizeStepCompletionAsync",
+            "HandleSubprocessDispatchAsync",
+            "logger",
+            "RecordArtifactAsync"
+        };
+
+        foreach (var token in routePlannerForbiddenTokens)
+        {
+            Assert.DoesNotContain(token, routePlannerSource, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("ProcessDispatchRoutePlanner.ResolveDatabaseRequirement", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner.ResolveUpstreamMaterialization", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner.ResolveStrandedRecovery", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner.ResolveSubprocess", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner.ResolveWorkflow", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("TryClaimStepDispatchAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchLeaseHeartbeat.Start", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("TransitionStepWithClaimAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("workflowRunCoordinator.TryRunOrObserveAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ExecuteUntilSettledAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("FinalizeStepCompletionAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ReleaseStepDispatchClaimAsync", dispatchSource, StringComparison.Ordinal);
+
+        Assert.Contains("BuildStartTransitionRequest", startTransitionSource, StringComparison.Ordinal);
+        Assert.Contains("StepRunConcurrencyToken", startTransitionSource, StringComparison.Ordinal);
+        Assert.Contains("SuppressAutomationDispatch = true", startTransitionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TransitionStepWithClaimAsync", startTransitionSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchGuardLease", guardLeaseSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchLeaseHeartbeat", heartbeatSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchClaimLostException", heartbeatSource, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessDispatchGuardLease_SB09_INV_001", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchLeaseHeartbeat_renews_outer_and_step_claims_during_long_work", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchStartTransitionPlanner_SB10_INV_001", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner_SB11_INV_001", integrationTestSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRoutePlanner_SB11_INV_002", integrationTestSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_claim_route_gate_c_SB12_INV_002_records_line_counts_and_blocks_core_driver_or_viewport_drift()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var concurrencySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Concurrency.cs"));
+        var finalizerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs"));
+        var routePlannerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePlanner.cs"));
+        var helperSource = string.Join(
+            Environment.NewLine,
+            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteSnapshot.cs")),
+            routePlannerSource,
+            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchStartTransitionPlanner.cs")),
+            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchGuardLease.cs")),
+            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchLeaseHeartbeat.cs")),
+            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessAutomationExecutionRunSelection.cs")));
+        var proofRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-claim-route-boundary-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.True(dispatchSource.Split(Environment.NewLine).Length < 2056);
+        Assert.True(concurrencySource.Split(Environment.NewLine).Length < 1477);
+        Assert.True(finalizerSource.Split(Environment.NewLine).Length <= 1433);
+        Assert.True(routePlannerSource.Split(Environment.NewLine).Length < 120);
+
+        var combinedSource = string.Join(Environment.NewLine, dispatchSource, concurrencySource, finalizerSource, helperSource);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("throw new Exception", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
+    public void Process_dispatch_claim_route_SB13_INV_001_extracts_finalizer_context_factory_with_route_field_parity()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var factorySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.FinalizerContextFactory.cs"));
+
+        Assert.Contains("private static class ProcessDispatchFinalizerContextFactory", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ForManagerArtifactRecovery", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ForDirectAgent", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ForWorkflow", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ForSubprocess", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ProcessStepCompletionFinalizerContext", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForDirectAgent", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForWorkflow", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForSubprocess", dispatchSource, StringComparison.Ordinal);
+
+        var requiredFactoryFields = new[]
+        {
+            "ProcessStepCompletionExecutorKind.ManagerArtifactRecovery",
+            "ProcessStepCompletionExecutorKind.DirectAgent",
+            "ProcessStepCompletionExecutorKind.WorkflowBackedRole",
+            "ProcessStepCompletionExecutorKind.SubprocessParent",
+            "ProjectExecutionArtifacts: true",
+            "ProjectExecutionArtifacts: false",
+            "AllowManagerArtifactRecovery: true",
+            "AllowManagerArtifactRecovery: false",
+            "RecoveryExecutionRunId: recoveryOutcome.Detail.Run.Id",
+            "RecoveredForExecutionRunId: candidate.RecoveryExecutionRunId",
+            "WorkflowRunId: workflowOutcome.Link?.WorkflowRunId",
+            "SubprocessRunId: subprocessRunId",
+            "Trigger: \"workflow-execution-outcome\"",
+            "Trigger: \"subprocess-execution-outcome\""
+        };
+
+        foreach (var field in requiredFactoryFields)
+        {
+            Assert.Contains(field, factorySource, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("FinalizeStepCompletionAsync", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ApplyFinalizedStepTransitionAsync", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TransitionStepWithClaimAsync", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("executionClient", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("workflowRunCoordinator", factorySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Step_completion_finalizer_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift()
     {
         var root = FindRepositoryRoot();

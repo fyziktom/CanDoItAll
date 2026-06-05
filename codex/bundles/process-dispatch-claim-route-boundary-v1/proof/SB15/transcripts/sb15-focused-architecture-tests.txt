@@ -1,0 +1,7 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~Process_dispatch_claim_route_gate_a_SB04|FullyQualifiedName~Process_dispatch_claim_route_gate_b_SB08|FullyQualifiedName~Process_dispatch_claim_route_gate_c_SB12|FullyQualifiedName~Process_dispatch_claim_route_SB13|FullyQualifiedName~Process_core_and_driver_pack_projects_are_not_introduced_prematurely|FullyQualifiedName~Bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts"
+Exit code: 0
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    11, Přeskočeno:     0, Celkem:    11, Doba trvání: 6 s - CanDoItAll.Tests.Unit.dll (net10.0)
