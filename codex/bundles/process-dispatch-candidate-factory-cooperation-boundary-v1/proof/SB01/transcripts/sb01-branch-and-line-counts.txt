@@ -1,0 +1,32 @@
+Command: git rev-parse --abbrev-ref HEAD
+maf-processes-refactor
+Command: git rev-parse HEAD
+50bf865e379bb20b09a5a53aa610dbdcd553c8b0
+Command: git status --short
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/analysis/02-assumptions-and-risks.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/plan/01-phase-plan.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/01-entry-audit,-branch-hygiene,-and-previous-boundary-smoke/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/02-candidate-construction-inventory-and-field-map/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/03-candidate-factory-seam-design-and-cutline/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/04-refactor-gate-a-architecture-guardrails/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/05-candidate-assembly-context-foundation/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/06-subprocess-candidate-factory-path/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/07-workflow-candidate-factory-path/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/08-refactor-gate-b-route-parity/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/09-direct-agent-candidate-factory-foundation/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/10-technical-agent-binding-integration-cleanup/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/11-recovery-intent-and-manual-directive-assembly/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/12-refactor-gate-c-direct-agent-parity/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/13-cooperation-metadata-resolver-extraction/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/14-driver-readiness-candidate-map/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/15-loaddispatchcandidateasync-slimming-pass/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/16-refactor-gate-d-runtime-smoke-and-line-count-review/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/17-final-red-team-and-completed-proof-pack/README.md
+ M codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/subbundles/18-next-cutline-decision/README.md
+?? codex/bundles/process-dispatch-candidate-factory-cooperation-boundary-v1/proof/
+Command: line counts for candidate-dispatch files
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs	1785
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Cooperation.cs	261
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationLoader.cs	202
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchTechnicalAgentBindingCoordinator.cs	128
+ExitCode: 0

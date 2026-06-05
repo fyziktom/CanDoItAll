@@ -1,6 +1,6 @@
 # process-dispatch-candidate-factory-cooperation-boundary-v1
 
-Status: Prepared
+Status: Completed
 
 ## Objective
 
@@ -10,7 +10,7 @@ This is the next safe step after candidate header selection and hydration readba
 
 ## Why this bundle
 
-The previous bundle completed candidate hydration and route helpers, but `LoadDispatchCandidateAsync` still owns route-specific `new DispatchCandidate(...)` construction, direct-agent assembly, recovery id integration, binding outcome integration and cooperation metadata.
+The previous bundle completed candidate hydration and route helpers, but `LoadDispatchCandidateAsync` still owned route-specific `new DispatchCandidate(...)` construction, direct-agent assembly, recovery id integration, binding outcome integration and cooperation metadata.
 
 ## Scope
 
@@ -29,12 +29,19 @@ The previous bundle completed candidate hydration and route helpers, but `LoadDi
 - No responsive/mobile proof.
 - No public contract expansion.
 
-## Validation Summary Required
+## Validation Summary
 
-Codex must record:
-- subbundle gate results,
-- source scans,
-- line counts,
-- focused unit/integration tests,
-- full solution build,
-- completed-stage validator output if local validator is available.
+- Bundle preparation status: `Completed`
+- Bundle readiness gate: `Passed`
+- Execution status: `Completed`
+- Subbundle gate review: `Passed`
+- Final closure gate: `Passed`
+- Browser validation analytics: `N/A runtime/service refactor`
+
+Recorded proof includes:
+
+- subbundle gate results in `reviews/01-execution-report.md`,
+- source scans and line counts in `proof/SB16/manifest.md`,
+- focused unit/integration tests in `proof/SB04/manifest.md`, `proof/SB08/manifest.md`, `proof/SB12/manifest.md`, and `proof/SB13/transcripts/`,
+- full solution build in `proof/SB16/transcripts/sb16-full-solution-build.txt`,
+- completed-stage validator output in `proof/SB17/transcripts/sb17-completed-validator.txt` after final closure validation.

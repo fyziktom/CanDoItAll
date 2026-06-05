@@ -1641,6 +1641,110 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("DriverPack", bindingSource + recoverySource, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Process_dispatch_candidate_factory_gate_a_SB04_INV_001_uses_module_local_side_effect_free_factory()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var contextPath = Path.Combine(dispatchDirectory, "ProcessDispatchCandidateAssemblyContext.cs");
+        var factoryPath = Path.Combine(dispatchDirectory, "ProcessDispatchCandidateFactory.cs");
+
+        Assert.True(File.Exists(contextPath), contextPath);
+        Assert.True(File.Exists(factoryPath), factoryPath);
+
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var contextSource = File.ReadAllText(contextPath);
+        var factorySource = File.ReadAllText(factoryPath);
+        var helperSource = contextSource + Environment.NewLine + factorySource;
+        var forbiddenTokens = new[]
+        {
+            "CanDoItAll.Processes.Core",
+            "IProcessDriverPack",
+            "DriverPack",
+            "ProcessDriver",
+            "DbContext",
+            "CreateDbContextAsync",
+            "SaveChangesAsync",
+            "SaveAgentAsync",
+            "executionClient",
+            "technicalAgentBridge",
+            "workflowRunCoordinator",
+            "TransitionStepWithClaimAsync",
+            "HandleSubprocessDispatchAsync",
+            "TryRunOrObserveAsync"
+        };
+
+        Assert.Contains("internal sealed record ProcessDispatchCandidateAssemblyContext", contextSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessDispatchCandidateAssemblyContextFactory", contextSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessDispatchCandidateFactory", factorySource, StringComparison.Ordinal);
+        Assert.Contains("CreateSubprocessCandidate", factorySource, StringComparison.Ordinal);
+        Assert.Contains("CreateWorkflowCandidate", factorySource, StringComparison.Ordinal);
+        Assert.Contains("CreateDirectAgentCandidate", factorySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateAssemblyContextFactory.Create", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateFactory.CreateSubprocessCandidate", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateFactory.CreateWorkflowCandidate", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateFactory.CreateDirectAgentCandidate", dispatchSource, StringComparison.Ordinal);
+
+        foreach (var forbiddenToken in forbiddenTokens)
+        {
+            Assert.DoesNotContain(forbiddenToken, helperSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Process_dispatch_candidate_factory_gate_b_SB08_INV_001_owns_all_dispatch_candidate_construction()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var factorySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateFactory.cs"));
+        var factoryConstructorCount = Regex.Matches(
+            factorySource,
+            @"new\s+DispatchCandidate\s*\(",
+            RegexOptions.CultureInvariant).Count;
+
+        Assert.DoesNotContain("new DispatchCandidate", dispatchSource, StringComparison.Ordinal);
+        Assert.Equal(1, factoryConstructorCount);
+        Assert.Contains("CreateSubprocessCandidate", factorySource, StringComparison.Ordinal);
+        Assert.Contains("CreateWorkflowCandidate", factorySource, StringComparison.Ordinal);
+        Assert.Contains("CreateDirectAgentCandidate", factorySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_cooperation_resolver_SB13_INV_001_moves_profile_resolution_without_driver_api()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var resolverPath = Path.Combine(dispatchDirectory, "ProcessDispatchCooperationMetadataResolver.cs");
+
+        Assert.True(File.Exists(resolverPath), resolverPath);
+
+        var resolverSource = File.ReadAllText(resolverPath);
+        var serviceCooperationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Cooperation.cs"));
+
+        Assert.Contains("internal static class ProcessDispatchCooperationMetadataResolver", resolverSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveProcessCooperationMetadata", resolverSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveWorkspaceToolProfile", resolverSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCooperationMetadataResolver.ResolveProcessCooperationMetadata", serviceCooperationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCooperationMetadataResolver.ResolveWorkspaceToolProfile", serviceCooperationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", resolverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", resolverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", resolverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", resolverSource, StringComparison.Ordinal);
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));

@@ -1,0 +1,7 @@
+Command: source assertion for SB04-INV-001 candidate factory guardrail
+Invariant ID: SB04-INV-001
+Test name: Process_dispatch_candidate_factory_gate_a_SB04_INV_001_uses_module_local_side_effect_free_factory
+Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateAssemblyContext.cs defines ProcessDispatchCandidateAssemblyContext and ProcessDispatchCandidateAssemblyContextFactory.
+Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs defines CreateSubprocessCandidate, CreateWorkflowCandidate, and CreateDirectAgentCandidate.
+Source assertion: candidate factory/context helpers contain no EF context reads, execution-client calls, technical-agent bridge calls, workflow coordinator calls, transition calls, or agent-save calls.
+ExitCode: 0

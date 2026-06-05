@@ -402,6 +402,80 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessDispatchCandidateFactory_CreateSubprocessCandidate_preserves_current_route_defaults()
+    {
+        var context = CreateCandidateAssemblyContext(ProcessStepKind.Subprocess);
+
+        var candidate = ProcessDispatchCandidateFactory.CreateSubprocessCandidate(context);
+
+        AssertCandidateCommonFields(context, candidate);
+        Assert.Equal(Guid.Empty, candidate.TechnicalAgentId);
+        Assert.Null(candidate.ChatSessionId);
+        Assert.Null(candidate.RecoveryExecutionRunId);
+        Assert.Equal(string.Empty, candidate.ManualRecoveryDirective);
+        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, candidate.CooperationMetadata.CooperationMode);
+        Assert.Equal(AgentWorkspaceToolProfileKind.ReadOnly, candidate.CooperationMetadata.WorkspaceToolProfile);
+        Assert.Equal("Subprocess step is orchestrated by the process runtime.", candidate.CooperationMetadata.Summary);
+    }
+
+    [Fact]
+    public void ProcessDispatchCandidateFactory_CreateWorkflowCandidate_preserves_current_route_defaults()
+    {
+        var context = CreateCandidateAssemblyContext(ProcessStepKind.Work);
+
+        var candidate = ProcessDispatchCandidateFactory.CreateWorkflowCandidate(context);
+
+        AssertCandidateCommonFields(context, candidate);
+        Assert.Equal(Guid.Empty, candidate.TechnicalAgentId);
+        Assert.Null(candidate.ChatSessionId);
+        Assert.Null(candidate.RecoveryExecutionRunId);
+        Assert.Equal(string.Empty, candidate.ManualRecoveryDirective);
+        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, candidate.CooperationMetadata.CooperationMode);
+        Assert.Equal(AgentWorkspaceToolProfileKind.ReadOnly, candidate.CooperationMetadata.WorkspaceToolProfile);
+        Assert.Equal("Workflow step is orchestrated through the Microsoft Agent Framework workflow runtime.", candidate.CooperationMetadata.Summary);
+    }
+
+    [Fact]
+    public void ProcessDispatchCandidateFactory_CreateDirectAgentCandidate_preserves_binding_recovery_and_cooperation_facts()
+    {
+        var technicalAgentId = Guid.NewGuid();
+        var chatSessionId = Guid.NewGuid();
+        var recoveryExecutionRunId = Guid.NewGuid();
+        var cooperationMetadata = new AgentProcessCooperationMetadata(
+            AgentProcessCooperationMode.Hybrid,
+            AgentWorkspaceToolProfileKind.SoftwareDevelopment,
+            "Resolved cooperation metadata from the dispatcher.");
+        var context = ProcessDispatchCandidateAssemblyContextFactory.WithDirectAgentFacts(
+            CreateCandidateAssemblyContext(ProcessStepKind.Work),
+            new ProcessDispatchDirectAgentCandidateFacts(
+                technicalAgentId,
+                chatSessionId,
+                recoveryExecutionRunId,
+                "Repair only missing artifacts.",
+                cooperationMetadata));
+
+        var candidate = ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(context);
+
+        AssertCandidateCommonFields(context, candidate);
+        Assert.Equal(technicalAgentId, candidate.TechnicalAgentId);
+        Assert.Equal(chatSessionId, candidate.ChatSessionId);
+        Assert.Equal(recoveryExecutionRunId, candidate.RecoveryExecutionRunId);
+        Assert.Equal("Repair only missing artifacts.", candidate.ManualRecoveryDirective);
+        Assert.Same(cooperationMetadata, candidate.CooperationMetadata);
+    }
+
+    [Fact]
+    public void ProcessDispatchCandidateFactory_CreateDirectAgentCandidate_requires_resolved_direct_agent_facts()
+    {
+        var context = CreateCandidateAssemblyContext(ProcessStepKind.Work);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(context));
+
+        Assert.Contains("Direct-agent candidate facts are required.", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ProcessDispatchRouteSnapshot_SB05_INV_001_captures_trigger_status_and_current_attempt_facts()
     {
         var processRunId = Guid.NewGuid();
@@ -19900,6 +19974,105 @@ Ancestor path to the target work node:
         {
             RoleDisplayName = roleDisplayName
         };
+    }
+
+    private static ProcessDispatchCandidateAssemblyContext CreateCandidateAssemblyContext(ProcessStepKind stepKind)
+    {
+        var runId = Guid.NewGuid();
+        var stepDefinitionId = Guid.NewGuid();
+        var expectationId = Guid.NewGuid();
+        var branchOutcome = new ProcessRunAutomationDispatchService.DispatchBranchOutcome(
+            Guid.NewGuid(),
+            "approved",
+            "Approved",
+            "Proceed with the selected branch.");
+
+        return ProcessDispatchCandidateAssemblyContextFactory.Create(
+            new ProcessRun
+            {
+                Id = runId,
+                Name = "Candidate factory parity run"
+            },
+            new ProcessDefinition
+            {
+                Id = Guid.NewGuid(),
+                Name = "Candidate factory parity definition"
+            },
+            new ProcessStepRun
+            {
+                Id = Guid.NewGuid(),
+                ProcessRunId = runId,
+                StepDefinitionId = stepDefinitionId,
+                Title = "Candidate factory step",
+                StepKind = stepKind
+            },
+            new ProcessStepDefinition
+            {
+                Id = stepDefinitionId,
+                Key = "candidate-factory-step",
+                Title = "Candidate factory step",
+                StepKind = stepKind
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Candidate factory brief",
+                WorkBriefText = "Preserve candidate construction facts."
+            },
+            [
+                new ProcessRunAutomationDispatchService.DispatchArtifactExpectation(
+                    expectationId,
+                    ProcessArtifactKind.Evidence,
+                    "Parity evidence",
+                    IsRequired: true,
+                    ProcessArtifactTrustRequirement.ReviewRequired,
+                    ProcessSensitivityLevel.Internal,
+                    "Record parity evidence.",
+                    string.Empty)
+            ],
+            [expectationId],
+            [
+                new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+                    "Source step",
+                    "Parity evidence",
+                    expectationId,
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    ProcessStepRunStatus.Completed,
+                    SourceStepHasAgentExecutor: true,
+                    [
+                        new ProcessRunAutomationDispatchService.DispatchArtifactReference(
+                            "Existing evidence",
+                            ProcessArtifactKind.Evidence.ToString(),
+                            "managed/parity-evidence.md",
+                            "Reviewed.",
+                            "Produced by an upstream step.")
+                    ])
+            ],
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "external-reference"
+            },
+            new ProcessDispatchBranchDependencyContext(
+                [branchOutcome],
+                RequiresExplicitBranchOutcomeSelection: true));
+    }
+
+    private static void AssertCandidateCommonFields(
+        ProcessDispatchCandidateAssemblyContext context,
+        ProcessRunAutomationDispatchService.DispatchCandidate candidate)
+    {
+        Assert.Same(context.Run, candidate.Run);
+        Assert.Same(context.Definition, candidate.Definition);
+        Assert.Same(context.StepRun, candidate.StepRun);
+        Assert.Same(context.StepDefinition, candidate.StepDefinition);
+        Assert.Same(context.WorkBrief, candidate.WorkBrief);
+        Assert.Same(context.ExpectedArtifacts, candidate.ExpectedArtifacts);
+        Assert.Same(context.RecordedArtifactExpectationIds, candidate.RecordedArtifactExpectationIds);
+        Assert.Same(context.ArtifactInputs, candidate.ArtifactInputs);
+        Assert.Same(context.ExternalReferenceKeys, candidate.ExternalReferenceKeys);
+        Assert.Same(context.BranchOutcomes, candidate.BranchOutcomes);
+        Assert.Equal(context.RequiresExplicitBranchOutcomeSelection, candidate.RequiresExplicitBranchOutcomeSelection);
     }
 
     private static object CreateDispatchCandidateCore(

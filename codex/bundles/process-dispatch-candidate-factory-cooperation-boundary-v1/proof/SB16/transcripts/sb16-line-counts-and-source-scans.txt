@@ -1,0 +1,16 @@
+Command: line counts after candidate factory and cooperation resolver extraction
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs	1750
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Cooperation.cs	69
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs	86
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateFactory.cs	81
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs	245
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationLoader.cs	202
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchTechnicalAgentBindingCoordinator.cs	128
+Command: rg -n "new DispatchCandidate" src/CanDoItAll.Modules.Processes/Automation/Dispatch
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCandidateFactory.cs:63:        return new DispatchCandidate(
+Command: production dispatch guardrail scan for process-core and driver API identifiers
+Command: side-effect token scan in candidate factory/context helpers
+Command: anti-stub scan in new candidate/cooperation helpers
+Command: current bundle proof-path guardrail scan for prohibited viewport artifacts
+No prohibited viewport proof paths found.
+ExitCode: 0

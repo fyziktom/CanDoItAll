@@ -1594,29 +1594,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     snapshot.ExistingArtifacts),
                 workspaceRoot,
                 workspaceScope);
+            var assemblyContext = ProcessDispatchCandidateAssemblyContextFactory.Create(
+                run,
+                definition,
+                stepRun,
+                currentStepDefinition,
+                snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                expectedArtifacts,
+                recordedArtifactExpectationIds,
+                preparedArtifactInputs,
+                snapshot.ExternalReferenceKeys,
+                branchContext);
 
             if (stepRun.StepKind == ProcessStepKind.Subprocess)
             {
-                return new DispatchCandidate(
-                    run,
-                    definition,
-                    stepRun,
-                    currentStepDefinition,
-                    snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
-                    Guid.Empty,
-                    expectedArtifacts,
-                    recordedArtifactExpectationIds,
-                    preparedArtifactInputs,
-                    snapshot.ExternalReferenceKeys,
-                    null,
-                    null,
-                    string.Empty,
-                    branchContext.BranchOutcomes,
-                    branchContext.RequiresExplicitBranchOutcomeSelection,
-                    new AgentProcessCooperationMetadata(
-                        AgentProcessCooperationMode.ProcessArtifactHandoff,
-                        AgentWorkspaceToolProfileKind.ReadOnly,
-                        "Subprocess step is orchestrated by the process runtime."));
+                return ProcessDispatchCandidateFactory.CreateSubprocessCandidate(assemblyContext);
             }
 
             snapshot.StepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var workflowStepRoleRequirements);
@@ -1626,26 +1618,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 : snapshot.RoleRequirementsById.GetValueOrDefault(workflowAssignment.RoleRequirementId);
             if (IsWorkflowDispatchAssignment(workflowAssignment, workflowRole))
             {
-                return new DispatchCandidate(
-                    run,
-                    definition,
-                    stepRun,
-                    currentStepDefinition,
-                    snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
-                    Guid.Empty,
-                    expectedArtifacts,
-                    recordedArtifactExpectationIds,
-                    preparedArtifactInputs,
-                    snapshot.ExternalReferenceKeys,
-                    null,
-                    null,
-                    string.Empty,
-                    branchContext.BranchOutcomes,
-                    branchContext.RequiresExplicitBranchOutcomeSelection,
-                    new AgentProcessCooperationMetadata(
-                        AgentProcessCooperationMode.ProcessArtifactHandoff,
-                        AgentWorkspaceToolProfileKind.ReadOnly,
-                        "Workflow step is orchestrated through the Microsoft Agent Framework workflow runtime."));
+                return ProcessDispatchCandidateFactory.CreateWorkflowCandidate(assemblyContext);
             }
 
             if (!stepRun.CurrentExecutorPartyId.HasValue)
@@ -1720,31 +1693,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     recordedArtifactExpectationIds);
             }
 
-            return new DispatchCandidate(
-                run,
-                definition,
-                stepRun,
-                currentStepDefinition,
-                snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
-                technicalAgentId,
-                expectedArtifacts,
-                recordedArtifactExpectationIds,
-                preparedArtifactInputs,
-                snapshot.ExternalReferenceKeys,
-                reusableChatSessionId,
-                recoveryExecutionRunId,
-                manualRecoveryDirective,
-                branchContext.BranchOutcomes,
-                branchContext.RequiresExplicitBranchOutcomeSelection,
-                ResolveProcessCooperationMetadata(
-                    stepRun,
-                    snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
-                    currentRole,
-                    currentAssignment,
-                    expectedArtifacts,
-                    preparedArtifactInputs,
-                    branchContext.BranchOutcomes,
-                    agentEditor));
+            var directAgentContext = ProcessDispatchCandidateAssemblyContextFactory.WithDirectAgentFacts(
+                assemblyContext,
+                new ProcessDispatchDirectAgentCandidateFacts(
+                    technicalAgentId,
+                    reusableChatSessionId,
+                    recoveryExecutionRunId,
+                    manualRecoveryDirective,
+                    ResolveProcessCooperationMetadata(
+                        stepRun,
+                        assemblyContext.WorkBrief,
+                        currentRole,
+                        currentAssignment,
+                        expectedArtifacts,
+                        preparedArtifactInputs,
+                        branchContext.BranchOutcomes,
+                        agentEditor)));
+            return ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(directAgentContext);
         }
 
         return null;

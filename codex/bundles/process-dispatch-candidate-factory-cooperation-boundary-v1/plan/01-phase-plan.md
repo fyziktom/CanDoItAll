@@ -1,5 +1,11 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute subbundles strictly in SB01 through SB18 order.
+- Stop at each critical gate before allowing dependent production movement.
+- Reopen the earliest affected subbundle if later proof weakens a prerequisite.
+
 ## Subbundle Dependency Map
 
 ```mermaid

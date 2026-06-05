@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -16,16 +16,16 @@ Move direct-agent candidate construction into factory, keeping side effects outs
 
 ## Prerequisites
 
-All previous subbundles through SB08 closed.
+- All previous subbundles through SB08 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Cooperation.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchTechnicalAgentBindingCoordinator.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Cooperation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchTechnicalAgentBindingCoordinator.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 ## Deliverables
 
@@ -36,7 +36,7 @@ All previous subbundles through SB08 closed.
 
 ## Dependency Impact
 
-This subbundle is part of a staged candidate-construction refactor. Downstream subbundles must not proceed if candidate field parity or side-effect boundaries are uncertain.
+- This subbundle is part of a staged candidate-construction refactor. Downstream subbundles must not proceed if candidate field parity or side-effect boundaries are uncertain.
 
 ## Validation Depth
 
@@ -84,11 +84,11 @@ This subbundle is part of a staged candidate-construction refactor. Downstream s
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. Do not run small/medium/mobile proof.
+- N/A expected. Runtime/service refactor only. Do not run small/medium/mobile proof.
 
 ## Progression Gate
 
-Do not continue until this subbundle's tests/source scans are passing and the proof manifest is complete.
+- Do not continue until this subbundle's tests/source scans are passing and the proof manifest is complete.
 
 ## Suggested Agent Prompt
 

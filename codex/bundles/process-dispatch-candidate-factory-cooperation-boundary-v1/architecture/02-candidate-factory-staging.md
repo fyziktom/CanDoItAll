@@ -25,6 +25,26 @@ Create an internal `ProcessDispatchCandidateAssemblyContext` that groups:
 
 The context must be module-local.
 
+## Factory Cutline
+
+`ProcessDispatchCandidateAssemblyContextFactory` may group already-loaded facts for the current step. It must not query EF, resolve technical-agent bindings, write journals, run execution clients, or mutate agents.
+
+`ProcessDispatchCandidateFactory` may only construct `DispatchCandidate` instances from:
+
+- `ProcessDispatchCandidateAssemblyContext`,
+- route-specific immutable values such as `technicalAgentId`, `reusableChatSessionId`, `recoveryExecutionRunId`, `manualRecoveryDirective`,
+- already-resolved `AgentProcessCooperationMetadata`.
+
+The dispatcher must continue to own:
+
+- `LoadExpectedArtifactsAsync`,
+- execution-run queries,
+- `ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync`,
+- project-structure access-grant logging,
+- manual recovery directive loading,
+- artifact-recovery id reuse decisions,
+- workflow/subprocess execution and process-step transitions.
+
 ## Stage 3: Route-specific factory methods
 
 Add factory methods with exact parity tests:

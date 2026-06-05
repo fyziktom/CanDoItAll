@@ -1,0 +1,7 @@
+Command: final red-team production dispatch guardrail and proof-path scans
+Invariant ID: SB17-INV-001
+Test name: Process_dispatch_candidate_factory_gate_a_SB04_INV_001_uses_module_local_side_effect_free_factory
+Test name: Process_dispatch_candidate_factory_gate_b_SB08_INV_001_owns_all_dispatch_candidate_construction
+Test name: Process_dispatch_cooperation_resolver_SB13_INV_001_moves_profile_resolution_without_driver_api
+No prohibited viewport proof paths found.
+ExitCode: 0
