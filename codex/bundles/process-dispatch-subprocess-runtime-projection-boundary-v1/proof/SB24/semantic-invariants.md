@@ -1,6 +1,12 @@
 # SB24 Semantic Invariants
 
-- Preserve subprocess dispatch behavior.
-- Preserve artifact projection and journal semantics when touched.
-- Preserve no-core/no-driver/no-UI constraints.
-- Preserve proof policy: no small/medium/mobile proof artifacts.
+- Invariant ID: `SB24-INV-001`
+- Source raw note: `inputs/00-original-request.md` asks for the prepared subprocess runtime/projection boundary bundle to be executed completely while avoiding a premature Process Core or production driver API.
+- Expected behavior: Final closure proves no Process Core, no production driver API, no UI proof drift, completed focused tests, and a documentation-only future driver map.
+- Disallowed shallow implementation: Moving names only, hiding EF/file writes inside pure-looking helpers, adding fallback behavior, creating Core/driver APIs, or claiming completion without source scans and focused tests.
+- Failing-first test: N/A - process refactor with no production behavior expansion; source and test guardrails verify parity instead.
+- Passing test: `dotnet build` plus focused subprocess integration tests and the unit architecture guardrail in `bundle://proof/SB24/transcripts/focused-tests.txt`.
+- Changed source files: `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessRunObservationCoordinator.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessCapabilityGapInspector.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessArtifactSourceResolver.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs`, `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`.
+- Production assertions: No public API or namespace expansion; existing statuses, reasons, artifact path generation, claim checks, and save boundary remain equivalent.
+- Red-team negative case: Scans reject Process Core, driver packs, dispatcher inline side-effect reintroduction, UI file changes, and TODO/NotImplemented stubs.
+- Downstream dependency check: Later subbundles consume the same helper boundary, and `ProcessDispatchRoutePlanner` plus subprocess artifact mapper tests stayed compatible.

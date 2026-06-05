@@ -1,0 +1,15 @@
+Command: dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessSubprocessLifecycleRules_SB05_INV_001|FullyQualifiedName~ProcessSubprocessCapabilityGapInspector_SB09_INV_001|FullyQualifiedName~ProcessSubprocessBoundary_SB18_INV_001|FullyQualifiedName~WorkflowSubprocessArtifactMapper_SB11_INV_001|FullyQualifiedName~SubprocessArtifactProjectionMapping"
+ExitCode: 0
+Result: Integration filter passed; failed 0, passed 7, skipped 0, total 7.
+Command: dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~Process_core_and_driver_pack_projects_are_not_introduced_prematurely"
+ExitCode: 0
+Result: Unit architecture guardrail passed; failed 0, passed 1, skipped 0, total 1.
+Invariant IDs: SB19-INV-001
+Test names:
+- ProcessSubprocessLifecycleRules_SB05_INV_001_preserves_transition_field_parity
+- ProcessSubprocessCapabilityGapInspector_SB09_INV_001_formats_unassigned_gap_steps
+- ProcessSubprocessBoundary_SB18_INV_001_dispatch_delegates_runtime_projection_side_effects
+- WorkflowSubprocessArtifactMapper_SB11_INV_001_resolves_explicit_mappings_without_dispatch_partials
+- SubprocessArtifactProjectionMapping_SB09_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict
+- SubprocessArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_child_mapping
+- SubprocessArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps

@@ -324,6 +324,104 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessSubprocessLifecycleRules_SB05_INV_001_preserves_transition_field_parity()
+    {
+        var stepRunId = Guid.NewGuid();
+        var concurrencyToken = Guid.NewGuid();
+        var stepRun = new ProcessStepRun
+        {
+            Id = stepRunId,
+            ConcurrencyToken = concurrencyToken,
+            Status = ProcessStepRunStatus.Ready
+        };
+        var subprocessRun = new ProcessSubprocessRunStartResult(
+            Guid.NewGuid(),
+            "Vendor intake",
+            ProcessRunStatus.Completed);
+
+        var startRequest = ProcessSubprocessLifecycleRules.BuildStartTransitionRequest(
+            stepRun,
+            "manual-dispatch",
+            "process-automation-dispatch");
+        var failureBlockRequest = ProcessSubprocessLifecycleRules.BuildEnsureFailureBlockTransitionRequest(
+            stepRun,
+            "Child run could not start.",
+            "process-automation-dispatch");
+        var terminalRequest = ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionRequest(
+            stepRun,
+            subprocessRun,
+            ProcessStepRunStatus.Completed,
+            "process-automation-dispatch");
+
+        Assert.Equal(stepRunId, startRequest.StepRunId);
+        Assert.Equal(concurrencyToken, startRequest.StepRunConcurrencyToken);
+        Assert.Equal(ProcessStepRunStatus.InProgress, startRequest.TargetStatus);
+        Assert.Equal("Started subprocess by the durable process automation dispatcher (manual-dispatch).", startRequest.Reason);
+        Assert.True(startRequest.SuppressAutomationDispatch);
+
+        Assert.Equal(ProcessStepRunStatus.Blocked, failureBlockRequest.TargetStatus);
+        Assert.Equal("Child run could not start.", failureBlockRequest.Reason);
+        Assert.True(failureBlockRequest.SuppressAutomationDispatch);
+
+        Assert.Equal(ProcessStepRunStatus.Completed, terminalRequest.TargetStatus);
+        Assert.Equal("Subprocess run 'Vendor intake' completed.", terminalRequest.Reason);
+        Assert.False(terminalRequest.SuppressAutomationDispatch);
+        Assert.Equal(ProcessStepRunStatus.Completed, ProcessSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Completed));
+        Assert.Equal(ProcessStepRunStatus.Blocked, ProcessSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Blocked));
+        Assert.Equal(ProcessStepRunStatus.Failed, ProcessSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Cancelled));
+        Assert.Equal(ProcessStepRunStatus.Failed, ProcessSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Failed));
+        Assert.Null(ProcessSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Active));
+    }
+
+    [Fact]
+    public void ProcessSubprocessCapabilityGapInspector_SB09_INV_001_formats_unassigned_gap_steps()
+    {
+        var summary = ProcessSubprocessCapabilityGapInspector.BuildStepSummary(
+            new ProcessSubprocessCapabilityGapStep(
+                "Legal review",
+                ProcessStepRunStatus.WaitingApproval,
+                ProcessCapabilityGapSeverity.Critical,
+                CurrentExecutorPartyId: null,
+                CurrentExecutorName: "  "));
+
+        Assert.Equal("'Legal review' is WaitingApproval for executor 'unassigned' (Critical)", summary);
+    }
+
+    [Fact]
+    public void ProcessSubprocessBoundary_SB18_INV_001_dispatch_delegates_runtime_projection_side_effects()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var subprocessHelperSource = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                "ProcessSubprocessRunObservationCoordinator.cs",
+                "ProcessSubprocessCapabilityGapInspector.cs",
+                "ProcessSubprocessProjectionGapJournalCoordinator.cs",
+                "ProcessSubprocessProjectionWriterCoordinator.cs",
+                "ProcessSubprocessProjectionPlanBuilder.cs"
+            }.Select(file => File.ReadAllText(Path.Combine(dispatchDirectory, file))));
+
+        Assert.Contains("CreateSubprocessRunObservationCoordinator", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionRequest", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSubprocessProjectionPlanBuilder.Build", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("projectionWriterCoordinator.WriteAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("EnsureSubprocessRunForStepAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.WriteAllTextAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", subprocessHelperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", subprocessHelperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", subprocessHelperSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void WorkflowSubprocessArtifactMapper_SB11_INV_001_resolves_explicit_mappings_without_dispatch_partials()
     {
         var workflowExpectation = new ProcessArtifactExpectation
@@ -20946,5 +21044,29 @@ Ancestor path to the target work node:
         public string ResolveEvidenceRoot() => Path.Combine(workspaceRoot, "evidence");
 
         public string ResolveManagerArtifactsRoot() => Path.Combine(workspaceRoot, "manager-artifacts");
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        foreach (var startPath in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory() })
+        {
+            if (string.IsNullOrWhiteSpace(startPath))
+            {
+                continue;
+            }
+
+            var directory = new DirectoryInfo(startPath);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+        }
+
+        throw new InvalidOperationException("Could not locate the repository root.");
     }
 }

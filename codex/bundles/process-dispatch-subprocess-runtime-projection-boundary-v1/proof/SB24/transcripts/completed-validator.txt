@@ -1,0 +1,4 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-dispatch-subprocess-runtime-projection-boundary-v1 --profile initiative --stage completed --repo-root <repo-root>
+ExitCode: 0
+Result: Bundle is valid for stage 'completed'.
+Invariant IDs: SB24-INV-001

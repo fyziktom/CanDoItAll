@@ -1,5 +1,9 @@
 # Phase Plan
 
+## Execution Order
+
+Execute SB01 through SB24 in numeric order. Do not start a subbundle until the previous subbundle closure gate has passed or has been explicitly reopened and repaired.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -23,4 +27,6 @@ graph TD
 
 ## Phase Gates
 
-Each gate must prove build/test/source scans and explicitly decide whether downstream work may continue. A failed gate reopens the last production movement subbundle.
+- Each gate must prove build, focused tests, source scans, and the required proof artifacts before downstream work may continue.
+- Critical gates SB04, SB08, SB16, SB19, SB23, and SB24 must include semantic adequacy proof and red-team or verifier evidence where required.
+- A failed gate reopens the last production movement subbundle and blocks dependent subbundles until repaired.

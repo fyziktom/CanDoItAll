@@ -2,8 +2,7 @@
 
 ## Status
 
-Prepared.
-
+- Completed
 ## Objective
 
 Wrap subprocess source artifact selection and mapping diagnostics behind a module-local helper while preserving WorkflowSubprocessArtifactMapper behavior.
@@ -12,7 +11,7 @@ Wrap subprocess source artifact selection and mapping diagnostics behind a modul
 
 - `inputs/00-original-request.md`
 - `inputs/01-branch-review-summary.md`
-- Current branch source under `src/CanDoItAll.Modules.Processes/Automation/Dispatch/`.
+- Current branch source under `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/`.
 
 ## Prerequisites
 
@@ -22,12 +21,12 @@ Wrap subprocess source artifact selection and mapping diagnostics behind a modul
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.FinalizerContextFactory.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePlanner.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.FinalizerContextFactory.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePlanner.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 ## Deliverables
 
@@ -38,7 +37,7 @@ Wrap subprocess source artifact selection and mapping diagnostics behind a modul
 
 ## Dependency Impact
 
-Feeds SB13. If this subbundle changes route/projection semantics, reopen the previous gate.
+- Feeds SB13. If this subbundle changes route/projection semantics, reopen the previous gate.
 
 ## Validation Depth
 
@@ -74,12 +73,12 @@ Feeds SB13. If this subbundle changes route/projection semantics, reopen the pre
 
 ## Acceptance Checklist
 
-- [ ] Objective satisfied.
-- [ ] Existing behavior preserved.
-- [ ] Tests/source scans recorded.
-- [ ] No Process Core or production driver API introduced.
-- [ ] No UI or prohibited viewport proof drift.
-- [ ] Execution report updated.
+- [x] Objective satisfied.
+- [x] Existing behavior preserved.
+- [x] Tests/source scans recorded.
+- [x] No Process Core or production driver API introduced.
+- [x] No UI or prohibited viewport proof drift.
+- [x] Execution report updated.
 
 ## Proof Required
 
@@ -92,11 +91,11 @@ Feeds SB13. If this subbundle changes route/projection semantics, reopen the pre
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If UI unexpectedly changes, record large desktop/PC proof only and explain why.
+- N/A expected. Runtime/service refactor only. If UI unexpectedly changes, record large desktop/PC proof only and explain why.
 
 ## Progression Gate
 
-Proceed only if acceptance checklist and proof are complete.
+- Proceed only if acceptance checklist and proof are complete.
 
 ## Suggested Agent Prompt
 

@@ -650,15 +650,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (stepRunSnapshot.Status != ProcessStepRunStatus.InProgress)
         {
             var startResult = await TransitionStepWithClaimAsync(
-                new ProcessStepTransitionRequest
-                {
-                    StepRunId = stepRunSnapshot.Id,
-                    StepRunConcurrencyToken = stepRunSnapshot.ConcurrencyToken,
-                    TargetStatus = ProcessStepRunStatus.InProgress,
-                    Reason = $"Started subprocess by the durable process automation dispatcher ({NormalizeTrigger(trigger, triggerStepRunId)}).",
-                    DecidedBy = AutomationActor,
-                    SuppressAutomationDispatch = true
-                },
+                ProcessSubprocessLifecycleRules.BuildStartTransitionRequest(
+                    stepRunSnapshot,
+                    NormalizeTrigger(trigger, triggerStepRunId),
+                    AutomationActor),
                 dispatchClaim,
                 cancellationToken);
             if (startResult.IsFailure)
@@ -672,43 +667,33 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        await using var scope = serviceScopeFactory.CreateAsyncScope();
-        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
-        var subprocessResult = await processesService.EnsureSubprocessRunForStepAsync(stepRunSnapshot.Id, cancellationToken);
+        var subprocessResult = await CreateSubprocessRunObservationCoordinator()
+            .EnsureRunForStepAsync(stepRunSnapshot.Id, cancellationToken);
         if (subprocessResult.IsFailure)
         {
             await TransitionStepWithClaimAsync(
-                new ProcessStepTransitionRequest
-                {
-                    StepRunId = stepRunSnapshot.Id,
-                    TargetStatus = ProcessStepRunStatus.Blocked,
-                    Reason = string.Join(" | ", subprocessResult.Errors.Select(error => error.Message)),
-                    DecidedBy = AutomationActor,
-                    SuppressAutomationDispatch = true
-                },
+                ProcessSubprocessLifecycleRules.BuildEnsureFailureBlockTransitionRequest(
+                    stepRunSnapshot,
+                    string.Join(" | ", subprocessResult.Errors.Select(error => error.Message)),
+                    AutomationActor),
                 dispatchClaim,
                 cancellationToken);
             return;
         }
 
         var subprocessRun = subprocessResult.Value!;
-        var terminalStatus = ResolveSubprocessParentStepStatus(subprocessRun.Status);
+        var terminalStatus = ProcessSubprocessLifecycleRules.ResolveParentStepStatus(subprocessRun.Status);
         if (!terminalStatus.HasValue)
         {
-            var capabilityGapBlockReason = await TryBuildSubprocessCapabilityGapBlockReasonAsync(
-                subprocessRun,
-                cancellationToken);
+            var capabilityGapBlockReason = await CreateSubprocessCapabilityGapInspector()
+                .TryBuildBlockReasonAsync(subprocessRun, cancellationToken);
             if (capabilityGapBlockReason is not null)
             {
                 var blockResult = await TransitionStepWithClaimAsync(
-                    new ProcessStepTransitionRequest
-                    {
-                        StepRunId = stepRunSnapshot.Id,
-                        TargetStatus = ProcessStepRunStatus.Blocked,
-                        Reason = capabilityGapBlockReason,
-                        DecidedBy = AutomationActor,
-                        SuppressAutomationDispatch = true
-                    },
+                    ProcessSubprocessLifecycleRules.BuildCapabilityGapBlockTransitionRequest(
+                        stepRunSnapshot,
+                        capabilityGapBlockReason,
+                        AutomationActor),
                     dispatchClaim,
                     cancellationToken);
                 if (blockResult.IsFailure)
@@ -736,7 +721,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (terminalStatus.Value == ProcessStepRunStatus.Completed)
         {
             await ProjectCompletedSubprocessArtifactsAsync(candidate, subprocessRun, dispatchClaim, cancellationToken);
-            var transitionReason = BuildSubprocessParentTransitionReason(subprocessRun);
+            var transitionReason = ProcessSubprocessLifecycleRules.BuildParentTransitionReason(subprocessRun);
             var finalizedCompletion = await FinalizeStepCompletionAsync(
                 ProcessDispatchFinalizerContextFactory.ForSubprocess(
                     candidate,
@@ -754,14 +739,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         var transitionResult = await TransitionStepWithClaimAsync(
-            new ProcessStepTransitionRequest
-            {
-                StepRunId = stepRunSnapshot.Id,
-                TargetStatus = terminalStatus.Value,
-                Reason = BuildSubprocessParentTransitionReason(subprocessRun),
-                DecidedBy = AutomationActor,
-                SuppressAutomationDispatch = terminalStatus.Value != ProcessStepRunStatus.Completed
-            },
+            ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionRequest(
+                stepRunSnapshot,
+                subprocessRun,
+                terminalStatus.Value,
+                AutomationActor),
             dispatchClaim,
             cancellationToken);
         if (transitionResult.IsFailure)
@@ -773,68 +755,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 subprocessRun.RunId,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
         }
-    }
-
-    private async Task<string?> TryBuildSubprocessCapabilityGapBlockReasonAsync(
-        ProcessSubprocessRunStartResult subprocessRun,
-        CancellationToken cancellationToken)
-    {
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var activeChildSteps = await dbContext.Set<ProcessStepRun>()
-            .AsNoTracking()
-            .Where(item =>
-                item.ProcessRunId == subprocessRun.RunId &&
-                (item.Status == ProcessStepRunStatus.Ready ||
-                 item.Status == ProcessStepRunStatus.WaitingApproval ||
-                 item.Status == ProcessStepRunStatus.InProgress))
-            .OrderBy(item => item.Sequence)
-            .Select(item => new SubprocessCapabilityGapStep(
-                item.Title,
-                item.Status,
-                item.CapabilityGapSeverity,
-                item.CurrentExecutorPartyId,
-                item.CurrentExecutorName))
-            .ToListAsync(cancellationToken);
-        if (activeChildSteps.Count == 0)
-        {
-            return null;
-        }
-
-        var executableChildStepExists = activeChildSteps.Any(item =>
-            item.CapabilityGapSeverity == ProcessCapabilityGapSeverity.None &&
-            item.CurrentExecutorPartyId.HasValue);
-        if (executableChildStepExists)
-        {
-            return null;
-        }
-
-        var blockingSteps = activeChildSteps
-            .Where(item =>
-                item.CapabilityGapSeverity != ProcessCapabilityGapSeverity.None ||
-                !item.CurrentExecutorPartyId.HasValue)
-            .Take(3)
-            .Select(BuildSubprocessCapabilityGapStepSummary)
-            .ToList();
-        if (blockingSteps.Count == 0)
-        {
-            return null;
-        }
-
-        var additionalCount = activeChildSteps.Count - blockingSteps.Count;
-        var additionalSummary = additionalCount <= 0
-            ? string.Empty
-            : $" and {additionalCount} more active child step(s)";
-
-        return $"Subprocess run '{subprocessRun.RunName}' cannot proceed because active child step(s) have unresolved required role assignments or capability gaps: {string.Join("; ", blockingSteps)}{additionalSummary}. Resolve the subprocess role assignments or rerun with a launch plan that binds the required roles.";
-    }
-
-    private static string BuildSubprocessCapabilityGapStepSummary(SubprocessCapabilityGapStep step)
-    {
-        var executorName = string.IsNullOrWhiteSpace(step.CurrentExecutorName)
-            ? "unassigned"
-            : step.CurrentExecutorName.Trim();
-
-        return $"'{step.Title}' is {step.Status} for executor '{executorName}' ({step.CapabilityGapSeverity})";
     }
 
     private async Task ProjectCompletedSubprocessArtifactsAsync(
@@ -862,9 +782,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 item.StepRunId == candidate.StepRun.Id)
             .ToListAsync(cancellationToken);
         var missingProjectableExpectations = expectations
-            .Where(WorkflowSubprocessArtifactMapper.IsSubprocessCompletionProjectionAllowed)
+            .Where(ProcessSubprocessArtifactSourceResolver.IsCompletionProjectionAllowed)
             .Where(expectation => !parentArtifacts.Any(artifact =>
-                SatisfiesCurrentSubprocessArtifactExpectation(artifact, expectation, subprocessRun.RunId)))
+                ProcessSubprocessProjectionPlanBuilder.SatisfiesCurrentArtifactExpectation(
+                    artifact,
+                    expectation,
+                    subprocessRun.RunId)))
             .ToList();
         if (missingProjectableExpectations.Count == 0)
         {
@@ -879,18 +802,21 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .OrderByDescending(item => item.CreatedAtUtc)
             .ToList();
         var now = clock.GetUtcNow();
+        var scopedProfileId = databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N");
+        var gapJournalCoordinator = CreateSubprocessProjectionGapJournalCoordinator();
+        var projectionWriterCoordinator = CreateSubprocessProjectionWriterCoordinator();
 
         foreach (var expectation in missingProjectableExpectations)
         {
             await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
-            var sourceArtifact = WorkflowSubprocessArtifactMapper.ResolveSubprocessSourceArtifact(
+            var sourceArtifact = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
                 childArtifacts,
                 missingProjectableExpectations,
                 expectation,
                 out var projectionDiagnostic);
             if (sourceArtifact is null)
             {
-                await RecordSubprocessProjectionGapAsync(
+                await gapJournalCoordinator.RecordAsync(
                     dbContext,
                     candidate,
                     subprocessRun,
@@ -901,196 +827,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var projectedManagedStoragePath = await WriteProjectedSubprocessArtifactAsync(
+            var projectionPlan = ProcessSubprocessProjectionPlanBuilder.Build(
                 candidate,
                 subprocessRun,
                 expectation,
                 sourceArtifact,
-                cancellationToken);
-            var projectionLineage = ProcessArtifactProjectionLineageJson.Normalize(
-                new ProcessArtifactProjectionLineage
-                {
-                    SourceKind = ProcessArtifactProjectionSourceKind.SubprocessArtifact,
-                    SubprocessRunId = subprocessRun.RunId,
-                    SourceArtifactId = sourceArtifact.Id,
-                    SourceExternalReferenceKey = sourceArtifact.ExternalReferenceKey
-                })!;
-            var artifact = new ProcessArtifactRecord
-            {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
-                ArtifactExpectationId = expectation.Id,
-                ArtifactKind = expectation.ArtifactKind,
-                Title = expectation.Title,
-                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
-                SensitivityLevel = ResolveProjectedSubprocessSensitivity(expectation, sourceArtifact),
-                ProvenanceSummary = BuildSubprocessArtifactProjectionProvenance(candidate, subprocessRun, sourceArtifact),
-                AllowedFutureUsageSummary = expectation.AllowedFutureUsageSummary,
-                ReviewSummary = BuildSubprocessArtifactProjectionReviewSummary(subprocessRun, sourceArtifact, projectionDiagnostic),
-                ManagedStoragePath = projectedManagedStoragePath,
-                ExternalReferenceKey = BuildSubprocessArtifactProjectionReferenceKey(subprocessRun.RunId, sourceArtifact.Id),
-                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.SerializeNormalized(projectionLineage),
-                ProjectionIdentityHash = projectionLineage.ProjectionIdentityHash,
-                CreatedAtUtc = now
-            };
-            await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
-            await dbContext.Set<ProcessJournalEntry>().AddAsync(
-                new ProcessJournalEntry
-                {
-                    ProcessRunId = candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    EventType = "artifact-recorded",
-                    Title = "Recorded process artifact",
-                    Description = artifact.Title,
-                    CorrelationId = Guid.NewGuid().ToString("N"),
-                    OperatingMode = candidate.Run.OperatingMode,
-                    PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                    EnvironmentMode = candidate.Run.OperatingMode.ToString(),
-                    ReplayContextJson = JsonSerializer.Serialize(new
-                    {
-                        RunId = candidate.Run.Id,
-                        StepRunId = candidate.StepRun.Id,
-                        SubprocessRunId = subprocessRun.RunId,
-                        SourceArtifactId = sourceArtifact?.Id,
-                        Summary = artifact.ProvenanceSummary
-                    }),
-                    OccurredAtUtc = now
-                },
+                projectionDiagnostic,
+                scopedProfileId);
+            await projectionWriterCoordinator.WriteAsync(
+                dbContext,
+                candidate,
+                subprocessRun,
+                projectionPlan,
+                now,
                 cancellationToken);
         }
 
         await EnsureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    private async Task<string> WriteProjectedSubprocessArtifactAsync(
-        DispatchCandidate candidate,
-        ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactExpectation expectation,
-        ProcessArtifactRecord sourceArtifact,
-        CancellationToken cancellationToken)
-    {
-        var fileSlug = FileSafeSlugBuilder.Build(expectation.Title);
-        if (string.IsNullOrWhiteSpace(fileSlug))
-        {
-            fileSlug = "subprocess-artifact-projection";
-        }
-
-        var scopedProfileId = databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N");
-        var relativePath = WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(
-            "artifacts",
-            "scopes",
-            "organization",
-            scopedProfileId,
-            "process-runs",
-            candidate.Run.Id.ToString("D"),
-            candidate.StepRun.Id.ToString("D"),
-            $"{fileSlug}.md"));
-        var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
-        var fullPath = Path.GetFullPath(Path.Combine(
-            workspaceRoot,
-            relativePath.Replace('/', Path.DirectorySeparatorChar)));
-        if (!IsWithinWorkspace(workspaceRoot, fullPath))
-        {
-            throw new InvalidOperationException(
-                $"Projected subprocess artifact path '{relativePath}' resolves outside the workspace root.");
-        }
-
-        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        await File.WriteAllTextAsync(
-            fullPath,
-            BuildProjectedSubprocessArtifactMarkdown(candidate, subprocessRun, expectation, sourceArtifact),
-            Encoding.UTF8,
-            cancellationToken);
-        return relativePath;
-    }
-
-    private static string BuildProjectedSubprocessArtifactMarkdown(
-        DispatchCandidate candidate,
-        ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactExpectation expectation,
-        ProcessArtifactRecord sourceArtifact)
-    {
-        return $"""
-            # {expectation.Title}
-
-            Parent process run: {candidate.Run.Id:D}
-            Parent subprocess step: {candidate.StepRun.Id:D}
-            Subprocess run: {subprocessRun.RunId:D}
-            Subprocess artifact: {sourceArtifact.Id:D}
-            Subprocess artifact title: {sourceArtifact.Title}
-            Subprocess managed path: {sourceArtifact.ManagedStoragePath}
-
-            This parent-scoped artifact is a durable projection of the completed subprocess output. The child run artifact ledger remains the source of detailed runtime evidence.
-            """;
-    }
-
-    private async Task RecordSubprocessProjectionGapAsync(
-        AppDbContext dbContext,
-        DispatchCandidate candidate,
-        ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactExpectation expectation,
-        string projectionDiagnostic,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        var fingerprint = CreateSubprocessProjectionGapFingerprint(candidate.Run.Id, candidate.StepRun.Id, subprocessRun.RunId, expectation.Id);
-        var existingGap = await dbContext.Set<ProcessJournalEntry>()
-            .AsNoTracking()
-            .AnyAsync(
-                item =>
-                    item.ProcessRunId == candidate.Run.Id &&
-                    item.StepRunId == candidate.StepRun.Id &&
-                    item.EventType == ProcessRuntimeEventTypes.ArtifactValidationDiagnostic &&
-                    item.CorrelationId == fingerprint,
-                cancellationToken);
-        if (existingGap)
-        {
-            return;
-        }
-
-        await dbContext.Set<ProcessJournalEntry>().AddAsync(
-            new ProcessJournalEntry
-            {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
-                EventType = ProcessRuntimeEventTypes.ArtifactValidationDiagnostic,
-                Title = $"Subprocess artifact projection gap: {expectation.Title}",
-                Description = string.IsNullOrWhiteSpace(projectionDiagnostic)
-                    ? $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'."
-                    : $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'. {projectionDiagnostic}",
-                CorrelationId = fingerprint,
-                OperatingMode = candidate.Run.OperatingMode,
-                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
-                ReplayContextJson = JsonSerializer.Serialize(new
-                {
-                    candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    SubprocessRunId = subprocessRun.RunId,
-                    ExpectationId = expectation.Id,
-                    ExpectationTitle = expectation.Title,
-                    ProjectionDiagnostic = projectionDiagnostic
-                }),
-                OccurredAtUtc = now
-            },
-            cancellationToken);
-    }
-
-    private static string CreateSubprocessProjectionGapFingerprint(
-        Guid processRunId,
-        Guid stepRunId,
-        Guid subprocessRunId,
-        Guid expectationId)
-    {
-        var normalized = string.Join(
-            "|",
-            "subprocess-projection-gap",
-            processRunId.ToString("D"),
-            stepRunId.ToString("D"),
-            subprocessRunId.ToString("D"),
-            expectationId.ToString("D"));
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
     }
 
     internal static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
@@ -1099,7 +853,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessArtifactExpectation expectation,
         out string diagnostic)
     {
-        return WorkflowSubprocessArtifactMapper.ResolveSubprocessSourceArtifact(
+        return ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
             childArtifacts,
             parentExpectations,
             expectation,
@@ -1109,130 +863,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
     internal static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveSubprocessOutputArtifactMappings(
         IReadOnlyList<ProcessArtifactExpectation> parentExpectations)
     {
-        return WorkflowSubprocessArtifactMapper.ResolveSubprocessOutputArtifactMappings(parentExpectations);
+        return ProcessSubprocessArtifactSourceResolver.ResolveOutputArtifactMappings(parentExpectations);
     }
 
-    private static bool SatisfiesArtifactExpectation(
-        ProcessArtifactRecord artifact,
-        ProcessArtifactExpectation expectation)
-    {
-        if (artifact.ArtifactKind != expectation.ArtifactKind)
-        {
-            return false;
-        }
+    private ProcessSubprocessRunObservationCoordinator CreateSubprocessRunObservationCoordinator()
+        => new(serviceScopeFactory);
 
-        if (artifact.SensitivityLevel < expectation.SensitivityLevel)
-        {
-            return false;
-        }
+    private ProcessSubprocessCapabilityGapInspector CreateSubprocessCapabilityGapInspector()
+        => new(dbContextFactory);
 
-        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
-        {
-            return false;
-        }
+    private static ProcessSubprocessProjectionGapJournalCoordinator CreateSubprocessProjectionGapJournalCoordinator()
+        => new();
 
-        return artifact.ArtifactExpectationId.HasValue
-            ? artifact.ArtifactExpectationId.Value == expectation.Id
-            : string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool SatisfiesCurrentSubprocessArtifactExpectation(
-        ProcessArtifactRecord artifact,
-        ProcessArtifactExpectation expectation,
-        Guid subprocessRunId)
-    {
-        return SatisfiesArtifactExpectation(artifact, expectation) &&
-               artifact.ExternalReferenceKey.StartsWith("subprocess-run:", StringComparison.OrdinalIgnoreCase) &&
-               artifact.ExternalReferenceKey.Contains(subprocessRunId.ToString("D"), StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool SatisfiesTrustRequirement(
-        ProcessArtifactTrustStatus trustStatus,
-        ProcessArtifactTrustRequirement trustRequirement)
-    {
-        return trustRequirement switch
-        {
-            ProcessArtifactTrustRequirement.None => true,
-            ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
-                ProcessArtifactTrustStatus.ReviewRequired or
-                ProcessArtifactTrustStatus.Approved or
-                ProcessArtifactTrustStatus.TrustedSource,
-            ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
-            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
-            ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
-            _ => false
-        };
-    }
-
-    private static ProcessSensitivityLevel ResolveProjectedSubprocessSensitivity(
-        ProcessArtifactExpectation expectation,
-        ProcessArtifactRecord? sourceArtifact)
-    {
-        if (sourceArtifact is null || sourceArtifact.SensitivityLevel < expectation.SensitivityLevel)
-        {
-            return expectation.SensitivityLevel;
-        }
-
-        return sourceArtifact.SensitivityLevel;
-    }
-
-    private static string BuildSubprocessArtifactProjectionProvenance(
-        DispatchCandidate candidate,
-        ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactRecord? sourceArtifact)
-    {
-        var sourceSummary = sourceArtifact is null
-            ? "No child artifact with the same kind was available; inspect the child run ledger for detailed evidence."
-            : $"Source subprocess artifact '{sourceArtifact.Title}' ({sourceArtifact.Id:D}).";
-        return $"Auto-projected from completed subprocess run '{subprocessRun.RunName}' ({subprocessRun.RunId:D}) for parent subprocess step '{candidate.StepRun.Title}'. {sourceSummary}";
-    }
-
-    private static string BuildSubprocessArtifactProjectionReviewSummary(
-        ProcessSubprocessRunStartResult subprocessRun,
-        ProcessArtifactRecord? sourceArtifact,
-        string projectionDiagnostic)
-    {
-        var diagnosticSuffix = string.IsNullOrWhiteSpace(projectionDiagnostic)
-            ? string.Empty
-            : $" Mapping diagnostic: {projectionDiagnostic}";
-        if (sourceArtifact is null)
-        {
-            return $"Subprocess run '{subprocessRun.RunName}' completed. Review the child run artifact ledger before reusing this parent evidence outside the process.{diagnosticSuffix}";
-        }
-
-        var summary = string.IsNullOrWhiteSpace(sourceArtifact.ReviewSummary)
-            ? $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}."
-            : $"Subprocess run '{subprocessRun.RunName}' completed. Source artifact: {sourceArtifact.Title}. {sourceArtifact.ReviewSummary}";
-        return $"{summary}{diagnosticSuffix}";
-    }
-
-    private static string BuildSubprocessArtifactProjectionReferenceKey(Guid subprocessRunId, Guid expectationId)
-    {
-        return $"subprocess-run:{subprocessRunId:D}:artifact:{expectationId:D}";
-    }
-
-    private static ProcessStepRunStatus? ResolveSubprocessParentStepStatus(ProcessRunStatus subprocessStatus)
-    {
-        return subprocessStatus switch
-        {
-            ProcessRunStatus.Completed => ProcessStepRunStatus.Completed,
-            ProcessRunStatus.Blocked => ProcessStepRunStatus.Blocked,
-            ProcessRunStatus.Cancelled or ProcessRunStatus.Failed => ProcessStepRunStatus.Failed,
-            _ => null
-        };
-    }
-
-    private static string BuildSubprocessParentTransitionReason(ProcessSubprocessRunStartResult subprocessRun)
-    {
-        return subprocessRun.Status switch
-        {
-            ProcessRunStatus.Completed => $"Subprocess run '{subprocessRun.RunName}' completed.",
-            ProcessRunStatus.Blocked => $"Subprocess run '{subprocessRun.RunName}' is blocked.",
-            ProcessRunStatus.Cancelled => $"Subprocess run '{subprocessRun.RunName}' was cancelled.",
-            ProcessRunStatus.Failed => $"Subprocess run '{subprocessRun.RunName}' failed.",
-            _ => $"Subprocess run '{subprocessRun.RunName}' is {subprocessRun.Status}."
-        };
-    }
+    private ProcessSubprocessProjectionWriterCoordinator CreateSubprocessProjectionWriterCoordinator()
+        => new(workspacePathResolver);
 
     private async Task BlockDispatchForDatabaseRequirementAsync(
         DispatchCandidate candidate,

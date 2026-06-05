@@ -2,8 +2,7 @@
 
 ## Status
 
-Prepared.
-
+- Completed
 ## Objective
 
 Review line counts and helper ownership; reject helper bloat, hidden side effects, or no-op wrapper extraction.
@@ -12,7 +11,7 @@ Review line counts and helper ownership; reject helper bloat, hidden side effect
 
 - `inputs/00-original-request.md`
 - `inputs/01-branch-review-summary.md`
-- Current branch source under `src/CanDoItAll.Modules.Processes/Automation/Dispatch/`.
+- Current branch source under `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/`.
 
 ## Prerequisites
 
@@ -22,12 +21,12 @@ Review line counts and helper ownership; reject helper bloat, hidden side effect
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.FinalizerContextFactory.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePlanner.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.FinalizerContextFactory.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePlanner.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 ## Deliverables
 
@@ -38,7 +37,7 @@ Review line counts and helper ownership; reject helper bloat, hidden side effect
 
 ## Dependency Impact
 
-Critical foundation. Downstream subbundles must not continue if this gate fails.
+- Critical foundation. Downstream subbundles must not continue if this gate fails.
 
 ## Validation Depth
 
@@ -74,12 +73,12 @@ Critical foundation. Downstream subbundles must not continue if this gate fails.
 
 ## Acceptance Checklist
 
-- [ ] Objective satisfied.
-- [ ] Existing behavior preserved.
-- [ ] Tests/source scans recorded.
-- [ ] No Process Core or production driver API introduced.
-- [ ] No UI or prohibited viewport proof drift.
-- [ ] Execution report updated.
+- [x] Objective satisfied.
+- [x] Existing behavior preserved.
+- [x] Tests/source scans recorded.
+- [x] No Process Core or production driver API introduced.
+- [x] No UI or prohibited viewport proof drift.
+- [x] Execution report updated.
 
 ## Proof Required
 
@@ -92,11 +91,11 @@ Critical foundation. Downstream subbundles must not continue if this gate fails.
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If UI unexpectedly changes, record large desktop/PC proof only and explain why.
+- N/A expected. Runtime/service refactor only. If UI unexpectedly changes, record large desktop/PC proof only and explain why.
 
 ## Progression Gate
 
-Stop and red-team before proceeding. Downstream work is blocked until this critical gate passes.
+- Stop and red-team before proceeding. Downstream work is blocked until this critical gate passes.
 
 ## Suggested Agent Prompt
 

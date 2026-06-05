@@ -1,0 +1,4 @@
+Command: PowerShell rg scan for TODO, NotImplemented, Process Core, driver-pack, and driver-registry tokens across subprocess dispatch boundary files
+ExitCode: 0
+Result: No TODO, NotImplemented, Process Core, or driver-pack tokens in subprocess dispatch boundary files.
+Invariant IDs: SB04-INV-001

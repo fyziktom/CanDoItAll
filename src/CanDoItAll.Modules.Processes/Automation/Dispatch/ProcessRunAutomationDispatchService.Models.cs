@@ -69,13 +69,6 @@ internal sealed record ProjectStructureRequiredArtifactPath(
     string FileName,
     string AliasPath);
 
-internal sealed record SubprocessCapabilityGapStep(
-    string Title,
-    ProcessStepRunStatus Status,
-    ProcessCapabilityGapSeverity CapabilityGapSeverity,
-    Guid? CurrentExecutorPartyId,
-    string CurrentExecutorName);
-
     internal sealed record DispatchArtifactInput(
         string SourceStepTitle,
         string ExpectedArtifactTitle,
