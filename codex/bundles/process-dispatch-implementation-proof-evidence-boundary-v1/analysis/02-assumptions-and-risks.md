@@ -9,6 +9,8 @@
 
 ## Critical Path Risks
 
+- Behavior drift in repair/retry logic, domain-specific assumptions leaking into generic process semantics, premature production driver APIs, and false compile-only parity are the critical path risks.
+
 1. **Behavior drift in repair/retry logic**  
    Implementation-proof summaries affect whether a step becomes Completed, Blocked, Failed, or retried. A small message or ordering change can alter process behavior.
 

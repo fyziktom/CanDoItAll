@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -24,12 +24,12 @@ Define local vocabulary for implementation proof/evidence families and explicit 
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ImplementationProof.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ImplementationProof.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 ## Deliverables
 
@@ -40,13 +40,12 @@ Define local vocabulary for implementation proof/evidence families and explicit 
 
 ## Dependency Impact
 
-Downstream subbundle: `SB04`.
-
-Downstream work depends on this subbundle preserving behavior and updating proof.
+- Downstream subbundle: `SB04`.
+- Downstream work depends on this subbundle preserving behavior and updating proof.
 
 ## Validation Depth
 
-Focused: compile or targeted test proof plus source assertions appropriate to the slice.
+- Focused: compile or targeted test proof plus source assertions appropriate to the slice.
 
 ## Implementation Steps
 
@@ -73,13 +72,13 @@ Focused: compile or targeted test proof plus source assertions appropriate to th
 
 ## Acceptance Checklist
 
-- [ ] Scope implemented.
-- [ ] Existing behavior preserved.
-- [ ] Tests/source scans recorded.
-- [ ] No Process Core.
-- [ ] No production driver API.
-- [ ] No UI/proof drift.
-- [ ] Execution report updated.
+- [x] Scope implemented.
+- [x] Existing behavior preserved.
+- [x] Tests/source scans recorded.
+- [x] No Process Core.
+- [x] No production driver API.
+- [x] No UI/proof drift.
+- [x] Execution report updated.
 
 ## Proof Required
 
@@ -91,11 +90,11 @@ Focused: compile or targeted test proof plus source assertions appropriate to th
 
 ## Browser Validation Logging
 
-N/A expected. Runtime/service refactor only. If UI files change unexpectedly, stop and reopen scope. Do not create small/medium/mobile proof artifacts.
+- N/A expected: runtime/service refactor only. If UI files change unexpectedly, stop and reopen scope. Do not create small/medium/mobile proof artifacts.
 
 ## Progression Gate
 
-No production code movement except docs/tests.
+- No production code movement except docs/tests.
 
 ## Suggested Agent Prompt
 

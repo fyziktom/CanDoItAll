@@ -558,7 +558,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact)
     {
         return ResolveProcessMockArtifactProjections(detail.Run.SerializedSessionStateJson)
-            .Any(projection => ProcessMockArtifactMatchesExpectation(expectedArtifact, projection));
+            .Any(projection => ProcessMockImplementationProofBridge.MatchesExpectedArtifact(expectedArtifact, projection));
     }
 
     private static bool CanProjectWorkspaceWrittenArtifact(
@@ -566,34 +566,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact)
     {
-        if (TryResolveProjectStructureExpectedArtifactPath(candidate, expectedArtifact, detail.Run.InputSummary, out var governedPath))
-        {
-            return ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
-                .Any(file => ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ||
-                detail.ToolReceipts
-                    .Where(IsSuccessfulWorkspaceFileMutationReceipt)
-                    .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
-                    .Any(path => ArtifactPathMatchesGovernedProjectStructurePath(path, governedPath));
-        }
-
-        if (ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)
-            .Any(file => WorkspaceWrittenFileMatchesExpectedArtifact(
-                candidate.ExpectedArtifacts,
-                expectedArtifact,
-                file.Path,
-                file.Content)))
-        {
-            return true;
-        }
-
-        return detail.ToolReceipts
-            .Where(IsSuccessfulWorkspaceFileMutationReceipt)
-            .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
-            .Any(path => WorkspaceWrittenFileMatchesExpectedArtifact(
-                candidate.ExpectedArtifacts,
-                expectedArtifact,
-                path,
-                content: string.Empty));
+        return ProcessImplementationArtifactWriteSatisfactionBridge.CanProjectWorkspaceWrittenArtifact(
+            candidate,
+            detail,
+            expectedArtifact);
     }
 
     private static bool CanProjectProviderNativeVisualArtifact(
@@ -2191,40 +2167,29 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact,
         ProcessMockArtifactProjection projection)
     {
-        var observedTokens = TokenizeArtifactContentSignalText($"{projection.RelativePath} {projection.ContentSignalText}")
-            .ToHashSet(StringComparer.Ordinal);
-        var titleTokens = TokenizeArtifactContentSignalText(expectedArtifact.Title)
-            .ToList();
-        if (observedTokens.Count == 0 || titleTokens.Count == 0)
-        {
-            return false;
-        }
-
-        return titleTokens.All(observedTokens.Contains);
+        return ProcessMockImplementationProofBridge.MatchesExpectedArtifact(expectedArtifact, projection);
     }
 
     private static bool CanSatisfyConcreteImplementationProofWithProcessMock(
         DispatchCandidate candidate,
         ProcessMockArtifactProjection projection)
     {
-        return RequiresConcreteImplementationProof(candidate) &&
-               IsProcessMockImplementationRole(projection.RoleKey) &&
-               ProcessMockProjectionMatchesRequiredArtifact(candidate, projection);
+        return ProcessMockImplementationProofBridge.CanSatisfyConcreteImplementationProof(
+            RequiresConcreteImplementationProof(candidate),
+            candidate.ExpectedArtifacts,
+            projection);
     }
 
     private static bool IsProcessMockImplementationRole(string roleKey)
     {
-        var normalizedRoleKey = roleKey.Trim().ToLowerInvariant();
-        return normalizedRoleKey is ProcessMockDeveloperRoleKey or ProcessMockRepairDeveloperRoleKey;
+        return ProcessMockImplementationProofBridge.IsImplementationRole(roleKey);
     }
 
     private static bool ProcessMockProjectionMatchesRequiredArtifact(
         DispatchCandidate candidate,
         ProcessMockArtifactProjection projection)
     {
-        return candidate.ExpectedArtifacts
-            .Where(item => item.IsRequired)
-            .Any(item => ProcessMockArtifactMatchesExpectation(item, projection));
+        return ProcessMockImplementationProofBridge.MatchesRequiredArtifact(candidate.ExpectedArtifacts, projection);
     }
 
     private static bool TryGetStringProperty(

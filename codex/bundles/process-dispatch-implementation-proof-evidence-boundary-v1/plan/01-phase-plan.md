@@ -1,5 +1,11 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute SB01 through SB28 in numeric order.
+- Do not start a subbundle until the prior subbundle closure gate has passed or is honestly blocked with a documented follow-up.
+- Critical gates SB04, SB08, SB13, SB18, SB23, SB27, and SB28 must produce artifact-backed proof before downstream work continues.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -45,7 +51,9 @@ graph TD
 
 ## Phase Gates
 
-Every gate must decide whether downstream work can continue. A failed gate reopens the most recent production movement subbundle and blocks all later work.
+- Every gate must decide whether downstream work can continue.
+- A failed gate reopens the most recent production movement subbundle and blocks all later work.
+- Critical gates require build/test/source scans, semantic invariants, anti-stub audit, and next-phase go/no-go.
 
 ## Subbundle Overview
 

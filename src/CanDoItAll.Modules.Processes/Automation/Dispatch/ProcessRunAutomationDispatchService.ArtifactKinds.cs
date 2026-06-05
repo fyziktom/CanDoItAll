@@ -63,23 +63,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsCodeOrProjectExtension(string extension)
     {
-        return extension.Equals(".cs", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".razor", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".cshtml", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".css", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".jsx", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".ts", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".tsx", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".props", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".targets", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".json", StringComparison.OrdinalIgnoreCase);
+        return ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension);
     }
 
     private static bool IsImageExtension(string extension)

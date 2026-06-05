@@ -351,6 +351,67 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Implementation_proof_helpers_are_module_local_without_core_or_driver_contracts()
+    {
+        var root = FindRepositoryRoot();
+        var processesDispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var helperFiles = new[]
+        {
+            "ProcessImplementationStackRules.cs",
+            "ProcessConcreteProductPathRules.cs",
+            "ProcessImplementationReceiptTimeline.cs",
+            "ProcessDotNetHostEvidenceRules.cs",
+            "ProcessCarriedImplementationProofRules.cs",
+            "ProcessRunAutomationDispatchService.ImplementationProofBridges.cs"
+        };
+        var dispatcherPath = Path.Combine(processesDispatchDirectory, "ProcessRunAutomationDispatchService.ImplementationProof.cs");
+        var artifactValidationPath = Path.Combine(processesDispatchDirectory, "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
+
+        var helperSource = string.Join(
+            Environment.NewLine,
+            helperFiles.Select(file =>
+            {
+                var path = Path.Combine(processesDispatchDirectory, file);
+                Assert.True(File.Exists(path), file);
+                return File.ReadAllText(path);
+        }));
+        var dispatcherSource = File.ReadAllText(dispatcherPath);
+        var artifactValidationSource = File.ReadAllText(artifactValidationPath);
+
+        Assert.Contains("internal sealed record ProcessImplementationContractSnapshot", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessImplementationStackRules", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessConcreteProductPathRules", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessImplementationReceiptTimeline", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessDotNetHostEvidenceRules", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessCarriedImplementationProofRules", helperSource, StringComparison.Ordinal);
+        Assert.Contains("private static class ProcessMockImplementationProofBridge", helperSource, StringComparison.Ordinal);
+        Assert.Contains("private static class ProcessImplementationArtifactWriteSatisfactionBridge", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessImplementationContractSnapshot.RequiresCurrentAttemptProductMutation", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessImplementationStackRules.ImplementationContractMentionsDotNet", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessConcreteProductPathRules.HasConcreteProductPath", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessImplementationReceiptTimeline.ResolveLatestImplementationProofReadReceipt", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDotNetHostEvidenceRules.ResolveRunnableDotNetHostProjectPaths", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessCarriedImplementationProofRules.ResolveCarriedImplementationProof", dispatcherSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessMockImplementationProofBridge.MatchesExpectedArtifact", artifactValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessImplementationArtifactWriteSatisfactionBridge.CanProjectWorkspaceWrittenArtifact", artifactValidationSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("NotImplemented", helperSource, StringComparison.Ordinal);
+        Assert.True(dispatcherSource.Split(Environment.NewLine).Length < 1120);
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+    }
+
+    [Fact]
     public void Tool_validation_dispatcher_delegates_to_local_fact_and_rule_boundaries()
     {
         var toolValidationSource = ReadRepositoryFile(

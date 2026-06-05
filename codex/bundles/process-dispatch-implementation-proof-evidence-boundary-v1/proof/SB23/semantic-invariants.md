@@ -1,0 +1,12 @@
+# SB23 Semantic Invariants
+
+- Invariant ID: SB23-IPBOUNDARY-001
+- Source raw note: Continue smaller dispatcher isolation steps, preserve behavior, do not create Process Core or production driver APIs, and avoid UI proof drift.
+- Expected behavior: Carried historical proof, process mock proof satisfaction, and workspace-written artifact satisfaction are isolated without changing completion behavior.
+- Disallowed shallow implementation: A helper that accepts unrelated process mock metadata or product source as narrative evidence.
+- Failing-first test: N/A - process non-production/no behavior exemption for behavior-preserving refactor; adversarial cases are covered by focused negative assertions and scans.
+- Passing test: Carry-forward, process mock, and workspace write focused integration filter passes in bundle://proof/SB28/transcripts/build-solution.txt, bundle://proof/SB28/transcripts/unit-architecture-guard.txt, bundle://proof/SB28/transcripts/source-boundary-scan.txt, bundle://proof/SB28/transcripts/anti-stub-scan.txt, bundle://proof/SB28/transcripts/no-ui-proof-drift-scan.txt, bundle://proof/SB28/transcripts/integration-carry-mock-write.txt.
+- Changed source files: 7331adaf25b2bf1793ba603232454e78f8d39536814cd7da063ac669758bdff7  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCarriedImplementationProofRules.cs; 577ade54bd7ab28ae6ea93f7ef72e50dd22dff7807b2264a7ba09921d9060adf  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ImplementationProofBridges.cs; fc6e462ecb0bb4e949dfcd236368e085c2eacbc23616233684b9a835b9027938  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs; 59b5a7d22ee83752d1972afcede951c1c1fa13fc3daa19c49778a6ab503738db  repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ImplementationProof.cs; 97854efe71d79a77c243dd0785c92c90a5212028bbc514e46fc3ff4236d1d832  repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs.
+- Production assertions: Existing wrappers delegate to module-local helpers and no production API surface is added.
+- Red-team negative case: A helper that accepts unrelated process mock metadata or product source as narrative evidence.
+- Downstream dependency check: SB24-SB27 allowed to continue after carry/mock/write parity passed.

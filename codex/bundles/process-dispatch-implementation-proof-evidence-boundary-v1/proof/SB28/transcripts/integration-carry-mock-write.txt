@@ -1,0 +1,10 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ResolveMissingConcreteImplementationProofSummary_accepts_prior_recovery_mutation_with_fresh_read|FullyQualifiedName~ResolveHistoricalCarriedImplementationProof_accepts_same_step_repair_mutation_with_fresh_rerun_read|FullyQualifiedName~WorkspaceWrittenFileMatchesExpectedArtifact_matches_required_artifact_write|FullyQualifiedName~WorkspaceWrittenFileMatchesExpectedArtifact_matches_scoped_required_artifact_write|FullyQualifiedName~WorkspaceWrittenFileMatchesExpectedArtifact_matches_single_managed_recheck_evidence_alias|FullyQualifiedName~WorkspaceWrittenFileMatchesExpectedArtifact_does_not_treat_product_source_as_narrative_evidence|FullyQualifiedName~ResolveCompletionStatus_allows_process_mock_completed_step_with_required_artifact_projection|FullyQualifiedName~ResolveCompletionStatus_blocks_process_mock_required_artifact_when_metadata_does_not_match_expectation|FullyQualifiedName~ResolveCompletionStatus_blocks_process_mock_implementation_when_rollout_checklist_is_missing|FullyQualifiedName~ResolveCompletionStatus_allows_process_mock_implementation_with_db_free_rollout_checklist" --no-build
+Invariant IDs: SB04-IPBOUNDARY-001; SB08-IPBOUNDARY-001; SB13-IPBOUNDARY-001; SB18-IPBOUNDARY-001; SB23-IPBOUNDARY-001; SB27-IPBOUNDARY-001; SB28-IPBOUNDARY-001
+Working directory context only: C:\repositories\CanDoItAll
+--- Output ---
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    10, Přeskočeno:     0, Celkem:    10, Doba trvání: 313 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+--- End Output ---
+ExitCode: 0
