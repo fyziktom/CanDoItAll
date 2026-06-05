@@ -1,0 +1,19 @@
+Command: dotnet test focused architecture and dispatch planner slices --no-build
+Working directory: C:\repositories\CanDoItAll
+
+Command: dotnet test --project tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests --verbosity minimal
+MSBUILD : error MSB1001: Neznámý přepínač.
+    Úplný příkazový řádek:C:\Program Files\dotnet\sdk\10.0.204\MSBuild.dll -maxcpucount --verbosity:m -tlp:default=auto --property:VSTestTestCaseFilter="FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests" --property:VSTestNoBuild=true --property:VSTestNoLogo=true --property:NuGetInteractive=false --property:VSTestVerbosity=minimal --property:VSTestArtifactsProcessingMode=collect --property:VSTestSessionCorrelationId=8328_99c84287-9f2a-405c-83a2-d8d0edd116c4 --target:VSTest --verbosity:minimal --nologo -nodereuse:false --project tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj -distributedlogger:Microsoft.DotNet.Cli.Commands.MSBuild.MSBuildLogger,C:\Program Files\dotnet\sdk\10.0.204\dotnet.dll*Microsoft.DotNet.Cli.Commands.MSBuild.MSBuildForwardingLogger,C:\Program Files\dotnet\sdk\10.0.204\dotnet.dll
+  Přepínače připojené pomocí souborů odpovědí:
+Přepínač: --project
+
+Syntaxi přepínačů zobrazíte zadáním příkazu MSBuild -help.
+Unit exit code: 1
+Command: dotnet test --project tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter FullyQualifiedName~ProcessDispatchRoutePlanner --verbosity minimal
+MSBUILD : error MSB1001: Neznámý přepínač.
+    Úplný příkazový řádek:C:\Program Files\dotnet\sdk\10.0.204\MSBuild.dll -maxcpucount --verbosity:m -tlp:default=auto --property:VSTestTestCaseFilter="FullyQualifiedName~ProcessDispatchRoutePlanner" --property:VSTestNoBuild=true --property:VSTestNoLogo=true --property:NuGetInteractive=false --property:VSTestVerbosity=minimal --property:VSTestArtifactsProcessingMode=collect --property:VSTestSessionCorrelationId=80524_20a09ca2-63aa-439c-8812-afb22b80ba1a --target:VSTest --verbosity:minimal --nologo -nodereuse:false --project tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj -distributedlogger:Microsoft.DotNet.Cli.Commands.MSBuild.MSBuildLogger,C:\Program Files\dotnet\sdk\10.0.204\dotnet.dll*Microsoft.DotNet.Cli.Commands.MSBuild.MSBuildForwardingLogger,C:\Program Files\dotnet\sdk\10.0.204\dotnet.dll
+  Přepínače připojené pomocí souborů odpovědí:
+Přepínač: --project
+
+Syntaxi přepínačů zobrazíte zadáním příkazu MSBuild -help.
+Integration exit code: 1

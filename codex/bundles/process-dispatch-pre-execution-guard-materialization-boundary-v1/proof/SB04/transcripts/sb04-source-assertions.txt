@@ -1,0 +1,9 @@
+Command: SB04 source assertion summary for architecture guard boundary
+Invariant ID: SB04-INV-001
+Source assertion: Process dispatch guard remains module-local under repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/.
+Source assertion: No CanDoItAll.Processes.Core project or directory was created.
+Source assertion: No production driver API token was added under repo://src.
+Source assertion: No UI file change or prohibited viewport proof artifact is required for this runtime/service refactor.
+Test assertion: Process_dispatch_pre_execution_guard_gate_a_SB04_INV_001_locks_local_boundary_without_core_driver_or_viewport_drift passed in the focused unit slice.
+Exit code: 0
+

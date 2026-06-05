@@ -1240,15 +1240,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        var targetStatus = candidate.StepRun.Status switch
-        {
-            ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.Blocked => ProcessStepRunStatus.Blocked,
-            ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Failed => ProcessStepRunStatus.Failed,
-            _ => candidate.StepRun.Status
-        };
-
-        if (targetStatus == candidate.StepRun.Status &&
-            targetStatus is not ProcessStepRunStatus.Blocked and not ProcessStepRunStatus.Failed)
+        var decision = CreatePreExecutionGuardHandler().BuildDatabaseRequirementDecision(
+            candidate,
+            failure.Message,
+            AutomationActor);
+        if (decision.IsUnsupportedNoOpTarget)
         {
             logger.LogWarning(
                 "Process automation dispatch for run {RunId}, step {StepRunId} requires PostgreSQL but current status {Status} has no supported blocking transition. Reason: {Reason}",
@@ -1259,28 +1255,22 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return;
         }
 
-        if (!ProcessStepRunTransitions.IsAllowed(candidate.StepRun.Status, targetStatus))
+        if (!decision.IsTransitionAllowed)
         {
             logger.LogWarning(
                 "Process automation dispatch for run {RunId}, step {StepRunId} requires PostgreSQL but current status {Status} cannot transition to {TargetStatus}. Reason: {Reason}",
                 candidate.Run.Id,
                 candidate.StepRun.Id,
                 candidate.StepRun.Status,
-                targetStatus,
+                decision.TargetStatus,
                 failure.Message);
             return;
         }
 
+        var transitionRequest = decision.TransitionRequest
+            ?? throw new InvalidOperationException("Database requirement transition request was not built for a supported target.");
         var transitionResult = await TransitionStepWithClaimAsync(
-            new ProcessStepTransitionRequest
-            {
-                StepRunId = candidate.StepRun.Id,
-                StepRunConcurrencyToken = candidate.StepRun.ConcurrencyToken,
-                TargetStatus = targetStatus,
-                Reason = failure.Message,
-                DecidedBy = AutomationActor,
-                SuppressAutomationDispatch = true
-            },
+            transitionRequest,
             dispatchClaim,
             cancellationToken);
 
@@ -1289,7 +1279,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             logger.LogWarning(
                 "Process step {StepRunId} could not be moved to {TargetStatus} after PostgreSQL runtime requirement failed. Errors: {Errors}",
                 candidate.StepRun.Id,
-                targetStatus,
+                decision.TargetStatus,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
             return;
         }
@@ -1305,14 +1295,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        var missingInputs = ResolveMissingUpstreamArtifactInputs(candidate);
-        if (missingInputs.Count == 0)
+        var handler = CreatePreExecutionGuardHandler();
+        var plan = handler.PlanMissingUpstreamArtifactMaterialization(candidate);
+        if (!plan.HasMissingInputs)
         {
             return false;
         }
 
-        var materializationTarget = missingInputs.FirstOrDefault(IsRunnableUpstreamArtifactMaterializationTarget);
-        var blockReason = BuildMissingUpstreamArtifactMaterializationBlockReason(candidate, missingInputs, materializationTarget);
         if (candidate.StepRun.Status != ProcessStepRunStatus.Blocked)
         {
             var snapshot = await LoadStepRunTransitionSnapshotAsync(candidate.StepRun.Id, cancellationToken);
@@ -1320,16 +1309,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 snapshot.Status is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.InProgress)
             {
                 var blockResult = await TransitionStepWithClaimAsync(
-                    new ProcessStepTransitionRequest
-                    {
-                        StepRunId = candidate.StepRun.Id,
-                        StepRunConcurrencyToken = snapshot.ConcurrencyToken,
-                        TargetStatus = ProcessStepRunStatus.Blocked,
-                        Reason = blockReason,
-                        BlockCause = ProcessStepBlockCause.UpstreamInput,
-                        DecidedBy = AutomationActor,
-                        SuppressAutomationDispatch = true
-                    },
+                    handler.BuildMissingUpstreamArtifactBlockTransitionRequest(
+                        plan,
+                        candidate.StepRun.Id,
+                        snapshot.ConcurrencyToken,
+                        AutomationActor),
                     dispatchClaim,
                     cancellationToken);
                 if (blockResult.IsFailure)
@@ -1344,66 +1328,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
         }
 
-        if (materializationTarget is null)
-        {
-            await RecordMissingUpstreamArtifactMaterializationAsync(
-                candidate,
-                missingInputs,
-                materializationTarget,
-                blockReason,
-                cancellationToken);
-            logger.LogWarning(
-                "Process run {RunId}, step {StepRunId} is missing required upstream artifacts, but no completed, blocked, or failed agent-owned source step is available for automatic materialization. Missing inputs: {MissingInputs}",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                string.Join(" | ", missingInputs.Select(input => $"{input.SourceStepTitle}: {input.ExpectedArtifactTitle}")));
-            return true;
-        }
-
-        var shouldRequestMaterialization = await RecordMissingUpstreamArtifactMaterializationAsync(
+        return await handler.RecordAndRequestMissingUpstreamArtifactMaterializationAsync(
             candidate,
-            missingInputs,
-            materializationTarget,
-            blockReason,
+            plan,
             cancellationToken);
-        if (!shouldRequestMaterialization)
-        {
-            logger.LogInformation(
-                "Skipping duplicate upstream artifact materialization request for run {RunId}, blocked downstream step {StepRunId}, source step {SourceStepRunId}; the same missing-artifact fingerprint is already recorded.",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                materializationTarget.SourceStepRunId);
-            return true;
-        }
-
-        await using var scope = serviceScopeFactory.CreateAsyncScope();
-        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
-        var rerunResult = await processesService.RerunAgentStepAsync(
-            new ProcessAgentStepRerunRequest
-            {
-                StepRunId = materializationTarget.SourceStepRunId!.Value,
-                StepRunConcurrencyToken = materializationTarget.SourceStepRunConcurrencyToken,
-                OperatorReason = BuildUpstreamArtifactMaterializationDirective(candidate, missingInputs, materializationTarget)
-            },
-            cancellationToken);
-        if (rerunResult.IsFailure)
-        {
-            logger.LogWarning(
-                "Could not request upstream artifact materialization from step {SourceStepRunId} for run {RunId}, blocked downstream step {StepRunId}. Errors: {Errors}",
-                materializationTarget.SourceStepRunId,
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                string.Join(" | ", rerunResult.Errors.Select(error => error.Message)));
-            return true;
-        }
-
-        logger.LogInformation(
-            "Requested upstream artifact materialization from step {SourceStepRunId} for blocked downstream step {StepRunId} on process run {RunId}. Missing artifact: {ExpectedArtifactTitle}",
-            materializationTarget.SourceStepRunId,
-            candidate.StepRun.Id,
-            candidate.Run.Id,
-            materializationTarget.ExpectedArtifactTitle);
-        return true;
     }
 
     private async Task<bool> RecordMissingUpstreamArtifactMaterializationAsync(
@@ -1413,55 +1341,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string blockReason,
         CancellationToken cancellationToken)
     {
-        var fingerprint = CreateMissingUpstreamArtifactMaterializationFingerprint(candidate, missingInputs, materializationTarget);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var existingFingerprint = await dbContext.Set<ProcessJournalEntry>()
-            .AsNoTracking()
-            .AnyAsync(
-                item =>
-                    item.ProcessRunId == candidate.Run.Id &&
-                    item.StepRunId == candidate.StepRun.Id &&
-                    item.EventType == ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationRequested &&
-                    item.CorrelationId == fingerprint,
-                cancellationToken);
-        if (existingFingerprint)
-        {
-            return false;
-        }
-
-        var now = clock.GetUtcNow();
-        await dbContext.Set<ProcessJournalEntry>().AddAsync(
-            new ProcessJournalEntry
-            {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
-                EventType = ProcessRuntimeEventTypes.MissingUpstreamArtifactMaterializationRequested,
-                Title = "Missing upstream artifact materialization requested",
-                Description = blockReason,
-                CorrelationId = fingerprint,
-                OperatingMode = candidate.Run.OperatingMode,
-                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
-                ReplayContextJson = JsonSerializer.Serialize(new
-                {
-                    candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
-                    MaterializationSourceStepRunId = materializationTarget?.SourceStepRunId,
-                    MissingInputs = missingInputs.Select(input => new
-                    {
-                        input.SourceStepTitle,
-                        input.ExpectedArtifactTitle,
-                        input.ArtifactExpectationId,
-                        input.SourceStepDefinitionId,
-                        input.SourceStepRunId,
-                        input.SourceStepRunStatus
-                    }).ToArray()
-                }),
-                OccurredAtUtc = now
-            },
-            cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        var facts = new ProcessMissingUpstreamArtifactMaterializationFacts(missingInputs, materializationTarget);
+        return await CreateMissingUpstreamArtifactMaterializationJournalCoordinator()
+            .RecordAsync(candidate, facts, blockReason, cancellationToken);
     }
 
     private static string CreateMissingUpstreamArtifactMaterializationFingerprint(
@@ -1469,38 +1351,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<DispatchArtifactInput> missingInputs,
         DispatchArtifactInput? materializationTarget)
     {
-        var normalizedInputs = missingInputs
-            .OrderBy(input => input.SourceStepDefinitionId)
-            .ThenBy(input => input.ArtifactExpectationId)
-            .Select(input => string.Join(
-                ":",
-                input.SourceStepDefinitionId.ToString("D"),
-                input.ArtifactExpectationId.ToString("D"),
-                input.SourceStepRunId?.ToString("D") ?? string.Empty,
-                input.SourceStepRunStatus?.ToString() ?? string.Empty));
-        var normalized = string.Join(
-            "|",
-            "missing-upstream-artifact-materialization",
-            candidate.Run.Id.ToString("D"),
-            candidate.StepRun.Id.ToString("D"),
-            materializationTarget?.SourceStepRunId?.ToString("D") ?? string.Empty,
-            string.Join(",", normalizedInputs));
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))).ToLowerInvariant();
+        return ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(
+            candidate,
+            new ProcessMissingUpstreamArtifactMaterializationFacts(missingInputs, materializationTarget));
     }
 
     private static IReadOnlyList<DispatchArtifactInput> ResolveMissingUpstreamArtifactInputs(DispatchCandidate candidate)
     {
-        return candidate.ArtifactInputs
-            .Where(input => input.Artifacts.Count == 0)
-            .ToList();
+        return ProcessMissingUpstreamArtifactMaterializationFactsResolver.ResolveMissingInputs(candidate);
     }
 
     private static bool IsRunnableUpstreamArtifactMaterializationTarget(DispatchArtifactInput input)
     {
-        return input.SourceStepRunId.HasValue &&
-               input.SourceStepRunConcurrencyToken.HasValue &&
-               input.SourceStepHasAgentExecutor &&
-               input.SourceStepRunStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed;
+        return ProcessMissingUpstreamArtifactMaterializationFactsResolver.IsRunnableTarget(input);
     }
 
     private static string BuildMissingUpstreamArtifactMaterializationBlockReason(
@@ -1508,15 +1371,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<DispatchArtifactInput> missingInputs,
         DispatchArtifactInput? materializationTarget)
     {
-        var missingSummary = string.Join(
-            "; ",
-            missingInputs
-                .Take(3)
-                .Select(input => $"upstream step '{input.SourceStepTitle}' must provide required artifact '{input.ExpectedArtifactTitle}'"));
-        var targetSummary = materializationTarget is null
-            ? "No eligible agent-owned upstream step is available for automatic materialization."
-            : $"Automation requested upstream artifact materialization from '{materializationTarget.SourceStepTitle}' before retrying this step.";
-        return $"Cannot dispatch '{candidate.StepRun.Title}' because required upstream artifacts are missing: {missingSummary}. {targetSummary}";
+        return ProcessMissingUpstreamArtifactMaterializationBlocker.BuildBlockReason(
+            candidate,
+            new ProcessMissingUpstreamArtifactMaterializationFacts(missingInputs, materializationTarget));
     }
 
     private static string BuildUpstreamArtifactMaterializationDirective(
@@ -1524,13 +1381,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<DispatchArtifactInput> missingInputs,
         DispatchArtifactInput materializationTarget)
     {
-        var targetMissingInputs = missingInputs
-            .Where(input => input.SourceStepRunId == materializationTarget.SourceStepRunId)
-            .ToList();
-        var artifactTitles = targetMissingInputs.Count == 0
-            ? materializationTarget.ExpectedArtifactTitle
-            : string.Join(", ", targetMissingInputs.Select(input => input.ExpectedArtifactTitle).Distinct(StringComparer.OrdinalIgnoreCase));
-        return $"Automatic upstream artifact materialization requested. Downstream step '{candidate.StepRun.Title}' cannot proceed because required upstream artifact(s) are missing: {artifactTitles}. Use this step's existing records, artifacts, decisions, and prior execution context to create or repair only the missing required artifact(s). Do not redo unrelated work. When the artifact(s) are recorded, the downstream step will retry from its configured artifact inputs.";
+        return ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildDirective(
+            candidate,
+            new ProcessMissingUpstreamArtifactMaterializationFacts(missingInputs, materializationTarget));
+    }
+
+    private ProcessMissingUpstreamArtifactMaterializationJournalCoordinator CreateMissingUpstreamArtifactMaterializationJournalCoordinator()
+    {
+        return new ProcessMissingUpstreamArtifactMaterializationJournalCoordinator(dbContextFactory, clock);
+    }
+
+    private ProcessDispatchPreExecutionGuardHandler CreatePreExecutionGuardHandler()
+    {
+        return new ProcessDispatchPreExecutionGuardHandler(
+            new ProcessMissingUpstreamArtifactMaterializationCoordinator(
+                CreateMissingUpstreamArtifactMaterializationJournalCoordinator(),
+                serviceScopeFactory,
+                logger));
     }
 
     private async Task<IReadOnlyList<DispatchCandidateHeader>> LoadDispatchCandidateHeadersAsync(

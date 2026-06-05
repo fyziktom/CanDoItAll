@@ -27,7 +27,7 @@ flowchart TD
 ```
 
 
-## Ordered phases
+## Phase Sequence
 
     01. Entry audit, current branch proof baseline, and scope lock
     02. Inventory pre-execution guard and upstream materialization methods

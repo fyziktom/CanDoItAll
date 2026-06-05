@@ -1024,6 +1024,192 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessDispatchDatabaseRequirementBlocker_SB05_INV_001_preserves_status_targets_and_transition_shape()
+    {
+        var stepRunId = Guid.NewGuid();
+        var concurrencyToken = Guid.NewGuid();
+        const string failureMessage = "Governed process automation requires PostgreSQL.";
+
+        Assert.Equal(
+            ProcessStepRunStatus.Blocked,
+            ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus(ProcessStepRunStatus.Ready));
+        Assert.Equal(
+            ProcessStepRunStatus.Blocked,
+            ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus(ProcessStepRunStatus.WaitingApproval));
+        Assert.Equal(
+            ProcessStepRunStatus.Failed,
+            ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus(ProcessStepRunStatus.InProgress));
+        Assert.Equal(
+            ProcessStepRunStatus.Completed,
+            ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus(ProcessStepRunStatus.Completed));
+        Assert.True(ProcessDispatchDatabaseRequirementBlocker.IsUnsupportedNoOpTarget(
+            ProcessStepRunStatus.Completed,
+            ProcessStepRunStatus.Completed));
+        Assert.False(ProcessDispatchDatabaseRequirementBlocker.IsUnsupportedNoOpTarget(
+            ProcessStepRunStatus.Blocked,
+            ProcessStepRunStatus.Blocked));
+
+        var request = ProcessDispatchDatabaseRequirementBlocker.BuildTransitionRequest(
+            stepRunId,
+            concurrencyToken,
+            ProcessStepRunStatus.Blocked,
+            failureMessage,
+            ProcessRunAutomationDispatchService.AutomationActor);
+
+        Assert.Equal(stepRunId, request.StepRunId);
+        Assert.Equal(concurrencyToken, request.StepRunConcurrencyToken);
+        Assert.Equal(ProcessStepRunStatus.Blocked, request.TargetStatus);
+        Assert.Equal(failureMessage, request.Reason);
+        Assert.Equal(ProcessRunAutomationDispatchService.AutomationActor, request.DecidedBy);
+        Assert.True(request.SuppressAutomationDispatch);
+        Assert.Null(request.BlockCause);
+    }
+
+    [Fact]
+    public void ProcessMissingUpstreamArtifactMaterializationFacts_SB07_INV_001_selects_only_missing_runnable_agent_source()
+    {
+        var runnableSourceStepRunId = Guid.NewGuid();
+        var runnableConcurrencyToken = Guid.NewGuid();
+        var waitingSourceStepRunId = Guid.NewGuid();
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidate(
+            "Implement the downstream launch packet.");
+        candidate.StepRun.Title = "Publish launch packet";
+        candidate = candidate with
+        {
+            ArtifactInputs =
+            [
+                new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+                    "Architecture",
+                    "Architecture decision record",
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    runnableSourceStepRunId,
+                    runnableConcurrencyToken,
+                    ProcessStepRunStatus.Completed,
+                    SourceStepHasAgentExecutor: true,
+                    []),
+                new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+                    "Human approval",
+                    "Approval note",
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    waitingSourceStepRunId,
+                    Guid.NewGuid(),
+                    ProcessStepRunStatus.Ready,
+                    SourceStepHasAgentExecutor: true,
+                    []),
+                new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+                    "Implementation",
+                    "Build log",
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    Guid.NewGuid(),
+                    ProcessStepRunStatus.Completed,
+                    SourceStepHasAgentExecutor: true,
+                    [
+                        new ProcessRunAutomationDispatchService.DispatchArtifactReference(
+                            "Build log",
+                            ProcessArtifactKind.Evidence.ToString(),
+                            "artifacts/build.log",
+                            "Build passed.",
+                            "workspace")
+                    ])
+            ]
+        };
+
+        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(candidate);
+
+        Assert.Equal(2, facts.MissingInputs.Count);
+        Assert.Equal(runnableSourceStepRunId, facts.MaterializationTarget?.SourceStepRunId);
+        Assert.Equal(runnableConcurrencyToken, facts.MaterializationTarget?.SourceStepRunConcurrencyToken);
+        Assert.True(ProcessMissingUpstreamArtifactMaterializationFactsResolver.IsRunnableTarget(facts.MaterializationTarget!));
+        Assert.False(ProcessMissingUpstreamArtifactMaterializationFactsResolver.IsRunnableTarget(facts.MissingInputs[1]));
+    }
+
+    [Fact]
+    public void ProcessMissingUpstreamArtifactMaterializationFingerprint_SB09_INV_001_is_order_stable_and_target_sensitive()
+    {
+        var sourceStepDefinitionA = Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        var sourceStepDefinitionB = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        var expectationA = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var expectationB = Guid.Parse("22222222-2222-2222-2222-222222222222");
+        var sourceStepRunA = Guid.Parse("33333333-3333-3333-3333-333333333333");
+        var sourceStepRunB = Guid.Parse("44444444-4444-4444-4444-444444444444");
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidate(
+            "Implement the downstream launch packet.");
+        candidate.Run.Id = Guid.Parse("55555555-5555-5555-5555-555555555555");
+        candidate.StepRun.Id = Guid.Parse("66666666-6666-6666-6666-666666666666");
+        var inputA = new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+            "Architecture",
+            "Architecture decision record",
+            expectationA,
+            sourceStepDefinitionA,
+            sourceStepRunA,
+            Guid.NewGuid(),
+            ProcessStepRunStatus.Completed,
+            SourceStepHasAgentExecutor: true,
+            []);
+        var inputB = new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+            "Implementation",
+            "Build log",
+            expectationB,
+            sourceStepDefinitionB,
+            sourceStepRunB,
+            Guid.NewGuid(),
+            ProcessStepRunStatus.Blocked,
+            SourceStepHasAgentExecutor: true,
+            []);
+        var facts = new ProcessMissingUpstreamArtifactMaterializationFacts([inputB, inputA], inputB);
+        var reorderedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([inputA, inputB], inputB);
+        var retargetedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([inputA, inputB], inputA);
+
+        var fingerprint = ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(candidate, facts);
+
+        Assert.Equal(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(candidate, reorderedFacts));
+        Assert.NotEqual(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(candidate, retargetedFacts));
+        Assert.Matches("^[a-f0-9]{64}$", fingerprint);
+    }
+
+    [Fact]
+    public void ProcessMissingUpstreamArtifactRerunRequestBuilder_SB12_INV_001_preserves_rerun_fields_and_directive_scope()
+    {
+        var sourceStepRunId = Guid.NewGuid();
+        var sourceConcurrencyToken = Guid.NewGuid();
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidate(
+            "Implement the downstream launch packet.");
+        candidate.StepRun.Title = "Publish launch packet";
+        var implementationPacket = new ProcessRunAutomationDispatchService.DispatchArtifactInput(
+            "Implementation",
+            "Implementation packet",
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            sourceStepRunId,
+            sourceConcurrencyToken,
+            ProcessStepRunStatus.Completed,
+            SourceStepHasAgentExecutor: true,
+            []);
+        var implementationPacketDuplicate = implementationPacket with
+        {
+            ArtifactExpectationId = Guid.NewGuid(),
+            ExpectedArtifactTitle = "implementation packet"
+        };
+        var facts = new ProcessMissingUpstreamArtifactMaterializationFacts(
+            [implementationPacket, implementationPacketDuplicate],
+            implementationPacket);
+
+        var request = ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildRequest(candidate, facts);
+
+        Assert.Equal(sourceStepRunId, request.StepRunId);
+        Assert.Equal(sourceConcurrencyToken, request.StepRunConcurrencyToken);
+        Assert.Contains("Downstream step 'Publish launch packet'", request.OperatorReason, StringComparison.Ordinal);
+        Assert.Contains("Implementation packet", request.OperatorReason, StringComparison.Ordinal);
+        Assert.DoesNotContain("implementation packet, implementation packet", request.OperatorReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Do not redo unrelated work", request.OperatorReason, StringComparison.Ordinal);
+        Assert.Contains("the downstream step will retry from its configured artifact inputs", request.OperatorReason, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ResolveBlockingAutomationExecutionRunId_SB09_INV_001_ignores_active_runs_from_previous_attempt_window()
     {
         var attemptStartedAtUtc = DateTimeOffset.Parse("2026-04-19T09:18:25+00:00");

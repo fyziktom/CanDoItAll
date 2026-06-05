@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -23,27 +23,24 @@ Materialization parity gate.
 ## Exact Source References
 
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- new/updated module-local helpers under `src/CanDoItAll.Modules.Processes/Automation/Dispatch/`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 
 ## Deliverables
-
-Materialization parity gate.
+- Materialization parity gate.
 
 ## Dependency Impact
+- This subbundle unlocks: SB15.
 
-This subbundle unlocks: SB15.
-
-If this subbundle is wrong, downstream proof may not be trustworthy because the dispatch pre-execution route can block, rerun, or continue incorrectly.
+- If this subbundle is wrong, downstream proof may not be trustworthy because the dispatch pre-execution route can block, rerun, or continue incorrectly.
 
 ## Validation Depth
-
-Critical gate: build + source scans + focused tests + anti-stub + no-core/no-driver + no prohibited viewport proof.
+- Critical gate: build + source scans + focused tests + anti-stub + no-core/no-driver + no prohibited viewport proof.
 
 ## Implementation Steps
 
@@ -72,13 +69,13 @@ Process Core and production driver APIs are explicitly out of scope.
 
 ## Acceptance Checklist
 
-- [ ] Scope limited to this subbundle.
-- [ ] Behavior parity proven.
-- [ ] No Process Core.
-- [ ] No production driver API.
-- [ ] No UI changes.
-- [ ] No prohibited proof paths.
-- [ ] Evidence recorded.
+- [x] Scope limited to this subbundle.
+- [x] Behavior parity proven.
+- [x] No Process Core.
+- [x] No production driver API.
+- [x] No UI changes.
+- [x] No prohibited proof paths.
+- [x] Evidence recorded.
 
 ## Proof Required
 
@@ -90,12 +87,10 @@ Process Core and production driver APIs are explicitly out of scope.
 - line-count or downstream check when relevant.
 
 ## Browser Validation Logging
-
-N/A expected. Runtime/service refactor only. Do not run small/medium/mobile proof.
+- N/A expected. Runtime/service refactor only. Do not run small/medium/mobile proof.
 
 ## Progression Gate
-
-Critical foundation gate. Downstream work must not continue until this gate passes.
+- Critical foundation gate. Downstream work must not continue until this gate passes.
 
 ## Suggested Agent Prompt
 

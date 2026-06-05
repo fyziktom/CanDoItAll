@@ -21,15 +21,17 @@ Expected helpers:
 
 - `ProcessDispatchDatabaseRequirementBlocker`
 - `ProcessDispatchDatabaseRequirementDecision`
-- `ProcessUpstreamArtifactGapFacts`
-- `ProcessUpstreamArtifactMaterializationPlanner`
-- `ProcessUpstreamArtifactMaterializationFingerprint`
-- `ProcessUpstreamArtifactMaterializationJournalCoordinator`
-- `ProcessUpstreamArtifactMaterializationRerunRequestBuilder`
+- `ProcessMissingUpstreamArtifactMaterializationFacts`
+- `ProcessMissingUpstreamArtifactMaterializationFactsResolver`
+- `ProcessMissingUpstreamArtifactMaterializationBlocker`
+- `ProcessMissingUpstreamArtifactMaterializationFingerprint`
+- `ProcessMissingUpstreamArtifactMaterializationJournalCoordinator`
+- `ProcessMissingUpstreamArtifactMaterializationCoordinator`
+- `ProcessMissingUpstreamArtifactRerunRequestBuilder`
 - `ProcessDispatchPreExecutionGuardHandler`
-- `ProcessDispatchPreExecutionGuardOutcome`
+- `ProcessDispatchMissingUpstreamArtifactMaterializationPlan`
 
-These names can be adjusted if the current code shape suggests better names, but the responsibilities must remain separated.
+These names are module-local implementation vocabulary, not production driver APIs.
 
 ## Purity split
 

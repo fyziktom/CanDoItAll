@@ -1,0 +1,15 @@
+Command: rerun focused pre-execution guard and materialization helper slices --no-build
+Working directory: C:\repositories\CanDoItAll
+
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~Process_dispatch_pre_execution_guard_gate_a_SB04_INV_001 --verbosity minimal
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 3 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Unit exit code: 0
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter FullyQualifiedName~ProcessDispatchDatabaseRequirementBlocker|FullyQualifiedName~ProcessMissingUpstreamArtifact|FullyQualifiedName~ProcessDispatchRoutePlanner --verbosity minimal
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     6, Přeskočeno:     0, Celkem:     6, Doba trvání: 73 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+Integration exit code: 0

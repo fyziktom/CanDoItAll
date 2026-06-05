@@ -1,0 +1,9 @@
+Command: SB08 source assertion summary for pre-execution guard parity
+Invariant ID: SB08-INV-001
+Source assertion: ProcessDispatchDatabaseRequirementBlocker resolves unsupported no-op targets to blocked and execution targets to failed.
+Source assertion: ProcessMissingUpstreamArtifactMaterializationFactsResolver selects missing runnable agent-sourced upstream dependencies only.
+Source assertion: Block transition request construction remains explicit and does not hide failure status changes.
+Test assertion: ProcessDispatchDatabaseRequirementBlocker_SB05_INV_001_preserves_status_targets_and_transition_shape passed in the focused integration slice.
+Test assertion: ProcessMissingUpstreamArtifactMaterializationFacts_SB07_INV_001_selects_only_missing_runnable_agent_source passed in the focused integration slice.
+Exit code: 0
+

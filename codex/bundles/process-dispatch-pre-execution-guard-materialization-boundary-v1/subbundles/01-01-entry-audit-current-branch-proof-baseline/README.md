@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -23,26 +23,23 @@ Baseline proof, current branch source scan, current line counts.
 ## Exact Source References
 
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
-
-Baseline proof, current branch source scan, current line counts.
+- Baseline proof, current branch source scan, current line counts.
 
 ## Dependency Impact
+- This subbundle unlocks: SB02.
 
-This subbundle unlocks: SB02.
-
-If this subbundle is wrong, downstream proof may not be trustworthy because the dispatch pre-execution route can block, rerun, or continue incorrectly.
+- If this subbundle is wrong, downstream proof may not be trustworthy because the dispatch pre-execution route can block, rerun, or continue incorrectly.
 
 ## Validation Depth
-
-Build + source scans.
+- Build + source scans.
 
 ## Implementation Steps
 
@@ -71,13 +68,13 @@ Process Core and production driver APIs are explicitly out of scope.
 
 ## Acceptance Checklist
 
-- [ ] Scope limited to this subbundle.
-- [ ] Behavior parity proven.
-- [ ] No Process Core.
-- [ ] No production driver API.
-- [ ] No UI changes.
-- [ ] No prohibited proof paths.
-- [ ] Evidence recorded.
+- [x] Scope limited to this subbundle.
+- [x] Behavior parity proven.
+- [x] No Process Core.
+- [x] No production driver API.
+- [x] No UI changes.
+- [x] No prohibited proof paths.
+- [x] Evidence recorded.
 
 ## Proof Required
 
@@ -89,12 +86,10 @@ Process Core and production driver APIs are explicitly out of scope.
 - line-count or downstream check when relevant.
 
 ## Browser Validation Logging
-
-N/A expected. Runtime/service refactor only. Do not run small/medium/mobile proof.
+- N/A expected. Runtime/service refactor only. Do not run small/medium/mobile proof.
 
 ## Progression Gate
-
-May continue only if scoped proof passes.
+- May continue only if scoped proof passes.
 
 ## Suggested Agent Prompt
 

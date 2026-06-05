@@ -6,11 +6,11 @@ Potential future driver/evidence concepts prepared by this bundle:
 
 | Future concept | Current process concept | Current owner |
 | --- | --- | --- |
-| `ArtifactMaterializationIntent` | missing upstream artifact target + rerun directive | upstream materialization planner |
-| `EvidenceGap` | missing artifact input list | upstream gap facts |
-| `DatabaseRuntimeRequirement` | database profile requirement failure | database blocker |
-| `DriverCanRecoverMissingArtifact` | runnable upstream source step | materialization target selection |
-| `DriverRecoveryDirective` | rerun operator reason | rerun request builder |
+| `ArtifactMaterializationIntent` | missing upstream artifact target + rerun directive | `ProcessDispatchMissingUpstreamArtifactMaterializationPlan` |
+| `EvidenceGap` | missing artifact input list | `ProcessMissingUpstreamArtifactMaterializationFacts` |
+| `DatabaseRuntimeRequirement` | database profile requirement failure | `ProcessDispatchDatabaseRequirementDecision` |
+| `DriverCanRecoverMissingArtifact` | runnable upstream source step | `ProcessMissingUpstreamArtifactMaterializationFactsResolver` |
+| `DriverRecoveryDirective` | rerun operator reason | `ProcessMissingUpstreamArtifactRerunRequestBuilder` |
 
 Notes:
 

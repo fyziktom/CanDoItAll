@@ -1,0 +1,10 @@
+Command: SB19 source assertion summary for final scans
+Invariant ID: SB19-INV-001
+Source assertion: No CanDoItAll.Processes.Core project or directory exists after the refactor.
+Source assertion: No production driver API token was added under repo://src.
+Source assertion: No UI file changes are present in the current diff.
+Source assertion: No prohibited small, medium, mobile, tablet, phone, Android, iPhone, or responsive proof artifact path exists under proof directories.
+Source assertion: Anti-stub scan found no placeholder implementation in touched production helpers.
+Source assertion: ProcessRunAutomationDispatchService.Dispatch.cs line count is 1476 after extraction.
+Exit code: 0
+

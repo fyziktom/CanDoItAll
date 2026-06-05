@@ -805,6 +805,76 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Process_dispatch_pre_execution_guard_gate_a_SB04_INV_001_locks_local_boundary_without_core_driver_or_viewport_drift()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var bundleRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-dispatch-pre-execution-guard-materialization-boundary-v1");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var preExecutionGuardHandlerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchPreExecutionGuardHandler.cs"));
+        var targetSolution = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "01-target-solution.md"));
+        var hardConstraints = File.ReadAllText(Path.Combine(bundleRoot, "requirements", "02-hard-constraints.md"));
+        var sourceText = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(Path.Combine(root, "src"), "*.*", SearchOption.AllDirectories)
+                .Where(path => Path.GetExtension(path) is ".cs" or ".csproj")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var proofRoot = Path.Combine(bundleRoot, "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet",
+            "android",
+            "iphone",
+            "responsive"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.Contains("Dispatch.cs", targetSolution, StringComparison.Ordinal);
+        Assert.Contains("database requirement blocker", targetSolution, StringComparison.Ordinal);
+        Assert.Contains("upstream materialization coordinator", targetSolution, StringComparison.Ordinal);
+        Assert.Contains("No Process Core project", hardConstraints, StringComparison.Ordinal);
+        Assert.Contains("No production driver API", hardConstraints, StringComparison.Ordinal);
+        Assert.Contains("BlockDispatchForDatabaseRequirementAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("TryRequestMissingUpstreamArtifactMaterializationAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("CreatePreExecutionGuardHandler", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessDispatchPreExecutionGuardHandler", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchDatabaseRequirementDecision", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchMissingUpstreamArtifactMaterializationPlan", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
+        Assert.DoesNotContain("IProcessDriverPack", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Modules.Processes.Core", sourceText, StringComparison.Ordinal);
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
     public void Process_dispatch_claim_route_SB13_INV_001_extracts_finalizer_context_factory_with_route_field_parity()
     {
         var dispatchDirectory = Path.Combine(
