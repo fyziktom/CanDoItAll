@@ -1325,6 +1325,70 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Artifact_satisfaction_boundary_helpers_are_module_local_and_side_effect_free()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var artifactValidationSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.ArtifactValidation.cs"));
+        var helperFiles = new[]
+        {
+            "ProcessArtifactSatisfactionSnapshot.cs",
+            "ProcessArtifactRecordedSatisfactionRules.cs",
+            "ProcessFreshImplementationArtifactSatisfactionRules.cs",
+            "ProcessRequiredArtifactAutoSatisfactionRules.cs",
+            "ProcessResponseTextArtifactSatisfactionRules.cs",
+            "ProcessManagedArtifactPathClassificationRules.cs",
+            "ProcessQualityValidationEvidenceAggregator.cs",
+            "ProcessIncompleteImplementationSignalRules.cs",
+            "ProcessExternalTargetReferenceGuard.cs",
+            "ProcessShallowManagedArtifactReferenceGuard.cs",
+            "ProcessArtifactSatisfactionBlockerSummaryBuilder.cs"
+        };
+        var helperSource = string.Join(
+            Environment.NewLine,
+            helperFiles.Select(fileName =>
+            {
+                var path = Path.Combine(dispatchDirectory, fileName);
+                Assert.True(File.Exists(path), path);
+                return File.ReadAllText(path);
+            }));
+        var forbiddenTokens = new[]
+        {
+            "CanDoItAll.Processes.Core",
+            "IProcessDriverPack",
+            "DriverPack",
+            "ProcessDriver",
+            "DbContext",
+            "CreateDbContextAsync",
+            "SaveChangesAsync",
+            "RecordArtifactAsync",
+            "storagePlacementService",
+            "File.",
+            "Directory."
+        };
+
+        Assert.Contains("internal sealed record ProcessArtifactSatisfactionSnapshot", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessRequiredArtifactAutoSatisfactionRules", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessQualityValidationEvidenceAggregator", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessIncompleteImplementationSignalRules", helperSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactSatisfactionSnapshotBuilder.From", artifactValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRequiredArtifactAutoSatisfactionRules.CanAutoSatisfyRequiredArtifact", artifactValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessQualityValidationEvidenceAggregator.ResolveEvidenceTexts", artifactValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessIncompleteImplementationSignalRules.ResolveIncompleteImplementationSummary", artifactValidationSource, StringComparison.Ordinal);
+
+        foreach (var forbiddenToken in forbiddenTokens)
+        {
+            Assert.DoesNotContain(forbiddenToken, helperSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Artifact_validation_project_structure_requirement_rules_are_local_and_preserve_mandatory_source_lines()
     {
         var source = ReadRepositoryFile(

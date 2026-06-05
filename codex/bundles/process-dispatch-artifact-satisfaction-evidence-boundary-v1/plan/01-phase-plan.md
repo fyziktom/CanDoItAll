@@ -75,7 +75,14 @@ SB31 --> SB32
 
 ## Critical Subbundles
 
-SB04, SB08, SB12, SB16, SB20, SB24, SB28, SB32
+- SB04: Gate A architecture guardrails before movement.
+- SB08: Gate B recorded/fresh artifact parity.
+- SB12: Gate C auto-satisfaction branch parity.
+- SB16: Gate D provider-native/browser parity.
+- SB20: Gate E response text and external-target parity.
+- SB24: Gate F path/quality validation parity.
+- SB28: Gate G line-count and consumer parity.
+- SB32: Final red-team closure and next cutline.
 
 ## Phase Gates
 

@@ -107,36 +107,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail,
         string? inspectionText)
     {
-        var texts = new List<string>();
-        AddQualityValidationEvidenceText(texts, inspectionText);
-        AddQualityValidationEvidenceText(texts, detail.Run.ResultSummary);
-
-        foreach (var receipt in detail.ToolReceipts)
-        {
-            var toolName = NormalizeToolToken(receipt.ToolName);
-            if (!IsQualityValidationEvidenceToolName(toolName))
-            {
-                continue;
-            }
-
-            AddQualityValidationEvidenceText(
-                texts,
-                string.Join(
-                    Environment.NewLine,
-                    receipt.RequestSummary,
-                    receipt.WorkingDirectory,
-                    receipt.ExitSummary));
-        }
-
-        foreach (var resultText in ResolveSuccessfulSessionToolResultTexts(detail.Run.SerializedSessionStateJson))
-        {
-            if (IsQualityValidationEvidenceToolName(resultText.ToolName))
-            {
-                AddQualityValidationEvidenceText(texts, resultText.Text);
-            }
-        }
-
-        return texts;
+        var sessionToolResultTexts = ResolveSuccessfulSessionToolResultTexts(detail.Run.SerializedSessionStateJson)
+            .Select(item => (item.ToolName, item.Text))
+            .ToList();
+        return ProcessQualityValidationEvidenceAggregator.ResolveEvidenceTexts(
+            inspectionText,
+            detail.Run.ResultSummary,
+            detail.ToolReceipts,
+            sessionToolResultTexts,
+            IsQualityValidationEvidenceToolName,
+            NormalizeToolToken);
     }
 
     private static bool IsQualityValidationEvidenceToolName(string normalizedToolName)
@@ -144,88 +124,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
             normalizedToolName,
             IsImplementationValidationToolName);
 
-    private static void AddQualityValidationEvidenceText(List<string> texts, string? value)
-    {
-        if (!string.IsNullOrWhiteSpace(value))
-        {
-            texts.Add(value);
-        }
-    }
-
     private static string ResolveIncompleteImplementationSummary(
         DispatchCandidate candidate,
         string? responseText)
     {
-        if (!RequiresConcreteImplementationProof(candidate) || string.IsNullOrWhiteSpace(responseText))
-        {
-            return string.Empty;
-        }
-
-        var normalizedResponse = CollapsePromptWhitespace(responseText).ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(normalizedResponse))
-        {
-            return string.Empty;
-        }
-
-        var defersFeatureImplementation =
-            normalizedResponse.Contains("ready for feature implementation", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("ready for later feature implementation", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("ready for further feature implementation", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("next steps for feature implementation", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("future feature implementation", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("later feature implementation", StringComparison.Ordinal) ||
-            (normalizedResponse.Contains("ready for", StringComparison.Ordinal) &&
-             normalizedResponse.Contains("implementation", StringComparison.Ordinal) &&
-             normalizedResponse.Contains("feature, tests, and migration notes", StringComparison.Ordinal)) ||
-            (normalizedResponse.Contains("structured for further", StringComparison.Ordinal) &&
-             normalizedResponse.Contains("implementation", StringComparison.Ordinal));
-
-        if (!defersFeatureImplementation &&
-            normalizedResponse.Contains("later step", StringComparison.Ordinal) &&
-            normalizedResponse.Contains("feature implementation", StringComparison.Ordinal))
-        {
-            defersFeatureImplementation = true;
-        }
-
-        var reportsMissingRequestedBehavior =
-            normalizedResponse.Contains("not yet implemented", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("still untouched template output", StringComparison.Ordinal) ||
-            normalizedResponse.Contains("untouched template output", StringComparison.Ordinal) ||
-            (normalizedResponse.Contains("hello, world!", StringComparison.Ordinal) &&
-             (normalizedResponse.Contains("still", StringComparison.Ordinal) ||
-              normalizedResponse.Contains("template", StringComparison.Ordinal))) ||
-            (normalizedResponse.Contains("no required", StringComparison.Ordinal) &&
-             normalizedResponse.Contains("present yet", StringComparison.Ordinal)) ||
-            (normalizedResponse.Contains("required", StringComparison.Ordinal) &&
-             normalizedResponse.Contains("is not present yet", StringComparison.Ordinal));
-
-        var reportsDeferredExecution =
-            !ContainsNegatedDeferredExecutionPhrase(normalizedResponse) &&
-            (normalizedResponse.Contains("next required actions", StringComparison.Ordinal) ||
-             normalizedResponse.Contains("next implementation steps", StringComparison.Ordinal) ||
-             normalizedResponse.Contains("for the next agent or step", StringComparison.Ordinal) ||
-             normalizedResponse.Contains("proceeding to implement", StringComparison.Ordinal));
-
-        return defersFeatureImplementation || reportsMissingRequestedBehavior || reportsDeferredExecution
-            ? "the response says the step only scaffolded the app and left the requested feature implementation for later work"
-            : string.Empty;
-    }
-
-    private static bool ContainsNegatedDeferredExecutionPhrase(string normalizedResponse)
-    {
-        var phrases = new[]
-        {
-            "no next required actions",
-            "no next implementation steps",
-            "no further implementation steps",
-            "no remaining implementation steps",
-            "no implementation steps remain",
-            "no follow-up implementation steps",
-            "no deferred implementation steps",
-            "no later implementation steps"
-        };
-
-        return phrases.Any(phrase => normalizedResponse.Contains(phrase, StringComparison.Ordinal));
+        return ProcessIncompleteImplementationSignalRules.ResolveIncompleteImplementationSummary(
+            RequiresConcreteImplementationProof(candidate),
+            responseText);
     }
 
     private static string ResolveMissingRequiredArtifactSummary(
@@ -238,18 +143,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return string.Empty;
         }
 
-        var missingRequiredArtifacts = candidate.ExpectedArtifacts
-            .Where(item => item.IsRequired)
-            .Where(item => !HasSatisfiedRequiredArtifact(candidate, detail, item, responseText))
-            .Select(item => item.Title.Trim())
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(3)
-            .ToList();
-
-        return missingRequiredArtifacts.Count == 0
-            ? string.Empty
-            : string.Join(", ", missingRequiredArtifacts);
+        return ProcessArtifactSatisfactionBlockerSummaryBuilder.BuildMissingRequiredArtifactSummary(
+            candidate.ExpectedArtifacts,
+            expectedArtifact => HasSatisfiedRequiredArtifact(candidate, detail, expectedArtifact, responseText));
     }
 
     private static bool HasSatisfiedRequiredArtifact(
@@ -282,9 +178,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         DispatchArtifactExpectation expectedArtifact)
     {
-        return RequiresConcreteImplementationProof(candidate) &&
-               expectedArtifact.IsRequired &&
-               expectedArtifact.ArtifactKind is not ProcessArtifactKind.Decision and not ProcessArtifactKind.DecisionRecord;
+        return ProcessFreshImplementationArtifactSatisfactionRules.RequiresFreshCurrentAttemptImplementationArtifact(
+            RequiresConcreteImplementationProof(candidate),
+            expectedArtifact);
     }
 
     private static bool HasFreshCurrentAttemptImplementationArtifact(
@@ -306,22 +202,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .Where(IsSuccessfulWorkspaceFileMutationReceipt)
             .Where(receipt => WorkspaceMutationReceiptMatchesExpectedArtifact(candidate, detail, expectedArtifact, receipt))
             .ToList();
-        if (latestConcreteMutation is null)
-        {
-            var latestConcreteRead = ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts);
-            if (latestConcreteRead is null)
-            {
-                return false;
-            }
-
-            return artifactReceipts.Any(receipt =>
-                !IsReceiptAfter(latestConcreteRead, receipt) &&
-                (latestValidation is null || !IsReceiptAfter(latestValidation, receipt)));
-        }
-
-        return artifactReceipts.Any(receipt =>
-            !IsReceiptAfter(latestConcreteMutation, receipt) &&
-            (latestValidation is null || !IsReceiptAfter(latestValidation, receipt)));
+        var latestConcreteRead = latestConcreteMutation is null
+            ? ResolveLatestImplementationProofReadReceipt(candidate, successfulReceipts)
+            : null;
+        return ProcessFreshImplementationArtifactSatisfactionRules.HasFreshCurrentAttemptImplementationArtifact(
+            latestConcreteMutation,
+            latestConcreteRead,
+            latestValidation,
+            artifactReceipts,
+            IsReceiptAfter);
     }
 
     private static bool WorkspaceMutationReceiptMatchesExpectedArtifact(
@@ -349,8 +238,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail detail,
         DispatchArtifactExpectation expectedArtifact)
     {
-        return candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-               detail.Artifacts.Any(artifact => ResolveArtifactExpectationId(candidate, detail, artifact) == expectedArtifact.Id);
+        var snapshot = ProcessArtifactSatisfactionSnapshotBuilder.From(candidate, detail);
+        return ProcessArtifactRecordedSatisfactionRules.HasRecordedExpectedArtifact(
+            snapshot,
+            expectedArtifact,
+            artifact => ResolveArtifactExpectationId(candidate, detail, artifact));
     }
 
     private static bool HasRecordedOrExecutionArtifactForExpectedArtifact(
@@ -369,41 +261,24 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact,
         string? responseText)
     {
-        if (TryResolveProjectStructureExpectedArtifactPath(candidate, expectedArtifact, detail.Run.InputSummary, out _))
-        {
-            return CanProjectWorkspaceWrittenArtifact(candidate, detail, expectedArtifact);
-        }
-
-        if (CanProjectProcessMockArtifact(candidate, detail, expectedArtifact))
-        {
-            return true;
-        }
-
-        if (CanProjectWorkspaceWrittenArtifact(candidate, detail, expectedArtifact))
-        {
-            return true;
-        }
-
-        if (CanProjectProviderNativeVisualArtifact(candidate, detail, expectedArtifact))
-        {
-            return true;
-        }
-
-        if (ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact))
-        {
-            return true;
-        }
-
-        var projectableResponseText = ResolveProjectableResponseArtifactText(responseText);
-        if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var declaredRelativePath))
-        {
-            return HasProviderNativeBrowserOutputForDeclaredPath(detail, declaredRelativePath) ||
-                   (IsUsableProjectedResponseArtifactContent(expectedArtifact, projectableResponseText) &&
-                    IsResponseProjectableTextArtifact(declaredRelativePath));
-        }
-
-        return IsUsableProjectedResponseArtifactContent(expectedArtifact, projectableResponseText) &&
-               CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact);
+        return ProcessRequiredArtifactAutoSatisfactionRules.CanAutoSatisfyRequiredArtifact(
+            () => TryResolveProjectStructureExpectedArtifactPath(candidate, expectedArtifact, detail.Run.InputSummary, out _),
+            () => CanProjectWorkspaceWrittenArtifact(candidate, detail, expectedArtifact),
+            () => CanProjectProcessMockArtifact(candidate, detail, expectedArtifact),
+            () => CanProjectProviderNativeVisualArtifact(candidate, detail, expectedArtifact),
+            () => ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact),
+            () => ResolveProjectableResponseArtifactText(responseText),
+            () =>
+            {
+                var hasDeclaredPath = TryExtractExpectedArtifactRelativePath(
+                    expectedArtifact.ValidationRequirementSummary,
+                    out var declaredRelativePath);
+                return (hasDeclaredPath, declaredRelativePath);
+            },
+            declaredRelativePath => HasProviderNativeBrowserOutputForDeclaredPath(detail, declaredRelativePath),
+            IsResponseProjectableTextArtifact,
+            projectableResponseText => IsUsableProjectedResponseArtifactContent(expectedArtifact, projectableResponseText),
+            () => CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact));
     }
 
     private static string ResolveOutOfScopeExternalTargetReferenceSummary(
@@ -435,7 +310,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     internal static string ResolveOutOfScopeExternalTargetReferenceSummary(
         string? text,
         IReadOnlyList<string> allowedAliases)
-        => ProcessExternalTargetGroundingService.InspectReferences(text, allowedAliases).Summary;
+        => ProcessExternalTargetReferenceGuard.ResolveOutOfScopeReferenceSummary(text, allowedAliases);
 
     private static string ResolveShallowSharedManagedArtifactReferenceSummary(
         ProcessAutomationExecutionRunDetail detail,
@@ -447,32 +322,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return string.Empty;
         }
 
-        var shallowPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson)
-                     .Concat(ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson)))
-        {
-            AddShallowSharedManagedArtifactPath(shallowPaths, file.Path, allowedExternalTargetAliases);
-            if (shallowPaths.Count >= 3)
-            {
-                break;
-            }
-        }
-
-        if (shallowPaths.Count < 3 && !string.IsNullOrWhiteSpace(responseText))
-        {
-            foreach (Match match in ManagedWorkspacePathRegex.Matches(responseText))
-            {
-                AddShallowSharedManagedArtifactPath(shallowPaths, match.Groups["path"].Value, allowedExternalTargetAliases);
-                if (shallowPaths.Count >= 3)
-                {
-                    break;
-                }
-            }
-        }
-
-        return shallowPaths.Count == 0
-            ? string.Empty
-            : $"the run used shallow shared managed artifact paths instead of run-specific artifact paths: {string.Join(", ", shallowPaths)}";
+        var observedPaths = ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson)
+            .Concat(ResolveSuccessfulSessionFileWrites(detail.Run.SerializedSessionStateJson))
+            .Select(file => file.Path)
+            .ToList();
+        return ProcessShallowManagedArtifactReferenceGuard.ResolveSummary(
+            observedPaths,
+            responseText,
+            allowedExternalTargetAliases,
+            ManagedWorkspacePathRegex,
+            AddShallowSharedManagedArtifactPath);
     }
 
     private static void AddShallowSharedManagedArtifactPath(
@@ -529,27 +388,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsLikelyProductSourceOrProjectFileName(string fileName)
     {
-        var extension = Path.GetExtension(fileName);
-        return string.Equals(extension, ".cs", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".razor", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".cshtml", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".csproj", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".fsproj", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".vbproj", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".sln", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".slnx", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".css", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".js", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".ts", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".tsx", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".jsx", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".html", StringComparison.OrdinalIgnoreCase);
+        return ProcessManagedArtifactPathClassificationRules.IsLikelyProductSourceOrProjectFileName(fileName);
     }
 
     private static bool IsLikelyProductDeliverableOrSourceFileName(string fileName)
     {
-        return IsImplementationDeliverableOrSourceExtension(Path.GetExtension(fileName));
+        return ProcessManagedArtifactPathClassificationRules.IsLikelyProductDeliverableOrSourceFileName(fileName);
     }
 
     private static bool CanProjectProcessMockArtifact(
@@ -864,25 +708,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsConversationalNonArtifactResponse(string normalizedResponse)
     {
-        if (string.IsNullOrWhiteSpace(normalizedResponse))
-        {
-            return true;
-        }
-
-        var value = normalizedResponse.ToLowerInvariant();
-        return value.Contains("ready to help", StringComparison.Ordinal) ||
-               value.Contains("please let me know", StringComparison.Ordinal) ||
-               value.Contains("let me know what", StringComparison.Ordinal) ||
-               value.Contains("what specific", StringComparison.Ordinal) ||
-               value.Contains("specific area or step", StringComparison.Ordinal) ||
-               value.Contains("how can i help", StringComparison.Ordinal) ||
-               value.Contains("i can help with", StringComparison.Ordinal) ||
-               value.Contains("provide more details", StringComparison.Ordinal) ||
-               value.Contains("please provide", StringComparison.Ordinal) ||
-               value.Contains("need more information", StringComparison.Ordinal) ||
-               value.Contains("not enough information", StringComparison.Ordinal) ||
-               value.Contains("cannot proceed without", StringComparison.Ordinal) ||
-               value.Contains("unable to proceed without", StringComparison.Ordinal);
+        return ProcessResponseTextArtifactSatisfactionRules.IsConversationalNonArtifactResponse(normalizedResponse);
     }
 
     private static bool ContainsConcreteBrowserProofSignal(string? value)
@@ -2580,15 +2406,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsVisualEvidenceAttachmentPath(string relativePath)
     {
-        var extension = Path.GetExtension(relativePath);
-        return IsImageExtension(extension);
+        return ProcessManagedArtifactPathClassificationRules.IsVisualEvidenceAttachmentPath(relativePath);
     }
 
     private static bool IsResponseProjectableTextArtifact(string relativePath)
     {
-        var extension = Path.GetExtension(relativePath);
-        return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase);
+        return ProcessManagedArtifactPathClassificationRules.IsResponseProjectableTextArtifact(relativePath);
     }
 
     private static bool TryResolveResponseTextArtifactRelativePath(
@@ -2623,72 +2446,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool CanProjectResponseTextArtifactWithoutDeclaredPath(DispatchArtifactExpectation expectedArtifact)
     {
-        return expectedArtifact.ArtifactKind is ProcessArtifactKind.Brief
-            or ProcessArtifactKind.Checklist
-            or ProcessArtifactKind.Prompt
-            or ProcessArtifactKind.Transcript ||
-               IsPathlessResponseProjectableDeliverable(expectedArtifact) ||
-               IsPathlessResponseProjectableEvidence(expectedArtifact);
-    }
-
-    private static bool IsPathlessResponseProjectableDeliverable(DispatchArtifactExpectation expectedArtifact)
-    {
-        if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Deliverable)
-        {
-            return false;
-        }
-
-        var normalizedTitle = CollapsePromptWhitespace(expectedArtifact.Title).ToLowerInvariant();
-        var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
-        return normalizedTitle.Contains("change set", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("change set", StringComparison.Ordinal);
-    }
-
-    private static bool IsPathlessResponseProjectableEvidence(DispatchArtifactExpectation expectedArtifact)
-    {
-        if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Evidence)
-        {
-            return false;
-        }
-
-        var normalizedTitle = CollapsePromptWhitespace(expectedArtifact.Title).ToLowerInvariant();
-        var normalizedValidation = CollapsePromptWhitespace(expectedArtifact.ValidationRequirementSummary).ToLowerInvariant();
-        return normalizedTitle.Contains("note", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("review", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("evidence index", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("result index", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("receipt", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("handoff", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("browser navigation", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("console evidence", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("evidence pack", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("snapshot", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("decision record", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("handoff packet", StringComparison.Ordinal) ||
-               normalizedTitle.Contains("regression", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("evidence index", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("raw record pointers", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("validation evidence", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("runtime/api/browser evidence", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("accepted issues", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("rejected concerns", StringComparison.Ordinal) ||
-               normalizedValidation.Contains("residual risk", StringComparison.Ordinal);
+        return ProcessResponseTextArtifactSatisfactionRules.CanProjectResponseTextArtifactWithoutDeclaredPath(expectedArtifact);
     }
 
     private static string BuildFallbackResponseTextArtifactRelativePath(
         DispatchCandidate candidate,
         DispatchArtifactExpectation expectedArtifact)
     {
-        var expectedSlug = FileSafeSlugBuilder.Build(expectedArtifact.Title);
-        if (string.IsNullOrWhiteSpace(expectedSlug))
-        {
-            expectedSlug = "artifact";
-        }
-
-        return WorkspaceScopeDescriptor.NormalizeRelativePath(
-            Path.Combine(
-                BuildCurrentRunManagedArtifactRoot(candidate),
-                $"{candidate.StepRun.Sequence + 1:00}-{expectedSlug}.md"));
+        return ProcessResponseTextArtifactSatisfactionRules.BuildFallbackResponseTextArtifactRelativePath(
+            BuildCurrentRunManagedArtifactRoot(candidate),
+            candidate.StepRun.Sequence,
+            expectedArtifact);
     }
 
     private static string BuildCurrentRunManagedArtifactRoot(DispatchCandidate candidate)
@@ -2711,17 +2479,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsTextReadableManagedArtifactPath(string relativePath)
     {
-        var extension = Path.GetExtension(relativePath);
-        return extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".txt", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".json", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".yml", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".log", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".csv", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
-               IsCodeOrProjectExtension(extension);
+        return ProcessManagedArtifactPathClassificationRules.IsTextReadableManagedArtifactPath(relativePath);
     }
 
     private static bool CanMatchArtifactByTextContent(ProcessAutomationExecutionArtifact artifact)

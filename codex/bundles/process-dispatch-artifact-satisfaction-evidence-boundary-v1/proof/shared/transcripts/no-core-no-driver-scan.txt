@@ -1,0 +1,7 @@
+Command: $matches = rg -n "CanDoItAll\.Processes\.Core|IProcessDriverPack|DriverPack|ProcessDriver" src\CanDoItAll.Modules.Processes\Automation\Dispatch
+if ($LASTEXITCODE -eq 0) { $matches; exit 1 }
+if ($LASTEXITCODE -eq 1) { "No Process Core or production driver API matches in dispatch production source."; exit 0 }
+exit $LASTEXITCODE
+Exit code: 0
+Output:
+No Process Core or production driver API matches in dispatch production source.

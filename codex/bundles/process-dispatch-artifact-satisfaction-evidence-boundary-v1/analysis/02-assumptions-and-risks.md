@@ -9,12 +9,12 @@
 
 ## Critical Path Risks
 
-1. **Branch ordering drift**: Auto-satisfaction checks are order-sensitive. A helper that changes precedence can falsely satisfy missing artifacts.
-2. **Provider-native browser false positives**: Screenshot/snapshot detection can accidentally satisfy evidence without actual output file proof.
-3. **Response text over-acceptance**: Narrative response text must not become a loophole for deliverable evidence.
-4. **External target false positives**: Allowed alias logic must not block real product files or permit out-of-scope references.
-5. **Hidden side effects**: Pure helpers must not start reading/writing files, querying DB, or mutating process state.
-6. **Driver API creep**: Documentation-only evidence vocabulary must not become production driver code in this bundle.
+- **Branch ordering drift**: Auto-satisfaction checks are order-sensitive. A helper that changes precedence can falsely satisfy missing artifacts.
+- **Provider-native browser false positives**: Screenshot/snapshot detection can accidentally satisfy evidence without actual output file proof.
+- **Response text over-acceptance**: Narrative response text must not become a loophole for deliverable evidence.
+- **External target false positives**: Allowed alias logic must not block real product files or permit out-of-scope references.
+- **Hidden side effects**: Pure helpers must not start reading/writing files, querying DB, or mutating process state.
+- **Driver API creep**: Documentation-only evidence vocabulary must not become production driver code in this bundle.
 
 ## Validation Risks
 
