@@ -578,7 +578,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private sealed record ProcessStepDispatchClaim(Guid StepRunId, string ClaimToken);
 
-    private sealed record DispatchCandidateHeader(Guid StepRunId, ProcessStepRunStatus Status);
+    internal sealed record DispatchCandidateHeader(Guid StepRunId, ProcessStepRunStatus Status);
 
     private async Task<bool> IsRunClosedToAutomationAsync(
         Guid processRunId,
@@ -1538,33 +1538,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var runStatus = await dbContext.Set<ProcessRun>()
-            .AsNoTracking()
-            .Where(item => item.Id == processRunId)
-            .Select(item => (ProcessRunStatus?)item.Status)
-            .SingleOrDefaultAsync(cancellationToken);
-        if (!runStatus.HasValue || !IsRunEligibleForDispatchCandidate(runStatus.Value))
-        {
-            return [];
-        }
-
-        var now = clock.GetUtcNow();
-        var dispatchableSteps = await dbContext.Set<ProcessStepRun>()
-            .AsNoTracking()
-            .Where(item => item.ProcessRunId == processRunId &&
-                (item.Status == ProcessStepRunStatus.Ready ||
-                 item.Status == ProcessStepRunStatus.WaitingApproval ||
-                 item.Status == ProcessStepRunStatus.InProgress))
-            .Where(item =>
-                item.AutomationDispatchLeaseExpiresAtUtc == null ||
-                item.AutomationDispatchLeaseExpiresAtUtc <= now)
-            .OrderBy(item => item.Sequence)
-            .Select(item => new DispatchCandidateHeader(item.Id, item.Status))
-            .ToListAsync(cancellationToken);
-
-        return dispatchableSteps
-            .Where(item => IsStepStatusDispatchableForRun(runStatus.Value, item.Status))
-            .ToList();
+        return await ProcessDispatchCandidateHeaderSelector.SelectAsync(
+            dbContext,
+            processRunId,
+            clock.GetUtcNow(),
+            cancellationToken);
     }
 
     private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
@@ -1574,187 +1552,46 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var run = await dbContext.Set<ProcessRun>()
-            .AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Id == processRunId, cancellationToken);
-        if (run is null || !IsRunEligibleForDispatchCandidate(run.Status))
+        var snapshot = await ProcessDispatchCandidateHydrationLoader.LoadAsync(
+            dbContext,
+            processRunId,
+            claimedStepRunId,
+            cancellationToken);
+        if (snapshot is null)
         {
             return null;
         }
 
-        var definition = await dbContext.Set<ProcessDefinition>()
-            .AsNoTracking()
-            .SingleAsync(item => item.Id == run.ProcessDefinitionId, cancellationToken);
-        var dispatchableSteps = await dbContext.Set<ProcessStepRun>()
-            .AsNoTracking()
-            .Where(item => item.ProcessRunId == processRunId &&
-                item.Id == claimedStepRunId &&
-                (item.Status == ProcessStepRunStatus.Ready ||
-                 item.Status == ProcessStepRunStatus.WaitingApproval ||
-                 item.Status == ProcessStepRunStatus.InProgress))
-            .OrderBy(item => item.Sequence)
-            .ToListAsync(cancellationToken);
-        dispatchableSteps = dispatchableSteps
-            .Where(item => IsStepStatusDispatchableForRun(run.Status, item.Status))
-            .ToList();
-        if (dispatchableSteps.Count == 0)
-        {
-            return null;
-        }
-
-        var stepRunIds = dispatchableSteps.Select(item => item.Id).ToList();
-        var workBriefsByStepRunId = (await dbContext.Set<ProcessWorkBrief>()
-                .AsNoTracking()
-                .Where(item => item.ProcessRunId == processRunId && item.StepRunId.HasValue && stepRunIds.Contains(item.StepRunId.Value))
-                .ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.CreatedAtUtc)
-            .GroupBy(item => item.StepRunId!.Value)
-            .ToDictionary(group => group.Key, group => group.First());
-        var allStepRuns = await dbContext.Set<ProcessStepRun>()
-            .AsNoTracking()
-            .Where(item => item.ProcessRunId == processRunId)
-            .ToListAsync(cancellationToken);
-        var stepRunsByDefinitionId = allStepRuns
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<ProcessStepRun>)group
-                    .OrderByDescending(item => item.Sequence)
-                    .ToList());
-        var existingArtifacts = (await dbContext.Set<ProcessArtifactRecord>()
-                .AsNoTracking()
-                .Where(item => item.ProcessRunId == processRunId)
-                .ToListAsync(cancellationToken))
-            .OrderByDescending(item => item.CreatedAtUtc)
-            .ToList();
-        var externalReferenceKeys = existingArtifacts
-            .Select(item => item.ExternalReferenceKey)
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var readyStepDefinitionIds = dispatchableSteps
-            .Select(item => item.StepDefinitionId)
-            .Distinct()
-            .ToList();
-        var readyStepDefinitionsById = readyStepDefinitionIds.Count == 0
-            ? new Dictionary<Guid, ProcessStepDefinition>()
-            : await dbContext.Set<ProcessStepDefinition>()
-                .AsNoTracking()
-                .Where(item => readyStepDefinitionIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var stepRoleRequirements = readyStepDefinitionIds.Count == 0
-            ? []
-            : await dbContext.Set<ProcessStepRoleAssignmentRequirement>()
-                .AsNoTracking()
-                .Where(item => readyStepDefinitionIds.Contains(item.StepDefinitionId))
-                .OrderBy(item => item.FallbackOrder)
-                .ToListAsync(cancellationToken);
-        var stepRoleRequirementsByStepDefinitionId = stepRoleRequirements
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<ProcessStepRoleAssignmentRequirement>)group.ToList());
-        var roleRequirementIds = stepRoleRequirements
-            .Select(item => item.RoleRequirementId)
-            .Distinct()
-            .ToList();
-        var roleRequirementsById = roleRequirementIds.Count == 0
-            ? new Dictionary<Guid, ProcessRoleRequirement>()
-            : await dbContext.Set<ProcessRoleRequirement>()
-                .AsNoTracking()
-                .Where(item => roleRequirementIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var runAssignments = await dbContext.Set<ProcessRunAssignment>()
-            .AsNoTracking()
-            .Where(item => item.ProcessRunId == processRunId)
-            .ToListAsync(cancellationToken);
-        var artifactInputs = readyStepDefinitionIds.Count == 0
-            ? []
-            : await dbContext.Set<ProcessStepArtifactInputDefinition>()
-                .AsNoTracking()
-                .Where(item => readyStepDefinitionIds.Contains(item.StepDefinitionId))
-                .OrderBy(item => item.DisplayOrder)
-                .ToListAsync(cancellationToken);
-        var artifactInputsByStepDefinitionId = artifactInputs
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(group => group.Key, group => (IReadOnlyList<ProcessStepArtifactInputDefinition>)group.ToList());
-        var artifactExpectationIds = artifactInputs
-            .Select(item => item.ArtifactExpectationId)
-            .Distinct()
-            .ToList();
-        var branchOutcomes = readyStepDefinitionIds.Count == 0
-            ? []
-            : await dbContext.Set<ProcessStepBranchOutcomeDefinition>()
-                .AsNoTracking()
-                .Where(item => readyStepDefinitionIds.Contains(item.StepDefinitionId))
-                .OrderBy(item => item.DisplayOrder)
-                .ToListAsync(cancellationToken);
-        var branchOutcomesByStepDefinitionId = branchOutcomes
-            .GroupBy(item => item.StepDefinitionId)
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<ProcessStepBranchOutcomeDefinition>)group.ToList());
-        var conditionalDependencies = readyStepDefinitionIds.Count == 0
-            ? []
-            : await dbContext.Set<ProcessStepDependencyDefinition>()
-                .AsNoTracking()
-                .Where(item => readyStepDefinitionIds.Contains(item.DependsOnStepId) && item.DependsOnBranchOutcomeId.HasValue)
-                .ToListAsync(cancellationToken);
-        var conditionalDependencyOutcomeIdsByStepDefinitionId = conditionalDependencies
-            .GroupBy(item => item.DependsOnStepId)
-            .ToDictionary(
-                group => group.Key,
-                group => group
-                    .Where(item => item.DependsOnBranchOutcomeId.HasValue)
-                    .Select(item => item.DependsOnBranchOutcomeId!.Value)
-                    .ToHashSet());
-        var artifactExpectationsById = artifactExpectationIds.Count == 0
-            ? new Dictionary<Guid, ProcessArtifactExpectation>()
-            : await dbContext.Set<ProcessArtifactExpectation>()
-                .AsNoTracking()
-                .Where(item => artifactExpectationIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, cancellationToken);
-        var sourceStepDefinitionIds = artifactExpectationsById.Values
-            .Select(item => item.StepDefinitionId)
-            .Distinct()
-            .ToList();
-        var sourceStepsById = sourceStepDefinitionIds.Count == 0
-            ? new Dictionary<Guid, ProcessStepDefinition>()
-            : await dbContext.Set<ProcessStepDefinition>()
-                .AsNoTracking()
-                .Where(item => sourceStepDefinitionIds.Contains(item.Id))
-                .ToDictionaryAsync(item => item.Id, cancellationToken);
+        var run = snapshot.Run;
+        var definition = snapshot.Definition;
         var workspaceRoot = Path.GetFullPath(workspacePathResolver.ResolveWorkspaceRoot());
         var workspaceScope = WorkspaceScopeDescriptor.Organization(
             databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N"));
 
-        foreach (var stepRun in dispatchableSteps)
+        foreach (var stepRun in snapshot.DispatchableSteps)
         {
-            if (!readyStepDefinitionsById.TryGetValue(stepRun.StepDefinitionId, out var currentStepDefinition))
+            if (!snapshot.ReadyStepDefinitionsById.TryGetValue(stepRun.StepDefinitionId, out var currentStepDefinition))
             {
                 continue;
             }
 
-            artifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
-            var availableBranchOutcomes = branchOutcomesByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredBranchOutcomes)
-                ? configuredBranchOutcomes
-                    .Select(item => new DispatchBranchOutcome(item.Id, item.Key, item.Title, item.Description))
-                    .ToList()
-                : [];
-            var requiresExplicitBranchOutcomeSelection =
-                conditionalDependencyOutcomeIdsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var requiredBranchOutcomeIds) &&
-                availableBranchOutcomes.Any(item => requiredBranchOutcomeIds.Contains(item.Id));
+            snapshot.ArtifactInputsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var configuredArtifactInputs);
+            var branchContext = ProcessDispatchBranchDependencyContext.Create(
+                stepRun,
+                snapshot.BranchOutcomesByStepDefinitionId,
+                snapshot.ConditionalDependencyOutcomeIdsByStepDefinitionId);
             var expectedArtifacts = await LoadExpectedArtifactsAsync(dbContext, stepRun.StepDefinitionId, cancellationToken);
-            var recordedArtifactExpectationIds = existingArtifacts
+            var recordedArtifactExpectationIds = snapshot.ExistingArtifacts
                 .Where(item => item.StepRunId == stepRun.Id && item.ArtifactExpectationId.HasValue)
                 .Select(item => item.ArtifactExpectationId!.Value)
                 .ToHashSet();
             var preparedArtifactInputs = PrepareArtifactInputsForPrompt(
                 BuildResolvedArtifactInputs(
                     configuredArtifactInputs ?? [],
-                    artifactExpectationsById,
-                    sourceStepsById,
-                    stepRunsByDefinitionId,
-                    existingArtifacts),
+                    snapshot.ArtifactExpectationsById,
+                    snapshot.SourceStepsById,
+                    snapshot.StepRunsByDefinitionId,
+                    snapshot.ExistingArtifacts),
                 workspaceRoot,
                 workspaceScope);
 
@@ -1765,28 +1602,28 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     definition,
                     stepRun,
                     currentStepDefinition,
-                    workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                    snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                     Guid.Empty,
                     expectedArtifacts,
                     recordedArtifactExpectationIds,
                     preparedArtifactInputs,
-                    externalReferenceKeys,
+                    snapshot.ExternalReferenceKeys,
                     null,
                     null,
                     string.Empty,
-                    availableBranchOutcomes,
-                    requiresExplicitBranchOutcomeSelection,
+                    branchContext.BranchOutcomes,
+                    branchContext.RequiresExplicitBranchOutcomeSelection,
                     new AgentProcessCooperationMetadata(
                         AgentProcessCooperationMode.ProcessArtifactHandoff,
                         AgentWorkspaceToolProfileKind.ReadOnly,
                         "Subprocess step is orchestrated by the process runtime."));
             }
 
-            stepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var workflowStepRoleRequirements);
-            var workflowAssignment = ResolveDispatchCurrentAssignment(stepRun, workflowStepRoleRequirements ?? [], runAssignments);
+            snapshot.StepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var workflowStepRoleRequirements);
+            var workflowAssignment = ResolveDispatchCurrentAssignment(stepRun, workflowStepRoleRequirements ?? [], snapshot.RunAssignments);
             var workflowRole = workflowAssignment is null
                 ? null
-                : roleRequirementsById.GetValueOrDefault(workflowAssignment.RoleRequirementId);
+                : snapshot.RoleRequirementsById.GetValueOrDefault(workflowAssignment.RoleRequirementId);
             if (IsWorkflowDispatchAssignment(workflowAssignment, workflowRole))
             {
                 return new DispatchCandidate(
@@ -1794,17 +1631,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
                     definition,
                     stepRun,
                     currentStepDefinition,
-                    workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                    snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                     Guid.Empty,
                     expectedArtifacts,
                     recordedArtifactExpectationIds,
                     preparedArtifactInputs,
-                    externalReferenceKeys,
+                    snapshot.ExternalReferenceKeys,
                     null,
                     null,
                     string.Empty,
-                    availableBranchOutcomes,
-                    requiresExplicitBranchOutcomeSelection,
+                    branchContext.BranchOutcomes,
+                    branchContext.RequiresExplicitBranchOutcomeSelection,
                     new AgentProcessCooperationMetadata(
                         AgentProcessCooperationMode.ProcessArtifactHandoff,
                         AgentWorkspaceToolProfileKind.ReadOnly,
@@ -1828,7 +1665,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 continue;
             }
 
-            var recoveryExecutionRunId = ResolveRecoverableAutomationExecutionRunId(stepRun, executionRuns);
+            var recoveryExecutionRunId = ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId(stepRun, executionRuns);
             Guid? reusableChatSessionId = null;
             var manualRecoveryDirective = await LoadLatestManualRecoveryDirectiveAsync(
                 dbContext,
@@ -1836,12 +1673,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 stepRun.Id,
                 stepRun.StartedAtUtc,
                 cancellationToken);
-            var summaries = await technicalAgentBridge.GetDirectorySummariesAsync([executorPartyId], cancellationToken);
-            var hasTechnicalAgentSummary = summaries.TryGetValue(executorPartyId, out var technicalAgentSummary);
-            if (!hasTechnicalAgentSummary ||
-                technicalAgentSummary is null ||
-                !technicalAgentSummary.TechnicalAgentId.HasValue ||
-                technicalAgentSummary.BindingStatus != AiResourceBindingStatus.Bound)
+            var bindingResult = await ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync(
+                run,
+                stepRun,
+                executorPartyId,
+                technicalAgentBridge,
+                executionClient,
+                cancellationToken);
+            if (bindingResult.TechnicalAgentId is not { } technicalAgentId ||
+                bindingResult.AgentEditor is not { } agentEditor)
             {
                 logger.LogWarning(
                     "{Diagnostic}",
@@ -1850,29 +1690,27 @@ internal sealed partial class ProcessRunAutomationDispatchService
                         stepRun.Id,
                         stepRun.Title,
                         executorPartyId,
-                        technicalAgentSummary?.BindingStatus,
-                        technicalAgentSummary?.TechnicalAgentId));
+                        bindingResult.BindingStatus,
+                        bindingResult.TechnicalAgentId));
                 continue;
             }
 
-            var agentEditor = await executionClient.GetAgentEditorAsync(technicalAgentSummary.TechnicalAgentId.Value, cancellationToken);
-            if (TryResolveProjectStructureAccessProjectId(run, out var projectStructureAccessProjectId) &&
-                ApplyProjectStructureReadAccess(agentEditor, projectStructureAccessProjectId))
+            if (bindingResult.Outcome == ProcessDispatchTechnicalAgentBindingOutcome.ProjectStructureAccessGrantedAndSaved &&
+                TryResolveProjectStructureAccessProjectId(run, out var projectStructureAccessProjectId))
             {
-                await executionClient.SaveAgentAsync(agentEditor, cancellationToken);
                 logger.LogInformation(
                     "Granted project-structure read access for project {ProjectId} to technical agent {TechnicalAgentId} before dispatching process run {RunId}, step {StepRunId}.",
                     projectStructureAccessProjectId,
-                    technicalAgentSummary.TechnicalAgentId.Value,
+                    technicalAgentId,
                     run.Id,
                     stepRun.Id);
             }
 
-            stepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var currentStepRoleRequirements);
-            var currentAssignment = ResolveDispatchCurrentAssignment(stepRun, currentStepRoleRequirements ?? [], runAssignments);
+            snapshot.StepRoleRequirementsByStepDefinitionId.TryGetValue(stepRun.StepDefinitionId, out var currentStepRoleRequirements);
+            var currentAssignment = ResolveDispatchCurrentAssignment(stepRun, currentStepRoleRequirements ?? [], snapshot.RunAssignments);
             var currentRole = currentAssignment is null
                 ? null
-                : roleRequirementsById.GetValueOrDefault(currentAssignment.RoleRequirementId);
+                : snapshot.RoleRequirementsById.GetValueOrDefault(currentAssignment.RoleRequirementId);
             if (ShouldReusePriorArtifactRecoveryExecutionRun(trigger))
             {
                 recoveryExecutionRunId ??= ResolveArtifactRecoveryExecutionRunId(
@@ -1887,25 +1725,25 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 definition,
                 stepRun,
                 currentStepDefinition,
-                workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
-                technicalAgentSummary.TechnicalAgentId.Value,
+                snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                technicalAgentId,
                 expectedArtifacts,
                 recordedArtifactExpectationIds,
                 preparedArtifactInputs,
-                externalReferenceKeys,
+                snapshot.ExternalReferenceKeys,
                 reusableChatSessionId,
                 recoveryExecutionRunId,
                 manualRecoveryDirective,
-                availableBranchOutcomes,
-                requiresExplicitBranchOutcomeSelection,
+                branchContext.BranchOutcomes,
+                branchContext.RequiresExplicitBranchOutcomeSelection,
                 ResolveProcessCooperationMetadata(
                     stepRun,
-                    workBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
+                    snapshot.WorkBriefsByStepRunId.GetValueOrDefault(stepRun.Id),
                     currentRole,
                     currentAssignment,
                     expectedArtifacts,
                     preparedArtifactInputs,
-                    availableBranchOutcomes,
+                    branchContext.BranchOutcomes,
                     agentEditor));
         }
 
@@ -1914,61 +1752,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal static bool ApplyProjectStructureReadAccess(AgentEditorModel agentEditor, Guid projectId)
     {
-        ArgumentNullException.ThrowIfNull(agentEditor);
-
-        if (projectId == Guid.Empty)
-        {
-            return false;
-        }
-
-        var access = AgentProjectStructureAccessMetadata.Normalize(agentEditor.ProjectStructureAccess);
-        if (access.CanRead &&
-            (access.AllowAllProjects || access.AllowedProjectIds.Contains(projectId)))
-        {
-            agentEditor.ProjectStructureAccess = access;
-            return false;
-        }
-
-        access.CanRead = true;
-        if (!access.AllowAllProjects &&
-            !access.AllowedProjectIds.Contains(projectId))
-        {
-            access.AllowedProjectIds.Add(projectId);
-        }
-
-        agentEditor.ProjectStructureAccess = AgentProjectStructureAccessMetadata.Normalize(access);
-        return true;
+        return ProcessDispatchTechnicalAgentBindingCoordinator.ApplyProjectStructureReadAccess(agentEditor, projectId);
     }
 
     private static bool TryResolveProjectStructureAccessProjectId(ProcessRun run, out Guid projectId)
     {
-        if (ProcessProjectStructureContextFormatter.TryParse(run.TriggerReason, out var projectStructureContext) &&
-            projectStructureContext is not null &&
-            projectStructureContext.ProjectId != Guid.Empty)
-        {
-            projectId = projectStructureContext.ProjectId;
-            return true;
-        }
-
-        if (run.ProjectId.HasValue && run.ProjectId.Value != Guid.Empty)
-        {
-            projectId = run.ProjectId.Value;
-            return true;
-        }
-
-        projectId = Guid.Empty;
-        return false;
+        return ProcessDispatchTechnicalAgentBindingCoordinator.TryResolveProjectStructureAccessProjectId(run, out projectId);
     }
 
     private static bool IsWorkflowDispatchAssignment(
         ProcessRunAssignment? assignment,
         ProcessRoleRequirement? role)
     {
-        return assignment is not null &&
-            (ProcessExecutorKindNames.IsWorkflow(assignment.ExecutorKind) ||
-             assignment.WorkflowDefinitionId.HasValue ||
-             ProcessExecutorKindNames.IsWorkflow(role?.PreferredExecutorKind) ||
-             role?.PreferredWorkflowDefinitionId.HasValue == true);
+        return ProcessDispatchAssignmentRouteHelper.IsWorkflowDispatchAssignment(assignment, role);
     }
 
     private static async Task<string> LoadLatestManualRecoveryDirectiveAsync(
@@ -1978,21 +1774,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DateTimeOffset? stepStartedAtUtc,
         CancellationToken cancellationToken)
     {
-        var query = dbContext.Set<ProcessJournalEntry>()
-            .AsNoTracking()
-            .Where(item =>
-                item.ProcessRunId == runId &&
-                item.StepRunId == stepRunId &&
-                item.EventType == ProcessRuntimeEventTypes.ManualAgentStepRerun);
-        var journalEntries = await query.ToListAsync(cancellationToken);
-        var candidateEntries = stepStartedAtUtc.HasValue
-            ? journalEntries.Where(item => item.OccurredAtUtc >= stepStartedAtUtc.Value)
-            : journalEntries;
-
-        return candidateEntries
-            .OrderByDescending(item => item.OccurredAtUtc)
-            .Select(item => item.Description)
-            .FirstOrDefault() ?? string.Empty;
+        return await ProcessDispatchRecoveryQueryHelper.LoadLatestManualRecoveryDirectiveAsync(
+            dbContext,
+            runId,
+            stepRunId,
+            stepStartedAtUtc,
+            cancellationToken);
     }
 
 }

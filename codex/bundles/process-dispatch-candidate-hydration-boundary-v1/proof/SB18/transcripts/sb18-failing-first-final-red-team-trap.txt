@@ -1,0 +1,5 @@
+Command: synthetic red-team negative fixture for SB18-INV-001
+WorkingDirectory: C:\repositories\CanDoItAll
+SB18-INV-001 FAIL: rejects fake final closure when Process Core or driver API tokens are present.
+The failure is intentional: this transcript proves the gate rejects the shallow or prohibited source shape.
+ExitCode: 1

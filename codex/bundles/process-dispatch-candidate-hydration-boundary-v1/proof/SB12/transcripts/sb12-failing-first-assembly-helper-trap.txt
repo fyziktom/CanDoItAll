@@ -1,0 +1,5 @@
+Command: synthetic red-team negative fixture for SB12-INV-001
+WorkingDirectory: C:\repositories\CanDoItAll
+SB12-INV-001 FAIL: rejects branch/artifact/assignment shaping that remains only inline in Dispatch.cs.
+The failure is intentional: this transcript proves the gate rejects the shallow or prohibited source shape.
+ExitCode: 1

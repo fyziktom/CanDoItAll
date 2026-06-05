@@ -1,7 +1,7 @@
 # SB03 - Design local selector/loader/assembler/coordinator seams
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Define module-local candidate hydration seam design and migration cutline.
@@ -13,24 +13,25 @@ Define module-local candidate hydration seam design and migration cutline.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB02 inventory complete.
+- SB02 inventory complete.
 
 ## Exact Source References
-- `architecture/02-candidate-hydration-staging.md`
-- `inventories/02-candidate-hydration-method-map.md`
+- `bundle://architecture/02-candidate-hydration-staging.md`
+- `bundle://inventories/02-candidate-hydration-method-map.md`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
 
 ## Deliverables
 - Design note for selector, loader, assembler, artifact input helper, assignment resolver, binding coordinator.
 - Explicit side-effect naming for technical-agent binding coordinator.
 
 ## Dependency Impact
-Wrong seam design invalidates all movement after SB04.
+- Wrong seam design invalidates all movement after SB04.
 
 ## Validation Depth
-Design review + source assertion; no production behavior movement.
+- Design review + source assertion; no production behavior movement.
 
 ## Implementation Steps
-1. 1. Confirm which helper may read EF and which must be pure.
+1. Confirm which helper may read EF and which must be pure.
 2. Confirm side-effect boundary for project-structure read-access mutation.
 3. Confirm no public contract promotion.
 
@@ -53,13 +54,13 @@ Design review + source assertion; no production behavior movement.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB03/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB03/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB04 may start when seam cutline is documented and reviewed.
+- SB04 may start when seam cutline is documented and reviewed.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

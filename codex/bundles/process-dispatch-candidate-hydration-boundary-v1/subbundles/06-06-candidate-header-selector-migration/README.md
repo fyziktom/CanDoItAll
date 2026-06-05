@@ -1,7 +1,7 @@
 # SB06 - Migrate LoadDispatchCandidateHeadersAsync through selector
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Migrate `LoadDispatchCandidateHeadersAsync` through the header selector.
@@ -13,24 +13,24 @@ Migrate `LoadDispatchCandidateHeadersAsync` through the header selector.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB05 selector foundation tests pass.
+- SB05 selector foundation tests pass.
 
 ## Exact Source References
-- `ProcessRunAutomationDispatchService.Dispatch.cs`
-- candidate header selector helper
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Dispatcher wrapper delegates to selector.
 - Header parity proof.
 
 ## Dependency Impact
-Candidate order and claim attempts depend on this.
+- Candidate order and claim attempts depend on this.
 
 ## Validation Depth
-Integration test for dispatchable candidates plus source scan for delegated wrapper.
+- Integration test for dispatchable candidates plus source scan for delegated wrapper.
 
 ## Implementation Steps
-1. 1. Replace inline query with selector call.
+1. Replace inline query with selector call.
 2. Preserve return shape and ordering.
 3. Preserve lease expiry and failed-run/in-progress exception.
 
@@ -53,13 +53,13 @@ Integration test for dispatchable candidates plus source scan for delegated wrap
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB06/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB06/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB07 may start only if header parity passes.
+- SB07 may start only if header parity passes.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

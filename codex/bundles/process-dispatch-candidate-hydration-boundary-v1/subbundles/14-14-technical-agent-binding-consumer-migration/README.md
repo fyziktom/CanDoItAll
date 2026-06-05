@@ -1,7 +1,7 @@
 # SB14 - Use binding coordinator in direct-agent hydration
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Migrate direct-agent candidate hydration to use technical-agent binding coordinator.
@@ -13,11 +13,11 @@ Migrate direct-agent candidate hydration to use technical-agent binding coordina
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB13 complete.
+- SB13 complete.
 
 ## Exact Source References
-- direct-agent section of `LoadDispatchCandidateAsync`
-- binding coordinator helper
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Direct-agent hydration uses binding outcome.
@@ -25,13 +25,13 @@ SB13 complete.
 - Access grant/save behavior preserved.
 
 ## Dependency Impact
-This is a side-effectful movement; must be proven carefully.
+- This is a side-effectful movement; must be proven carefully.
 
 ## Validation Depth
-Focused direct-agent hydration tests and source scans.
+- Focused direct-agent hydration tests and source scans.
 
 ## Implementation Steps
-1. 1. Replace inline binding summary/editor/save code with coordinator call.
+1. Replace inline binding summary/editor/save code with coordinator call.
 2. Preserve warning diagnostic.
 3. Preserve access grant and SaveAgentAsync.
 4. Preserve candidate construction fields.
@@ -55,13 +55,13 @@ Focused direct-agent hydration tests and source scans.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB14/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB14/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB15 may start when direct-agent parity passes.
+- SB15 may start when direct-agent parity passes.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

@@ -1,7 +1,7 @@
 # SB02 - Live inventory of candidate header selection and hydration
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Build live source-backed inventory of candidate header selection and hydration responsibilities.
@@ -13,7 +13,7 @@ Build live source-backed inventory of candidate header selection and hydration r
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB01 completed.
+- SB01 completed.
 
 ## Exact Source References
 - `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
@@ -23,13 +23,13 @@ SB01 completed.
 - Exact source ranges for header selection, hydration data reads, candidate creation, binding, recovery query, and access mutation.
 
 ## Dependency Impact
-Downstream helper design depends on this inventory; stale inventory reopens SB02.
+- Downstream helper design depends on this inventory; stale inventory reopens SB02.
 
 ## Validation Depth
-Source scan with method/range classification; no production movement.
+- Source scan with method/range classification; no production movement.
 
 ## Implementation Steps
-1. 1. Map every query and side-effect in `LoadDispatchCandidateHeadersAsync` and `LoadDispatchCandidateAsync`.
+1. Map every query and side-effect in `LoadDispatchCandidateHeadersAsync` and `LoadDispatchCandidateAsync`.
 2. Categorize pure shaping vs EF read vs side effect.
 3. Record the test coverage slice for each category.
 
@@ -52,13 +52,13 @@ Source scan with method/range classification; no production movement.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB02/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB02/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB03 may start only when every hydration section is categorized.
+- SB03 may start only when every hydration section is categorized.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

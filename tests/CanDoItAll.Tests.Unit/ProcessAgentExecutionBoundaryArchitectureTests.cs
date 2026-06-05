@@ -1524,6 +1524,123 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("StoragePlacementRequest", recordOnlyCoordinatorSection, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Process_dispatch_candidate_hydration_gate_b_SB08_INV_001_uses_selector_and_snapshot_loader_without_side_effect_drift()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var selectorSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHeaderSelector.cs"));
+        var loaderSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationLoader.cs"));
+
+        Assert.Contains("internal static class ProcessDispatchCandidateHeaderSelector", selectorSource, StringComparison.Ordinal);
+        Assert.Contains("SelectAsync", selectorSource, StringComparison.Ordinal);
+        Assert.Contains("AutomationDispatchLeaseExpiresAtUtc", selectorSource, StringComparison.Ordinal);
+        Assert.Contains("OrderBy(item => item.Sequence)", selectorSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate", selectorSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun", selectorSource, StringComparison.Ordinal);
+
+        Assert.Contains("internal sealed record ProcessDispatchCandidateHydrationSnapshot", loaderSource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessDispatchCandidateHydrationLoader", loaderSource, StringComparison.Ordinal);
+        Assert.Contains("LoadAsync", loaderSource, StringComparison.Ordinal);
+        Assert.Contains("WorkBriefsByStepRunId", loaderSource, StringComparison.Ordinal);
+        Assert.Contains("StepRoleRequirementsByStepDefinitionId", loaderSource, StringComparison.Ordinal);
+        Assert.Contains("ArtifactInputsByStepDefinitionId", loaderSource, StringComparison.Ordinal);
+        Assert.Contains("ConditionalDependencyOutcomeIdsByStepDefinitionId", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveChangesAsync", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveAgentAsync", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteRunAsync", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("workflowRunCoordinator", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", selectorSource + loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", selectorSource + loaderSource, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessDispatchCandidateHeaderSelector.SelectAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateHydrationLoader.LoadAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.DispatchableSteps", dispatchSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_candidate_hydration_gate_c_SB12_INV_001_uses_assembly_helpers_without_core_or_driver_drift()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var artifactSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchArtifactInputAssembler.cs"));
+        var branchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchBranchDependencyContext.cs"));
+        var assignmentSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchAssignmentRouteHelper.cs"));
+        var serviceArtifactSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.ArtifactValidation.cs"));
+        var serviceCooperationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Cooperation.cs"));
+        var combinedSource = string.Join(Environment.NewLine, artifactSource, branchSource, assignmentSource);
+
+        Assert.Contains("internal static class ProcessDispatchArtifactInputAssembler", artifactSource, StringComparison.Ordinal);
+        Assert.Contains("BuildResolvedArtifactInputs", artifactSource, StringComparison.Ordinal);
+        Assert.Contains("PrepareArtifactInputsForPrompt", artifactSource, StringComparison.Ordinal);
+        Assert.Contains("IsCurrentRunUpstreamArtifactInput", artifactSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchArtifactInputAssembler.BuildResolvedArtifactInputs", serviceArtifactSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchArtifactInputAssembler.PrepareArtifactInputsForPrompt", serviceArtifactSource, StringComparison.Ordinal);
+
+        Assert.Contains("internal sealed record ProcessDispatchBranchDependencyContext", branchSource, StringComparison.Ordinal);
+        Assert.Contains("RequiresExplicitBranchOutcomeSelection", branchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchBranchDependencyContext.Create", dispatchSource, StringComparison.Ordinal);
+
+        Assert.Contains("internal static class ProcessDispatchAssignmentRouteHelper", assignmentSource, StringComparison.Ordinal);
+        Assert.Contains("ResolveCurrentAssignment", assignmentSource, StringComparison.Ordinal);
+        Assert.Contains("IsWorkflowDispatchAssignment", assignmentSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchAssignmentRouteHelper.ResolveCurrentAssignment", serviceCooperationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchAssignmentRouteHelper.IsWorkflowDispatchAssignment", dispatchSource, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveChangesAsync", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveAgentAsync", combinedSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_candidate_hydration_gate_d_SB16_INV_001_keeps_binding_side_effects_explicit_and_recovery_queries_local()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var bindingSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchTechnicalAgentBindingCoordinator.cs"));
+        var recoverySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRecoveryQueryHelper.cs"));
+        var loaderSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationLoader.cs"));
+
+        Assert.Contains("internal static class ProcessDispatchTechnicalAgentBindingCoordinator", bindingSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchTechnicalAgentBindingOutcome", bindingSource, StringComparison.Ordinal);
+        Assert.Contains("ProjectStructureAccessGrantedAndSaved", bindingSource, StringComparison.Ordinal);
+        Assert.Contains("technicalAgentBridge.GetDirectorySummariesAsync", bindingSource, StringComparison.Ordinal);
+        Assert.Contains("executionClient.GetAgentEditorAsync", bindingSource, StringComparison.Ordinal);
+        Assert.Contains("executionClient.SaveAgentAsync", bindingSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("BuildMissingTechnicalAgentBindingDiagnostic", dispatchSource, StringComparison.Ordinal);
+
+        Assert.Contains("internal static class ProcessDispatchRecoveryQueryHelper", recoverySource, StringComparison.Ordinal);
+        Assert.Contains("ResolveRecoverableExecutionRunId", recoverySource, StringComparison.Ordinal);
+        Assert.Contains("LoadLatestManualRecoveryDirectiveAsync", recoverySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRecoveryQueryHelper.LoadLatestManualRecoveryDirectiveAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("SaveChangesAsync", recoverySource, StringComparison.Ordinal);
+
+        Assert.DoesNotContain("SaveAgentAsync", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetDirectorySummariesAsync", loaderSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", bindingSource + recoverySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", bindingSource + recoverySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", bindingSource + recoverySource, StringComparison.Ordinal);
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));

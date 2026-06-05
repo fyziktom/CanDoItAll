@@ -1,0 +1,5 @@
+Command: synthetic red-team negative fixture for SB16-INV-001
+WorkingDirectory: C:\repositories\CanDoItAll
+SB16-INV-001 FAIL: rejects hidden binding mutation or recovery query logic without explicit coordinator/helper.
+The failure is intentional: this transcript proves the gate rejects the shallow or prohibited source shape.
+ExitCode: 1

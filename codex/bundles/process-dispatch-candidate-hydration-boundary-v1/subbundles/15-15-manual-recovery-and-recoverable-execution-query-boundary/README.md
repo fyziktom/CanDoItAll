@@ -1,7 +1,7 @@
 # SB15 - Move manual recovery/recoverable execution query helpers
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Extract manual recovery directive and recoverable execution query boundaries.
@@ -13,11 +13,11 @@ Extract manual recovery directive and recoverable execution query boundaries.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB14 complete.
+- SB14 complete.
 
 ## Exact Source References
-- `LoadLatestManualRecoveryDirectiveAsync`
-- recoverable execution id selection in candidate hydration
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Module-local manual recovery query helper.
@@ -25,13 +25,13 @@ SB14 complete.
 - Artifact recovery execution reuse preserved.
 
 ## Dependency Impact
-Recovery dispatch depends on this; keep behavior exact.
+- Recovery dispatch depends on this; keep behavior exact.
 
 ## Validation Depth
-Focused recovery directive and execution reuse tests.
+- Focused recovery directive and execution reuse tests.
 
 ## Implementation Steps
-1. 1. Move manual directive query behind local helper.
+1. Move manual directive query behind local helper.
 2. Keep EF read-only.
 3. Preserve stepStartedAt filtering.
 4. Preserve recovery execution fallback behavior.
@@ -55,13 +55,13 @@ Focused recovery directive and execution reuse tests.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB15/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB15/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB16 Gate D may start after recovery query tests pass.
+- SB16 Gate D may start after recovery query tests pass.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

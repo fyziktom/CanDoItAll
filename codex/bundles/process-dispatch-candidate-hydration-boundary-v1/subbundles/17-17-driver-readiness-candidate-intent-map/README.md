@@ -1,7 +1,7 @@
 # SB17 - Documentation-only driver readiness candidate/evidence map
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Document candidate/evidence driver readiness map without production APIs.
@@ -13,24 +13,24 @@ Document candidate/evidence driver readiness map without production APIs.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-Gate D passed.
+- Gate D passed.
 
 ## Exact Source References
-- `architecture/03-driver-readiness-position.md`
-- `inventories/03-driver-readiness-candidate-map.md`
+- `bundle://architecture/03-driver-readiness-position.md`
+- `bundle://inventories/03-driver-readiness-candidate-map.md`
 
 ## Deliverables
 - Documentation-only map of candidate facts to future driver needs.
 - Explicit non-goals and no-driver scan.
 
 ## Dependency Impact
-Prepares later driver conversation without freezing API prematurely.
+- Prepares later driver conversation without freezing API prematurely.
 
 ## Validation Depth
-Docs/source scan proving no production driver files/interfaces/DI registrations.
+- Docs/source scan proving no production driver files/interfaces/DI registrations.
 
 ## Implementation Steps
-1. 1. Update driver readiness map with actual helper names and candidate facts.
+1. Update driver readiness map with actual helper names and candidate facts.
 2. State what remains module-local.
 3. Do not add code for drivers.
 
@@ -53,13 +53,13 @@ Docs/source scan proving no production driver files/interfaces/DI registrations.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB17/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB17/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB18 may start after no-driver scan passes.
+- SB18 may start after no-driver scan passes.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

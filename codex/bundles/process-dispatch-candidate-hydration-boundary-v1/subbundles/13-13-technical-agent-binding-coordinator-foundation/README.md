@@ -1,7 +1,7 @@
 # SB13 - Introduce side-effect-explicit technical-agent binding coordinator
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Introduce side-effect-explicit technical-agent binding coordinator.
@@ -13,12 +13,11 @@ Introduce side-effect-explicit technical-agent binding coordinator.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-Gate C passed.
+- Gate C passed.
 
 ## Exact Source References
-- technical-agent binding region in `LoadDispatchCandidateAsync`
-- `ApplyProjectStructureReadAccess`
-- `TryResolveProjectStructureAccessProjectId`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - `ProcessDispatchTechnicalAgentBindingCoordinator` or equivalent.
@@ -26,13 +25,13 @@ Gate C passed.
 - Tests for all outcomes.
 
 ## Dependency Impact
-Prepares direct-agent hydration migration. Side effects must be transparent.
+- Prepares direct-agent hydration migration. Side effects must be transparent.
 
 ## Validation Depth
-Focused unit/integration tests with fake bridge/execution client or existing test harness.
+- Focused unit/integration tests with fake bridge/execution client or existing test harness.
 
 ## Implementation Steps
-1. 1. Create coordinator with side-effect naming.
+1. Create coordinator with side-effect naming.
 2. Keep project-structure access mutation testable.
 3. Do not mark it pure.
 4. Keep logging in dispatcher or return diagnostic strings.
@@ -56,13 +55,13 @@ Focused unit/integration tests with fake bridge/execution client or existing tes
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB13/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB13/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB14 may start after binding coordinator tests pass.
+- SB14 may start after binding coordinator tests pass.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

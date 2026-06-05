@@ -1,0 +1,5 @@
+Command: python codex/skills/bundles/candoitall-bundle-preparation/scripts/validate_bundle.py codex/bundles/process-dispatch-candidate-hydration-boundary-v1 --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll
+
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-candidate-hydration-boundary-v1
+
+ExitCode: 0

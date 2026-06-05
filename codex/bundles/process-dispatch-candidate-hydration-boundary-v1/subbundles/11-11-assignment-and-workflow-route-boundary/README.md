@@ -1,7 +1,7 @@
 # SB11 - Move current assignment/workflow route recognition
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Extract current assignment and workflow route recognition.
@@ -13,24 +13,24 @@ Extract current assignment and workflow route recognition.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB10 complete.
+- SB10 complete.
 
 ## Exact Source References
-- `ResolveDispatchCurrentAssignment` usage
-- `IsWorkflowDispatchAssignment` usage
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Assignment/workflow route helper.
 - Tests for workflow executor kind, workflow definition id, preferred executor kind, preferred workflow id.
 
 ## Dependency Impact
-Incorrect detection changes route from workflow to agent or vice versa.
+- Incorrect detection changes route from workflow to agent or vice versa.
 
 ## Validation Depth
-Focused workflow route parity tests.
+- Focused workflow route parity tests.
 
 ## Implementation Steps
-1. 1. Create helper that consumes loaded assignment/role facts.
+1. Create helper that consumes loaded assignment/role facts.
 2. Preserve existing wrappers.
 3. Do not call workflow runtime here.
 
@@ -53,13 +53,13 @@ Focused workflow route parity tests.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB11/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB11/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB12 Gate C may start when workflow route parity passes.
+- SB12 Gate C may start when workflow route parity passes.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

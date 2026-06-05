@@ -1,7 +1,7 @@
 # SB07 - Introduce read snapshot records and loader cutline
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Introduce candidate hydration read snapshot and loader cutline.
@@ -13,24 +13,24 @@ Introduce candidate hydration read snapshot and loader cutline.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB06 header migration passed.
+- SB06 header migration passed.
 
 ## Exact Source References
-- `ProcessRunAutomationDispatchService.Dispatch.cs`
-- new hydration snapshot/loader helper files
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Snapshot types for run, definition, dispatchable step, work brief, step definitions, assignments, artifacts, branch outcomes, artifact inputs.
 - Loader may read EF but must not mutate.
 
 ## Dependency Impact
-Prepares assembly movement without changing behavior yet.
+- Prepares assembly movement without changing behavior yet.
 
 ## Validation Depth
-Build + tests proving snapshot contains all required fields.
+- Build + tests proving snapshot contains all required fields.
 
 ## Implementation Steps
-1. 1. Create snapshot records.
+1. Create snapshot records.
 2. Create loader that gathers read-only data.
 3. Keep dispatcher consumer unchanged or minimally adapted.
 4. Do not expose snapshot publicly.
@@ -54,13 +54,13 @@ Build + tests proving snapshot contains all required fields.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB07/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB07/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB08 Gate B may start when snapshot build/tests pass.
+- SB08 Gate B may start when snapshot build/tests pass.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

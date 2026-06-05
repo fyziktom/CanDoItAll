@@ -1486,59 +1486,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyDictionary<Guid, IReadOnlyList<ProcessStepRun>> stepRunsByDefinitionId,
         IReadOnlyList<ProcessArtifactRecord> existingArtifacts)
     {
-        if (configuredInputs.Count == 0)
-        {
-            return [];
-        }
-
-        var resolvedInputs = new List<DispatchArtifactInput>(configuredInputs.Count);
-        foreach (var configuredInput in configuredInputs)
-        {
-            if (!artifactExpectationsById.TryGetValue(configuredInput.ArtifactExpectationId, out var artifactExpectation))
-            {
-                continue;
-            }
-
-            sourceStepsById.TryGetValue(artifactExpectation.StepDefinitionId, out var sourceStepDefinition);
-            stepRunsByDefinitionId.TryGetValue(artifactExpectation.StepDefinitionId, out var sourceStepRuns);
-            var sourceStepRun = sourceStepRuns?
-                .OrderByDescending(item => item.Sequence)
-                .FirstOrDefault();
-            var sourceStepRunIds = sourceStepRuns?
-                .Select(item => item.Id)
-                .ToHashSet()
-                ?? [];
-            var sourceProcessRunIds = sourceStepRuns?
-                .Select(item => item.ProcessRunId)
-                .ToHashSet()
-                ?? [];
-            var matchingArtifacts = existingArtifacts
-                .Where(item =>
-                    IsCurrentRunUpstreamArtifactInput(item, sourceStepRunIds, sourceProcessRunIds) &&
-                    SatisfiesExpectedArtifactInput(item, artifactExpectation))
-                .OrderByDescending(item => item.CreatedAtUtc)
-                .Take(3)
-                .Select(item => new DispatchArtifactReference(
-                    item.Title,
-                    item.ArtifactKind.ToString(),
-                    item.ManagedStoragePath,
-                    item.ReviewSummary,
-                    item.ProvenanceSummary))
-                .ToList();
-
-            resolvedInputs.Add(new DispatchArtifactInput(
-                sourceStepDefinition?.Title ?? "Unknown upstream step",
-                artifactExpectation.Title,
-                artifactExpectation.Id,
-                artifactExpectation.StepDefinitionId,
-                sourceStepRun?.Id,
-                sourceStepRun?.ConcurrencyToken,
-                sourceStepRun?.Status,
-                sourceStepRun?.CurrentExecutorPartyId.HasValue == true,
-                matchingArtifacts));
-        }
-
-        return resolvedInputs;
+        return ProcessDispatchArtifactInputAssembler.BuildResolvedArtifactInputs(
+            configuredInputs,
+            artifactExpectationsById,
+            sourceStepsById,
+            stepRunsByDefinitionId,
+            existingArtifacts);
     }
 
     internal static bool IsCurrentRunUpstreamArtifactInput(
@@ -1546,16 +1499,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlySet<Guid> sourceStepRunIds,
         IReadOnlySet<Guid> sourceProcessRunIds)
     {
-        if (!artifact.StepRunId.HasValue ||
-            !sourceStepRunIds.Contains(artifact.StepRunId.Value) ||
-            !sourceProcessRunIds.Contains(artifact.ProcessRunId))
-        {
-            return false;
-        }
-
-        return ProcessArtifactLineageValidator
-            .ValidateManagedStorageBoundary(artifact, artifact.ProcessRunId)
-            .IsCurrentRun;
+        return ProcessDispatchArtifactInputAssembler.IsCurrentRunUpstreamArtifactInput(
+            artifact,
+            sourceStepRunIds,
+            sourceProcessRunIds);
     }
 
     private static string BuildArtifactInputSummary(IReadOnlyList<DispatchArtifactInput> artifactInputs)
@@ -1634,37 +1581,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return artifactInputs;
         }
 
-        var preparedInputs = new List<DispatchArtifactInput>(artifactInputs.Count);
-        foreach (var artifactInput in artifactInputs)
-        {
-            var preparedArtifacts = new List<DispatchArtifactReference>(artifactInput.Artifacts.Count);
-            foreach (var artifact in artifactInput.Artifacts)
-            {
-                var preparedPath = PrepareManagedArtifactPathForPrompt(
-                    artifact.ManagedStoragePath,
-                    workspaceRoot,
-                    workspaceScope);
-                preparedArtifacts.Add(string.Equals(preparedPath, artifact.ManagedStoragePath, StringComparison.OrdinalIgnoreCase)
-                    ? artifact
-                    : artifact with
-                    {
-                        ManagedStoragePath = preparedPath
-                    });
-            }
-
-            preparedInputs.Add(new DispatchArtifactInput(
-                artifactInput.SourceStepTitle,
-                artifactInput.ExpectedArtifactTitle,
-                artifactInput.ArtifactExpectationId,
-                artifactInput.SourceStepDefinitionId,
-                artifactInput.SourceStepRunId,
-                artifactInput.SourceStepRunConcurrencyToken,
-                artifactInput.SourceStepRunStatus,
-                artifactInput.SourceStepHasAgentExecutor,
-                preparedArtifacts));
-        }
-
-        return preparedInputs;
+        return ProcessDispatchArtifactInputAssembler.PrepareArtifactInputsForPrompt(
+            artifactInputs,
+            managedStoragePath => PrepareManagedArtifactPathForPrompt(
+                managedStoragePath,
+                workspaceRoot,
+                workspaceScope));
     }
 
     private string PrepareManagedArtifactPathForPrompt(
@@ -1734,7 +1656,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return normalized[..maxLength].TrimEnd() + "...";
     }
 
-    private static bool SatisfiesExpectedArtifactInput(
+    internal static bool SatisfiesExpectedArtifactInput(
         ProcessArtifactRecord artifact,
         ProcessArtifactExpectation expectation)
     {

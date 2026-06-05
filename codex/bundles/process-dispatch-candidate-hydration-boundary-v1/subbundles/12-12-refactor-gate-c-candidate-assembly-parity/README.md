@@ -1,7 +1,7 @@
 # SB12 - Gate C candidate assembly parity
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Refactor Gate C for candidate assembly parity.
@@ -13,11 +13,12 @@ Refactor Gate C for candidate assembly parity.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB09-SB11 complete.
+- SB09-SB11 complete.
 
 ## Exact Source References
-- Candidate assembler helpers
-- Dispatch integration tests
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Gate C proof across subprocess, workflow-backed role, and direct-agent candidates.
@@ -25,13 +26,13 @@ SB09-SB11 complete.
 - No-core/no-driver/no-viewport scans.
 
 ## Dependency Impact
-Unlocks side-effectful technical-agent boundary work.
+- Unlocks side-effectful technical-agent boundary work.
 
 ## Validation Depth
-Focused integration slices + source scans.
+- Focused integration slices + source scans.
 
 ## Implementation Steps
-1. 1. Run candidate assembly tests.
+1. Run candidate assembly tests.
 2. Compare dispatch candidate fields.
 3. Record line counts and reopened risks.
 
@@ -54,13 +55,13 @@ Focused integration slices + source scans.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB12/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB12/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-Gate C must pass before SB13.
+- Gate C must pass before SB13.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

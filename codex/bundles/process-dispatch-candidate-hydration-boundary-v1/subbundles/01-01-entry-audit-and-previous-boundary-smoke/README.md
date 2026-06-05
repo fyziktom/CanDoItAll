@@ -1,7 +1,7 @@
 # SB01 - Entry audit, branch hygiene, previous claim/route boundary smoke
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Establish current branch baseline after the claim/route bundle and prove previous boundaries still pass.
@@ -13,7 +13,7 @@ Establish current branch baseline after the claim/route bundle and prove previou
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-Branch must be clean except intended work.
+- Branch must be clean except intended work.
 
 ## Exact Source References
 - `repo://codex/bundles/process-dispatch-claim-route-boundary-v1/reviews/01-execution-report.md`
@@ -25,13 +25,13 @@ Branch must be clean except intended work.
 - Previous no-core/no-driver/no-viewport proof preserved.
 
 ## Dependency Impact
-No downstream code movement may start if the previous boundary is broken.
+- No downstream code movement may start if the previous boundary is broken.
 
 ## Validation Depth
-Source scans + architecture smoke + full or focused build as appropriate.
+- Source scans + architecture smoke + full or focused build as appropriate.
 
 ## Implementation Steps
-1. 1. Capture branch status.
+1. Capture branch status.
 2. Capture line counts.
 3. Run no-core/no-driver/no-viewport scans.
 4. Run focused architecture smoke.
@@ -56,13 +56,13 @@ Source scans + architecture smoke + full or focused build as appropriate.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB01/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB01/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB02 may start only if baseline proof is clean.
+- SB02 may start only if baseline proof is clean.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

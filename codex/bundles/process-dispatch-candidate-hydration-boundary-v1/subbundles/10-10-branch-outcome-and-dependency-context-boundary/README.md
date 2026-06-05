@@ -1,7 +1,7 @@
 # SB10 - Move branch outcome/conditional dependency shaping
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Extract branch outcome and conditional dependency context shaping.
@@ -13,24 +13,24 @@ Extract branch outcome and conditional dependency context shaping.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB09 complete.
+- SB09 complete.
 
 ## Exact Source References
-- branch outcome shaping region in `LoadDispatchCandidateAsync`
-- conditional dependency maps
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Module-local branch/dependency context helper.
 - Tests for explicit branch outcome requirement detection.
 
 ## Dependency Impact
-Branch routing and finalizer branch selection depend on this.
+- Branch routing and finalizer branch selection depend on this.
 
 ## Validation Depth
-Focused branch outcome tests.
+- Focused branch outcome tests.
 
 ## Implementation Steps
-1. 1. Extract available branch outcomes.
+1. Extract available branch outcomes.
 2. Extract requires-explicit-branch-outcome flag.
 3. Preserve display order and ids.
 
@@ -53,13 +53,13 @@ Focused branch outcome tests.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB10/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB10/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB11 may start when branch/dependency parity passes.
+- SB11 may start when branch/dependency parity passes.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

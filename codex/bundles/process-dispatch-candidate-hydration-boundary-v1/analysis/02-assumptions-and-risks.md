@@ -1,13 +1,20 @@
 # Assumptions And Risks
 
+## Working Assumptions
+
+- The current target branch remains `maf-processes-refactor`.
+- Candidate selection and hydration are the next safe module-local dispatch cutline after the prior claim/route bundle.
+- Existing dispatch tests and architecture tests are the primary proof surface for this service/runtime refactor.
+- Browser validation remains N/A unless implementation unexpectedly touches UI.
+
 ## Critical Path Risks
 
-1. Candidate hydration is a high-risk seam because it shapes the complete `DispatchCandidate` consumed by later execution, projection, validation, and finalizer code.
-2. Header selection changes can silently alter which step is claimed first.
-3. Technical-agent binding/access preparation includes side effects; treating it as pure would hide behavior and weaken tests.
-4. Artifact-input preparation affects prompts and downstream artifact satisfaction. A shallow helper extraction could preserve compile but change prompt semantics.
-5. Premature Process Core extraction would likely drag EF entities, AgentFramework models, Workbench/project-structure concepts, or technical-agent binding into the wrong boundary.
-6. Premature production driver APIs would freeze vocabulary before candidate/evidence intent semantics are stable.
+- Candidate hydration is a high-risk seam because it shapes the complete `DispatchCandidate` consumed by later execution, projection, validation, and finalizer code.
+- Header selection changes can silently alter which step is claimed first.
+- Technical-agent binding/access preparation includes side effects; treating it as pure would hide behavior and weaken tests.
+- Artifact-input preparation affects prompts and downstream artifact satisfaction. A shallow helper extraction could preserve compile but change prompt semantics.
+- Premature Process Core extraction would likely drag EF entities, AgentFramework models, Workbench/project-structure concepts, or technical-agent binding into the wrong boundary.
+- Premature production driver APIs would freeze vocabulary before candidate/evidence intent semantics are stable.
 
 ## Validation Risks
 

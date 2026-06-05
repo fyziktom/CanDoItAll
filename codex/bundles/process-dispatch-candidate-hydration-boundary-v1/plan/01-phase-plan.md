@@ -1,5 +1,14 @@
 # Phase Plan
 
+## Execution Order
+
+1. SB01 establishes branch hygiene and previous boundary smoke proof.
+2. SB02-SB04 inventory and guard the candidate hydration cutline before production movement.
+3. SB05-SB08 introduce and prove candidate header selection plus read snapshot parity.
+4. SB09-SB12 move candidate assembly helpers and prove route-kind parity.
+5. SB13-SB16 isolate side-effect-explicit binding and recovery query helpers, then run runtime smoke.
+6. SB17-SB18 close documentation-only driver readiness mapping and final red-team proof.
+
 ## Subbundle Dependency Map
 
 ```mermaid

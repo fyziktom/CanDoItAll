@@ -1,7 +1,7 @@
 # SB04 - Gate A guardrails before production movement
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Add/extend architecture guardrails before candidate code movement.
@@ -13,7 +13,7 @@ Add/extend architecture guardrails before candidate code movement.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB03 seam design complete.
+- SB03 seam design complete.
 
 ## Exact Source References
 - `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
@@ -24,13 +24,13 @@ SB03 seam design complete.
 - Tests ensuring no prohibited viewport proof paths.
 
 ## Dependency Impact
-Unlocks production movement.
+- Unlocks production movement.
 
 ## Validation Depth
-Failing-first where practical, then passing architecture tests.
+- Failing-first where practical, then passing architecture tests.
 
 ## Implementation Steps
-1. 1. Add guard tests.
+1. Add guard tests.
 2. Run targeted architecture tests.
 3. Record Gate A transcript.
 
@@ -53,13 +53,13 @@ Failing-first where practical, then passing architecture tests.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB04/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB04/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-Gate A: no production movement after SB04 unless guardrails pass.
+- Gate A: no production movement after SB04 unless guardrails pass.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

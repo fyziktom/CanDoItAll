@@ -1,7 +1,7 @@
 # SB18 - Final red-team and next safe cutline
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Final red-team and next safe cutline.
@@ -13,12 +13,12 @@ Final red-team and next safe cutline.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB01-SB17 complete.
+- SB01-SB17 complete.
 
 ## Exact Source References
-- all changed source files
-- execution report
-- proof transcripts
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `bundle://reviews/01-execution-report.md`
+- `bundle://proof`
 
 ## Deliverables
 - Final red-team.
@@ -27,13 +27,13 @@ SB01-SB17 complete.
 - Raw note closure.
 
 ## Dependency Impact
-Determines whether a future bundle can approach Process Core readiness or should continue local isolation.
+- Determines whether a future bundle can approach Process Core readiness or should continue local isolation.
 
 ## Validation Depth
-Full build, focused tests, source scans, bundle validator.
+- Full build, focused tests, source scans, bundle validator.
 
 ## Implementation Steps
-1. 1. Run final scans.
+1. Run final scans.
 2. Run final focused tests and build.
 3. Validate bundle completed.
 4. Decide next seam.
@@ -58,13 +58,13 @@ Full build, focused tests, source scans, bundle validator.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB18/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB18/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-Bundle can close only if all raw notes are mapped and no scope drift exists.
+- Bundle can close only if all raw notes are mapped and no scope drift exists.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

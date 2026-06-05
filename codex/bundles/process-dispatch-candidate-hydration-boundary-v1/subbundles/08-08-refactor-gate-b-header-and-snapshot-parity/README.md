@@ -1,7 +1,7 @@
 # SB08 - Gate B candidate header/snapshot parity
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Refactor Gate B for header and read snapshot parity.
@@ -13,12 +13,12 @@ Refactor Gate B for header and read snapshot parity.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-SB07 complete.
+- SB07 complete.
 
 ## Exact Source References
-- selector/helper tests
-- hydration snapshot tests
-- `Dispatch.cs` wrapper source
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 ## Deliverables
 - Gate B transcript.
@@ -26,13 +26,13 @@ SB07 complete.
 - No-core/no-driver/no-viewport scans.
 
 ## Dependency Impact
-Unlocks candidate assembly movement.
+- Unlocks candidate assembly movement.
 
 ## Validation Depth
-Focused dispatch tests + architecture tests + build.
+- Focused dispatch tests + architecture tests + build.
 
 ## Implementation Steps
-1. 1. Run header selector parity.
+1. Run header selector parity.
 2. Run snapshot/loader tests.
 3. Run source scans.
 4. Record reopen triggers.
@@ -56,13 +56,13 @@ Focused dispatch tests + architecture tests + build.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB08/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB08/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-Gate B must pass before SB09.
+- Gate B must pass before SB09.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.

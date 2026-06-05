@@ -1,7 +1,7 @@
 # SB05 - Introduce module-local candidate header selector
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Introduce module-local candidate header selector foundation.
@@ -13,24 +13,24 @@ Introduce module-local candidate header selector foundation.
 - `inputs/03-structured-input.md`
 
 ## Prerequisites
-Gate A passed.
+- Gate A passed.
 
 ## Exact Source References
-- `ProcessRunAutomationDispatchService.Dispatch.cs`
-- new `ProcessDispatchCandidateHeaderSelector.cs` or equivalent
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Header selector/query helper.
 - Tests for run eligibility, step status, lease expiry, sequence ordering.
 
 ## Dependency Impact
-Prepares SB06 migration.
+- Prepares SB06 migration.
 
 ## Validation Depth
-Focused unit/integration tests over selector logic.
+- Focused unit/integration tests over selector logic.
 
 ## Implementation Steps
-1. 1. Create helper with explicit EF read responsibility.
+1. Create helper with explicit EF read responsibility.
 2. Keep existing wrapper method in dispatcher.
 3. Do not change durable claim behavior.
 
@@ -53,13 +53,13 @@ Focused unit/integration tests over selector logic.
 - [ ] No Process Core, no driver API, no prohibited viewport artifacts.
 
 ## Proof Required
-Proof artifacts under `proof/SB05/` with source assertions, transcripts, and semantic invariants.
+- Proof artifacts under `proof/SB05/` with source assertions, transcripts, and semantic invariants.
 
 ## Browser Validation Logging
-N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
+- N/A expected - service/runtime refactor only. Record `N/A` in the execution report. If UI changes unexpectedly, stop and require large desktop/PC-only proof.
 
 ## Progression Gate
-SB06 may start when selector tests pass.
+- SB06 may start when selector tests pass.
 
 ## Suggested Agent Prompt
 Implement this subbundle only. Preserve behavior, keep changes module-local, update proof artifacts, and do not start downstream subbundles until this progression gate passes.
