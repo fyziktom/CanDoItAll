@@ -1,0 +1,42 @@
+Command: final source scan bundle wrapper
+Command: line counts for dispatcher and extracted helpers
+1700	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs
+1876	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+366	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryDirective.cs
+437	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs
+92	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessToolReceiptFacts.cs
+141	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRequiredToolValidationRules.cs
+51	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCriticalToolFailureRules.cs
+64	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCompletionBlockerRules.cs
+47	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCompletionDecisionRules.cs
+66	src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRecoveryRetryDecisionRules.cs
+Command: no Process Core or driver production source directories
+No matching production directories.
+Command: no prohibited viewport proof file paths
+No matching proof file paths.
+Command: anti-stub audit on extracted helper sources
+No stub/TODO/default-return matches in extracted helper sources.
+Command: dispatcher delegation source scan
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:27:        return ProcessCriticalToolFailureRules.ResolveUnresolvedCriticalToolFailures(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:46:        return ProcessCriticalToolFailureRules.ShouldIgnoreStackInapplicableCriticalToolFailure(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:86:        var decision = ProcessRequiredToolValidationRules.ResolveMissingRequiredTools(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:222:        return ProcessRequiredToolValidationRules.ShouldCarryForwardSuccessfulToolName(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:231:        return ProcessRequiredToolValidationRules.IsCurrentAttemptOnlyImplementationToolName(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:238:        return ProcessRequiredToolValidationRules.HasUnrecoverableMissingRequiredTool(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:292:        if (ProcessCompletionDecisionRules.TryResolveRunStateDecision(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs:437:        var blockerSummary = ProcessCompletionBlockerRules.CreateSummary(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs:1022:        return ProcessToolReceiptFacts.IsCriticalWorkspaceProcessReceipt(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs:1189:        return ProcessToolReceiptFacts.NormalizeToolToken(value);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationReceiptObservationHelper.cs:8:        return ProcessToolReceiptFacts.ResolveSuccessfulReceipts(detail);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationReceiptObservationHelper.cs:13:        return ProcessToolReceiptFacts.ResolveSuccessfulToolNames(detail);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationReceiptObservationHelper.cs:19:        return ProcessToolReceiptFacts.ResolveReceiptFamilies(detail);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationReceiptObservationHelper.cs:27:                ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessAutomationReceiptObservationHelper.cs:47:        return ProcessToolReceiptFacts.IsFailedReceipt(receipt);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs:213:        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs:240:        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs:266:        if (ProcessRecoveryRetryDecisionRules.TryResolveToolFailureCategory(retryFacts, out var toolFailureCategory))
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs:324:        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs:345:            return ProcessRecoveryRetryDecisionRules.ResolveMissingRequiredToolsReason(retryFacts);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RecoveryPackets.cs:350:            return ProcessRecoveryRetryDecisionRules.ResolveCriticalToolFailureReason(retryFacts);
+Invariant ID: SB16-FINAL-RED-TEAM
+ExitCode: 0

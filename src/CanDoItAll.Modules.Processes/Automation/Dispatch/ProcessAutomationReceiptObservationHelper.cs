@@ -5,35 +5,18 @@ internal static class ProcessAutomationReceiptObservationHelper
     internal static IReadOnlyList<ProcessAutomationToolExecutionReceipt> ResolveSuccessfulReceipts(
         ProcessAutomationExecutionRunDetail detail)
     {
-        ArgumentNullException.ThrowIfNull(detail);
-
-        return detail.ToolReceipts
-            .Where(receipt => !IsFailedReceipt(receipt))
-            .ToList();
+        return ProcessToolReceiptFacts.ResolveSuccessfulReceipts(detail);
     }
 
     internal static ISet<string> ResolveSuccessfulToolNames(ProcessAutomationExecutionRunDetail detail)
     {
-        return ResolveSuccessfulReceipts(detail)
-            .Select(receipt => NormalizeToolToken(receipt.ToolName))
-            .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
-            .ToHashSet(StringComparer.Ordinal);
+        return ProcessToolReceiptFacts.ResolveSuccessfulToolNames(detail);
     }
 
     internal static IReadOnlyDictionary<string, IReadOnlyList<ProcessAutomationToolExecutionReceipt>> ResolveReceiptFamilies(
         ProcessAutomationExecutionRunDetail detail)
     {
-        ArgumentNullException.ThrowIfNull(detail);
-
-        return detail.ToolReceipts
-            .GroupBy(
-                receipt => NormalizeReceiptFamily(receipt.ToolFamily),
-                StringComparer.Ordinal)
-            .Where(group => !string.IsNullOrWhiteSpace(group.Key))
-            .ToDictionary(
-                group => group.Key,
-                group => (IReadOnlyList<ProcessAutomationToolExecutionReceipt>)group.ToList(),
-                StringComparer.Ordinal);
+        return ProcessToolReceiptFacts.ResolveReceiptFamilies(detail);
     }
 
     internal static IReadOnlyList<ProcessAutomationReceiptProviderMetadata> ResolveProviderMetadata(
@@ -41,7 +24,7 @@ internal static class ProcessAutomationReceiptObservationHelper
     {
         return ResolveSuccessfulReceipts(detail)
             .Select(receipt => new ProcessAutomationReceiptProviderMetadata(
-                NormalizeToolToken(receipt.ToolName),
+                ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName),
                 receipt.RuntimeToolProviderKey.Trim(),
                 receipt.RuntimeToolProviderName.Trim()))
             .Where(metadata =>
@@ -61,26 +44,7 @@ internal static class ProcessAutomationReceiptObservationHelper
 
     internal static bool IsFailedReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
-        ArgumentNullException.ThrowIfNull(receipt);
-
-        if (string.IsNullOrWhiteSpace(receipt.ExitSummary))
-        {
-            return false;
-        }
-
-        return receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) ||
-               receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase) ||
-               receipt.ExitSummary.StartsWith("TimedOut", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeReceiptFamily(string value)
-    {
-        return value.Trim().ToLowerInvariant();
-    }
-
-    private static string NormalizeToolToken(string value)
-    {
-        return value.Trim().Replace('-', '_').ToLowerInvariant();
+        return ProcessToolReceiptFacts.IsFailedReceipt(receipt);
     }
 }
 

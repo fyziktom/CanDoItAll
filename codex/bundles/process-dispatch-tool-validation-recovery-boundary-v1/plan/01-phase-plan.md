@@ -1,5 +1,24 @@
 # Phase Plan
 
+## Phase Sequence
+
+1. SB01 - Entry audit, branch hygiene, previous boundary smoke.
+2. SB02 - Live inventory of ToolValidation and consumers.
+3. SB03 - Design local tool validation snapshot/fact seam.
+4. SB04 - Refactor Gate A architecture guardrails.
+5. SB05 - Tool receipt fact and normalization foundation.
+6. SB06 - Required tool rule helper foundation.
+7. SB07 - Migrate missing required tool consumer path.
+8. SB08 - Refactor Gate B required-tool parity.
+9. SB09 - Critical tool failure rule boundary.
+10. SB10 - Completion blocker summary aggregation.
+11. SB11 - Completion status decision wrapper.
+12. SB12 - Refactor Gate C completion parity.
+13. SB13 - Recovery retry fact boundary.
+14. SB14 - Driver-readiness semantic map.
+15. SB15 - Runtime smoke and viewport policy check.
+16. SB16 - Final red-team and next dispatcher cutline.
+
 ## Subbundle Dependency Map
 
 ```mermaid

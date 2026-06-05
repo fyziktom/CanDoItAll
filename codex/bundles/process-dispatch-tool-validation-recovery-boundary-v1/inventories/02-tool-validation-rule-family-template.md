@@ -1,16 +1,15 @@
-# Tool Validation Rule Family Inventory Template
+# Tool Validation Rule Family Inventory
 
-Codex must refresh this from live source in SB02.
+Refreshed from live source during SB02-SB16 execution.
 
 | Method/Region | Rule family | Inputs | Output | Side effects | Candidate helper | Existing tests |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ResolveRequiredToolNames` | required-tool discovery | candidate | tool names | none expected | `ProcessRequiredToolValidationRules` | TBD |
-| `ResolveMetadataRequiredToolNames` | metadata required browser proof | candidate/detail | tool names | none expected | `ProcessRequiredToolValidationRules` | TBD |
-| `ResolveMissingRequiredToolExecutions*` | missing required tools | candidate/detail/prior tools/carried proof | missing names | none expected | `ProcessRequiredToolValidationRules` | TBD |
-| `ResolveProcessMockSatisfiedToolNames` | process mock equivalent evidence | candidate/detail/required tools | satisfied tool names | none expected | `ProcessRequiredToolValidationRules` | TBD |
-| `CanSatisfyMissingDotnetNewWithValidatedExistingScaffold` | dotnet scaffold equivalence | detail | boolean | none expected | `ProcessRequiredToolValidationRules` or stack-specific local helper | TBD |
-| `ResolveUnresolvedCriticalToolFailures*` | critical failure resolution | detail/candidate | receipts | none expected | `ProcessCriticalToolFailureRules` | TBD |
-| `ShouldIgnoreStackInapplicableCriticalToolFailure` | stack-specific suppression | candidate/receipt | boolean | none expected | local stack compatibility helper; not driver API | TBD |
-| `ResolveCompletionStatusWithCarryForward*` | completion status decision | candidate/detail/outcome/facts | step status | none expected | `ProcessCompletionDecisionRules` | TBD |
-| `BuildCompletionReasonWithCarryForward*` | completion reason | candidate/detail/facts | string | none expected | later helper if safe | TBD |
-| retry/rework helpers | recovery decision facts | candidate/detail/facts | decision facts | persistence elsewhere | `ProcessRecoveryRetryDecisionRules` | TBD |
+| `ResolveRequiredToolNames` and `ResolveMetadataRequiredToolNames` | required-tool discovery | candidate/detail metadata | normalized tool names | none | Dispatcher-owned discovery, passed into `ProcessRequiredToolValidationRules` | Required-tool parity transcript: `bundle://proof/SB08/transcripts/required-tool-parity.txt`. |
+| `ResolveMissingRequiredToolExecutions*` | missing required tools | candidate/detail/prior tools/carried proof | missing names | none | `ProcessRequiredToolValidationRules` | Required-tool missing, carry-forward, negated reference, process mock, and scaffold equivalence tests passed in `bundle://proof/SB08/transcripts/required-tool-parity.txt`. |
+| `ResolveProcessMockSatisfiedToolNames` | process mock equivalent evidence | candidate/detail/required tools | satisfied tool names | none | Dispatcher-owned extraction, passed into `ProcessRequiredToolValidationRules` | `ResolveCompletionStatus_allows_process_mock*` tests passed in `bundle://proof/SB08/transcripts/required-tool-parity.txt`. |
+| `CanSatisfyMissingDotnetNewWithValidatedExistingScaffold` | dotnet scaffold equivalence | detail | boolean | none | Dispatcher predicate consumed by `ProcessRequiredToolValidationRules` | Dotnet scaffold test passed in `bundle://proof/SB08/transcripts/required-tool-parity.txt`. |
+| `ResolveUnresolvedCriticalToolFailures*` | critical failure resolution | detail/candidate | unresolved critical receipts | none | `ProcessCriticalToolFailureRules` | Critical failure tests passed in `bundle://proof/SB12/transcripts/completion-critical-parity.txt`. |
+| `ShouldIgnoreStackInapplicableCriticalToolFailure` | stack-specific suppression | candidate/receipt | boolean | none | `ProcessCriticalToolFailureRules` with dispatcher-provided stack context | JavaScript/dotnet stack suppression tests passed in `bundle://proof/SB12/transcripts/completion-critical-parity.txt`. |
+| `ResolveCompletionStatusWithCarryForward*` | completion status decision | candidate/detail/outcome/facts | step status | none | `ProcessCompletionDecisionRules` for terminal run-state branch; dispatcher keeps artifact/state orchestration | Completion parity tests passed in `bundle://proof/SB12/transcripts/completion-critical-parity.txt`. |
+| Completion blocker summary checks | blocker aggregation | resolved blocker summary strings | typed summary with `HasAny` | none | `ProcessCompletionBlockerRules` | Completion parity tests passed in `bundle://proof/SB12/transcripts/completion-critical-parity.txt`. |
+| Recovery retry packet helpers | recovery decision facts | detail/missing tools/critical receipts | retry facts, failed tool names, reason category | persistence remains in dispatcher | `ProcessRecoveryRetryDecisionRules` | Retry and directive parity tests passed in `bundle://proof/SB13/transcripts/recovery-retry-parity.txt`. |

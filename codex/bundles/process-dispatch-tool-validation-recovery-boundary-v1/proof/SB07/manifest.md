@@ -1,17 +1,20 @@
 # SB07 Proof Manifest
 
-Status: Prepared.
+## Status
 
-## Objective
+- Status: `Completed`
 
-See `subbundles/07-07-required-tool-consumer-migration/README.md`.
+## Evidence
 
-## Evidence To Record
+- Semantic invariant contract: `bundle://proof/SB07/semantic-invariants.md`
+- Source proof: `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`, `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRequiredToolValidationRules.cs`
+- Passing transcript: `bundle://proof/SB08/transcripts/required-tool-parity.txt`
+- Failing-first: N/A - process refactor with preserved public behavior; existing integration negative fixtures cover rejected required-tool cases.
+- Anti-stub audit transcript: `bundle://proof/SB16/transcripts/final-source-scans.txt`
+- Changed-file SHA-256: `30bacfb1eebd2e040c57b557aba2146cc2a66282c0adb8f78334e22647be804e` for `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs`
+- Changed-file SHA-256: `0f5b1728fb53ad1e451ca6adc967e4a182b0d007c41b2c1f4159c2445c685925` for `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRequiredToolValidationRules.cs`
+- Hash list: `bundle://proof/SB16/hashes/changed-file-hashes.txt`
 
-- transcripts/
-- source-assertions/
-- hashes/
-- semantic-invariants.md
-- anti-stub audit
-- no-core/no-driver scan where applicable
-- no prohibited viewport proof scan where applicable
+## Notes
+
+- The dispatcher still owns candidate/detail extraction; the helper owns pure required-tool missing calculations.

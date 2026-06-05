@@ -307,6 +307,121 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Tool_validation_boundary_helpers_are_module_local_without_core_or_driver_contracts()
+    {
+        var root = FindRepositoryRoot();
+        var processesDispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var helperFiles = new[]
+        {
+            "ProcessToolReceiptFacts.cs",
+            "ProcessRequiredToolValidationRules.cs",
+            "ProcessCriticalToolFailureRules.cs",
+            "ProcessCompletionBlockerRules.cs",
+            "ProcessCompletionDecisionRules.cs",
+            "ProcessRecoveryRetryDecisionRules.cs"
+        };
+        var helperSource = string.Join(
+            Environment.NewLine,
+            helperFiles.Select(file =>
+            {
+                var path = Path.Combine(processesDispatchDirectory, file);
+                Assert.True(File.Exists(path), file);
+                return File.ReadAllText(path);
+            }));
+
+        Assert.Contains("internal sealed record ProcessToolReceiptFact", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessRequiredToolDecision", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessCriticalToolFailureStackContext", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessCompletionBlockerSummary", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessCompletionDecisionInput", helperSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessRecoveryRetryFacts", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DbContext", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("storagePlacementService", helperSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("RecordArtifactAsync", helperSource, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+    }
+
+    [Fact]
+    public void Tool_validation_dispatcher_delegates_to_local_fact_and_rule_boundaries()
+    {
+        var toolValidationSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ToolValidation.cs");
+        var artifactValidationSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
+        var recoveryPacketsSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.RecoveryPackets.cs");
+        var receiptObservationSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessAutomationReceiptObservationHelper.cs");
+
+        Assert.Contains("ProcessCriticalToolFailureRules.ResolveUnresolvedCriticalToolFailures", toolValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRequiredToolValidationRules.ResolveMissingRequiredTools", toolValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessCompletionBlockerRules.CreateSummary", toolValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessCompletionDecisionRules.TryResolveRunStateDecision", toolValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessToolReceiptFacts.IsCriticalWorkspaceProcessReceipt", artifactValidationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessToolReceiptFacts.ResolveSuccessfulReceipts", receiptObservationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRecoveryRetryDecisionRules.CreateFacts", recoveryPacketsSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Tool_validation_boundary_bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
+    {
+        var proofRoot = Path.Combine(
+            FindRepositoryRoot(),
+            "codex",
+            "bundles",
+            "process-dispatch-tool-validation-recovery-boundary-v1",
+            "proof");
+        var forbiddenPathTokens = new[]
+        {
+            "mobile",
+            "small-screen",
+            "small_screen",
+            "medium-screen",
+            "medium_screen",
+            "phone",
+            "tablet",
+            "android",
+            "iphone",
+            "responsive"
+        };
+        IEnumerable<string> proofArtifactPaths = Directory.Exists(proofRoot)
+            ? Directory.EnumerateFiles(proofRoot, "*", SearchOption.AllDirectories)
+            : [];
+
+        Assert.DoesNotContain(proofArtifactPaths, path =>
+        {
+            var relativePath = Path.GetRelativePath(proofRoot, path);
+            return forbiddenPathTokens.Any(token =>
+                relativePath.Contains(token, StringComparison.OrdinalIgnoreCase));
+        });
+    }
+
+    [Fact]
     public void Artifact_validation_gate_a_records_live_inventory_and_blocks_driver_or_viewport_drift()
     {
         var root = FindRepositoryRoot();

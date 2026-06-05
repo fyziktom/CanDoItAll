@@ -1019,14 +1019,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsCriticalToolReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
-        if (!string.Equals(receipt.ToolFamily, "workspace-process", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var toolName = NormalizeToolToken(receipt.ToolName);
-        return !string.IsNullOrWhiteSpace(toolName) &&
-               !NonCriticalWorkspaceProcessToolNames.Contains(toolName);
+        return ProcessToolReceiptFacts.IsCriticalWorkspaceProcessReceipt(
+            receipt,
+            NonCriticalWorkspaceProcessToolNames);
     }
 
     private static bool IsFailedToolReceipt(ProcessAutomationToolExecutionReceipt receipt)
@@ -1191,9 +1186,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static string NormalizeToolToken(string value)
     {
-        return string.IsNullOrWhiteSpace(value)
-            ? string.Empty
-            : value.Replace('-', '_').Trim().ToLowerInvariant();
+        return ProcessToolReceiptFacts.NormalizeToolToken(value);
     }
 
     private static string? ResolveProviderNativeBrowserWorkingDirectory(ProcessAutomationExecutionRunDetail detail)

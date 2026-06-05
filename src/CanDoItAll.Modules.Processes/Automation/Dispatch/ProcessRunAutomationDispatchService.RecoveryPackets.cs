@@ -210,6 +210,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> retryReasons,
         NoProgressRetrySignal signal)
     {
+        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+            detail,
+            missingRequiredTools,
+            []);
         return new
         {
             ProcessRunId = candidate.Run.Id,
@@ -222,13 +226,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             signal.ProofDelta,
             MissingRequiredTools = missingRequiredTools,
             RetryReasons = retryReasons,
-            FailedToolNames = detail.ToolReceipts
-                .Where(IsFailedToolReceipt)
-                .Select(receipt => NormalizeToolToken(receipt.ToolName))
-                .Where(toolName => !string.IsNullOrWhiteSpace(toolName))
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(toolName => toolName, StringComparer.Ordinal)
-                .ToArray()
+            retryFacts.FailedToolNames
         };
     }
 
@@ -239,6 +237,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<string> missingRequiredTools,
         IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures)
     {
+        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+            detail,
+            missingRequiredTools,
+            unresolvedCriticalToolFailures);
         if (TryResolveRecoverableProviderFailure(detail, responseText, out _))
         {
             return AgentFailureCategory.ProviderFailure;
@@ -261,16 +263,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return AgentFailureCategory.QaRejected;
         }
 
-        if (unresolvedCriticalToolFailures.Any(receipt =>
-                NormalizeToolToken(receipt.ToolName).EndsWith("_test", StringComparison.Ordinal)))
+        if (ProcessRecoveryRetryDecisionRules.TryResolveToolFailureCategory(retryFacts, out var toolFailureCategory))
         {
-            return AgentFailureCategory.TestFailure;
-        }
-
-        if (unresolvedCriticalToolFailures.Any(receipt =>
-                NormalizeToolToken(receipt.ToolName).EndsWith("_build", StringComparison.Ordinal)))
-        {
-            return AgentFailureCategory.BuildFailure;
+            return toolFailureCategory;
         }
 
         if (RequiresConcreteBrowserProof(candidate) &&
@@ -299,7 +294,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return AgentFailureCategory.RepeatedToolLoop;
         }
 
-        if (missingRequiredTools.Count > 0)
+        if (retryFacts.HasMissingRequiredTools)
         {
             return AgentFailureCategory.MissingRequiredTool;
         }
@@ -310,7 +305,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return AgentFailureCategory.FinalizerInvalid;
         }
 
-        if (unresolvedCriticalToolFailures.Count > 0)
+        if (retryFacts.HasUnresolvedCriticalToolFailures)
         {
             return AgentFailureCategory.CriticalToolFailure;
         }
@@ -326,6 +321,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<ProcessAutomationToolExecutionReceipt> unresolvedCriticalToolFailures,
         AgentFailureCategory category)
     {
+        var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+            detail,
+            missingRequiredTools,
+            unresolvedCriticalToolFailures);
         if (TryResolveRecoverableProviderFailure(detail, responseText, out var providerFailureSummary))
         {
             return providerFailureSummary;
@@ -341,16 +340,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return finalizerFailureSummary;
         }
 
-        if (missingRequiredTools.Count > 0)
+        if (retryFacts.HasMissingRequiredTools)
         {
-            return $"Missing required tool execution(s): {string.Join(", ", missingRequiredTools)}.";
+            return ProcessRecoveryRetryDecisionRules.ResolveMissingRequiredToolsReason(retryFacts);
         }
 
-        if (unresolvedCriticalToolFailures.Count > 0)
+        if (retryFacts.HasUnresolvedCriticalToolFailures)
         {
-            return string.Join(
-                "; ",
-                unresolvedCriticalToolFailures.Take(2).Select(item => $"{item.ToolName}: {item.ExitSummary}"));
+            return ProcessRecoveryRetryDecisionRules.ResolveCriticalToolFailureReason(retryFacts);
         }
 
         var inspectionText = ResolveOutputInspectionText(responseText);

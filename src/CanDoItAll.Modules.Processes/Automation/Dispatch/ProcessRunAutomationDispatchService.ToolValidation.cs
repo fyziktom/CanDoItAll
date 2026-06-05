@@ -24,25 +24,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private static IReadOnlyList<ProcessAutomationToolExecutionReceipt> ResolveUnresolvedCriticalToolFailures(ProcessAutomationExecutionRunDetail detail)
     {
-        var latestCriticalReceipts = detail.ToolReceipts
-            .Where(IsCriticalToolReceipt)
-            .GroupBy(
-                item => string.Join(
-                    "|",
-                    NormalizeToolToken(item.ToolName),
-                    item.RequestSummary.Trim(),
-                    item.WorkingDirectory.Trim()),
-                StringComparer.Ordinal)
-            .Select(group => group
-                .OrderByDescending(item => item.CompletedAtUtc)
-                .ThenByDescending(item => item.StartedAtUtc)
-                .First())
-            .ToList();
-
-        return latestCriticalReceipts
-            .Where(IsFailedToolReceipt)
-            .Where(item => !ShouldIgnoreSupersededCriticalToolFailure(detail, item))
-            .ToList();
+        return ProcessCriticalToolFailureRules.ResolveUnresolvedCriticalToolFailures(
+            detail,
+            NonCriticalWorkspaceProcessToolNames,
+            ShouldIgnoreSupersededCriticalToolFailure);
     }
 
     private static IReadOnlyList<ProcessAutomationToolExecutionReceipt> ResolveUnresolvedCriticalToolFailures(
@@ -58,16 +43,13 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchCandidate candidate,
         ProcessAutomationToolExecutionReceipt receipt)
     {
-        var toolName = NormalizeToolToken(receipt.ToolName);
-        if (!toolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal) ||
-            ResolveRequiredToolNames(candidate).Contains(toolName, StringComparer.Ordinal))
-        {
-            return false;
-        }
-
-        return !ImplementationContractMentionsDotNet(candidate) &&
-               (ImplementationContractMentionsJavaScript(candidate) ||
-                ImplementationContractNegatesDotNet(candidate));
+        return ProcessCriticalToolFailureRules.ShouldIgnoreStackInapplicableCriticalToolFailure(
+            new ProcessCriticalToolFailureStackContext(
+                receipt,
+                ResolveRequiredToolNames(candidate),
+                ImplementationContractMentionsDotNet(candidate),
+                ImplementationContractMentionsJavaScript(candidate),
+                ImplementationContractNegatesDotNet(candidate)));
     }
 
     private static IReadOnlyList<string> ResolveMissingRequiredToolExecutions(
@@ -95,58 +77,26 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IEnumerable<string> successfulToolNamesFromPriorAttempts,
         CarriedImplementationProof carriedImplementationProof)
     {
-        var requiredToolNames = ResolveRequiredToolNames(candidate)
-            .Concat(ResolveMetadataRequiredToolNames(candidate, detail))
+        var declaredRequiredToolNames = ResolveRequiredToolNames(candidate);
+        var metadataRequiredToolNames = ResolveMetadataRequiredToolNames(candidate, detail);
+        var requiredToolNames = declaredRequiredToolNames
+            .Concat(metadataRequiredToolNames)
             .Distinct(StringComparer.Ordinal)
             .ToList();
-        if (requiredToolNames.Count == 0)
-        {
-            return [];
-        }
-
-        var successfulToolNames = ResolveSuccessfulToolNames(detail);
-        foreach (var toolName in successfulToolNamesFromPriorAttempts)
-        {
-            var normalizedToolName = NormalizeToolToken(toolName);
-            if (!string.IsNullOrWhiteSpace(normalizedToolName) &&
-                ShouldCarryForwardSuccessfulToolName(candidate, normalizedToolName))
-            {
-                successfulToolNames.Add(normalizedToolName);
-            }
-        }
-
-        foreach (var toolName in ResolveProcessMockSatisfiedToolNames(candidate, detail, requiredToolNames))
-        {
-            successfulToolNames.Add(toolName);
-        }
-
-        var missing = new List<string>();
-
-        foreach (var requiredToolName in requiredToolNames)
-        {
-            if (!successfulToolNames.Contains(requiredToolName))
-            {
-                missing.Add(requiredToolName);
-            }
-        }
-
-        if (missing.Contains("workspace_dotnet_new", StringComparer.Ordinal) &&
-            CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(detail))
-        {
-            missing = missing
-                .Where(toolName => !string.Equals(toolName, "workspace_dotnet_new", StringComparison.Ordinal))
-                .ToList();
-        }
-
-        return CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof)
-            ? missing
-                .Where(toolName =>
-                    !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
-                    !IsImplementationValidationToolName(toolName) &&
-                    !(string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) &&
-                      CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail)))
-                .ToList()
-            : missing;
+        var decision = ProcessRequiredToolValidationRules.ResolveMissingRequiredTools(
+            new ProcessRequiredToolValidationRequest(
+                declaredRequiredToolNames,
+                metadataRequiredToolNames,
+                ResolveSuccessfulToolNames(detail),
+                successfulToolNamesFromPriorAttempts,
+                ResolveProcessMockSatisfiedToolNames(candidate, detail, requiredToolNames),
+                RequiresConcreteImplementationProof(candidate),
+                RequiresConcreteBrowserProof(candidate),
+                CanSatisfyMissingDotnetNewWithValidatedExistingScaffold(detail),
+                CanSatisfyImplementationProofToolsWithCarriedProof(candidate, detail, carriedImplementationProof),
+                CanSatisfyImplementationArtifactWriteWithRecordedArtifacts(candidate, detail),
+                CreateRequiredToolValidationPolicy()));
+        return decision.MissingToolNames;
     }
 
     private static IReadOnlyList<string> ResolveMetadataRequiredToolNames(
@@ -269,39 +219,35 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ShouldCarryForwardSuccessfulToolName(DispatchCandidate candidate, string normalizedToolName)
     {
-        if (string.IsNullOrWhiteSpace(normalizedToolName))
-        {
-            return false;
-        }
-
-        if (RequiresConcreteImplementationProof(candidate) &&
-            IsCurrentAttemptOnlyImplementationToolName(normalizedToolName))
-        {
-            return false;
-        }
-
-        if (RequiresConcreteBrowserProof(candidate) &&
-            CurrentAttemptOnlyBrowserProofToolNames.Contains(normalizedToolName))
-        {
-            return false;
-        }
-
-        return true;
+        return ProcessRequiredToolValidationRules.ShouldCarryForwardSuccessfulToolName(
+            CreateRequiredToolValidationPolicy(),
+            RequiresConcreteImplementationProof(candidate),
+            RequiresConcreteBrowserProof(candidate),
+            normalizedToolName);
     }
 
     private static bool IsCurrentAttemptOnlyImplementationToolName(string normalizedToolName)
     {
-        return CurrentAttemptOnlyImplementationProofToolNames.Contains(normalizedToolName) ||
-               IsImplementationValidationToolName(normalizedToolName);
+        return ProcessRequiredToolValidationRules.IsCurrentAttemptOnlyImplementationToolName(
+            CreateRequiredToolValidationPolicy(),
+            normalizedToolName);
     }
 
     private static bool HasUnrecoverableMissingRequiredTool(IReadOnlyList<string> missingRequiredTools)
     {
-        return missingRequiredTools.Any(toolName =>
-            !ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) &&
-            !ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) &&
-            !toolName.StartsWith("project_structure_", StringComparison.Ordinal) &&
-            !IsImplementationValidationToolName(toolName));
+        return ProcessRequiredToolValidationRules.HasUnrecoverableMissingRequiredTool(
+            CreateRequiredToolValidationPolicy(),
+            missingRequiredTools);
+    }
+
+    private static ProcessRequiredToolValidationPolicy CreateRequiredToolValidationPolicy()
+    {
+        return new ProcessRequiredToolValidationPolicy(
+            ImplementationProofToolNames,
+            ConcreteProductMutationToolNames,
+            CurrentAttemptOnlyImplementationProofToolNames,
+            CurrentAttemptOnlyBrowserProofToolNames,
+            IsImplementationValidationToolName);
     }
 
     private static ProcessStepRunStatus ResolveCompletionStatusWithCarryForward(
@@ -342,26 +288,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate,
             detail,
             successfulToolNamesFromPriorAttempts,
-            carriedImplementationProof);
-        if (run.State != ProcessAutomationExecutionState.Completed)
+                carriedImplementationProof);
+        if (ProcessCompletionDecisionRules.TryResolveRunStateDecision(
+                new ProcessCompletionDecisionInput(
+                    run.State,
+                    run.Outcome,
+                    run.PendingApprovals.Count,
+                    candidate.StepRun.Status),
+                out var runStateDecision))
         {
-            return run.PendingApprovals.Count > 0
-                ? ProcessStepRunStatus.WaitingApproval
-                : run.State == ProcessAutomationExecutionState.Failed
-                    ? ProcessStepRunStatus.Failed
-                    : candidate.StepRun.Status == ProcessStepRunStatus.WaitingApproval
-                        ? ProcessStepRunStatus.WaitingApproval
-                        : ProcessStepRunStatus.InProgress;
-        }
-
-        if (run.PendingApprovals.Count > 0)
-        {
-            return ProcessStepRunStatus.WaitingApproval;
-        }
-
-        if (run.Outcome != ProcessAutomationRunOutcome.Succeeded)
-        {
-            return ProcessStepRunStatus.Failed;
+            return runStateDecision.Status;
         }
 
         var unresolvedCriticalToolFailures = ResolveUnresolvedCriticalToolFailures(candidate, detail);
@@ -498,6 +434,19 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var missingUpstreamArtifactInspectionSummary = ResolveMissingUpstreamArtifactInspectionSummary(candidate, detail);
         var outOfScopeExternalTargetReferenceSummary = ResolveOutOfScopeExternalTargetReferenceSummary(detail, inspectionText);
         var shallowSharedManagedArtifactReferenceSummary = ResolveShallowSharedManagedArtifactReferenceSummary(detail, inspectionText);
+        var blockerSummary = ProcessCompletionBlockerRules.CreateSummary(
+            missingUpstreamArtifactInputSummary,
+            missingConcreteProofSummary,
+            incompleteImplementationSummary,
+            missingConcreteImplementationProofSummary,
+            missingRunnableApplicationProofSummary,
+            invalidBrowserProofSummary,
+            invalidQualityValidationProofSummary,
+            missingRequiredArtifactSummary,
+            downgradedProjectStructureRequirementSummary,
+            missingUpstreamArtifactInspectionSummary,
+            outOfScopeExternalTargetReferenceSummary,
+            shallowSharedManagedArtifactReferenceSummary);
         if (hasDeclaredOutcome)
         {
             var contextValidation = ValidateProcessStepOutcomeContextWithCarryForward(
@@ -540,18 +489,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             }
 
             if (declaredOutcome.Status == ProcessStepRunStatus.Completed &&
-                (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
-                 !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
-                 !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
-                  !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
-                  !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
-                  !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
-                  !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
-                  !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
-                  !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary) ||
-                  !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
-                  !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
-                  !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary)))
+                blockerSummary.HasAny)
             {
                 return ProcessStepRunStatus.Blocked;
             }
@@ -565,18 +503,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return declaredOutcome.Status;
         }
 
-        if (!string.IsNullOrWhiteSpace(missingUpstreamArtifactInputSummary) ||
-            !string.IsNullOrWhiteSpace(missingConcreteProofSummary) ||
-            !string.IsNullOrWhiteSpace(incompleteImplementationSummary) ||
-            !string.IsNullOrWhiteSpace(missingConcreteImplementationProofSummary) ||
-            !string.IsNullOrWhiteSpace(missingRunnableApplicationProofSummary) ||
-            !string.IsNullOrWhiteSpace(invalidBrowserProofSummary) ||
-            !string.IsNullOrWhiteSpace(invalidQualityValidationProofSummary) ||
-            !string.IsNullOrWhiteSpace(missingRequiredArtifactSummary) ||
-            !string.IsNullOrWhiteSpace(downgradedProjectStructureRequirementSummary) ||
-            !string.IsNullOrWhiteSpace(missingUpstreamArtifactInspectionSummary) ||
-            !string.IsNullOrWhiteSpace(outOfScopeExternalTargetReferenceSummary) ||
-            !string.IsNullOrWhiteSpace(shallowSharedManagedArtifactReferenceSummary))
+        if (blockerSummary.HasAny)
         {
             return ProcessStepRunStatus.Blocked;
         }
