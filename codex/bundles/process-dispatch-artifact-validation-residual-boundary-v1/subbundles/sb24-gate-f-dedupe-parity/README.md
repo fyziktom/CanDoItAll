@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -44,8 +44,7 @@ Gate F dedupe parity.
 
 ## Deliverables
 
-Consolidate duplicate managed-path/content-kind/provider-native declared-path wrapper logic.
-
+- Consolidate duplicate managed-path/content-kind/provider-native declared-path wrapper logic.
 ## Dependency Impact
 
 - Downstream: SB25
@@ -85,13 +84,13 @@ Consolidate duplicate managed-path/content-kind/provider-native declared-path wr
 
 ## Acceptance Checklist
 
-- [ ] Source movement matches this subbundle only.
-- [ ] Existing behavior is preserved.
-- [ ] Focused tests pass or are explicitly N/A for non-production inventory.
-- [ ] Full or scoped build passes as required.
-- [ ] No Core / no driver / no UI proof scans pass.
-- [ ] Anti-stub scan passes.
-- [ ] Proof artifacts are recorded.
+- [x] Source movement matches this subbundle only.
+- [x] Existing behavior is preserved.
+- [x] Focused tests pass or are explicitly N/A for non-production inventory.
+- [x] Full or scoped build passes as required.
+- [x] No Core / no driver / no UI proof scans pass.
+- [x] Anti-stub scan passes.
+- [x] Proof artifacts are recorded.
 
 ## Proof Required
 
@@ -105,12 +104,13 @@ Consolidate duplicate managed-path/content-kind/provider-native declared-path wr
 
 ## Browser Validation Logging
 
-N/A expected. This is a runtime/service refactor only. If UI files unexpectedly change, stop and reopen scope. Do not add small/medium/mobile proof. Large desktop proof only if a reviewer explicitly confirms a UI route was intentionally affected.
-
+- N/A expected. This is a runtime/service refactor only. If UI files unexpectedly change, stop and reopen scope. Do not add small/medium/mobile proof. Large desktop proof only if a reviewer explicitly confirms a UI route was intentionally affected.
 ## Progression Gate
 
-Do not start SB25 until this subbundle's acceptance checklist is complete. Critical gates must include an explicit downstream dependency decision.
-
+- Do not start SB25 until this subbundle's acceptance checklist is complete. Critical gates must include an explicit downstream dependency decision.
 ## Suggested Agent Prompt
 
 Implement SB24 from `process-dispatch-artifact-validation-residual-boundary-v1`. Follow the exact source references and do not broaden scope. Preserve behavior, keep changes module-local, and record the required proof artifacts before proceeding.
+
+
+

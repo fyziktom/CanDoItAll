@@ -460,38 +460,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool HasProviderNativeBrowserOutputForDeclaredPath(
         ProcessAutomationExecutionRunDetail detail,
         string declaredRelativePath)
-    {
-        var expectedToolName = ResolveProviderNativeBrowserToolName(declaredRelativePath);
-        if (string.IsNullOrWhiteSpace(expectedToolName))
-        {
-            return false;
-        }
-
-        var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
-        if (!browserOutputsByToolName.TryGetValue(expectedToolName, out var outputFiles))
-        {
-            return false;
-        }
-
-        var matchingOutputFiles = outputFiles
-            .Where(outputFile => MatchesExpectedBrowserOutputFile(declaredRelativePath, outputFile))
-            .ToList();
-        if (matchingOutputFiles.Count == 0)
-        {
-            return false;
-        }
-
-        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
-        if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
-        {
-            return true;
-        }
-
-        return matchingOutputFiles.Any(outputFile =>
-            TryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFile, out var fullPath) &&
-            File.Exists(fullPath) &&
-            new FileInfo(fullPath).Length > 0);
-    }
+        => ProcessProviderNativeBrowserOutputFacts.HasProviderNativeBrowserOutputForDeclaredPath(
+            detail,
+            declaredRelativePath,
+            ResolveSuccessfulBrowserToolOutputFiles,
+            TryResolveSafeBrowserOutputPath);
 
     internal static bool WorkspaceWrittenFileMatchesExpectedArtifact(
         IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
@@ -834,87 +807,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool ShouldIgnoreSupersededCriticalToolFailure(
         ProcessAutomationExecutionRunDetail detail,
         ProcessAutomationToolExecutionReceipt receipt)
-    {
-        ArgumentNullException.ThrowIfNull(detail);
-        ArgumentNullException.ThrowIfNull(receipt);
-
-        if (ShouldIgnoreRecoveredImplementationScaffoldFailure(detail, receipt))
-        {
-            return true;
-        }
-
-        if (ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure(detail, receipt))
-        {
-            return true;
-        }
-
-        if (!receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var normalizedToolName = NormalizeToolToken(receipt.ToolName);
-        if (string.IsNullOrWhiteSpace(normalizedToolName) ||
-            !IsPlaceholderCriticalToolRequestSummary(normalizedToolName, receipt.RequestSummary))
-        {
-            return false;
-        }
-
-        return detail.ToolReceipts.Any(item =>
-            !ReferenceEquals(item, receipt) &&
-            string.Equals(NormalizeToolToken(item.ToolName), normalizedToolName, StringComparison.Ordinal) &&
-            !IsFailedToolReceipt(item) &&
-            !IsPlaceholderCriticalToolRequestSummary(normalizedToolName, item.RequestSummary));
-    }
-
-    private static bool ShouldIgnoreRecoveredImplementationScaffoldFailure(
-        ProcessAutomationExecutionRunDetail detail,
-        ProcessAutomationToolExecutionReceipt receipt)
-    {
-        ArgumentNullException.ThrowIfNull(detail);
-        ArgumentNullException.ThrowIfNull(receipt);
-
-        if ((!receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) &&
-             !receipt.ExitSummary.StartsWith("Denied", StringComparison.OrdinalIgnoreCase)) ||
-            !IsImplementationBootstrapToolName(NormalizeToolToken(receipt.ToolName)))
-        {
-            return false;
-        }
-
-        if (detail.Run.State != ProcessAutomationExecutionState.Completed ||
-            detail.Run.Outcome != ProcessAutomationRunOutcome.Succeeded)
-        {
-            return false;
-        }
-
-        if (!HasCompletedDeclaredStepOutcome(detail))
-        {
-            return false;
-        }
-
-        var successfulReceipts = detail.ToolReceipts
-            .Where(item =>
-            {
-                if (ReferenceEquals(item, receipt) || IsFailedToolReceipt(item))
-                {
-                    return false;
-                }
-
-                var normalizedToolName = NormalizeToolToken(item.ToolName);
-                return !IsPlaceholderCriticalToolRequestSummary(normalizedToolName, item.RequestSummary);
-            })
-            .ToList();
-        var hasProductCreationOrMutation = successfulReceipts.Any(item =>
-            IsConcreteProductMutationToolName(NormalizeToolToken(item.ToolName)));
-        var hasValidationOrProof = successfulReceipts.Any(item =>
-        {
-            var normalizedToolName = NormalizeToolToken(item.ToolName);
-            return ImplementationProofToolNames.Contains(normalizedToolName) ||
-                   IsImplementationValidationToolName(normalizedToolName);
-        });
-
-        return hasProductCreationOrMutation && hasValidationOrProof;
-    }
+        => ProcessCriticalToolFailureSuppressionRules.ShouldIgnoreSupersededCriticalToolFailure(
+            detail,
+            receipt,
+            new ProcessCriticalToolFailureSuppressionContext(
+                IsImplementationBootstrapToolName,
+                IsConcreteProductMutationToolName,
+                IsImplementationValidationToolName,
+                ImplementationProofToolNames,
+                HasCompletedDeclaredStepOutcome,
+                ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure));
 
     private static bool HasCompletedDeclaredStepOutcome(ProcessAutomationExecutionRunDetail detail)
     {
@@ -931,53 +833,18 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure(
         ProcessAutomationExecutionRunDetail detail,
         ProcessAutomationToolExecutionReceipt receipt)
-    {
-        var normalizedToolName = NormalizeToolToken(receipt.ToolName);
-        if (normalizedToolName is not ("workspace_read_file" or "workspace_stat_path") ||
-            !receipt.ExitSummary.StartsWith("Failed", StringComparison.OrdinalIgnoreCase) ||
-            !receipt.ExitSummary.Contains("does not exist", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
-        if (string.IsNullOrWhiteSpace(browserWorkingDirectory) ||
-            !TryResolveRequestedManagedPath(receipt.RequestSummary, out var requestedPath))
-        {
-            return false;
-        }
-
-        var browserOutputsByToolName = ResolveSuccessfulBrowserToolOutputFiles(detail);
-        foreach (var outputFileName in browserOutputsByToolName.Values.SelectMany(item => item))
-        {
-            if (MatchesExpectedBrowserOutputFile(requestedPath, outputFileName) &&
-                TryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFileName, out var fullPath) &&
-                File.Exists(fullPath))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+        => ProcessProviderNativeBrowserProbeFailureRules.ShouldIgnoreProviderNativeBrowserOutputFileProbeFailure(
+            detail,
+            receipt,
+            ManagedWorkspacePathRegex,
+            ResolveSuccessfulBrowserToolOutputFiles,
+            TryResolveSafeBrowserOutputPath);
 
     private static bool TryResolveRequestedManagedPath(string requestSummary, out string path)
-    {
-        path = string.Empty;
-        if (string.IsNullOrWhiteSpace(requestSummary))
-        {
-            return false;
-        }
-
-        var match = ManagedWorkspacePathRegex.Match(requestSummary);
-        if (!match.Success)
-        {
-            return false;
-        }
-
-        path = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
-        return !string.IsNullOrWhiteSpace(path);
-    }
+        => ProcessProviderNativeBrowserOutputFacts.TryResolveRequestedManagedPath(
+            requestSummary,
+            ManagedWorkspacePathRegex,
+            out path);
 
     private static bool IsPlaceholderCriticalToolRequestSummary(
         string normalizedToolName,
@@ -992,18 +859,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static string? ResolveProviderNativeBrowserWorkingDirectory(ProcessAutomationExecutionRunDetail detail)
-    {
-        return detail.ToolReceipts
-            .Where(receipt =>
-                string.Equals(NormalizeToolToken(receipt.ToolName), "local_mcp_launch", StringComparison.Ordinal) &&
-                receipt.RequestSummary.Contains("@playwright/mcp", StringComparison.OrdinalIgnoreCase) &&
-                !string.IsNullOrWhiteSpace(receipt.WorkingDirectory) &&
-                !IsFailedToolReceipt(receipt))
-            .OrderByDescending(receipt => receipt.CompletedAtUtc)
-            .ThenByDescending(receipt => receipt.StartedAtUtc)
-            .Select(receipt => receipt.WorkingDirectory.Trim())
-            .FirstOrDefault();
-    }
+        => ProcessProviderNativeBrowserOutputFacts.ResolveProviderNativeBrowserWorkingDirectory(detail);
 
     private static string ResolveProviderNativeBrowserToolName(string expectedRelativePath)
         => ProcessArtifactProviderNativeVisualValidationRules.ResolveProviderNativeBrowserToolName(expectedRelativePath);
@@ -1018,19 +874,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => ProcessArtifactProviderNativeVisualValidationRules.MatchesExpectedBrowserOutputFile(expectedRelativePath, outputFileName);
 
     private static string GuessContentTypeFromPath(string fullPath)
-    {
-        return Path.GetExtension(fullPath).ToLowerInvariant() switch
-        {
-            ".png" => "image/png",
-            ".jpg" or ".jpeg" => "image/jpeg",
-            ".svg" => "image/svg+xml",
-            ".yml" or ".yaml" => "text/yaml",
-            ".log" or ".txt" => "text/plain",
-            ".md" => "text/markdown",
-            ".json" => "application/json",
-            _ => "application/octet-stream"
-        };
-    }
+        => ProcessArtifactKindClassificationRules.GuessContentTypeFromPath(fullPath);
 
     private static string BuildArtifactTitle(ProcessAutomationExecutionArtifact artifact)
         => ProcessArtifactProjectionPlanner.BuildArtifactTitle(artifact);
@@ -1039,9 +883,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
 
     private static string BuildCompletedDecisionArtifactExternalReferenceKey(Guid stepRunId, Guid artifactExpectationId)
-    {
-        return $"process-step-decision:{stepRunId:D}:{artifactExpectationId:D}";
-    }
+        => ProcessExecutionArtifactMetadataRules.BuildCompletedDecisionArtifactExternalReferenceKey(
+            stepRunId,
+            artifactExpectationId);
 
     private static string BuildProviderNativeBrowserArtifactExternalReferenceKey(Guid executionRunId, string relativePath)
         => ProcessArtifactProjectionPlanner.BuildProviderNativeBrowserArtifactExternalReferenceKey(executionRunId, relativePath);
@@ -1062,128 +906,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid currentExecutorPartyId,
         AiResourceBindingStatus? bindingStatus,
         Guid? technicalAgentId)
-    {
-        var statusSummary = bindingStatus?.ToString() ?? "MissingDirectorySummary";
-        var technicalAgentSummary = technicalAgentId.HasValue
-            ? technicalAgentId.Value.ToString("D")
-            : "none";
-        return $"Process automation dispatch cannot run step '{stepTitle}' ({stepRunId:D}) for process run {processRunId:D} because executor party {currentExecutorPartyId:D} is not bound to an active technical agent. Binding status: {statusSummary}; technical agent ID: {technicalAgentSummary}.";
-    }
+        => ProcessExecutionArtifactMetadataRules.BuildMissingTechnicalAgentBindingDiagnostic(
+            processRunId,
+            stepRunId,
+            stepTitle,
+            currentExecutorPartyId,
+            bindingStatus,
+            technicalAgentId);
 
     private static string BuildStorageRelativePath(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact)
-    {
-        var normalizedRelativePath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.RelativePath);
-        if (!string.IsNullOrWhiteSpace(normalizedRelativePath))
-        {
-            return normalizedRelativePath;
-        }
-
-        return $"process-runs/{candidate.Run.Id:D}/{candidate.StepRun.Id:D}/{Path.GetFileName(artifact.RelativePath)}";
-    }
+        => ProcessExecutionArtifactMetadataRules.BuildStorageRelativePath(
+            candidate.Run.Id,
+            candidate.StepRun.Id,
+            artifact.RelativePath);
 
     private static ProcessArtifactKind ResolveProcessArtifactKind(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact)
-    {
-        var matchedExpectation = ResolveArtifactExpectation(candidate, artifact);
-        if (matchedExpectation is not null)
-        {
-            return matchedExpectation.ArtifactKind;
-        }
-
-        if (artifact.RelativePath.EndsWith("/response.md", StringComparison.OrdinalIgnoreCase))
-        {
-            return ProcessArtifactKind.Transcript;
-        }
-
-        var relativePath = artifact.RelativePath.Replace('\\', '/');
-        var fileName = Path.GetFileName(relativePath);
-        var extension = Path.GetExtension(fileName);
-
-        if (artifact.ContentType.Contains("image", StringComparison.OrdinalIgnoreCase) ||
-            IsImageExtension(extension))
-        {
-            return ProcessArtifactKind.Evidence;
-        }
-
-        if (ContainsArtifactHint(fileName, "checklist"))
-        {
-            return ProcessArtifactKind.Checklist;
-        }
-
-        if (ContainsArtifactHint(fileName, "decision"))
-        {
-            return ProcessArtifactKind.Decision;
-        }
-
-        if (ContainsArtifactHint(fileName, "brief"))
-        {
-            return ProcessArtifactKind.Brief;
-        }
-
-        if (ContainsArtifactHint(fileName, "prompt"))
-        {
-            return ProcessArtifactKind.Prompt;
-        }
-
-        if (ContainsArtifactHint(fileName, "dataset"))
-        {
-            return ProcessArtifactKind.Dataset;
-        }
-
-        if (ContainsArtifactHint(fileName, "log") ||
-            ContainsArtifactHint(fileName, "transcript") ||
-            ContainsArtifactHint(fileName, "stdout") ||
-            ContainsArtifactHint(fileName, "stderr") ||
-            extension.Equals(".log", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".txt", StringComparison.OrdinalIgnoreCase))
-        {
-            return ProcessArtifactKind.Transcript;
-        }
-
-        return string.Equals(artifact.ArtifactKind, "generated-output", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-               IsCodeOrProjectExtension(extension)
-            ? ProcessArtifactKind.Deliverable
-            : ProcessArtifactKind.Evidence;
-    }
+        => ProcessArtifactKindClassificationRules.ResolveProcessArtifactKind(
+            artifact,
+            ResolveArtifactExpectation(candidate, artifact)?.ArtifactKind);
 
     private static StorageContentKind ResolveStorageContentKind(string contentType, string fullPath)
-    {
-        if (contentType.Contains("markdown", StringComparison.OrdinalIgnoreCase))
-        {
-            return StorageContentKind.Markdown;
-        }
-
-        if (contentType.Contains("json", StringComparison.OrdinalIgnoreCase))
-        {
-            return StorageContentKind.Json;
-        }
-
-        if (contentType.Contains("image", StringComparison.OrdinalIgnoreCase))
-        {
-            return StorageContentKind.Image;
-        }
-
-        if (contentType.Contains("pdf", StringComparison.OrdinalIgnoreCase))
-        {
-            return StorageContentKind.Pdf;
-        }
-
-        return Path.GetExtension(fullPath).ToLowerInvariant() switch
-        {
-            ".md" => StorageContentKind.Markdown,
-            ".json" => StorageContentKind.Json,
-            ".svg" => StorageContentKind.Image,
-            ".png" => StorageContentKind.Image,
-            ".jpg" or ".jpeg" => StorageContentKind.Image,
-            ".pdf" => StorageContentKind.Pdf,
-            ".txt" or ".log" => StorageContentKind.Log,
-            _ => StorageContentKind.Unknown
-        };
-    }
+        => ProcessStorageContentKindRules.ResolveStorageContentKind(contentType, fullPath);
 
     private static string NormalizeTrigger(string trigger, Guid? stepRunId)
     {
@@ -2038,42 +1785,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(validationRequirementSummary, out relativePath);
 
     internal static IReadOnlyList<ProjectStructureRequiredArtifactPath> ResolveProjectStructureRequiredArtifactPaths(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return [];
-        }
-
-        var artifacts = new List<ProjectStructureRequiredArtifactPath>();
-        foreach (Match match in Regex.Matches(
-                     text,
-                     @"Required file\s+`(?<file>[^`]+\.md)`\s+must be written at\s+`(?<path>[^`]+)`",
-                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            AddProjectStructureRequiredArtifactPath(
-                artifacts,
-                match.Groups["file"].Value,
-                match.Groups["path"].Value);
-        }
-
-        foreach (Match match in Regex.Matches(
-                     text,
-                     @"Governed path:\s*(?<path>external-target/[^\r\n\s`]+)",
-                     RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-        {
-            var path = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
-            AddProjectStructureRequiredArtifactPath(
-                artifacts,
-                Path.GetFileName(path),
-                path);
-        }
-
-        return artifacts
-            .GroupBy(item => item.AliasPath, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(item => item.FileName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
+        => ProcessProjectStructureArtifactPathRules.ResolveProjectStructureRequiredArtifactPaths(
+            text,
+            TryMapAbsoluteExternalPathToAlias);
 
     private static bool TryResolveProjectStructureExpectedArtifactPath(
         DispatchCandidate candidate,
@@ -2091,315 +1805,64 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact,
         IReadOnlyList<ProjectStructureRequiredArtifactPath> requiredArtifactPaths,
         out string governedPath)
-    {
-        governedPath = string.Empty;
-        if (requiredArtifactPaths.Count == 0)
-        {
-            return false;
-        }
-
-        var bestMatch = requiredArtifactPaths
-            .Select(path => new
-            {
-                Path = path,
-                Score = ScoreProjectStructureArtifactPathMatch(expectedArtifact, path.FileName)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .ThenBy(item => item.Path.FileName, StringComparer.OrdinalIgnoreCase)
-            .FirstOrDefault();
-        if (bestMatch is null)
-        {
-            return false;
-        }
-
-        governedPath = bestMatch.Path.AliasPath;
-        return !string.IsNullOrWhiteSpace(governedPath);
-    }
+        => ProcessProjectStructureArtifactPathRules.TryResolveProjectStructureExpectedArtifactPath(
+            expectedArtifact,
+            requiredArtifactPaths,
+            out governedPath);
 
     internal static int ScoreProjectStructureArtifactPathMatch(
         DispatchArtifactExpectation expectedArtifact,
         string fileName)
-    {
-        if (string.IsNullOrWhiteSpace(fileName))
-        {
-            return 0;
-        }
-
-        var expectedTokens = TokenizeProjectStructureArtifactName(expectedArtifact.Title);
-        var fileTokens = TokenizeProjectStructureArtifactName(Path.GetFileNameWithoutExtension(fileName));
-        if (expectedTokens.Count == 0 || fileTokens.Count == 0)
-        {
-            return 0;
-        }
-
-        var matchedTokenCount = expectedTokens.Count(fileTokens.Contains);
-        if (matchedTokenCount >= Math.Min(2, expectedTokens.Count))
-        {
-            return matchedTokenCount * 10 + (expectedTokens.Count == matchedTokenCount ? 5 : 0);
-        }
-
-        var expectedSlug = FileSafeSlugBuilder.Build(string.Join('-', expectedTokens));
-        var fileSlug = FileSafeSlugBuilder.Build(string.Join('-', fileTokens));
-        return !string.IsNullOrWhiteSpace(expectedSlug) &&
-               !string.IsNullOrWhiteSpace(fileSlug) &&
-               (fileSlug.Contains(expectedSlug, StringComparison.Ordinal) ||
-                expectedSlug.Contains(fileSlug, StringComparison.Ordinal))
-            ? 1
-            : 0;
-    }
-
-    private static IReadOnlyList<string> TokenizeProjectStructureArtifactName(string value)
-    {
-        return TokenizeArtifactComparisonText(value)
-            .Where(token => !ProcessArtifactTextMatchRules.IsArtifactTitleNoiseToken(token))
-            .Where(token => !ProcessArtifactTextMatchRules.IsArtifactContentNoiseToken(token))
-            .Where(token => !token.All(char.IsDigit))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-    }
-
-    private static void AddProjectStructureRequiredArtifactPath(
-        ICollection<ProjectStructureRequiredArtifactPath> artifacts,
-        string fileName,
-        string aliasPath)
-    {
-        var normalizedFileName = fileName.Trim();
-        var normalizedPath = NormalizeProjectStructureArtifactPathForComparison(aliasPath);
-        if (string.IsNullOrWhiteSpace(normalizedFileName) ||
-            string.IsNullOrWhiteSpace(normalizedPath) ||
-            artifacts.Any(item => string.Equals(item.AliasPath, normalizedPath, StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
-        }
-
-        artifacts.Add(new ProjectStructureRequiredArtifactPath(normalizedFileName, normalizedPath));
-    }
+        => ProcessProjectStructureArtifactPathRules.ScoreProjectStructureArtifactPathMatch(
+            expectedArtifact,
+            fileName);
 
     private static bool ArtifactPathMatchesGovernedProjectStructurePath(
         string observedPath,
         string governedPath)
-    {
-        return string.Equals(
-            NormalizeProjectStructureArtifactPathForComparison(observedPath),
-            NormalizeProjectStructureArtifactPathForComparison(governedPath),
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string NormalizeProjectStructureArtifactPathForComparison(string path)
-    {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
-        if (string.IsNullOrWhiteSpace(normalized))
-        {
-            return string.Empty;
-        }
-
-        if (TryMapAbsoluteExternalPathToAlias(normalized, out var mappedAlias))
-        {
-            normalized = mappedAlias;
-        }
-
-        return NormalizeManagedRelativePathForComparison(normalized);
-    }
+        => ProcessProjectStructureArtifactPathRules.ArtifactPathMatchesGovernedProjectStructurePath(
+            observedPath,
+            governedPath,
+            TryMapAbsoluteExternalPathToAlias);
 
     private static GovernedInspectionPaths ResolveGovernedInspectionPaths(IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts)
-    {
-        var statPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        var readPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var expectedArtifact in expectedArtifacts)
-        {
-            if (!TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var relativePath))
-            {
-                continue;
-            }
-
-            var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
-            if (string.IsNullOrWhiteSpace(normalizedPath))
-            {
-                continue;
-            }
-
-            statPaths.Add(normalizedPath);
-            if (IsTextReadableManagedArtifactPath(normalizedPath))
-            {
-                readPaths.Add(normalizedPath);
-            }
-        }
-
-        return new GovernedInspectionPaths(statPaths.ToList(), readPaths.ToList());
-    }
+        => ToGovernedInspectionPaths(
+            ProcessGovernedArtifactInspectionRules.ResolveGovernedInspectionPaths(expectedArtifacts));
 
     private static GovernedInspectionPaths ResolveArtifactInputInspectionPaths(IReadOnlyList<DispatchArtifactInput> artifactInputs)
-    {
-        var statPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        var readPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var sourceStepGroup in artifactInputs.GroupBy(input => input.SourceStepTitle, StringComparer.OrdinalIgnoreCase))
-        {
-            var sourceStepStatPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-            var sourceStepReadPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-            var sourceStepVisualAttachmentPaths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var artifactInput in sourceStepGroup)
-            {
-                foreach (var artifact in artifactInput.Artifacts)
-                {
-                    var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(artifact.ManagedStoragePath);
-                    if (string.IsNullOrWhiteSpace(normalizedPath))
-                    {
-                        continue;
-                    }
-
-                    if (IsTextReadableManagedArtifactPath(normalizedPath))
-                    {
-                        sourceStepStatPaths.Add(normalizedPath);
-                        sourceStepReadPaths.Add(normalizedPath);
-                        continue;
-                    }
-
-                    if (IsVisualEvidenceAttachmentPath(normalizedPath))
-                    {
-                        sourceStepVisualAttachmentPaths.Add(normalizedPath);
-                        continue;
-                    }
-
-                    sourceStepStatPaths.Add(normalizedPath);
-                }
-            }
-
-            foreach (var path in sourceStepStatPaths)
-            {
-                statPaths.Add(path);
-            }
-
-            foreach (var path in sourceStepReadPaths)
-            {
-                readPaths.Add(path);
-            }
-
-            if (sourceStepReadPaths.Count == 0)
-            {
-                foreach (var path in sourceStepVisualAttachmentPaths)
-                {
-                    statPaths.Add(path);
-                }
-            }
-        }
-
-        return new GovernedInspectionPaths(statPaths.ToList(), readPaths.ToList());
-    }
+        => ToGovernedInspectionPaths(
+            ProcessGovernedArtifactInspectionRules.ResolveArtifactInputInspectionPaths(artifactInputs));
 
     private static string ResolveMissingUpstreamArtifactInspectionSummary(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail)
-    {
-        var missingInspectionPaths = ResolveMissingUpstreamArtifactInspectionPaths(candidate, detail);
-        if (missingInspectionPaths.StatPaths.Count == 0 && missingInspectionPaths.ReadPaths.Count == 0)
-        {
-            return string.Empty;
-        }
-
-        var parts = new List<string>();
-        if (missingInspectionPaths.StatPaths.Count > 0)
-        {
-            parts.Add($"workspace_stat_path missing for {FormatPromptPathList(missingInspectionPaths.StatPaths)}");
-        }
-
-        if (missingInspectionPaths.ReadPaths.Count > 0)
-        {
-            parts.Add($"workspace_read_file missing for {FormatPromptPathList(missingInspectionPaths.ReadPaths)}");
-        }
-
-        return "the review step did not directly inspect inherited upstream artifacts: " + string.Join("; ", parts);
-    }
+        => ProcessGovernedArtifactInspectionRules.ResolveMissingUpstreamArtifactInspectionSummary(
+            ToGovernedInspectionPathSet(ResolveMissingUpstreamArtifactInspectionPaths(candidate, detail)));
 
     private static GovernedInspectionPaths ResolveMissingUpstreamArtifactInspectionPaths(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail)
-    {
-        if (!RequiresGovernedInspection(candidate.StepRun) || candidate.ArtifactInputs.Count == 0)
-        {
-            return new GovernedInspectionPaths([], []);
-        }
-
-        var requiredInspectionPaths = ResolveArtifactInputInspectionPaths(candidate.ArtifactInputs);
-        if (requiredInspectionPaths.StatPaths.Count == 0 && requiredInspectionPaths.ReadPaths.Count == 0)
-        {
-            return new GovernedInspectionPaths([], []);
-        }
-
-        var successfulStatPaths = ResolveSuccessfulWorkspaceInspectionPaths(
-            detail,
-            "workspace_stat_path",
-            ResolveSuccessfulSessionPathStats(detail.Run.SerializedSessionStateJson));
-        var successfulReadPaths = ResolveSuccessfulWorkspaceInspectionPaths(
-            detail,
-            "workspace_read_file",
-            ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson));
-
-        var missingStatPaths = requiredInspectionPaths.StatPaths
-            .Where(path => !ContainsEquivalentManagedPath(successfulStatPaths, path) &&
-                           !ContainsEquivalentManagedPath(successfulReadPaths, path))
-            .Take(3)
-            .ToList();
-        var missingReadPaths = requiredInspectionPaths.ReadPaths
-            .Where(path => !ContainsEquivalentManagedPath(successfulReadPaths, path))
-            .Take(3)
-            .ToList();
-
-        return new GovernedInspectionPaths(missingStatPaths, missingReadPaths);
-    }
-
-    private static bool ContainsEquivalentManagedPath(IReadOnlySet<string> paths, string requiredPath)
-    {
-        if (paths.Contains(requiredPath))
-        {
-            return true;
-        }
-
-        var normalizedRequiredPath = NormalizeManagedRelativePathForComparison(requiredPath);
-        return !string.IsNullOrWhiteSpace(normalizedRequiredPath) &&
-               paths.Any(path => string.Equals(
-                   NormalizeManagedRelativePathForComparison(path),
-                   normalizedRequiredPath,
-                   StringComparison.OrdinalIgnoreCase));
-    }
-
-    private static IReadOnlySet<string> ResolveSuccessfulWorkspaceInspectionPaths(
-        ProcessAutomationExecutionRunDetail detail,
-        string normalizedToolName,
-        IReadOnlyList<SessionFileContent> sessionPaths)
-    {
-        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var sessionPath in sessionPaths)
-        {
-            AddNormalizedWorkspaceInspectionPath(paths, sessionPath.Path);
-        }
-
-        foreach (var receipt in detail.ToolReceipts.Where(receipt =>
-                     !IsFailedToolReceipt(receipt) &&
-                     string.Equals(NormalizeToolToken(receipt.ToolName), normalizedToolName, StringComparison.Ordinal)))
-        {
-            foreach (var path in ResolveManagedWorkspacePathsFromReceipt(receipt))
-            {
-                AddNormalizedWorkspaceInspectionPath(paths, path);
-            }
-        }
-
-        return paths;
-    }
-
-    private static void AddNormalizedWorkspaceInspectionPath(ISet<string> paths, string path)
-    {
-        var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
-        if (!string.IsNullOrWhiteSpace(normalizedPath))
-        {
-            paths.Add(normalizedPath);
-        }
-    }
+        => ToGovernedInspectionPaths(
+            ProcessGovernedArtifactInspectionRules.ResolveMissingUpstreamArtifactInspectionPaths(
+                RequiresGovernedInspection(candidate.StepRun),
+                candidate.ArtifactInputs,
+                ResolveSuccessfulSessionPathStats(detail.Run.SerializedSessionStateJson)
+                    .Select(path => path.Path)
+                    .ToList(),
+                ResolveSuccessfulSessionFileReads(detail.Run.SerializedSessionStateJson)
+                    .Select(file => file.Path)
+                    .ToList(),
+                detail.ToolReceipts,
+                ResolveManagedWorkspacePathsFromReceipt));
 
     private static string FormatPromptPathList(IReadOnlyList<string> relativePaths)
-    {
-        return string.Join(", ", relativePaths.Select(relativePath => $"`{relativePath}`"));
-    }
+        => ProcessGovernedArtifactInspectionRules.FormatPromptPathList(relativePaths);
+
+    private static GovernedInspectionPaths ToGovernedInspectionPaths(ProcessGovernedInspectionPathSet paths)
+        => new(paths.StatPaths, paths.ReadPaths);
+
+    private static ProcessGovernedInspectionPathSet ToGovernedInspectionPathSet(GovernedInspectionPaths paths)
+        => new(paths.StatPaths, paths.ReadPaths);
 
     private static string NormalizeManagedRelativePathForComparison(string relativePath)
         => ProcessArtifactPathValidationRules.NormalizeManagedRelativePathForComparison(relativePath);
@@ -2483,18 +1946,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool CanMatchArtifactByTextContent(ProcessAutomationExecutionArtifact artifact)
-    {
-        if (string.IsNullOrWhiteSpace(artifact.RelativePath))
-        {
-            return false;
-        }
-
-        return artifact.ContentType.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ||
-               artifact.ContentType.Contains("json", StringComparison.OrdinalIgnoreCase) ||
-              artifact.ContentType.Contains("xml", StringComparison.OrdinalIgnoreCase) ||
-              artifact.ContentType.Contains("yaml", StringComparison.OrdinalIgnoreCase) ||
-              IsTextReadableManagedArtifactPath(artifact.RelativePath);
-    }
+        => ProcessExecutionArtifactTextContentRules.CanMatchArtifactByTextContent(artifact);
 
     private static bool IsProviderNativeBrowserOutputArtifact(ProcessAutomationExecutionArtifact artifact)
         => ProcessArtifactProviderNativeVisualValidationRules.IsProviderNativeBrowserOutputArtifact(artifact);
@@ -2503,29 +1955,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionArtifact artifact,
         string fullPath,
         byte[] content)
-    {
-        const int maxTextArtifactBytes = 512 * 1024;
-
-        if (!CanMatchArtifactByTextContent(artifact) ||
-            content.Length == 0 ||
-            content.Length > maxTextArtifactBytes ||
-            IsImageExtension(Path.GetExtension(fullPath)))
-        {
-            return null;
-        }
-
-        try
-        {
-            var text = Encoding.UTF8.GetString(content);
-            return text.Contains('\0', StringComparison.Ordinal)
-                ? null
-                : text;
-        }
-        catch (DecoderFallbackException)
-        {
-            return null;
-        }
-    }
+        => ProcessExecutionArtifactTextContentRules.TryDecodeTextArtifactContent(
+            artifact,
+            fullPath,
+            content);
 
     private static bool ShouldProjectFinalAssistantResponse(ProcessAutomationExecutionRunRecord run)
     {
@@ -2565,22 +1998,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static string ResolveWorkspaceWrittenArtifactRelativePath(
         WorkspaceScopeDescriptor workspaceScope,
         string path)
-    {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
-        if (string.IsNullOrWhiteSpace(normalized))
-        {
-            return string.Empty;
-        }
-
-        if (IsExternalTargetAliasPath(normalized))
-        {
-            return normalized;
-        }
-
-        return TryMapAbsoluteExternalPathToAlias(normalized, out var mappedAlias)
-            ? mappedAlias
-            : ResolveScopedManagedRelativePath(workspaceScope, normalized);
-    }
+        => ProcessExecutionArtifactMetadataRules.ResolveWorkspaceWrittenArtifactRelativePath(
+            workspaceScope,
+            path,
+            IsExternalTargetAliasPath,
+            TryMapAbsoluteExternalPathToAlias,
+            ResolveScopedManagedRelativePath);
 
     private static bool TryResolveWorkspaceWrittenArtifactSourceFullPath(
         string workspaceRoot,
@@ -2590,115 +2013,37 @@ internal sealed partial class ProcessRunAutomationDispatchService
         out string fullPath,
         out string sourceRelativePath,
         out string failureReason)
-    {
-        fullPath = string.Empty;
-        sourceRelativePath = string.Empty;
-        failureReason = string.Empty;
-
-        var sourceCandidates = ResolveWorkspaceWrittenArtifactSourceRelativePaths(
+        => ProcessExecutionArtifactMetadataRules.TryResolveWorkspaceWrittenArtifactSourceFullPath(
+            workspaceRoot,
             workspaceScope,
             writtenPath,
-            projectedRelativePath);
-        foreach (var candidatePath in sourceCandidates)
-        {
-            if (!TryResolveArtifactFullPath(workspaceRoot, candidatePath, out var candidateFullPath, out var candidateFailure))
-            {
-                failureReason = candidateFailure;
-                continue;
-            }
-
-            if (!File.Exists(candidateFullPath))
-            {
-                failureReason = $"File '{candidatePath}' does not exist.";
-                continue;
-            }
-
-            fullPath = candidateFullPath;
-            sourceRelativePath = candidatePath;
-            failureReason = string.Empty;
-            return true;
-        }
-
-        return false;
-    }
+            projectedRelativePath,
+            IsExternalTargetAliasPath,
+            TryMapAbsoluteExternalPathToAlias,
+            ResolveScopedManagedRelativePath,
+            TryResolveArtifactFullPath,
+            out fullPath,
+            out sourceRelativePath,
+            out failureReason);
 
     internal static IReadOnlyList<string> ResolveWorkspaceWrittenArtifactSourceRelativePaths(
         WorkspaceScopeDescriptor workspaceScope,
         string writtenPath,
         string projectedRelativePath)
-    {
-        var paths = new List<string>();
-        AddWorkspaceWrittenArtifactSourceRelativePath(paths, writtenPath);
-        AddWorkspaceWrittenArtifactSourceRelativePath(paths, projectedRelativePath);
-
-        var normalizedWrittenPath = WorkspaceScopeDescriptor.NormalizeRelativePath(writtenPath);
-        if (!string.IsNullOrWhiteSpace(normalizedWrittenPath) &&
-            !IsExternalTargetAliasPath(normalizedWrittenPath) &&
-            !TryMapAbsoluteExternalPathToAlias(normalizedWrittenPath, out _) &&
-            IsManagedWorkspaceArtifactPath(normalizedWrittenPath))
-        {
-            AddWorkspaceWrittenArtifactSourceRelativePath(
-                paths,
-                ResolveScopedManagedRelativePath(workspaceScope, normalizedWrittenPath));
-        }
-
-        return paths;
-    }
-
-    private static void AddWorkspaceWrittenArtifactSourceRelativePath(
-        ICollection<string> paths,
-        string path)
-    {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
-        if (string.IsNullOrWhiteSpace(normalized) ||
-            paths.Contains(normalized, StringComparer.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (TryMapAbsoluteExternalPathToAlias(normalized, out var mappedAlias))
-        {
-            if (!paths.Contains(mappedAlias, StringComparer.OrdinalIgnoreCase))
-            {
-                paths.Add(mappedAlias);
-            }
-
-            return;
-        }
-
-        paths.Add(normalized);
-    }
-
-    private static bool IsManagedWorkspaceArtifactPath(string path)
-    {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
-        if (string.IsNullOrWhiteSpace(normalized))
-        {
-            return false;
-        }
-
-        var rootSegment = normalized
-            .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .FirstOrDefault();
-        return rootSegment is not null && IsManagedRootSegment(rootSegment);
-    }
+        => ProcessExecutionArtifactMetadataRules.ResolveWorkspaceWrittenArtifactSourceRelativePaths(
+            workspaceScope,
+            writtenPath,
+            projectedRelativePath,
+            IsExternalTargetAliasPath,
+            TryMapAbsoluteExternalPathToAlias,
+            ResolveScopedManagedRelativePath);
 
     private static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
-    {
-        return expectedArtifact.IsRequired &&
-               expectedArtifact.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord &&
-               expectedArtifact.TrustRequirement is ProcessArtifactTrustRequirement.ReviewRequired or ProcessArtifactTrustRequirement.HumanApproved or ProcessArtifactTrustRequirement.ApprovalRequired;
-    }
+        => ProcessExecutionArtifactMetadataRules.ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact);
 
     private static ProcessArtifactTrustStatus ResolveCompletedDecisionArtifactTrustStatus(
         ProcessArtifactTrustRequirement trustRequirement)
-    {
-        return trustRequirement switch
-        {
-            ProcessArtifactTrustRequirement.HumanApproved or ProcessArtifactTrustRequirement.ApprovalRequired => ProcessArtifactTrustStatus.Approved,
-            _ => ProcessArtifactTrustStatus.ReviewRequired
-        };
-    }
+        => ProcessExecutionArtifactMetadataRules.ResolveCompletedDecisionArtifactTrustStatus(trustRequirement);
 
     internal static ProcessArtifactTrustStatus ResolveProjectedArtifactTrustStatus(
         DispatchArtifactExpectation expectedArtifact,
@@ -2801,59 +2146,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static string ResolveScopedManagedRelativePath(WorkspaceScopeDescriptor workspaceScope, string relativePath)
-    {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
-        if (workspaceScope.IsDefaultSandbox || string.IsNullOrWhiteSpace(normalized))
-        {
-            return normalized;
-        }
-
-        return TryResolveScopedManagedRelativePath(normalized, "artifacts", workspaceScope.ArtifactRootRelativePath)
-            ?? TryResolveScopedManagedRelativePath(normalized, "output", workspaceScope.OutputRootRelativePath)
-            ?? TryResolveScopedManagedRelativePath(normalized, "integration-map", workspaceScope.IntegrationMapRootRelativePath)
-            ?? TryResolveScopedManagedRelativePath(normalized, "data", workspaceScope.DataRootRelativePath)
-            ?? normalized;
-    }
-
-    private static string? TryResolveScopedManagedRelativePath(string relativePath, string rootName, string scopedRootRelativePath)
-    {
-        if (!IsManagedRootMatch(relativePath, rootName))
-        {
-            return null;
-        }
-
-        if (IsManagedRootMatch(relativePath, scopedRootRelativePath))
-        {
-            return relativePath;
-        }
-
-        var foreignScopedPrefix = $"{rootName}/scopes/";
-        if (relativePath.StartsWith(foreignScopedPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return relativePath;
-        }
-
-        var suffix = RemoveManagedRoot(relativePath, rootName);
-        return string.IsNullOrWhiteSpace(suffix)
-            ? scopedRootRelativePath
-            : WorkspaceScopeDescriptor.NormalizeRelativePath(Path.Combine(scopedRootRelativePath, suffix));
-    }
-
-    private static bool IsManagedRootMatch(string relativePath, string rootRelativePath)
-    {
-        return string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase) ||
-               relativePath.StartsWith(rootRelativePath + "/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string RemoveManagedRoot(string relativePath, string rootRelativePath)
-    {
-        if (string.Equals(relativePath, rootRelativePath, StringComparison.OrdinalIgnoreCase))
-        {
-            return string.Empty;
-        }
-
-        return relativePath[(rootRelativePath.Length + 1)..];
-    }
+        => ProcessScopedManagedArtifactPathRules.ResolveScopedManagedRelativePath(
+            workspaceScope,
+            relativePath);
 
     private static bool IsManagedRootSegment(string segment)
         => ProcessArtifactPathValidationRules.IsManagedRootSegment(segment);

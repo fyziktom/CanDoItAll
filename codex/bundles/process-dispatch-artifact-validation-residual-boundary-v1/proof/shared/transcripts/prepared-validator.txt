@@ -1,0 +1,5 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --stage prepared --profile initiative --repo-root C:\repositories\CanDoItAll C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-validation-residual-boundary-v1
+ExitCode: 0
+WorkingDirectory: repo://
+--- Output ---
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-validation-residual-boundary-v1

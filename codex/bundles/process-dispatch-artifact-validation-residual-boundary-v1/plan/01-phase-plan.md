@@ -1,4 +1,10 @@
 # Phase Plan
+## Execution Order
+
+- Execute SB01-SB36 in numeric order.
+- Stop at every critical gate until source scans, focused tests, proof manifests, semantic invariants, and downstream dependency checks pass.
+- Reopen the most recent affected production-movement subbundle if a later gate weakens an earlier assumption.
+
 ## Subbundle Dependency Map
 ```mermaid
 graph TD
@@ -66,3 +72,4 @@ graph TD
 ## Execution Rule
 
 Execute SB01-SB36 in numeric order. If any critical gate fails, reopen the most recent production-movement subbundle and stop downstream work until repaired.
+

@@ -1,0 +1,6 @@
+Command: 'AntiStubScan:'; $matches = rg -n 'TODO|NotImplemented|throw new NotImplementedException|REPLACEME|stub' 'src\CanDoItAll.Modules.Processes\Automation\Dispatch' -g '*.cs'; if ($LASTEXITCODE -eq 1) { 'No TODO/NotImplemented/stub markers in dispatch production source.' } elseif ($LASTEXITCODE -eq 0) { $matches; exit 2 } else { exit $LASTEXITCODE }
+ExitCode: 0
+WorkingDirectory: repo://
+--- Output ---
+AntiStubScan:
+No TODO/NotImplemented/stub markers in dispatch production source.

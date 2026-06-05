@@ -1,0 +1,10 @@
+Command: 'NoCoreNoDriverScan:'; $matches = rg -n 'IProcessDriverPack|ProcessDriverRegistry|CanDoItAll\.Processes\.Core|CanDoItAll\.Modules\.Processes\.Core|ProcessDriverDescriptor|DriverPack' src -g '*.cs' -g '*.csproj'; if ($LASTEXITCODE -eq 1) { 'No production Core or driver API matches.' } elseif ($LASTEXITCODE -eq 0) { $matches; exit 2 } else { exit $LASTEXITCODE }; 'NoUiChangedScan:'; $ui = git diff --name-only -- '*.razor' '*.css' '*.js' '*.ts' '*.tsx' '*.jsx' '*.html'; if ($ui) { $ui; exit 3 } else { 'No UI files changed.' }; 'NoViewportProofScan:'; $viewport = Get-ChildItem 'codex\bundles\process-dispatch-artifact-validation-residual-boundary-v1\proof' -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.FullName -match 'mobile|small-screen|small_screen|medium-screen|medium_screen|phone|tablet' }; if ($viewport) { $viewport.FullName; exit 4 } else { 'No prohibited viewport proof artifacts.' }
+ExitCode: 0
+WorkingDirectory: repo://
+--- Output ---
+NoCoreNoDriverScan:
+No production Core or driver API matches.
+NoUiChangedScan:
+No UI files changed.
+NoViewportProofScan:
+No prohibited viewport proof artifacts.
