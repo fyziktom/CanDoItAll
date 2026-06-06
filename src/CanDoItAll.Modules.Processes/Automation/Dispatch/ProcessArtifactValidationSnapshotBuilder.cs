@@ -25,7 +25,19 @@ internal static class ProcessArtifactValidationSnapshotBuilder
             expectedArtifact.ValidationRequirementSummary,
             expectedArtifact.AllowedFutureUsageSummary);
 
-    public static ProcessArtifactProjectionExpectation ToProjectionExpectation(
+    public static ProcessArtifactValidationExpectation FromProjectionExpectation(
+        ProcessProjectionArtifactExpectation expectedArtifact)
+        => new(
+            expectedArtifact.Id,
+            expectedArtifact.ArtifactKind,
+            expectedArtifact.Title,
+            expectedArtifact.IsRequired,
+            expectedArtifact.TrustRequirement,
+            expectedArtifact.SensitivityLevel,
+            expectedArtifact.ValidationRequirementSummary,
+            expectedArtifact.AllowedFutureUsageSummary);
+
+    public static ProcessProjectionArtifactExpectation ToProjectionExpectation(
         ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
         => FromDispatchExpectation(expectedArtifact).ToProjectionExpectation();
 }

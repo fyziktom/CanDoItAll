@@ -1,15 +1,11 @@
 using CanDoItAll.AgentFramework.Models;
 using Microsoft.Extensions.Logging;
 
-using ArtifactProjectionLineage = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ArtifactProjectionLineage;
-using DispatchCandidate = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchCandidate;
-using ProcessStepDispatchClaim = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
-
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed record ProcessArtifactProjectionContext(
-    DispatchCandidate Candidate,
-    ProcessAutomationExecutionRunDetail Detail,
+    ProcessProjectionCandidateSnapshot Candidate,
+    ProcessProjectionRunSnapshot Run,
     string ResponseText,
     string WorkspaceRoot,
     WorkspaceScopeDescriptor WorkspaceScope,
@@ -17,14 +13,9 @@ internal sealed record ProcessArtifactProjectionContext(
     ProcessArtifactProjectionRecordOnlyCoordinator RecordOnlyCoordinator,
     ILogger<ProcessRunAutomationDispatchService> Logger,
     ProcessStepRunStatus CompletionStatus,
-    ProcessStepDispatchClaim DispatchClaim,
+    ProcessProjectionStepDispatchClaim DispatchClaim,
     CancellationToken CancellationToken,
-    ArtifactProjectionLineage? Lineage)
+    ProcessProjectionLineageInput Lineage)
 {
-    public ProcessArtifactRecoveryProjectionContext RecoveryContext { get; } = Lineage is null
-        ? ProcessArtifactRecoveryProjectionContext.None
-        : new ProcessArtifactRecoveryProjectionContext(
-            Lineage.RecoveryExecutionRunId,
-            Lineage.RecoveredForExecutionRunId,
-            Lineage.ReworkPacketId);
+    public ProcessArtifactRecoveryProjectionContext RecoveryContext { get; } = Lineage.ToRecoveryContext();
 }

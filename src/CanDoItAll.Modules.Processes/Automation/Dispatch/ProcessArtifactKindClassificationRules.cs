@@ -4,6 +4,13 @@ namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessArtifactKindClassificationRules
 {
+    internal static bool IsTransientExecutionArtifact(ProcessAutomationExecutionArtifact artifact)
+    {
+        var relativePath = artifact.RelativePath.Replace('\\', '/');
+        return relativePath.StartsWith(".playwright-mcp/", StringComparison.OrdinalIgnoreCase) ||
+               relativePath.Contains("/.playwright-mcp/", StringComparison.OrdinalIgnoreCase);
+    }
+
     internal static string GuessContentTypeFromPath(string fullPath)
     {
         return Path.GetExtension(fullPath).ToLowerInvariant() switch

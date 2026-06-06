@@ -20,19 +20,25 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
     [Fact]
     public async Task Dispatch_claim_loss_is_checked_before_artifact_projection_and_completion_transition() {
         var source = await ReadDispatchSourceAsync();
+        var finalizerContextFactorySource = await ReadDispatchSourceAsync("ProcessRunAutomationDispatchService.FinalizerContextFactory.cs");
 
         var executionIndex = FindRequired(source, "ExecuteUntilSettledAsync");
         var claimLostGuardIndex = FindRequired(source, "dispatchHeartbeat.ThrowIfClaimLost();", executionIndex);
         var artifactProjectionIndex = FindRequired(source, "FinalizeStepCompletionAsync", claimLostGuardIndex);
-        var projectionFlagIndex = FindRequired(source, "ProjectExecutionArtifacts: true", artifactProjectionIndex);
+        var directAgentContextIndex = FindRequired(source, "ProcessDispatchFinalizerContextFactory.ForDirectAgent", artifactProjectionIndex);
         var transitionIndex = FindRequired(source, "TransitionStepWithClaimAsync", artifactProjectionIndex);
+        var directAgentFactoryIndex = FindRequired(finalizerContextFactorySource, "ForDirectAgent");
+        var projectionFlagIndex = FindRequired(finalizerContextFactorySource, "ProjectExecutionArtifacts: true", directAgentFactoryIndex);
 
         Assert.True(
             executionIndex < claimLostGuardIndex &&
             claimLostGuardIndex < artifactProjectionIndex &&
-            artifactProjectionIndex < projectionFlagIndex &&
+            artifactProjectionIndex < directAgentContextIndex &&
             artifactProjectionIndex < transitionIndex,
             "Stale dispatch workers must stop before projecting artifacts or attempting completion transitions.");
+        Assert.True(
+            directAgentFactoryIndex < projectionFlagIndex,
+            "Direct agent finalizer contexts must project execution artifacts.");
 
         var transitionWindow = source.Substring(transitionIndex, Math.Min(900, source.Length - transitionIndex));
         Assert.Contains("dispatchClaim", transitionWindow, StringComparison.Ordinal);
@@ -61,7 +67,10 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
         Assert.Contains("processes.artifact.unique-conflict", source, StringComparison.Ordinal);
     }
 
-    private static async Task<string> ReadDispatchSourceAsync() {
+    private static Task<string> ReadDispatchSourceAsync()
+        => ReadDispatchSourceAsync("ProcessRunAutomationDispatchService.Dispatch.cs");
+
+    private static async Task<string> ReadDispatchSourceAsync(string fileName) {
         var repositoryRoot = FindRepositoryRoot();
         var sourcePath = Path.Combine(
             repositoryRoot,
@@ -69,7 +78,7 @@ public sealed class ProcessDatabaseRedTeamSourceInvariantTests {
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.Dispatch.cs");
+            fileName);
 
         return await File.ReadAllTextAsync(sourcePath);
     }

@@ -56,6 +56,15 @@ internal static class ProcessProjectStructureArtifactPathRules
         DispatchArtifactExpectation expectedArtifact,
         IReadOnlyList<ProjectStructureRequiredArtifactPath> requiredArtifactPaths,
         out string governedPath)
+        => TryResolveProjectStructureExpectedArtifactPath(
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation(),
+            requiredArtifactPaths,
+            out governedPath);
+
+    internal static bool TryResolveProjectStructureExpectedArtifactPath(
+        ProcessProjectionArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProjectStructureRequiredArtifactPath> requiredArtifactPaths,
+        out string governedPath)
     {
         governedPath = string.Empty;
         if (requiredArtifactPaths.Count == 0)
@@ -84,6 +93,13 @@ internal static class ProcessProjectStructureArtifactPathRules
 
     internal static int ScoreProjectStructureArtifactPathMatch(
         DispatchArtifactExpectation expectedArtifact,
+        string fileName)
+        => ScoreProjectStructureArtifactPathMatch(
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation(),
+            fileName);
+
+    internal static int ScoreProjectStructureArtifactPathMatch(
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string fileName)
     {
         if (string.IsNullOrWhiteSpace(fileName))

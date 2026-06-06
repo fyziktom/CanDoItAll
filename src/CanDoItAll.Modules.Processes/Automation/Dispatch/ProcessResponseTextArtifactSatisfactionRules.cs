@@ -30,6 +30,11 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
 
     public static bool CanProjectResponseTextArtifactWithoutDeclaredPath(
         ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
+        => CanProjectResponseTextArtifactWithoutDeclaredPath(
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation());
+
+    public static bool CanProjectResponseTextArtifactWithoutDeclaredPath(
+        ProcessProjectionArtifactExpectation expectedArtifact)
     {
         return expectedArtifact.ArtifactKind is ProcessArtifactKind.Brief
             or ProcessArtifactKind.Checklist
@@ -43,6 +48,15 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
         string currentRunManagedArtifactRoot,
         int stepSequence,
         ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
+        => BuildFallbackResponseTextArtifactRelativePath(
+            currentRunManagedArtifactRoot,
+            stepSequence,
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation());
+
+    public static string BuildFallbackResponseTextArtifactRelativePath(
+        string currentRunManagedArtifactRoot,
+        int stepSequence,
+        ProcessProjectionArtifactExpectation expectedArtifact)
     {
         var expectedSlug = FileSafeSlugBuilder.Build(expectedArtifact.Title);
         if (string.IsNullOrWhiteSpace(expectedSlug))
@@ -57,7 +71,7 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
     }
 
     private static bool IsPathlessResponseProjectableDeliverable(
-        ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
+        ProcessProjectionArtifactExpectation expectedArtifact)
     {
         if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Deliverable)
         {
@@ -71,7 +85,7 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
     }
 
     private static bool IsPathlessResponseProjectableEvidence(
-        ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
+        ProcessProjectionArtifactExpectation expectedArtifact)
     {
         if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Evidence)
         {

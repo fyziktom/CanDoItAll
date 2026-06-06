@@ -23,10 +23,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             storagePlacementService,
             RecordArtifactAsync);
         var recordOnlyCoordinator = new ProcessArtifactProjectionRecordOnlyCoordinator(RecordArtifactAsync);
-        var facets = ProcessArtifactProjectionFacetFactory.Create(EnsureStepDispatchClaimHeldAsync);
+        var facets = ProcessArtifactProjectionFacetFactory.Create((claim, token) =>
+            EnsureStepDispatchClaimHeldAsync(ProcessProjectionSnapshotBuilderAdapter.ToDispatchClaim(claim), token));
         var context = new ProcessArtifactProjectionContext(
-            candidate,
-            detail,
+            ProcessProjectionSnapshotBuilderAdapter.FromDispatchCandidate(candidate),
+            ProcessProjectionSnapshotBuilderAdapter.FromExecutionDetail(detail),
             responseText,
             workspaceRoot,
             workspaceScope,
@@ -34,9 +35,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             recordOnlyCoordinator,
             logger,
             completionStatus,
-            dispatchClaim,
+            ProcessProjectionSnapshotBuilderAdapter.FromDispatchClaim(dispatchClaim),
             cancellationToken,
-            lineage);
+            ProcessProjectionSnapshotBuilderAdapter.FromDispatchLineage(lineage));
 
         await ProcessArtifactProjectionOrchestrator.CreateDefault(facets).ProjectAsync(context);
     }

@@ -1,27 +1,24 @@
 using CanDoItAll.SharedKernel;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using DispatchCandidate = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchCandidate;
-
 namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessArtifactProjectionCandidateState
 {
     public static bool TryApplyExpectedWriteOutcome(
-        DispatchCandidate candidate,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionMutableCandidateState candidateState,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         Result<ProcessArtifactProjectionWriteResult> writeResult,
         out string errorSummary)
     {
         return TryApplyWriteOutcome(
-            candidate,
+            candidateState,
             writeResult,
             expectedArtifact.Id,
             out errorSummary);
     }
 
     public static bool TryApplyWriteOutcome(
-        DispatchCandidate candidate,
+        ProcessProjectionMutableCandidateState candidateState,
         Result<ProcessArtifactProjectionWriteResult> writeResult,
         Guid? expectedArtifactId,
         out string errorSummary)
@@ -43,14 +40,14 @@ internal static class ProcessArtifactProjectionCandidateState
             return false;
         }
 
-        Apply(candidate, writeOutcome.ExternalReferenceKey, writeOutcome.ArtifactExpectationId);
+        candidateState.AddProjection(writeOutcome.ExternalReferenceKey, writeOutcome.ArtifactExpectationId);
         errorSummary = string.Empty;
         return true;
     }
 
     public static bool TryApplyExpectedRecordOnlyOutcome(
-        DispatchCandidate candidate,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionMutableCandidateState candidateState,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
         out string errorSummary)
     {
@@ -71,7 +68,7 @@ internal static class ProcessArtifactProjectionCandidateState
             return false;
         }
 
-        Apply(candidate, recordOutcome.ExternalReferenceKey, recordOutcome.ArtifactExpectationId);
+        candidateState.AddProjection(recordOutcome.ExternalReferenceKey, recordOutcome.ArtifactExpectationId);
         errorSummary = string.Empty;
         return true;
     }
@@ -104,17 +101,5 @@ internal static class ProcessArtifactProjectionCandidateState
 
         errorSummary = string.Empty;
         return true;
-    }
-
-    private static void Apply(
-        DispatchCandidate candidate,
-        string externalReferenceKey,
-        Guid? artifactExpectationId)
-    {
-        candidate.ExternalReferenceKeys.Add(externalReferenceKey);
-        if (artifactExpectationId is { } expectationId)
-        {
-            candidate.RecordedArtifactExpectationIds.Add(expectationId);
-        }
     }
 }

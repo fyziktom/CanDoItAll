@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -36,15 +33,15 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
-        foreach (var artifact in context.Detail.Artifacts)
+        foreach (var artifact in context.Run.Artifacts)
         {
             await claimGuard.EnsureStepDispatchClaimHeldAsync(context.DispatchClaim, context.CancellationToken);
             if (artifactClassifier.IsTransientExecutionArtifact(artifact))
             {
                 context.Logger.LogDebug(
                     "Skipping transient execution artifact projection for run {RunId}, step {StepRunId}, artifact {ArtifactId}, path {RelativePath}.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     artifact.Id,
                     artifact.RelativePath);
                 continue;
@@ -53,9 +50,9 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
             var sourceExternalReferenceKey = ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
             var externalReferenceKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
                 sourceExternalReferenceKey,
-                context.Detail.Run.Id,
+                context.Run.Id,
                 context.RecoveryContext);
-            if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
             }
@@ -65,8 +62,8 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
             {
                 context.Logger.LogDebug(
                     "Skipping execution artifact projection for run {RunId}, step {StepRunId}, artifact {ArtifactId} because the file path is unavailable. Reason: {Reason}",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     artifact.Id,
                     string.IsNullOrWhiteSpace(pathResolutionFailure) ? "File does not exist." : pathResolutionFailure);
                 continue;
@@ -83,29 +80,29 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
                     exception,
                     "Execution artifact {ArtifactId} could not be read for process run {RunId}.",
                     artifact.Id,
-                    context.Candidate.Run.Id);
+                    context.Candidate.RunId);
                 continue;
             }
 
             var matchedExpectation = expectationMatcher.ResolveArtifactExpectation(
                 context.Candidate,
-                context.Detail.Run.InputSummary,
+                context.Run.InputSummary,
                 artifact,
                 artifactClassifier.TryDecodeTextArtifactContent(artifact, fullPath, content));
             var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
-                context.Detail.Run.Id,
+                context.Run.Id,
                 artifact,
-                matchedExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(matchedExpectation),
+                matchedExpectation is null ? null : matchedExpectation,
                 artifactClassifier.ResolveProcessArtifactKind(context.Candidate, artifact),
                 context.CompletionStatus,
-                context.Detail.Run.ResultSummary,
+                context.Run.ResultSummary,
                 context.RecoveryContext);
 
             var writeResult = await context.WriteCoordinator.WriteAsync(
                 new ProcessArtifactProjectionWriteRequest(
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
-                    context.Candidate.Run.ProjectId,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
+                    context.Candidate.ProjectId,
                     projectionPlan,
                     Path.GetFileName(fullPath),
                     string.IsNullOrWhiteSpace(artifact.ContentType)
@@ -116,15 +113,15 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
                     artifactClassifier.BuildStorageRelativePath(context.Candidate, artifact)),
                 context.CancellationToken);
             if (!candidateState.TryApplyWriteOutcome(
-                    context.Candidate,
+                    context.Candidate.MutableState,
                     writeResult,
                     projectionPlan.ArtifactExpectationId,
                     out var errorSummary))
             {
                 context.Logger.LogWarning(
                     "Process artifact projection failed for run {RunId}, step {StepRunId}, artifact {ArtifactId}. Errors: {Errors}",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     artifact.Id,
                     errorSummary);
             }

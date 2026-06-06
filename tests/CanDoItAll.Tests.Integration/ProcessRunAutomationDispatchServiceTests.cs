@@ -15353,7 +15353,7 @@ Ancestor path to the target work node:
         var evidenceId = Guid.NewGuid();
         var expectedArtifacts = new[]
         {
-            new ProcessArtifactProjectionExpectation(
+            new ProcessProjectionArtifactExpectation(
                 deliverableId,
                 ProcessArtifactKind.Deliverable,
                 "Release packet",
@@ -15362,7 +15362,7 @@ Ancestor path to the target work node:
                 ProcessSensitivityLevel.Internal,
                 "Create release packet.",
                 string.Empty),
-            new ProcessArtifactProjectionExpectation(
+            new ProcessProjectionArtifactExpectation(
                 evidenceId,
                 ProcessArtifactKind.Evidence,
                 "Release packet",
@@ -20207,13 +20207,13 @@ Ancestor path to the target work node:
                 string.Empty);
     }
 
-    private static ProcessArtifactProjectionExpectation CreateProjectionExpectation(
+    private static ProcessProjectionArtifactExpectation CreateProjectionExpectation(
         ProcessArtifactKind artifactKind,
         string title,
         bool isRequired,
         string validationRequirementSummary)
     {
-        return new ProcessArtifactProjectionExpectation(
+        return new ProcessProjectionArtifactExpectation(
             Guid.NewGuid(),
             artifactKind,
             title,

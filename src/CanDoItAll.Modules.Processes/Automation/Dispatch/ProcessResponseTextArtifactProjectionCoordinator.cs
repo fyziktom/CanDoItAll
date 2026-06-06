@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -39,7 +36,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
-        if (!responseTextRules.ShouldProjectResponseTextArtifacts(context.Detail.Run, context.CompletionStatus) ||
+        if (!responseTextRules.ShouldProjectResponseTextArtifacts(context.Run, context.CompletionStatus) ||
             context.Candidate.ExpectedArtifacts.Count == 0 ||
             string.IsNullOrWhiteSpace(context.ResponseText))
         {
@@ -58,8 +55,8 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
             {
                 context.Logger.LogInformation(
                     "Skipping response-text artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because the assistant response is not usable artifact content.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title);
                 continue;
             }
@@ -73,19 +70,19 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                 continue;
             }
 
-            if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                context.Run.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Run, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
             var projectionSource = new ResponseTextArtifactProjectionSource(
-                context.Detail.Run.Id,
+                context.Run.Id,
                 projectedRelativePath);
             var externalReferenceKey = ResponseTextArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
                 projectionSource,
                 context.RecoveryContext);
-            if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
             }
@@ -97,8 +94,8 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
             {
                 context.Logger.LogWarning(
                     "Skipping response-text artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because target path '{ExpectedPath}' resolves outside the workspace root.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title,
                     projectedRelativePath);
                 continue;
@@ -126,7 +123,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                 var content = Encoding.UTF8.GetBytes(persistedResponseText);
                 var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                     Guid.NewGuid(),
-                    context.Detail.Run.Id,
+                    context.Run.Id,
                     "generated-output",
                     expectedArtifact.Title,
                     projectedRelativePath,
@@ -136,15 +133,15 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                     DateTimeOffset.UtcNow);
                 var projectionPlan = ResponseTextArtifactProjectionSourceAdapter.Plan(
                     projectionSource,
-                    ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
+                    expectedArtifact,
                     context.CompletionStatus,
                     context.RecoveryContext);
 
                 var writeResult = await context.WriteCoordinator.WriteAsync(
                     new ProcessArtifactProjectionWriteRequest(
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
-                        context.Candidate.Run.ProjectId,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
+                        context.Candidate.ProjectId,
                         projectionPlan,
                         Path.GetFileName(targetFullPath),
                         syntheticArtifact.ContentType,
@@ -154,15 +151,15 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                     context.CancellationToken);
 
                 if (!candidateState.TryApplyExpectedWriteOutcome(
-                        context.Candidate,
+                        context.Candidate.MutableState,
                         expectedArtifact,
                         writeResult,
                         out var errorSummary))
                 {
                     context.Logger.LogWarning(
                         "Response-text artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
                         expectedArtifact.Title,
                         errorSummary);
                 }
@@ -172,8 +169,8 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                 context.Logger.LogWarning(
                     exception,
                     "Response-text artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title);
             }
         }

@@ -1,6 +1,6 @@
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed record ProcessArtifactProjectionExpectation(
+internal sealed record ProcessProjectionArtifactExpectation(
     Guid Id,
     ProcessArtifactKind ArtifactKind,
     string Title,

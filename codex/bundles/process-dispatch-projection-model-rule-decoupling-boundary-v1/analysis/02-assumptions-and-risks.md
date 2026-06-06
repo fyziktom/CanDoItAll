@@ -1,5 +1,10 @@
 # Assumptions And Risks
 
+## Assumptions
+
+- Refactoring remains module-local to `CanDoItAll.Modules.Processes`.
+- Existing projection tests are the baseline for behavior preservation unless a known unrelated failure is recorded.
+
 ## Critical Path Risks
 
 - Projection model conversion could accidentally drop mutable candidate state such as external reference keys or recorded artifact expectation ids.

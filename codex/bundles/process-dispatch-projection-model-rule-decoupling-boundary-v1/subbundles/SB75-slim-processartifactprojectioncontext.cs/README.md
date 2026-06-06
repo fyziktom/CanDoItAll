@@ -1,7 +1,7 @@
 # SB75 - Slim ProcessArtifactProjectionContext.cs
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Slim ProcessArtifactProjectionContext.cs.
@@ -16,14 +16,19 @@ Slim ProcessArtifactProjectionContext.cs.
 - Critical gate: No
 
 ## Exact Source References
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionFacetImplementations.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionFacets.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionContext.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionOrchestrator.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/Process*ArtifactProjectionCoordinator.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjection.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionFacetImplementations.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionFacets.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionContext.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionOrchestrator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionArtifactProjectionCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMockArtifactProjectionCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExistingManagedArtifactProjectionCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessResponseTextArtifactProjectionCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjection.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 ## Deliverables / Scope
 - Implement only the slice described by this subbundle title.
@@ -35,7 +40,7 @@ Slim ProcessArtifactProjectionContext.cs.
 - If this subbundle changes projection shape or source-family order, reopen all downstream subbundles that depend on projection context/model shape.
 
 ## Validation Depth
-Focused compile/test/source assertion validation appropriate to this movement slice.
+- Focused compile/test/source assertion validation appropriate to this movement slice.
 
 ## Implementation Steps
 1. Re-read the exact current source before editing.
@@ -72,10 +77,11 @@ Focused compile/test/source assertion validation appropriate to this movement sl
 - No-core/no-driver/no-UI scan at critical gates.
 
 ## Browser Validation Logging
-N/A - runtime/service refactor only. Do not create small/medium/mobile proof artifacts.
+- N/A - runtime/service refactor only. Do not create small/medium/mobile proof artifacts.
 
 ## Progression Gate
-Proceed only when local validation and source assertions pass.
+- Proceed only when local validation and source assertions pass.
 
 ## Suggested Agent Prompt
 Implement SB75 from `process-dispatch-projection-model-rule-decoupling-boundary-v1`. Preserve behavior and projection order. Do not introduce Process Core, production driver APIs, UI changes, or mobile proof artifacts.
+

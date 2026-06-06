@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -40,8 +37,8 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
 
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts)
         {
-            if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                context.Run.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Run, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -65,13 +62,13 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
                 expectedArtifact,
                 projectedRelativePath,
                 "existing managed artifact",
-                $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {context.Detail.Run.Id:D}.");
+                $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {context.Run.Id:D}.");
         }
     }
 
     public async Task<bool> TryRecordForResponseProjectionAsync(
         ProcessArtifactProjectionContext context,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string projectedRelativePath,
         string targetFullPath)
     {
@@ -89,27 +86,27 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
             expectedArtifact,
             projectedRelativePath,
             "existing response-target artifact",
-            $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {context.Detail.Run.Id:D}.",
+            $"Projected from existing managed workspace artifact '{projectedRelativePath}' for AgentFramework execution run {context.Run.Id:D}.",
             targetFullPath);
     }
 
     private async Task<bool> RecordExistingManagedArtifactAsync(
         ProcessArtifactProjectionContext context,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string projectedRelativePath,
         string logSourceName,
         string artifactSummary,
         string? knownFullPath = null)
     {
-        var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+        var expectedProjection = expectedArtifact;
         var projectionSource = new ExistingManagedArtifactProjectionSource(
-            context.Detail.Run.Id,
+            context.Run.Id,
             projectedRelativePath);
         var externalReferenceKey = ExistingManagedArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
             projectionSource,
             expectedProjection,
             context.RecoveryContext);
-        if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+        if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(externalReferenceKey))
         {
             return true;
         }
@@ -126,8 +123,8 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
         {
             context.Logger.LogDebug(
                 "Skipping existing managed artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because path '{RelativePath}' is unavailable. Reason: {Reason}",
-                context.Candidate.Run.Id,
-                context.Candidate.StepRun.Id,
+                context.Candidate.RunId,
+                context.Candidate.Step.Id,
                 expectedArtifact.Title,
                 projectedRelativePath,
                 string.IsNullOrWhiteSpace(pathResolutionFailure) ? "File does not exist." : pathResolutionFailure);
@@ -145,14 +142,14 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
                 exception,
                 "Existing managed artifact '{ArtifactTitle}' could not be read for process run {RunId}.",
                 expectedArtifact.Title,
-                context.Candidate.Run.Id);
+                context.Candidate.RunId);
             return false;
         }
 
         var contentType = artifactClassifier.GuessContentTypeFromPath(fullPath);
         var syntheticArtifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
-            context.Detail.Run.Id,
+            context.Run.Id,
             "generated-output",
             expectedArtifact.Title,
             projectedRelativePath,
@@ -167,9 +164,9 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
             context.RecoveryContext);
         var writeResult = await context.WriteCoordinator.WriteAsync(
             new ProcessArtifactProjectionWriteRequest(
-                context.Candidate.Run.Id,
-                context.Candidate.StepRun.Id,
-                context.Candidate.Run.ProjectId,
+                context.Candidate.RunId,
+                context.Candidate.Step.Id,
+                context.Candidate.ProjectId,
                 projectionPlan,
                 Path.GetFileName(fullPath),
                     contentType,
@@ -178,7 +175,7 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
                     artifactClassifier.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
             context.CancellationToken);
         if (candidateState.TryApplyExpectedWriteOutcome(
-                context.Candidate,
+                context.Candidate.MutableState,
                 expectedArtifact,
                 writeResult,
                 out var errorSummary))
@@ -189,8 +186,8 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
         context.Logger.LogWarning(
             "{SourceName} projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
             logSourceName,
-            context.Candidate.Run.Id,
-            context.Candidate.StepRun.Id,
+            context.Candidate.RunId,
+            context.Candidate.Step.Id,
             expectedArtifact.Title,
             errorSummary);
         return false;

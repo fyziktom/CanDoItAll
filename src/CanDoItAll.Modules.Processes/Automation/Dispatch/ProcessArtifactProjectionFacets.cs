@@ -3,13 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using System.Text;
 
-using ArtifactProjectionLineage = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ArtifactProjectionLineage;
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using DispatchCandidate = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchCandidate;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using ProcessStepDispatchClaim = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
-
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed record ProcessArtifactProjectionFacetSet(
@@ -29,7 +22,9 @@ internal sealed record ProcessArtifactProjectionFacetSet(
 
 internal interface IProcessProjectionClaimGuard
 {
-    Task EnsureStepDispatchClaimHeldAsync(ProcessStepDispatchClaim dispatchClaim, CancellationToken cancellationToken);
+    Task EnsureStepDispatchClaimHeldAsync(
+        ProcessProjectionStepDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken);
 }
 
 internal interface IProcessProjectionPathResolver
@@ -45,12 +40,12 @@ internal interface IProcessProjectionPathResolver
         string relativePath);
 
     IReadOnlyList<string> ResolveExpectedManagedArtifactRelativePaths(
-        DispatchCandidate candidate,
+        ProcessProjectionCandidateSnapshot candidate,
         WorkspaceScopeDescriptor workspaceScope,
-        DispatchArtifactExpectation expectedArtifact);
+        ProcessProjectionArtifactExpectation expectedArtifact);
 
     string ResolveProviderNativeBrowserProjectedRelativePath(
-        DispatchCandidate candidate,
+        ProcessProjectionCandidateSnapshot candidate,
         WorkspaceScopeDescriptor workspaceScope,
         string normalizedOutputPath);
 
@@ -101,13 +96,13 @@ internal interface IProcessProjectionArtifactClassifier
         byte[] content);
 
     ProcessArtifactKind ResolveProcessArtifactKind(
-        DispatchCandidate candidate,
+        ProcessProjectionCandidateSnapshot candidate,
         ProcessAutomationExecutionArtifact artifact);
 
     StorageContentKind ResolveStorageContentKind(string contentType, string fullPath);
 
     string BuildStorageRelativePath(
-        DispatchCandidate candidate,
+        ProcessProjectionCandidateSnapshot candidate,
         ProcessAutomationExecutionArtifact artifact);
 
     string GuessContentTypeFromPath(string fullPath);
@@ -116,8 +111,8 @@ internal interface IProcessProjectionArtifactClassifier
 internal interface IProcessProjectionExpectationMatcher
 {
     bool ExistingManagedArtifactFileMatches(
-        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
-        DispatchArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string workspaceRoot,
         string relativePath);
 
@@ -125,47 +120,46 @@ internal interface IProcessProjectionExpectationMatcher
         IEnumerable<string> externalReferenceKeys,
         Guid artifactExpectationId);
 
-    DispatchArtifactExpectation? ResolveArtifactExpectation(
-        DispatchCandidate candidate,
+    ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
+        ProcessProjectionCandidateSnapshot candidate,
         ProcessAutomationExecutionArtifact artifact);
 
-    DispatchArtifactExpectation? ResolveArtifactExpectation(
-        DispatchCandidate candidate,
+    ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
+        ProcessProjectionCandidateSnapshot candidate,
         string projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact);
 
-    DispatchArtifactExpectation? ResolveArtifactExpectation(
-        DispatchCandidate candidate,
+    ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
+        ProcessProjectionCandidateSnapshot candidate,
         string projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact,
         string? artifactTextContent);
 
     Guid? ResolveArtifactExpectationId(
-        DispatchCandidate candidate,
-        ProcessAutomationExecutionRunDetail detail,
+        ProcessProjectionCandidateSnapshot candidate,
+        ProcessProjectionRunSnapshot run,
         ProcessAutomationExecutionArtifact artifact);
 
     bool WorkspaceWrittenFileMatchesExpectedArtifact(
-        IReadOnlyList<DispatchArtifactExpectation> expectedArtifacts,
-        DispatchArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string path,
         string content);
 }
 
 internal interface IProcessProjectionProcessMockRules
 {
-    IReadOnlyList<ProcessMockArtifactProjection> ResolveProcessMockArtifactProjections(string? serializedSessionStateJson);
+    IReadOnlyList<ProcessProjectionProcessMockArtifact> ResolveProcessMockArtifactProjections(string? serializedSessionStateJson);
 
     bool ProcessMockArtifactMatchesExpectation(
-        DispatchArtifactExpectation expectedArtifact,
-        ProcessMockArtifactProjection projection);
+        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessProjectionProcessMockArtifact projection);
 }
 
 internal interface IProcessProjectionProjectStructureMatcher
 {
     bool TryResolveProjectStructureExpectedArtifactPath(
-        DispatchCandidate candidate,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string projectStructureContractText,
         out string governedPath);
 
@@ -174,32 +168,32 @@ internal interface IProcessProjectionProjectStructureMatcher
 
 internal interface IProcessProjectionSessionObservationSource
 {
-    IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ProcessAutomationExecutionRunDetail detail);
+    IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ProcessProjectionRunSnapshot run);
 
-    IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson);
+    IReadOnlyList<ProcessProjectionSessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson);
 
     IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(
-        ProcessAutomationExecutionRunDetail detail);
+        ProcessProjectionRunSnapshot run);
 
-    string? ResolveProviderNativeBrowserWorkingDirectory(ProcessAutomationExecutionRunDetail detail);
+    string? ResolveProviderNativeBrowserWorkingDirectory(ProcessProjectionRunSnapshot run);
 }
 
 internal interface IProcessProjectionResponseTextRules
 {
     bool ShouldProjectResponseTextArtifacts(
-        ProcessAutomationExecutionRunRecord run,
+        ProcessProjectionRunSnapshot run,
         ProcessStepRunStatus completionStatus);
 
     string ResolveProjectableResponseArtifactText(string? responseText);
 
     bool IsUsableProjectedResponseArtifactContent(
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         string responseText);
 
     bool TryResolveResponseTextArtifactRelativePath(
-        DispatchCandidate candidate,
+        ProcessProjectionCandidateSnapshot candidate,
         WorkspaceScopeDescriptor workspaceScope,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         out string relativePath);
 }
 
@@ -218,21 +212,21 @@ internal interface IProcessProjectionBrowserOutputRules
 
 internal interface IProcessProjectionDecisionArtifactRules
 {
-    bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact);
+    bool ShouldAutoRecordCompletedDecisionArtifact(ProcessProjectionArtifactExpectation expectedArtifact);
 
     string BuildCompletedDecisionArtifactExternalReferenceKey(Guid stepRunId, Guid artifactExpectationId);
 
     ProcessArtifactTrustStatus ResolveCompletedDecisionArtifactTrustStatus(ProcessArtifactTrustRequirement trustRequirement);
 
     string BuildCompletedDecisionArtifactProvenanceSummary(
-        DispatchCandidate candidate,
-        ProcessAutomationExecutionRunDetail detail);
+        ProcessProjectionCandidateSnapshot candidate,
+        ProcessProjectionRunSnapshot run);
 
     string BuildCompletedDecisionArtifactReviewSummary(
-        DispatchCandidate candidate,
-        ProcessAutomationExecutionRunDetail detail,
+        ProcessProjectionCandidateSnapshot candidate,
+        ProcessProjectionRunSnapshot run,
         string responseText,
-        DispatchArtifactExpectation expectedArtifact);
+        ProcessProjectionArtifactExpectation expectedArtifact);
 }
 
 internal interface IProcessProjectionLineageFactory
@@ -240,7 +234,7 @@ internal interface IProcessProjectionLineageFactory
     ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
         ProcessArtifactProjectionSourceKind sourceKind,
         Guid? sourceExecutionRunId = null,
-        ArtifactProjectionLineage? lineage = null,
+        ProcessProjectionLineageInput? lineage = null,
         Guid? sourceArtifactId = null,
         string sourceExternalReferenceKey = "");
 }
@@ -248,20 +242,20 @@ internal interface IProcessProjectionLineageFactory
 internal interface IProcessProjectionCandidateStateUpdater
 {
     bool TryApplyExpectedWriteOutcome(
-        DispatchCandidate candidate,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionMutableCandidateState candidateState,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         Result<ProcessArtifactProjectionWriteResult> writeResult,
         out string errorSummary);
 
     bool TryApplyWriteOutcome(
-        DispatchCandidate candidate,
+        ProcessProjectionMutableCandidateState candidateState,
         Result<ProcessArtifactProjectionWriteResult> writeResult,
         Guid? expectedArtifactId,
         out string errorSummary);
 
     bool TryApplyExpectedRecordOnlyOutcome(
-        DispatchCandidate candidate,
-        DispatchArtifactExpectation expectedArtifact,
+        ProcessProjectionMutableCandidateState candidateState,
+        ProcessProjectionArtifactExpectation expectedArtifact,
         Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
         out string errorSummary);
 }

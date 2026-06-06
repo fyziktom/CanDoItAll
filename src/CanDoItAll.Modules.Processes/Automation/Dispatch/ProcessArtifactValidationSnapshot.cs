@@ -17,7 +17,7 @@ internal sealed record ProcessArtifactValidationExpectation(
     string ValidationRequirementSummary,
     string AllowedFutureUsageSummary)
 {
-    public ProcessArtifactProjectionExpectation ToProjectionExpectation()
+    public ProcessProjectionArtifactExpectation ToProjectionExpectation()
         => new(
             Id,
             ArtifactKind,

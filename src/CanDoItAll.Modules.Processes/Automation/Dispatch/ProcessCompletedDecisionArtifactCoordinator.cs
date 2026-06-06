@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -38,54 +35,54 @@ internal sealed class ProcessCompletedDecisionArtifactCoordinator : IProcessArti
 
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts.Where(decisionArtifactRules.ShouldAutoRecordCompletedDecisionArtifact))
         {
-            if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                expectationMatcher.HasProjectedArtifactExpectationExternalReference(context.Candidate.ExternalReferenceKeys, expectedArtifact.Id))
+            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                expectationMatcher.HasProjectedArtifactExpectationExternalReference(context.Candidate.MutableState.ExternalReferenceKeys, expectedArtifact.Id))
             {
                 continue;
             }
 
             var externalReferenceKey = decisionArtifactRules.BuildCompletedDecisionArtifactExternalReferenceKey(
-                context.Candidate.StepRun.Id,
+                context.Candidate.Step.Id,
                 expectedArtifact.Id);
-            if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
             }
 
             var recordResult = await context.RecordOnlyCoordinator.RecordAsync(
                 new ProcessArtifactProjectionRecordOnlyRequest(
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Id,
                     expectedArtifact.ArtifactKind,
                     expectedArtifact.Title,
                     decisionArtifactRules.ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement),
                     expectedArtifact.SensitivityLevel,
-                    decisionArtifactRules.BuildCompletedDecisionArtifactProvenanceSummary(context.Candidate, context.Detail),
+                    decisionArtifactRules.BuildCompletedDecisionArtifactProvenanceSummary(context.Candidate, context.Run),
                     string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                         ? "Reusable for audit, release replay, and governance tuning."
                         : expectedArtifact.AllowedFutureUsageSummary,
                     decisionArtifactRules.BuildCompletedDecisionArtifactReviewSummary(
                         context.Candidate,
-                        context.Detail,
+                        context.Run,
                         context.ResponseText,
                         expectedArtifact),
                     externalReferenceKey,
                     lineageFactory.BuildArtifactProjectionLineage(
                         ProcessArtifactProjectionSourceKind.CompletedDecision,
-                        context.Detail.Run.Id,
+                        context.Run.Id,
                         sourceExternalReferenceKey: externalReferenceKey)),
                 context.CancellationToken);
             if (!candidateState.TryApplyExpectedRecordOnlyOutcome(
-                    context.Candidate,
+                    context.Candidate.MutableState,
                     expectedArtifact,
                     recordResult,
                     out var errorSummary))
             {
                 context.Logger.LogWarning(
                     "Completed-step decision artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title,
                     errorSummary);
             }

@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -39,13 +36,13 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
-        var browserOutputsByToolName = sessionObservationSource.ResolveSuccessfulBrowserToolOutputFiles(context.Detail);
+        var browserOutputsByToolName = sessionObservationSource.ResolveSuccessfulBrowserToolOutputFiles(context.Run);
         if (browserOutputsByToolName.Count == 0)
         {
             return;
         }
 
-        var browserWorkingDirectory = sessionObservationSource.ResolveProviderNativeBrowserWorkingDirectory(context.Detail) ?? context.WorkspaceRoot;
+        var browserWorkingDirectory = sessionObservationSource.ResolveProviderNativeBrowserWorkingDirectory(context.Run) ?? context.WorkspaceRoot;
         if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
         {
             return;
@@ -67,8 +64,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 continue;
             }
 
-            if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                context.Run.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Run, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -94,8 +91,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
             {
                 context.Logger.LogDebug(
                     "Skipping provider-native browser artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because source file {SourcePath} is unavailable.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title,
                     sourceFullPath);
                 continue;
@@ -109,8 +106,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
             {
                 context.Logger.LogWarning(
                     "Skipping provider-native browser artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because target path '{ExpectedPath}' resolves outside the workspace root.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title,
                     projectedRelativePath);
                 continue;
@@ -128,7 +125,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 var content = await fileIo.ReadAllBytesAsync(targetFullPath, context.CancellationToken);
                 var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                     Guid.NewGuid(),
-                    context.Detail.Run.Id,
+                    context.Run.Id,
                     "generated-output",
                     expectedArtifact.Title,
                     projectedRelativePath,
@@ -137,25 +134,25 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                     $"Projected provider-native browser output '{matchedOutputFileName}' into the required managed artifact path.",
                     DateTimeOffset.UtcNow);
                 var projectionSource = new ProviderNativeBrowserArtifactProjectionSource(
-                    context.Detail.Run.Id,
+                    context.Run.Id,
                     projectedRelativePath,
                     matchedOutputFileName,
                     requiredToolName);
                 var projectionPlan = ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanExpectedOutput(
                     projectionSource,
-                    ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
+                    expectedArtifact,
                     context.CompletionStatus,
                     context.RecoveryContext);
-                if (context.Candidate.ExternalReferenceKeys.Contains(projectionPlan.ExternalReferenceKey))
+                if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(projectionPlan.ExternalReferenceKey))
                 {
                     continue;
                 }
 
                 var writeResult = await context.WriteCoordinator.WriteAsync(
                     new ProcessArtifactProjectionWriteRequest(
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
-                        context.Candidate.Run.ProjectId,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
+                        context.Candidate.ProjectId,
                         projectionPlan,
                         Path.GetFileName(targetFullPath),
                         syntheticArtifact.ContentType,
@@ -165,15 +162,15 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                     context.CancellationToken);
 
                 if (!candidateState.TryApplyExpectedWriteOutcome(
-                        context.Candidate,
+                        context.Candidate.MutableState,
                         expectedArtifact,
                         writeResult,
                         out var errorSummary))
                 {
                     context.Logger.LogWarning(
                         "Provider-native browser artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
                         expectedArtifact.Title,
                         errorSummary);
                 }
@@ -183,8 +180,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 context.Logger.LogWarning(
                     exception,
                     "Provider-native browser artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}.",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title);
             }
         }
@@ -210,14 +207,14 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                     context.WorkspaceScope,
                     normalizedOutputPath);
                 var projectionSource = new ProviderNativeBrowserArtifactProjectionSource(
-                    context.Detail.Run.Id,
+                    context.Run.Id,
                     projectedRelativePath,
                     normalizedOutputPath,
                     pair.Key);
                 var externalReferenceKey = ProviderNativeBrowserArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
                     projectionSource,
                     context.RecoveryContext);
-                if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+                if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(externalReferenceKey))
                 {
                     continue;
                 }
@@ -229,8 +226,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 {
                     context.Logger.LogDebug(
                         "Skipping provider-native browser output projection for run {RunId}, step {StepRunId} because source file {SourcePath} is unavailable.",
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
                         sourceFullPath);
                     continue;
                 }
@@ -242,8 +239,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 {
                     context.Logger.LogWarning(
                         "Skipping provider-native browser output projection for run {RunId}, step {StepRunId} because target path '{ProjectedPath}' resolves outside the workspace root.",
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
                         projectedRelativePath);
                     continue;
                 }
@@ -261,7 +258,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                     var contentType = artifactClassifier.GuessContentTypeFromPath(targetFullPath);
                     var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                         Guid.NewGuid(),
-                        context.Detail.Run.Id,
+                        context.Run.Id,
                         "generated-output",
                         Path.GetFileName(projectedRelativePath),
                         projectedRelativePath,
@@ -271,15 +268,15 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                         DateTimeOffset.UtcNow);
                     var matchedExpectation = expectationMatcher.ResolveArtifactExpectation(
                         context.Candidate,
-                        context.Detail.Run.InputSummary,
+                        context.Run.InputSummary,
                         syntheticArtifact);
                     var recordExpectation = matchedExpectation is not null &&
-                                            !context.Candidate.RecordedArtifactExpectationIds.Contains(matchedExpectation.Id)
+                                            !context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(matchedExpectation.Id)
                         ? matchedExpectation
                         : null;
                     var projectionPlan = ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanDiscoveredOutput(
                         projectionSource,
-                        recordExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(recordExpectation),
+                        recordExpectation is null ? null : recordExpectation,
                         ProcessArtifactKind.Evidence,
                         browserOutputRules.BuildProviderNativeBrowserArtifactTitle(syntheticArtifact),
                         context.CompletionStatus,
@@ -287,9 +284,9 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
 
                     var writeResult = await context.WriteCoordinator.WriteAsync(
                         new ProcessArtifactProjectionWriteRequest(
-                            context.Candidate.Run.Id,
-                            context.Candidate.StepRun.Id,
-                            context.Candidate.Run.ProjectId,
+                            context.Candidate.RunId,
+                            context.Candidate.Step.Id,
+                            context.Candidate.ProjectId,
                             projectionPlan,
                             Path.GetFileName(targetFullPath),
                             contentType,
@@ -299,15 +296,15 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                         context.CancellationToken);
 
                     if (!candidateState.TryApplyWriteOutcome(
-                            context.Candidate,
+                            context.Candidate.MutableState,
                             writeResult,
                             recordExpectation?.Id,
                             out var errorSummary))
                     {
                         context.Logger.LogWarning(
                             "Provider-native browser output projection failed for run {RunId}, step {StepRunId}, output {OutputPath}. Errors: {Errors}",
-                            context.Candidate.Run.Id,
-                            context.Candidate.StepRun.Id,
+                            context.Candidate.RunId,
+                            context.Candidate.Step.Id,
                             normalizedOutputPath,
                             errorSummary);
                     }
@@ -317,8 +314,8 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                     context.Logger.LogWarning(
                         exception,
                         "Provider-native browser output projection failed for run {RunId}, step {StepRunId}, output {OutputPath}.",
-                        context.Candidate.Run.Id,
-                        context.Candidate.StepRun.Id,
+                        context.Candidate.RunId,
+                        context.Candidate.Step.Id,
                         normalizedOutputPath);
                 }
             }

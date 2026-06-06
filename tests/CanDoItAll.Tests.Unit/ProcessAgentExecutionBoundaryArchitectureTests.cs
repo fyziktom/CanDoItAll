@@ -1216,7 +1216,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts", source, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactValidationExpectation expectedArtifact", source, StringComparison.Ordinal);
         Assert.Contains("ToProjectionExpectation()", snapshotSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("private static ProcessArtifactProjectionExpectation ToProjectionExpectation", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("private static ProcessProjectionArtifactExpectation ToProjectionExpectation", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1616,7 +1616,9 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             RegexOptions.Singleline | RegexOptions.CultureInvariant);
 
         Assert.DoesNotContain("ProcessArtifactProjectionServices", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessArtifactProjectionFacetFactory.Create(EnsureStepDispatchClaimHeldAsync)", shellSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionFacetFactory.Create((claim, token) =>", shellSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessProjectionSnapshotBuilderAdapter.ToDispatchClaim(claim)", shellSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessArtifactProjectionFacetFactory.Create(EnsureStepDispatchClaimHeldAsync)", shellSource, StringComparison.Ordinal);
         Assert.Contains("internal delegate Task ProcessProjectionClaimGuardHandler", facetSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed class ProcessProjectionClaimGuard", facetSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed class ProcessProjectionPathResolver", facetSource, StringComparison.Ordinal);
@@ -1642,6 +1644,83 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
 
             Assert.True(implementedFacetCount <= 1, match.Value);
         }
+    }
+
+    [Fact]
+    public void Artifact_projection_boundary_keeps_dispatcher_nested_models_inside_snapshot_adapter()
+    {
+        var coordinatorFiles = new[]
+        {
+            "ProcessExecutionArtifactProjectionCoordinator.cs",
+            "ProcessMockArtifactProjectionCoordinator.cs",
+            "ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs",
+            "ProcessExistingManagedArtifactProjectionCoordinator.cs",
+            "ProcessResponseTextArtifactProjectionCoordinator.cs",
+            "ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs",
+            "ProcessCompletedDecisionArtifactCoordinator.cs"
+        };
+        var projectionBoundaryFiles = coordinatorFiles
+            .Concat(new[]
+            {
+                "ProcessArtifactProjectionContext.cs",
+                "ProcessArtifactProjectionFacets.cs",
+                "ProcessArtifactProjectionFacetImplementations.cs",
+                "ProcessArtifactProjectionCandidateState.cs"
+            })
+            .ToList();
+        var forbiddenBoundaryTokens = new[]
+        {
+            "using DispatchCandidate =",
+            "using DispatchArtifactExpectation =",
+            "ProcessRunAutomationDispatchService.DispatchCandidate",
+            "ProcessRunAutomationDispatchService.DispatchArtifactExpectation",
+            "ProcessRunAutomationDispatchService.ProcessStepDispatchClaim",
+            "ProcessRunAutomationDispatchService.ProcessMockArtifactProjection",
+            "ProcessRunAutomationDispatchService.SessionFileContent",
+            "DispatchArtifactExpectation ",
+            "DispatchCandidate ",
+            "ProcessStepDispatchClaim ",
+            "ProcessMockArtifactProjection ",
+            "new SessionFileContent(",
+            "context.Detail"
+        };
+
+        foreach (var file in projectionBoundaryFiles)
+        {
+            var source = ReadRepositoryFile(
+                "src",
+                "CanDoItAll.Modules.Processes",
+                "Automation",
+                "Dispatch",
+                file);
+
+            foreach (var forbiddenToken in forbiddenBoundaryTokens)
+            {
+                Assert.DoesNotContain(forbiddenToken, source, StringComparison.Ordinal);
+            }
+        }
+
+        var adapterSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessProjectionModels.cs");
+        var shellSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+
+        Assert.Contains("ProcessProjectionSnapshotBuilderAdapter", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.DispatchCandidate", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.ProcessStepDispatchClaim", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.ArtifactProjectionLineage", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessProjectionSnapshotBuilderAdapter.FromDispatchCandidate(candidate)", shellSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessProjectionSnapshotBuilderAdapter.FromExecutionDetail(detail)", shellSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessProjectionSnapshotBuilderAdapter.FromDispatchClaim(dispatchClaim)", shellSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessProjectionSnapshotBuilderAdapter.FromDispatchLineage(lineage)", shellSource, StringComparison.Ordinal);
     }
 
     [Fact]

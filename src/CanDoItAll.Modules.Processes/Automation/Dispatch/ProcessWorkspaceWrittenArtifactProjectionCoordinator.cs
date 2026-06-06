@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -44,9 +41,9 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
             return;
         }
 
-        var fileWrites = sessionObservationSource.ResolveSuccessfulSessionFileWrites(context.Detail.Run.SerializedSessionStateJson);
-        var receiptFileWrites = sessionObservationSource.ResolveSuccessfulWorkspaceFileMutationReceiptPaths(context.Detail)
-            .Select(path => new SessionFileContent(path, string.Empty))
+        var fileWrites = sessionObservationSource.ResolveSuccessfulSessionFileWrites(context.Run.SerializedSessionStateJson);
+        var receiptFileWrites = sessionObservationSource.ResolveSuccessfulWorkspaceFileMutationReceiptPaths(context.Run)
+            .Select(path => new ProcessProjectionSessionFileContent(path, string.Empty))
             .ToList();
         if (fileWrites.Count == 0 && receiptFileWrites.Count == 0)
         {
@@ -55,16 +52,15 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
 
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts)
         {
-            if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
+                context.Run.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Run, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
             var matchingWrite = projectStructureMatcher.TryResolveProjectStructureExpectedArtifactPath(
-                    context.Candidate,
                     expectedArtifact,
-                    context.Detail.Run.InputSummary,
+                    context.Run.InputSummary,
                     out var governedPath)
                 ? fileWrites.LastOrDefault(file => projectStructureMatcher.ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ??
                   receiptFileWrites.LastOrDefault(file => projectStructureMatcher.ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath))
@@ -89,16 +85,16 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                 continue;
             }
 
-            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+            var expectedProjection = expectedArtifact;
             var duplicateProbeSource = new WorkspaceWrittenArtifactProjectionSource(
-                context.Detail.Run.Id,
+                context.Run.Id,
                 projectedRelativePath,
                 projectedRelativePath);
             var externalReferenceKey = WorkspaceWrittenArtifactProjectionSourceAdapter.BuildExternalReferenceKey(
                 duplicateProbeSource,
                 expectedProjection,
                 context.RecoveryContext);
-            if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
+            if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(externalReferenceKey))
             {
                 continue;
             }
@@ -114,8 +110,8 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
             {
                 context.Logger.LogDebug(
                     "Skipping workspace-written artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because write path '{WrittenPath}' could not be read as projected path '{ProjectedPath}'. Reason: {Reason}",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title,
                     matchingWrite.Path,
                     projectedRelativePath,
@@ -134,23 +130,23 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                     exception,
                     "Workspace-written artifact '{ArtifactTitle}' could not be read for process run {RunId}.",
                     expectedArtifact.Title,
-                    context.Candidate.Run.Id);
+                    context.Candidate.RunId);
                 continue;
             }
 
             var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                 Guid.NewGuid(),
-                context.Detail.Run.Id,
+                context.Run.Id,
                 "generated-output",
                 expectedArtifact.Title,
                 projectedRelativePath,
                 artifactClassifier.GuessContentTypeFromPath(fullPath),
                 "workspace_write_file",
-                $"Projected from workspace file write '{sourceRelativePath}' for AgentFramework execution run {context.Detail.Run.Id:D}.",
+                $"Projected from workspace file write '{sourceRelativePath}' for AgentFramework execution run {context.Run.Id:D}.",
                 DateTimeOffset.UtcNow);
             var projectionPlan = WorkspaceWrittenArtifactProjectionSourceAdapter.Plan(
                 new WorkspaceWrittenArtifactProjectionSource(
-                    context.Detail.Run.Id,
+                    context.Run.Id,
                     projectedRelativePath,
                     sourceRelativePath),
                 expectedProjection,
@@ -158,9 +154,9 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                 context.RecoveryContext);
             var writeResult = await context.WriteCoordinator.WriteAsync(
                 new ProcessArtifactProjectionWriteRequest(
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
-                    context.Candidate.Run.ProjectId,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
+                    context.Candidate.ProjectId,
                     projectionPlan,
                     Path.GetFileName(fullPath),
                     syntheticArtifact.ContentType,
@@ -169,15 +165,15 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                     artifactClassifier.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
                 context.CancellationToken);
             if (!candidateState.TryApplyExpectedWriteOutcome(
-                    context.Candidate,
+                    context.Candidate.MutableState,
                     expectedArtifact,
                     writeResult,
                     out var errorSummary))
             {
                 context.Logger.LogWarning(
                     "Workspace-written artifact projection failed for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle}. Errors: {Errors}",
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
                     expectedArtifact.Title,
                     errorSummary);
             }

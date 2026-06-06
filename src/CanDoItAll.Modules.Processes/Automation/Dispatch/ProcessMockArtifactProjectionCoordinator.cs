@@ -3,9 +3,6 @@ using CanDoItAll.Infrastructure.Storage;
 using Microsoft.Extensions.Logging;
 using System.Text;
 
-using DispatchArtifactExpectation = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchArtifactExpectation;
-using ProcessMockArtifactProjection = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessMockArtifactProjection;
-using SessionFileContent = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.SessionFileContent;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -38,7 +35,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
             return;
         }
 
-        var projections = processMockRules.ResolveProcessMockArtifactProjections(context.Detail.Run.SerializedSessionStateJson);
+        var projections = processMockRules.ResolveProcessMockArtifactProjections(context.Run.SerializedSessionStateJson);
         if (projections.Count == 0)
         {
             return;
@@ -59,15 +56,15 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
             if (matchedExpectations.Count > 1)
             {
                 throw new InvalidOperationException(
-                    $"Process mock artifact '{projection.RelativePath}' for role '{projection.RoleKey}' matched multiple required artifact expectations for step '{context.Candidate.StepRun.Title}': {string.Join(", ", matchedExpectations.Select(item => item.Title))}.");
+                    $"Process mock artifact '{projection.RelativePath}' for role '{projection.RoleKey}' matched multiple required artifact expectations for step '{context.Candidate.Step.Title}': {string.Join(", ", matchedExpectations.Select(item => item.Title))}.");
             }
 
             var expectedArtifact = matchedExpectations[0];
-            var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
+            var expectedProjection = expectedArtifact;
             var scopedRelativePath = pathResolver.ResolveScopedManagedRelativePath(context.WorkspaceScope, projection.RelativePath);
             var projectionSource = new ProcessMockArtifactProjectionSource(
-                context.Candidate.StepRun.Id,
-                context.Detail.Run.Id,
+                context.Candidate.Step.Id,
+                context.Run.Id,
                 projection.RelativePath,
                 scopedRelativePath,
                 projection.RoleKey);
@@ -76,7 +73,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
                 expectedProjection,
                 context.CompletionStatus,
                 context.RecoveryContext);
-            if (context.Candidate.ExternalReferenceKeys.Contains(projectionPlan.ExternalReferenceKey))
+            if (context.Candidate.MutableState.ExternalReferenceKeys.Contains(projectionPlan.ExternalReferenceKey))
             {
                 projectedExpectationIds.Add(expectedArtifact.Id);
                 continue;
@@ -86,7 +83,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
                 !fileIo.FileExists(fullPath))
             {
                 throw new InvalidOperationException(
-                    $"Process mock artifact '{projection.RelativePath}' for expected artifact '{expectedArtifact.Title}' was declared by execution run {context.Detail.Run.Id:D}, but scoped path '{scopedRelativePath}' could not be found. {pathResolutionFailure}".Trim());
+                    $"Process mock artifact '{projection.RelativePath}' for expected artifact '{expectedArtifact.Title}' was declared by execution run {context.Run.Id:D}, but scoped path '{scopedRelativePath}' could not be found. {pathResolutionFailure}".Trim());
             }
 
             byte[] content;
@@ -104,9 +101,9 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
             var contentType = artifactClassifier.GuessContentTypeFromPath(fullPath);
             var writeResult = await context.WriteCoordinator.WriteAsync(
                 new ProcessArtifactProjectionWriteRequest(
-                    context.Candidate.Run.Id,
-                    context.Candidate.StepRun.Id,
-                    context.Candidate.Run.ProjectId,
+                    context.Candidate.RunId,
+                    context.Candidate.Step.Id,
+                    context.Candidate.ProjectId,
                     projectionPlan,
                     Path.GetFileName(fullPath),
                     contentType,
@@ -115,7 +112,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
                     scopedRelativePath),
                 context.CancellationToken);
             if (!candidateState.TryApplyExpectedWriteOutcome(
-                    context.Candidate,
+                    context.Candidate.MutableState,
                     expectedArtifact,
                     writeResult,
                     out var errorSummary))
