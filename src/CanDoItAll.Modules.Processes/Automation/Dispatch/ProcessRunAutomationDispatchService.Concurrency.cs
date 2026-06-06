@@ -99,7 +99,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             cancellationToken);
     }
 
-    private async Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
+    internal async Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
         DispatchCandidate candidate,
         DispatchExecutionOutcome executionOutcome,
         CancellationToken cancellationToken)

@@ -1,0 +1,4 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-dispatch-route-handler-facet-implementation-boundary-v1 --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll
+ExitCode: 0
+
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-route-handler-facet-implementation-boundary-v1

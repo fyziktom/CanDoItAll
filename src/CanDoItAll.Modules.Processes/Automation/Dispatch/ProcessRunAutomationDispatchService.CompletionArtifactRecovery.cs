@@ -42,7 +42,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             cancellationToken);
     }
 
-    private async Task<DispatchExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
+    internal async Task<DispatchExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
         DispatchCandidate candidate,
         string trigger,
         ProcessStepDispatchClaim dispatchClaim,

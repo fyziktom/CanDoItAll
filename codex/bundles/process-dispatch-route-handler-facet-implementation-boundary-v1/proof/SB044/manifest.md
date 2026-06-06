@@ -1,0 +1,28 @@
+# SB044 Proof Manifest
+
+- Status: `Completed`
+- Invariant ID: `ROUTE-FACET-BOUNDARY`
+- Source raw note: `RAW-001`
+- Source proof: `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`; `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`; `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`; `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerFactory.cs`; `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`.
+- Changed-file hashes:
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteExecutionModels.cs`: `4999839430e60195e79c36f5e4028dd9b1d8cd43f444efecc0fbf9e8e532f644`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`: `20854b67fed823cdaa37e7d4ee8733bce8560596a93eeadc971dbbe7357ec44d`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerFactory.cs`: `cc728117cbff9fa34949fc9831bd1407760f69358873ef76b23d221c3b4c8bfe`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerPipeline.cs`: `c608629227b5447a4f45ac5b625a45b6950757b26bd36e1fb6ea550ec084be37`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`: `80a339f55dcae142b9999929bf324e607d05c1433d22128f627e54400e118f65`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`: `84eae498c2a53baeafe6f6b5075effec2f9c03cce55553ea5e8e022f39731c7f`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs`: `ce01802d2b9d1530168d9f8e1451cc9bc89b6a885fdf5681e2b4d9518bedc998`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs`: `3dcbed8941799466bb438c879cbc820b017f82e1c0bdfe395872d4ef65295b11`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs`: `ec9e060f0a4648bf2d4898083e7386988f529075f1b04ed77ae2779e05ceab91`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Concurrency.cs`: `e32dd10ac8913d97509ece97116450d611a5505a03479399668b02e32d52c63d`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`: `dee42998af078e7498c7b2f0f2a8b94b1019902c2fc2a4c7ad4802317b0136f8`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs`: `f460cc17fa0ce5eb146a34fa2ac074834ac8ce190bd59621119fbc6f193aa150`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`: `c4b85d83b2d5aebe6808f5496d6405fc9f968947ef84fbf3b54eb5cb06fe3668`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`: `8f61ce940dddae354c57cb36a2add72db26623619d055106e2cc6581a7d0ed3b`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`: `47fbbac5125b8ee81e3b27763e726fd35f60aa4483e3e4af292779bbd7db2257`
+- Passing transcript: `bundle://proof/transcripts/build-no-restore.txt`; `bundle://proof/transcripts/unit-focused-route-boundary-tests.txt`; `bundle://proof/transcripts/integration-focused-route-tests.txt`.
+- Semantic positive proof transcript: `bundle://proof/transcripts/unit-focused-route-boundary-tests.txt`; `bundle://proof/transcripts/integration-focused-route-tests.txt`.
+- Anti-stub audit transcript: `bundle://proof/transcripts/source-assertions.txt`.
+- Failing-first test: N/A - process refactor with no production behavior change; adversarial negative proof is the structural source assertion rejecting nested handlers, dispatcher injection, order drift, Core tokens, driver tokens, and stubs.
+- Semantic invariant contract: `bundle://proof/SB044/semantic-invariants.md`.
+- Downstream dependency check: Gate rows SB001-SB144 in `bundle://reviews/01-execution-report.md` are passed, and the focused unit/integration transcripts keep downstream dispatch routes on the same route pipeline semantics.

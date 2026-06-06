@@ -932,7 +932,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     internal static StorageContentKind ResolveStorageContentKind(string contentType, string fullPath)
         => ProcessStorageContentKindRules.ResolveStorageContentKind(contentType, fullPath);
 
-    private static string NormalizeTrigger(string trigger, Guid? stepRunId)
+    internal static string NormalizeTrigger(string trigger, Guid? stepRunId)
     {
         if (!string.IsNullOrWhiteSpace(trigger))
         {

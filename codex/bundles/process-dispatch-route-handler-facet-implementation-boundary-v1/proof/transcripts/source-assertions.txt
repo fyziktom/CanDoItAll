@@ -1,0 +1,11 @@
+Command: source assertion script for route handler facet boundary
+Invariant ID: ROUTE-FACET-BOUNDARY
+ExitCode: 0
+Result: PASS
+Assertions:
+- Dispatcher route partial has no private nested route handler classes.
+- Route handler constructors do not receive ProcessRunAutomationDispatchService dispatcher parameters.
+- Explicit route facet interfaces and dispatcher-backed route services adapter exist.
+- All 11 route handlers are top-level module-local classes.
+- Factory handler order matches canonical route stage order.
+- Changed route source contains no Core/driver/stub tokens.

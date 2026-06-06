@@ -256,7 +256,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return await processesService.TransitionStepAsync(request, cancellationToken);
     }
 
-    private async Task<Result> TransitionStepWithClaimAsync(
+    internal async Task<Result> TransitionStepWithClaimAsync(
         ProcessStepTransitionRequest request,
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)

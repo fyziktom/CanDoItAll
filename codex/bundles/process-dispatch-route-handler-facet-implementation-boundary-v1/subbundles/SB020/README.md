@@ -2,8 +2,8 @@
 
 ## Status
 
-Planned.
-
+- Status: `Completed`
+- Closure proof: `bundle://reviews/01-execution-report.md`; `bundle://proof/transcripts/build-no-restore.txt`; `bundle://proof/transcripts/unit-focused-route-boundary-tests.txt`; `bundle://proof/transcripts/integration-focused-route-tests.txt`; `bundle://proof/transcripts/source-assertions.txt`.
 ## Objective
 
 Critical Gate E: route model readiness
@@ -21,14 +21,14 @@ Critical Gate E: route model readiness
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePipeline.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchClaimLease.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExceptionClosure.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePipeline.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchClaimLease.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExceptionClosure.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration`
 
 ## Deliverables
 
@@ -38,11 +38,11 @@ Critical Gate E: route model readiness
 
 ## Dependency Impact
 
-This subbundle is part of phase `P2: Route model extraction and vocabulary`. Downstream route-handler extraction depends on this subbundle preserving route order and side-effect ownership.
+- This subbundle is part of phase `P2: Route model extraction and vocabulary`. Downstream route-handler extraction depends on this subbundle preserving route order and side-effect ownership.
 
 ## Validation Depth
 
-Critical gate: source scans, focused unit tests, focused integration tests, semantic invariant proof, anti-stub scan and no-core/no-driver/no-UI scan are required.
+- Critical gate: source scans, focused unit tests, focused integration tests, semantic invariant proof, anti-stub scan and no-core/no-driver/no-UI scan are required.
 
 ## Implementation Steps
 
@@ -87,11 +87,11 @@ Critical gate: source scans, focused unit tests, focused integration tests, sema
 
 ## Browser Validation Logging
 
-`N/A` - runtime/service refactor only. Do not create browser screenshots. Do not run small, medium, mobile, phone or tablet proof.
+- `N/A` - runtime/service refactor only. Do not create browser screenshots. Do not run small, medium, mobile, phone or tablet proof.
 
 ## Progression Gate
 
-Do not start downstream subbundles until this critical gate passes.
+- Do not start downstream subbundles until this critical gate passes.
 
 ## Suggested Agent Prompt
 

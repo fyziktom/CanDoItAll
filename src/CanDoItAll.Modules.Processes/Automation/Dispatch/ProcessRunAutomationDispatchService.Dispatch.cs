@@ -93,7 +93,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static double GetElapsedMilliseconds(long startTimestamp)
         => Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
 
-    private async Task HandleWorkflowExecutionOutcomeAsync(
+    internal async Task HandleWorkflowExecutionOutcomeAsync(
         DispatchCandidate candidate,
         ProcessWorkflowExecutionOutcome workflowOutcome,
         ProcessStepDispatchClaim dispatchClaim,
@@ -117,7 +117,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal sealed record DispatchCandidateHeader(Guid StepRunId, ProcessStepRunStatus Status);
 
-    private async Task<bool> IsRunClosedToAutomationAsync(
+    internal async Task<bool> IsRunClosedToAutomationAsync(
         Guid processRunId,
         Guid stepRunId,
         CancellationToken cancellationToken)
@@ -176,7 +176,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             $"Governed process automation requires PostgreSQL, but the active database profile is '{profile.Profile.DisplayName}' ({profile.Profile.Id:D}, provider {profile.Profile.ProviderKind}, source {profile.Profile.SourceKind}, resolved by {profile.ResolutionSource}). Switch the active database profile to PostgreSQL before rerunning automation.");
     }
 
-    private async Task HandleSubprocessDispatchAsync(
+    internal async Task HandleSubprocessDispatchAsync(
         DispatchCandidate candidate,
         string trigger,
         Guid? triggerStepRunId,
@@ -471,7 +471,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.StepRun.Id);
     }
 
-    private async Task<bool> TryRequestMissingUpstreamArtifactMaterializationAsync(
+    internal async Task<bool> TryRequestMissingUpstreamArtifactMaterializationAsync(
         DispatchCandidate candidate,
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
@@ -593,7 +593,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             cancellationToken);
     }
 
-    private async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
+    internal async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
         Guid processRunId,
         Guid claimedStepRunId,
         string trigger,

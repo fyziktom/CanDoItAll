@@ -1,5 +1,17 @@
 # Phase Plan
 
+## Phase Sequence
+
+- P1: Baseline, inventory and hard guardrails.
+- P2: Route model extraction and vocabulary.
+- P3: Route facet interface foundation.
+- P4: Pre-execution route handler split.
+- P5: Recovery, subprocess and start route handler split.
+- P6: Workflow, direct-agent and finalizer route handler split.
+- P7: Route host/factory composition and source-hardening.
+- P8: Dispatcher shim slimming and nested handler removal.
+- P9: No-core, no-driver, driver-readiness documentation.
+- P10: Broad smoke, red-team and completed closure.
 ## Subbundle Dependency Map
 
 ```mermaid

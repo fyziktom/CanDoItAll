@@ -2,8 +2,8 @@
 
 ## Status
 
-Planned.
-
+- Status: `Completed`
+- Closure proof: `bundle://reviews/01-execution-report.md`; `bundle://proof/transcripts/build-no-restore.txt`; `bundle://proof/transcripts/unit-focused-route-boundary-tests.txt`; `bundle://proof/transcripts/integration-focused-route-tests.txt`; `bundle://proof/transcripts/source-assertions.txt`.
 ## Objective
 
 Add direct-agent outcome storage tests
@@ -21,14 +21,14 @@ Add direct-agent outcome storage tests
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePipeline.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchClaimLease.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExceptionClosure.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePipeline.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchClaimLease.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExceptionClosure.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration`
 
 ## Deliverables
 
@@ -36,11 +36,11 @@ Add direct-agent outcome storage tests
 
 ## Dependency Impact
 
-This subbundle is part of phase `P6: Workflow, direct-agent and finalizer route handler split`. Downstream route-handler extraction depends on this subbundle preserving route order and side-effect ownership.
+- This subbundle is part of phase `P6: Workflow, direct-agent and finalizer route handler split`. Downstream route-handler extraction depends on this subbundle preserving route order and side-effect ownership.
 
 ## Validation Depth
 
-Focused source assertions and at least one downstream dependency check are required. If this subbundle touches production code, run the nearest focused route-handler tests.
+- Focused source assertions and at least one downstream dependency check are required. If this subbundle touches production code, run the nearest focused route-handler tests.
 
 ## Implementation Steps
 
@@ -85,11 +85,11 @@ Focused source assertions and at least one downstream dependency check are requi
 
 ## Browser Validation Logging
 
-`N/A` - runtime/service refactor only. Do not create browser screenshots. Do not run small, medium, mobile, phone or tablet proof.
+- `N/A` - runtime/service refactor only. Do not create browser screenshots. Do not run small, medium, mobile, phone or tablet proof.
 
 ## Progression Gate
 
-May continue only if source assertions pass and no critical invariant is violated.
+- May continue only if source assertions pass and no critical invariant is violated.
 
 ## Suggested Agent Prompt
 

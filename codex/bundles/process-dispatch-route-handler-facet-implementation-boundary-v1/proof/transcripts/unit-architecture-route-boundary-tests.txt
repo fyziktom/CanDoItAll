@@ -1,0 +1,67 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests -v minimal
+ExitCode: 1
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+  Neúspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Execution_boundary_design_stays_on_staging_facade_cutline [< 1 ms]
+  Chybová zpráva:
+   System.IO.DirectoryNotFoundException : Could not find a part of the path 'C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\architecture\02-execution-boundary-staging.md'.
+  Trasování zásobníku:
+     at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.StreamReader.ValidateArgsAndOpenPath(String path, Int32 bufferSize)
+   at System.IO.File.ReadAllText(String path, Encoding encoding)
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.ReadRepositoryFile(String[] pathParts) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 2379
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Execution_boundary_design_stays_on_staging_facade_cutline() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 27
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Neúspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Step_completion_finalizer_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift [1 ms]
+  Chybová zpráva:
+   System.IO.DirectoryNotFoundException : Could not find a part of the path 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-step-completion-finalizer-boundary-v1\inventories\02-finalizer-method-classification-template.md'.
+  Trasování zásobníku:
+     at Microsoft.Win32.SafeHandles.SafeFileHandle.CreateFile(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.Strategies.FileStreamHelpers.ChooseStrategyCore(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.StreamReader.ValidateArgsAndOpenPath(String path, Int32 bufferSize)
+   at System.IO.File.ReadAllText(String path, Encoding encoding)
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.ReadRepositoryFile(String[] pathParts) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 2379
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Step_completion_finalizer_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 1118
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Neúspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_dispatch_claim_route_gate_b_SB08_INV_001_records_concurrency_helper_parity_and_blocks_side_effect_drift [9 ms]
+  Chybová zpráva:
+   Assert.Contains() Failure: Sub-string not found
+String:    "using CanDoItAll.AgentFramework.Core;\r\nus"···
+Not found: "executionClient.GetExecutionRunDetailAsyn"···
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_dispatch_claim_route_gate_b_SB08_INV_001_records_concurrency_helper_parity_and_blocks_side_effect_drift() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 696
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Neúspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Artifact_validation_gate_a_records_live_inventory_and_blocks_driver_or_viewport_drift [< 1 ms]
+  Chybová zpráva:
+   System.IO.DirectoryNotFoundException : Could not find a part of the path 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-validation-rule-boundary-v1\inventories\02-artifact-validation-method-inventory-seed.md'.
+  Trasování zásobníku:
+     at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.ReadAllText(String path)
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.ReadRepositoryFile(String[] pathParts) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 2379
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Artifact_validation_gate_a_records_live_inventory_and_blocks_driver_or_viewport_drift() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 497
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+  Neúspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_execution_boundary_inventory_records_direct_dispatcher_calls_before_movement [< 1 ms]
+  Chybová zpráva:
+   System.IO.DirectoryNotFoundException : Could not find a part of the path 'C:\repositories\CanDoItAll\codex\bundles\process-agent-execution-boundary-foundation-v1\inventories\02-agentframework-usage-in-processes.md'.
+  Trasování zásobníku:
+     at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.ReadAllText(String path)
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.ReadRepositoryFile(String[] pathParts) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 2379
+   at CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_execution_boundary_inventory_records_direct_dispatcher_calls_before_movement() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:line 44
+   at System.RuntimeMethodHandle.InvokeMethod(ObjectHandleOnStack target, Void** arguments, ObjectHandleOnStack sig, BOOL isConstructor, ObjectHandleOnStack result)
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+
+Neúspěšné!  - Neúspěšné:     5, Úspěšné:    53, Přeskočeno:     0, Celkem:    58, Doba trvání: 15 s - CanDoItAll.Tests.Unit.dll (net10.0)

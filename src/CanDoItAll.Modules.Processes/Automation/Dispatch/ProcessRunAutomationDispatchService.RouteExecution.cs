@@ -5,50 +5,6 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private enum ProcessClaimedDispatchResult
-    {
-        DispatchComplete,
-        ContinueCandidates
-    }
-
-    private sealed class ProcessClaimedDispatchExecution
-    {
-        public ProcessClaimedDispatchExecution(
-            Guid processRunId,
-            Guid? triggerStepRunId,
-            string trigger,
-            ProcessStepDispatchClaim dispatchClaim,
-            Func<CancellationToken, Task> dispatchRenewLeaseAsync,
-            CancellationToken rootCancellationToken)
-        {
-            ProcessRunId = processRunId;
-            TriggerStepRunId = triggerStepRunId;
-            Trigger = trigger;
-            DispatchClaim = dispatchClaim;
-            DispatchRenewLeaseAsync = dispatchRenewLeaseAsync;
-            RootCancellationToken = rootCancellationToken;
-            DispatchCancellationToken = rootCancellationToken;
-        }
-
-        public Guid ProcessRunId { get; }
-
-        public Guid? TriggerStepRunId { get; }
-
-        public string Trigger { get; }
-
-        public ProcessStepDispatchClaim DispatchClaim { get; }
-
-        public Func<CancellationToken, Task> DispatchRenewLeaseAsync { get; }
-
-        public CancellationToken RootCancellationToken { get; }
-
-        public CancellationToken DispatchCancellationToken { get; set; }
-
-        public ProcessDispatchLeaseHeartbeat? DispatchHeartbeat { get; set; }
-
-        public DispatchCandidate? Candidate { get; set; }
-    }
-
     private async Task<ProcessClaimedDispatchResult> RunClaimedDispatchAsync(
         ProcessDispatchClaimCoordinator claimCoordinator,
         Guid processRunId,
@@ -124,6 +80,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         return await CreateClaimedDispatchRouteHandlerPipeline().ExecuteAsync(
-            new ProcessClaimedDispatchRouteContext(execution, execution.Candidate));
+            new ProcessDispatchRouteContext(execution, execution.Candidate));
     }
 }

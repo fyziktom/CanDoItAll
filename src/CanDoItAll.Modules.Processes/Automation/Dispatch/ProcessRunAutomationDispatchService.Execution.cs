@@ -23,7 +23,7 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private async Task<DispatchExecutionOutcome> ExecuteUntilSettledAsync(
+    internal async Task<DispatchExecutionOutcome> ExecuteUntilSettledAsync(
         DispatchCandidate candidate,
         string trigger,
         Func<CancellationToken, Task>? renewLeaseAsync,
