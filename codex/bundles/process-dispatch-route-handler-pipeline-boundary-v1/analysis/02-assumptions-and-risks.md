@@ -9,16 +9,16 @@
 
 ## Critical Path Risks
 
-1. Route order drift can silently change process behavior.
-2. Transition side effects may be hidden inside "pure" helpers.
-3. Finalizer handoff can be reordered before competing/run-closed guards.
-4. Subprocess route may lose projection or capability-gap handling.
-5. Start transition reload fallback may be weakened.
-6. Failure closure can accidentally skip failure transition when claim is still held.
-7. Production driver API may appear too early and freeze the wrong abstractions.
-8. Process Core extraction may be started prematurely.
-9. Collapsed execution-report rows may hide skipped subbundles.
-10. Codex may create wrapper-only handlers while leaving real decisions in `RouteExecution.cs`.
+- Route order drift can silently change process behavior.
+- Transition side effects may be hidden inside "pure" helpers.
+- Finalizer handoff can be reordered before competing/run-closed guards.
+- Subprocess route may lose projection or capability-gap handling.
+- Start transition reload fallback may be weakened.
+- Failure closure can accidentally skip failure transition when claim is still held.
+- Production driver API may appear too early and freeze the wrong abstractions.
+- Process Core extraction may be started prematurely.
+- Collapsed execution-report rows may hide skipped subbundles.
+- Codex may create wrapper-only handlers while leaving real decisions in `RouteExecution.cs`.
 
 ## Validation Risks
 

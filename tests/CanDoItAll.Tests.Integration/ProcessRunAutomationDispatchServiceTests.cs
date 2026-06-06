@@ -17017,6 +17017,9 @@ Ancestor path to the target work node:
         var routeSource = File.ReadAllText(Path.Combine(
             dispatchDirectory,
             "ProcessRunAutomationDispatchService.RouteExecution.cs"));
+        var routeHandlerSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.RouteHandlers.cs"));
         var finalizerFactorySource = File.ReadAllText(Path.Combine(
             dispatchDirectory,
             "ProcessRunAutomationDispatchService.FinalizerContextFactory.cs"));
@@ -17024,6 +17027,7 @@ Ancestor path to the target work node:
             Environment.NewLine,
             dispatchSource,
             routeSource,
+            routeHandlerSource,
             finalizerFactorySource);
 
         Assert.Contains("FinalizeStepCompletionAsync", combinedSource, StringComparison.Ordinal);

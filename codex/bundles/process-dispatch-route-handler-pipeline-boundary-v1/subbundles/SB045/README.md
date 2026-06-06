@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -19,17 +19,17 @@ Introduce module-local subprocess route snapshot if direct DispatchCandidate acc
 
 ## Prerequisites
 
-Previous subbundle completed; all earlier critical gates passed.
+- Previous subbundle completed; all earlier critical gates passed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePipeline.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchClaimLease.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExceptionClosure.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePipeline.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchClaimLease.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ExceptionClosure.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 ## Deliverables / Scope
 
@@ -37,15 +37,15 @@ Named handlers/coordinators for stranded recovery, subprocess, and start transit
 
 ## Dependency Impact
 
-Phase: `P3 - Recovery, subprocess, and start-transition handlers`
+- Phase: `P3 - Recovery, subprocess, and start-transition handlers`
 
-Critical foundation: No.
+- Critical foundation: No.
 
-If this subbundle is wrong, reopen it and all downstream subbundles that depend on its route order, claim lifecycle, side-effect ownership, handler context or proof artifacts.
+- If this subbundle is wrong, reopen it and all downstream subbundles that depend on its route order, claim lifecycle, side-effect ownership, handler context or proof artifacts.
 
 ## Validation Depth
 
-Build, focused route/subprocess tests, line-count scan, no-core/no-driver scan.
+- Build, focused route/subprocess tests, line-count scan, no-core/no-driver scan.
 
 ## Implementation Steps
 
@@ -69,14 +69,14 @@ Do not introduce CanDoItAll.Processes.Core, production driver APIs, UI changes, 
 
 ## Acceptance Checklist
 
-- [ ] Behavior preserved.
-- [ ] Route order preserved.
-- [ ] No hidden side effects in pure helpers.
-- [ ] No Process Core.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Tests/source scans recorded.
-- [ ] Execution report row updated individually.
+- [x] Behavior preserved.
+- [x] Route order preserved.
+- [x] No hidden side effects in pure helpers.
+- [x] No Process Core.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Tests/source scans recorded.
+- [x] Execution report row updated individually.
 
 ## Proof Required
 
@@ -87,11 +87,11 @@ Do not introduce CanDoItAll.Processes.Core, production driver APIs, UI changes, 
 
 ## Browser Validation Logging
 
-N/A - runtime/service refactor only. Do not create small/medium/mobile/browser proof.
+- N/A - runtime/service refactor only. Do not create small/medium/mobile/browser proof.
 
 ## Progression Gate
 
-Downstream work may continue only after the closure checklist and proof are complete. Critical gate subbundles require manifest + semantic invariant proof.
+- Downstream work may continue only after the closure checklist and proof are complete. Critical gate subbundles require manifest + semantic invariant proof.
 
 ## Suggested Agent Prompt
 
