@@ -1,0 +1,4 @@
+Command: dotnet test 'C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj' --no-build --filter "FullyQualifiedName~Process_dispatch_claim_route_gate_c_SB12_INV_001|FullyQualifiedName~Process_dispatch_main_loop_claim_lifecycle_boundary_SB88_INV_001"
+ExitCode: 0
+Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
+Result: 2 existing route boundary architecture tests passed after rebuilding the test assembly.

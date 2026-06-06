@@ -8,21 +8,21 @@ internal static class ProcessDispatchRouteHandlerFactory
     public static ProcessDispatchRouteHandlerPipeline Create(
         IClock clock,
         ILogger<ProcessRunAutomationDispatchService> logger,
-        ProcessDispatchRouteServices routeServices)
+        ProcessDispatchRouteFacetSet routeFacets)
     {
         return new ProcessDispatchRouteHandlerPipeline(
             [
                 new FreshRecoverySkipRouteHandler(clock, logger),
-                new DatabaseRequirementRouteHandler(routeServices),
-                new UpstreamMaterializationRouteHandler(routeServices),
-                new StrandedArtifactRecoveryRouteHandler(routeServices),
-                new SubprocessRouteHandler(routeServices),
-                new StartTransitionRouteHandler(routeServices, logger),
-                new WorkflowRouteHandler(routeServices),
-                new DirectAgentExecutionRouteHandler(routeServices),
-                new CompetingExecutionGuardRouteHandler(routeServices, logger),
-                new RunClosedGuardRouteHandler(routeServices, logger),
-                new FinalizerTransitionRouteHandler(routeServices)
+                new DatabaseRequirementRouteHandler(routeFacets.DatabaseRequirement),
+                new UpstreamMaterializationRouteHandler(routeFacets.UpstreamMaterialization),
+                new StrandedArtifactRecoveryRouteHandler(routeFacets.Recovery),
+                new SubprocessRouteHandler(routeFacets.Subprocess),
+                new StartTransitionRouteHandler(routeFacets.StartTransition, logger),
+                new WorkflowRouteHandler(routeFacets.Workflow),
+                new DirectAgentExecutionRouteHandler(routeFacets.DirectAgent),
+                new CompetingExecutionGuardRouteHandler(routeFacets.Guard, logger),
+                new RunClosedGuardRouteHandler(routeFacets.Guard, logger),
+                new FinalizerTransitionRouteHandler(routeFacets.Finalizer)
             ]);
     }
 }

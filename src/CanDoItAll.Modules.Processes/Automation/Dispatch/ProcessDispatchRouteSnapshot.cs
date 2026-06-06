@@ -50,7 +50,7 @@ internal readonly record struct ProcessDispatchRouteSnapshot(
     public bool IsStepStatusDispatchableForRun => ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(RunStatus, StepStatus);
 
     public static ProcessDispatchRouteSnapshot Create(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         string trigger,
         Guid? triggerStepRunId)
     {

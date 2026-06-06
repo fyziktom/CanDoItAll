@@ -1,0 +1,4 @@
+Command: rg -n "internal sealed class ProcessDispatchRouteServices|using (DispatchCandidate|DispatchExecutionOutcome|ProcessStepDispatchClaim) =|ProcessRunAutomationDispatchService\.(DispatchCandidate|DispatchExecutionOutcome|ProcessStepDispatchClaim)" route-facing dispatch files
+ExitCode: 1
+Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
+Result: no all-facet ProcessDispatchRouteServices class and no forbidden route-facing dispatcher nested model references were found.

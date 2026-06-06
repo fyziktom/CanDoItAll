@@ -1,8 +1,5 @@
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.SharedKernel;
-using DispatchCandidate = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchCandidate;
-using DispatchExecutionOutcome = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchExecutionOutcome;
-using ProcessStepDispatchClaim = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -18,44 +15,44 @@ internal interface IProcessDispatchDatabaseRequirementRouteFacet
     bool HasAutomationDatabaseRequirementFailure();
 
     Task BlockDispatchForCurrentDatabaseRequirementAsync(
-        DispatchCandidate candidate,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteCandidate candidate,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 }
 
 internal interface IProcessDispatchUpstreamMaterializationRouteFacet
 {
     Task<bool> TryRequestMissingUpstreamArtifactMaterializationAsync(
-        DispatchCandidate candidate,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteCandidate candidate,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 }
 
 internal interface IProcessDispatchRecoveryRouteFacet
 {
-    Task<DispatchExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
-        DispatchCandidate candidate,
+    Task<ProcessRouteExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
+        ProcessRouteCandidate candidate,
         string trigger,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         Func<CancellationToken, Task> renewLeaseAsync,
         CancellationToken cancellationToken);
 
     Task FinalizeRecoveredCompletionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome recoveryOutcome,
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome recoveryOutcome,
         string trigger,
         Func<CancellationToken, Task> renewLeaseAsync,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 }
 
 internal interface IProcessDispatchSubprocessRouteFacet
 {
     Task HandleSubprocessDispatchAsync(
-        DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         string trigger,
         Guid? triggerStepRunId,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 }
 
@@ -63,10 +60,10 @@ internal interface IProcessDispatchStartTransitionRouteFacet
 {
     Task<Result> TransitionStepWithClaimAsync(
         ProcessStepTransitionRequest request,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 
-    Task<DispatchCandidate?> LoadDispatchCandidateAsync(
+    Task<ProcessRouteCandidate?> LoadDispatchCandidateAsync(
         Guid processRunId,
         Guid claimedStepRunId,
         string trigger,
@@ -82,16 +79,16 @@ internal interface IProcessDispatchWorkflowRouteFacet
         CancellationToken cancellationToken);
 
     Task HandleWorkflowExecutionOutcomeAsync(
-        DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessWorkflowExecutionOutcome workflowOutcome,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 }
 
 internal interface IProcessDispatchDirectAgentRouteFacet
 {
-    Task<DispatchExecutionOutcome> ExecuteUntilSettledAsync(
-        DispatchCandidate candidate,
+    Task<ProcessRouteExecutionOutcome> ExecuteUntilSettledAsync(
+        ProcessRouteCandidate candidate,
         string trigger,
         Func<CancellationToken, Task> renewLeaseAsync,
         CancellationToken cancellationToken);
@@ -100,8 +97,8 @@ internal interface IProcessDispatchDirectAgentRouteFacet
 internal interface IProcessDispatchGuardRouteFacet
 {
     Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome executionOutcome,
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome executionOutcome,
         CancellationToken cancellationToken);
 
     Task<bool> IsRunClosedToAutomationAsync(
@@ -113,10 +110,10 @@ internal interface IProcessDispatchGuardRouteFacet
 internal interface IProcessDispatchFinalizerRouteFacet
 {
     Task FinalizeDirectAgentCompletionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome executionOutcome,
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome executionOutcome,
         string trigger,
         Func<CancellationToken, Task> renewLeaseAsync,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken);
 }

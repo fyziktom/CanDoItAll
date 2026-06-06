@@ -1,6 +1,3 @@
-using DispatchCandidate = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchCandidate;
-using ProcessStepDispatchClaim = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
-
 namespace CanDoItAll.Modules.Processes;
 
 internal enum ProcessClaimedDispatchResult
@@ -9,13 +6,13 @@ internal enum ProcessClaimedDispatchResult
     ContinueCandidates
 }
 
-internal sealed class ProcessClaimedDispatchExecution
+internal sealed class ProcessRouteExecutionContext
 {
-    public ProcessClaimedDispatchExecution(
+    public ProcessRouteExecutionContext(
         Guid processRunId,
         Guid? triggerStepRunId,
         string trigger,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         Func<CancellationToken, Task> dispatchRenewLeaseAsync,
         CancellationToken rootCancellationToken)
     {
@@ -34,7 +31,7 @@ internal sealed class ProcessClaimedDispatchExecution
 
     public string Trigger { get; }
 
-    public ProcessStepDispatchClaim DispatchClaim { get; }
+    public ProcessRouteDispatchClaim DispatchClaim { get; }
 
     public Func<CancellationToken, Task> DispatchRenewLeaseAsync { get; }
 
@@ -44,7 +41,7 @@ internal sealed class ProcessClaimedDispatchExecution
 
     public ProcessDispatchLeaseHeartbeat? DispatchHeartbeat { get; set; }
 
-    public DispatchCandidate? Candidate { get; set; }
+    public ProcessRouteCandidate? Candidate { get; set; }
 }
 
 internal enum ProcessDispatchRouteHandlerResultKind
@@ -80,14 +77,14 @@ internal readonly record struct ProcessDispatchRouteHandlerResult(
 }
 
 internal sealed class ProcessDispatchRouteContext(
-    ProcessClaimedDispatchExecution execution,
-    DispatchCandidate candidate)
+    ProcessRouteExecutionContext execution,
+    ProcessRouteCandidate candidate)
 {
-    public ProcessClaimedDispatchExecution Execution { get; } = execution;
+    public ProcessRouteExecutionContext Execution { get; } = execution;
 
-    public DispatchCandidate Candidate { get; private set; } = candidate;
+    public ProcessRouteCandidate Candidate { get; private set; } = candidate;
 
-    public ProcessRunAutomationDispatchService.DispatchExecutionOutcome? DirectAgentExecutionOutcome { get; private set; }
+    public ProcessRouteExecutionOutcome? DirectAgentExecutionOutcome { get; private set; }
 
     public ProcessDispatchRouteSnapshot CreateRouteSnapshot()
     {
@@ -97,18 +94,18 @@ internal sealed class ProcessDispatchRouteContext(
             Execution.TriggerStepRunId);
     }
 
-    public void UpdateCandidate(DispatchCandidate candidate)
+    public void UpdateCandidate(ProcessRouteCandidate candidate)
     {
         Candidate = candidate;
         Execution.Candidate = candidate;
     }
 
-    public void SetDirectAgentExecutionOutcome(ProcessRunAutomationDispatchService.DispatchExecutionOutcome executionOutcome)
+    public void SetDirectAgentExecutionOutcome(ProcessRouteExecutionOutcome executionOutcome)
     {
         DirectAgentExecutionOutcome = executionOutcome;
     }
 
-    public ProcessRunAutomationDispatchService.DispatchExecutionOutcome GetRequiredDirectAgentExecutionOutcome(ProcessDispatchRouteStage stage)
+    public ProcessRouteExecutionOutcome GetRequiredDirectAgentExecutionOutcome(ProcessDispatchRouteStage stage)
     {
         return DirectAgentExecutionOutcome ??
             throw new InvalidOperationException($"Route stage {stage} requires a direct-agent execution outcome.");

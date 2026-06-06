@@ -15,11 +15,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         var dispatchRenewLeaseAsync = CreateDispatchRenewLeaseCallback(claimCoordinator, dispatchClaim, renewLeaseAsync);
-        var execution = new ProcessClaimedDispatchExecution(
+        var execution = new ProcessRouteExecutionContext(
             processRunId,
             triggerStepRunId,
             trigger,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim),
             dispatchRenewLeaseAsync,
             cancellationToken);
 
@@ -60,14 +60,17 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private async Task<ProcessClaimedDispatchResult> ExecuteClaimedDispatchRouteAsync(
-        ProcessClaimedDispatchExecution execution)
+        ProcessRouteExecutionContext execution)
     {
         var candidateHydrationStarted = Stopwatch.GetTimestamp();
-        execution.Candidate = await LoadDispatchCandidateAsync(
+        var candidate = await LoadDispatchCandidateAsync(
             execution.ProcessRunId,
             execution.DispatchClaim.StepRunId,
             execution.Trigger,
             execution.DispatchCancellationToken);
+        execution.Candidate = candidate is null
+            ? null
+            : ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
         logger.LogDebug(
             "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
             execution.ProcessRunId,

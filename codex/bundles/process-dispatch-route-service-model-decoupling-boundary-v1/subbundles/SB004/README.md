@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -28,13 +28,13 @@ This subbundle belongs to **P1: Baseline and guardrails**.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerFactory.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerFactory.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 ## Deliverables
 
@@ -45,11 +45,13 @@ This subbundle belongs to **P1: Baseline and guardrails**.
 
 ## Dependency Impact
 
-Downstream subbundles depend on this subbundle preserving behavior and not widening route dependencies. If this subbundle changes route order, route result semantics, claim behavior, finalizer behavior, or side-effect ownership, downstream proof becomes invalid and earlier phases must be reopened.
+- Downstream subbundles depend on SB004 preserving behavior and not widening route dependencies.
+- If SB004 changes route order, route result semantics, claim behavior, finalizer behavior, or side-effect ownership, downstream proof is invalid and the affected earlier phase must be reopened.
 
 ## Validation Depth
 
-Critical gate: build + focused unit + focused integration + source scans + anti-stub + no-Core/no-driver/no-UI scan.
+- Focused validation for Gate A: no-Core/no-driver/no-UI guardrails..
+- Cumulative behavior proof is consolidated at the next critical gate for P1: Baseline and guardrails.
 
 ## Implementation Steps
 
@@ -98,12 +100,20 @@ Critical gate: build + focused unit + focused integration + source scans + anti-
 
 ## Browser Validation Logging
 
-N/A - runtime/service refactor only. Do not create browser, mobile, small-screen, or medium-screen proof.
+- N/A - runtime/service refactor only.
+- Do not create browser, mobile, small-screen, or medium-screen proof unless source diff unexpectedly touches UI.
 
 ## Progression Gate
 
-Downstream work may continue only after this critical gate passes and all failed source scans are repaired.
+- May continue only after local checks for SB004 pass and the execution report has an individual SB004 row.
+- Stop and reopen prerequisites if source scans, tests, or critical-gate proof contradict earlier assumptions.
 
 ## Suggested Agent Prompt
 
 Implement SB004 from this bundle. Keep changes narrow, preserve existing process route behavior, and do not introduce Process Core or driver APIs. Record exact proof before proceeding.
+
+## Closure Proof
+
+- Manifest: `bundle://proof/SB004/manifest.md`
+- Semantic invariants: `bundle://proof/SB004/semantic-invariants.md`
+

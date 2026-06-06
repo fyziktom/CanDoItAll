@@ -1,23 +1,21 @@
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.SharedKernel;
-using DispatchCandidate = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchCandidate;
-using DispatchExecutionOutcome = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.DispatchExecutionOutcome;
-using ProcessStepDispatchClaim = CanDoItAll.Modules.Processes.ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class ProcessDispatchRouteServices(
-    ProcessRunAutomationDispatchService dispatcher,
-    ProcessWorkflowRunCoordinator workflowRunCoordinator)
-    : IProcessDispatchDatabaseRequirementRouteFacet,
-        IProcessDispatchUpstreamMaterializationRouteFacet,
-        IProcessDispatchRecoveryRouteFacet,
-        IProcessDispatchSubprocessRouteFacet,
-        IProcessDispatchStartTransitionRouteFacet,
-        IProcessDispatchWorkflowRouteFacet,
-        IProcessDispatchDirectAgentRouteFacet,
-        IProcessDispatchGuardRouteFacet,
-        IProcessDispatchFinalizerRouteFacet
+internal sealed record ProcessDispatchRouteFacetSet(
+    IProcessDispatchDatabaseRequirementRouteFacet DatabaseRequirement,
+    IProcessDispatchUpstreamMaterializationRouteFacet UpstreamMaterialization,
+    IProcessDispatchRecoveryRouteFacet Recovery,
+    IProcessDispatchSubprocessRouteFacet Subprocess,
+    IProcessDispatchStartTransitionRouteFacet StartTransition,
+    IProcessDispatchWorkflowRouteFacet Workflow,
+    IProcessDispatchDirectAgentRouteFacet DirectAgent,
+    IProcessDispatchGuardRouteFacet Guard,
+    IProcessDispatchFinalizerRouteFacet Finalizer);
+
+internal sealed class ProcessDispatchDatabaseRequirementRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchDatabaseRequirementRouteFacet
 {
     public bool HasAutomationDatabaseRequirementFailure()
     {
@@ -25,98 +23,127 @@ internal sealed class ProcessDispatchRouteServices(
     }
 
     public async Task BlockDispatchForCurrentDatabaseRequirementAsync(
-        DispatchCandidate candidate,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteCandidate candidate,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         await dispatcher.BlockDispatchForCurrentDatabaseRequirementAsync(
-            candidate,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
+}
 
+internal sealed class ProcessDispatchUpstreamMaterializationRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchUpstreamMaterializationRouteFacet
+{
     public async Task<bool> TryRequestMissingUpstreamArtifactMaterializationAsync(
-        DispatchCandidate candidate,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteCandidate candidate,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         return await dispatcher.TryRequestMissingUpstreamArtifactMaterializationAsync(
-            candidate,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
+}
 
-    public async Task<DispatchExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
-        DispatchCandidate candidate,
+internal sealed class ProcessDispatchRecoveryRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchRecoveryRouteFacet
+{
+    public async Task<ProcessRouteExecutionOutcome?> TryRecoverStrandedMissingCompletionArtifactsAsync(
+        ProcessRouteCandidate candidate,
         string trigger,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         Func<CancellationToken, Task> renewLeaseAsync,
         CancellationToken cancellationToken)
     {
-        return await dispatcher.TryRecoverStrandedMissingCompletionArtifactsAsync(
-            candidate,
+        var recoveryOutcome = await dispatcher.TryRecoverStrandedMissingCompletionArtifactsAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
             trigger,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             renewLeaseAsync,
             cancellationToken);
+
+        return recoveryOutcome is null
+            ? null
+            : ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(recoveryOutcome);
     }
 
     public async Task FinalizeRecoveredCompletionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome recoveryOutcome,
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome recoveryOutcome,
         string trigger,
         Func<CancellationToken, Task> renewLeaseAsync,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         await dispatcher.FinalizeRecoveredCompletionAsync(
-            candidate,
-            recoveryOutcome,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(recoveryOutcome),
             trigger,
             renewLeaseAsync,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
+}
 
+internal sealed class ProcessDispatchSubprocessRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchSubprocessRouteFacet
+{
     public async Task HandleSubprocessDispatchAsync(
-        DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         string trigger,
         Guid? triggerStepRunId,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         await dispatcher.HandleSubprocessDispatchAsync(
-            candidate,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
             trigger,
             triggerStepRunId,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
+}
 
+internal sealed class ProcessDispatchStartTransitionRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchStartTransitionRouteFacet
+{
     public async Task<Result> TransitionStepWithClaimAsync(
         ProcessStepTransitionRequest request,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         return await dispatcher.TransitionStepWithClaimAsync(
             request,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
 
-    public async Task<DispatchCandidate?> LoadDispatchCandidateAsync(
+    public async Task<ProcessRouteCandidate?> LoadDispatchCandidateAsync(
         Guid processRunId,
         Guid claimedStepRunId,
         string trigger,
         CancellationToken cancellationToken)
     {
-        return await dispatcher.LoadDispatchCandidateAsync(
+        var candidate = await dispatcher.LoadDispatchCandidateAsync(
             processRunId,
             claimedStepRunId,
             trigger,
             cancellationToken);
-    }
 
+        return candidate is null
+            ? null
+            : ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+    }
+}
+
+internal sealed class ProcessDispatchWorkflowRouteService(
+    ProcessRunAutomationDispatchService dispatcher,
+    ProcessWorkflowRunCoordinator workflowRunCoordinator) : IProcessDispatchWorkflowRouteFacet
+{
     public async Task<ProcessWorkflowExecutionOutcome> TryRunOrObserveWorkflowAsync(
         Guid processRunId,
         Guid stepRunId,
@@ -131,39 +158,49 @@ internal sealed class ProcessDispatchRouteServices(
     }
 
     public async Task HandleWorkflowExecutionOutcomeAsync(
-        DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessWorkflowExecutionOutcome workflowOutcome,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         await dispatcher.HandleWorkflowExecutionOutcomeAsync(
-            candidate,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
             workflowOutcome,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
+}
 
-    public async Task<DispatchExecutionOutcome> ExecuteUntilSettledAsync(
-        DispatchCandidate candidate,
+internal sealed class ProcessDispatchDirectAgentRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchDirectAgentRouteFacet
+{
+    public async Task<ProcessRouteExecutionOutcome> ExecuteUntilSettledAsync(
+        ProcessRouteCandidate candidate,
         string trigger,
         Func<CancellationToken, Task> renewLeaseAsync,
         CancellationToken cancellationToken)
     {
-        return await dispatcher.ExecuteUntilSettledAsync(
-            candidate,
+        var executionOutcome = await dispatcher.ExecuteUntilSettledAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
             trigger,
             renewLeaseAsync,
             cancellationToken);
-    }
 
+        return ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(executionOutcome);
+    }
+}
+
+internal sealed class ProcessDispatchGuardRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchGuardRouteFacet
+{
     public async Task<ProcessAutomationExecutionRunRecord?> ResolveCompetingActiveAutomationExecutionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome executionOutcome,
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome executionOutcome,
         CancellationToken cancellationToken)
     {
         return await dispatcher.ResolveCompetingActiveAutomationExecutionAsync(
-            candidate,
-            executionOutcome,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(executionOutcome),
             cancellationToken);
     }
 
@@ -177,21 +214,25 @@ internal sealed class ProcessDispatchRouteServices(
             stepRunId,
             cancellationToken);
     }
+}
 
+internal sealed class ProcessDispatchFinalizerRouteService(
+    ProcessRunAutomationDispatchService dispatcher) : IProcessDispatchFinalizerRouteFacet
+{
     public async Task FinalizeDirectAgentCompletionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome executionOutcome,
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome executionOutcome,
         string trigger,
         Func<CancellationToken, Task> renewLeaseAsync,
-        ProcessStepDispatchClaim dispatchClaim,
+        ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
         await dispatcher.FinalizeDirectAgentCompletionAsync(
-            candidate,
-            executionOutcome,
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(executionOutcome),
             trigger,
             renewLeaseAsync,
-            dispatchClaim,
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
 }

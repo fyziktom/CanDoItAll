@@ -5,7 +5,7 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed partial class ProcessRunAutomationDispatchService
 {
     private ProcessClaimedDispatchResult HandleDispatchHeartbeatClaimLost(
-        ProcessClaimedDispatchExecution execution)
+        ProcessRouteExecutionContext execution)
     {
         var claimLostException = execution.DispatchHeartbeat!.CreateClaimLostException();
         if (execution.Candidate is null)
@@ -27,7 +27,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private ProcessClaimedDispatchResult HandleDispatchClaimLost(
-        ProcessClaimedDispatchExecution execution,
+        ProcessRouteExecutionContext execution,
         ProcessDispatchClaimLostException exception)
     {
         if (execution.Candidate is null)
@@ -49,7 +49,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private async Task<ProcessClaimedDispatchResult> HandleDispatchFailureAsync(
-        ProcessClaimedDispatchExecution execution,
+        ProcessRouteExecutionContext execution,
         Exception exception)
     {
         if (execution.DispatchHeartbeat?.ClaimLost == true)
@@ -95,7 +95,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return ProcessClaimedDispatchResult.DispatchComplete;
         }
 
-        if (!await IsStepDispatchClaimHeldAsync(execution.DispatchClaim, execution.DispatchCancellationToken))
+        var dispatcherClaim = ProcessDispatchRouteModelAdapters.ToDispatcherClaim(execution.DispatchClaim);
+        if (!await IsStepDispatchClaimHeldAsync(dispatcherClaim, execution.DispatchCancellationToken))
         {
             logger.LogWarning(
                 "Skipping automation failure transition for run {RunId}, step {StepRunId} because the durable dispatch claim is no longer held.",
@@ -113,7 +114,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 DecidedBy = AutomationActor,
                 SuppressAutomationDispatch = true
             },
-            execution.DispatchClaim,
+            dispatcherClaim,
             execution.DispatchCancellationToken);
         if (failResult.IsFailure)
         {

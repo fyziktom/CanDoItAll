@@ -1,0 +1,4 @@
+Command: git diff -- src/CanDoItAll.Modules.Processes/Automation/Dispatch tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs | Select-String -Pattern 'Components|\.razor|\.css|\.js|\.ts|mobile|small-screen|medium-screen|phone|tablet' -CaseSensitive:$false
+ExitCode: 0
+Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
+Result: no UI, Razor, CSS, JavaScript, TypeScript, mobile, small-screen, medium-screen, phone, or tablet diff tokens were returned for the production/test diff scope.

@@ -750,6 +750,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             Environment.NewLine,
             new[]
             {
+                "ProcessDispatchRouteModels.cs",
                 "ProcessDispatchRouteExecutionModels.cs",
                 "ProcessDispatchRouteFacets.cs",
                 "ProcessDispatchRouteHandlerPipeline.cs",
@@ -781,10 +782,16 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ProcessDispatchRouteStage.FinalizerTransition", routePipelineSource, StringComparison.Ordinal);
         Assert.Contains("IProcessDispatchRouteHandler", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteContext", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRouteExecutionContext", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRouteCandidate", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRouteDispatchClaim", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRouteExecutionOutcome", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerPipeline", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteOrderAssertion.ThrowIfStageOrderInvalid", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerFactory", routeBoundarySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRouteServices", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteFacetSet", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchDatabaseRequirementRouteService", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerRouteService", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("IProcessDispatchDatabaseRequirementRouteFacet", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("IProcessDispatchFinalizerRouteFacet", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("FreshRecoverySkipRouteHandler", routeBoundarySource, StringComparison.Ordinal);
@@ -876,6 +883,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         var helperSource = string.Join(
             Environment.NewLine,
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteSnapshot.cs")),
+            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModels.cs")),
             routePlannerSource,
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePipeline.cs")),
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteExecution.cs")),
@@ -950,6 +958,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             Environment.NewLine,
             new[]
             {
+                "ProcessDispatchRouteModels.cs",
                 "ProcessDispatchRouteExecutionModels.cs",
                 "ProcessDispatchRouteFacets.cs",
                 "ProcessDispatchRouteHandlerPipeline.cs",
@@ -973,7 +982,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ExecuteClaimedDispatchRouteAsync", routeSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerPipeline", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerFactory", routeBoundarySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRouteServices", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteFacetSet", routeBoundarySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchGuardRouteService", routeBoundarySource, StringComparison.Ordinal);
         Assert.DoesNotContain("RouteHandler(ProcessRunAutomationDispatchService", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("HandleDispatchHeartbeatClaimLost", exceptionSource, StringComparison.Ordinal);
         Assert.Contains("HandleDispatchClaimLost", exceptionSource, StringComparison.Ordinal);
@@ -981,6 +991,77 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedBoundarySource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverPack", combinedBoundarySource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverRegistry", combinedBoundarySource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_dispatch_route_service_model_decoupling_boundary_uses_route_models_and_narrow_services()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var routeFacingSource = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                "ProcessDispatchRouteModels.cs",
+                "ProcessDispatchRouteSnapshot.cs",
+                "ProcessDispatchRouteExecutionModels.cs",
+                "ProcessDispatchRouteFacets.cs",
+                "ProcessDispatchRouteHandlerPipeline.cs",
+                "ProcessDispatchRouteHandlerFactory.cs",
+                "ProcessDispatchRouteHandlers.cs",
+                "ProcessDispatchRouteServices.cs"
+            }.Select(file => File.ReadAllText(Path.Combine(dispatchDirectory, file))));
+        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModelAdapters.cs"));
+        var factorySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteHandlerFactory.cs"));
+        var routeServiceSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteServices.cs"));
+        var routeExecutionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteExecution.cs"));
+        var routeHandlerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteHandlers.cs"));
+
+        Assert.Contains("internal sealed record ProcessRouteCandidate", routeFacingSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessRouteDispatchClaim", routeFacingSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessRouteExecutionOutcome", routeFacingSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRouteExecutionContext", routeFacingSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteFacetSet", routeFacingSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteModelAdapters.FromDispatcherCandidate", routeExecutionSource, StringComparison.Ordinal);
+
+        var narrowServiceNames = new[]
+        {
+            "ProcessDispatchDatabaseRequirementRouteService",
+            "ProcessDispatchUpstreamMaterializationRouteService",
+            "ProcessDispatchRecoveryRouteService",
+            "ProcessDispatchSubprocessRouteService",
+            "ProcessDispatchStartTransitionRouteService",
+            "ProcessDispatchWorkflowRouteService",
+            "ProcessDispatchDirectAgentRouteService",
+            "ProcessDispatchGuardRouteService",
+            "ProcessDispatchFinalizerRouteService"
+        };
+
+        foreach (var narrowServiceName in narrowServiceNames)
+        {
+            Assert.Contains($"internal sealed class {narrowServiceName}", routeServiceSource, StringComparison.Ordinal);
+            Assert.Contains($"new {narrowServiceName}", routeHandlerSource, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("internal sealed class ProcessDispatchRouteServices", routeServiceSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchRouteServices", factorySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("using DispatchCandidate =", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("using DispatchExecutionOutcome =", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("using ProcessStepDispatchClaim =", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService.DispatchCandidate", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService.DispatchExecutionOutcome", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService.ProcessStepDispatchClaim", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchCandidate candidate", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DispatchExecutionOutcome executionOutcome", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessStepDispatchClaim dispatchClaim", routeFacingSource, StringComparison.Ordinal);
+
+        Assert.Contains("ProcessRunAutomationDispatchService.DispatchCandidate", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.DispatchExecutionOutcome", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.ProcessStepDispatchClaim", adapterSource, StringComparison.Ordinal);
     }
 
     [Fact]

@@ -7,7 +7,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ProcessDispatchRouteHandlerFactory.Create(
             clock,
             logger,
-            new ProcessDispatchRouteServices(this, workflowRunCoordinator));
+            new ProcessDispatchRouteFacetSet(
+                new ProcessDispatchDatabaseRequirementRouteService(this),
+                new ProcessDispatchUpstreamMaterializationRouteService(this),
+                new ProcessDispatchRecoveryRouteService(this),
+                new ProcessDispatchSubprocessRouteService(this),
+                new ProcessDispatchStartTransitionRouteService(this),
+                new ProcessDispatchWorkflowRouteService(this, workflowRunCoordinator),
+                new ProcessDispatchDirectAgentRouteService(this),
+                new ProcessDispatchGuardRouteService(this),
+                new ProcessDispatchFinalizerRouteService(this)));
     }
 
     internal bool HasAutomationDatabaseRequirementFailure()

@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Completed
 
 ## Objective
 
@@ -28,13 +28,13 @@ This subbundle belongs to **P5: Pre-execution service split**.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerFactory.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlerFactory.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 ## Deliverables
 
@@ -45,11 +45,13 @@ This subbundle belongs to **P5: Pre-execution service split**.
 
 ## Dependency Impact
 
-Downstream subbundles depend on this subbundle preserving behavior and not widening route dependencies. If this subbundle changes route order, route result semantics, claim behavior, finalizer behavior, or side-effect ownership, downstream proof becomes invalid and earlier phases must be reopened.
+- Downstream subbundles depend on SB051 preserving behavior and not widening route dependencies.
+- If SB051 changes route order, route result semantics, claim behavior, finalizer behavior, or side-effect ownership, downstream proof is invalid and the affected earlier phase must be reopened.
 
 ## Validation Depth
 
-Focused validation; deeper proof may be consolidated at the next critical gate.
+- Focused validation for Pre-execution side-effect classification update..
+- Cumulative behavior proof is consolidated at the next critical gate for P5: Pre-execution service split.
 
 ## Implementation Steps
 
@@ -98,12 +100,16 @@ Focused validation; deeper proof may be consolidated at the next critical gate.
 
 ## Browser Validation Logging
 
-N/A - runtime/service refactor only. Do not create browser, mobile, small-screen, or medium-screen proof.
+- N/A - runtime/service refactor only.
+- Do not create browser, mobile, small-screen, or medium-screen proof unless source diff unexpectedly touches UI.
 
 ## Progression Gate
 
-May continue to next subbundle only if local checks pass. The next critical gate will validate cumulative behavior.
+- May continue only after local checks for SB051 pass and the execution report has an individual SB051 row.
+- Stop and reopen prerequisites if source scans, tests, or critical-gate proof contradict earlier assumptions.
 
 ## Suggested Agent Prompt
 
 Implement SB051 from this bundle. Keep changes narrow, preserve existing process route behavior, and do not introduce Process Core or driver APIs. Record exact proof before proceeding.
+
+

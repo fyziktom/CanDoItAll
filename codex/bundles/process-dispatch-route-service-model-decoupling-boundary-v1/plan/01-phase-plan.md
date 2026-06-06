@@ -1,7 +1,10 @@
 # Phase Plan
 
-## Subbundle Dependency Map
+## Execution Order
 
+- Execute SB001 through SB128 in numeric order, stopping at each critical gate before downstream phases continue.
+
+## Subbundle Dependency Map
 ```mermaid
 gantt
     title Route Service / Model Decoupling Boundary
@@ -148,7 +151,8 @@ gantt
 
 ## Critical Subbundles
 
-SB004, SB008, SB012, SB016, SB020, SB024, SB028, SB032, SB040, SB048, SB056, SB064, SB072, SB080, SB088, SB096, SB104, SB112, SB120, SB128
+- SB004, SB008, SB012, SB016, SB020, SB024, SB028, SB032, SB040, SB048, SB056, SB064, SB072, SB080, SB088, SB096, SB104, SB112, SB120, SB128 are critical gates and require artifact-backed proof before dependent phases continue.
+
 
 ## Phase Gates
 
@@ -166,3 +170,4 @@ SB004, SB008, SB012, SB016, SB020, SB024, SB028, SB032, SB040, SB048, SB056, SB0
 ## No-collapse rule
 
 The execution report must contain individual rows for SB001 through SB128. A collapsed row such as `SB001-SB128` is not acceptable.
+

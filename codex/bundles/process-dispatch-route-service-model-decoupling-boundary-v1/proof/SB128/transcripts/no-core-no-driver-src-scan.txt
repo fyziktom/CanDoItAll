@@ -1,0 +1,4 @@
+Command: rg -n "CanDoItAll\.Processes\.Core|CanDoItAll\.Modules\.Processes\.Core|IProcessDriverPack|IProcessDriverRegistry|ProcessDriverRegistry|DriverPack|IProcessHelperDriver" src
+ExitCode: 1
+Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
+Result: production source scan found no Process Core project/reference and no production driver API tokens.
