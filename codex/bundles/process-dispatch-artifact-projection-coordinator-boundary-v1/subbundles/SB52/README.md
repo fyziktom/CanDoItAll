@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -17,7 +17,7 @@ Critical proof that projection order and side-effect boundaries are preserved.
 
 ## Prerequisites
 
-SB49-SB51
+- SB49-SB51
 
 ## Exact Source References
 
@@ -42,11 +42,11 @@ SB49-SB51
 
 ## Dependency Impact
 
-Downstream subbundles depend on this slice preserving projection source order and side-effect ownership. If this slice is wrong, reopen it before continuing.
+- Downstream subbundles depend on this slice preserving projection source order and side-effect ownership. If this slice is wrong, reopen it before continuing.
 
 ## Validation Depth
 
-Full build or focused build, focused tests, no-core/no-driver/no-UI scan, anti-stub scan, source assertion transcript, semantic invariant manifest.
+- Full build or focused build, focused tests, no-core/no-driver/no-UI scan, anti-stub scan, source assertion transcript, semantic invariant manifest.
 
 ## Implementation Steps
 
@@ -91,11 +91,11 @@ Full build or focused build, focused tests, no-core/no-driver/no-UI scan, anti-s
 
 ## Browser Validation Logging
 
-N/A - runtime/service refactor only. Do not create small, medium, mobile, phone, or tablet proof artifacts.
+- N/A - runtime/service refactor only. Do not create small, medium, mobile, phone, or tablet proof artifacts.
 
 ## Progression Gate
 
-Proceed only after proof is recorded and reviewed. Critical gates must block downstream work until clean.
+- Proceed only after proof is recorded and reviewed. Critical gates must block downstream work until clean.
 
 ## Suggested Agent Prompt
 

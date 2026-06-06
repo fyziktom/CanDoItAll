@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: `Completed`
 
 ## Objective
 
@@ -17,7 +17,7 @@ Wrapper delegates provider-native browser path; preserve required evidence match
 
 ## Prerequisites
 
-SB41
+- SB41
 
 ## Exact Source References
 
@@ -42,11 +42,11 @@ SB41
 
 ## Dependency Impact
 
-Downstream subbundles depend on this slice preserving projection source order and side-effect ownership. If this slice is wrong, reopen it before continuing.
+- Downstream subbundles depend on this slice preserving projection source order and side-effect ownership. If this slice is wrong, reopen it before continuing.
 
 ## Validation Depth
 
-Focused build/test proof for this slice plus source scan proving no forbidden boundary drift.
+- Focused build/test proof for this slice plus source scan proving no forbidden boundary drift.
 
 ## Implementation Steps
 
@@ -91,11 +91,11 @@ Focused build/test proof for this slice plus source scan proving no forbidden bo
 
 ## Browser Validation Logging
 
-N/A - runtime/service refactor only. Do not create small, medium, mobile, phone, or tablet proof artifacts.
+- N/A - runtime/service refactor only. Do not create small, medium, mobile, phone, or tablet proof artifacts.
 
 ## Progression Gate
 
-Proceed only after proof is recorded and reviewed. Critical gates must block downstream work until clean.
+- Proceed only after proof is recorded and reviewed. Critical gates must block downstream work until clean.
 
 ## Suggested Agent Prompt
 
