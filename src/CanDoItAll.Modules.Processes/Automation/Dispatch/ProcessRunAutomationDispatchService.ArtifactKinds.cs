@@ -83,25 +83,4 @@ internal sealed partial class ProcessRunAutomationDispatchService
                relativePath.Contains("/.playwright-mcp/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static async Task<IReadOnlyList<DispatchArtifactExpectation>> LoadExpectedArtifactsAsync(
-        AppDbContext dbContext,
-        Guid stepDefinitionId,
-        CancellationToken cancellationToken)
-    {
-        return await dbContext.Set<ProcessArtifactExpectation>()
-            .AsNoTracking()
-            .Where(item => item.StepDefinitionId == stepDefinitionId)
-            .OrderBy(item => item.Title)
-            .Select(item => new DispatchArtifactExpectation(
-                item.Id,
-                item.ArtifactKind,
-                item.Title,
-                item.IsRequired,
-                item.TrustRequirement,
-                item.SensitivityLevel,
-                item.ValidationRequirementSummary,
-                item.AllowedFutureUsageSummary))
-            .ToListAsync(cancellationToken);
-    }
-
 }

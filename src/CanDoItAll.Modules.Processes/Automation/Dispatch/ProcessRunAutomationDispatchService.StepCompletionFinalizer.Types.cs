@@ -77,7 +77,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         public bool IsSatisfied => Status == ProcessArtifactValidationStatus.Satisfied;
     }
 
-    private sealed record ProcessStepCompletionFinalizerContext(
+    internal sealed record ProcessStepCompletionFinalizerContext(
         ProcessStepCompletionExecutorKind ExecutorKind,
         DispatchCandidate Candidate,
         ProcessStepRunStatus CompletionStatus,
@@ -94,7 +94,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         Guid? RecoveryExecutionRunId = null,
         Guid? RecoveredForExecutionRunId = null);
 
-    private sealed record ProcessStepCompletionFinalizerResult(
+    internal sealed record ProcessStepCompletionFinalizerResult(
         ProcessStepRunStatus CompletionStatus,
         string CompletionReason,
         ProcessStepBlockCause? BlockCause,
@@ -103,7 +103,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         IReadOnlyList<ProcessArtifactExpectationValidationResult> ArtifactValidationResults,
         ProcessStepTransitionArtifactValidationContext ArtifactValidationContext);
 
-    private sealed record ProcessStepTransitionArtifactValidationContext(
+    internal sealed record ProcessStepTransitionArtifactValidationContext(
         ProcessStepCompletionExecutorKind ExecutorKind,
         Guid? ExecutionRunId,
         Guid? WorkflowRunId,

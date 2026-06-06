@@ -167,7 +167,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                (IsTerminalAutomationExecutionRun(executionRun) || IsStaleAutomationExecutionRun(executionRun, now)) &&
                candidate.RequiresExplicitBranchOutcomeSelection &&
                candidate.BranchOutcomes.Count > 0 &&
-               ResolveMissingUpstreamArtifactInputs(candidate).Count == 0 &&
+               ProcessMissingUpstreamArtifactMaterializationFactsResolver.ResolveMissingInputs(candidate).Count == 0 &&
                IsDispositionRoutingStep(candidate) &&
                TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out _);
     }

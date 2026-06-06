@@ -369,7 +369,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         if (unsatisfiedResults.Count == 0 ||
             candidate.BranchOutcomes.Count == 0 ||
-            ResolveMissingUpstreamArtifactInputs(candidate).Count > 0 ||
+            ProcessMissingUpstreamArtifactMaterializationFactsResolver.ResolveMissingInputs(candidate).Count > 0 ||
             !IsDispositionRoutingStep(candidate) ||
             !CanRouteArtifactContractDispositionFailures(candidate, unsatisfiedResults))
         {
@@ -497,7 +497,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         if (completionStatus is not (ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Failed) ||
             !candidate.RequiresExplicitBranchOutcomeSelection ||
             candidate.BranchOutcomes.Count == 0 ||
-            ResolveMissingUpstreamArtifactInputs(candidate).Count > 0 ||
+            ProcessMissingUpstreamArtifactMaterializationFactsResolver.ResolveMissingInputs(candidate).Count > 0 ||
             !IsDispositionRoutingStep(candidate) ||
             !HasSatisfiedRequiredCompletionArtifacts(candidate, validationResults) ||
             !TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out branchOutcome))

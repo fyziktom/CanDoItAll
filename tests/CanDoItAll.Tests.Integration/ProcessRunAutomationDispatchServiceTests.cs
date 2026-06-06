@@ -399,6 +399,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var dispatchSource = File.ReadAllText(Path.Combine(
             dispatchDirectory,
             "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var routeServicesSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessDispatchRouteServices.cs"));
+        var subprocessRuntimeSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessDispatchSubprocessRuntimeService.cs"));
         var subprocessHelperSource = string.Join(
             Environment.NewLine,
             new[]
@@ -410,10 +416,13 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                 "ProcessSubprocessProjectionPlanBuilder.cs"
             }.Select(file => File.ReadAllText(Path.Combine(dispatchDirectory, file))));
 
-        Assert.Contains("CreateSubprocessRunObservationCoordinator", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionRequest", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessSubprocessProjectionPlanBuilder.Build", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("projectionWriterCoordinator.WriteAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchSubprocessRuntimeService", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSubprocessRunObservationCoordinator", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionRequest", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSubprocessProjectionPlanBuilder.Build", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("projectionWriterCoordinator.WriteAsync", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessSubprocessProjectionPlanBuilder.Build", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("projectionWriterCoordinator.WriteAsync", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsureSubprocessRunForStepAsync", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("File.WriteAllTextAsync", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriver", subprocessHelperSource, StringComparison.Ordinal);

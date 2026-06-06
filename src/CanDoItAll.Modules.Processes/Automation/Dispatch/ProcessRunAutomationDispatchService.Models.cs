@@ -120,8 +120,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
         int AffectedAgentCount,
         string FailureSummary);
 
-    private sealed record ProcessAutomationDatabaseRequirementFailure(string Message);
-
     private readonly record struct DeclaredStepOutcome(
         ProcessStepRunStatus Status,
         string Reason,

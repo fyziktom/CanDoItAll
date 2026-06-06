@@ -648,6 +648,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "Dispatch");
         var helperSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessAutomationExecutionRunSelection.cs"));
         var concurrencySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Concurrency.cs"));
+        var adoptionCoordinatorSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessConcurrentExecutionAdoptionCoordinator.cs"));
         var integrationTestSource = ReadRepositoryFile(
             "tests",
             "CanDoItAll.Tests.Integration",
@@ -693,9 +694,13 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun", concurrencySource, StringComparison.Ordinal);
         Assert.Contains("ProcessAutomationExecutionRunSelection.IsConcurrentAutomationSessionBusyException", concurrencySource, StringComparison.Ordinal);
         Assert.Contains("executionClient.ListExecutionRunsAsync", concurrencySource, StringComparison.Ordinal);
-        Assert.Contains("executionClient.GetExecutionRunDetailAsync", concurrencySource, StringComparison.Ordinal);
-        Assert.Contains("Task.Delay", concurrencySource, StringComparison.Ordinal);
-        Assert.Contains("new ConcurrentAutomationExecution", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessConcurrentExecutionAdoptionCoordinator.TryAdoptAsync", concurrencySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("executionClient.GetExecutionRunDetailAsync", concurrencySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Task.Delay", concurrencySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ConcurrentAutomationExecution", concurrencySource, StringComparison.Ordinal);
+        Assert.Contains("executionClient.GetExecutionRunDetailAsync", adoptionCoordinatorSource, StringComparison.Ordinal);
+        Assert.Contains("Task.Delay", adoptionCoordinatorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessRunAutomationDispatchService.ConcurrentAutomationExecution", adoptionCoordinatorSource, StringComparison.Ordinal);
 
         Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_001", integrationTestSource, StringComparison.Ordinal);
         Assert.Contains("ProcessAutomationExecutionRunSelection_SB06_INV_002", integrationTestSource, StringComparison.Ordinal);
@@ -789,7 +794,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ProcessDispatchRouteHandlerPipeline", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteOrderAssertion.ThrowIfStageOrderInvalid", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerFactory", routeBoundarySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRouteFacetSet", routeBoundarySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchRouteFacetSet", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchDatabaseRequirementRouteService", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchFinalizerRouteService", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("IProcessDispatchDatabaseRequirementRouteFacet", routeBoundarySource, StringComparison.Ordinal);
@@ -982,7 +987,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ExecuteClaimedDispatchRouteAsync", routeSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerPipeline", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteHandlerFactory", routeBoundarySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRouteFacetSet", routeBoundarySource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchRouteFacetSet", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchGuardRouteService", routeBoundarySource, StringComparison.Ordinal);
         Assert.DoesNotContain("RouteHandler(ProcessRunAutomationDispatchService", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("HandleDispatchHeartbeatClaimLost", exceptionSource, StringComparison.Ordinal);
@@ -1025,7 +1030,9 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("internal sealed record ProcessRouteDispatchClaim", routeFacingSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed record ProcessRouteExecutionOutcome", routeFacingSource, StringComparison.Ordinal);
         Assert.Contains("ProcessRouteExecutionContext", routeFacingSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRouteFacetSet", routeFacingSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchRouteFacetSet", routeFacingSource, StringComparison.Ordinal);
+        Assert.Contains("IProcessDispatchDatabaseRequirementRouteFacet databaseRequirementFacet", factorySource, StringComparison.Ordinal);
+        Assert.Contains("IProcessDispatchFinalizerRouteFacet finalizerFacet", factorySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteModelAdapters.FromDispatcherCandidate", routeExecutionSource, StringComparison.Ordinal);
 
         var narrowServiceNames = new[]
@@ -1080,6 +1087,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "bundles",
             "process-dispatch-pre-execution-guard-materialization-boundary-v1");
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var routeServicesSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteServices.cs"));
+        var routeHandlersSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteHandlers.cs"));
         var preExecutionGuardHandlerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchPreExecutionGuardHandler.cs"));
         var targetSolution = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "01-target-solution.md"));
         var hardConstraints = File.ReadAllText(Path.Combine(bundleRoot, "requirements", "02-hard-constraints.md"));
@@ -1113,9 +1122,11 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("upstream materialization coordinator", targetSolution, StringComparison.Ordinal);
         Assert.Contains("No Process Core project", hardConstraints, StringComparison.Ordinal);
         Assert.Contains("No production driver API", hardConstraints, StringComparison.Ordinal);
-        Assert.Contains("BlockDispatchForDatabaseRequirementAsync", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("TryRequestMissingUpstreamArtifactMaterializationAsync", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("CreatePreExecutionGuardHandler", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("BlockDispatchForDatabaseRequirementAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryRequestMissingUpstreamArtifactMaterializationAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("BlockDispatchForCurrentDatabaseRequirementAsync", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("TryRequestMissingUpstreamArtifactMaterializationAsync", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("CreatePreExecutionGuardHandler", routeHandlersSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed class ProcessDispatchPreExecutionGuardHandler", preExecutionGuardHandlerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchDatabaseRequirementDecision", preExecutionGuardHandlerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchMissingUpstreamArtifactMaterializationPlan", preExecutionGuardHandlerSource, StringComparison.Ordinal);
@@ -1146,7 +1157,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
         var factorySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.FinalizerContextFactory.cs"));
 
-        Assert.Contains("private static class ProcessDispatchFinalizerContextFactory", factorySource, StringComparison.Ordinal);
+        Assert.Contains("internal static class ProcessDispatchFinalizerContextFactory", factorySource, StringComparison.Ordinal);
         Assert.Contains("ForManagerArtifactRecovery", factorySource, StringComparison.Ordinal);
         Assert.Contains("ForDirectAgent", factorySource, StringComparison.Ordinal);
         Assert.Contains("ForWorkflow", factorySource, StringComparison.Ordinal);
@@ -1154,12 +1165,15 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("new ProcessStepCompletionFinalizerContext", dispatchSource, StringComparison.Ordinal);
         var routeExecutionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteExecution.cs"));
         var routeHandlerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteHandlers.cs"));
+        var finalizerApplicationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchFinalizerApplicationService.cs"));
 
         Assert.Contains("CreateClaimedDispatchRouteHandlerPipeline", routeExecutionSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery", routeHandlerSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForDirectAgent", routeHandlerSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForWorkflow", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForSubprocess", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchFinalizerContextFactory.ForWorkflow", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchFinalizerContextFactory.ForSubprocess", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery", finalizerApplicationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForDirectAgent", finalizerApplicationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForWorkflow", finalizerApplicationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForSubprocess", finalizerApplicationSource, StringComparison.Ordinal);
 
         var requiredFactoryFields = new[]
         {
@@ -1322,7 +1336,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("internal interface IProcessArtifactContentReader", mainSource, StringComparison.Ordinal);
         Assert.Contains("internal enum ProcessStepCompletionExecutorKind", typeSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed record ProcessArtifactExpectationValidationResult", typeSource, StringComparison.Ordinal);
-        Assert.Contains("private sealed record ProcessStepCompletionFinalizerContext", typeSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessStepCompletionFinalizerContext", typeSource, StringComparison.Ordinal);
         Assert.Contains("internal interface IProcessArtifactContentReader", readerSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed class WorkspaceProcessArtifactContentReader", readerSource, StringComparison.Ordinal);
         Assert.Contains("internal sealed class StorageBackedProcessArtifactContentReader", readerSource, StringComparison.Ordinal);
@@ -2183,6 +2197,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "Automation",
             "Dispatch");
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var hydrationServiceSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationService.cs"));
         var selectorSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHeaderSelector.cs"));
         var loaderSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationLoader.cs"));
 
@@ -2208,8 +2223,9 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("DriverPack", selectorSource + loaderSource, StringComparison.Ordinal);
 
         Assert.Contains("ProcessDispatchCandidateHeaderSelector.SelectAsync", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchCandidateHydrationLoader.LoadAsync", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("snapshot.DispatchableSteps", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchCandidateHydrationLoader.LoadAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateHydrationLoader.LoadAsync", hydrationServiceSource, StringComparison.Ordinal);
+        Assert.Contains("snapshot.DispatchableSteps", hydrationServiceSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -2222,6 +2238,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "Automation",
             "Dispatch");
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var hydrationServiceSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationService.cs"));
         var artifactSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchArtifactInputAssembler.cs"));
         var branchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchBranchDependencyContext.cs"));
         var assignmentSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchAssignmentRouteHelper.cs"));
@@ -2238,13 +2255,15 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
 
         Assert.Contains("internal sealed record ProcessDispatchBranchDependencyContext", branchSource, StringComparison.Ordinal);
         Assert.Contains("RequiresExplicitBranchOutcomeSelection", branchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchBranchDependencyContext.Create", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchBranchDependencyContext.Create", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchBranchDependencyContext.Create", hydrationServiceSource, StringComparison.Ordinal);
 
         Assert.Contains("internal static class ProcessDispatchAssignmentRouteHelper", assignmentSource, StringComparison.Ordinal);
         Assert.Contains("ResolveCurrentAssignment", assignmentSource, StringComparison.Ordinal);
         Assert.Contains("IsWorkflowDispatchAssignment", assignmentSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchAssignmentRouteHelper.ResolveCurrentAssignment", serviceCooperationSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchAssignmentRouteHelper.IsWorkflowDispatchAssignment", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchAssignmentRouteHelper.IsWorkflowDispatchAssignment", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchAssignmentRouteHelper.IsWorkflowDispatchAssignment", hydrationServiceSource, StringComparison.Ordinal);
 
         Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverPack", combinedSource, StringComparison.Ordinal);
@@ -2263,6 +2282,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "Automation",
             "Dispatch");
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var hydrationServiceSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationService.cs"));
         var bindingSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchTechnicalAgentBindingCoordinator.cs"));
         var recoverySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRecoveryQueryHelper.cs"));
         var loaderSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationLoader.cs"));
@@ -2273,14 +2293,17 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("technicalAgentBridge.GetDirectorySummariesAsync", bindingSource, StringComparison.Ordinal);
         Assert.Contains("executionClient.GetAgentEditorAsync", bindingSource, StringComparison.Ordinal);
         Assert.Contains("executionClient.SaveAgentAsync", bindingSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("BuildMissingTechnicalAgentBindingDiagnostic", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync", hydrationServiceSource, StringComparison.Ordinal);
+        Assert.Contains("BuildMissingTechnicalAgentBindingDiagnostic", hydrationServiceSource, StringComparison.Ordinal);
 
         Assert.Contains("internal static class ProcessDispatchRecoveryQueryHelper", recoverySource, StringComparison.Ordinal);
         Assert.Contains("ResolveRecoverableExecutionRunId", recoverySource, StringComparison.Ordinal);
         Assert.Contains("LoadLatestManualRecoveryDirectiveAsync", recoverySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId", hydrationServiceSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRecoveryQueryHelper.LoadLatestManualRecoveryDirectiveAsync", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRecoveryQueryHelper.LoadLatestManualRecoveryDirectiveAsync", hydrationServiceSource, StringComparison.Ordinal);
         Assert.DoesNotContain("SaveChangesAsync", recoverySource, StringComparison.Ordinal);
 
         Assert.DoesNotContain("SaveAgentAsync", loaderSource, StringComparison.Ordinal);
@@ -2306,6 +2329,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.True(File.Exists(factoryPath), factoryPath);
 
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var hydrationServiceSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationService.cs"));
         var contextSource = File.ReadAllText(contextPath);
         var factorySource = File.ReadAllText(factoryPath);
         var helperSource = contextSource + Environment.NewLine + factorySource;
@@ -2333,10 +2357,11 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("CreateSubprocessCandidate", factorySource, StringComparison.Ordinal);
         Assert.Contains("CreateWorkflowCandidate", factorySource, StringComparison.Ordinal);
         Assert.Contains("CreateDirectAgentCandidate", factorySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchCandidateAssemblyContextFactory.Create", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchCandidateFactory.CreateSubprocessCandidate", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchCandidateFactory.CreateWorkflowCandidate", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDispatchCandidateFactory.CreateDirectAgentCandidate", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchCandidateAssemblyContextFactory.Create", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateAssemblyContextFactory.Create", hydrationServiceSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateFactory.CreateSubprocessCandidate", hydrationServiceSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateFactory.CreateWorkflowCandidate", hydrationServiceSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCandidateFactory.CreateDirectAgentCandidate", hydrationServiceSource, StringComparison.Ordinal);
 
         foreach (var forbiddenToken in forbiddenTokens)
         {

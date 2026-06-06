@@ -31,17 +31,24 @@ public sealed class AgentRuntimeHardeningStaticRegressionTests
     [Fact]
     public void Process_step_execution_request_sets_required_finalizer_policy()
     {
-        var source = ReadRepositoryFile(
+        var executionSource = ReadRepositoryFile(
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
             "ProcessRunAutomationDispatchService.Execution.cs");
+        var requestBuilderSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessExecutionInvocationRequestBuilder.cs");
+        var combinedSource = string.Concat(executionSource, Environment.NewLine, requestBuilderSource);
 
-        Assert.DoesNotContain("MetadataJson: \"{}\"", source, StringComparison.Ordinal);
-        Assert.Contains("AgentFinalizerMode.Required", source, StringComparison.Ordinal);
-        Assert.Contains("ExecutionInvocationMetadata.DefaultGovernedRepairAttempts", source, StringComparison.Ordinal);
-        Assert.Contains("StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("MetadataJson: \"{}\"", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("AgentFinalizerMode.Required", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("ExecutionInvocationMetadata.DefaultGovernedRepairAttempts", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("StructuredOutputKind: ProcessAutomationStructuredOutputKind.ProcessStepOutcomeResult", combinedSource, StringComparison.Ordinal);
     }
 
     [Fact]

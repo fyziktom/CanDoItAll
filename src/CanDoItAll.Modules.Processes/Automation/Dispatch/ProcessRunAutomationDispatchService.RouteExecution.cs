@@ -63,7 +63,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessRouteExecutionContext execution)
     {
         var candidateHydrationStarted = Stopwatch.GetTimestamp();
-        var candidate = await LoadDispatchCandidateAsync(
+        var candidate = await CreateCandidateHydrationService().LoadAsync(
             execution.ProcessRunId,
             execution.DispatchClaim.StepRunId,
             execution.Trigger,

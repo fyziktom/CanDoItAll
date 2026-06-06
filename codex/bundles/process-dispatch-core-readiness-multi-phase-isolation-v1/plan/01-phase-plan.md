@@ -1,6 +1,11 @@
 # Phase plan
 
-## Subbundle dependency map
+## Execution Order
+- Execute SB001 through SB024 in numeric order.
+- Stop at critical gates SB003, SB006, SB009, SB012, SB015, SB018, SB021, and SB024 until artifact-backed proof is recorded.
+- Do not begin a dependent phase until the prior phase gate passes.
+
+## Subbundle Dependency Map
 
 ```mermaid
 gantt
@@ -41,11 +46,12 @@ gantt
     SB024 Broad regression and final red-team         :32, 2
 ```
 
-## Critical subbundles
+## Critical Subbundles
 
-SB003, SB006, SB009, SB012, SB015, SB018, SB021, and SB024 are critical gates. Do not continue to the next phase until the gate passes.
+- SB003, SB006, SB009, SB012, SB015, SB018, SB021, and SB024 are critical gates.
+- Do not continue to the next phase until the gate passes.
 
-## Phase gates
+## Phase Gates
 
 Each phase gate must include:
 

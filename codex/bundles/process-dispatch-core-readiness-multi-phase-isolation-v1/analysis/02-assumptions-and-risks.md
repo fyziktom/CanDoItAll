@@ -7,21 +7,21 @@
 - The goal remains refactoring and architecture hardening only.
 - Existing process behavior, templates, workflow integration, agent execution, artifacts, recovery, subprocess, materialization, and finalizer behavior must remain intact.
 
-## Critical path risks
+## Critical Path Risks
 
-1. **Wrapper-only progress**: Codex may move methods into new files while keeping the dispatcher as the actual god service.
-2. **Behavior drift**: route order, finalizer order, recovery/retry behavior, and subprocess artifact projection can easily change if code is moved carelessly.
-3. **Premature Core**: moving types into a Core project before adapters are clean could freeze bad boundaries.
-4. **Driver API leakage**: the driver idea is important, but production driver APIs are still too early.
-5. **Test masking**: broad tests may be skipped because of known unrelated historical bundle fixture issues; focused tests must be precise and supplemented by source scans.
+- **Wrapper-only progress**: Codex may move methods into new files while keeping the dispatcher as the actual god service.
+- **Behavior drift**: route order, finalizer order, recovery/retry behavior, and subprocess artifact projection can easily change if code is moved carelessly.
+- **Premature Core**: moving types into a Core project before adapters are clean could freeze bad boundaries.
+- **Driver API leakage**: the driver idea is important, but production driver APIs are still too early.
+- **Test masking**: broad tests may be skipped because of known unrelated historical bundle fixture issues; focused tests must be precise and supplemented by source scans.
 
-## Validation risks
+## Validation Risks
 
 - Existing broad architecture tests may still contain stale fixture assumptions. Do not use that as an excuse to skip focused architecture guards.
 - If any behavior has no test coverage, add characterization tests before moving it.
 - If source scans are too broad or too weak, they can pass while wrappers remain unchanged. Scans must target concrete forbidden patterns.
 
-## Reopen triggers
+## Reopen Triggers
 
 Reopen the current or prior phase if any of these happen:
 

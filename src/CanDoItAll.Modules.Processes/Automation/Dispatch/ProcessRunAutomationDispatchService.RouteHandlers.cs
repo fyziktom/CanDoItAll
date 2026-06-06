@@ -4,39 +4,77 @@ internal sealed partial class ProcessRunAutomationDispatchService
 {
     private ProcessDispatchRouteHandlerPipeline CreateClaimedDispatchRouteHandlerPipeline()
     {
+        var stepTransitionService = CreateStepTransitionService();
+        var preExecutionGuardHandler = CreatePreExecutionGuardHandler();
+        var candidateHydrationService = CreateCandidateHydrationService();
+        var runClosureGuardService = CreateRunClosureGuardService();
+        var finalizerApplicationService = CreateFinalizerApplicationService();
+        var subprocessRuntimeService = CreateSubprocessRuntimeService(
+            stepTransitionService,
+            finalizerApplicationService);
+
         return ProcessDispatchRouteHandlerFactory.Create(
             clock,
             logger,
-            new ProcessDispatchRouteFacetSet(
-                new ProcessDispatchDatabaseRequirementRouteService(this),
-                new ProcessDispatchUpstreamMaterializationRouteService(this),
-                new ProcessDispatchRecoveryRouteService(this),
-                new ProcessDispatchSubprocessRouteService(this),
-                new ProcessDispatchStartTransitionRouteService(this),
-                new ProcessDispatchWorkflowRouteService(this, workflowRunCoordinator),
-                new ProcessDispatchDirectAgentRouteService(this),
-                new ProcessDispatchGuardRouteService(this),
-                new ProcessDispatchFinalizerRouteService(this)));
+            new ProcessDispatchDatabaseRequirementRouteService(
+                CreateDatabaseRequirementResolver(),
+                preExecutionGuardHandler,
+                stepTransitionService,
+                logger),
+            new ProcessDispatchUpstreamMaterializationRouteService(
+                preExecutionGuardHandler,
+                stepTransitionService,
+                logger),
+            new ProcessDispatchRecoveryRouteService(this),
+            new ProcessDispatchSubprocessRouteService(subprocessRuntimeService),
+            new ProcessDispatchStartTransitionRouteService(
+                stepTransitionService,
+                candidateHydrationService),
+            new ProcessDispatchWorkflowRouteService(this, workflowRunCoordinator),
+            new ProcessDispatchDirectAgentRouteService(this),
+            new ProcessDispatchGuardRouteService(this, runClosureGuardService),
+            new ProcessDispatchFinalizerRouteService(this));
     }
 
-    internal bool HasAutomationDatabaseRequirementFailure()
+    private ProcessDispatchStepTransitionService CreateStepTransitionService()
+        => new(serviceScopeFactory, dbContextFactory, EnsureStepDispatchClaimHeldAsync);
+
+    private ProcessDispatchRunClosureGuardService CreateRunClosureGuardService()
+        => new(dbContextFactory);
+
+    private ProcessAutomationDatabaseRequirementResolver CreateDatabaseRequirementResolver()
+        => new(databaseProfileRuntimeAccessor, processRuntimeOptions);
+
+    private ProcessDispatchCandidateHydrationService CreateCandidateHydrationService()
     {
-        return ResolveAutomationDatabaseRequirementFailure() is not null;
+        return new ProcessDispatchCandidateHydrationService(
+            dbContextFactory,
+            workspacePathResolver,
+            databaseProfileRuntimeAccessor,
+            technicalAgentBridge,
+            executionClient,
+            clock,
+            StaleAutomationExecutionRunTimeout,
+            logger);
     }
 
-    internal async Task BlockDispatchForCurrentDatabaseRequirementAsync(
-        DispatchCandidate candidate,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
-        var databaseRequirementFailure = ResolveAutomationDatabaseRequirementFailure() ??
-            throw new InvalidOperationException("Database requirement blocking was requested, but no active database requirement failure was resolved.");
+    private ProcessDispatchFinalizerApplicationService CreateFinalizerApplicationService()
+        => new(FinalizeStepCompletionAsync, ApplyFinalizedStepTransitionAsync);
 
-        await BlockDispatchForDatabaseRequirementAsync(
-            candidate,
-            databaseRequirementFailure,
-            dispatchClaim,
-            cancellationToken);
+    private ProcessDispatchSubprocessRuntimeService CreateSubprocessRuntimeService(
+        ProcessDispatchStepTransitionService stepTransitionService,
+        ProcessDispatchFinalizerApplicationService finalizerApplicationService)
+    {
+        return new ProcessDispatchSubprocessRuntimeService(
+            stepTransitionService,
+            finalizerApplicationService,
+            dbContextFactory,
+            serviceScopeFactory,
+            workspacePathResolver,
+            databaseProfileRuntimeAccessor,
+            clock,
+            EnsureStepDispatchClaimHeldAsync,
+            logger);
     }
 
     internal async Task FinalizeRecoveredCompletionAsync(
@@ -47,22 +85,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        var finalizedRecoveryCompletion = await FinalizeStepCompletionAsync(
-            ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery(
-                candidate,
-                recoveryOutcome,
-                trigger,
-                renewLeaseAsync),
-            dispatchClaim,
-            cancellationToken);
-        if (finalizedRecoveryCompletion is null)
-        {
-            return;
-        }
-
-        await ApplyFinalizedStepTransitionAsync(
+        await CreateFinalizerApplicationService().FinalizeRecoveredCompletionAsync(
             candidate,
-            finalizedRecoveryCompletion,
+            recoveryOutcome,
+            trigger,
+            renewLeaseAsync,
             dispatchClaim,
             cancellationToken);
     }
@@ -75,22 +102,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        var finalizedCompletion = await FinalizeStepCompletionAsync(
-            ProcessDispatchFinalizerContextFactory.ForDirectAgent(
-                candidate,
-                executionOutcome,
-                trigger,
-                renewLeaseAsync),
-            dispatchClaim,
-            cancellationToken);
-        if (finalizedCompletion is null)
-        {
-            return;
-        }
-
-        await ApplyFinalizedStepTransitionAsync(
+        await CreateFinalizerApplicationService().FinalizeDirectAgentCompletionAsync(
             candidate,
-            finalizedCompletion,
+            executionOutcome,
+            trigger,
+            renewLeaseAsync,
             dispatchClaim,
             cancellationToken);
     }
