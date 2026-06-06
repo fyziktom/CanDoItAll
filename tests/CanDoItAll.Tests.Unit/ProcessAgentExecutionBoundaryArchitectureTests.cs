@@ -387,7 +387,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
                 var path = Path.Combine(processesDispatchDirectory, file);
                 Assert.True(File.Exists(path), file);
                 return File.ReadAllText(path);
-        }));
+            }));
         var dispatcherSource = File.ReadAllText(dispatcherPath);
         var artifactValidationSource = File.ReadAllText(artifactValidationPath);
 
@@ -1444,9 +1444,9 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
+            "ProcessExecutionArtifactProjectionCoordinator.cs");
 
-        var coordinatorIndex = source.IndexOf("private sealed class ProcessExecutionArtifactProjectionCoordinator", StringComparison.Ordinal);
+        var coordinatorIndex = source.IndexOf("internal sealed class ProcessExecutionArtifactProjectionCoordinator", StringComparison.Ordinal);
         var plannerIndex = source.IndexOf("ProcessArtifactProjectionPlanner.PlanExecutionArtifact", coordinatorIndex, StringComparison.Ordinal);
         var writeIndex = source.IndexOf("context.WriteCoordinator.WriteAsync", plannerIndex, StringComparison.Ordinal);
         var stateIndex = source.IndexOf("ProcessArtifactProjectionCandidateState.TryApplyWriteOutcome", writeIndex, StringComparison.Ordinal);
@@ -1455,6 +1455,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.True(plannerIndex > coordinatorIndex);
         Assert.True(writeIndex > plannerIndex);
         Assert.True(stateIndex > writeIndex);
+        Assert.Contains("IProcessArtifactProjectionHost host", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", source, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1497,21 +1499,41 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "Automation",
             "Dispatch",
             "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
-        var coordinatorSource = ReadRepositoryFile(
+        var orchestratorSource = ReadRepositoryFile(
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
+            "ProcessArtifactProjectionOrchestrator.cs");
+        var coordinatorSource = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                "ProcessExecutionArtifactProjectionCoordinator.cs",
+                "ProcessMockArtifactProjectionCoordinator.cs",
+                "ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs",
+                "ProcessExistingManagedArtifactProjectionCoordinator.cs",
+                "ProcessResponseTextArtifactProjectionCoordinator.cs",
+                "ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs",
+                "ProcessCompletedDecisionArtifactCoordinator.cs"
+            }.Select(file => ReadRepositoryFile(
+                "src",
+                "CanDoItAll.Modules.Processes",
+                "Automation",
+                "Dispatch",
+                file)));
 
         Assert.True(File.Exists(adapterPath));
-        Assert.Contains("ProcessExecutionArtifactProjectionCoordinator", shellSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessMockArtifactProjectionCoordinator", shellSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessWorkspaceWrittenArtifactProjectionCoordinator", shellSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessExistingManagedArtifactProjectionCoordinator", shellSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessResponseTextArtifactProjectionCoordinator", shellSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessProviderNativeBrowserArtifactProjectionCoordinator", shellSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessCompletedDecisionArtifactCoordinator", shellSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionOrchestrator.CreateDefault", shellSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessExecutionArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessMockArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessWorkspaceWrittenArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessExistingManagedArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessResponseTextArtifactProjectionCoordinator(host, existingManagedCoordinator)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessProviderNativeBrowserArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessCompletedDecisionArtifactCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ProcessExecutionArtifactProjectionCoordinator(this)", shellSource + coordinatorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ProcessMockArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("WorkspaceWrittenArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ExistingManagedArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
@@ -1546,20 +1568,16 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
-        var methodStart = source.IndexOf("private sealed class ProcessMockArtifactProjectionCoordinator", StringComparison.Ordinal);
-        var nextMethodStart = source.IndexOf("private sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator", StringComparison.Ordinal);
-
-        Assert.True(methodStart >= 0);
-        Assert.True(nextMethodStart > methodStart);
-
-        var processMockSection = source[methodStart..nextMethodStart];
+            "ProcessMockArtifactProjectionCoordinator.cs");
+        var processMockSection = source;
 
         Assert.Contains("context.WriteCoordinator.WriteAsync", processMockSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", processMockSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", processMockSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessArtifactProjectionHost host", processMockSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", processMockSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", processMockSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", processMockSection, StringComparison.Ordinal);
         Assert.Contains("throw new InvalidOperationException", processMockSection, StringComparison.Ordinal);
     }
 
@@ -1571,21 +1589,17 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
-        var methodStart = source.IndexOf("private sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator", StringComparison.Ordinal);
-        var nextMethodStart = source.IndexOf("private sealed class ProcessExistingManagedArtifactProjectionCoordinator", StringComparison.Ordinal);
-
-        Assert.True(methodStart >= 0);
-        Assert.True(nextMethodStart > methodStart);
-
-        var workspaceWrittenSection = source[methodStart..nextMethodStart];
+            "ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs");
+        var workspaceWrittenSection = source;
 
         Assert.Contains("WorkspaceWrittenArtifactProjectionSourceAdapter.Plan", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessArtifactProjectionHost host", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("context.Logger.LogWarning", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("throw new InvalidOperationException", workspaceWrittenSection, StringComparison.Ordinal);
     }
@@ -1598,22 +1612,18 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
-        var methodStart = source.IndexOf("private sealed class ProcessExistingManagedArtifactProjectionCoordinator", StringComparison.Ordinal);
-        var nextMethodStart = source.IndexOf("private sealed class ProcessResponseTextArtifactProjectionCoordinator", StringComparison.Ordinal);
-
-        Assert.True(methodStart >= 0);
-        Assert.True(nextMethodStart > methodStart);
-
-        var existingManagedSection = source[methodStart..nextMethodStart];
+            "ProcessExistingManagedArtifactProjectionCoordinator.cs");
+        var existingManagedSection = source;
 
         Assert.Contains("ExistingManagedArtifactFileMatches", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("ExistingManagedArtifactProjectionSourceAdapter.Plan", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessArtifactProjectionHost host", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", existingManagedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("context.Logger.LogWarning", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("throw new InvalidOperationException", existingManagedSection, StringComparison.Ordinal);
     }
@@ -1621,22 +1631,18 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     [Fact]
     public void Response_text_projection_SB09_INV_001_uses_write_coordinator_without_moving_file_creation_or_short_circuit()
     {
-        var source = ReadRepositoryFile(
+        var responseSection = ReadRepositoryFile(
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
-        var existingManagedStart = source.IndexOf("private sealed class ProcessExistingManagedArtifactProjectionCoordinator", StringComparison.Ordinal);
-        var responseMethodStart = source.IndexOf("private sealed class ProcessResponseTextArtifactProjectionCoordinator", StringComparison.Ordinal);
-        var nextMethodStart = source.IndexOf("private sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator", StringComparison.Ordinal);
-
-        Assert.True(existingManagedStart >= 0);
-        Assert.True(responseMethodStart >= 0);
-        Assert.True(nextMethodStart > responseMethodStart);
-
-        var responseSection = source[responseMethodStart..nextMethodStart];
-        var existingManagedHelperSection = source[existingManagedStart..responseMethodStart];
+            "ProcessResponseTextArtifactProjectionCoordinator.cs");
+        var existingManagedHelperSection = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessExistingManagedArtifactProjectionCoordinator.cs");
 
         Assert.Contains("IsWithinWorkspace", responseSection, StringComparison.Ordinal);
         Assert.Contains("File.WriteAllTextAsync", responseSection, StringComparison.Ordinal);
@@ -1647,8 +1653,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("context.WriteCoordinator.WriteAsync", responseSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", responseSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", responseSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessArtifactProjectionHost host", responseSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", responseSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", responseSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", responseSection, StringComparison.Ordinal);
 
         Assert.Contains("TryRecordForResponseProjectionAsync", existingManagedHelperSection, StringComparison.Ordinal);
         Assert.Contains("ExistingManagedArtifactFileMatches", existingManagedHelperSection, StringComparison.Ordinal);
@@ -1668,19 +1676,17 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
-        var coordinatorStart = source.IndexOf("private sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator", StringComparison.Ordinal);
+            "ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs");
+        var coordinatorStart = source.IndexOf("internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator", StringComparison.Ordinal);
         var expectedMethodStart = source.IndexOf("private async Task ProjectExpectedOutputsAsync", coordinatorStart, StringComparison.Ordinal);
         var discoveredMethodStart = source.IndexOf("private async Task ProjectDiscoveredOutputsAsync", expectedMethodStart, StringComparison.Ordinal);
-        var nextMethodStart = source.IndexOf("private sealed class ProcessCompletedDecisionArtifactCoordinator", StringComparison.Ordinal);
 
         Assert.True(coordinatorStart >= 0);
         Assert.True(expectedMethodStart >= 0);
         Assert.True(discoveredMethodStart > expectedMethodStart);
-        Assert.True(nextMethodStart > discoveredMethodStart);
 
         var expectedSection = source[expectedMethodStart..discoveredMethodStart];
-        var discoveredSection = source[discoveredMethodStart..nextMethodStart];
+        var discoveredSection = source[discoveredMethodStart..];
 
         Assert.Contains("ProjectDiscoveredOutputsAsync", source[coordinatorStart..expectedMethodStart], StringComparison.Ordinal);
         Assert.Contains("ResolveProviderNativeBrowserToolName", expectedSection, StringComparison.Ordinal);
@@ -1689,8 +1695,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("File.Copy", expectedSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", expectedSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessArtifactProjectionHost host", source, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", expectedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", expectedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", source, StringComparison.Ordinal);
 
         Assert.Contains("IsProviderNativeBrowserArtifactPath", discoveredSection, StringComparison.Ordinal);
         Assert.Contains("ResolveArtifactExpectation", discoveredSection, StringComparison.Ordinal);
@@ -1711,22 +1719,20 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs");
+            "ProcessCompletedDecisionArtifactCoordinator.cs");
         var coordinatorSource = ReadRepositoryFile(
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
             "ProcessArtifactProjectionWriteCoordinator.cs");
-        var methodStart = source.IndexOf("private sealed class ProcessCompletedDecisionArtifactCoordinator", StringComparison.Ordinal);
-        var nextMethodStart = source.IndexOf("private static bool TryApplyExpectedArtifactProjectionWriteOutcome", StringComparison.Ordinal);
+        var methodStart = source.IndexOf("internal sealed class ProcessCompletedDecisionArtifactCoordinator", StringComparison.Ordinal);
         var recordOnlyCoordinatorStart = coordinatorSource.IndexOf("internal sealed class ProcessArtifactProjectionRecordOnlyCoordinator", StringComparison.Ordinal);
 
         Assert.True(methodStart >= 0);
-        Assert.True(nextMethodStart > methodStart);
         Assert.True(recordOnlyCoordinatorStart >= 0);
 
-        var decisionSection = source[methodStart..nextMethodStart];
+        var decisionSection = source[methodStart..];
         var recordOnlyCoordinatorSection = coordinatorSource[recordOnlyCoordinatorStart..];
 
         Assert.Contains("ProcessArtifactProjectionRecordOnlyRequest", decisionSection, StringComparison.Ordinal);
@@ -1734,9 +1740,11 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("BuildCompletedDecisionArtifactExternalReferenceKey", decisionSection, StringComparison.Ordinal);
         Assert.Contains("ResolveCompletedDecisionArtifactTrustStatus", decisionSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedRecordOnlyOutcome", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessArtifactProjectionHost host", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessArtifactProjectionWriteCoordinator", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", decisionSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", decisionSection, StringComparison.Ordinal);
 
         Assert.Contains("ProcessArtifactProjectionRecordOnlyRequest", recordOnlyCoordinatorSection, StringComparison.Ordinal);
         Assert.Contains("recordArtifactAsync", recordOnlyCoordinatorSection, StringComparison.Ordinal);
@@ -1983,6 +1991,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         var productionProjectNames = Directory
             .EnumerateFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
             .Select(Path.GetFileNameWithoutExtension)
+            .Where(static name => !string.IsNullOrEmpty(name))
+            .Select(static name => name!)
             .ToArray();
         var dispatchSource = string.Join(
             Environment.NewLine,

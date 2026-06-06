@@ -45,7 +45,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessAutomationExecutionRunDetail Detail,
         string ResponseText);
 
-    private sealed record ArtifactProjectionLineage(
+    internal sealed record ArtifactProjectionLineage(
         Guid? RecoveryExecutionRunId,
         Guid? RecoveredForExecutionRunId,
         Guid? ReworkPacketId);
@@ -65,9 +65,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         string ValidationRequirementSummary,
         string AllowedFutureUsageSummary);
 
-internal sealed record ProjectStructureRequiredArtifactPath(
-    string FileName,
-    string AliasPath);
+    internal sealed record ProjectStructureRequiredArtifactPath(
+        string FileName,
+        string AliasPath);
 
     internal sealed record DispatchArtifactInput(
         string SourceStepTitle,
@@ -135,7 +135,7 @@ internal sealed record ProjectStructureRequiredArtifactPath(
         string Title,
         string Description);
 
-    private readonly record struct ProcessMockArtifactProjection(
+    internal readonly record struct ProcessMockArtifactProjection(
         string RoleKey,
         string? BranchOutcomeKey,
         string RelativePath,
@@ -143,5 +143,5 @@ internal sealed record ProjectStructureRequiredArtifactPath(
 
     private sealed record SessionToolResultText(string ToolName, string Text);
 
-    private sealed record SessionFileContent(string Path, string Content);
+    internal sealed record SessionFileContent(string Path, string Content);
 }

@@ -1,30 +1,7 @@
 # Test Inventory
 
-Required proof commands should be adapted to the repo's actual current test names.
-
-## Minimum proof
-
-- `dotnet build CanDoItAll.slnx --no-restore`
-- focused unit architecture tests for:
-  - no Process Core,
-  - no driver API,
-  - no nested coordinator reintroduction,
-  - no broad dispatch-service dependency.
-- focused unit projection tests for candidate-state mutation and projection order.
-- focused integration tests for:
-  - execution artifact projection,
-  - process mock artifact projection,
-  - workspace-written artifact projection,
-  - existing managed artifact projection,
-  - response-text artifact projection,
-  - provider-native browser artifact projection,
-  - completed-decision artifact record-only path.
-
-## Broad smoke matrix
-
-Include previously created focused test slices from:
-- artifact validation residual boundary,
-- observation/outcome boundary,
-- execution/retry/provider boundary,
-- subprocess runtime/projection boundary,
-- pre-execution/materialization boundary.
+- `dotnet build CanDoItAll.slnx --no-restore`: bundle://proof/shared/transcripts/build-no-restore.txt.
+- Focused projection architecture tests: bundle://proof/shared/transcripts/unit-projection-architecture-tests.txt.
+- Focused projection integration tests: bundle://proof/shared/transcripts/integration-projection-tests.txt.
+- Source, line-count, no-core/no-driver, no-UI, no-prohibited-viewport, and anti-stub scans: bundle://proof/shared/transcripts/source-scans.txt.
+- Broad architecture class diagnostic remains non-gating: bundle://proof/shared/transcripts/architecture-class-diagnostic.txt.

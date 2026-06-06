@@ -1,6 +1,14 @@
 # Assumptions And Risks
 
+## Working Assumptions
+
+- The current branch already contains the previous projection coordinator boundary and remains runtime/service-only.
+- This bundle preserves projection behavior while moving nested projection helpers into module-local internal types.
+- Browser validation remains N/A unless an out-of-scope UI file change is detected and reverted.
+
 ## Critical Path Risks
+
+- The split can only progress when behavior, source-family order, and dependency narrowing are proven by focused tests and source scans.
 
 1. **Wrapper-only split risk**  
    Codex could create top-level files while leaving the real logic nested in the partial class. Every split subbundle must require a source scan proving that the moved source-family logic is consumed by top-level coordinators.

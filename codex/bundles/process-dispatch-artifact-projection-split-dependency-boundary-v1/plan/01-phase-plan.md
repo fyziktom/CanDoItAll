@@ -1,5 +1,10 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute SB01 through SB64 in order; each critical gate must pass before downstream work starts.
+- Repair and rerun the prepared-stage validator if implementation reality changes bundle scope or proof requirements.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -122,7 +127,7 @@ graph TD
 
 ## Critical Subbundles
 
-Critical gates: SB04, SB08, SB12, SB18, SB24, SB30, SB38, SB44, SB50, SB56, SB60, SB64.
+- Critical gates: SB04, SB08, SB12, SB18, SB24, SB30, SB38, SB44, SB50, SB56, SB60, SB64.
 
 A failed critical gate reopens the last production-movement subbundle and blocks all downstream work.
 

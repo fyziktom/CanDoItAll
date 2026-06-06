@@ -1,0 +1,7 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-dispatch-artifact-projection-split-dependency-boundary-v1 --stage completed
+WorkingDirectory: repo://.
+StartedUtc: 2026-06-06T01:12:01.6113797Z
+EndedUtc: 2026-06-06T01:12:02.4111626Z
+ExitCode: 0
+Output:
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-artifact-projection-split-dependency-boundary-v1

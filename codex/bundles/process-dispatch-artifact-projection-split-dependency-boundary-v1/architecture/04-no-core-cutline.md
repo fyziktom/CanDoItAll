@@ -1,17 +1,8 @@
 # No-Core Cutline
 
-This bundle must not start Process Core extraction.
-
-Allowed:
-- internal top-level classes under `CanDoItAll.Modules.Processes`;
-- internal interfaces whose name is not `IProcessDriver*` and whose scope is only artifact projection;
-- module-local context, host and coordinator classes;
-- source scans and documentation-only driver-readiness maps.
-
-Forbidden:
-- `src/CanDoItAll.Processes.Core`;
-- `CanDoItAll.Processes.Core` namespace;
-- `IProcessDriverPack`, `IProcessDriverRegistry`, `ProcessDriverRegistry`, `ProcessDriverPack`;
-- public projection APIs consumed outside `CanDoItAll.Modules.Processes`;
-- moving EF entities or persistence mapping;
-- UI changes.
+- This bundle intentionally stops at module-local internal classes under repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch.
+- No repo://src/CanDoItAll.Processes.Core project or repo://src/CanDoItAll.Modules.Processes.Core project was created.
+- No production process-driver API was introduced.
+- `IProcessArtifactProjectionHost` is an internal dependency surface, not a public driver contract.
+- Driver readiness is documentation-only in repo://codex/bundles/process-dispatch-artifact-projection-split-dependency-boundary-v1/architecture/03-driver-readiness-map.md.
+- Proof: bundle://proof/shared/transcripts/source-scans.txt.

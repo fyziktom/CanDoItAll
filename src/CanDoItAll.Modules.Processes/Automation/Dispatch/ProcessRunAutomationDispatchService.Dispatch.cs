@@ -576,7 +576,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
-    private sealed record ProcessStepDispatchClaim(Guid StepRunId, string ClaimToken);
+    internal sealed record ProcessStepDispatchClaim(Guid StepRunId, string ClaimToken);
 
     internal sealed record DispatchCandidateHeader(Guid StepRunId, ProcessStepRunStatus Status);
 
