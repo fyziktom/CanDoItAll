@@ -11,11 +11,24 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionPathResolver pathResolver;
+    private readonly IProcessProjectionFileIo fileIo;
+    private readonly IProcessProjectionArtifactClassifier artifactClassifier;
+    private readonly IProcessProjectionProcessMockRules processMockRules;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
-    public ProcessMockArtifactProjectionCoordinator(IProcessArtifactProjectionHost host)
+    public ProcessMockArtifactProjectionCoordinator(
+        IProcessProjectionPathResolver pathResolver,
+        IProcessProjectionFileIo fileIo,
+        IProcessProjectionArtifactClassifier artifactClassifier,
+        IProcessProjectionProcessMockRules processMockRules,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.pathResolver = pathResolver;
+        this.fileIo = fileIo;
+        this.artifactClassifier = artifactClassifier;
+        this.processMockRules = processMockRules;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
@@ -25,7 +38,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
             return;
         }
 
-        var projections = host.ResolveProcessMockArtifactProjections(context.Detail.Run.SerializedSessionStateJson);
+        var projections = processMockRules.ResolveProcessMockArtifactProjections(context.Detail.Run.SerializedSessionStateJson);
         if (projections.Count == 0)
         {
             return;
@@ -36,7 +49,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
         {
             var matchedExpectations = context.Candidate.ExpectedArtifacts
                 .Where(item => item.IsRequired && !projectedExpectationIds.Contains(item.Id))
-                .Where(item => host.ProcessMockArtifactMatchesExpectation(item, projection))
+                .Where(item => processMockRules.ProcessMockArtifactMatchesExpectation(item, projection))
                 .ToList();
             if (matchedExpectations.Count == 0)
             {
@@ -51,7 +64,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
 
             var expectedArtifact = matchedExpectations[0];
             var expectedProjection = ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact);
-            var scopedRelativePath = host.ResolveScopedManagedRelativePath(context.WorkspaceScope, projection.RelativePath);
+            var scopedRelativePath = pathResolver.ResolveScopedManagedRelativePath(context.WorkspaceScope, projection.RelativePath);
             var projectionSource = new ProcessMockArtifactProjectionSource(
                 context.Candidate.StepRun.Id,
                 context.Detail.Run.Id,
@@ -69,8 +82,8 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
                 continue;
             }
 
-            if (!host.TryResolveArtifactFullPath(context.WorkspaceRoot, scopedRelativePath, out var fullPath, out var pathResolutionFailure) ||
-                !File.Exists(fullPath))
+            if (!pathResolver.TryResolveArtifactFullPath(context.WorkspaceRoot, scopedRelativePath, out var fullPath, out var pathResolutionFailure) ||
+                !fileIo.FileExists(fullPath))
             {
                 throw new InvalidOperationException(
                     $"Process mock artifact '{projection.RelativePath}' for expected artifact '{expectedArtifact.Title}' was declared by execution run {context.Detail.Run.Id:D}, but scoped path '{scopedRelativePath}' could not be found. {pathResolutionFailure}".Trim());
@@ -79,7 +92,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
             byte[] content;
             try
             {
-                content = await File.ReadAllBytesAsync(fullPath, context.CancellationToken);
+                content = await fileIo.ReadAllBytesAsync(fullPath, context.CancellationToken);
             }
             catch (Exception exception)
             {
@@ -88,7 +101,7 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
                     exception);
             }
 
-            var contentType = host.GuessContentTypeFromPath(fullPath);
+            var contentType = artifactClassifier.GuessContentTypeFromPath(fullPath);
             var writeResult = await context.WriteCoordinator.WriteAsync(
                 new ProcessArtifactProjectionWriteRequest(
                     context.Candidate.Run.Id,
@@ -98,10 +111,10 @@ internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifac
                     Path.GetFileName(fullPath),
                     contentType,
                     content,
-                    host.ResolveStorageContentKind(contentType, fullPath),
+                    artifactClassifier.ResolveStorageContentKind(contentType, fullPath),
                     scopedRelativePath),
                 context.CancellationToken);
-            if (!ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+            if (!candidateState.TryApplyExpectedWriteOutcome(
                     context.Candidate,
                     expectedArtifact,
                     writeResult,

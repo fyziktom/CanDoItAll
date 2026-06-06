@@ -11,11 +11,24 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionPathResolver pathResolver;
+    private readonly IProcessProjectionFileIo fileIo;
+    private readonly IProcessProjectionArtifactClassifier artifactClassifier;
+    private readonly IProcessProjectionExpectationMatcher expectationMatcher;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
-    public ProcessExistingManagedArtifactProjectionCoordinator(IProcessArtifactProjectionHost host)
+    public ProcessExistingManagedArtifactProjectionCoordinator(
+        IProcessProjectionPathResolver pathResolver,
+        IProcessProjectionFileIo fileIo,
+        IProcessProjectionArtifactClassifier artifactClassifier,
+        IProcessProjectionExpectationMatcher expectationMatcher,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.pathResolver = pathResolver;
+        this.fileIo = fileIo;
+        this.artifactClassifier = artifactClassifier;
+        this.expectationMatcher = expectationMatcher;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
@@ -28,16 +41,16 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts)
         {
             if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => host.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
-            var projectedRelativePath = host.ResolveExpectedManagedArtifactRelativePaths(
+            var projectedRelativePath = pathResolver.ResolveExpectedManagedArtifactRelativePaths(
                     context.Candidate,
                     context.WorkspaceScope,
                     expectedArtifact)
-                .FirstOrDefault(relativePath => host.ExistingManagedArtifactFileMatches(
+                .FirstOrDefault(relativePath => expectationMatcher.ExistingManagedArtifactFileMatches(
                     context.Candidate.ExpectedArtifacts,
                     expectedArtifact,
                     context.WorkspaceRoot,
@@ -62,7 +75,7 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
         string projectedRelativePath,
         string targetFullPath)
     {
-        if (!host.ExistingManagedArtifactFileMatches(
+        if (!expectationMatcher.ExistingManagedArtifactFileMatches(
                 context.Candidate.ExpectedArtifacts,
                 expectedArtifact,
                 context.WorkspaceRoot,
@@ -108,8 +121,8 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
             fullPath = knownFullPath;
             pathResolutionFailure = string.Empty;
         }
-        else if (!host.TryResolveArtifactFullPath(context.WorkspaceRoot, projectedRelativePath, out fullPath, out pathResolutionFailure) ||
-                 !File.Exists(fullPath))
+        else if (!pathResolver.TryResolveArtifactFullPath(context.WorkspaceRoot, projectedRelativePath, out fullPath, out pathResolutionFailure) ||
+                 !fileIo.FileExists(fullPath))
         {
             context.Logger.LogDebug(
                 "Skipping existing managed artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because path '{RelativePath}' is unavailable. Reason: {Reason}",
@@ -124,7 +137,7 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
         byte[] content;
         try
         {
-            content = await File.ReadAllBytesAsync(fullPath, context.CancellationToken);
+            content = await fileIo.ReadAllBytesAsync(fullPath, context.CancellationToken);
         }
         catch (Exception exception)
         {
@@ -136,7 +149,7 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
             return false;
         }
 
-        var contentType = host.GuessContentTypeFromPath(fullPath);
+        var contentType = artifactClassifier.GuessContentTypeFromPath(fullPath);
         var syntheticArtifact = new ProcessAutomationExecutionArtifact(
             Guid.NewGuid(),
             context.Detail.Run.Id,
@@ -159,12 +172,12 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
                 context.Candidate.Run.ProjectId,
                 projectionPlan,
                 Path.GetFileName(fullPath),
-                contentType,
-                content,
-                host.ResolveStorageContentKind(contentType, fullPath),
-                host.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
+                    contentType,
+                    content,
+                    artifactClassifier.ResolveStorageContentKind(contentType, fullPath),
+                    artifactClassifier.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
             context.CancellationToken);
-        if (ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+        if (candidateState.TryApplyExpectedWriteOutcome(
                 context.Candidate,
                 expectedArtifact,
                 writeResult,

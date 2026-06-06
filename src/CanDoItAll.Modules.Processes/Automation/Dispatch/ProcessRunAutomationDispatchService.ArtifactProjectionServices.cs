@@ -1,17 +1,65 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.SharedKernel;
+using System.Text;
 
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private sealed class DispatcherArtifactProjectionHost : IProcessArtifactProjectionHost
+    private sealed class ProcessArtifactProjectionServices :
+        IProcessProjectionClaimGuard,
+        IProcessProjectionPathResolver,
+        IProcessProjectionFileIo,
+        IProcessProjectionArtifactClassifier,
+        IProcessProjectionExpectationMatcher,
+        IProcessProjectionProcessMockRules,
+        IProcessProjectionProjectStructureMatcher,
+        IProcessProjectionSessionObservationSource,
+        IProcessProjectionResponseTextRules,
+        IProcessProjectionBrowserOutputRules,
+        IProcessProjectionDecisionArtifactRules,
+        IProcessProjectionLineageFactory,
+        IProcessProjectionCandidateStateUpdater
     {
         private readonly ProcessRunAutomationDispatchService dispatchService;
 
-        public DispatcherArtifactProjectionHost(ProcessRunAutomationDispatchService dispatchService)
+        public ProcessArtifactProjectionServices(ProcessRunAutomationDispatchService dispatchService)
         {
             this.dispatchService = dispatchService;
+        }
+
+        public bool FileExists(string fullPath)
+        {
+            return File.Exists(fullPath);
+        }
+
+        public Task<byte[]> ReadAllBytesAsync(string fullPath, CancellationToken cancellationToken)
+        {
+            return File.ReadAllBytesAsync(fullPath, cancellationToken);
+        }
+
+        public Task WriteAllTextAsync(
+            string fullPath,
+            string contents,
+            Encoding encoding,
+            CancellationToken cancellationToken)
+        {
+            return File.WriteAllTextAsync(fullPath, contents, encoding, cancellationToken);
+        }
+
+        public void CopyFile(string sourceFullPath, string targetFullPath, bool overwrite)
+        {
+            File.Copy(sourceFullPath, targetFullPath, overwrite);
+        }
+
+        public void EnsureDirectoryForFile(string fullPath)
+        {
+            var directory = Path.GetDirectoryName(fullPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
         }
 
         public Task EnsureStepDispatchClaimHeldAsync(
@@ -382,6 +430,45 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 lineage,
                 sourceArtifactId,
                 sourceExternalReferenceKey);
+        }
+
+        public bool TryApplyExpectedWriteOutcome(
+            DispatchCandidate candidate,
+            DispatchArtifactExpectation expectedArtifact,
+            Result<ProcessArtifactProjectionWriteResult> writeResult,
+            out string errorSummary)
+        {
+            return ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+                candidate,
+                expectedArtifact,
+                writeResult,
+                out errorSummary);
+        }
+
+        public bool TryApplyWriteOutcome(
+            DispatchCandidate candidate,
+            Result<ProcessArtifactProjectionWriteResult> writeResult,
+            Guid? expectedArtifactId,
+            out string errorSummary)
+        {
+            return ProcessArtifactProjectionCandidateState.TryApplyWriteOutcome(
+                candidate,
+                writeResult,
+                expectedArtifactId,
+                out errorSummary);
+        }
+
+        public bool TryApplyExpectedRecordOnlyOutcome(
+            DispatchCandidate candidate,
+            DispatchArtifactExpectation expectedArtifact,
+            Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
+            out string errorSummary)
+        {
+            return ProcessArtifactProjectionCandidateState.TryApplyExpectedRecordOnlyOutcome(
+                candidate,
+                expectedArtifact,
+                recordResult,
+                out errorSummary);
         }
     }
 }

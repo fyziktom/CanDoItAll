@@ -11,11 +11,21 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessCompletedDecisionArtifactCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionExpectationMatcher expectationMatcher;
+    private readonly IProcessProjectionDecisionArtifactRules decisionArtifactRules;
+    private readonly IProcessProjectionLineageFactory lineageFactory;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
-    public ProcessCompletedDecisionArtifactCoordinator(IProcessArtifactProjectionHost host)
+    public ProcessCompletedDecisionArtifactCoordinator(
+        IProcessProjectionExpectationMatcher expectationMatcher,
+        IProcessProjectionDecisionArtifactRules decisionArtifactRules,
+        IProcessProjectionLineageFactory lineageFactory,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.expectationMatcher = expectationMatcher;
+        this.decisionArtifactRules = decisionArtifactRules;
+        this.lineageFactory = lineageFactory;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
@@ -26,15 +36,15 @@ internal sealed class ProcessCompletedDecisionArtifactCoordinator : IProcessArti
             return;
         }
 
-        foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts.Where(host.ShouldAutoRecordCompletedDecisionArtifact))
+        foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts.Where(decisionArtifactRules.ShouldAutoRecordCompletedDecisionArtifact))
         {
             if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                host.HasProjectedArtifactExpectationExternalReference(context.Candidate.ExternalReferenceKeys, expectedArtifact.Id))
+                expectationMatcher.HasProjectedArtifactExpectationExternalReference(context.Candidate.ExternalReferenceKeys, expectedArtifact.Id))
             {
                 continue;
             }
 
-            var externalReferenceKey = host.BuildCompletedDecisionArtifactExternalReferenceKey(
+            var externalReferenceKey = decisionArtifactRules.BuildCompletedDecisionArtifactExternalReferenceKey(
                 context.Candidate.StepRun.Id,
                 expectedArtifact.Id);
             if (context.Candidate.ExternalReferenceKeys.Contains(externalReferenceKey))
@@ -49,24 +59,24 @@ internal sealed class ProcessCompletedDecisionArtifactCoordinator : IProcessArti
                     expectedArtifact.Id,
                     expectedArtifact.ArtifactKind,
                     expectedArtifact.Title,
-                    host.ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement),
+                    decisionArtifactRules.ResolveCompletedDecisionArtifactTrustStatus(expectedArtifact.TrustRequirement),
                     expectedArtifact.SensitivityLevel,
-                    host.BuildCompletedDecisionArtifactProvenanceSummary(context.Candidate, context.Detail),
+                    decisionArtifactRules.BuildCompletedDecisionArtifactProvenanceSummary(context.Candidate, context.Detail),
                     string.IsNullOrWhiteSpace(expectedArtifact.AllowedFutureUsageSummary)
                         ? "Reusable for audit, release replay, and governance tuning."
                         : expectedArtifact.AllowedFutureUsageSummary,
-                    host.BuildCompletedDecisionArtifactReviewSummary(
+                    decisionArtifactRules.BuildCompletedDecisionArtifactReviewSummary(
                         context.Candidate,
                         context.Detail,
                         context.ResponseText,
                         expectedArtifact),
                     externalReferenceKey,
-                    host.BuildArtifactProjectionLineage(
+                    lineageFactory.BuildArtifactProjectionLineage(
                         ProcessArtifactProjectionSourceKind.CompletedDecision,
                         context.Detail.Run.Id,
                         sourceExternalReferenceKey: externalReferenceKey)),
                 context.CancellationToken);
-            if (!ProcessArtifactProjectionCandidateState.TryApplyExpectedRecordOnlyOutcome(
+            if (!candidateState.TryApplyExpectedRecordOnlyOutcome(
                     context.Candidate,
                     expectedArtifact,
                     recordResult,

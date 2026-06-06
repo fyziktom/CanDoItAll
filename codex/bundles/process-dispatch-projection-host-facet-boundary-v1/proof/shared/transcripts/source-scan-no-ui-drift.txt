@@ -1,0 +1,5 @@
+Command: git diff --name-only | rg UI file extensions
+ExitCode: 0
+WorkingDirectory: C:\repositories\CanDoItAll
+
+No matches found; scan passed.

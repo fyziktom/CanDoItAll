@@ -1,5 +1,11 @@
 # Assumptions and risks
 
+## Working Assumptions
+
+- Runtime projection behavior is already covered by existing focused unit and integration tests that can be extended without changing public contracts.
+- The broad projection host is transitional and can be narrowed module-locally before any Process Core extraction.
+- Driver readiness in this bundle is documentation-only and must not become production driver API surface.
+
 ## Critical Path Risks
 
 - Projection behavior can regress silently if source-family order changes.

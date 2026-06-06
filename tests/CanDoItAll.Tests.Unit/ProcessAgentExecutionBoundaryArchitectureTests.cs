@@ -1449,13 +1449,15 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         var coordinatorIndex = source.IndexOf("internal sealed class ProcessExecutionArtifactProjectionCoordinator", StringComparison.Ordinal);
         var plannerIndex = source.IndexOf("ProcessArtifactProjectionPlanner.PlanExecutionArtifact", coordinatorIndex, StringComparison.Ordinal);
         var writeIndex = source.IndexOf("context.WriteCoordinator.WriteAsync", plannerIndex, StringComparison.Ordinal);
-        var stateIndex = source.IndexOf("ProcessArtifactProjectionCandidateState.TryApplyWriteOutcome", writeIndex, StringComparison.Ordinal);
+        var stateIndex = source.IndexOf("candidateState.TryApplyWriteOutcome", writeIndex, StringComparison.Ordinal);
 
         Assert.True(coordinatorIndex >= 0);
         Assert.True(plannerIndex > coordinatorIndex);
         Assert.True(writeIndex > plannerIndex);
         Assert.True(stateIndex > writeIndex);
-        Assert.Contains("IProcessArtifactProjectionHost host", source, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionClaimGuard claimGuard", source, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionPathResolver pathResolver", source, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionCandidateStateUpdater candidateState", source, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", source, StringComparison.Ordinal);
     }
 
@@ -1525,21 +1527,59 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
 
         Assert.True(File.Exists(adapterPath));
         Assert.Contains("ProcessArtifactProjectionOrchestrator.CreateDefault", shellSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessExecutionArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessMockArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessWorkspaceWrittenArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessExistingManagedArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessResponseTextArtifactProjectionCoordinator(host, existingManagedCoordinator)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessProviderNativeBrowserArtifactProjectionCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("new ProcessCompletedDecisionArtifactCoordinator(host)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionFacetSet facets", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessExecutionArtifactProjectionCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("facets.ClaimGuard", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessMockArtifactProjectionCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("facets.ProcessMockRules", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessWorkspaceWrittenArtifactProjectionCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("facets.ProjectStructureMatcher", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessExistingManagedArtifactProjectionCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessResponseTextArtifactProjectionCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("facets.ResponseTextRules", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessProviderNativeBrowserArtifactProjectionCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("facets.BrowserOutputRules", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("new ProcessCompletedDecisionArtifactCoordinator(", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("facets.DecisionArtifactRules", orchestratorSource, StringComparison.Ordinal);
         Assert.DoesNotContain("new ProcessExecutionArtifactProjectionCoordinator(this)", shellSource + coordinatorSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", coordinatorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", shellSource + orchestratorSource + coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ProcessMockArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("WorkspaceWrittenArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ExistingManagedArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ResponseTextArtifactProjectionSourceAdapter.Plan", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanExpectedOutput", coordinatorSource, StringComparison.Ordinal);
         Assert.Contains("ProviderNativeBrowserArtifactProjectionSourceAdapter.PlanDiscoveredOutput", coordinatorSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Artifact_projection_source_family_order_stays_execution_mock_workspace_existing_response_browser_decision()
+    {
+        var orchestratorSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactProjectionOrchestrator.cs");
+        var sourceFamilies = new[]
+        {
+            "new ProcessExecutionArtifactProjectionCoordinator(",
+            "new ProcessMockArtifactProjectionCoordinator(",
+            "new ProcessWorkspaceWrittenArtifactProjectionCoordinator(",
+            "existingManagedCoordinator,",
+            "new ProcessResponseTextArtifactProjectionCoordinator(",
+            "new ProcessProviderNativeBrowserArtifactProjectionCoordinator(",
+            "new ProcessCompletedDecisionArtifactCoordinator("
+        };
+
+        var lastIndex = -1;
+        foreach (var sourceFamily in sourceFamilies)
+        {
+            var currentIndex = orchestratorSource.IndexOf(sourceFamily, StringComparison.Ordinal);
+
+            Assert.True(currentIndex > lastIndex, sourceFamily);
+            lastIndex = currentIndex;
+        }
     }
 
     [Fact]
@@ -1573,11 +1613,13 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
 
         Assert.Contains("context.WriteCoordinator.WriteAsync", processMockSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", processMockSection, StringComparison.Ordinal);
-        Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", processMockSection, StringComparison.Ordinal);
-        Assert.Contains("IProcessArtifactProjectionHost host", processMockSection, StringComparison.Ordinal);
+        Assert.Contains("candidateState.TryApplyExpectedWriteOutcome", processMockSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionProcessMockRules processMockRules", processMockSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionFileIo fileIo", processMockSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", processMockSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", processMockSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", processMockSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", processMockSection, StringComparison.Ordinal);
         Assert.Contains("throw new InvalidOperationException", processMockSection, StringComparison.Ordinal);
     }
 
@@ -1595,11 +1637,13 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("WorkspaceWrittenArtifactProjectionSourceAdapter.Plan", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", workspaceWrittenSection, StringComparison.Ordinal);
-        Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", workspaceWrittenSection, StringComparison.Ordinal);
-        Assert.Contains("IProcessArtifactProjectionHost host", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("candidateState.TryApplyExpectedWriteOutcome", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionSessionObservationSource sessionObservationSource", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionProjectStructureMatcher projectStructureMatcher", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", workspaceWrittenSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.Contains("context.Logger.LogWarning", workspaceWrittenSection, StringComparison.Ordinal);
         Assert.DoesNotContain("throw new InvalidOperationException", workspaceWrittenSection, StringComparison.Ordinal);
     }
@@ -1619,11 +1663,13 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ExistingManagedArtifactProjectionSourceAdapter.Plan", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", existingManagedSection, StringComparison.Ordinal);
-        Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", existingManagedSection, StringComparison.Ordinal);
-        Assert.Contains("IProcessArtifactProjectionHost host", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("candidateState.TryApplyExpectedWriteOutcome", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionExpectationMatcher expectationMatcher", existingManagedSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionPathResolver pathResolver", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", existingManagedSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", existingManagedSection, StringComparison.Ordinal);
         Assert.Contains("context.Logger.LogWarning", existingManagedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("throw new InvalidOperationException", existingManagedSection, StringComparison.Ordinal);
     }
@@ -1645,18 +1691,20 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "ProcessExistingManagedArtifactProjectionCoordinator.cs");
 
         Assert.Contains("IsWithinWorkspace", responseSection, StringComparison.Ordinal);
-        Assert.Contains("File.WriteAllTextAsync", responseSection, StringComparison.Ordinal);
+        Assert.Contains("fileIo.WriteAllTextAsync", responseSection, StringComparison.Ordinal);
         Assert.Contains("persistedResponseText", responseSection, StringComparison.Ordinal);
         Assert.Contains("Environment.NewLine", responseSection, StringComparison.Ordinal);
         Assert.Contains("Encoding.UTF8.GetBytes(persistedResponseText)", responseSection, StringComparison.Ordinal);
         Assert.Contains("existingManagedCoordinator.TryRecordForResponseProjectionAsync", responseSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", responseSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", responseSection, StringComparison.Ordinal);
-        Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome", responseSection, StringComparison.Ordinal);
-        Assert.Contains("IProcessArtifactProjectionHost host", responseSection, StringComparison.Ordinal);
+        Assert.Contains("candidateState.TryApplyExpectedWriteOutcome", responseSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionResponseTextRules responseTextRules", responseSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionFileIo fileIo", responseSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", responseSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", responseSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", responseSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", responseSection, StringComparison.Ordinal);
 
         Assert.Contains("TryRecordForResponseProjectionAsync", existingManagedHelperSection, StringComparison.Ordinal);
         Assert.Contains("ExistingManagedArtifactFileMatches", existingManagedHelperSection, StringComparison.Ordinal);
@@ -1692,19 +1740,21 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("ResolveProviderNativeBrowserToolName", expectedSection, StringComparison.Ordinal);
         Assert.Contains("PlanExpectedOutput", expectedSection, StringComparison.Ordinal);
         Assert.Contains("IsWithinWorkspace", expectedSection, StringComparison.Ordinal);
-        Assert.Contains("File.Copy", expectedSection, StringComparison.Ordinal);
+        Assert.Contains("fileIo.CopyFile", expectedSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", expectedSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", expectedSection, StringComparison.Ordinal);
-        Assert.Contains("IProcessArtifactProjectionHost host", source, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionBrowserOutputRules browserOutputRules", source, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionSessionObservationSource sessionObservationSource", source, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", expectedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", expectedSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", source, StringComparison.Ordinal);
 
         Assert.Contains("IsProviderNativeBrowserArtifactPath", discoveredSection, StringComparison.Ordinal);
         Assert.Contains("ResolveArtifactExpectation", discoveredSection, StringComparison.Ordinal);
         Assert.Contains("recordExpectation", discoveredSection, StringComparison.Ordinal);
         Assert.Contains("PlanDiscoveredOutput", discoveredSection, StringComparison.Ordinal);
-        Assert.Contains("File.Copy", discoveredSection, StringComparison.Ordinal);
+        Assert.Contains("fileIo.CopyFile", discoveredSection, StringComparison.Ordinal);
         Assert.Contains("context.WriteCoordinator.WriteAsync", discoveredSection, StringComparison.Ordinal);
         Assert.Contains("ProcessArtifactProjectionWriteRequest", discoveredSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", discoveredSection, StringComparison.Ordinal);
@@ -1739,12 +1789,14 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("context.RecordOnlyCoordinator.RecordAsync", decisionSection, StringComparison.Ordinal);
         Assert.Contains("BuildCompletedDecisionArtifactExternalReferenceKey", decisionSection, StringComparison.Ordinal);
         Assert.Contains("ResolveCompletedDecisionArtifactTrustStatus", decisionSection, StringComparison.Ordinal);
-        Assert.Contains("ProcessArtifactProjectionCandidateState.TryApplyExpectedRecordOnlyOutcome", decisionSection, StringComparison.Ordinal);
-        Assert.Contains("IProcessArtifactProjectionHost host", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("candidateState.TryApplyExpectedRecordOnlyOutcome", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionDecisionArtifactRules decisionArtifactRules", decisionSection, StringComparison.Ordinal);
+        Assert.Contains("IProcessProjectionLineageFactory lineageFactory", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService.PlaceAsync", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessArtifactProjectionWriteCoordinator", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync(", decisionSection, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", decisionSection, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessArtifactProjectionHost", decisionSection, StringComparison.Ordinal);
 
         Assert.Contains("ProcessArtifactProjectionRecordOnlyRequest", recordOnlyCoordinatorSection, StringComparison.Ordinal);
         Assert.Contains("recordArtifactAsync", recordOnlyCoordinatorSection, StringComparison.Ordinal);

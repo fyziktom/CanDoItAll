@@ -11,19 +11,35 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionClaimGuard claimGuard;
+    private readonly IProcessProjectionPathResolver pathResolver;
+    private readonly IProcessProjectionFileIo fileIo;
+    private readonly IProcessProjectionArtifactClassifier artifactClassifier;
+    private readonly IProcessProjectionExpectationMatcher expectationMatcher;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
-    public ProcessExecutionArtifactProjectionCoordinator(IProcessArtifactProjectionHost host)
+    public ProcessExecutionArtifactProjectionCoordinator(
+        IProcessProjectionClaimGuard claimGuard,
+        IProcessProjectionPathResolver pathResolver,
+        IProcessProjectionFileIo fileIo,
+        IProcessProjectionArtifactClassifier artifactClassifier,
+        IProcessProjectionExpectationMatcher expectationMatcher,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.claimGuard = claimGuard;
+        this.pathResolver = pathResolver;
+        this.fileIo = fileIo;
+        this.artifactClassifier = artifactClassifier;
+        this.expectationMatcher = expectationMatcher;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
         foreach (var artifact in context.Detail.Artifacts)
         {
-            await host.EnsureStepDispatchClaimHeldAsync(context.DispatchClaim, context.CancellationToken);
-            if (host.IsTransientExecutionArtifact(artifact))
+            await claimGuard.EnsureStepDispatchClaimHeldAsync(context.DispatchClaim, context.CancellationToken);
+            if (artifactClassifier.IsTransientExecutionArtifact(artifact))
             {
                 context.Logger.LogDebug(
                     "Skipping transient execution artifact projection for run {RunId}, step {StepRunId}, artifact {ArtifactId}, path {RelativePath}.",
@@ -44,8 +60,8 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
                 continue;
             }
 
-            if (!host.TryResolveArtifactFullPath(context.WorkspaceRoot, artifact.RelativePath, out var fullPath, out var pathResolutionFailure) ||
-                !File.Exists(fullPath))
+            if (!pathResolver.TryResolveArtifactFullPath(context.WorkspaceRoot, artifact.RelativePath, out var fullPath, out var pathResolutionFailure) ||
+                !fileIo.FileExists(fullPath))
             {
                 context.Logger.LogDebug(
                     "Skipping execution artifact projection for run {RunId}, step {StepRunId}, artifact {ArtifactId} because the file path is unavailable. Reason: {Reason}",
@@ -59,7 +75,7 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
             byte[] content;
             try
             {
-                content = await File.ReadAllBytesAsync(fullPath, context.CancellationToken);
+                content = await fileIo.ReadAllBytesAsync(fullPath, context.CancellationToken);
             }
             catch (Exception exception)
             {
@@ -71,16 +87,16 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
                 continue;
             }
 
-            var matchedExpectation = host.ResolveArtifactExpectation(
+            var matchedExpectation = expectationMatcher.ResolveArtifactExpectation(
                 context.Candidate,
                 context.Detail.Run.InputSummary,
                 artifact,
-                host.TryDecodeTextArtifactContent(artifact, fullPath, content));
+                artifactClassifier.TryDecodeTextArtifactContent(artifact, fullPath, content));
             var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
                 context.Detail.Run.Id,
                 artifact,
                 matchedExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(matchedExpectation),
-                host.ResolveProcessArtifactKind(context.Candidate, artifact),
+                artifactClassifier.ResolveProcessArtifactKind(context.Candidate, artifact),
                 context.CompletionStatus,
                 context.Detail.Run.ResultSummary,
                 context.RecoveryContext);
@@ -96,10 +112,10 @@ internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessAr
                         ? "application/octet-stream"
                         : artifact.ContentType,
                     content,
-                    host.ResolveStorageContentKind(artifact.ContentType, fullPath),
-                    host.BuildStorageRelativePath(context.Candidate, artifact)),
+                    artifactClassifier.ResolveStorageContentKind(artifact.ContentType, fullPath),
+                    artifactClassifier.BuildStorageRelativePath(context.Candidate, artifact)),
                 context.CancellationToken);
-            if (!ProcessArtifactProjectionCandidateState.TryApplyWriteOutcome(
+            if (!candidateState.TryApplyWriteOutcome(
                     context.Candidate,
                     writeResult,
                     projectionPlan.ArtifactExpectationId,

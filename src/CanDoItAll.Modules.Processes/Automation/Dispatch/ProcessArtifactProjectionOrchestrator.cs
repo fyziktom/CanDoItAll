@@ -10,20 +10,61 @@ internal sealed class ProcessArtifactProjectionOrchestrator
         this.sourceCoordinators = sourceCoordinators;
     }
 
-    public static ProcessArtifactProjectionOrchestrator CreateDefault(IProcessArtifactProjectionHost host)
+    public static ProcessArtifactProjectionOrchestrator CreateDefault(ProcessArtifactProjectionFacetSet facets)
     {
-        var existingManagedCoordinator = new ProcessExistingManagedArtifactProjectionCoordinator(host);
+        var existingManagedCoordinator = new ProcessExistingManagedArtifactProjectionCoordinator(
+            facets.PathResolver,
+            facets.FileIo,
+            facets.ArtifactClassifier,
+            facets.ExpectationMatcher,
+            facets.CandidateState);
 
         return new ProcessArtifactProjectionOrchestrator(
             new IProcessArtifactProjectionSourceCoordinator[]
             {
-                new ProcessExecutionArtifactProjectionCoordinator(host),
-                new ProcessMockArtifactProjectionCoordinator(host),
-                new ProcessWorkspaceWrittenArtifactProjectionCoordinator(host),
+                new ProcessExecutionArtifactProjectionCoordinator(
+                    facets.ClaimGuard,
+                    facets.PathResolver,
+                    facets.FileIo,
+                    facets.ArtifactClassifier,
+                    facets.ExpectationMatcher,
+                    facets.CandidateState),
+                new ProcessMockArtifactProjectionCoordinator(
+                    facets.PathResolver,
+                    facets.FileIo,
+                    facets.ArtifactClassifier,
+                    facets.ProcessMockRules,
+                    facets.CandidateState),
+                new ProcessWorkspaceWrittenArtifactProjectionCoordinator(
+                    facets.PathResolver,
+                    facets.FileIo,
+                    facets.ArtifactClassifier,
+                    facets.ExpectationMatcher,
+                    facets.ProjectStructureMatcher,
+                    facets.SessionObservationSource,
+                    facets.CandidateState),
                 existingManagedCoordinator,
-                new ProcessResponseTextArtifactProjectionCoordinator(host, existingManagedCoordinator),
-                new ProcessProviderNativeBrowserArtifactProjectionCoordinator(host),
-                new ProcessCompletedDecisionArtifactCoordinator(host)
+                new ProcessResponseTextArtifactProjectionCoordinator(
+                    facets.PathResolver,
+                    facets.FileIo,
+                    facets.ArtifactClassifier,
+                    facets.ResponseTextRules,
+                    facets.ExpectationMatcher,
+                    existingManagedCoordinator,
+                    facets.CandidateState),
+                new ProcessProviderNativeBrowserArtifactProjectionCoordinator(
+                    facets.PathResolver,
+                    facets.FileIo,
+                    facets.ArtifactClassifier,
+                    facets.ExpectationMatcher,
+                    facets.SessionObservationSource,
+                    facets.BrowserOutputRules,
+                    facets.CandidateState),
+                new ProcessCompletedDecisionArtifactCoordinator(
+                    facets.ExpectationMatcher,
+                    facets.DecisionArtifactRules,
+                    facets.LineageFactory,
+                    facets.CandidateState)
             });
     }
 

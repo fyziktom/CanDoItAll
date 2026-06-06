@@ -11,22 +11,41 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionPathResolver pathResolver;
+    private readonly IProcessProjectionFileIo fileIo;
+    private readonly IProcessProjectionArtifactClassifier artifactClassifier;
+    private readonly IProcessProjectionExpectationMatcher expectationMatcher;
+    private readonly IProcessProjectionSessionObservationSource sessionObservationSource;
+    private readonly IProcessProjectionBrowserOutputRules browserOutputRules;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
-    public ProcessProviderNativeBrowserArtifactProjectionCoordinator(IProcessArtifactProjectionHost host)
+    public ProcessProviderNativeBrowserArtifactProjectionCoordinator(
+        IProcessProjectionPathResolver pathResolver,
+        IProcessProjectionFileIo fileIo,
+        IProcessProjectionArtifactClassifier artifactClassifier,
+        IProcessProjectionExpectationMatcher expectationMatcher,
+        IProcessProjectionSessionObservationSource sessionObservationSource,
+        IProcessProjectionBrowserOutputRules browserOutputRules,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.pathResolver = pathResolver;
+        this.fileIo = fileIo;
+        this.artifactClassifier = artifactClassifier;
+        this.expectationMatcher = expectationMatcher;
+        this.sessionObservationSource = sessionObservationSource;
+        this.browserOutputRules = browserOutputRules;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
-        var browserOutputsByToolName = host.ResolveSuccessfulBrowserToolOutputFiles(context.Detail);
+        var browserOutputsByToolName = sessionObservationSource.ResolveSuccessfulBrowserToolOutputFiles(context.Detail);
         if (browserOutputsByToolName.Count == 0)
         {
             return;
         }
 
-        var browserWorkingDirectory = host.ResolveProviderNativeBrowserWorkingDirectory(context.Detail) ?? context.WorkspaceRoot;
+        var browserWorkingDirectory = sessionObservationSource.ResolveProviderNativeBrowserWorkingDirectory(context.Detail) ?? context.WorkspaceRoot;
         if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
         {
             return;
@@ -43,18 +62,18 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
     {
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts)
         {
-            if (!host.TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath))
+            if (!browserOutputRules.TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath))
             {
                 continue;
             }
 
             if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => host.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
-            var requiredToolName = host.ResolveProviderNativeBrowserToolName(expectedRelativePath);
+            var requiredToolName = browserOutputRules.ResolveProviderNativeBrowserToolName(expectedRelativePath);
             if (string.IsNullOrWhiteSpace(requiredToolName) ||
                 !browserOutputsByToolName.TryGetValue(requiredToolName, out var outputFileNames))
             {
@@ -62,7 +81,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
             }
 
             var matchedOutputFileName = outputFileNames.FirstOrDefault(outputFileName =>
-                host.MatchesExpectedBrowserOutputFile(expectedRelativePath, outputFileName));
+                browserOutputRules.MatchesExpectedBrowserOutputFile(expectedRelativePath, outputFileName));
             if (string.IsNullOrWhiteSpace(matchedOutputFileName))
             {
                 continue;
@@ -71,7 +90,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
             var sourceFullPath = Path.GetFullPath(Path.Combine(
                 browserWorkingDirectory,
                 matchedOutputFileName.Replace('/', Path.DirectorySeparatorChar)));
-            if (!host.IsWithinWorkspace(context.WorkspaceRoot, sourceFullPath) || !File.Exists(sourceFullPath))
+            if (!pathResolver.IsWithinWorkspace(context.WorkspaceRoot, sourceFullPath) || !fileIo.FileExists(sourceFullPath))
             {
                 context.Logger.LogDebug(
                     "Skipping provider-native browser artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because source file {SourcePath} is unavailable.",
@@ -82,11 +101,11 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 continue;
             }
 
-            var projectedRelativePath = host.ResolveScopedManagedRelativePath(context.WorkspaceScope, expectedRelativePath);
+            var projectedRelativePath = pathResolver.ResolveScopedManagedRelativePath(context.WorkspaceScope, expectedRelativePath);
             var targetFullPath = Path.GetFullPath(Path.Combine(
                 context.WorkspaceRoot,
                 projectedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!host.IsWithinWorkspace(context.WorkspaceRoot, targetFullPath))
+            if (!pathResolver.IsWithinWorkspace(context.WorkspaceRoot, targetFullPath))
             {
                 context.Logger.LogWarning(
                     "Skipping provider-native browser artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because target path '{ExpectedPath}' resolves outside the workspace root.",
@@ -99,25 +118,21 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
 
             try
             {
-                var targetDirectory = Path.GetDirectoryName(targetFullPath);
-                if (!string.IsNullOrWhiteSpace(targetDirectory))
-                {
-                    Directory.CreateDirectory(targetDirectory);
-                }
+                fileIo.EnsureDirectoryForFile(targetFullPath);
 
                 if (!string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Copy(sourceFullPath, targetFullPath, overwrite: true);
+                    fileIo.CopyFile(sourceFullPath, targetFullPath, overwrite: true);
                 }
 
-                var content = await File.ReadAllBytesAsync(targetFullPath, context.CancellationToken);
+                var content = await fileIo.ReadAllBytesAsync(targetFullPath, context.CancellationToken);
                 var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                     Guid.NewGuid(),
                     context.Detail.Run.Id,
                     "generated-output",
                     expectedArtifact.Title,
                     projectedRelativePath,
-                    host.GuessContentTypeFromPath(targetFullPath),
+                    artifactClassifier.GuessContentTypeFromPath(targetFullPath),
                     requiredToolName,
                     $"Projected provider-native browser output '{matchedOutputFileName}' into the required managed artifact path.",
                     DateTimeOffset.UtcNow);
@@ -145,11 +160,11 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                         Path.GetFileName(targetFullPath),
                         syntheticArtifact.ContentType,
                         content,
-                        host.ResolveStorageContentKind(syntheticArtifact.ContentType, targetFullPath),
-                        host.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
+                        artifactClassifier.ResolveStorageContentKind(syntheticArtifact.ContentType, targetFullPath),
+                        artifactClassifier.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
                     context.CancellationToken);
 
-                if (!ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+                if (!candidateState.TryApplyExpectedWriteOutcome(
                         context.Candidate,
                         expectedArtifact,
                         writeResult,
@@ -185,12 +200,12 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
             foreach (var outputFileName in pair.Value)
             {
                 var normalizedOutputPath = WorkspaceScopeDescriptor.NormalizeRelativePath(outputFileName);
-                if (!host.IsProviderNativeBrowserArtifactPath(normalizedOutputPath))
+                if (!browserOutputRules.IsProviderNativeBrowserArtifactPath(normalizedOutputPath))
                 {
                     continue;
                 }
 
-                var projectedRelativePath = host.ResolveProviderNativeBrowserProjectedRelativePath(
+                var projectedRelativePath = pathResolver.ResolveProviderNativeBrowserProjectedRelativePath(
                     context.Candidate,
                     context.WorkspaceScope,
                     normalizedOutputPath);
@@ -210,7 +225,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 var sourceFullPath = Path.GetFullPath(Path.Combine(
                     browserWorkingDirectory,
                     normalizedOutputPath.Replace('/', Path.DirectorySeparatorChar)));
-                if (!host.IsWithinWorkspace(context.WorkspaceRoot, sourceFullPath) || !File.Exists(sourceFullPath))
+                if (!pathResolver.IsWithinWorkspace(context.WorkspaceRoot, sourceFullPath) || !fileIo.FileExists(sourceFullPath))
                 {
                     context.Logger.LogDebug(
                         "Skipping provider-native browser output projection for run {RunId}, step {StepRunId} because source file {SourcePath} is unavailable.",
@@ -223,7 +238,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                 var targetFullPath = Path.GetFullPath(Path.Combine(
                     context.WorkspaceRoot,
                     projectedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-                if (!host.IsWithinWorkspace(context.WorkspaceRoot, targetFullPath))
+                if (!pathResolver.IsWithinWorkspace(context.WorkspaceRoot, targetFullPath))
                 {
                     context.Logger.LogWarning(
                         "Skipping provider-native browser output projection for run {RunId}, step {StepRunId} because target path '{ProjectedPath}' resolves outside the workspace root.",
@@ -235,19 +250,15 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
 
                 try
                 {
-                    var targetDirectory = Path.GetDirectoryName(targetFullPath);
-                    if (!string.IsNullOrWhiteSpace(targetDirectory))
-                    {
-                        Directory.CreateDirectory(targetDirectory);
-                    }
+                    fileIo.EnsureDirectoryForFile(targetFullPath);
 
                     if (!string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        File.Copy(sourceFullPath, targetFullPath, overwrite: true);
+                        fileIo.CopyFile(sourceFullPath, targetFullPath, overwrite: true);
                     }
 
-                    var content = await File.ReadAllBytesAsync(targetFullPath, context.CancellationToken);
-                    var contentType = host.GuessContentTypeFromPath(targetFullPath);
+                    var content = await fileIo.ReadAllBytesAsync(targetFullPath, context.CancellationToken);
+                    var contentType = artifactClassifier.GuessContentTypeFromPath(targetFullPath);
                     var syntheticArtifact = new ProcessAutomationExecutionArtifact(
                         Guid.NewGuid(),
                         context.Detail.Run.Id,
@@ -258,7 +269,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                         pair.Key,
                         $"Projected provider-native browser output '{normalizedOutputPath}' into the scoped managed artifact path.",
                         DateTimeOffset.UtcNow);
-                    var matchedExpectation = host.ResolveArtifactExpectation(
+                    var matchedExpectation = expectationMatcher.ResolveArtifactExpectation(
                         context.Candidate,
                         context.Detail.Run.InputSummary,
                         syntheticArtifact);
@@ -270,7 +281,7 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                         projectionSource,
                         recordExpectation is null ? null : ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(recordExpectation),
                         ProcessArtifactKind.Evidence,
-                        host.BuildProviderNativeBrowserArtifactTitle(syntheticArtifact),
+                        browserOutputRules.BuildProviderNativeBrowserArtifactTitle(syntheticArtifact),
                         context.CompletionStatus,
                         context.RecoveryContext);
 
@@ -283,11 +294,11 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
                             Path.GetFileName(targetFullPath),
                             contentType,
                             content,
-                            host.ResolveStorageContentKind(contentType, targetFullPath),
+                            artifactClassifier.ResolveStorageContentKind(contentType, targetFullPath),
                             projectedRelativePath),
                         context.CancellationToken);
 
-                    if (!ProcessArtifactProjectionCandidateState.TryApplyWriteOutcome(
+                    if (!candidateState.TryApplyWriteOutcome(
                             context.Candidate,
                             writeResult,
                             recordExpectation?.Id,

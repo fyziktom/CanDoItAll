@@ -11,27 +11,42 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionPathResolver pathResolver;
+    private readonly IProcessProjectionFileIo fileIo;
+    private readonly IProcessProjectionArtifactClassifier artifactClassifier;
+    private readonly IProcessProjectionResponseTextRules responseTextRules;
+    private readonly IProcessProjectionExpectationMatcher expectationMatcher;
     private readonly ProcessExistingManagedArtifactProjectionCoordinator existingManagedCoordinator;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
     public ProcessResponseTextArtifactProjectionCoordinator(
-        IProcessArtifactProjectionHost host,
-        ProcessExistingManagedArtifactProjectionCoordinator existingManagedCoordinator)
+        IProcessProjectionPathResolver pathResolver,
+        IProcessProjectionFileIo fileIo,
+        IProcessProjectionArtifactClassifier artifactClassifier,
+        IProcessProjectionResponseTextRules responseTextRules,
+        IProcessProjectionExpectationMatcher expectationMatcher,
+        ProcessExistingManagedArtifactProjectionCoordinator existingManagedCoordinator,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.pathResolver = pathResolver;
+        this.fileIo = fileIo;
+        this.artifactClassifier = artifactClassifier;
+        this.responseTextRules = responseTextRules;
+        this.expectationMatcher = expectationMatcher;
         this.existingManagedCoordinator = existingManagedCoordinator;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
-        if (!host.ShouldProjectResponseTextArtifacts(context.Detail.Run, context.CompletionStatus) ||
+        if (!responseTextRules.ShouldProjectResponseTextArtifacts(context.Detail.Run, context.CompletionStatus) ||
             context.Candidate.ExpectedArtifacts.Count == 0 ||
             string.IsNullOrWhiteSpace(context.ResponseText))
         {
             return;
         }
 
-        var normalizedResponseText = host.ResolveProjectableResponseArtifactText(context.ResponseText).ReplaceLineEndings(Environment.NewLine);
+        var normalizedResponseText = responseTextRules.ResolveProjectableResponseArtifactText(context.ResponseText).ReplaceLineEndings(Environment.NewLine);
         if (string.IsNullOrWhiteSpace(normalizedResponseText))
         {
             return;
@@ -39,7 +54,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
 
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts)
         {
-            if (!host.IsUsableProjectedResponseArtifactContent(expectedArtifact, normalizedResponseText))
+            if (!responseTextRules.IsUsableProjectedResponseArtifactContent(expectedArtifact, normalizedResponseText))
             {
                 context.Logger.LogInformation(
                     "Skipping response-text artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because the assistant response is not usable artifact content.",
@@ -49,7 +64,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                 continue;
             }
 
-            if (!host.TryResolveResponseTextArtifactRelativePath(
+            if (!responseTextRules.TryResolveResponseTextArtifactRelativePath(
                     context.Candidate,
                     context.WorkspaceScope,
                     expectedArtifact,
@@ -59,7 +74,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
             }
 
             if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => host.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
@@ -78,7 +93,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
             var targetFullPath = Path.GetFullPath(Path.Combine(
                 context.WorkspaceRoot,
                 projectedRelativePath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!host.IsWithinWorkspace(context.WorkspaceRoot, targetFullPath))
+            if (!pathResolver.IsWithinWorkspace(context.WorkspaceRoot, targetFullPath))
             {
                 context.Logger.LogWarning(
                     "Skipping response-text artifact projection for run {RunId}, step {StepRunId}, expected artifact {ArtifactTitle} because target path '{ExpectedPath}' resolves outside the workspace root.",
@@ -91,7 +106,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
 
             try
             {
-                if (File.Exists(targetFullPath) &&
+                if (fileIo.FileExists(targetFullPath) &&
                     await existingManagedCoordinator.TryRecordForResponseProjectionAsync(
                         context,
                         expectedArtifact,
@@ -101,16 +116,12 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                     continue;
                 }
 
-                var targetDirectory = Path.GetDirectoryName(targetFullPath);
-                if (!string.IsNullOrWhiteSpace(targetDirectory))
-                {
-                    Directory.CreateDirectory(targetDirectory);
-                }
+                fileIo.EnsureDirectoryForFile(targetFullPath);
 
                 var persistedResponseText = normalizedResponseText.EndsWith(Environment.NewLine, StringComparison.Ordinal)
                     ? normalizedResponseText
                     : normalizedResponseText + Environment.NewLine;
-                await File.WriteAllTextAsync(targetFullPath, persistedResponseText, Encoding.UTF8, context.CancellationToken);
+                await fileIo.WriteAllTextAsync(targetFullPath, persistedResponseText, Encoding.UTF8, context.CancellationToken);
 
                 var content = Encoding.UTF8.GetBytes(persistedResponseText);
                 var syntheticArtifact = new ProcessAutomationExecutionArtifact(
@@ -119,7 +130,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                     "generated-output",
                     expectedArtifact.Title,
                     projectedRelativePath,
-                    host.GuessContentTypeFromPath(targetFullPath),
+                    artifactClassifier.GuessContentTypeFromPath(targetFullPath),
                     "assistant-response",
                     "Projected the final assistant response into the required managed text artifact path.",
                     DateTimeOffset.UtcNow);
@@ -138,11 +149,11 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                         Path.GetFileName(targetFullPath),
                         syntheticArtifact.ContentType,
                         content,
-                        host.ResolveStorageContentKind(syntheticArtifact.ContentType, targetFullPath),
-                        host.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
+                        artifactClassifier.ResolveStorageContentKind(syntheticArtifact.ContentType, targetFullPath),
+                        artifactClassifier.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
                     context.CancellationToken);
 
-                if (!ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+                if (!candidateState.TryApplyExpectedWriteOutcome(
                         context.Candidate,
                         expectedArtifact,
                         writeResult,

@@ -11,11 +11,30 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
 {
-    private readonly IProcessArtifactProjectionHost host;
+    private readonly IProcessProjectionPathResolver pathResolver;
+    private readonly IProcessProjectionFileIo fileIo;
+    private readonly IProcessProjectionArtifactClassifier artifactClassifier;
+    private readonly IProcessProjectionExpectationMatcher expectationMatcher;
+    private readonly IProcessProjectionProjectStructureMatcher projectStructureMatcher;
+    private readonly IProcessProjectionSessionObservationSource sessionObservationSource;
+    private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
-    public ProcessWorkspaceWrittenArtifactProjectionCoordinator(IProcessArtifactProjectionHost host)
+    public ProcessWorkspaceWrittenArtifactProjectionCoordinator(
+        IProcessProjectionPathResolver pathResolver,
+        IProcessProjectionFileIo fileIo,
+        IProcessProjectionArtifactClassifier artifactClassifier,
+        IProcessProjectionExpectationMatcher expectationMatcher,
+        IProcessProjectionProjectStructureMatcher projectStructureMatcher,
+        IProcessProjectionSessionObservationSource sessionObservationSource,
+        IProcessProjectionCandidateStateUpdater candidateState)
     {
-        this.host = host;
+        this.pathResolver = pathResolver;
+        this.fileIo = fileIo;
+        this.artifactClassifier = artifactClassifier;
+        this.expectationMatcher = expectationMatcher;
+        this.projectStructureMatcher = projectStructureMatcher;
+        this.sessionObservationSource = sessionObservationSource;
+        this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
@@ -25,8 +44,8 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
             return;
         }
 
-        var fileWrites = host.ResolveSuccessfulSessionFileWrites(context.Detail.Run.SerializedSessionStateJson);
-        var receiptFileWrites = host.ResolveSuccessfulWorkspaceFileMutationReceiptPaths(context.Detail)
+        var fileWrites = sessionObservationSource.ResolveSuccessfulSessionFileWrites(context.Detail.Run.SerializedSessionStateJson);
+        var receiptFileWrites = sessionObservationSource.ResolveSuccessfulWorkspaceFileMutationReceiptPaths(context.Detail)
             .Select(path => new SessionFileContent(path, string.Empty))
             .ToList();
         if (fileWrites.Count == 0 && receiptFileWrites.Count == 0)
@@ -37,24 +56,24 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
         foreach (var expectedArtifact in context.Candidate.ExpectedArtifacts)
         {
             if (context.Candidate.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Detail.Artifacts.Any(artifact => host.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
+                context.Detail.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Detail, artifact) == expectedArtifact.Id))
             {
                 continue;
             }
 
-            var matchingWrite = host.TryResolveProjectStructureExpectedArtifactPath(
+            var matchingWrite = projectStructureMatcher.TryResolveProjectStructureExpectedArtifactPath(
                     context.Candidate,
                     expectedArtifact,
                     context.Detail.Run.InputSummary,
                     out var governedPath)
-                ? fileWrites.LastOrDefault(file => host.ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ??
-                  receiptFileWrites.LastOrDefault(file => host.ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath))
-                : fileWrites.LastOrDefault(file => host.WorkspaceWrittenFileMatchesExpectedArtifact(
+                ? fileWrites.LastOrDefault(file => projectStructureMatcher.ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath)) ??
+                  receiptFileWrites.LastOrDefault(file => projectStructureMatcher.ArtifactPathMatchesGovernedProjectStructurePath(file.Path, governedPath))
+                : fileWrites.LastOrDefault(file => expectationMatcher.WorkspaceWrittenFileMatchesExpectedArtifact(
                     context.Candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
                     file.Content)) ??
-                  receiptFileWrites.LastOrDefault(file => host.WorkspaceWrittenFileMatchesExpectedArtifact(
+                  receiptFileWrites.LastOrDefault(file => expectationMatcher.WorkspaceWrittenFileMatchesExpectedArtifact(
                     context.Candidate.ExpectedArtifacts,
                     expectedArtifact,
                     file.Path,
@@ -64,7 +83,7 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                 continue;
             }
 
-            var projectedRelativePath = host.ResolveWorkspaceWrittenArtifactRelativePath(context.WorkspaceScope, matchingWrite.Path);
+            var projectedRelativePath = pathResolver.ResolveWorkspaceWrittenArtifactRelativePath(context.WorkspaceScope, matchingWrite.Path);
             if (string.IsNullOrWhiteSpace(projectedRelativePath))
             {
                 continue;
@@ -84,7 +103,7 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                 continue;
             }
 
-            if (!host.TryResolveWorkspaceWrittenArtifactSourceFullPath(
+            if (!pathResolver.TryResolveWorkspaceWrittenArtifactSourceFullPath(
                     context.WorkspaceRoot,
                     context.WorkspaceScope,
                     matchingWrite.Path,
@@ -107,7 +126,7 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
             byte[] content;
             try
             {
-                content = await File.ReadAllBytesAsync(fullPath, context.CancellationToken);
+                content = await fileIo.ReadAllBytesAsync(fullPath, context.CancellationToken);
             }
             catch (Exception exception)
             {
@@ -125,7 +144,7 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                 "generated-output",
                 expectedArtifact.Title,
                 projectedRelativePath,
-                host.GuessContentTypeFromPath(fullPath),
+                artifactClassifier.GuessContentTypeFromPath(fullPath),
                 "workspace_write_file",
                 $"Projected from workspace file write '{sourceRelativePath}' for AgentFramework execution run {context.Detail.Run.Id:D}.",
                 DateTimeOffset.UtcNow);
@@ -146,10 +165,10 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
                     Path.GetFileName(fullPath),
                     syntheticArtifact.ContentType,
                     content,
-                    host.ResolveStorageContentKind(syntheticArtifact.ContentType, fullPath),
-                    host.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
+                    artifactClassifier.ResolveStorageContentKind(syntheticArtifact.ContentType, fullPath),
+                    artifactClassifier.BuildStorageRelativePath(context.Candidate, syntheticArtifact)),
                 context.CancellationToken);
-            if (!ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+            if (!candidateState.TryApplyExpectedWriteOutcome(
                     context.Candidate,
                     expectedArtifact,
                     writeResult,

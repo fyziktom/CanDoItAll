@@ -1,5 +1,11 @@
 # Phase plan
 
+## Execution Order
+
+- Execute subbundles strictly in numeric order from SB01 through SB72.
+- Do not start a dependent subbundle until the prior subbundle closure gate is recorded.
+- Critical gates SB04, SB08, SB12, SB16, SB20, SB24, SB28, SB32, SB36, SB40, SB44, SB48, SB52, SB56, SB60, SB64, SB68, and SB72 must pass before downstream execution continues.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -51,7 +57,7 @@ The execution order is strictly linear SB01 through SB72. The mermaid graph is a
 
 ## Critical Subbundles
 
-Critical gates: SB04, SB08, SB12, SB16, SB20, SB24, SB28, SB32, SB36, SB40, SB44, SB48, SB52, SB56, SB60, SB64, SB68, SB72.
+- SB04, SB08, SB12, SB16, SB20, SB24, SB28, SB32, SB36, SB40, SB44, SB48, SB52, SB56, SB60, SB64, SB68, and SB72 are critical foundation gates.
 
 ## Phase Gates
 
