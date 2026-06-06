@@ -1,5 +1,11 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute subbundles in numeric order from `SB01` through `SB96`.
+- Stop at each critical gate listed below and do not continue until entry, closure and proof requirements pass.
+- Reopen the most recent production-movement subbundle and all dependent subbundles if route order, claim lifecycle, heartbeat, exception closure, Core/driver, UI or proof-row constraints drift.
+
 ## Subbundle Dependency Map
 
 ```mermaid

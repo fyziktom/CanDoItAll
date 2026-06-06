@@ -9,13 +9,13 @@
 
 ## Critical Path Risks
 
-1. **Claim lease drift**: changing claim acquisition, renewal or release can create duplicate dispatch or stranded claims.
-2. **Route order drift**: moving code may reorder database requirement, upstream materialization, stranded recovery, subprocess, start transition, workflow, direct execution or finalizer routes.
-3. **Failure closure drift**: exception paths may stop moving steps to Failed or may do so after claim loss.
-4. **Heartbeat disposal drift**: losing `finally` semantics can cause leaked heartbeats or incorrect claim release.
-5. **Hidden side effects in pure helpers**: EF writes and service-scope calls must be named as coordinators or stores, not hidden inside `Rules` classes.
-6. **Over-abstraction**: creating public Core or driver APIs now would lock the wrong shape too early.
-7. **Shallow pass**: Codex may only create wrappers and keep all logic in `Dispatch.cs`.
+- **Claim lease drift**: changing claim acquisition, renewal or release can create duplicate dispatch or stranded claims.
+- **Route order drift**: moving code may reorder database requirement, upstream materialization, stranded recovery, subprocess, start transition, workflow, direct execution or finalizer routes.
+- **Failure closure drift**: exception paths may stop moving steps to Failed or may do so after claim loss.
+- **Heartbeat disposal drift**: losing `finally` semantics can cause leaked heartbeats or incorrect claim release.
+- **Hidden side effects in pure helpers**: EF writes and service-scope calls must be named as coordinators or stores, not hidden inside `Rules` classes.
+- **Over-abstraction**: creating public Core or driver APIs now would lock the wrong shape too early.
+- **Shallow pass**: Codex may only create wrappers and keep all logic in `Dispatch.cs`.
 
 ## Validation Risks
 

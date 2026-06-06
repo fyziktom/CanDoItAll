@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
 
 ## Objective
 
@@ -22,13 +22,13 @@ Run-closed guard handler as part of Phase G: Direct-agent route and finalizer ha
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePlanner.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchLeaseHeartbeat.cs` if present / existing heartbeat type
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchGuardLease.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRoutePlanner.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchLeaseHeartbeat.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchGuardLease.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationLoader.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 
 ## Deliverables
@@ -39,9 +39,8 @@ Run-closed guard handler as part of Phase G: Direct-agent route and finalizer ha
 
 ## Dependency Impact
 
-Non-critical production/support slice, but still must close before downstream numeric subbundles.
-
-Potentially invalidates downstream proof if route order, claim lifecycle, failure closure, or dispatch side-effect ownership changes.
+- Non-critical production/support slice, but still must close before downstream numeric subbundles.
+- Potentially invalidates downstream proof if route order, claim lifecycle, failure closure, or dispatch side-effect ownership changes.
 
 ## Validation Depth
 
@@ -76,12 +75,12 @@ Potentially invalidates downstream proof if route order, claim lifecycle, failur
 
 ## Acceptance Checklist
 
-- [ ] Code compiles.
-- [ ] Relevant focused tests pass.
-- [ ] Source scans pass.
-- [ ] No Core/driver/UI/prohibited viewport artifacts.
-- [ ] Execution report row for `SB61` is updated.
-- [ ] Critical gate proof exists if this is a gate.
+- [x] Code compiles.
+- [x] Relevant focused tests pass.
+- [x] Source scans pass.
+- [x] No Core/driver/UI/prohibited viewport artifacts.
+- [x] Execution report row for `SB61` is updated.
+- [x] Critical gate proof exists if this is a gate.
 
 ## Proof Required
 
@@ -91,12 +90,14 @@ Potentially invalidates downstream proof if route order, claim lifecycle, failur
 
 ## Browser Validation Logging
 
-N/A. This subbundle must not touch browser-visible UI. If UI files change, stop and reopen the subbundle as a scope violation.
+- N/A. This subbundle must not touch browser-visible UI. If UI files change, stop and reopen the subbundle as a scope violation.
 
 ## Progression Gate
 
-Downstream subbundles may proceed only after this subbundle's closure checklist passes. Critical gate status: No.
+- Downstream subbundles may proceed only after this subbundle's closure checklist passes. Critical gate status: No.
 
 ## Suggested Agent Prompt
 
 Execute `SB61 - Run-closed guard handler` only. Preserve current behavior. Do not start Process Core or driver APIs. Update proof and execution report before proceeding.
+
+

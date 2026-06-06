@@ -1122,6 +1122,26 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessDispatchRoutePipeline_SB38_INV_001_preserves_exact_dispatch_stage_order()
+    {
+        Assert.Equal(
+        [
+            ProcessDispatchRouteStage.FreshRecoverySkip,
+            ProcessDispatchRouteStage.DatabaseRequirement,
+            ProcessDispatchRouteStage.UpstreamMaterialization,
+            ProcessDispatchRouteStage.StrandedArtifactRecovery,
+            ProcessDispatchRouteStage.Subprocess,
+            ProcessDispatchRouteStage.StartTransition,
+            ProcessDispatchRouteStage.Workflow,
+            ProcessDispatchRouteStage.DirectAgentExecution,
+            ProcessDispatchRouteStage.CompetingExecutionGuard,
+            ProcessDispatchRouteStage.RunClosedGuard,
+            ProcessDispatchRouteStage.FinalizerTransition
+        ],
+            ProcessDispatchRoutePipeline.StageOrder);
+    }
+
+    [Fact]
     public void ProcessDispatchDatabaseRequirementBlocker_SB05_INV_001_preserves_status_targets_and_transition_shape()
     {
         var stepRunId = Guid.NewGuid();
@@ -16985,21 +17005,34 @@ Ancestor path to the target work node:
     [Fact]
     public void DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer()
     {
-        var dispatchSource = File.ReadAllText(Path.Combine(
+        var dispatchDirectory = Path.Combine(
             IntegrationTestPaths.RepositoryRoot,
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
-            "Dispatch",
+            "Dispatch");
+        var dispatchSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
             "ProcessRunAutomationDispatchService.Dispatch.cs"));
+        var routeSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.RouteExecution.cs"));
+        var finalizerFactorySource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessRunAutomationDispatchService.FinalizerContextFactory.cs"));
+        var combinedSource = string.Join(
+            Environment.NewLine,
+            dispatchSource,
+            routeSource,
+            finalizerFactorySource);
 
-        Assert.Contains("FinalizeStepCompletionAsync", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessStepCompletionExecutorKind.DirectAgent", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessStepCompletionExecutorKind.WorkflowBackedRole", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessStepCompletionExecutorKind.SubprocessParent", dispatchSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessStepCompletionExecutorKind.ManagerArtifactRecovery", dispatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TargetStatus = workflowOutcome.CompletionStatus", dispatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("sourceArtifact?.ManagedStoragePath ?? string.Empty", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("FinalizeStepCompletionAsync", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.DirectAgent", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.WorkflowBackedRole", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.SubprocessParent", combinedSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessStepCompletionExecutorKind.ManagerArtifactRecovery", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TargetStatus = workflowOutcome.CompletionStatus", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("sourceArtifact?.ManagedStoragePath ?? string.Empty", combinedSource, StringComparison.Ordinal);
     }
 
     [Fact]
