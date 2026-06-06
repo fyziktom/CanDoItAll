@@ -2,8 +2,7 @@
 
 ## Status
 
-Prepared.
-
+- Status: `Completed`
 ## Objective
 
 Split `ProcessDispatchCandidateHydrationService` into read snapshot loader orchestration and application decision collaborators; no behavior change.
@@ -23,26 +22,23 @@ Split `ProcessDispatchCandidateHydrationService` into read snapshot loader orche
 ## Exact Source References
 
 Primary candidate source paths:
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 ## Scope
 
-Implement only the slice described by this subbundle. Keep the work module-local unless explicitly stated otherwise.
-
+- Implement only the slice described by this subbundle.
 ## Dependency Impact
 
-Depends on previous phase gate.
-
-Downstream phases become untrustworthy if this subbundle changes behavior without proof.
-
+- Depends on the previous numeric subbundle and previous critical gate where applicable.
+- Downstream phases become untrustworthy if this subbundle changes behavior without proof.
 ## Validation Depth
 
 - Build after meaningful source movement.
@@ -76,11 +72,11 @@ Downstream phases become untrustworthy if this subbundle changes behavior withou
 
 ## Acceptance Checklist
 
-- [ ] Behavior preserved.
-- [ ] Source movement is meaningful, not cosmetic.
-- [ ] Tests updated where needed.
-- [ ] Source scans pass.
-- [ ] Execution report row completed.
+- [x] Behavior preserved.
+- [x] Source movement is meaningful, not cosmetic.
+- [x] Tests updated where needed.
+- [x] Source scans pass.
+- [x] Execution report row completed.
 
 ## Proof Required
 
@@ -93,12 +89,12 @@ Minimum proof:
 
 ## Browser Validation Logging
 
-N/A - runtime/service refactor only. If UI files change unexpectedly, stop and document before proceeding.
-
+- N/A - runtime/service refactor only.
 ## Progression Gate
 
-Do not proceed to downstream subbundles until this subbundle's proof passes. Critical gates must include manifest and semantic invariant files.
-
+- Do not proceed to downstream subbundles until this subbundle proof passes.
 ## Suggested Agent Prompt
 
 Implement SB007: Hydration read/query split. Preserve behavior, avoid Process Core and production driver APIs, update proof artifacts, and close the execution report row.
+
+

@@ -9,6 +9,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var candidateHydrationService = CreateCandidateHydrationService();
         var runClosureGuardService = CreateRunClosureGuardService();
         var finalizerApplicationService = CreateFinalizerApplicationService();
+        var recoveryRuntimeService = CreateRecoveryRuntimeService();
+        var directAgentRuntimeService = CreateDirectAgentRuntimeService();
+        var competingExecutionGuardService = CreateCompetingExecutionGuardService();
         var subprocessRuntimeService = CreateSubprocessRuntimeService(
             stepTransitionService,
             finalizerApplicationService);
@@ -25,15 +28,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 preExecutionGuardHandler,
                 stepTransitionService,
                 logger),
-            new ProcessDispatchRecoveryRouteService(this),
+            new ProcessDispatchRecoveryRouteService(recoveryRuntimeService, finalizerApplicationService),
             new ProcessDispatchSubprocessRouteService(subprocessRuntimeService),
             new ProcessDispatchStartTransitionRouteService(
                 stepTransitionService,
                 candidateHydrationService),
-            new ProcessDispatchWorkflowRouteService(this, workflowRunCoordinator),
-            new ProcessDispatchDirectAgentRouteService(this),
-            new ProcessDispatchGuardRouteService(this, runClosureGuardService),
-            new ProcessDispatchFinalizerRouteService(this));
+            new ProcessDispatchWorkflowRouteService(finalizerApplicationService, workflowRunCoordinator),
+            new ProcessDispatchDirectAgentRouteService(directAgentRuntimeService),
+            new ProcessDispatchGuardRouteService(competingExecutionGuardService, runClosureGuardService),
+            new ProcessDispatchFinalizerRouteService(finalizerApplicationService));
     }
 
     private ProcessDispatchStepTransitionService CreateStepTransitionService()
@@ -41,6 +44,15 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private ProcessDispatchRunClosureGuardService CreateRunClosureGuardService()
         => new(dbContextFactory);
+
+    private ProcessDispatchRecoveryRuntimeService CreateRecoveryRuntimeService()
+        => new(TryRecoverStrandedMissingCompletionArtifactsAsync);
+
+    private ProcessDispatchDirectAgentRuntimeService CreateDirectAgentRuntimeService()
+        => new(ExecuteUntilSettledAsync);
+
+    private ProcessDispatchCompetingExecutionGuardService CreateCompetingExecutionGuardService()
+        => new(executionClient, clock, StaleAutomationExecutionRunTimeout);
 
     private ProcessAutomationDatabaseRequirementResolver CreateDatabaseRequirementResolver()
         => new(databaseProfileRuntimeAccessor, processRuntimeOptions);

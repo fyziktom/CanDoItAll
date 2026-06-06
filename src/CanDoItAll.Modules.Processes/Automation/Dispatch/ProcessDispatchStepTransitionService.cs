@@ -17,6 +17,19 @@ internal sealed class ProcessDispatchStepTransitionService(
 {
     public async Task<Result> TransitionStepWithClaimAsync(
         ProcessStepTransitionRequest request,
+        ProcessRouteDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        return await TransitionStepWithClaimAsync(
+            request,
+            new ProcessRunAutomationDispatchService.ProcessStepDispatchClaim(
+                dispatchClaim.StepRunId,
+                dispatchClaim.ClaimToken),
+            cancellationToken);
+    }
+
+    public async Task<Result> TransitionStepWithClaimAsync(
+        ProcessStepTransitionRequest request,
         ProcessRunAutomationDispatchService.ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {

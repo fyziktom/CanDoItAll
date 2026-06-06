@@ -10,8 +10,8 @@ using System.Text.Json;
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed record ProcessMissingUpstreamArtifactMaterializationFacts(
-    IReadOnlyList<ProcessRunAutomationDispatchService.DispatchArtifactInput> MissingInputs,
-    ProcessRunAutomationDispatchService.DispatchArtifactInput? MaterializationTarget)
+    IReadOnlyList<ProcessRouteArtifactInput> MissingInputs,
+    ProcessRouteArtifactInput? MaterializationTarget)
 {
     public bool HasMissingInputs => MissingInputs.Count > 0;
 }
@@ -28,15 +28,56 @@ internal static class ProcessMissingUpstreamArtifactMaterializationFactsResolver
             missingInputs.FirstOrDefault(IsRunnableTarget));
     }
 
-    public static IReadOnlyList<ProcessRunAutomationDispatchService.DispatchArtifactInput> ResolveMissingInputs(
+    public static ProcessMissingUpstreamArtifactMaterializationFacts Create(
+        ProcessRouteCandidate candidate)
+    {
+        var missingInputs = ResolveMissingInputs(candidate);
+
+        return new ProcessMissingUpstreamArtifactMaterializationFacts(
+            missingInputs,
+            missingInputs.FirstOrDefault(IsRunnableTarget));
+    }
+
+    public static IReadOnlyList<ProcessRouteArtifactInput> ResolveMissingInputs(
         ProcessRunAutomationDispatchService.DispatchCandidate candidate)
+    {
+        return candidate.ArtifactInputs
+            .Where(input => input.Artifacts.Count == 0)
+            .Select(ToRouteArtifactInput)
+            .ToList();
+    }
+
+    public static IReadOnlyList<ProcessRouteArtifactInput> ResolveMissingInputs(
+        ProcessRouteCandidate candidate)
     {
         return candidate.ArtifactInputs
             .Where(input => input.Artifacts.Count == 0)
             .ToList();
     }
 
-    public static bool IsRunnableTarget(ProcessRunAutomationDispatchService.DispatchArtifactInput input)
+    private static ProcessRouteArtifactInput ToRouteArtifactInput(
+        ProcessRunAutomationDispatchService.DispatchArtifactInput input)
+    {
+        return new ProcessRouteArtifactInput(
+            input.SourceStepTitle,
+            input.ExpectedArtifactTitle,
+            input.ArtifactExpectationId,
+            input.SourceStepDefinitionId,
+            input.SourceStepRunId,
+            input.SourceStepRunConcurrencyToken,
+            input.SourceStepRunStatus,
+            input.SourceStepHasAgentExecutor,
+            input.Artifacts
+                .Select(artifact => new ProcessRouteArtifactReference(
+                    artifact.Title,
+                    artifact.ArtifactKind,
+                    artifact.ManagedStoragePath,
+                    artifact.ReviewSummary,
+                    artifact.ProvenanceSummary))
+                .ToList());
+    }
+
+    public static bool IsRunnableTarget(ProcessRouteArtifactInput input)
     {
         return input.SourceStepRunId.HasValue &&
                input.SourceStepRunConcurrencyToken.HasValue &&
@@ -66,7 +107,7 @@ internal static class ProcessMissingUpstreamArtifactMaterializationBlocker
     }
 
     public static string BuildBlockReason(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessMissingUpstreamArtifactMaterializationFacts facts)
     {
         var missingSummary = string.Join(
@@ -84,7 +125,7 @@ internal static class ProcessMissingUpstreamArtifactMaterializationBlocker
 internal static class ProcessMissingUpstreamArtifactMaterializationFingerprint
 {
     public static string Create(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessMissingUpstreamArtifactMaterializationFacts facts)
     {
         var normalizedInputs = facts.MissingInputs
@@ -110,7 +151,7 @@ internal static class ProcessMissingUpstreamArtifactMaterializationFingerprint
 internal static class ProcessMissingUpstreamArtifactRerunRequestBuilder
 {
     public static ProcessAgentStepRerunRequest BuildRequest(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessMissingUpstreamArtifactMaterializationFacts facts)
     {
         var materializationTarget = facts.MaterializationTarget
@@ -125,7 +166,7 @@ internal static class ProcessMissingUpstreamArtifactRerunRequestBuilder
     }
 
     public static string BuildDirective(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessMissingUpstreamArtifactMaterializationFacts facts)
     {
         var materializationTarget = facts.MaterializationTarget
@@ -145,7 +186,7 @@ internal sealed class ProcessMissingUpstreamArtifactMaterializationJournalCoordi
     IClock clock)
 {
     public async Task<bool> RecordAsync(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessMissingUpstreamArtifactMaterializationFacts facts,
         string blockReason,
         CancellationToken cancellationToken)
@@ -208,7 +249,7 @@ internal sealed class ProcessMissingUpstreamArtifactMaterializationCoordinator(
     ILogger<ProcessRunAutomationDispatchService> logger)
 {
     public async Task<bool> RecordAndRequestAsync(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessMissingUpstreamArtifactMaterializationFacts facts,
         string blockReason,
         CancellationToken cancellationToken)

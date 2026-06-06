@@ -21,6 +21,23 @@ internal sealed class ProcessDispatchCandidateHydrationService(
     TimeSpan staleAutomationExecutionRunTimeout,
     ILogger<ProcessRunAutomationDispatchService> logger)
 {
+    public async Task<ProcessRouteCandidate?> LoadRouteCandidateAsync(
+        Guid processRunId,
+        Guid claimedStepRunId,
+        string trigger,
+        CancellationToken cancellationToken)
+    {
+        var candidate = await LoadAsync(
+            processRunId,
+            claimedStepRunId,
+            trigger,
+            cancellationToken);
+
+        return candidate is null
+            ? null
+            : ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+    }
+
     public async Task<ProcessRunAutomationDispatchService.DispatchCandidate?> LoadAsync(
         Guid processRunId,
         Guid claimedStepRunId,

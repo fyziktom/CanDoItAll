@@ -11,6 +11,19 @@ internal sealed class ProcessDispatchFinalizerApplicationService(
     Func<DispatchCandidate, FinalizerResult, ProcessStepDispatchClaim, CancellationToken, Task> applyFinalizedStepTransitionAsync)
 {
     public async Task FinalizeWorkflowCompletionAsync(
+        ProcessRouteCandidate candidate,
+        ProcessWorkflowExecutionOutcome workflowOutcome,
+        ProcessRouteDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        await FinalizeWorkflowCompletionAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            workflowOutcome,
+            ToDispatcherClaim(dispatchClaim),
+            cancellationToken);
+    }
+
+    public async Task FinalizeWorkflowCompletionAsync(
         DispatchCandidate candidate,
         ProcessWorkflowExecutionOutcome workflowOutcome,
         ProcessStepDispatchClaim dispatchClaim,
@@ -20,6 +33,23 @@ internal sealed class ProcessDispatchFinalizerApplicationService(
             candidate,
             ProcessDispatchFinalizerContextFactory.ForWorkflow(candidate, workflowOutcome),
             dispatchClaim,
+            cancellationToken);
+    }
+
+    public async Task FinalizeRecoveredCompletionAsync(
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome recoveryOutcome,
+        string trigger,
+        Func<CancellationToken, Task> renewLeaseAsync,
+        ProcessRouteDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        await FinalizeRecoveredCompletionAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(recoveryOutcome),
+            trigger,
+            renewLeaseAsync,
+            ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
 
@@ -43,6 +73,23 @@ internal sealed class ProcessDispatchFinalizerApplicationService(
     }
 
     public async Task FinalizeDirectAgentCompletionAsync(
+        ProcessRouteCandidate candidate,
+        ProcessRouteExecutionOutcome executionOutcome,
+        string trigger,
+        Func<CancellationToken, Task> renewLeaseAsync,
+        ProcessRouteDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        await FinalizeDirectAgentCompletionAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(executionOutcome),
+            trigger,
+            renewLeaseAsync,
+            ToDispatcherClaim(dispatchClaim),
+            cancellationToken);
+    }
+
+    public async Task FinalizeDirectAgentCompletionAsync(
         DispatchCandidate candidate,
         DispatchExecutionOutcome executionOutcome,
         string trigger,
@@ -58,6 +105,23 @@ internal sealed class ProcessDispatchFinalizerApplicationService(
                 trigger,
                 renewLeaseAsync),
             dispatchClaim,
+            cancellationToken);
+    }
+
+    public async Task FinalizeSubprocessCompletionAsync(
+        ProcessRouteCandidate candidate,
+        Guid subprocessRunId,
+        ProcessStepRunStatus terminalStatus,
+        string transitionReason,
+        ProcessRouteDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        await FinalizeSubprocessCompletionAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            subprocessRunId,
+            terminalStatus,
+            transitionReason,
+            ToDispatcherClaim(dispatchClaim),
             cancellationToken);
     }
 
@@ -93,5 +157,10 @@ internal sealed class ProcessDispatchFinalizerApplicationService(
         }
 
         await applyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
+    }
+
+    private static ProcessStepDispatchClaim ToDispatcherClaim(ProcessRouteDispatchClaim dispatchClaim)
+    {
+        return new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken);
     }
 }

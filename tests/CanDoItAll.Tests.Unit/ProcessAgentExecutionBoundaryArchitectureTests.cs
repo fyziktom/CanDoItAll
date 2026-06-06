@@ -1072,6 +1072,57 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Process_dispatch_route_service_ownership_gate_uses_route_models_for_pre_execution_and_failure_closure()
+    {
+        var dispatchDirectory = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var routeServicesSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteServices.cs"));
+        var routeModelsSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModels.cs"));
+        var hydrationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateHydrationService.cs"));
+        var recoveryRuntimeSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRecoveryRuntimeService.cs"));
+        var directAgentRuntimeSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchDirectAgentRuntimeService.cs"));
+        var competingGuardSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCompetingExecutionGuardService.cs"));
+        var failureClosureSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchFailureClosureService.cs"));
+        var exceptionClosureSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.ExceptionClosure.cs"));
+
+        Assert.Contains("internal sealed record ProcessRouteArtifactInput", routeModelsSource, StringComparison.Ordinal);
+        Assert.Contains("IReadOnlyList<ProcessRouteArtifactInput> ArtifactInputs", routeModelsSource, StringComparison.Ordinal);
+        Assert.Contains("preExecutionGuardHandler.BuildDatabaseRequirementDecision(", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("databaseRequirementFailure.Message", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(candidate)", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("LoadRouteCandidateAsync", hydrationSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRecoveryRuntimeService recoveryRuntimeService", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchDirectAgentRuntimeService directAgentRuntimeService", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchCompetingExecutionGuardService competingExecutionGuardService", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", recoveryRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", directAgentRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessExecutionRunQueryBuilder.ForCandidate(dispatcherCandidate)", competingGuardSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatcher", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var dispatcherCandidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate);", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("var dispatcherClaim = ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim);", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("finalizerApplicationService.FinalizeRecoveredCompletionAsync", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("finalizerApplicationService.FinalizeWorkflowCompletionAsync", routeServicesSource, StringComparison.Ordinal);
+        Assert.Contains("finalizerApplicationService.FinalizeDirectAgentCompletionAsync", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchWorkflowRouteService(\n    ProcessRunAutomationDispatchService dispatcher", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchDirectAgentRouteService(\n    ProcessRunAutomationDispatchService dispatcher", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchGuardRouteService(\n    ProcessRunAutomationDispatchService dispatcher", routeServicesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDispatchFinalizerRouteService(\n    ProcessRunAutomationDispatchService dispatcher", routeServicesSource, StringComparison.Ordinal);
+
+        Assert.Contains("internal sealed class ProcessDispatchFailureClosureService", failureClosureSource, StringComparison.Ordinal);
+        Assert.Contains("runClosureGuardService.IsRunClosedToAutomationAsync", failureClosureSource, StringComparison.Ordinal);
+        Assert.Contains("isStepDispatchClaimHeldAsync", failureClosureSource, StringComparison.Ordinal);
+        Assert.Contains("stepTransitionService.TransitionStepWithClaimAsync", failureClosureSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunAutomationDispatchService.AutomationActor", failureClosureSource, StringComparison.Ordinal);
+        Assert.Contains("CreateFailureClosureService", exceptionClosureSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TargetStatus = ProcessStepRunStatus.Failed", exceptionClosureSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_dispatch_pre_execution_guard_gate_a_SB04_INV_001_locks_local_boundary_without_core_driver_or_viewport_drift()
     {
         var root = FindRepositoryRoot();

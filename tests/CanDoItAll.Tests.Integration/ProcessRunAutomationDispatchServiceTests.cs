@@ -1244,8 +1244,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
                     ])
             ]
         };
+        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
 
-        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(candidate);
+        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(routeCandidate);
 
         Assert.Equal(2, facts.MissingInputs.Count);
         Assert.Equal(runnableSourceStepRunId, facts.MaterializationTarget?.SourceStepRunId);
@@ -1287,14 +1288,21 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ProcessStepRunStatus.Blocked,
             SourceStepHasAgentExecutor: true,
             []);
-        var facts = new ProcessMissingUpstreamArtifactMaterializationFacts([inputB, inputA], inputB);
-        var reorderedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([inputA, inputB], inputB);
-        var retargetedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([inputA, inputB], inputA);
+        candidate = candidate with
+        {
+            ArtifactInputs = [inputA, inputB]
+        };
+        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var routeInputA = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == expectationA);
+        var routeInputB = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == expectationB);
+        var facts = new ProcessMissingUpstreamArtifactMaterializationFacts([routeInputB, routeInputA], routeInputB);
+        var reorderedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([routeInputA, routeInputB], routeInputB);
+        var retargetedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([routeInputA, routeInputB], routeInputA);
 
-        var fingerprint = ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(candidate, facts);
+        var fingerprint = ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeCandidate, facts);
 
-        Assert.Equal(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(candidate, reorderedFacts));
-        Assert.NotEqual(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(candidate, retargetedFacts));
+        Assert.Equal(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeCandidate, reorderedFacts));
+        Assert.NotEqual(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeCandidate, retargetedFacts));
         Assert.Matches("^[a-f0-9]{64}$", fingerprint);
     }
 
@@ -1321,11 +1329,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ArtifactExpectationId = Guid.NewGuid(),
             ExpectedArtifactTitle = "implementation packet"
         };
+        candidate = candidate with
+        {
+            ArtifactInputs = [implementationPacket, implementationPacketDuplicate]
+        };
+        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var routeImplementationPacket = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == implementationPacket.ArtifactExpectationId);
+        var routeImplementationPacketDuplicate = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == implementationPacketDuplicate.ArtifactExpectationId);
         var facts = new ProcessMissingUpstreamArtifactMaterializationFacts(
-            [implementationPacket, implementationPacketDuplicate],
-            implementationPacket);
+            [routeImplementationPacket, routeImplementationPacketDuplicate],
+            routeImplementationPacket);
 
-        var request = ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildRequest(candidate, facts);
+        var request = ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildRequest(routeCandidate, facts);
 
         Assert.Equal(sourceStepRunId, request.StepRunId);
         Assert.Equal(sourceConcurrencyToken, request.StepRunConcurrencyToken);

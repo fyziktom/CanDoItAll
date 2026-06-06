@@ -1,5 +1,13 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute subbundles in numeric order from SB001 through SB027.
+- Stop at each critical gate before starting the next phase.
+- Reopen the owning phase if a later observation weakens earlier behavior proof.
+
+## Timeline
+
 ```mermaid
 gantt
     title Process Core Readiness Multi-Area Isolation
@@ -25,6 +33,19 @@ gantt
 ```
 
 ## Subbundle Dependency Map
+
+```mermaid
+flowchart LR
+    SB001 --> SB002 --> SB003
+    SB003 --> SB004 --> SB005 --> SB006
+    SB006 --> SB007 --> SB008 --> SB009
+    SB009 --> SB010 --> SB011 --> SB012
+    SB012 --> SB013 --> SB014 --> SB015
+    SB015 --> SB016 --> SB017 --> SB018
+    SB018 --> SB019 --> SB020 --> SB021
+    SB021 --> SB022 --> SB023 --> SB024
+    SB024 --> SB025 --> SB026 --> SB027
+```
 
 ### P1: Baseline and guardrails
 
@@ -82,7 +103,15 @@ Owns: SB025, SB026, SB027
 
 ## Critical Subbundles
 
-Critical gates: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027.
+- SB003: baseline architecture guard.
+- SB006: route service ownership proof.
+- SB009: hydration parity proof.
+- SB012: pre-execution/start transition proof.
+- SB015: subprocess runtime/projection proof.
+- SB018: finalizer/failure proof.
+- SB021: wrapper/rule proof.
+- SB024: model readiness proof.
+- SB027: final red-team, proof closure, and next bundle cutline.
 
 ## Phase Gates
 

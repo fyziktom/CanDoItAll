@@ -17,7 +17,7 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
     ProcessMissingUpstreamArtifactMaterializationCoordinator materializationCoordinator)
 {
     public ProcessDispatchDatabaseRequirementDecision BuildDatabaseRequirementDecision(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         string failureMessage,
         string automationActor)
     {
@@ -57,7 +57,7 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
     }
 
     public ProcessDispatchMissingUpstreamArtifactMaterializationPlan PlanMissingUpstreamArtifactMaterialization(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate)
+        ProcessRouteCandidate candidate)
     {
         var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(candidate);
 
@@ -87,7 +87,7 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
     }
 
     public async Task<bool> RecordAndRequestMissingUpstreamArtifactMaterializationAsync(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessRouteCandidate candidate,
         ProcessDispatchMissingUpstreamArtifactMaterializationPlan plan,
         CancellationToken cancellationToken)
     {

@@ -23,6 +23,21 @@ internal sealed class ProcessDispatchSubprocessRuntimeService(
     ILogger<ProcessRunAutomationDispatchService> logger)
 {
     public async Task HandleSubprocessDispatchAsync(
+        ProcessRouteCandidate candidate,
+        string trigger,
+        Guid? triggerStepRunId,
+        ProcessRouteDispatchClaim dispatchClaim,
+        CancellationToken cancellationToken)
+    {
+        await HandleSubprocessDispatchAsync(
+            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+            trigger,
+            triggerStepRunId,
+            new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken),
+            cancellationToken);
+    }
+
+    public async Task HandleSubprocessDispatchAsync(
         DispatchCandidate candidate,
         string trigger,
         Guid? triggerStepRunId,

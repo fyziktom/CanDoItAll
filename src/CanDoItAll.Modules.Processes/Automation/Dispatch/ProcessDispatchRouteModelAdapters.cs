@@ -10,16 +10,38 @@ internal static class ProcessDispatchRouteModelAdapters
         return new ProcessRouteCandidate(
             new ProcessRouteRunSnapshot(
                 candidate.Run.Id,
-                candidate.Run.Status),
+                candidate.Run.Status,
+                candidate.Run.OperatingMode,
+                candidate.Run.ProcessDefinitionVersionId),
             new ProcessRouteStepSnapshot(
                 candidate.StepRun.Id,
                 candidate.StepRun.StepDefinitionId,
+                candidate.StepRun.Title,
                 candidate.StepRun.Status,
                 candidate.StepRun.StepKind,
                 candidate.StepRun.ConcurrencyToken,
                 candidate.StepRun.StartedAtUtc),
             candidate.TechnicalAgentId,
             candidate.RecoveryExecutionRunId,
+            candidate.ArtifactInputs
+                .Select(input => new ProcessRouteArtifactInput(
+                    input.SourceStepTitle,
+                    input.ExpectedArtifactTitle,
+                    input.ArtifactExpectationId,
+                    input.SourceStepDefinitionId,
+                    input.SourceStepRunId,
+                    input.SourceStepRunConcurrencyToken,
+                    input.SourceStepRunStatus,
+                    input.SourceStepHasAgentExecutor,
+                    input.Artifacts
+                        .Select(artifact => new ProcessRouteArtifactReference(
+                            artifact.Title,
+                            artifact.ArtifactKind,
+                            artifact.ManagedStoragePath,
+                            artifact.ReviewSummary,
+                            artifact.ProvenanceSummary))
+                        .ToList()))
+                .ToList(),
             new DispatcherCandidateSource(candidate));
     }
 
