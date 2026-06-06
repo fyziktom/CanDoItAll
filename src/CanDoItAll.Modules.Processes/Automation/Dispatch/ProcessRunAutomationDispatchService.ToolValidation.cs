@@ -752,7 +752,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
     }
 
-    private static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ProcessAutomationExecutionRunDetail detail)
+    internal static IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ProcessAutomationExecutionRunDetail detail)
     {
         return CreateAutomationObservationSnapshot(detail).BrowserToolOutputFiles;
     }
@@ -809,7 +809,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
     }
 
-    private static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson)
+    internal static IReadOnlyList<SessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson)
     {
         return ProcessAutomationSessionObservation
             .Create(serializedSessionStateJson)

@@ -74,6 +74,10 @@ internal interface IProcessProjectionFileIo
 {
     bool FileExists(string fullPath);
 
+    long GetFileLength(string fullPath);
+
+    byte[] ReadAllBytes(string fullPath);
+
     Task<byte[]> ReadAllBytesAsync(string fullPath, CancellationToken cancellationToken);
 
     Task WriteAllTextAsync(

@@ -1,0 +1,33 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -Command $ErrorActionPreference = 'Stop'
+$changed = @((git diff --name-only) + (git ls-files --others --exclude-standard))
+$ui = @($changed | Where-Object { $_ -match '\.(razor|css|js|ts|tsx|jsx|png|jpg|jpeg|webp|gif|svg)$' })
+if ($ui.Count -gt 0) { Write-Output 'Unexpected UI/media changes:'; $ui | Write-Output; exit 1 }
+$matches = @(rg -n 'CanDoItAll\.Processes\.Core|IProcessDriverPack|ProcessDriverRegistry|IProcessDriver' src\CanDoItAll.Modules.Processes 2>&1)
+if ($LASTEXITCODE -eq 0) { Write-Output 'Unexpected Process Core or driver production token:'; $matches | Write-Output; exit 1 }
+if ($LASTEXITCODE -gt 1) { $matches | Write-Output; exit $LASTEXITCODE }
+Write-Output 'No changed UI/media files detected.'
+Write-Output 'No Process Core or process driver production tokens detected under src\CanDoItAll.Modules.Processes.'
+exit 0
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-06T03:26:00.2700127Z
+
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/analysis/02-assumptions-and-risks.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/plan/01-phase-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/reviews/02-architect-self-review.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/reviews/03-final-red-team-review.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/reviews/04-known-unrelated-failures.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/reviews/05-manager-cutline.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-dispatch-projection-facet-implementation-boundary-v1/reviews/06-final-no-regression-summary.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionFacets.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactKinds.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjection.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ArtifactValidation.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.ToolValidation.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs', LF will be replaced by CRLF the next time Git touches it
+No changed UI/media files detected.
+No Process Core or process driver production tokens detected under src\CanDoItAll.Modules.Processes.
+
+EndTimeUtc: 2026-06-06T03:26:03.6855292Z
+ExitCode: 0

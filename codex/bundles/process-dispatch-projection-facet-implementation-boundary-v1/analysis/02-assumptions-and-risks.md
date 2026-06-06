@@ -1,12 +1,18 @@
 # Assumptions And Risks
 
+## Working Assumptions
+
+- The branch starts from the completed `process-dispatch-projection-host-facet-boundary-v1` state.
+- This bundle is architecture refactoring only; projection behavior and source-family order must remain unchanged.
+- Browser validation remains `N/A` unless a prohibited UI file change appears, in which case the scope must be reopened.
+
 ## Critical Path Risks
 
-1. A shallow pass may only rename `ProcessArtifactProjectionServices` while leaving one all-facet implementation.
-2. Moving too much logic out of dispatcher wrappers at once can change projection matching, storage path, or candidate mutation semantics.
-3. Creating production driver APIs too early can freeze the wrong abstractions.
-4. Moving nested dispatch models into contracts prematurely can force large downstream changes.
-5. Broad source scans may pass even if source-family order changes unless explicit order tests remain.
+- A shallow pass may only rename `ProcessArtifactProjectionServices` while leaving one all-facet implementation.
+- Moving too much logic out of dispatcher wrappers at once can change projection matching, storage path, or candidate mutation semantics.
+- Creating production driver APIs too early can freeze the wrong abstractions.
+- Moving nested dispatch models into contracts prematurely can force large downstream changes.
+- Broad source scans may pass even if source-family order changes unless explicit order tests remain.
 
 ## Validation Risks
 

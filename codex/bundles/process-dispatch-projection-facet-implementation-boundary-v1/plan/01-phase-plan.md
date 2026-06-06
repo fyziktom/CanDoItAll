@@ -91,7 +91,25 @@ graph TD
 
 ## Critical Subbundles
 
-SB04, SB08, SB12, SB18, SB24, SB28, SB36, SB40, SB44, SB48, SB52, SB56, SB60, SB64, SB68, SB72, SB76, SB80, SB84.
+- SB04
+- SB08
+- SB12
+- SB18
+- SB24
+- SB28
+- SB36
+- SB40
+- SB44
+- SB48
+- SB52
+- SB56
+- SB60
+- SB64
+- SB68
+- SB72
+- SB76
+- SB80
+- SB84
 
 ## Phase Gates
 

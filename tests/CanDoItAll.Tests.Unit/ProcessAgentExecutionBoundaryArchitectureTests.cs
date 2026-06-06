@@ -1583,6 +1583,101 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Artifact_projection_facets_use_focused_implementations_without_all_facet_service()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var dispatchSource = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(dispatchDirectory, "*.cs")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var facetSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactProjectionFacetImplementations.cs");
+        var shellSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessRunAutomationDispatchService.ArtifactProjection.cs");
+        var facetImplementationMatches = Regex.Matches(
+            facetSource,
+            @"internal sealed class\s+\w+[^{:]*:\s*(?<interfaces>[^{]+)",
+            RegexOptions.Singleline | RegexOptions.CultureInvariant);
+
+        Assert.DoesNotContain("ProcessArtifactProjectionServices", dispatchSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionFacetFactory.Create(EnsureStepDispatchClaimHeldAsync)", shellSource, StringComparison.Ordinal);
+        Assert.Contains("internal delegate Task ProcessProjectionClaimGuardHandler", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionClaimGuard", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionPathResolver", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionFileIo", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionArtifactClassifier", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionExpectationMatcher", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionProcessMockRules", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionProjectStructureMatcher", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionSessionObservationSource", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionResponseTextRules", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionBrowserOutputRules", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionDecisionArtifactRules", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionLineageFactory", facetSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed class ProcessProjectionCandidateStateUpdater", facetSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRunAutomationDispatchService dispatchService", facetSource, StringComparison.Ordinal);
+
+        foreach (Match match in facetImplementationMatches)
+        {
+            var implementedFacetCount = Regex.Matches(
+                match.Groups["interfaces"].Value,
+                @"\bIProcessProjection[A-Za-z]+\b",
+                RegexOptions.CultureInvariant).Count;
+
+            Assert.True(implementedFacetCount <= 1, match.Value);
+        }
+    }
+
+    [Fact]
+    public void Artifact_projection_direct_file_io_stays_inside_file_io_facet()
+    {
+        var facetSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessArtifactProjectionFacetImplementations.cs");
+        var fileIoStart = facetSource.IndexOf("internal sealed class ProcessProjectionFileIo", StringComparison.Ordinal);
+        var nextFacetStart = facetSource.IndexOf("internal sealed class ProcessProjectionArtifactClassifier", fileIoStart, StringComparison.Ordinal);
+
+        Assert.True(fileIoStart >= 0);
+        Assert.True(nextFacetStart > fileIoStart);
+
+        var nonFileIoSource = facetSource.Remove(fileIoStart, nextFacetStart - fileIoStart);
+        var directIoTokens = new[]
+        {
+            "File.Exists(",
+            "new FileInfo(",
+            "File.ReadAllBytes(",
+            "File.ReadAllBytesAsync(",
+            "File.WriteAllTextAsync(",
+            "File.Copy(",
+            "Directory.CreateDirectory("
+        };
+
+        foreach (var directIoToken in directIoTokens)
+        {
+            Assert.DoesNotContain(directIoToken, nonFileIoSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Artifact_projection_write_coordinator_is_created_once_by_artifact_projection_flow()
     {
         var source = ReadRepositoryFile(

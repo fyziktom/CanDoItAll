@@ -1,0 +1,25 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -Command $ErrorActionPreference = 'Stop'
+$productionMatches = @(rg -n 'ProcessArtifactProjectionServices|IProcessArtifactProjectionHost|ProcessRunAutomationDispatchService\s+dispatchService' src\CanDoItAll.Modules.Processes 2>&1)
+if ($LASTEXITCODE -eq 0) { Write-Output 'Unexpected broad-host/all-facet/dispatcher-injection token in production source:'; $productionMatches | Write-Output; exit 1 }
+if ($LASTEXITCODE -gt 1) { $productionMatches | Write-Output; exit $LASTEXITCODE }
+$impl = Get-Content 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs' -Raw
+$classDeclarations = [regex]::Matches($impl, 'internal sealed class\s+[\s\S]*?\{')
+foreach ($declaration in $classDeclarations) {
+    $value = $declaration.Value
+    $colonIndex = $value.LastIndexOf(':')
+    if ($colonIndex -lt 0) { continue }
+    $implementedInterfaces = $value.Substring($colonIndex + 1)
+    $count = [regex]::Matches($implementedInterfaces, 'IProcessProjection[A-Za-z0-9_]+').Count
+    if ($count -gt 1) { Write-Output "Class declaration implements more than one projection facet: $value"; exit 1 }
+}
+Write-Output 'No all-facet implementation, broad projection host, or dispatcher injection token detected in production source.'
+Write-Output 'No focused facet class declaration implements more than one projection facet.'
+exit 0
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-06T03:26:04.0247433Z
+
+No all-facet implementation, broad projection host, or dispatcher injection token detected in production source.
+No focused facet class declaration implements more than one projection facet.
+
+EndTimeUtc: 2026-06-06T03:26:08.2292224Z
+ExitCode: 0

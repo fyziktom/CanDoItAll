@@ -10,7 +10,7 @@ namespace CanDoItAll.Modules.Processes;
 
 internal sealed partial class ProcessRunAutomationDispatchService
 {
-    private static IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ProcessAutomationExecutionRunDetail detail)
+    internal static IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ProcessAutomationExecutionRunDetail detail)
     {
         return ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail)
             .Where(IsSuccessfulWorkspaceFileMutationReceipt)
@@ -19,7 +19,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             .ToList();
     }
 
-    private static IReadOnlyList<string> ResolveExpectedManagedArtifactRelativePaths(
+    internal static IReadOnlyList<string> ResolveExpectedManagedArtifactRelativePaths(
         DispatchCandidate candidate,
         WorkspaceScopeDescriptor workspaceScope,
         DispatchArtifactExpectation expectedArtifact)
@@ -116,7 +116,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return matchedExpectationId == expectedArtifact.Id;
     }
 
-    private static bool HasProjectedArtifactExpectationExternalReference(
+    internal static bool HasProjectedArtifactExpectationExternalReference(
         IEnumerable<string> externalReferenceKeys,
         Guid artifactExpectationId)
     {
@@ -128,7 +128,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
              key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private static string ResolveProviderNativeBrowserProjectedRelativePath(
+    internal static string ResolveProviderNativeBrowserProjectedRelativePath(
         DispatchCandidate candidate,
         WorkspaceScopeDescriptor workspaceScope,
         string normalizedOutputPath)
@@ -159,7 +159,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return comparablePath.StartsWith("artifacts/process-runs/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string BuildProviderNativeBrowserArtifactTitle(ProcessAutomationExecutionArtifact artifact)
+    internal static string BuildProviderNativeBrowserArtifactTitle(ProcessAutomationExecutionArtifact artifact)
     {
         var normalizedToolName = NormalizeToolToken(artifact.ProducedBy);
         return normalizedToolName switch
@@ -172,7 +172,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         };
     }
 
-    private static bool IsProviderNativeBrowserArtifactPath(string relativePath)
+    internal static bool IsProviderNativeBrowserArtifactPath(string relativePath)
         => ProcessArtifactProviderNativeVisualValidationRules.IsProviderNativeBrowserArtifactPath(relativePath);
 
     private void EnsureProviderNativeBrowserOutputDirectories(DispatchCandidate candidate)
@@ -295,7 +295,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             executionRunId,
             CreateArtifactRecoveryProjectionContext(lineage));
 
-    private static ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
+    internal static ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
         ProcessArtifactProjectionSourceKind sourceKind,
         Guid? sourceExecutionRunId = null,
         ArtifactProjectionLineage? lineage = null,

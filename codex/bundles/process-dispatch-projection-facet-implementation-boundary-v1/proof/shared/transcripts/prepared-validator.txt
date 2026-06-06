@@ -1,0 +1,8 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -Command python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage prepared --repo-root C:\repositories\CanDoItAll --bundle-root C:\repositories\CanDoItAll\codex\bundles\process-dispatch-projection-facet-implementation-boundary-v1 C:\repositories\CanDoItAll\codex\bundles\process-dispatch-projection-facet-implementation-boundary-v1
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-06T03:16:03.1125834Z
+
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-projection-facet-implementation-boundary-v1
+
+EndTimeUtc: 2026-06-06T03:16:05.2642626Z
+ExitCode: 0

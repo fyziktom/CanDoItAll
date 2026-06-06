@@ -76,7 +76,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool IsTransientExecutionArtifact(ProcessAutomationExecutionArtifact artifact)
+    internal static bool IsTransientExecutionArtifact(ProcessAutomationExecutionArtifact artifact)
     {
         var relativePath = artifact.RelativePath.Replace('\\', '/');
         return relativePath.StartsWith(".playwright-mcp/", StringComparison.OrdinalIgnoreCase) ||

@@ -23,21 +23,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             storagePlacementService,
             RecordArtifactAsync);
         var recordOnlyCoordinator = new ProcessArtifactProjectionRecordOnlyCoordinator(RecordArtifactAsync);
-        var services = new ProcessArtifactProjectionServices(this);
-        var facets = new ProcessArtifactProjectionFacetSet(
-            ClaimGuard: services,
-            PathResolver: services,
-            FileIo: services,
-            ArtifactClassifier: services,
-            ExpectationMatcher: services,
-            ProcessMockRules: services,
-            ProjectStructureMatcher: services,
-            SessionObservationSource: services,
-            ResponseTextRules: services,
-            BrowserOutputRules: services,
-            DecisionArtifactRules: services,
-            LineageFactory: services,
-            CandidateState: services);
+        var facets = ProcessArtifactProjectionFacetFactory.Create(EnsureStepDispatchClaimHeldAsync);
         var context = new ProcessArtifactProjectionContext(
             candidate,
             detail,

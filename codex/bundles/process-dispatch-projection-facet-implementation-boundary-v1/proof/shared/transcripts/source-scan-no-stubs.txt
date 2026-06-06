@@ -1,0 +1,29 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -Command $ErrorActionPreference = 'Stop'
+$files = @(
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs',
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs',
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs',
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs',
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs',
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs',
+    'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactKinds.cs'
+)
+$patterns = @('TODO', 'HACK', 'NotImplementedException', 'throw new NotImplemented', 'throw new NotSupportedException("TODO', 'throw new InvalidOperationException("TODO')
+$matches = @()
+foreach ($pattern in $patterns) {
+    $matches += @(Select-String -Path $files -Pattern $pattern -SimpleMatch)
+}
+if ($matches.Count -gt 0) {
+    Write-Output 'Unfinished implementation markers found:'
+    $matches | ForEach-Object { "{0}:{1}: {2}" -f $_.Path, $_.LineNumber, $_.Line.Trim() } | Write-Output
+    exit 1
+}
+Write-Output 'No TODO, HACK, NotImplementedException, or unfinished throw markers found in touched projection production files.'
+exit 0
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-06T03:27:09.9571115Z
+
+No TODO, HACK, NotImplementedException, or unfinished throw markers found in touched projection production files.
+
+EndTimeUtc: 2026-06-06T03:27:12.4456164Z
+ExitCode: 0

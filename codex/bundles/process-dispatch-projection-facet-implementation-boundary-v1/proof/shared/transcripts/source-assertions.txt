@@ -1,0 +1,74 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -Command $ErrorActionPreference = 'Stop'
+$criticalIds = @('SB04_INV_001','SB08_INV_001','SB12_INV_001','SB18_INV_001','SB24_INV_001','SB28_INV_001','SB36_INV_001','SB40_INV_001','SB44_INV_001','SB48_INV_001','SB52_INV_001','SB56_INV_001','SB60_INV_001','SB64_INV_001','SB68_INV_001','SB72_INV_001','SB76_INV_001','SB80_INV_001','SB84_INV_001')
+Write-Output 'Semantic invariant IDs covered by this assertion transcript:'
+$criticalIds | ForEach-Object { Write-Output $_ }
+$implPath = 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs'
+$oldPath = 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionServices.cs'
+$projectionEntryPath = 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs'
+$orchestratorPath = 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs'
+$facetsPath = 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs'
+$testPath = 'tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs'
+foreach ($path in @($implPath, $projectionEntryPath, $orchestratorPath, $facetsPath, $testPath)) {
+    if (-not (Test-Path $path)) { throw "Required proof file missing: $path" }
+}
+if (Test-Path $oldPath) { throw "Old all-facet implementation file still exists: $oldPath" }
+$impl = Get-Content $implPath -Raw
+$projectionEntry = Get-Content $projectionEntryPath -Raw
+$orchestrator = Get-Content $orchestratorPath -Raw
+$testSource = Get-Content $testPath -Raw
+$requiredTypes = @('ProcessArtifactProjectionFacetFactory','ProcessProjectionClaimGuard','ProcessProjectionPathResolver','ProcessProjectionFileIo','ProcessProjectionArtifactClassifier','ProcessProjectionExpectationMatcher','ProcessProjectionProcessMockRules','ProcessProjectionProjectStructureMatcher','ProcessProjectionSessionObservationSource','ProcessProjectionResponseTextRules','ProcessProjectionBrowserOutputRules','ProcessProjectionDecisionArtifactRules','ProcessProjectionLineageFactory','ProcessProjectionCandidateStateUpdater')
+foreach ($typeName in $requiredTypes) {
+    if ($impl -notmatch "class\s+$typeName\b") { throw "Required focused facet type missing: $typeName" }
+}
+if ($impl -match 'ProcessRunAutomationDispatchService\s+dispatchService') { throw 'Focused facet implementation stores the dispatcher instance.' }
+if ($impl -match 'IProcessArtifactProjectionHost') { throw 'Broad projection host reference returned in facet implementation.' }
+if ($impl -match 'ProcessArtifactProjectionServices') { throw 'Deleted all-facet implementation name remains in new facet implementation.' }
+if ($projectionEntry -notmatch 'ProcessArtifactProjectionFacetFactory\.Create\(EnsureStepDispatchClaimHeldAsync\)') { throw 'Projection entry point does not use the focused facet factory.' }
+if ($projectionEntry -match 'new\s+ProcessArtifactProjectionServices') { throw 'Projection entry point still constructs the all-facet implementation.' }
+$sourceFamilies = @('new ProcessExecutionArtifactProjectionCoordinator(','new ProcessMockArtifactProjectionCoordinator(','new ProcessWorkspaceWrittenArtifactProjectionCoordinator(','existingManagedCoordinator,','new ProcessResponseTextArtifactProjectionCoordinator(','new ProcessProviderNativeBrowserArtifactProjectionCoordinator(','new ProcessCompletedDecisionArtifactCoordinator(')
+$positions = @()
+foreach ($family in $sourceFamilies) {
+    $index = $orchestrator.IndexOf($family, [System.StringComparison]::Ordinal)
+    if ($index -lt 0) { throw "Source-family coordinator not found: $family" }
+    $positions += $index
+}
+for ($i = 1; $i -lt $positions.Count; $i++) {
+    if ($positions[$i] -le $positions[$i - 1]) { throw 'Projection source-family order changed.' }
+}
+$requiredTests = @('Artifact_projection_facets_use_focused_implementations_without_all_facet_service','Artifact_projection_direct_file_io_stays_inside_file_io_facet','Artifact_projection_source_family_order_stays_execution_mock_workspace_existing_response_browser_decision')
+foreach ($testName in $requiredTests) {
+    if ($testSource -notmatch $testName) { throw "Required architecture test missing: $testName" }
+}
+Write-Output 'Focused facet implementation boundary assertions passed.'
+Write-Output 'Projection source-family order assertion passed.'
+Write-Output 'Architecture test coverage assertions passed.'
+exit 0
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-06T03:26:17.2578241Z
+
+Semantic invariant IDs covered by this assertion transcript:
+SB04_INV_001
+SB08_INV_001
+SB12_INV_001
+SB18_INV_001
+SB24_INV_001
+SB28_INV_001
+SB36_INV_001
+SB40_INV_001
+SB44_INV_001
+SB48_INV_001
+SB52_INV_001
+SB56_INV_001
+SB60_INV_001
+SB64_INV_001
+SB68_INV_001
+SB72_INV_001
+SB76_INV_001
+SB80_INV_001
+SB84_INV_001
+Focused facet implementation boundary assertions passed.
+Projection source-family order assertion passed.
+Architecture test coverage assertions passed.
+
+EndTimeUtc: 2026-06-06T03:26:21.8895866Z
+ExitCode: 0

@@ -590,7 +590,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return paths.ToList();
     }
 
-    private static bool IsUsableProjectedResponseArtifactContent(
+    internal static bool IsUsableProjectedResponseArtifactContent(
         DispatchArtifactExpectation expectedArtifact,
         string? responseText)
     {
@@ -613,7 +613,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return HasExpectedArtifactContentSignals(expectedArtifact, responseText, normalizedResponse);
     }
 
-    private static string ResolveProjectableResponseArtifactText(string? responseText)
+    internal static string ResolveProjectableResponseArtifactText(string? responseText)
     {
         if (string.IsNullOrWhiteSpace(responseText))
         {
@@ -858,10 +858,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ProcessToolReceiptFacts.NormalizeToolToken(value);
     }
 
-    private static string? ResolveProviderNativeBrowserWorkingDirectory(ProcessAutomationExecutionRunDetail detail)
+    internal static string? ResolveProviderNativeBrowserWorkingDirectory(ProcessAutomationExecutionRunDetail detail)
         => ProcessProviderNativeBrowserOutputFacts.ResolveProviderNativeBrowserWorkingDirectory(detail);
 
-    private static string ResolveProviderNativeBrowserToolName(string expectedRelativePath)
+    internal static string ResolveProviderNativeBrowserToolName(string expectedRelativePath)
         => ProcessArtifactProviderNativeVisualValidationRules.ResolveProviderNativeBrowserToolName(expectedRelativePath);
 
     private static bool IsProviderNativeBrowserEvidenceReferencePath(string relativePath)
@@ -870,10 +870,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool IsManagedBrowserEvidenceReferencePath(string comparablePath)
         => ProcessArtifactProviderNativeVisualValidationRules.IsManagedBrowserEvidenceReferencePath(comparablePath);
 
-    private static bool MatchesExpectedBrowserOutputFile(string expectedRelativePath, string outputFileName)
+    internal static bool MatchesExpectedBrowserOutputFile(string expectedRelativePath, string outputFileName)
         => ProcessArtifactProviderNativeVisualValidationRules.MatchesExpectedBrowserOutputFile(expectedRelativePath, outputFileName);
 
-    private static string GuessContentTypeFromPath(string fullPath)
+    internal static string GuessContentTypeFromPath(string fullPath)
         => ProcessArtifactKindClassificationRules.GuessContentTypeFromPath(fullPath);
 
     private static string BuildArtifactTitle(ProcessAutomationExecutionArtifact artifact)
@@ -882,7 +882,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static string BuildExternalReferenceKey(ProcessAutomationExecutionArtifact artifact)
         => ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
 
-    private static string BuildCompletedDecisionArtifactExternalReferenceKey(Guid stepRunId, Guid artifactExpectationId)
+    internal static string BuildCompletedDecisionArtifactExternalReferenceKey(Guid stepRunId, Guid artifactExpectationId)
         => ProcessExecutionArtifactMetadataRules.BuildCompletedDecisionArtifactExternalReferenceKey(
             stepRunId,
             artifactExpectationId);
@@ -914,7 +914,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             bindingStatus,
             technicalAgentId);
 
-    private static string BuildStorageRelativePath(
+    internal static string BuildStorageRelativePath(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact)
         => ProcessExecutionArtifactMetadataRules.BuildStorageRelativePath(
@@ -922,14 +922,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             candidate.StepRun.Id,
             artifact.RelativePath);
 
-    private static ProcessArtifactKind ResolveProcessArtifactKind(
+    internal static ProcessArtifactKind ResolveProcessArtifactKind(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact)
         => ProcessArtifactKindClassificationRules.ResolveProcessArtifactKind(
             artifact,
             ResolveArtifactExpectation(candidate, artifact)?.ArtifactKind);
 
-    private static StorageContentKind ResolveStorageContentKind(string contentType, string fullPath)
+    internal static StorageContentKind ResolveStorageContentKind(string contentType, string fullPath)
         => ProcessStorageContentKindRules.ResolveStorageContentKind(contentType, fullPath);
 
     private static string NormalizeTrigger(string trigger, Guid? stepRunId)
@@ -944,7 +944,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : "process-runtime";
     }
 
-    private static bool IsWithinWorkspace(string workspaceRoot, string fullPath)
+    internal static bool IsWithinWorkspace(string workspaceRoot, string fullPath)
     {
         var normalizedWorkspaceRoot = Path.GetFullPath(workspaceRoot);
         var normalizedFullPath = Path.GetFullPath(fullPath);
@@ -952,7 +952,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                normalizedFullPath.StartsWith(EnsureTrailingDirectorySeparator(normalizedWorkspaceRoot), StringComparison.OrdinalIgnoreCase);
     }
 
-    private static bool TryResolveArtifactFullPath(
+    internal static bool TryResolveArtifactFullPath(
         string workspaceRoot,
         string relativePath,
         out string fullPath,
@@ -1293,14 +1293,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             : string.Empty;
     }
 
-    private static Guid? ResolveArtifactExpectationId(
+    internal static Guid? ResolveArtifactExpectationId(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact)
     {
         return ResolveArtifactExpectation(candidate, artifact)?.Id;
     }
 
-    private static Guid? ResolveArtifactExpectationId(
+    internal static Guid? ResolveArtifactExpectationId(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail,
         ProcessAutomationExecutionArtifact artifact)
@@ -1308,14 +1308,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ResolveArtifactExpectation(candidate, detail.Run.InputSummary, artifact)?.Id;
     }
 
-    private static DispatchArtifactExpectation? ResolveArtifactExpectation(
+    internal static DispatchArtifactExpectation? ResolveArtifactExpectation(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact)
     {
         return ResolveArtifactExpectation(candidate, artifact, artifactTextContent: null);
     }
 
-    private static DispatchArtifactExpectation? ResolveArtifactExpectation(
+    internal static DispatchArtifactExpectation? ResolveArtifactExpectation(
         DispatchCandidate candidate,
         ProcessAutomationExecutionArtifact artifact,
         string? artifactTextContent)
@@ -1323,7 +1323,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ResolveArtifactExpectation(candidate, null, artifact, artifactTextContent);
     }
 
-    private static DispatchArtifactExpectation? ResolveArtifactExpectation(
+    internal static DispatchArtifactExpectation? ResolveArtifactExpectation(
         DispatchCandidate candidate,
         string? projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact)
@@ -1331,7 +1331,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ResolveArtifactExpectation(candidate, projectStructureContractText, artifact, artifactTextContent: null);
     }
 
-    private static DispatchArtifactExpectation? ResolveArtifactExpectation(
+    internal static DispatchArtifactExpectation? ResolveArtifactExpectation(
         DispatchCandidate candidate,
         string? projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact,
@@ -1637,7 +1637,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return projections.Count > 0;
     }
 
-    private static IReadOnlyList<ProcessMockArtifactProjection> ResolveProcessMockArtifactProjections(
+    internal static IReadOnlyList<ProcessMockArtifactProjection> ResolveProcessMockArtifactProjections(
         string? serializedSessionStateJson)
     {
         if (string.IsNullOrWhiteSpace(serializedSessionStateJson))
@@ -1736,7 +1736,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return !string.IsNullOrWhiteSpace(fileName);
     }
 
-    private static bool ProcessMockArtifactMatchesExpectation(
+    internal static bool ProcessMockArtifactMatchesExpectation(
         DispatchArtifactExpectation expectedArtifact,
         ProcessMockArtifactProjection projection)
     {
@@ -1781,7 +1781,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return false;
     }
 
-    private static bool TryExtractExpectedArtifactRelativePath(string validationRequirementSummary, out string relativePath)
+    internal static bool TryExtractExpectedArtifactRelativePath(string validationRequirementSummary, out string relativePath)
         => ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(validationRequirementSummary, out relativePath);
 
     internal static IReadOnlyList<ProjectStructureRequiredArtifactPath> ResolveProjectStructureRequiredArtifactPaths(string? text)
@@ -1789,7 +1789,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             text,
             TryMapAbsoluteExternalPathToAlias);
 
-    private static bool TryResolveProjectStructureExpectedArtifactPath(
+    internal static bool TryResolveProjectStructureExpectedArtifactPath(
         DispatchCandidate candidate,
         DispatchArtifactExpectation expectedArtifact,
         string? projectStructureContractText,
@@ -1801,7 +1801,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             out governedPath);
     }
 
-    private static bool TryResolveProjectStructureExpectedArtifactPath(
+    internal static bool TryResolveProjectStructureExpectedArtifactPath(
         DispatchArtifactExpectation expectedArtifact,
         IReadOnlyList<ProjectStructureRequiredArtifactPath> requiredArtifactPaths,
         out string governedPath)
@@ -1817,7 +1817,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             expectedArtifact,
             fileName);
 
-    private static bool ArtifactPathMatchesGovernedProjectStructurePath(
+    internal static bool ArtifactPathMatchesGovernedProjectStructurePath(
         string observedPath,
         string governedPath)
         => ProcessProjectStructureArtifactPathRules.ArtifactPathMatchesGovernedProjectStructurePath(
@@ -1877,7 +1877,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return ProcessManagedArtifactPathClassificationRules.IsResponseProjectableTextArtifact(relativePath);
     }
 
-    private static bool TryResolveResponseTextArtifactRelativePath(
+    internal static bool TryResolveResponseTextArtifactRelativePath(
         DispatchCandidate candidate,
         WorkspaceScopeDescriptor workspaceScope,
         DispatchArtifactExpectation expectedArtifact,
@@ -1951,7 +1951,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     private static bool IsProviderNativeBrowserOutputArtifact(ProcessAutomationExecutionArtifact artifact)
         => ProcessArtifactProviderNativeVisualValidationRules.IsProviderNativeBrowserOutputArtifact(artifact);
 
-    private static string? TryDecodeTextArtifactContent(
+    internal static string? TryDecodeTextArtifactContent(
         ProcessAutomationExecutionArtifact artifact,
         string fullPath,
         byte[] content)
@@ -1966,7 +1966,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                run.Outcome == ProcessAutomationRunOutcome.Succeeded;
     }
 
-    private static bool ShouldProjectResponseTextArtifacts(
+    internal static bool ShouldProjectResponseTextArtifacts(
         ProcessAutomationExecutionRunRecord run,
         ProcessStepRunStatus completionStatus)
     {
@@ -1995,7 +1995,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             artifactExpectationId,
             relativePath);
 
-    private static string ResolveWorkspaceWrittenArtifactRelativePath(
+    internal static string ResolveWorkspaceWrittenArtifactRelativePath(
         WorkspaceScopeDescriptor workspaceScope,
         string path)
         => ProcessExecutionArtifactMetadataRules.ResolveWorkspaceWrittenArtifactRelativePath(
@@ -2005,7 +2005,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             TryMapAbsoluteExternalPathToAlias,
             ResolveScopedManagedRelativePath);
 
-    private static bool TryResolveWorkspaceWrittenArtifactSourceFullPath(
+    internal static bool TryResolveWorkspaceWrittenArtifactSourceFullPath(
         string workspaceRoot,
         WorkspaceScopeDescriptor workspaceScope,
         string writtenPath,
@@ -2038,10 +2038,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
             TryMapAbsoluteExternalPathToAlias,
             ResolveScopedManagedRelativePath);
 
-    private static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
+    internal static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
         => ProcessExecutionArtifactMetadataRules.ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact);
 
-    private static ProcessArtifactTrustStatus ResolveCompletedDecisionArtifactTrustStatus(
+    internal static ProcessArtifactTrustStatus ResolveCompletedDecisionArtifactTrustStatus(
         ProcessArtifactTrustRequirement trustRequirement)
         => ProcessExecutionArtifactMetadataRules.ResolveCompletedDecisionArtifactTrustStatus(trustRequirement);
 
@@ -2052,7 +2052,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
             completionStatus);
 
-    private static string BuildCompletedDecisionArtifactProvenanceSummary(
+    internal static string BuildCompletedDecisionArtifactProvenanceSummary(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail)
     {
@@ -2062,7 +2062,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return $"Recorded from the governed step outcome for AgentFramework execution run {detail.Run.Id:D} by {executorName}.";
     }
 
-    private static string BuildCompletedDecisionArtifactReviewSummary(
+    internal static string BuildCompletedDecisionArtifactReviewSummary(
         DispatchCandidate candidate,
         ProcessAutomationExecutionRunDetail detail,
         string responseText,
@@ -2145,7 +2145,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return $"{trimmed}.";
     }
 
-    private static string ResolveScopedManagedRelativePath(WorkspaceScopeDescriptor workspaceScope, string relativePath)
+    internal static string ResolveScopedManagedRelativePath(WorkspaceScopeDescriptor workspaceScope, string relativePath)
         => ProcessScopedManagedArtifactPathRules.ResolveScopedManagedRelativePath(
             workspaceScope,
             relativePath);

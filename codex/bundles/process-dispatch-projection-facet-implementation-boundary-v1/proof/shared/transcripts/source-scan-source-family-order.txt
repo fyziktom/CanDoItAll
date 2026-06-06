@@ -1,0 +1,21 @@
+Command: powershell -NoProfile -ExecutionPolicy Bypass -Command $ErrorActionPreference = 'Stop'
+$orchestrator = Get-Content 'src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs' -Raw
+$sourceFamilies = @('new ProcessExecutionArtifactProjectionCoordinator(','new ProcessMockArtifactProjectionCoordinator(','new ProcessWorkspaceWrittenArtifactProjectionCoordinator(','existingManagedCoordinator,','new ProcessResponseTextArtifactProjectionCoordinator(','new ProcessProviderNativeBrowserArtifactProjectionCoordinator(','new ProcessCompletedDecisionArtifactCoordinator(')
+$positions = @()
+foreach ($family in $sourceFamilies) {
+    $index = $orchestrator.IndexOf($family, [System.StringComparison]::Ordinal)
+    if ($index -lt 0) { Write-Output "Missing source family coordinator: $family"; exit 1 }
+    $positions += $index
+}
+for ($i = 1; $i -lt $positions.Count; $i++) {
+    if ($positions[$i] -le $positions[$i - 1]) { Write-Output 'Projection source family order changed.'; exit 1 }
+}
+Write-Output 'Projection source-family order preserved: execution artifacts -> process mock artifacts -> workspace-written artifacts -> existing managed artifacts -> response text artifacts -> provider-native browser artifacts -> completed decision artifacts.'
+exit 0
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-06T03:26:13.8531082Z
+
+Projection source-family order preserved: execution artifacts -> process mock artifacts -> workspace-written artifacts -> existing managed artifacts -> response text artifacts -> provider-native browser artifacts -> completed decision artifacts.
+
+EndTimeUtc: 2026-06-06T03:26:17.2521633Z
+ExitCode: 0
