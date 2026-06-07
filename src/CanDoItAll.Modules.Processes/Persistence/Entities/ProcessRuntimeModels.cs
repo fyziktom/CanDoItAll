@@ -5,27 +5,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace CanDoItAll.Modules.Processes;
 
-public enum ProcessRunStatus {
-    Draft,
-    Active,
-    Blocked,
-    Completed,
-    Cancelled,
-    Failed
-}
-
-public enum ProcessStepRunStatus {
-    Pending,
-    Ready,
-    InProgress,
-    WaitingApproval,
-    Blocked,
-    Completed,
-    Refused,
-    Skipped,
-    Failed
-}
-
 public enum ProcessOperatingMode {
     Simulation,
     Development,

@@ -61,6 +61,26 @@ internal static class ProcessDispatchRouteModelAdapters
         return RequireSource(CandidateSources, candidate, nameof(candidate)).Candidate;
     }
 
+    public static ProcessDispatchRouteSnapshot ToRouteSnapshot(
+        ProcessRouteCandidate candidate,
+        string trigger,
+        Guid? triggerStepRunId)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+
+        return ProcessDispatchRouteSnapshot.Create(
+            candidate.Run.Id,
+            candidate.StepRun.Id,
+            candidate.Run.Status,
+            candidate.StepRun.Status,
+            candidate.StepRun.StepKind,
+            candidate.TechnicalAgentId,
+            candidate.RecoveryExecutionRunId,
+            candidate.StepRun.StartedAtUtc,
+            trigger,
+            triggerStepRunId);
+    }
+
     public static ProcessRouteDispatchClaim FromDispatcherClaim(
         ProcessRunAutomationDispatchService.ProcessStepDispatchClaim dispatchClaim)
     {

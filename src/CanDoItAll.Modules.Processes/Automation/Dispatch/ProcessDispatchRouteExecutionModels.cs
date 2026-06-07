@@ -88,7 +88,7 @@ internal sealed class ProcessDispatchRouteContext(
 
     public ProcessDispatchRouteSnapshot CreateRouteSnapshot()
     {
-        return ProcessDispatchRouteSnapshot.Create(
+        return ProcessDispatchRouteModelAdapters.ToRouteSnapshot(
             Candidate,
             Execution.Trigger,
             Execution.TriggerStepRunId);

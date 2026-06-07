@@ -2,8 +2,7 @@
 
 ## Status
 
-Prepared.
-
+- Status: `Completed`
 ## Objective
 
 Create test-only map of subprocess lifecycle pure rules that could move later.
@@ -22,10 +21,10 @@ Create test-only map of subprocess lifecycle pure rules that could move later.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/`
-- `src/CanDoItAll.Processes.Contracts/`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://src/CanDoItAll.Processes.Contracts`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration`
 
 ## Deliverables
 
@@ -35,12 +34,10 @@ Create test-only map of subprocess lifecycle pure rules that could move later.
 
 ## Dependency Impact
 
-Downstream subbundles cannot rely on this slice until its proof passes.
-
+- Downstream subbundles cannot rely on this slice until its proof passes.
 ## Validation Depth
 
-Docs/tests only; no production move.
-
+- Docs/tests only; no production move.
 ## Implementation Steps
 
 1. Re-open exact source files and confirm current state.
@@ -59,12 +56,12 @@ Do not move subprocess production code in this bundle.
 
 ## Acceptance Checklist
 
-- [ ] Behavior preserved.
-- [ ] No forbidden Core dependencies.
-- [ ] No production driver API.
-- [ ] No UI/media drift.
-- [ ] Tests/scans recorded.
-- [ ] Execution report row updated.
+- [x] Behavior preserved.
+- [x] No forbidden Core dependencies.
+- [x] No production driver API.
+- [x] No UI/media drift.
+- [x] Tests/scans recorded.
+- [x] Execution report row updated.
 
 ## Proof Required
 
@@ -73,12 +70,10 @@ Do not move subprocess production code in this bundle.
 
 ## Browser Validation Logging
 
-N/A — runtime/service/refactor bundle. If UI files change unexpectedly, fail this subbundle.
-
+- N/A — runtime/service/refactor bundle. If UI files change unexpectedly, fail this subbundle.
 ## Progression Gate
 
-Do not continue to dependent work until acceptance checklist is complete.
-
+- Do not continue to dependent work until acceptance checklist is complete.
 ## Suggested Agent Prompt
 
 Implement SB013 only. Preserve behavior. Do not broaden scope. Record proof before proceeding.

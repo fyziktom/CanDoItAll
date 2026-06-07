@@ -9,11 +9,11 @@
 
 ## Critical Path Risks
 
-1. **Over-extraction risk** — moving route handlers or route services into Core would mix orchestration with pure rules.
-2. **Dependency leak risk** — a Core project reference to Infrastructure, AgentFramework, Storage, EF, or Modules would invalidate the cutline.
-3. **Behavior drift risk** — changing route order or eligibility decisions would alter process execution semantics.
-4. **Driver creep risk** — adding helper-driver interfaces during the first Core cutline would combine two architectural changes.
-5. **Test illusion risk** — focused tests may pass while a full runtime path breaks; require focused route/dispatch integration plus source scans.
+- **Over-extraction risk** — moving route handlers or route services into Core would mix orchestration with pure rules.
+- **Dependency leak risk** — a Core project reference to Infrastructure, AgentFramework, Storage, EF, or Modules would invalidate the cutline.
+- **Behavior drift risk** — changing route order or eligibility decisions would alter process execution semantics.
+- **Driver creep risk** — adding helper-driver interfaces during the first Core cutline would combine two architectural changes.
+- **Test illusion risk** — focused tests may pass while a full runtime path breaks; require focused route/dispatch integration plus source scans.
 
 ## Validation Risks
 

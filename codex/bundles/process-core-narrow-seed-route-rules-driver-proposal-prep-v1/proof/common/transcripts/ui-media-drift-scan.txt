@@ -1,0 +1,60 @@
+Command: git diff --name-only filtered for UI/media extensions; success requires no matches
+WorkingDirectory: C:/repositories/CanDoItAll
+StartedUtc: 2026-06-07T10:17:04.4978099Z
+Invariant IDs: SB003-NARROW-CORE-ROUTE-RULES, SB006-CORE-DEPENDENCY-CLEAN, SB009-ROUTE-BEHAVIOR-PARITY, SB012-MODULE-ADAPTER-PARITY, SB015-SUBPROCESS-STAYS-MODULE-LOCAL, SB018-ARTIFACT-STAYS-MODULE-LOCAL, SB021-CORE-HYGIENE, SB024-DRIVER-DOCS-ONLY, SB027-BROAD-SMOKE, SB030-FINAL-CLOSURE
+--- Output ---
+warning: in the working copy of 'CanDoItAll.slnx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/analysis/02-assumptions-and-risks.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/plan/01-phase-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/reviews/01-execution-report.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB001/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB002/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB003/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB004/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB005/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB006/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB007/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB008/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB009/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB010/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB011/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB012/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB013/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB014/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB015/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB016/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB017/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB018/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB019/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB020/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB021/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB022/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB023/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB024/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB025/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB026/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB027/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB028/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB029/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-core-narrow-seed-route-rules-driver-proposal-prep-v1/subbundles/SB030/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteExecutionModels.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Definitions/ProcessDefinitionEnums.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/GlobalUsings.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Persistence/Entities/ProcessRuntimeModels.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Workbench/CanDoItAll.Modules.Workbench.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Web/CanDoItAll.Web.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Components/CanDoItAll.Tests.Components.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Components/GlobalUsings.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Playwright/CanDoItAll.Tests.Playwright.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tools/CanDoItAll.ScenarioSeeder/CanDoItAll.ScenarioSeeder.csproj', LF will be replaced by CRLF the next time Git touches it
+No UI/media files changed.
+RawExitCode: 0
+ExitCode: 0
+FinishedUtc: 2026-06-07T10:17:15.9615406Z

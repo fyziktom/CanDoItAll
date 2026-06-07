@@ -7,7 +7,7 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessAgentExecutionBoundaryArchitectureTests
 {
     [Fact]
-    public void Process_core_and_driver_pack_projects_are_not_introduced_prematurely()
+    public void Process_core_seed_is_narrow_and_driver_pack_projects_are_not_introduced_prematurely()
     {
         var root = FindRepositoryRoot();
         var projectFiles = Directory
@@ -15,11 +15,13 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             .Select(path => Path.GetFileNameWithoutExtension(path))
             .ToArray();
 
+        Assert.Contains(projectFiles, name =>
+            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(projectFiles, name =>
-            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
+        AssertNarrowProcessCoreSeed(root);
     }
 
     [Fact]
@@ -275,7 +277,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactProjectionLineageBuilder.cs")));
         Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactProjectionPlanner.cs")));
         Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactEvidenceValidationRules.cs")));
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
     }
 
@@ -304,7 +306,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
     }
 
     [Fact]
@@ -356,7 +358,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("DbContext", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("storagePlacementService", helperSource, StringComparison.Ordinal);
         Assert.DoesNotContain("RecordArtifactAsync", helperSource, StringComparison.Ordinal);
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
     }
 
     [Fact]
@@ -417,7 +419,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("NotImplemented", helperSource, StringComparison.Ordinal);
         Assert.True(dispatcherSource.Split(Environment.NewLine).Length < 1120);
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
     }
 
     [Fact]
@@ -602,8 +604,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("CanDoItAll.Modules.Workbench", mafProject, StringComparison.Ordinal);
         Assert.DoesNotContain("interface IProcessDriverPack", processesModuleSource, StringComparison.Ordinal);
         Assert.DoesNotContain("class ProcessDriverPack", processesModuleSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", processesModuleSource, StringComparison.Ordinal);
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        Assert.DoesNotContain("CanDoItAll.Modules.Processes.Core", processesModuleSource, StringComparison.Ordinal);
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
         Assert.DoesNotContain(proofArtifactPaths, path =>
         {
@@ -742,15 +744,17 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     [Fact]
     public void Process_dispatch_claim_route_gate_c_SB12_INV_001_proves_route_claim_start_and_heartbeat_boundaries_without_side_effect_drift()
     {
+        var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
-            FindRepositoryRoot(),
+            root,
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch");
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
-        var routePlannerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePlanner.cs"));
-        var routePipelineSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePipeline.cs"));
+        var coreRoutingDirectory = Path.Combine(root, "src", "CanDoItAll.Processes.Core", "Routing");
+        var routePlannerSource = File.ReadAllText(Path.Combine(coreRoutingDirectory, "ProcessDispatchRoutePlanner.cs"));
+        var routePipelineSource = File.ReadAllText(Path.Combine(coreRoutingDirectory, "ProcessDispatchRoutePipeline.cs"));
         var routeExecutionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteExecution.cs"));
         var routeBoundarySource = string.Join(
             Environment.NewLine,
@@ -776,16 +780,17 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Tests.Integration",
             "ProcessRunAutomationDispatchServiceTests.cs");
 
-        Assert.Contains("internal static class ProcessDispatchRoutePlanner", routePlannerSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessDispatchRoutePlanner", routePlannerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteKind.DatabaseRequirement", routePlannerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteKind.UpstreamMaterialization", routePlannerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteKind.StrandedRecovery", routePlannerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteKind.Subprocess", routePlannerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteKind.Workflow", routePlannerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteKind.AgentExecution", routePlannerSource, StringComparison.Ordinal);
-        Assert.Contains("internal enum ProcessDispatchRouteStage", routePipelineSource, StringComparison.Ordinal);
+        Assert.Contains("public enum ProcessDispatchRouteStage", routePipelineSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteStage.FreshRecoverySkip", routePipelineSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteStage.FinalizerTransition", routePipelineSource, StringComparison.Ordinal);
+        AssertNarrowProcessCoreSeed(root);
         Assert.Contains("IProcessDispatchRouteHandler", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchRouteContext", routeBoundarySource, StringComparison.Ordinal);
         Assert.Contains("ProcessRouteExecutionContext", routeBoundarySource, StringComparison.Ordinal);
@@ -885,13 +890,13 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
         var concurrencySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Concurrency.cs"));
         var finalizerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs"));
-        var routePlannerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePlanner.cs"));
+        var routePlannerSource = File.ReadAllText(Path.Combine(root, "src", "CanDoItAll.Processes.Core", "Routing", "ProcessDispatchRoutePlanner.cs"));
+        var coreRoutingSource = ReadNarrowProcessCoreSource(root);
         var helperSource = string.Join(
             Environment.NewLine,
-            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteSnapshot.cs")),
+            coreRoutingSource,
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModels.cs")),
             routePlannerSource,
-            File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePipeline.cs")),
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RouteExecution.cs")),
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteExecutionModels.cs")),
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteFacets.cs")),
@@ -934,7 +939,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.True(routePlannerSource.Split(Environment.NewLine).Length < 120);
 
         var combinedSource = string.Join(Environment.NewLine, dispatchSource, concurrencySource, finalizerSource, helperSource);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedSource, StringComparison.Ordinal);
+        AssertNarrowProcessCoreSeed(root);
         Assert.DoesNotContain("IProcessDriverPack", combinedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriver", combinedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
@@ -951,8 +956,9 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     [Fact]
     public void Process_dispatch_main_loop_claim_lifecycle_boundary_SB88_INV_001_keeps_dispatch_facade_thin_and_side_effects_named()
     {
+        var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
-            FindRepositoryRoot(),
+            root,
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
@@ -974,7 +980,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
                 "ProcessRunAutomationDispatchService.RouteHandlers.cs"
             }.Select(file => File.ReadAllText(Path.Combine(dispatchDirectory, file))));
         var exceptionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.ExceptionClosure.cs"));
-        var pipelineSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRoutePipeline.cs"));
+        var pipelineSource = File.ReadAllText(Path.Combine(root, "src", "CanDoItAll.Processes.Core", "Routing", "ProcessDispatchRoutePipeline.cs"));
         var combinedBoundarySource = string.Join(Environment.NewLine, claimSource, routeSource, routeBoundarySource, exceptionSource, pipelineSource);
 
         Assert.Contains("RunClaimedDispatchAsync", dispatchSource, StringComparison.Ordinal);
@@ -994,7 +1000,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("HandleDispatchHeartbeatClaimLost", exceptionSource, StringComparison.Ordinal);
         Assert.Contains("HandleDispatchClaimLost", exceptionSource, StringComparison.Ordinal);
         Assert.Contains("HandleDispatchFailureAsync", exceptionSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedBoundarySource, StringComparison.Ordinal);
+        AssertNarrowProcessCoreSeed(root);
         Assert.DoesNotContain("IProcessDriverPack", combinedBoundarySource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverRegistry", combinedBoundarySource, StringComparison.Ordinal);
     }
@@ -1002,8 +1008,9 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     [Fact]
     public void Process_dispatch_route_service_model_decoupling_boundary_uses_route_models_and_narrow_services()
     {
+        var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
-            FindRepositoryRoot(),
+            root,
             "src",
             "CanDoItAll.Modules.Processes",
             "Automation",
@@ -1013,14 +1020,14 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             new[]
             {
                 "ProcessDispatchRouteModels.cs",
-                "ProcessDispatchRouteSnapshot.cs",
                 "ProcessDispatchRouteExecutionModels.cs",
                 "ProcessDispatchRouteFacets.cs",
                 "ProcessDispatchRouteHandlerPipeline.cs",
                 "ProcessDispatchRouteHandlerFactory.cs",
                 "ProcessDispatchRouteHandlers.cs",
                 "ProcessDispatchRouteServices.cs"
-            }.Select(file => File.ReadAllText(Path.Combine(dispatchDirectory, file))));
+            }.Select(file => File.ReadAllText(Path.Combine(dispatchDirectory, file)))
+                .Prepend(ReadNarrowProcessCoreSource(root)));
         var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModelAdapters.cs"));
         var factorySource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteHandlerFactory.cs"));
         var routeServiceSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteServices.cs"));
@@ -1601,12 +1608,11 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("internal sealed class ProcessDispatchPreExecutionGuardHandler", preExecutionGuardHandlerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchDatabaseRequirementDecision", preExecutionGuardHandlerSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDispatchMissingUpstreamArtifactMaterializationPlan", preExecutionGuardHandlerSource, StringComparison.Ordinal);
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
         Assert.DoesNotContain("IProcessDriverPack", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain("DriverPack", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriver", sourceText, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain("CanDoItAll.Modules.Processes.Core", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain(proofArtifactPaths, path =>
         {
@@ -1862,7 +1868,6 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("CanDoItAll.Modules.Workbench", mafProject, StringComparison.Ordinal);
         Assert.DoesNotContain("interface IProcessDriverPack", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain("class ProcessDriverPack", sourceText, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain(proofArtifactPaths, path =>
         {
             var relativePath = Path.GetRelativePath(proofRoot, path);
@@ -3490,11 +3495,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         };
 
         Assert.DoesNotContain(productionProjectNames, name =>
-            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
         Assert.DoesNotContain("IProcessDriverPack", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
@@ -3553,11 +3557,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         };
 
         Assert.DoesNotContain(productionProjectNames, name =>
-            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
         Assert.DoesNotContain("IProcessDriverPack", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
@@ -3623,11 +3626,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         };
 
         Assert.DoesNotContain(productionProjectNames, name =>
-            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
-        Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Modules.Processes.Core")));
         Assert.All(forbiddenProductionTokens, token =>
             Assert.DoesNotContain(token, dispatchSource, StringComparison.Ordinal));
@@ -3699,7 +3701,12 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "bundles",
             "process-core-contract-candidate-driver-readiness-prep-v1");
         var dispatchSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Dispatch.cs"));
-        var routeSnapshotSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteSnapshot.cs"));
+        var routeSnapshotSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Core",
+            "Routing",
+            "ProcessDispatchRouteSnapshot.cs"));
         var subprocessResolverSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessSubprocessArtifactSourceResolver.cs"));
         var projectionUtilitiesSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs"));
         var routeServicesSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteServices.cs"));
@@ -3733,7 +3740,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("ProcessRunAutomationDispatchService.IsRunClosedToAutomation", integrationTestSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRunAutomationDispatchService.ResolveSubprocessSourceArtifact", integrationTestSource, StringComparison.Ordinal);
 
-        Assert.Contains("internal static class ProcessDispatchRouteEligibility", routeSnapshotSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessDispatchRouteEligibility", routeSnapshotSource, StringComparison.Ordinal);
         Assert.Contains("public static bool IsRunClosedToAutomation", routeSnapshotSource, StringComparison.Ordinal);
         Assert.Contains("public static bool IsRunEligibleForDispatchCandidate", routeSnapshotSource, StringComparison.Ordinal);
         Assert.Contains("public static bool IsStepStatusDispatchableForRun", routeSnapshotSource, StringComparison.Ordinal);
@@ -3759,11 +3766,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.Contains("Must remain application-local.", coreDecisionMatrix, StringComparison.Ordinal);
         Assert.Contains("No production driver API", coreDecisionMatrix, StringComparison.Ordinal);
         Assert.DoesNotContain(productionProjectNames, name =>
-            string.Equals(name, "CanDoItAll.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(name, "CanDoItAll.Modules.Processes.Core", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("ProcessDriver", StringComparison.OrdinalIgnoreCase) ||
             name.Contains("DriverPack", StringComparison.OrdinalIgnoreCase));
-        Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
         Assert.DoesNotContain("IProcessDriverPack", dispatchModuleSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverRegistry", dispatchModuleSource, StringComparison.Ordinal);
@@ -3808,7 +3814,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "IProcessDotNetSwDevHelperDriver"
         };
 
-        Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Modules.Processes.Core")));
         Assert.All(forbiddenProductionTokens, token =>
             Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
@@ -3867,7 +3873,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "MapProcessDriver"
         };
 
-        Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Modules.Processes.Core")));
         Assert.All(forbiddenProductionTokens, token =>
             Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
@@ -3925,7 +3931,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "IProcessDotNetSwDevHelperDriver"
         };
 
-        Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Modules.Processes.Core")));
         Assert.All(forbiddenProductionTokens, token =>
             Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
@@ -3981,7 +3987,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "IProcessDotNetSwDevHelperDriver"
         };
 
-        Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Processes.Core")));
+        AssertNarrowProcessCoreSeed(root);
         Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Modules.Processes.Core")));
         Assert.All(forbiddenProductionTokens, token =>
             Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
@@ -4007,6 +4013,73 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));
+    }
+
+    private static void AssertNarrowProcessCoreSeed(string repositoryRoot)
+    {
+        var coreRoot = Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Core");
+        var coreProjectPath = Path.Combine(coreRoot, "CanDoItAll.Processes.Core.csproj");
+        var solution = File.ReadAllText(Path.Combine(repositoryRoot, "CanDoItAll.slnx"));
+        var coreProject = File.ReadAllText(coreProjectPath);
+        var coreSource = ReadNarrowProcessCoreSource(repositoryRoot);
+
+        Assert.True(Directory.Exists(coreRoot));
+        Assert.False(Directory.Exists(Path.Combine(repositoryRoot, "src", "CanDoItAll.Modules.Processes.Core")));
+        Assert.Contains("src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj", solution, StringComparison.Ordinal);
+        Assert.Contains(
+            @"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />",
+            coreProject,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"..\CanDoItAll.Modules.Processes\", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"..\CanDoItAll.Infrastructure\", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"..\CanDoItAll.AgentFramework", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"..\CanDoItAll.Modules.Workspace\", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(@"..\CanDoItAll.Modules.Plugins\", coreProject, StringComparison.OrdinalIgnoreCase);
+
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Routing", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public enum ProcessDispatchRouteStage", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessDispatchRoutePipeline", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessDispatchRoutePlanner", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessDispatchRouteEligibility", coreSource, StringComparison.Ordinal);
+
+        var forbiddenCoreTokens = new[]
+        {
+            "CanDoItAll.Modules.",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "Microsoft.EntityFrameworkCore",
+            "DbContext",
+            "IDbContextFactory",
+            "IWorkspace",
+            "WorkspacePathResolver",
+            "IStorage",
+            "StoragePlacement",
+            "AgentFramework",
+            "Maf",
+            "ProcessRunAutomationDispatchService",
+            "IProcessDriver",
+            "DriverPack",
+            "DriverRegistry",
+            "IServiceProvider",
+            "IServiceScopeFactory",
+            "ILogger<"
+        };
+
+        foreach (var forbiddenCoreToken in forbiddenCoreTokens)
+        {
+            Assert.DoesNotContain(forbiddenCoreToken, coreSource, StringComparison.Ordinal);
+        }
+    }
+
+    private static string ReadNarrowProcessCoreSource(string repositoryRoot)
+    {
+        return string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Core"), "*.cs", SearchOption.AllDirectories)
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
     }
 
     private static IReadOnlyList<string> ReadGitChangedFilesOutsideBundle(string repositoryRoot)

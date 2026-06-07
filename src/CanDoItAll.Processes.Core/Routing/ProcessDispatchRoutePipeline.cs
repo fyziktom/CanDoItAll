@@ -1,6 +1,6 @@
-namespace CanDoItAll.Modules.Processes;
+namespace CanDoItAll.Processes.Core.Routing;
 
-internal enum ProcessDispatchRouteStage
+public enum ProcessDispatchRouteStage
 {
     FreshRecoverySkip,
     DatabaseRequirement,
@@ -15,7 +15,7 @@ internal enum ProcessDispatchRouteStage
     FinalizerTransition
 }
 
-internal static class ProcessDispatchRoutePipeline
+public static class ProcessDispatchRoutePipeline
 {
     public static IReadOnlyList<ProcessDispatchRouteStage> StageOrder { get; } =
     [
@@ -31,4 +31,23 @@ internal static class ProcessDispatchRoutePipeline
         ProcessDispatchRouteStage.RunClosedGuard,
         ProcessDispatchRouteStage.FinalizerTransition
     ];
+}
+
+public static class ProcessDispatchRouteOrderAssertion
+{
+    public static void ThrowIfStageOrderInvalid(IReadOnlyList<ProcessDispatchRouteStage> actualStageOrder)
+    {
+        if (ProcessDispatchRoutePipeline.StageOrder.SequenceEqual(actualStageOrder))
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"Process dispatch route handler order must match the canonical route stage order. Expected: {FormatStageOrder(ProcessDispatchRoutePipeline.StageOrder)}. Actual: {FormatStageOrder(actualStageOrder)}.");
+    }
+
+    private static string FormatStageOrder(IReadOnlyList<ProcessDispatchRouteStage> stageOrder)
+    {
+        return string.Join(" -> ", stageOrder);
+    }
 }

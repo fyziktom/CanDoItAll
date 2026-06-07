@@ -1,6 +1,8 @@
-namespace CanDoItAll.Modules.Processes;
+using CanDoItAll.Processes.Contracts;
 
-internal readonly record struct ProcessDispatchTriggerFacts(
+namespace CanDoItAll.Processes.Core.Routing;
+
+public readonly record struct ProcessDispatchTriggerFacts(
     string RawTrigger,
     Guid? TriggerStepRunId,
     string NormalizedTrigger)
@@ -26,7 +28,7 @@ internal readonly record struct ProcessDispatchTriggerFacts(
     }
 }
 
-internal readonly record struct ProcessDispatchRouteSnapshot(
+public readonly record struct ProcessDispatchRouteSnapshot(
     Guid ProcessRunId,
     Guid StepRunId,
     ProcessRunStatus RunStatus,
@@ -48,26 +50,6 @@ internal readonly record struct ProcessDispatchRouteSnapshot(
     public bool IsRunEligibleForDispatchCandidate => ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate(RunStatus);
 
     public bool IsStepStatusDispatchableForRun => ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(RunStatus, StepStatus);
-
-    public static ProcessDispatchRouteSnapshot Create(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Guid? triggerStepRunId)
-    {
-        ArgumentNullException.ThrowIfNull(candidate);
-
-        return Create(
-            candidate.Run.Id,
-            candidate.StepRun.Id,
-            candidate.Run.Status,
-            candidate.StepRun.Status,
-            candidate.StepRun.StepKind,
-            candidate.TechnicalAgentId,
-            candidate.RecoveryExecutionRunId,
-            candidate.StepRun.StartedAtUtc,
-            trigger,
-            triggerStepRunId);
-    }
 
     public static ProcessDispatchRouteSnapshot Create(
         Guid processRunId,
@@ -94,7 +76,7 @@ internal readonly record struct ProcessDispatchRouteSnapshot(
     }
 }
 
-internal static class ProcessDispatchRouteEligibility
+public static class ProcessDispatchRouteEligibility
 {
     public static bool IsRunClosedToAutomation(
         ProcessRunStatus? runStatus,

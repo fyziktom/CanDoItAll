@@ -1,6 +1,6 @@
-namespace CanDoItAll.Modules.Processes;
+namespace CanDoItAll.Processes.Core.Routing;
 
-internal enum ProcessDispatchRouteKind
+public enum ProcessDispatchRouteKind
 {
     Continue,
     DatabaseRequirement,
@@ -11,7 +11,7 @@ internal enum ProcessDispatchRouteKind
     AgentExecution
 }
 
-internal readonly record struct ProcessDispatchRouteDecision(ProcessDispatchRouteKind Kind)
+public readonly record struct ProcessDispatchRouteDecision(ProcessDispatchRouteKind Kind)
 {
     public static ProcessDispatchRouteDecision Continue { get; } = new(ProcessDispatchRouteKind.Continue);
 
@@ -28,7 +28,7 @@ internal readonly record struct ProcessDispatchRouteDecision(ProcessDispatchRout
     public static ProcessDispatchRouteDecision AgentExecution { get; } = new(ProcessDispatchRouteKind.AgentExecution);
 }
 
-internal static class ProcessDispatchRoutePlanner
+public static class ProcessDispatchRoutePlanner
 {
     public static ProcessDispatchRouteDecision ResolveDatabaseRequirement(
         ProcessDispatchRouteSnapshot routeSnapshot,
