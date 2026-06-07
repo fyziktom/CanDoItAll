@@ -1,0 +1,6 @@
+Command: Get-FileHash -Algorithm SHA256 <changed production files>
+ExitCode: 0
+Output:
+FC8B3248D34088C19B9027B6649703AF9A2E867BB75473D7943AA9FDA15C4F18  repo://src/CanDoItAll.AgentFramework.Persistence/Validation/SandboxWorkspaceDocumentInvariantValidator.cs
+E4EC4A6CF113976F7FFEFB1F44D53CA691D147AE723369DD87C57FDEA3FF7D52  repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowEventNormalizer.cs
+633A40FF5A1E22EB8C9E7A053572F9BD3D4B693DDD5761356D45C76EEA89D989  repo://src/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs

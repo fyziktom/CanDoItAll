@@ -1,0 +1,8 @@
+Command: Select-String -Path bundle://proof/shared/transcripts/baseline-build.txt -Pattern "warning CS"
+ExitCode: 1
+Output:
+Failing-first warning gate found 3 compiler warnings before SB002 cleanup:
+- CS8629 in repo://src/CanDoItAll.AgentFramework.Persistence/Validation/SandboxWorkspaceDocumentInvariantValidator.cs
+- CS0618 in repo://src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowEventNormalizer.cs
+- CS9113 in repo://src/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs
+Invariant IDs affected: SB003-WARN-001; SB003-BOUNDARY-001.

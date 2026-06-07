@@ -1,0 +1,5 @@
+SB006-BOUNDARY-001 dispatch adapter confinement scan
+No unauthorized Core references found in dispatch side-effect files.
+Only explicitly mapped adapter files consume CanDoItAll.Processes.Core.
+SB006-EXEC-001 ProcessExecutionEvidenceDescriptorAdapter is the execution descriptor bridge.
+ExitCode: 0

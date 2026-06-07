@@ -1,0 +1,9 @@
+SB012 semantic closure
+SB012-DIAGNOSTIC-001 PASS: Core retry/provider/no-progress descriptors model immutable facts; ProcessRunAutomationDispatchService.Execution computes decisions in module code and verifies descriptors preserve those decisions.
+SB012-BOUNDARY-001 PASS: Core forbidden dependency scan and adapter confinement scan both passed with ExitCode: 0.
+SB012-DRIVER-001 PASS: production process-driver token scan passed with ExitCode: 0 and did not introduce driver registry, pack, or selector APIs.
+SB012-UI-001 PASS: UI/media drift scan passed with ExitCode: 0.
+SB012-STUB-001 PASS: changed production anti-stub audit passed with ExitCode: 0.
+Architecture tests: 96 passed in bundle://proof/SB012/transcripts/diagnostic-descriptor-architecture-tests.txt.
+Focused integration tests: 7 passed in bundle://proof/SB012/transcripts/diagnostic-descriptor-focused-integration-tests.txt.
+ExitCode: 0

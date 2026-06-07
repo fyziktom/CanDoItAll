@@ -1,0 +1,10 @@
+ExitCode: 1
+
+Pre-SB019/SB020 gap:
+- The new descriptor families had executable API snapshot coverage, but this bundle did not yet carry an owner-classification document for the expanded public Core surface.
+- A broad scanner also had to distinguish proposed process-driver APIs from existing storage-driver infrastructure so the gate could prove the intended boundary without false positives.
+
+Expected repair:
+- Add `architecture/07-public-api-owner-classification.md`.
+- Regenerate the Core public API surface transcript from the built assembly.
+- Run architecture/API guard tests and Core dependency, namespace, forbidden-token, driver, UI/media, and anti-stub scans.

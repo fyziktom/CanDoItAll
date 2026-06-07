@@ -1,0 +1,5 @@
+SB009-BOUNDARY-001 dispatch adapter confinement scan
+No unauthorized Core references found in dispatch side-effect files.
+Only explicitly mapped adapter files consume CanDoItAll.Processes.Core.
+SB009-FINALIZER-001 ProcessFinalizerEvidenceDescriptorAdapter is the finalizer descriptor bridge.
+ExitCode: 0

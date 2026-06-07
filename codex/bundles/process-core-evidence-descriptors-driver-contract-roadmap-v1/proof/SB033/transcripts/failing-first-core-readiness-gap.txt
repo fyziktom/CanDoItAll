@@ -1,0 +1,10 @@
+ExitCode: 1
+
+Pre-SB031/SB032 gap:
+- Descriptor work was complete, but the bundle did not yet have a refreshed scorecard or next-pure-family decision.
+- Without that decision, downstream work could keep extracting runtime behavior instead of stopping at the stable Core boundary.
+
+Expected repair:
+- Add the Core extraction scorecard.
+- Add the next pure family decision.
+- Prove no broad runtime extraction or process-driver production surface was added.

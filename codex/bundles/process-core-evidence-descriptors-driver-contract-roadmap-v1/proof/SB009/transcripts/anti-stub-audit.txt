@@ -1,0 +1,4 @@
+SB009-STUB-001 changed production anti-stub audit
+No TODO, NotImplemented, stub, or placeholder markers found in changed production C# files.
+SB009-FINALIZER-001 finalizer descriptors are implemented, not stubbed.
+ExitCode: 0

@@ -1,0 +1,1 @@
+No forbidden Core, driver, side-effect, or stub tokens found in projection/validation Core descriptor files.

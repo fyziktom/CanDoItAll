@@ -1,0 +1,107 @@
+SB012-DIAGNOSTIC-001 source assertions for retry/provider/no-progress diagnostic descriptors
+SB012-BOUNDARY-001 source assertions for Core purity and adapter ownership
+
+## repo://src/CanDoItAll.Processes.Core/Diagnostics/ProcessRetryDiagnosticDescriptors.cs
+17:public sealed record ProcessRetryDiagnosticDescriptor(
+35:public sealed record ProcessNoProgressRetryDiagnosticDescriptor(
+44:public sealed record ProcessProviderRepairDiagnosticDescriptor(
+53:public static class ProcessRetryDiagnosticDescriptorRules
+55:    public static ProcessRetryDiagnosticDescriptor DescribeRetry(
+83:        return new ProcessRetryDiagnosticDescriptor(
+113:    public static ProcessNoProgressRetryDiagnosticDescriptor DescribeNoProgressSignal(
+127:        return new ProcessNoProgressRetryDiagnosticDescriptor(
+137:    public static ProcessNoProgressRetryDiagnosticDescriptor DescribeNoProgressSignalAbsent()
+139:        return new ProcessNoProgressRetryDiagnosticDescriptor(
+149:    public static ProcessProviderRepairDiagnosticDescriptor DescribeProviderRepair(
+159:        return new ProcessProviderRepairDiagnosticDescriptor(
+
+## repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRetryDiagnosticDescriptorAdapter.cs
+4:using CoreRetryDiagnosticDescriptorRules = global::CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules;
+11:internal static class ProcessRetryDiagnosticDescriptorAdapter
+13:    public static CoreRetryDiagnosticDescriptor DescribeRetry(
+27:        return CoreRetryDiagnosticDescriptorRules.DescribeRetry(
+43:    public static CoreNoProgressRetryDiagnosticDescriptor DescribeNoProgressSignal(
+47:            ? CoreRetryDiagnosticDescriptorRules.DescribeNoProgressSignalAbsent()
+48:            : CoreRetryDiagnosticDescriptorRules.DescribeNoProgressSignal(
+57:    public static CoreProviderRepairDiagnosticDescriptor DescribeProviderRepair(
+61:            ? CoreRetryDiagnosticDescriptorRules.DescribeProviderRepair(
+68:            : CoreRetryDiagnosticDescriptorRules.DescribeProviderRepair(
+
+## repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs
+265:                var providerRepairDiagnostics = ProcessRetryDiagnosticDescriptorAdapter.DescribeProviderRepair(providerRepair);
+266:                if (!providerRepairDiagnostics.HasRepairOutcome)
+352:            var retryDiagnostics = ProcessRetryDiagnosticDescriptorAdapter.DescribeRetry(
+362:            var noProgressDiagnostics = ProcessRetryDiagnosticDescriptorAdapter.DescribeNoProgressSignal(noProgressSignal);
+363:            if (retryDiagnostics.ShouldRetry != shouldRetry)
+365:                throw new InvalidOperationException("Retry diagnostics did not preserve the computed retry decision.");
+368:            if (noProgressSignal is not null && !noProgressDiagnostics.HasSignal)
+370:                throw new InvalidOperationException("No-progress diagnostics did not describe the generated retry signal.");
+
+## repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+1:using System.Diagnostics;
+68:        Assert.Equal(["Artifacts", "Diagnostics", "Execution", "Finalization", "Routing", "Subprocess"], topLevelDirectories);
+74:        Assert.Contains("namespace CanDoItAll.Processes.Core.Diagnostics", coreSource, StringComparison.Ordinal);
+267:Type:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor
+268:Constructor:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor(System.Boolean,System.String,System.Nullable<System.Guid>,System.String,System.String,System.String,System.String)
+269:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ArtifactValidationFingerprint:System.String
+270:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ExecutionRunId:System.Nullable<System.Guid>
+271:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.Fingerprint:System.String
+272:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.HasSignal:System.Boolean
+273:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.MutationDelta:System.String
+274:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ProofDelta:System.String
+275:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ToolSignature:System.String
+276:Type:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor
+277:Constructor:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor(System.Boolean,System.Boolean,System.String,System.String,System.String,System.String,System.Int32)
+278:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.AffectedAgentCount:System.Int32
+279:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FailedProviderName:System.String
+280:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FailureSummary:System.String
+281:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FallbackModel:System.String
+282:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FallbackProviderName:System.String
+283:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.HasRecoverableProviderFailure:System.Boolean
+284:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.HasRepairOutcome:System.Boolean
+285:Type:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor
+286:Constructor:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor(System.Boolean,System.Int32,System.Int32,System.Collections.Generic.IReadOnlyList<System.String>,System.String,System.Collections.Generic.IReadOnlyList<System.String>,System.Collections.Generic.IReadOnlyList<System.String>,System.Int32,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind)
+287:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.AttemptNumber:System.Int32
+288:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.FailedToolNames:System.Collections.Generic.IReadOnlyList<System.String>
+289:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasBuildFailure:System.Boolean
+290:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasMissingRequiredTools:System.Boolean
+291:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasRecoverableExecutionInterruption:System.Boolean
+292:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasRecoverableFinalizerFailure:System.Boolean
+293:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasRecoverableProviderFailure:System.Boolean
+294:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasTestFailure:System.Boolean
+295:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasUnresolvedCriticalToolFailures:System.Boolean
+296:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.MaxExecutionAttempts:System.Int32
+297:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.MissingRequiredTools:System.Collections.Generic.IReadOnlyList<System.String>
+298:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.PrimaryFailureKind:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind
+299:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.RetryReasonSummary:System.String
+300:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.RetryReasons:System.Collections.Generic.IReadOnlyList<System.String>
+301:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.ShouldRetry:System.Boolean
+302:Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.UnresolvedCriticalToolFailureCount:System.Int32
+303:Type:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules
+304:Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeNoProgressSignal(System.String,System.Guid,System.String,System.String,System.String,System.String):CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor
+305:Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeNoProgressSignalAbsent():CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor
+306:Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeProviderRepair(System.Boolean,System.String,System.String,System.String,System.String,System.Int32):CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor
+307:Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeRetry(System.Boolean,System.Int32,System.Int32,System.Collections.Generic.IEnumerable<System.String>,System.Collections.Generic.IEnumerable<System.String>,System.Collections.Generic.IEnumerable<System.String>,System.Int32,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean):CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor
+308:Type:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind
+309:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.None
+310:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.MissingRequiredTool
+311:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.CriticalToolFailure
+312:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.BuildFailure
+313:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.TestFailure
+314:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.ProviderFailure
+315:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.ExecutionInterruption
+316:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.FinalizerValidationFailure
+317:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.NoProgress
+318:Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.Unknown
+2571:    public void Process_core_diagnostic_descriptors_SB010_SB012_INV_001_keeps_retry_provider_diagnostics_pure_and_adapter_owned()
+2584:            "Diagnostics",
+2586:        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRetryDiagnosticDescriptorAdapter.cs"));
+2620:        Assert.Contains("global::CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules", adapterSource, StringComparison.Ordinal);
+2624:        Assert.Contains("retryDiagnostics.ShouldRetry != shouldRetry", executionSource, StringComparison.Ordinal);
+2625:        Assert.Contains("noProgressSignal is not null && !noProgressDiagnostics.HasSignal", executionSource, StringComparison.Ordinal);
+5293:            "ProcessRetryDiagnosticDescriptorAdapter.cs",
+
+## repo://codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1/architecture/05-core-consumer-allowed-call-site-map.md
+39:| `ProcessRetryDiagnosticDescriptorAdapter.cs` | Diagnostics | Converts module retry, no-progress, and provider repair facts into Core diagnostic descriptors. |
+
+ExitCode: 0

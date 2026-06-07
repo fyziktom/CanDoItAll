@@ -22,6 +22,7 @@ using CoreArtifactExpectationSnapshot = CanDoItAll.Processes.Core.Artifacts.Proc
 using CoreArtifactExpectationMode = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactExpectationMode;
 using CoreArtifactKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactKind;
 using CoreArtifactProducerKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind;
+using CoreArtifactProjectionEvidenceDescriptorRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules;
 using CoreArtifactProjectionEligibilityRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules;
 using CoreArtifactProjectionSourceKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind;
 using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
@@ -33,6 +34,7 @@ using CoreSensitivityLevel = CanDoItAll.Processes.Core.Artifacts.ProcessCoreSens
 using CoreSubprocessArtifactSourceDiagnosticReason = CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnosticReason;
 using CoreSubprocessLifecycleRules = CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules;
 using CoreSubprocessRunFacts = CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts;
+using CoreProviderNativeBrowserEvidenceKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind;
 using CoreTrustRequirement = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustRequirement;
 using CoreTrustStatus = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus;
 
@@ -662,6 +664,62 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal(CoreArtifactProducerKind.Unknown, unknownDescriptor.ProducerKind);
         Assert.False(unknownDescriptor.IsRuntimeEvidenceSource);
         Assert.False(unknownDescriptor.IsRecordOnlySource);
+    }
+
+    [Fact]
+    public void ProcessCoreArtifactProjectionEvidenceDescriptorRules_SB013_SB015_preserve_order_lineage_and_provider_browser_facts()
+    {
+        var sourceOrder = new[]
+        {
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+            ProcessArtifactProjectionSourceKind.ProcessMock,
+            ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+            ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+            ProcessArtifactProjectionSourceKind.AssistantResponse,
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+            ProcessArtifactProjectionSourceKind.CompletedDecision
+        };
+        var orderDescriptors = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProjectionSourceOrder(sourceOrder);
+        var recoveryContext = new ProcessArtifactRecoveryProjectionContext(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            Guid.NewGuid());
+        var sourceExecutionRunId = Guid.NewGuid();
+        var sourceArtifactId = Guid.NewGuid();
+        var lineage = ProcessArtifactProjectionLineageBuilder.BuildLineage(
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+            sourceExecutionRunId,
+            recoveryContext,
+            sourceArtifactId,
+            "agentframework-browser-artifact:current-run:browser/screenshot.png");
+        var lineageDescriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeLineage(lineage);
+        var browserDescriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProviderNativeBrowserEvidence(
+            "browser-take-screenshot",
+            hasDeclaredPath: true,
+            hasMatchedOutput: true);
+        var missingBrowserOutputDescriptor = CoreArtifactProjectionEvidenceDescriptorRules.DescribeProviderNativeBrowserEvidence(
+            "browser_take_screenshot",
+            hasDeclaredPath: true,
+            hasMatchedOutput: false);
+
+        Assert.True(CoreArtifactProjectionEvidenceDescriptorRules.IsDefaultProjectionOrder(
+            orderDescriptors.Select(item => item.SourceKind).ToList()));
+        Assert.Equal(CoreArtifactProjectionSourceKind.AgentExecutionArtifact, orderDescriptors[0].SourceKind);
+        Assert.Equal(CoreArtifactProjectionSourceKind.CompletedDecision, orderDescriptors[^1].SourceKind);
+        Assert.True(orderDescriptors.Single(item => item.SourceKind == CoreArtifactProjectionSourceKind.ProviderNativeBrowser).IsProviderNativeBrowserEvidence);
+        Assert.True(orderDescriptors.Single(item => item.SourceKind == CoreArtifactProjectionSourceKind.ProviderNativeBrowser).RunsBeforeRecordOnlySources);
+        Assert.False(orderDescriptors.Single(item => item.SourceKind == CoreArtifactProjectionSourceKind.CompletedDecision).RunsBeforeRecordOnlySources);
+        Assert.Equal(CoreArtifactProjectionSourceKind.ProviderNativeBrowser, lineageDescriptor.SourceKind);
+        Assert.True(lineageDescriptor.HasRuntimeSource);
+        Assert.False(lineageDescriptor.HasRecordOnlySource);
+        Assert.True(lineageDescriptor.HasRecoveryLineage);
+        Assert.True(lineageDescriptor.HasSourceArtifact);
+        Assert.True(lineageDescriptor.IsProviderNativeBrowserEvidence);
+        Assert.Equal(sourceExecutionRunId, lineageDescriptor.SourceExecutionRunId);
+        Assert.Equal(sourceArtifactId, lineageDescriptor.SourceArtifactId);
+        Assert.Equal(CoreProviderNativeBrowserEvidenceKind.Screenshot, browserDescriptor.EvidenceKind);
+        Assert.True(browserDescriptor.CanSatisfyRequiredArtifact);
+        Assert.False(missingBrowserOutputDescriptor.CanSatisfyRequiredArtifact);
     }
 
     [Fact]

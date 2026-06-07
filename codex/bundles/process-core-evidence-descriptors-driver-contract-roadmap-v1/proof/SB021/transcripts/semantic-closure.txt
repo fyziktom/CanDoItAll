@@ -1,0 +1,13 @@
+SB021 semantic closure passed.
+
+The gate adds `architecture/07-public-api-owner-classification.md` and proves the expanded Core public API surface through the existing architecture guard plus a regenerated 487-line API transcript.
+
+Gate proof:
+- Build passed with 0 warnings.
+- Architecture/API guard tests passed: 97/97.
+- Core public API transcript was regenerated from the built assembly and contains 487 lines.
+- Core project scan found exactly one project reference, to `CanDoItAll.Processes.Contracts`, and no package references.
+- Core namespace/package hygiene scan found only Artifacts, Diagnostics, Execution, Finalization, Routing, and Subprocess namespaces.
+- Forbidden Core source scan found no module, infrastructure, AgentFramework, storage, filesystem, service-provider, process-driver, or UI tokens.
+- Production process-driver token scan found no process-driver pack, registry, selector, runtime, or manager command API.
+- UI/media and anti-stub audits passed.

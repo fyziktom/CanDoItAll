@@ -1,0 +1,4 @@
+Proof index and execution report shape scan
+CollapsedRowCount: 0
+MissingSubbundleRowCount: 0
+Result: Passed - subbundle rows are separate and no collapsed SB range rows were found.

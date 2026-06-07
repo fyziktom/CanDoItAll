@@ -1,0 +1,8 @@
+SB039 semantic closure passed when final validators passed.
+
+Gate proof:
+- Final prepared-stage validator passed.
+- Completed-stage validator passed.
+- Critical manifests and semantic invariant contracts are linked.
+- Execution report has separate rows for SB001-SB042.
+- Raw notes are closed with proof references.

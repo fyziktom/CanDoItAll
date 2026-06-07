@@ -1,7 +1,7 @@
 # SB031 — Core extraction scorecard refresh
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Score execution/finalizer/diagnostics/projection descriptors and remaining blockers.
@@ -16,12 +16,12 @@ Score execution/finalizer/diagnostics/projection descriptors and remaining block
 - If this is a gate, all previous subbundles in the phase must have proof artifacts.
 
 ## Exact Source References
-- `/src/CanDoItAll.Processes.Core`
-- `/src/CanDoItAll.Modules.Processes/Automation/Dispatch`
-- `/tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `/tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `/codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1`
-- `/codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1`
+- repo://src/CanDoItAll.Processes.Core
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch
+- repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+- repo://codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1
+- repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1
 
 ## Scope
 - Implement only the named slice.
@@ -29,10 +29,10 @@ Score execution/finalizer/diagnostics/projection descriptors and remaining block
 - Keep Core pure and deterministic.
 
 ## Dependency Impact
-Feeds the next subbundle in the same phase.
+- Feeds the next subbundle in the same phase.
 
 ## Validation Depth
-Focused source and unit proof; defer broad smoke to phase gate.
+- Focused source and unit proof; defer broad smoke to phase gate.
 
 ## Implementation Steps
 1. Inspect current source and previous proof.
@@ -64,10 +64,12 @@ Focused source and unit proof; defer broad smoke to phase gate.
 - If gate: phase manifest and semantic invariants.
 
 ## Browser Validation Logging
-N/A runtime/Core/service refactor. If UI files change unexpectedly, fail the subbundle and explain why.
+- N/A runtime/Core/service refactor. If UI files change unexpectedly, fail the subbundle and explain why.
 
 ## Progression Gate
-May proceed only if local proof passes.
+- May proceed only if local proof passes.
 
 ## Suggested Agent Prompt
 Implement SB031 from `process-core-evidence-descriptors-driver-contract-roadmap-v1`. Keep Core pure, preserve behavior, and record proof before proceeding.
+
+

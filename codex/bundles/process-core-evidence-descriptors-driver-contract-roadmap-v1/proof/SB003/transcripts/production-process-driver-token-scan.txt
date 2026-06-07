@@ -1,0 +1,5 @@
+Command: rg -n 'IProcessDriver|ProcessDriverPack|ProcessDriverRegistry|ProcessDriverSelector|ProcessDriverRuntimeSelector|MapProcessDriver' src -g '*.cs'
+ExitCode: 0
+RawExitCode: 1
+Result: Pass: no forbidden matches.
+Output:

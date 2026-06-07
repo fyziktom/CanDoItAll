@@ -1,0 +1,5 @@
+Consumer boundary assertions passed.
+The actual dispatch files with direct Core references exactly match architecture/06-core-adapter-ownership-map.md and the inherited stabilization map.
+Global usings do not hide Core imports.
+Side-effect dispatch files outside the explicit allow-list do not import Core directly.
+No production process-driver registry/pack tokens were introduced.

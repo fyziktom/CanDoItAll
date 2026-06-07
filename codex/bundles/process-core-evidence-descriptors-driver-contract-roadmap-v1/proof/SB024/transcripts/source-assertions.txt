@@ -1,0 +1,7 @@
+SB022-SB033 source assertions
+- Driver permission/audit requirements are proposal-only and readonly.
+- Negative driver scenarios deny mutation, runtime hooks, registry, dependency-injection integration, manager commands, shell, Graph, storage writes, and incomplete audit facts.
+- Domain schemas remain read-only evidence shapes for .NET/Rust, Office, business-analysis, and runtime verification lanes.
+- Production driver implementation is explicitly deferred.
+- Core extraction scorecard approves no broad runtime extraction.
+- No production process-driver APIs or UI/media changes were introduced.

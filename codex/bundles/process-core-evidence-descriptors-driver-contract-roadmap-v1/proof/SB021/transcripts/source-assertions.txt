@@ -1,0 +1,7 @@
+SB019-SB021 source assertions
+- Public API owner classification is recorded at bundle://architecture/07-public-api-owner-classification.md.
+- Core public API surface was regenerated and remains 487 lines.
+- CanDoItAll.Processes.Core remains package-free and references only CanDoItAll.Processes.Contracts.
+- Core namespaces remain limited to Artifacts, Diagnostics, Execution, Finalization, Routing, and Subprocess.
+- No production process-driver registry/pack/runtime-selector APIs were introduced.
+- No UI/media drift occurred.

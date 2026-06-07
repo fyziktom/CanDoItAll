@@ -19,6 +19,7 @@ It is intentionally file-based and exact; wildcard directory exemptions are not 
 | --- | --- | --- |
 | `ProcessArtifactExpectationMatcher.cs` | Artifacts | Adapter wrapper for expected-artifact match diagnostics. |
 | `ProcessArtifactExpectationSatisfactionAdapter.cs` | Artifacts | Adapter wrapper for trust/sensitivity satisfaction rules. |
+| `ProcessArtifactProjectionEvidenceDescriptorAdapter.cs` | Artifacts | Adapter wrapper for projection source order, lineage, and provider-native browser evidence descriptors. |
 | `ProcessArtifactRecordedSatisfactionRules.cs` | Artifacts | Rule wrapper for recorded expected-artifact satisfaction. |
 | `ProcessArtifactValidationDescriptorAdapter.cs` | Artifacts | Adapter wrapper for projection/validation descriptors and producer policy. |
 | `ProcessCoreArtifactModelAdapters.cs` | Artifacts | Converts module artifact entities/snapshots to Core snapshots. |
@@ -34,6 +35,9 @@ It is intentionally file-based and exact; wildcard directory exemptions are not 
 | `ProcessDispatchRouteModelAdapters.cs` | Routing | Converts module dispatch candidates/claims/outcomes into Core route snapshots. |
 | `ProcessDispatchRunClosureGuardService.cs` | Routing | Uses route closed/eligible facts while checking run closure. |
 | `ProcessDispatchStartTransitionPlanner.cs` | Routing | Converts Core start-transition intent to a module transition request. |
+| `ProcessExecutionEvidenceDescriptorAdapter.cs` | Execution | Converts module execution run and post-attempt facts into Core execution evidence descriptors. |
+| `ProcessFinalizerEvidenceDescriptorAdapter.cs` | Finalization | Converts module finalizer context and result facts into Core finalizer evidence descriptors. |
+| `ProcessRetryDiagnosticDescriptorAdapter.cs` | Diagnostics | Converts module retry, no-progress, and provider repair facts into Core diagnostic descriptors. |
 | `ProcessRunAutomationDispatchService.Concurrency.cs` | Routing | Uses route eligibility facts during concurrency/candidate checks. |
 
 ## Denied Consumers

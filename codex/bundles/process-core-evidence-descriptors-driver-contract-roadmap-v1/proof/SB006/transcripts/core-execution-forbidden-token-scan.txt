@@ -1,0 +1,4 @@
+SB006-BOUNDARY-001 core execution descriptor forbidden dependency scan
+No forbidden dependency or side-effect tokens found in repo://src/CanDoItAll.Processes.Core/Execution/ProcessExecutionEvidenceDescriptors.cs.
+SB006-EXEC-001 pure execution descriptors remain in Core only as deterministic data/rules.
+ExitCode: 0

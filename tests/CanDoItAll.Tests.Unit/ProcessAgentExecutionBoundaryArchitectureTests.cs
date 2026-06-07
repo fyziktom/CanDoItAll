@@ -65,12 +65,15 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "DriverPack"
         };
 
-        Assert.Equal(["Artifacts", "Routing", "Subprocess"], topLevelDirectories);
+        Assert.Equal(["Artifacts", "Diagnostics", "Execution", "Finalization", "Routing", "Subprocess"], topLevelDirectories);
         Assert.Contains(@"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />", coreProject, StringComparison.Ordinal);
         Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("namespace CanDoItAll.Processes.Core.Routing", coreSource, StringComparison.Ordinal);
         Assert.Contains("namespace CanDoItAll.Processes.Core.Subprocess", coreSource, StringComparison.Ordinal);
         Assert.Contains("namespace CanDoItAll.Processes.Core.Artifacts", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Diagnostics", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Execution", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Finalization", coreSource, StringComparison.Ordinal);
         Assert.Contains("public static class ProcessSubprocessLifecycleRules", coreSource, StringComparison.Ordinal);
         Assert.Contains("public static class ProcessSubprocessArtifactSourceResolver", coreSource, StringComparison.Ordinal);
         Assert.Contains("public sealed record ProcessArtifactExpectationSnapshot", coreSource, StringComparison.Ordinal);
@@ -140,6 +143,41 @@ Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityR
 Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules.IsRecordOnlySource(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind):System.Boolean
 Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules.IsRuntimeEvidenceSource(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind):System.Boolean
 Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules.ResolveProducerKind(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind):CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind
+Type:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules
+Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules.DescribeLineage(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.String,System.String,System.String):CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor
+Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules.DescribeProviderNativeBrowserEvidence(System.String,System.Boolean,System.Boolean):CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor
+Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind):CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor
+Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules.IsDefaultProjectionOrder(System.Collections.Generic.IReadOnlyList<CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind>):System.Boolean
+Method:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules.ResolveProviderNativeBrowserEvidenceKind(System.String):CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind
+Type:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor
+Constructor:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.String,System.String,System.String,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean)
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.ContentHash:System.String
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.HasRecordOnlySource:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.HasRecoveryLineage:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.HasRuntimeSource:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.HasSourceArtifact:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.IsProviderNativeBrowserEvidence:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.ProjectedExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.ProjectionIdentityHash:System.String
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.RecoveredForExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.RecoveryExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.ReworkPacketId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.SourceArtifactId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.SourceExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.SourceExternalReferenceKey:System.String
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.SourceKind:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.SubprocessRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.WorkflowArtifactId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor.WorkflowRunId:System.Nullable<System.Guid>
+Type:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor
+Constructor:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor(CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind,CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind,System.Int32,System.Boolean,System.Boolean,System.Boolean,System.Boolean)
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.IsProviderNativeBrowserEvidence:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.IsRecordOnlySource:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.IsRuntimeEvidenceSource:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.ProducerKind:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.ProjectionOrder:System.Int32
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.RunsBeforeRecordOnlySources:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor.SourceKind:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind
 Type:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot
 Constructor:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot(System.Guid,System.Nullable<System.Guid>,CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactKind,System.String,CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus,CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel,System.DateTimeOffset)
 Property:CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot.ArtifactExpectationId:System.Nullable<System.Guid>
@@ -229,11 +267,24 @@ Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus.ReviewRe
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus.Approved
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus.Rejected
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus.TrustedSource
+Type:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind
+Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind.Unknown
+Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind.Screenshot
+Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind.Snapshot
+Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind.ConsoleLog
+Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind.DomOrState
 Type:CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel.Public
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel.Internal
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel.Confidential
 Enum:CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel.Restricted
+Type:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor(CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind,System.String,System.Boolean,System.Boolean,System.Boolean)
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor.CanSatisfyRequiredArtifact:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor.EvidenceKind:CanDoItAll.Processes.Core.Artifacts.ProcessCoreProviderNativeBrowserEvidenceKind
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor.HasDeclaredPath:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor.HasMatchedOutput:System.Boolean
+Property:CanDoItAll.Processes.Core.Artifacts.ProcessProviderNativeBrowserEvidenceDescriptor.ToolName:System.String
 Type:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnostic
 Constructor:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnostic(CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot,CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnosticReason,System.String,System.Int32)
 Property:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnostic.EligibleArtifactCount:System.Int32
@@ -261,6 +312,152 @@ Constructor:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessOutputArtifactM
 Property:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessOutputArtifactMapping.ChildExpectationId:System.Guid
 Property:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessOutputArtifactMapping.IsLegacyTextMapping:System.Boolean
 Property:CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessOutputArtifactMapping.ParentExpectationId:System.Guid
+Type:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor
+Constructor:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor(System.Boolean,System.String,System.Nullable<System.Guid>,System.String,System.String,System.String,System.String)
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ArtifactValidationFingerprint:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.Fingerprint:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.HasSignal:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.MutationDelta:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ProofDelta:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor.ToolSignature:System.String
+Type:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor
+Constructor:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor(System.Boolean,System.Boolean,System.String,System.String,System.String,System.String,System.Int32)
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.AffectedAgentCount:System.Int32
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FailedProviderName:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FailureSummary:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FallbackModel:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.FallbackProviderName:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.HasRecoverableProviderFailure:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor.HasRepairOutcome:System.Boolean
+Type:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor
+Constructor:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor(System.Boolean,System.Int32,System.Int32,System.Collections.Generic.IReadOnlyList<System.String>,System.String,System.Collections.Generic.IReadOnlyList<System.String>,System.Collections.Generic.IReadOnlyList<System.String>,System.Int32,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind)
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.AttemptNumber:System.Int32
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.FailedToolNames:System.Collections.Generic.IReadOnlyList<System.String>
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasBuildFailure:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasMissingRequiredTools:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasRecoverableExecutionInterruption:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasRecoverableFinalizerFailure:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasRecoverableProviderFailure:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasTestFailure:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.HasUnresolvedCriticalToolFailures:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.MaxExecutionAttempts:System.Int32
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.MissingRequiredTools:System.Collections.Generic.IReadOnlyList<System.String>
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.PrimaryFailureKind:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.RetryReasonSummary:System.String
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.RetryReasons:System.Collections.Generic.IReadOnlyList<System.String>
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.ShouldRetry:System.Boolean
+Property:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor.UnresolvedCriticalToolFailureCount:System.Int32
+Type:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules
+Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeNoProgressSignal(System.String,System.Guid,System.String,System.String,System.String,System.String):CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor
+Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeNoProgressSignalAbsent():CanDoItAll.Processes.Core.Diagnostics.ProcessNoProgressRetryDiagnosticDescriptor
+Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeProviderRepair(System.Boolean,System.String,System.String,System.String,System.String,System.Int32):CanDoItAll.Processes.Core.Diagnostics.ProcessProviderRepairDiagnosticDescriptor
+Method:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules.DescribeRetry(System.Boolean,System.Int32,System.Int32,System.Collections.Generic.IEnumerable<System.String>,System.Collections.Generic.IEnumerable<System.String>,System.Collections.Generic.IEnumerable<System.String>,System.Int32,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean,System.Boolean):CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptor
+Type:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.None
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.MissingRequiredTool
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.CriticalToolFailure
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.BuildFailure
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.TestFailure
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.ProviderFailure
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.ExecutionInterruption
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.FinalizerValidationFailure
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.NoProgress
+Enum:CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticFailureKind.Unknown
+Type:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind
+Enum:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind.Active
+Enum:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind.Succeeded
+Enum:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind.Failed
+Enum:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind.Cancelled
+Enum:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind.TerminalWithoutOutcome
+Type:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor(System.Guid,System.Int32,CanDoItAll.Processes.Contracts.ProcessStepRunStatus,System.String,System.Collections.Generic.IReadOnlyList<System.String>,System.Boolean,System.Int32,System.Boolean,System.Int32,System.Nullable<System.Guid>)
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.AttemptNumber:System.Int32
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.CompletionReason:System.String
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.CompletionStatus:CanDoItAll.Processes.Contracts.ProcessStepRunStatus
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.ExecutionRunId:System.Guid
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.HasMissingRequiredTools:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.HasUnresolvedCriticalToolFailures:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.MissingRequiredToolCount:System.Int32
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.MissingRequiredTools:System.Collections.Generic.IReadOnlyList<System.String>
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.SelectedBranchOutcomeId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor.UnresolvedCriticalToolFailureCount:System.Int32
+Type:CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor
+Constructor:CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor(System.Boolean,System.Boolean,System.Boolean)
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor.HasConcreteImplementationProof:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor.HasConcreteProductMutation:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor.HasRunnableApplicationProof:System.Boolean
+Type:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptor(CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor,CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor,CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor)
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptor.Attempt:CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptor.CarriedProof:CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptor.Run:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor
+Type:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules
+Method:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules.DescribeAttempt(System.Guid,System.Int32,CanDoItAll.Processes.Contracts.ProcessStepRunStatus,System.String,System.Collections.Generic.IEnumerable<System.String>,System.Int32,System.Nullable<System.Guid>):CanDoItAll.Processes.Core.Execution.ProcessExecutionAttemptEvidenceDescriptor
+Method:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules.DescribeCarriedProof(System.Boolean,System.Boolean,System.Boolean):CanDoItAll.Processes.Core.Execution.ProcessExecutionCarriedProofDescriptor
+Method:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules.DescribeRun(CanDoItAll.Processes.Contracts.ProcessAutomationExecutionRunRecord):CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor
+Method:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules.IsTerminalState(CanDoItAll.Processes.Contracts.ProcessAutomationExecutionState):System.Boolean
+Method:CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules.ResolveObservationKind(CanDoItAll.Processes.Contracts.ProcessAutomationExecutionState,System.Nullable<CanDoItAll.Processes.Contracts.ProcessAutomationRunOutcome>):CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind
+Type:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor(System.Guid,CanDoItAll.Processes.Contracts.ProcessAutomationExecutionState,System.Nullable<CanDoItAll.Processes.Contracts.ProcessAutomationRunOutcome>,System.Boolean,System.Boolean,System.Boolean,System.DateTimeOffset,System.Nullable<System.DateTimeOffset>,System.Nullable<System.DateTimeOffset>,CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind)
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.CompletedAtUtc:System.Nullable<System.DateTimeOffset>
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.CreatedAtUtc:System.DateTimeOffset
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.ExecutionRunId:System.Guid
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.HasPendingToolApprovals:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.IsActive:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.IsTerminal:System.Boolean
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.ObservationKind:CanDoItAll.Processes.Core.Execution.ProcessCoreExecutionRunObservationKind
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.Outcome:System.Nullable<CanDoItAll.Processes.Contracts.ProcessAutomationRunOutcome>
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.StartedAtUtc:System.Nullable<System.DateTimeOffset>
+Property:CanDoItAll.Processes.Core.Execution.ProcessExecutionRunEvidenceDescriptor.State:CanDoItAll.Processes.Contracts.ProcessAutomationExecutionState
+Type:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind.None
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind.OwnOutput
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind.UpstreamInput
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind.RuntimeEvidence
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind.PolicyDenied
+Type:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind.DirectAgent
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind.WorkflowBackedRole
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind.SubprocessParent
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind.ManagerArtifactRecovery
+Enum:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind.Manual
+Type:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptor(CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor,CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor)
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptor.Intent:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptor.Result:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor
+Type:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptorRules
+Method:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptorRules.DescribeAppliedResult(CanDoItAll.Processes.Contracts.ProcessStepRunStatus,System.String,CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind,System.Nullable<System.Guid>,System.Guid,System.Int32):CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor
+Method:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptorRules.DescribeIntent(CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind,System.Guid,System.Guid,CanDoItAll.Processes.Contracts.ProcessStepRunStatus,System.String,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Boolean,System.Boolean,System.String,System.Boolean,System.Nullable<System.Guid>,System.Nullable<System.Guid>):CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor
+Method:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptorRules.DescribeNoResult():CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor
+Type:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor(CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind,System.Guid,System.Guid,CanDoItAll.Processes.Contracts.ProcessStepRunStatus,System.String,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Boolean,System.Boolean,System.String,System.Boolean,System.Nullable<System.Guid>,System.Nullable<System.Guid>)
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.AllowsManagerArtifactRecovery:System.Boolean
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.CompletionReason:System.String
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.CompletionStatus:CanDoItAll.Processes.Contracts.ProcessStepRunStatus
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.ExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.FinalizerKind:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerKind
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.ProcessRunId:System.Guid
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.ProjectsExecutionArtifacts:System.Boolean
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.RecoveredForExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.RecoveryExecutionRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.RequiresLeaseRenewal:System.Boolean
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.SelectedBranchOutcomeId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.StepRunId:System.Guid
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.SubprocessRunId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.Trigger:System.String
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerIntentEvidenceDescriptor.WorkflowRunId:System.Nullable<System.Guid>
+Type:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor
+Constructor:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor(System.Boolean,System.Boolean,System.Nullable<CanDoItAll.Processes.Contracts.ProcessStepRunStatus>,System.String,CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind,System.Nullable<System.Guid>,System.Nullable<System.Guid>,System.Int32,System.Boolean)
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.ArtifactValidationResultCount:System.Int32
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.BlockCauseKind:CanDoItAll.Processes.Core.Finalization.ProcessCoreFinalizerBlockCauseKind
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.CompletionReason:System.String
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.CompletionStatus:System.Nullable<CanDoItAll.Processes.Contracts.ProcessStepRunStatus>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.HasArtifactValidationResults:System.Boolean
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.HasResult:System.Boolean
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.SelectedBranchOutcomeId:System.Nullable<System.Guid>
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.ShouldApplyTransition:System.Boolean
+Property:CanDoItAll.Processes.Core.Finalization.ProcessFinalizerResultEvidenceDescriptor.StepRunConcurrencyToken:System.Nullable<System.Guid>
 Type:CanDoItAll.Processes.Core.Routing.ProcessDispatchRouteDecision
 Constructor:CanDoItAll.Processes.Core.Routing.ProcessDispatchRouteDecision(CanDoItAll.Processes.Core.Routing.ProcessDispatchRouteKind)
 Property:CanDoItAll.Processes.Core.Routing.ProcessDispatchRouteDecision.AgentExecution:CanDoItAll.Processes.Core.Routing.ProcessDispatchRouteDecision
@@ -2304,6 +2501,242 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
+    public void Process_core_evidence_descriptors_SB004_SB006_INV_001_keeps_execution_descriptors_pure_and_adapter_owned()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var coreDescriptorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Core",
+            "Execution",
+            "ProcessExecutionEvidenceDescriptors.cs"));
+        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessExecutionEvidenceDescriptorAdapter.cs"));
+        var executionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Execution.cs"));
+        var observedOutcomeSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessObservedExecutionOutcomeBuilder.cs"));
+        var dispatchSideEffectSource = ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory);
+        var forbiddenCoreTokens = new[]
+        {
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "DbContext",
+            "StoragePlacement",
+            "IStorage",
+            "WorkspacePathResolver",
+            "File.",
+            "Directory.",
+            "ProcessRunAutomationDispatchService",
+            "IProcessDriverPack",
+            "DriverPack",
+            "DriverRegistry",
+            "ILogger<"
+        };
+
+        Assert.Contains("public sealed record ProcessExecutionRunEvidenceDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessExecutionAttemptEvidenceDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessExecutionCarriedProofDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessExecutionEvidenceDescriptorRules", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Execution.ProcessExecutionEvidenceDescriptorRules", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessExecutionEvidenceDescriptorAdapter.Describe(", executionSource, StringComparison.Ordinal);
+        Assert.Contains("detail.Run", executionSource, StringComparison.Ordinal);
+        Assert.Contains("postAttemptFacts", executionSource, StringComparison.Ordinal);
+        Assert.Contains("attemptNumber", executionSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessExecutionEvidenceDescriptorAdapter.DescribeRun(run)", observedOutcomeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSideEffectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ExecuteUntilSettledAsync", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessAutomationExecutionClient", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new DispatchExecutionOutcome", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IProcessDriverPack", coreDescriptorSource + adapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("DriverPack", coreDescriptorSource + adapterSource, StringComparison.Ordinal);
+        Assert.All(forbiddenCoreTokens, token =>
+            Assert.DoesNotContain(token, coreDescriptorSource, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Process_core_finalizer_evidence_descriptors_SB007_SB009_INV_001_keeps_finalizer_descriptors_pure_and_adapter_owned()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var coreDescriptorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Core",
+            "Finalization",
+            "ProcessFinalizerEvidenceDescriptors.cs"));
+        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessFinalizerEvidenceDescriptorAdapter.cs"));
+        var finalizerAdapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchFinalizerAdapter.cs"));
+        var dispatchSideEffectSource = ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory);
+        var forbiddenCoreTokens = new[]
+        {
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "DbContext",
+            "StoragePlacement",
+            "IStorage",
+            "WorkspacePathResolver",
+            "File.",
+            "Directory.",
+            "ProcessDispatchFinalizerAdapter",
+            "ProcessDispatchFinalizerApplicationService",
+            "ProcessStepCompletionFinalizerContext",
+            "ProcessStepCompletionFinalizerResult",
+            "finalizeStepCompletionAsync",
+            "applyFinalizedStepTransitionAsync",
+            "IProcessDriverPack",
+            "DriverPack",
+            "DriverRegistry",
+            "ILogger<"
+        };
+
+        Assert.Contains("public enum ProcessCoreFinalizerKind", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public enum ProcessCoreFinalizerBlockCauseKind", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessFinalizerIntentEvidenceDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessFinalizerResultEvidenceDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessFinalizerEvidenceDescriptorRules", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Finalization.ProcessFinalizerEvidenceDescriptorRules", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessFinalizerEvidenceDescriptorAdapter.Describe(context, finalizedCompletion)", finalizerAdapterSource, StringComparison.Ordinal);
+        Assert.Contains("!finalizerEvidence.Result.ShouldApplyTransition", finalizerAdapterSource, StringComparison.Ordinal);
+        Assert.Contains("applyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken)", finalizerAdapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSideEffectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessStepBlockCause", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.All(forbiddenCoreTokens, token =>
+            Assert.DoesNotContain(token, coreDescriptorSource, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Process_core_diagnostic_descriptors_SB010_SB012_INV_001_keeps_retry_provider_diagnostics_pure_and_adapter_owned()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var coreDescriptorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Core",
+            "Diagnostics",
+            "ProcessRetryDiagnosticDescriptors.cs"));
+        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRetryDiagnosticDescriptorAdapter.cs"));
+        var executionSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.Execution.cs"));
+        var dispatchSideEffectSource = ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory);
+        var forbiddenCoreTokens = new[]
+        {
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "AgentRecoveryDecision",
+            "AgentFailureCategory",
+            "ProcessAutomationExecutionRunDetail",
+            "ProcessAutomationToolExecutionReceipt",
+            "ProcessRecoveryRetryFacts",
+            "NoProgressRetrySignal",
+            "ProviderRepairOutcome",
+            "ProcessProviderRepairCoordinator",
+            "IProcessAutomationExecutionClient",
+            "DbContext",
+            "StoragePlacement",
+            "IStorage",
+            "WorkspacePathResolver",
+            "File.",
+            "Directory.",
+            "IProcessDriverPack",
+            "DriverPack",
+            "DriverRegistry",
+            "ILogger<"
+        };
+
+        Assert.Contains("public enum ProcessRetryDiagnosticFailureKind", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessRetryDiagnosticDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessNoProgressRetryDiagnosticDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessProviderRepairDiagnosticDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessRetryDiagnosticDescriptorRules", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Diagnostics.ProcessRetryDiagnosticDescriptorRules", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRetryDiagnosticDescriptorAdapter.DescribeProviderRepair(providerRepair)", executionSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRetryDiagnosticDescriptorAdapter.DescribeRetry(", executionSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRetryDiagnosticDescriptorAdapter.DescribeNoProgressSignal(noProgressSignal)", executionSource, StringComparison.Ordinal);
+        Assert.Contains("retryDiagnostics.ShouldRetry != shouldRetry", executionSource, StringComparison.Ordinal);
+        Assert.Contains("noProgressSignal is not null && !noProgressDiagnostics.HasSignal", executionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSideEffectSource, StringComparison.Ordinal);
+        Assert.All(forbiddenCoreTokens, token =>
+            Assert.DoesNotContain(token, coreDescriptorSource, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Process_core_projection_evidence_descriptors_SB013_SB015_INV_001_keeps_projection_descriptors_pure_and_adapter_owned()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var coreDescriptorSource = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Core",
+            "Artifacts",
+            "ProcessArtifactProjectionEvidenceDescriptors.cs"));
+        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessArtifactProjectionEvidenceDescriptorAdapter.cs"));
+        var lineageBuilderSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessArtifactProjectionLineageBuilder.cs"));
+        var orchestratorSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessArtifactProjectionOrchestrator.cs"));
+        var browserFactsSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessProviderNativeBrowserOutputFacts.cs"));
+        var dispatchSideEffectSource = ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory);
+        var forbiddenCoreTokens = new[]
+        {
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "ProcessArtifactProjectionLineageJson",
+            "ProcessProviderNativeBrowserOutputFacts",
+            "ProcessArtifactProjectionOrchestrator",
+            "ProcessRunAutomationDispatchService",
+            "DbContext",
+            "StoragePlacement",
+            "IStorage",
+            "WorkspacePathResolver",
+            "WorkspaceScopeDescriptor",
+            "File.",
+            "Directory.",
+            "IProcessDriverPack",
+            "DriverPack",
+            "DriverRegistry",
+            "ILogger<"
+        };
+
+        Assert.Contains("public enum ProcessCoreProviderNativeBrowserEvidenceKind", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessArtifactProjectionLineageDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessArtifactProjectionSourceOrderDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessProviderNativeBrowserEvidenceDescriptor", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessArtifactProjectionEvidenceDescriptorRules", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeLineage(lineage)", lineageBuilderSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionEvidenceDescriptorAdapter.VerifyProjectionSourceOrder(projectionSourceOrder)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProviderNativeBrowserEvidence", browserFactsSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSideEffectSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("TryResolveArtifactFullPath", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProjectAsync", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ProcessArtifactProjectionWriteRequest", coreDescriptorSource, StringComparison.Ordinal);
+        Assert.All(forbiddenCoreTokens, token =>
+            Assert.DoesNotContain(token, coreDescriptorSource, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Process_core_stabilization_SB022_INV_001_limits_process_core_consumers_to_explicit_call_site_map()
     {
         var root = FindRepositoryRoot();
@@ -2325,6 +2758,13 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "process-core-stabilization-diagnostics-driver-roadmap-v1",
             "architecture",
             "05-core-consumer-allowed-call-site-map.md"));
+        var currentBundleAllowedMap = File.ReadAllText(Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-core-evidence-descriptors-driver-contract-roadmap-v1",
+            "architecture",
+            "06-core-adapter-ownership-map.md"));
         var expectedFiles = CreateAllowedDispatchProcessCoreConsumerFiles()
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -2340,9 +2780,11 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.Equal(expectedFiles, actualFiles);
         Assert.DoesNotContain("global using CanDoItAll.Processes.Core", globalUsings, StringComparison.Ordinal);
         Assert.DoesNotContain("*", allowedMap, StringComparison.Ordinal);
+        Assert.DoesNotContain("*", currentBundleAllowedMap, StringComparison.Ordinal);
         foreach (var expectedFile in expectedFiles)
         {
             Assert.Contains($"| `{expectedFile}` |", allowedMap, StringComparison.Ordinal);
+            Assert.Contains($"| `{expectedFile}` |", currentBundleAllowedMap, StringComparison.Ordinal);
         }
     }
 
@@ -4775,6 +5217,127 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.Contains("final red-team closure", inputCoverage, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Process_core_evidence_driver_contract_SB024_INV_001_keeps_driver_permission_model_non_production()
+    {
+        var root = FindRepositoryRoot();
+        var bundleRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-core-evidence-descriptors-driver-contract-roadmap-v1");
+        var sourceText = ReadProductionSourceText(root);
+        var permissionModel = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "08-driver-permission-audit-requirements.md"));
+        var negativeScenarios = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "09-driver-negative-scenarios.md"));
+        var docsText = string.Join(Environment.NewLine, permissionModel, negativeScenarios);
+        var forbiddenProductionTokens = new[]
+        {
+            "IProcessDriverPack",
+            "IProcessDriverRegistry",
+            "ProcessDriverRegistry",
+            "ProcessDriverPack",
+            "ProcessDriverRuntimeSelector",
+            "ProcessDriverManagerCommand",
+            "ProcessDriverRuntime",
+            "ProcessDriverProvider"
+        };
+
+        AssertNarrowProcessCoreSeed(root);
+        Assert.All(forbiddenProductionTokens, token =>
+            Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
+        Assert.Contains("VerificationOnly", permissionModel, StringComparison.Ordinal);
+        Assert.Contains("ManagerReadonly", permissionModel, StringComparison.Ordinal);
+        Assert.Contains("ExecutionCapableFuture", permissionModel, StringComparison.Ordinal);
+        Assert.Contains("Absence of an approved mode is a denial.", permissionModel, StringComparison.Ordinal);
+        Assert.Contains("Required Audit Facts", permissionModel, StringComparison.Ordinal);
+        Assert.Contains("Mutation denied", negativeScenarios, StringComparison.Ordinal);
+        Assert.Contains("Shell denied", negativeScenarios, StringComparison.Ordinal);
+        Assert.Contains("Graph denied", negativeScenarios, StringComparison.Ordinal);
+        Assert.DoesNotContain("public interface", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddScoped", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddSingleton", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("MapProcessDriver", docsText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_core_evidence_driver_contract_SB027_INV_001_keeps_domain_schemas_readonly()
+    {
+        var root = FindRepositoryRoot();
+        var bundleRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-core-evidence-descriptors-driver-contract-roadmap-v1");
+        var sourceText = ReadProductionSourceText(root);
+        var laneMap = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "05-domain-driver-lanes.md"));
+        var schemas = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "10-domain-driver-readonly-evidence-schemas.md"));
+        var docsText = string.Join(Environment.NewLine, laneMap, schemas);
+        var forbiddenProductionTokens = new[]
+        {
+            "IProcessDriverPack",
+            "IProcessDriverRegistry",
+            "ProcessDriverRegistry",
+            "ProcessDriverPack",
+            "ProcessDriverRuntimeSelector",
+            "ProcessDriverManagerCommand",
+            "ProcessDriverRuntime",
+            "ProcessDriverProvider"
+        };
+
+        AssertNarrowProcessCoreSeed(root);
+        Assert.All(forbiddenProductionTokens, token =>
+            Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
+        Assert.Contains(".NET / Rust verification lane", laneMap, StringComparison.Ordinal);
+        Assert.Contains("Office lane", laneMap, StringComparison.Ordinal);
+        Assert.Contains("Business-analysis lane", laneMap, StringComparison.Ordinal);
+        Assert.Contains("Readonly build/test/proof evidence schema", schemas, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Calling Office or Graph APIs", schemas, StringComparison.Ordinal);
+        Assert.Contains("Mutating CRM, project, workflow, or business records", schemas, StringComparison.Ordinal);
+        Assert.DoesNotContain("State mutation allowed", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Run shell commands", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("Workspace write allowed", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddScoped", docsText, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddSingleton", docsText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_core_evidence_driver_contract_SB033_INV_001_defers_driver_runtime_and_blocks_broad_core_extraction()
+    {
+        var root = FindRepositoryRoot();
+        var bundleRoot = Path.Combine(
+            root,
+            "codex",
+            "bundles",
+            "process-core-evidence-descriptors-driver-contract-roadmap-v1");
+        var sourceText = ReadProductionSourceText(root);
+        var implementationDecision = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "11-production-driver-implementation-decision.md"));
+        var scorecard = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "12-core-extraction-scorecard.md"));
+        var nextPureFamilyDecision = File.ReadAllText(Path.Combine(bundleRoot, "architecture", "13-next-pure-family-decision.md"));
+        var forbiddenProductionTokens = new[]
+        {
+            "IProcessDriverPack",
+            "IProcessDriverRegistry",
+            "ProcessDriverRegistry",
+            "ProcessDriverPack",
+            "ProcessDriverRuntimeSelector",
+            "ProcessDriverManagerCommand",
+            "ProcessDriverRuntime",
+            "ProcessDriverProvider"
+        };
+
+        AssertNarrowProcessCoreSeed(root);
+        Assert.All(forbiddenProductionTokens, token =>
+            Assert.DoesNotContain(token, sourceText, StringComparison.Ordinal));
+        Assert.Contains("Decision: No production driver implementation in this bundle.", implementationDecision, StringComparison.Ordinal);
+        Assert.Contains("Alpha candidate: Defer.", implementationDecision, StringComparison.Ordinal);
+        Assert.Contains("permission enforcement, audit persistence, sandbox policy, runtime ownership, and executable negative tests are not yet implemented", implementationDecision, StringComparison.Ordinal);
+        Assert.Contains("No broad runtime extraction is approved.", scorecard, StringComparison.Ordinal);
+        Assert.Contains("Core is stable enough for driver-contract proposal work.", scorecard, StringComparison.Ordinal);
+        Assert.Contains("declare Core stable enough for driver-contract proposal work", nextPureFamilyDecision, StringComparison.Ordinal);
+        Assert.Contains("No additional pure family is required", nextPureFamilyDecision, StringComparison.Ordinal);
+        Assert.DoesNotContain("Implement production driver", implementationDecision + scorecard + nextPureFamilyDecision, StringComparison.Ordinal);
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));
@@ -4951,6 +5514,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         {
             "ProcessArtifactExpectationMatcher.cs",
             "ProcessArtifactExpectationSatisfactionAdapter.cs",
+            "ProcessArtifactProjectionEvidenceDescriptorAdapter.cs",
             "ProcessArtifactRecordedSatisfactionRules.cs",
             "ProcessArtifactValidationDescriptorAdapter.cs",
             "ProcessCoreArtifactModelAdapters.cs",
@@ -4963,6 +5527,9 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "ProcessDispatchRouteModelAdapters.cs",
             "ProcessDispatchRunClosureGuardService.cs",
             "ProcessDispatchStartTransitionPlanner.cs",
+            "ProcessExecutionEvidenceDescriptorAdapter.cs",
+            "ProcessFinalizerEvidenceDescriptorAdapter.cs",
+            "ProcessRetryDiagnosticDescriptorAdapter.cs",
             "ProcessRunAutomationDispatchService.Concurrency.cs",
             "ProcessSubprocessArtifactSourceResolver.cs",
             "ProcessSubprocessLifecycleRules.cs",

@@ -43,15 +43,16 @@ internal static class ProcessProviderNativeBrowserOutputFacts
         }
 
         var browserWorkingDirectory = ResolveProviderNativeBrowserWorkingDirectory(detail);
-        if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
-        {
-            return true;
-        }
-
-        return matchingOutputFiles.Any(outputFile =>
-            tryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFile, out var fullPath) &&
-            File.Exists(fullPath) &&
-            new FileInfo(fullPath).Length > 0);
+        var hasMatchedOutput = string.IsNullOrWhiteSpace(browserWorkingDirectory) ||
+                               matchingOutputFiles.Any(outputFile =>
+                                   tryResolveSafeBrowserOutputPath(browserWorkingDirectory, outputFile, out var fullPath) &&
+                                   File.Exists(fullPath) &&
+                                   new FileInfo(fullPath).Length > 0);
+        var descriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProviderNativeBrowserEvidence(
+            expectedToolName,
+            hasDeclaredPath: true,
+            hasMatchedOutput);
+        return descriptor.CanSatisfyRequiredArtifact;
     }
 
     internal static bool TryResolveRequestedManagedPath(

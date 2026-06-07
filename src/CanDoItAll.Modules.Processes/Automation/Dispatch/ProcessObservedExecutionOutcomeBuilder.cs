@@ -25,6 +25,7 @@ internal static class ProcessObservedExecutionOutcomeBuilder
     {
         ArgumentNullException.ThrowIfNull(run);
 
-        return $"AgentFramework run '{run.Title}' is still {run.State}; automation will observe it again after it becomes terminal or stale.";
+        var runEvidence = ProcessExecutionEvidenceDescriptorAdapter.DescribeRun(run);
+        return $"AgentFramework run '{run.Title}' is still {runEvidence.State}; automation will observe it again after it becomes terminal or stale.";
     }
 }

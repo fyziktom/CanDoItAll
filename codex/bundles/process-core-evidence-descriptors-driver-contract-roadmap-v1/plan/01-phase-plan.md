@@ -33,6 +33,10 @@ flowchart TD
   P13 --> P14
 ```
 
+## Execution Order
+- Execute subbundles strictly in numeric order from SB001 through SB042.
+- Stop at each critical gate before starting the next phase.
+- Reopen prerequisite subbundles if later build, test, source-scan, adapter, or driver-token proof weakens an earlier gate.
 ## Phases
 
 ### P01 — Baseline, build-warning and Core/driver guard
@@ -123,5 +127,6 @@ flowchart TD
 - **SB042** — gate for P14: Roadmap handoff for next bundle
 
 ## Phase Gates
-
-Every third subbundle is a gate. Downstream phases must stop if the gate fails. Gate proof must include build/test/source scan evidence appropriate to the phase.
+- Every third subbundle is a gate.
+- Downstream phases must stop if the gate fails.
+- Gate proof must include build, test, source-scan, anti-stub, and driver-token evidence appropriate to the phase.

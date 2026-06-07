@@ -1,0 +1,2 @@
+Generated 387 API surface lines at C:\repositories\CanDoItAll\codex\bundles\process-core-evidence-descriptors-driver-contract-roadmap-v1\proof\SB009\transcripts\current-core-public-api-surface-after-finalizer.txt
+ExitCode: 0

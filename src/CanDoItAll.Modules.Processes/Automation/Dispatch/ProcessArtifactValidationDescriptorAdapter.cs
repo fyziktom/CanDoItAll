@@ -16,8 +16,8 @@ internal static class ProcessArtifactValidationDescriptorAdapter
         ProcessArtifactProjectionSourceKind sourceKind)
     {
         var descriptor = global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules
-            .Describe(ToCoreProjectionSourceKind(sourceKind));
-        return FromCoreProducerKind(descriptor.ProducerKind);
+            .Describe(ProcessCoreArtifactModelAdapters.ToCoreProjectionSourceKind(sourceKind));
+        return ProcessCoreArtifactModelAdapters.FromCoreProducerKind(descriptor.ProducerKind);
     }
 
     public static bool IsProducerAllowedForMode(
@@ -27,7 +27,7 @@ internal static class ProcessArtifactValidationDescriptorAdapter
         return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactValidationPolicyRules
             .IsProducerAllowedForMode(
                 ToCoreExpectationMode(mode),
-                ToCoreProducerKind(producerKind));
+                ProcessCoreArtifactModelAdapters.ToCoreProducerKind(producerKind));
     }
 
     public static bool RequiresManagedEvidencePath(
@@ -37,7 +37,7 @@ internal static class ProcessArtifactValidationDescriptorAdapter
         return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactValidationPolicyRules
             .RequiresManagedEvidencePath(
                 ToCoreExpectationMode(mode),
-                ToCoreProducerKind(producerKind));
+                ProcessCoreArtifactModelAdapters.ToCoreProducerKind(producerKind));
     }
 
     public static bool RequiresStoredArtifactContent(
@@ -50,7 +50,7 @@ internal static class ProcessArtifactValidationDescriptorAdapter
             .RequiresStoredArtifactContent(
                 expectationIsRequired,
                 ToCoreExpectationMode(mode),
-                ToCoreProducerKind(producerKind),
+                ProcessCoreArtifactModelAdapters.ToCoreProducerKind(producerKind),
                 managedStoragePath);
     }
 
@@ -66,26 +66,6 @@ internal static class ProcessArtifactValidationDescriptorAdapter
             ToCoreSensitivityLevel(expectation.SensitivityLevel),
             expectation.ValidationRequirementSummary,
             expectation.AllowedFutureUsageSummary);
-    }
-
-    private static global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind ToCoreProjectionSourceKind(
-        ProcessArtifactProjectionSourceKind sourceKind)
-    {
-        return sourceKind switch
-        {
-            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.AgentExecutionArtifact,
-            ProcessArtifactProjectionSourceKind.WorkspaceWrite => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.FileWrite,
-            ProcessArtifactProjectionSourceKind.ExistingManagedFile => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.ExistingManagedFile,
-            ProcessArtifactProjectionSourceKind.AssistantResponse => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.AssistantResponse,
-            ProcessArtifactProjectionSourceKind.WorkflowRun => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.WorkflowRun,
-            ProcessArtifactProjectionSourceKind.WorkflowArtifact => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.WorkflowArtifact,
-            ProcessArtifactProjectionSourceKind.SubprocessArtifact => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.SubprocessArtifact,
-            ProcessArtifactProjectionSourceKind.CompletedDecision => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.CompletedDecision,
-            ProcessArtifactProjectionSourceKind.ProcessMock => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.ProcessMock,
-            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.ProviderNativeBrowser,
-            ProcessArtifactProjectionSourceKind.Manual => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.Manual,
-            _ => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind.Unknown
-        };
     }
 
     private static global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactExpectationMode ToCoreExpectationMode(
@@ -115,48 +95,6 @@ internal static class ProcessArtifactValidationDescriptorAdapter
             global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactExpectationMode.RuntimeProof => ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
             global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactExpectationMode.RecoveryDiagnostic => ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RecoveryDiagnostic,
             _ => ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative
-        };
-    }
-
-    private static global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind ToCoreProducerKind(
-        ProcessRunAutomationDispatchService.ProcessArtifactProducerKind producerKind)
-    {
-        return producerKind switch
-        {
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AgentExecutionArtifact => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.AgentExecutionArtifact,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkspaceWrite => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.FileWrite,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ExistingManagedFile => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ExistingManagedFile,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AssistantResponse => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.AssistantResponse,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.CompletedDecision => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.CompletedDecision,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProcessMock => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ProcessMock,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProviderNativeBrowser => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ProviderNativeBrowser,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowRun => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.WorkflowRun,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowArtifact => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.WorkflowArtifact,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.SubprocessArtifact => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.SubprocessArtifact,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ManagerRecovery => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ManagerRecovery,
-            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Manual => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.Manual,
-            _ => global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.Unknown
-        };
-    }
-
-    private static ProcessRunAutomationDispatchService.ProcessArtifactProducerKind FromCoreProducerKind(
-        global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind producerKind)
-    {
-        return producerKind switch
-        {
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.AgentExecutionArtifact => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AgentExecutionArtifact,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.FileWrite => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkspaceWrite,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ExistingManagedFile => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ExistingManagedFile,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.AssistantResponse => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AssistantResponse,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.CompletedDecision => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.CompletedDecision,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ProcessMock => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProcessMock,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ProviderNativeBrowser => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProviderNativeBrowser,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.WorkflowRun => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowRun,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.WorkflowArtifact => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowArtifact,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.SubprocessArtifact => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.SubprocessArtifact,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.ManagerRecovery => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ManagerRecovery,
-            global::CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind.Manual => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Manual,
-            _ => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Unknown
         };
     }
 

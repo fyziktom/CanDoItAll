@@ -50,7 +50,7 @@ internal static class ProcessArtifactProjectionLineageBuilder
     {
         ArgumentNullException.ThrowIfNull(recoveryContext);
 
-        return new ProcessArtifactProjectionLineage
+        var lineage = new ProcessArtifactProjectionLineage
         {
             SourceKind = sourceKind,
             SourceExecutionRunId = sourceExecutionRunId,
@@ -61,6 +61,14 @@ internal static class ProcessArtifactProjectionLineageBuilder
             ReworkPacketId = recoveryContext.ReworkPacketId,
             SourceExternalReferenceKey = sourceExternalReferenceKey
         };
+        var descriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeLineage(lineage);
+        if (descriptor.HasRecoveryLineage != recoveryContext.HasRecoveryLineage)
+        {
+            throw new InvalidOperationException(
+                $"Projection lineage recovery descriptor mismatch for source kind {sourceKind}.");
+        }
+
+        return lineage;
     }
 
     public static string BuildProvenance(

@@ -7,12 +7,12 @@
 - Runtime/service refactor remains backend-only; UI/browser validation is N/A unless source changes unexpectedly touch UI files.
 
 ## Critical Path Risks
-1. **Core creep**: deterministic evidence descriptors may accidentally pull execution/finalizer/application behavior into Core.
-2. **Driver API creep**: helper-driver vocabulary may become production contracts before permission/audit/sandbox ownership is ready.
-3. **Adapter leakage**: Core consumers may bypass explicit module adapters or hide source payloads.
-4. **Warning normalization**: build warning cleanup can be treated as unrelated and skipped, weakening future gates.
-5. **Proof weakness**: broad documentation can make progress look larger than source changes. Each phase needs executable source scans/tests.
-6. **Side-effect confusion**: verification-only drivers must not mutate process state, write artifacts, run shell commands, call Office/Graph, or trigger retries.
+- **Core creep**: deterministic evidence descriptors may accidentally pull execution/finalizer/application behavior into Core.
+- **Driver API creep**: helper-driver vocabulary may become production contracts before permission/audit/sandbox ownership is ready.
+- **Adapter leakage**: Core consumers may bypass explicit module adapters or hide source payloads.
+- **Warning normalization**: build warning cleanup can be treated as unrelated and skipped, weakening future gates.
+- **Proof weakness**: broad documentation can make progress look larger than source changes. Each phase needs executable source scans/tests.
+- **Side-effect confusion**: verification-only drivers must not mutate process state, write artifacts, run shell commands, call Office/Graph, or trigger retries.
 
 ## Validation Risks
 - Full integration tests can be slow. Require focused integration matrix plus attempted broad integration if feasible.
@@ -25,3 +25,4 @@
 - Any Core public API changes without the public API inventory and architecture snapshot update.
 - Any route/subprocess/artifact parity test fails.
 - Any build warning is newly introduced by this bundle or the current 3-warning baseline is not explicitly closed or deferred.
+

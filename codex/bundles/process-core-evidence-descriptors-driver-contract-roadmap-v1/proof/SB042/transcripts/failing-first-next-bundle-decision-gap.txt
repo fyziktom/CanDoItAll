@@ -1,0 +1,11 @@
+ExitCode: 1
+
+Pre-SB040/SB041 gap:
+- Stable Core and driver roadmap updates existed only as phase decisions, not as final next-bundle closure.
+- Without an explicit next-bundle decision, the bundle could close without saying whether to continue Core expansion, driver-contract prerequisites, or stabilization cleanup.
+
+Expected repair:
+- Add stable Core roadmap update.
+- Add driver roadmap update.
+- Add next bundle decision.
+- Keep production driver implementation and broad Core runtime extraction deferred.

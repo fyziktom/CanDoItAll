@@ -1,0 +1,10 @@
+ExitCode: 1
+
+Pre-SB025/SB026 gap:
+- Domain lane prose existed, but the bundle did not yet carry concrete readonly evidence schemas for .NET/Rust, Office, business-analysis, and runtime verification lanes.
+- Without schema denial proof, the lanes could be misread as approval for command execution, Graph calls, document mutation, workspace writes, or business-record mutation.
+
+Expected repair:
+- Add readonly evidence schemas.
+- Add architecture tests asserting the schemas stay read-only.
+- Run source scans proving production driver APIs were not added.

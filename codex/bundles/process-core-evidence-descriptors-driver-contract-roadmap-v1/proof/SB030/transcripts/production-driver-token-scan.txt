@@ -1,0 +1,5 @@
+Production process-driver token scan for SB030
+Pattern: IProcessDriverPack|IProcessDriverRegistry|ProcessDriverRegistry|ProcessDriverPack|ProcessDriverRuntimeSelector|ProcessDriverManagerCommand|ProcessDriverRuntime|ProcessDriverProvider
+Scope: src/CanDoItAll.Processes.Core, src/CanDoItAll.Processes.Contracts, src/CanDoItAll.Modules.Processes
+MatchCount: 0
+Result: Passed - no production process-driver pack, registry, selector, runtime, provider, or manager-command APIs were added.

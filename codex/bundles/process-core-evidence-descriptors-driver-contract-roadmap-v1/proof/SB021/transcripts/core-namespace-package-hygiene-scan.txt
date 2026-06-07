@@ -1,0 +1,8 @@
+Core namespace/package hygiene scan
+SourceFileCount: 15
+Namespaces: CanDoItAll.Processes.Core.Artifacts, CanDoItAll.Processes.Core.Diagnostics, CanDoItAll.Processes.Core.Execution, CanDoItAll.Processes.Core.Finalization, CanDoItAll.Processes.Core.Routing, CanDoItAll.Processes.Core.Subprocess
+UnexpectedNamespaceCount: 0
+BroadHelperOrDriverTypeTokenCount: 0
+MutableServiceApiTokenCount: 0
+TopLevelSourceDirectories: Artifacts, Diagnostics, Execution, Finalization, Routing, Subprocess
+Result: Passed - Core namespaces are stable, package-free, and contain no broad helper/service/registry/driver API families.

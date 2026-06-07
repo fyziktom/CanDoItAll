@@ -1,0 +1,11 @@
+ExitCode: 1
+
+Pre-SB022/SB023 gap:
+- The roadmap named future driver permission modes and lane denials, but the bundle did not yet have an auditable requirement model or negative scenario matrix.
+- Without architecture-test and source-scan proof, a proposal-only bundle could accidentally grow production driver registry, runtime, or manager-command surface.
+
+Expected repair:
+- Add permission/audit requirements.
+- Add negative driver scenarios.
+- Add architecture tests that assert the proposal remains docs/tests only.
+- Run production process-driver token, UI/media, and anti-stub scans.

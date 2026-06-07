@@ -1,0 +1,7 @@
+D879216A6714F75436E3FE27437CE1B27DC4E5F0D7474E0AD9B644B0009A728A codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/08-driver-permission-audit-requirements.md
+EBE54ABE0C05F22DF2E4471BA5F751C0491E67999585F2C7BC73F623E73CD467 codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/09-driver-negative-scenarios.md
+94EB8AFBDAC3F53E163054E912C9FB8275D8C59EF5FC4C6871C1AEE91E74FC3C codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/10-domain-driver-readonly-evidence-schemas.md
+438A0C609B0422BFB6294B0888BCB7BE3B5689EF269B3D8FC93D7403873F5E3A codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/11-production-driver-implementation-decision.md
+7DA2F2FF7DB795195C3F88F0661FCECC3CC9653A7517217D1F106DC280FA9135 codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/12-core-extraction-scorecard.md
+822AA58FAC6383857D846419F0B5386F61A12ADEDAD3E8CB5C2B43793D79ACC0 codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/13-next-pure-family-decision.md
+89932F34BD10EE1E977A1F046EB02E8844224C0AE7A01F34569B4F0C48C9CDE5 tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs

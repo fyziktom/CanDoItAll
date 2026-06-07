@@ -1,0 +1,47 @@
+Allowed Core consumers:
+- ProcessArtifactExpectationMatcher.cs
+- ProcessArtifactExpectationSatisfactionAdapter.cs
+- ProcessArtifactProjectionEvidenceDescriptorAdapter.cs
+- ProcessArtifactRecordedSatisfactionRules.cs
+- ProcessArtifactValidationDescriptorAdapter.cs
+- ProcessCoreArtifactModelAdapters.cs
+- ProcessDispatchCandidateHeaderSelector.cs
+- ProcessDispatchCandidateHydrationLoader.cs
+- ProcessDispatchRouteExecutionModels.cs
+- ProcessDispatchRouteFacets.cs
+- ProcessDispatchRouteHandlerPipeline.cs
+- ProcessDispatchRouteHandlers.cs
+- ProcessDispatchRouteModelAdapters.cs
+- ProcessDispatchRunClosureGuardService.cs
+- ProcessDispatchStartTransitionPlanner.cs
+- ProcessExecutionEvidenceDescriptorAdapter.cs
+- ProcessFinalizerEvidenceDescriptorAdapter.cs
+- ProcessRetryDiagnosticDescriptorAdapter.cs
+- ProcessRunAutomationDispatchService.Concurrency.cs
+- ProcessSubprocessArtifactSourceResolver.cs
+- ProcessSubprocessLifecycleRules.cs
+- ProcessTransitionIntentAdapters.cs
+
+Actual Core consumers:
+- ProcessArtifactExpectationMatcher.cs
+- ProcessArtifactExpectationSatisfactionAdapter.cs
+- ProcessArtifactProjectionEvidenceDescriptorAdapter.cs
+- ProcessArtifactRecordedSatisfactionRules.cs
+- ProcessArtifactValidationDescriptorAdapter.cs
+- ProcessCoreArtifactModelAdapters.cs
+- ProcessDispatchCandidateHeaderSelector.cs
+- ProcessDispatchCandidateHydrationLoader.cs
+- ProcessDispatchRouteExecutionModels.cs
+- ProcessDispatchRouteFacets.cs
+- ProcessDispatchRouteHandlerPipeline.cs
+- ProcessDispatchRouteHandlers.cs
+- ProcessDispatchRouteModelAdapters.cs
+- ProcessDispatchRunClosureGuardService.cs
+- ProcessDispatchStartTransitionPlanner.cs
+- ProcessExecutionEvidenceDescriptorAdapter.cs
+- ProcessFinalizerEvidenceDescriptorAdapter.cs
+- ProcessRetryDiagnosticDescriptorAdapter.cs
+- ProcessRunAutomationDispatchService.Concurrency.cs
+- ProcessSubprocessArtifactSourceResolver.cs
+- ProcessSubprocessLifecycleRules.cs
+- ProcessTransitionIntentAdapters.cs

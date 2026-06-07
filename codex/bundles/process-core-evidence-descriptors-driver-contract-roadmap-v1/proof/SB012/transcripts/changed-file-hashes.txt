@@ -1,0 +1,7 @@
+SB012-DIAGNOSTIC-001 changed file SHA-256 hashes
+AC4BD2B655B55D2AE1A0B52B2008F6E29AC3C510BBDCFE252742C0271C246471 repo://src/CanDoItAll.Processes.Core/Diagnostics/ProcessRetryDiagnosticDescriptors.cs
+202BF62BC97A9C95CCCD4A8E05D97331DFF65C1D7B50C363272D808E90F81956 repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRetryDiagnosticDescriptorAdapter.cs
+54D62B0F26EDE67F2C76F5F9FF7515BC62FFBF7D7C773954A405997CAC5952BA repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs
+5AEDE72F85E0B903D26EF41A431F38AAC849C3C6CB8FD2C4D0571EA3AE6C2028 repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+936407A05A66A0EF2E2C0845DC9EA4A75EE3D4276C7400F0817522680A2164AC repo://codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1/architecture/05-core-consumer-allowed-call-site-map.md
+ExitCode: 0

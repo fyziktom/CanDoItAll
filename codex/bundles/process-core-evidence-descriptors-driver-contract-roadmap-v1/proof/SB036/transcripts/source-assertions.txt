@@ -1,0 +1,8 @@
+SB034-SB036 broad smoke source assertions
+- Final solution build passed with 0 warnings and 0 errors.
+- Full unit tests passed: 1046/1046.
+- Focused integration matrix passed: 540/540.
+- Core remains dependency-clean and free of forbidden side-effect tokens.
+- No production process-driver APIs were introduced.
+- No UI/media drift or stub markers were added.
+- Execution report keeps separate rows for SB001-SB042.

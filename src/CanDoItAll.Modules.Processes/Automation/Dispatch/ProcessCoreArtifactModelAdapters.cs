@@ -69,6 +69,68 @@ internal static class ProcessCoreArtifactModelAdapters
         };
     }
 
+    public static ProcessCoreArtifactProjectionSourceKind ToCoreProjectionSourceKind(
+        ProcessArtifactProjectionSourceKind sourceKind)
+    {
+        return sourceKind switch
+        {
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact => ProcessCoreArtifactProjectionSourceKind.AgentExecutionArtifact,
+            ProcessArtifactProjectionSourceKind.WorkspaceWrite => ProcessCoreArtifactProjectionSourceKind.FileWrite,
+            ProcessArtifactProjectionSourceKind.ExistingManagedFile => ProcessCoreArtifactProjectionSourceKind.ExistingManagedFile,
+            ProcessArtifactProjectionSourceKind.AssistantResponse => ProcessCoreArtifactProjectionSourceKind.AssistantResponse,
+            ProcessArtifactProjectionSourceKind.WorkflowRun => ProcessCoreArtifactProjectionSourceKind.WorkflowRun,
+            ProcessArtifactProjectionSourceKind.WorkflowArtifact => ProcessCoreArtifactProjectionSourceKind.WorkflowArtifact,
+            ProcessArtifactProjectionSourceKind.SubprocessArtifact => ProcessCoreArtifactProjectionSourceKind.SubprocessArtifact,
+            ProcessArtifactProjectionSourceKind.CompletedDecision => ProcessCoreArtifactProjectionSourceKind.CompletedDecision,
+            ProcessArtifactProjectionSourceKind.ProcessMock => ProcessCoreArtifactProjectionSourceKind.ProcessMock,
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser => ProcessCoreArtifactProjectionSourceKind.ProviderNativeBrowser,
+            ProcessArtifactProjectionSourceKind.Manual => ProcessCoreArtifactProjectionSourceKind.Manual,
+            _ => ProcessCoreArtifactProjectionSourceKind.Unknown
+        };
+    }
+
+    public static ProcessCoreArtifactProducerKind ToCoreProducerKind(
+        ProcessRunAutomationDispatchService.ProcessArtifactProducerKind producerKind)
+    {
+        return producerKind switch
+        {
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AgentExecutionArtifact => ProcessCoreArtifactProducerKind.AgentExecutionArtifact,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkspaceWrite => ProcessCoreArtifactProducerKind.FileWrite,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ExistingManagedFile => ProcessCoreArtifactProducerKind.ExistingManagedFile,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AssistantResponse => ProcessCoreArtifactProducerKind.AssistantResponse,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.CompletedDecision => ProcessCoreArtifactProducerKind.CompletedDecision,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProcessMock => ProcessCoreArtifactProducerKind.ProcessMock,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProviderNativeBrowser => ProcessCoreArtifactProducerKind.ProviderNativeBrowser,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowRun => ProcessCoreArtifactProducerKind.WorkflowRun,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowArtifact => ProcessCoreArtifactProducerKind.WorkflowArtifact,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.SubprocessArtifact => ProcessCoreArtifactProducerKind.SubprocessArtifact,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ManagerRecovery => ProcessCoreArtifactProducerKind.ManagerRecovery,
+            ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Manual => ProcessCoreArtifactProducerKind.Manual,
+            _ => ProcessCoreArtifactProducerKind.Unknown
+        };
+    }
+
+    public static ProcessRunAutomationDispatchService.ProcessArtifactProducerKind FromCoreProducerKind(
+        ProcessCoreArtifactProducerKind producerKind)
+    {
+        return producerKind switch
+        {
+            ProcessCoreArtifactProducerKind.AgentExecutionArtifact => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AgentExecutionArtifact,
+            ProcessCoreArtifactProducerKind.FileWrite => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkspaceWrite,
+            ProcessCoreArtifactProducerKind.ExistingManagedFile => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ExistingManagedFile,
+            ProcessCoreArtifactProducerKind.AssistantResponse => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.AssistantResponse,
+            ProcessCoreArtifactProducerKind.CompletedDecision => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.CompletedDecision,
+            ProcessCoreArtifactProducerKind.ProcessMock => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProcessMock,
+            ProcessCoreArtifactProducerKind.ProviderNativeBrowser => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ProviderNativeBrowser,
+            ProcessCoreArtifactProducerKind.WorkflowRun => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowRun,
+            ProcessCoreArtifactProducerKind.WorkflowArtifact => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.WorkflowArtifact,
+            ProcessCoreArtifactProducerKind.SubprocessArtifact => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.SubprocessArtifact,
+            ProcessCoreArtifactProducerKind.ManagerRecovery => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.ManagerRecovery,
+            ProcessCoreArtifactProducerKind.Manual => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Manual,
+            _ => ProcessRunAutomationDispatchService.ProcessArtifactProducerKind.Unknown
+        };
+    }
+
     private static ProcessCoreArtifactTrustRequirement ToCoreTrustRequirement(
         ProcessArtifactTrustRequirement trustRequirement)
     {

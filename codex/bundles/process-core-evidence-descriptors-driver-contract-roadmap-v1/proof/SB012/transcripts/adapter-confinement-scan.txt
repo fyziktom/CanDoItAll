@@ -1,0 +1,5 @@
+SB012-BOUNDARY-001 dispatch adapter confinement scan
+No unauthorized Core references found in dispatch side-effect files.
+Only explicitly mapped adapter files consume CanDoItAll.Processes.Core.
+SB012-DIAGNOSTIC-001 ProcessRetryDiagnosticDescriptorAdapter is the retry/provider diagnostics bridge.
+ExitCode: 0

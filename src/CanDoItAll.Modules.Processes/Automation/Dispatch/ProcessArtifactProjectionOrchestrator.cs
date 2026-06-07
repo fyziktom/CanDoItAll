@@ -19,6 +19,18 @@ internal sealed class ProcessArtifactProjectionOrchestrator
             facets.ExpectationMatcher,
             facets.CandidateState);
 
+        var projectionSourceOrder = new[]
+        {
+            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+            ProcessArtifactProjectionSourceKind.ProcessMock,
+            ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+            ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+            ProcessArtifactProjectionSourceKind.AssistantResponse,
+            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+            ProcessArtifactProjectionSourceKind.CompletedDecision
+        };
+        ProcessArtifactProjectionEvidenceDescriptorAdapter.VerifyProjectionSourceOrder(projectionSourceOrder);
+
         return new ProcessArtifactProjectionOrchestrator(
             new IProcessArtifactProjectionSourceCoordinator[]
             {

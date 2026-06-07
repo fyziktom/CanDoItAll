@@ -1,0 +1,5 @@
+Command: semantic closure assertion for SB003 warning and boundary gate
+ExitCode: 0
+Output:
+SB003-WARN-001 passed: dotnet build CanDoItAll.slnx completed with 0 warnings after explicit warning fixes.
+SB003-BOUNDARY-001 passed: Core forbidden dependency scan, production process-driver token scan, no UI/media drift scan, and anti-stub scan passed with no forbidden matches.

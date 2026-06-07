@@ -1,0 +1,5 @@
+Command: git diff --name-only -- src tests | rg '\.(razor|css|scss|js|ts|tsx|jsx|png|jpg|jpeg|gif|svg|webp)$'
+ExitCode: 0
+RawExitCode: 1
+Result: Pass: no forbidden matches.
+Output:

@@ -1,0 +1,12 @@
+SB018 semantic closure passed.
+
+The implementation adds `architecture/06-core-adapter-ownership-map.md` and extends the architecture guard so actual dispatch Core consumers must exactly match both the inherited stabilization map and the current bundle ownership map.
+
+Gate proof:
+- Build passed with 0 warnings.
+- Architecture tests passed: 97/97.
+- Exact consumer scan matched allowed consumers.
+- Global using scan found no hidden Core import.
+- Side-effect dispatch scan found no direct Core references outside explicit adapter/route files.
+- Production driver token scan found no process-driver pack or registry API.
+- UI/media and anti-stub audits passed.

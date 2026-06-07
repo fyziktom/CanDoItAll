@@ -14,7 +14,6 @@ using WorkspaceProviderProfile = CanDoItAll.Modules.Workspace.ProviderProfile;
 
 internal sealed class WorkspaceBackedAgentProviderProfileRegistry(
     IDbContextFactory<AppDbContext> dbContextFactory,
-    IDatabaseProfileRuntimeAccessor profileAccessor,
     ISandboxWorkspaceStore store,
     ProviderRegistry providerRegistry,
     IProviderProfileService providerProfileService) : IProviderProfileRegistry

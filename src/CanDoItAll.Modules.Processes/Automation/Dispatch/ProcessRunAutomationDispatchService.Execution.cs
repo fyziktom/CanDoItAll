@@ -232,16 +232,20 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 carriedImplementationProof,
                 attemptNumber,
                 maxExecutionAttempts);
+            var executionEvidence = ProcessExecutionEvidenceDescriptorAdapter.Describe(
+                detail.Run,
+                postAttemptFacts,
+                attemptNumber);
             carriedImplementationProof = postAttemptFacts.CarriedImplementationProof;
 
             finalOutcome = new DispatchExecutionOutcome(
                 detail,
                 responseText,
-                postAttemptFacts.CompletionStatus,
-                postAttemptFacts.CompletionReason,
-                postAttemptFacts.MissingRequiredTools,
-                attemptNumber,
-                postAttemptFacts.SelectedBranchOutcomeId);
+                executionEvidence.Attempt.CompletionStatus,
+                executionEvidence.Attempt.CompletionReason,
+                executionEvidence.Attempt.MissingRequiredTools,
+                executionEvidence.Attempt.AttemptNumber,
+                executionEvidence.Attempt.SelectedBranchOutcomeId);
             CleanupKeptAliveDotnetRunProcesses(candidate, detail);
 
             if (postAttemptFacts.CompletionStatus == ProcessStepRunStatus.Completed)
@@ -258,6 +262,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 cancellationToken);
             if (providerRepair is not null)
             {
+                var providerRepairDiagnostics = ProcessRetryDiagnosticDescriptorAdapter.DescribeProviderRepair(providerRepair);
+                if (!providerRepairDiagnostics.HasRepairOutcome)
+                {
+                    throw new InvalidOperationException("Provider repair diagnostics did not describe the completed provider repair outcome.");
+                }
+
                 logger.LogWarning(
                     "Recovered provider failure for process run {RunId}, step {StepRunId} by switching {AffectedAgentCount} assigned internal agent(s) from '{FailedProviderName}' to '{FallbackProviderName}' ({FallbackModel}). Failure summary: {FailureSummary}",
                     candidate.Run.Id,
@@ -333,6 +343,31 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 await HasPriorNoProgressRetrySignalAsync(candidate, noProgressSignal, cancellationToken))
             {
                 shouldRetry = false;
+            }
+
+            var retryFacts = ProcessRecoveryRetryDecisionRules.CreateFacts(
+                detail,
+                postAttemptFacts.MissingRequiredTools,
+                postAttemptFacts.UnresolvedCriticalToolFailures);
+            var retryDiagnostics = ProcessRetryDiagnosticDescriptorAdapter.DescribeRetry(
+                retryFacts,
+                retryReasons,
+                shouldRetry,
+                attemptNumber,
+                maxExecutionAttempts,
+                TryResolveRecoverableProviderFailure(detail, responseText, out _),
+                TryResolveRecoverableExecutionInterruption(detail, responseText, out _),
+                TryResolveRecoverableFinalizerValidationFailure(candidate, detail, responseText, out _),
+                noProgressSignal);
+            var noProgressDiagnostics = ProcessRetryDiagnosticDescriptorAdapter.DescribeNoProgressSignal(noProgressSignal);
+            if (retryDiagnostics.ShouldRetry != shouldRetry)
+            {
+                throw new InvalidOperationException("Retry diagnostics did not preserve the computed retry decision.");
+            }
+
+            if (noProgressSignal is not null && !noProgressDiagnostics.HasSignal)
+            {
+                throw new InvalidOperationException("No-progress diagnostics did not describe the generated retry signal.");
             }
 
             if (!shouldRetry)

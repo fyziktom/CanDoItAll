@@ -85,9 +85,15 @@ internal sealed class ProcessDispatchFinalizerAdapter(
         CancellationToken cancellationToken)
     {
         var finalizedCompletion = await finalizeStepCompletionAsync(context, dispatchClaim, cancellationToken);
-        if (finalizedCompletion is null)
+        var finalizerEvidence = ProcessFinalizerEvidenceDescriptorAdapter.Describe(context, finalizedCompletion);
+        if (!finalizerEvidence.Result.ShouldApplyTransition)
         {
             return;
+        }
+
+        if (finalizedCompletion is null)
+        {
+            throw new InvalidOperationException("Finalizer evidence requested transition application without a finalized completion result.");
         }
 
         await applyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
