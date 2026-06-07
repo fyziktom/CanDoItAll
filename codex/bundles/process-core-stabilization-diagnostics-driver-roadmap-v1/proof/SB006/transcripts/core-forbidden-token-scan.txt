@@ -1,0 +1,2 @@
+Command: rg forbidden tokens in Process Core after API guard
+ExitCode: 1

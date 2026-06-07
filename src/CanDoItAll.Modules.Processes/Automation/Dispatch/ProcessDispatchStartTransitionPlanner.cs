@@ -1,3 +1,5 @@
+using CanDoItAll.Processes.Core.Routing;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessDispatchStartTransitionPlanner
@@ -7,30 +9,11 @@ internal static class ProcessDispatchStartTransitionPlanner
         Guid stepRunConcurrencyToken,
         string automationActor)
     {
-        if (routeSnapshot.StepRunId == Guid.Empty)
-        {
-            throw new ArgumentException("Step run id must be set.", nameof(routeSnapshot));
-        }
-
-        if (stepRunConcurrencyToken == Guid.Empty)
-        {
-            throw new ArgumentException("Step run concurrency token must be set.", nameof(stepRunConcurrencyToken));
-        }
-
-        if (string.IsNullOrWhiteSpace(automationActor))
-        {
-            throw new ArgumentException("Automation actor must be set.", nameof(automationActor));
-        }
-
-        return new ProcessStepTransitionRequest
-        {
-            StepRunId = routeSnapshot.StepRunId,
-            StepRunConcurrencyToken = stepRunConcurrencyToken,
-            TargetStatus = ProcessStepRunStatus.InProgress,
-            Reason = $"Started by the durable process automation dispatcher ({routeSnapshot.Trigger.NormalizedTrigger}).",
-            DecidedBy = automationActor,
-            SuppressAutomationDispatch = true
-        };
+        return ProcessTransitionIntentAdapters.ToTransitionRequest(
+            ProcessDispatchTransitionIntentRules.BuildStartTransitionIntent(
+                routeSnapshot,
+                stepRunConcurrencyToken,
+                automationActor));
     }
 
     public static bool ShouldSkipFreshAutomationDispatch(

@@ -1,0 +1,50 @@
+# Dispatch files containing explicit Process Core references
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactExpectationMatcher.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactExpectationSatisfactionAdapter.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactRecordedSatisfactionRules.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactValidationDescriptorAdapter.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHeaderSelector.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationLoader.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteExecutionModels.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteFacets.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlerPipeline.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteModelAdapters.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRunClosureGuardService.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessArtifactSourceResolver.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessLifecycleRules.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTransitionIntentAdapters.cs
+
+# Global using check
+GlobalUsings.cs contains no Process Core global using.
+
+# Allow-list map assertions
+2307:    public void Process_core_stabilization_SB022_INV_001_limits_process_core_consumers_to_explicit_call_site_map()
+2327:            "05-core-consumer-allowed-call-site-map.md"));
+2328:        var expectedFiles = CreateAllowedDispatchProcessCoreConsumerFiles()
+4323:        var allowedCoreAdapterFiles = CreateAllowedDispatchProcessCoreConsumerFiles();
+4760:        var allowedCoreAdapterFiles = CreateAllowedDispatchProcessCoreConsumerFiles();
+4771:    private static HashSet<string> CreateAllowedDispatchProcessCoreConsumerFiles()
+
+# Dependency guard assertions
+69:        Assert.Contains(@"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />", coreProject, StringComparison.Ordinal);
+70:        Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
+465:        Assert.DoesNotContain("<ProjectReference", project, StringComparison.OrdinalIgnoreCase);
+466:        Assert.DoesNotContain("<PackageReference", project, StringComparison.OrdinalIgnoreCase);
+2350:    public void Process_core_stabilization_SB023_INV_001_hardens_core_dependency_guard_against_runtime_and_driver_dependencies()
+2356:        var forbiddenCoreSourcePatterns = new[]
+2380:            @"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />",
+2383:        Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
+2388:        foreach (var forbiddenPattern in forbiddenCoreSourcePatterns)
+4699:            @"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />",
+4702:        Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
+
+# Architecture map entries
+7:## Project-Level References
+15:| `src/CanDoItAll.Modules.Processes/GlobalUsings.cs` | Must not contain `CanDoItAll.Processes.Core`; Core consumption must be visible in the local file. |
+23:| `ProcessArtifactValidationDescriptorAdapter.cs` | Artifacts | Adapter wrapper for projection/validation descriptors and producer policy. |
+33:| `ProcessDispatchRouteHandlers.cs` | Routing | Executes route stages using pure Core route decisions. |
+39:## Denied Consumers

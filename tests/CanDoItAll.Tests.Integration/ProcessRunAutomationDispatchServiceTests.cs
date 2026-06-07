@@ -15,12 +15,22 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using CoreArtifactExpectationMatcher = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationMatcher;
+using CoreArtifactExpectationMatchReason = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationMatchReason;
+using CoreArtifactExpectationSatisfactionReason = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSatisfactionReason;
+using CoreArtifactExpectationSatisfactionRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSatisfactionRules;
 using CoreArtifactExpectationSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSnapshot;
+using CoreArtifactExpectationMode = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactExpectationMode;
 using CoreArtifactKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactKind;
+using CoreArtifactProducerKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProducerKind;
+using CoreArtifactProjectionEligibilityRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules;
+using CoreArtifactProjectionSourceKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactProjectionSourceKind;
 using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
 using CoreArtifactRecordedSatisfactionRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordedSatisfactionRules;
 using CoreArtifactResolver = CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceResolver;
+using CoreArtifactValidationPolicyRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactValidationPolicyRules;
+using CoreArtifactValidationRequirementDescriptorRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactValidationRequirementDescriptorRules;
 using CoreSensitivityLevel = CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel;
+using CoreSubprocessArtifactSourceDiagnosticReason = CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnosticReason;
 using CoreSubprocessLifecycleRules = CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules;
 using CoreSubprocessRunFacts = CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts;
 using CoreTrustRequirement = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustRequirement;
@@ -559,6 +569,10 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ambiguousParentExpectations,
             ambiguousParentExpectations[0],
             out var ambiguousDiagnostic);
+        var ambiguousSourceDiagnostic = CoreArtifactResolver.DiagnoseSourceArtifact(
+            [],
+            ambiguousParentExpectations,
+            ambiguousParentExpectations[0]);
 
         var selectedArtifactId = Guid.NewGuid();
         var olderArtifact = CreateCoreArtifact(Guid.NewGuid(), childExpectationId, DateTimeOffset.UtcNow.AddMinutes(-5));
@@ -569,11 +583,138 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             [positiveExpectation],
             positiveExpectation,
             out var positiveDiagnostic);
+        var positiveSourceDiagnostic = CoreArtifactResolver.DiagnoseSourceArtifact(
+            [olderArtifact, newerArtifact],
+            [positiveExpectation],
+            positiveExpectation);
 
         Assert.Null(ambiguousResult);
         Assert.Contains($"Subprocess child expectation '{childExpectationId:D}' maps to multiple parent artifact expectations.", ambiguousDiagnostic, StringComparison.Ordinal);
+        Assert.False(ambiguousSourceDiagnostic.HasSourceArtifact);
+        Assert.Equal(CoreSubprocessArtifactSourceDiagnosticReason.AmbiguousMapping, ambiguousSourceDiagnostic.Reason);
+        Assert.Equal(ambiguousDiagnostic, ambiguousSourceDiagnostic.Message);
         Assert.Equal(selectedArtifactId, positiveResult?.Id);
         Assert.Equal(string.Empty, positiveDiagnostic);
+        Assert.True(positiveSourceDiagnostic.HasSourceArtifact);
+        Assert.Equal(CoreSubprocessArtifactSourceDiagnosticReason.LatestEligibleMappedArtifact, positiveSourceDiagnostic.Reason);
+        Assert.Equal(2, positiveSourceDiagnostic.EligibleArtifactCount);
+        Assert.Equal(selectedArtifactId, positiveSourceDiagnostic.SourceArtifact?.Id);
+        Assert.Equal(positiveDiagnostic, positiveSourceDiagnostic.Message);
+    }
+
+    [Fact]
+    public void ProcessCoreArtifactExpectationSatisfactionRules_SB016_INV_001_reports_trust_and_sensitivity_failures()
+    {
+        var expectation = CreateCoreExpectation(
+            Guid.NewGuid(),
+            "Restricted approval packet",
+            null,
+            CoreArtifactKind.Evidence,
+            CoreTrustRequirement.HumanApproved,
+            CoreSensitivityLevel.Confidential);
+        var satisfiedArtifact = CreateCoreArtifact(
+            Guid.NewGuid(),
+            expectation.Id,
+            DateTimeOffset.UtcNow,
+            trustStatus: CoreTrustStatus.Approved,
+            sensitivityLevel: CoreSensitivityLevel.Confidential);
+        var lowSensitivityArtifact = CreateCoreArtifact(
+            Guid.NewGuid(),
+            expectation.Id,
+            DateTimeOffset.UtcNow,
+            trustStatus: CoreTrustStatus.Approved,
+            sensitivityLevel: CoreSensitivityLevel.Internal);
+        var lowTrustArtifact = CreateCoreArtifact(
+            Guid.NewGuid(),
+            expectation.Id,
+            DateTimeOffset.UtcNow,
+            trustStatus: CoreTrustStatus.ReviewRequired,
+            sensitivityLevel: CoreSensitivityLevel.Confidential);
+
+        var satisfied = CoreArtifactExpectationSatisfactionRules.Diagnose(satisfiedArtifact, expectation);
+        var lowSensitivity = CoreArtifactExpectationSatisfactionRules.Diagnose(lowSensitivityArtifact, expectation);
+        var lowTrust = CoreArtifactExpectationSatisfactionRules.Diagnose(lowTrustArtifact, expectation);
+
+        Assert.True(satisfied.IsSatisfied);
+        Assert.Equal(CoreArtifactExpectationSatisfactionReason.Satisfied, satisfied.Reason);
+        Assert.False(lowSensitivity.IsSatisfied);
+        Assert.Equal(CoreArtifactExpectationSatisfactionReason.SensitivityTooLow, lowSensitivity.Reason);
+        Assert.False(lowTrust.IsSatisfied);
+        Assert.Equal(CoreArtifactExpectationSatisfactionReason.TrustRequirementNotSatisfied, lowTrust.Reason);
+    }
+
+    [Fact]
+    public void ProcessCoreArtifactProjectionEligibilityRules_SB019_INV_001_describes_projection_sources_without_storage_paths()
+    {
+        var agentExecutionDescriptor = CoreArtifactProjectionEligibilityRules.Describe(
+            CoreArtifactProjectionSourceKind.AgentExecutionArtifact);
+        var completedDecisionDescriptor = CoreArtifactProjectionEligibilityRules.Describe(
+            CoreArtifactProjectionSourceKind.CompletedDecision);
+        var unknownDescriptor = CoreArtifactProjectionEligibilityRules.Describe(
+            CoreArtifactProjectionSourceKind.Unknown);
+
+        Assert.Equal(CoreArtifactProducerKind.AgentExecutionArtifact, agentExecutionDescriptor.ProducerKind);
+        Assert.True(agentExecutionDescriptor.IsRuntimeEvidenceSource);
+        Assert.False(agentExecutionDescriptor.IsRecordOnlySource);
+        Assert.Equal(CoreArtifactProducerKind.CompletedDecision, completedDecisionDescriptor.ProducerKind);
+        Assert.False(completedDecisionDescriptor.IsRuntimeEvidenceSource);
+        Assert.True(completedDecisionDescriptor.IsRecordOnlySource);
+        Assert.Equal(CoreArtifactProducerKind.Unknown, unknownDescriptor.ProducerKind);
+        Assert.False(unknownDescriptor.IsRuntimeEvidenceSource);
+        Assert.False(unknownDescriptor.IsRecordOnlySource);
+    }
+
+    [Fact]
+    public void ProcessCoreArtifactValidationRequirementDescriptorRules_SB020_INV_001_preserves_mode_and_policy_classification()
+    {
+        var runtimeProof = CreateCoreExpectation(
+            Guid.NewGuid(),
+            "Browser screenshot proof",
+            null,
+            CoreArtifactKind.Evidence,
+            validationRequirementSummary: "Must include browser proof and console log.");
+        var explicitRecovery = CreateCoreExpectation(
+            Guid.NewGuid(),
+            "Recovery diagnostic",
+            null,
+            CoreArtifactKind.Brief,
+            validationRequirementSummary: "Artifact mode: RecoveryDiagnostic.");
+        var decision = CreateCoreExpectation(
+            Guid.NewGuid(),
+            "Approval decision",
+            null,
+            CoreArtifactKind.Decision);
+
+        var runtimeDescriptor = CoreArtifactValidationRequirementDescriptorRules.Describe(runtimeProof);
+        var recoveryMode = CoreArtifactValidationRequirementDescriptorRules.ResolveExpectationMode(explicitRecovery);
+        var decisionMode = CoreArtifactValidationRequirementDescriptorRules.ResolveExpectationMode(decision);
+
+        Assert.Equal(runtimeProof.Id, runtimeDescriptor.ExpectationId);
+        Assert.Equal(CoreArtifactExpectationMode.RuntimeProof, runtimeDescriptor.Mode);
+        Assert.Equal(CoreArtifactExpectationMode.RecoveryDiagnostic, recoveryMode);
+        Assert.Equal(CoreArtifactExpectationMode.Decision, decisionMode);
+        Assert.True(CoreArtifactValidationPolicyRules.IsProducerAllowedForMode(
+            CoreArtifactExpectationMode.RuntimeProof,
+            CoreArtifactProducerKind.ProviderNativeBrowser));
+        Assert.False(CoreArtifactValidationPolicyRules.IsProducerAllowedForMode(
+            CoreArtifactExpectationMode.Evidence,
+            CoreArtifactProducerKind.AssistantResponse));
+        Assert.True(CoreArtifactValidationPolicyRules.RequiresManagedEvidencePath(
+            CoreArtifactExpectationMode.Deliverable,
+            CoreArtifactProducerKind.FileWrite));
+        Assert.False(CoreArtifactValidationPolicyRules.RequiresManagedEvidencePath(
+            CoreArtifactExpectationMode.Deliverable,
+            CoreArtifactProducerKind.WorkflowArtifact));
+        Assert.True(CoreArtifactValidationPolicyRules.RequiresStoredArtifactContent(
+            expectationIsRequired: true,
+            CoreArtifactExpectationMode.Narrative,
+            CoreArtifactProducerKind.Manual,
+            "artifact.md"));
+        Assert.False(CoreArtifactValidationPolicyRules.RequiresStoredArtifactContent(
+            expectationIsRequired: false,
+            CoreArtifactExpectationMode.Narrative,
+            CoreArtifactProducerKind.Manual,
+            "artifact.md"));
     }
 
     [Fact]
@@ -611,7 +752,8 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Guid? childExpectationId,
         CoreArtifactKind artifactKind = CoreArtifactKind.Evidence,
         CoreTrustRequirement trustRequirement = CoreTrustRequirement.ReviewRequired,
-        CoreSensitivityLevel sensitivityLevel = CoreSensitivityLevel.Internal)
+        CoreSensitivityLevel sensitivityLevel = CoreSensitivityLevel.Internal,
+        string validationRequirementSummary = "validation summary")
     {
         return new CoreArtifactExpectationSnapshot(
             id,
@@ -620,7 +762,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             IsRequired: true,
             trustRequirement,
             sensitivityLevel,
-            "validation summary",
+            validationRequirementSummary,
             "future usage summary",
             childExpectationId);
     }
@@ -628,15 +770,19 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     private static CoreArtifactRecordSnapshot CreateCoreArtifact(
         Guid id,
         Guid? artifactExpectationId,
-        DateTimeOffset createdAtUtc)
+        DateTimeOffset createdAtUtc,
+        CoreArtifactKind artifactKind = CoreArtifactKind.Evidence,
+        CoreTrustStatus trustStatus = CoreTrustStatus.ReviewRequired,
+        CoreSensitivityLevel sensitivityLevel = CoreSensitivityLevel.Internal,
+        string title = "Signed vendor attestation")
     {
         return new CoreArtifactRecordSnapshot(
             id,
             artifactExpectationId,
-            CoreArtifactKind.Evidence,
-            "Signed vendor attestation",
-            CoreTrustStatus.ReviewRequired,
-            CoreSensitivityLevel.Internal,
+            artifactKind,
+            title,
+            trustStatus,
+            sensitivityLevel,
             createdAtUtc);
     }
 
@@ -1141,6 +1287,11 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             routeSnapshot,
             concurrencyToken,
             ProcessRunAutomationDispatchService.AutomationActor);
+        var intent = ProcessDispatchTransitionIntentRules.BuildStartTransitionIntent(
+            routeSnapshot,
+            concurrencyToken,
+            ProcessRunAutomationDispatchService.AutomationActor);
+        var adaptedRequest = ProcessTransitionIntentAdapters.ToTransitionRequest(intent);
 
         Assert.Equal(stepRunId, request.StepRunId);
         Assert.Equal(concurrencyToken, request.StepRunConcurrencyToken);
@@ -1150,6 +1301,18 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             request.Reason);
         Assert.Equal(ProcessRunAutomationDispatchService.AutomationActor, request.DecidedBy);
         Assert.True(request.SuppressAutomationDispatch);
+        Assert.Equal(request.StepRunId, intent.StepRunId);
+        Assert.Equal(request.StepRunConcurrencyToken, intent.StepRunConcurrencyToken);
+        Assert.Equal(request.TargetStatus, intent.TargetStatus);
+        Assert.Equal(request.Reason, intent.Reason);
+        Assert.Equal(request.DecidedBy, intent.DecidedBy);
+        Assert.Equal(request.SuppressAutomationDispatch, intent.SuppressAutomationDispatch);
+        Assert.Equal(request.StepRunId, adaptedRequest.StepRunId);
+        Assert.Equal(request.StepRunConcurrencyToken, adaptedRequest.StepRunConcurrencyToken);
+        Assert.Equal(request.TargetStatus, adaptedRequest.TargetStatus);
+        Assert.Equal(request.Reason, adaptedRequest.Reason);
+        Assert.Equal(request.DecidedBy, adaptedRequest.DecidedBy);
+        Assert.Equal(request.SuppressAutomationDispatch, adaptedRequest.SuppressAutomationDispatch);
     }
 
     [Fact]
@@ -1346,6 +1509,61 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal(
             ProcessDispatchRouteKind.AgentExecution,
             ProcessDispatchRoutePlanner.ResolveWorkflow(workflowHandled: false).Kind);
+    }
+
+    [Fact]
+    public void ProcessDispatchRoutePlanner_SB007_INV_001_exposes_additive_diagnostics_without_changing_decisions()
+    {
+        var agentRoute = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Work,
+            Guid.NewGuid(),
+            null,
+            null,
+            "step-transition:Completed",
+            null);
+        var subprocessRoute = ProcessDispatchRouteSnapshot.Create(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            ProcessRunStatus.Active,
+            ProcessStepRunStatus.Ready,
+            ProcessStepKind.Subprocess,
+            Guid.Empty,
+            null,
+            null,
+            "step-transition:Completed",
+            null);
+
+        var databaseDiagnostic = ProcessDispatchRoutePlanner.DiagnoseDatabaseRequirement(
+            agentRoute,
+            hasDatabaseRequirementFailure: true);
+        var ignoredDatabaseDiagnostic = ProcessDispatchRoutePlanner.DiagnoseDatabaseRequirement(
+            subprocessRoute,
+            hasDatabaseRequirementFailure: true);
+        var upstreamDiagnostic = ProcessDispatchRoutePlanner.DiagnoseUpstreamMaterialization(materializationRequested: true);
+        var recoveryDiagnostic = ProcessDispatchRoutePlanner.DiagnoseStrandedRecovery(recoveryCompleted: true);
+        var subprocessDiagnostic = ProcessDispatchRoutePlanner.DiagnoseSubprocess(subprocessRoute);
+        var workflowDiagnostic = ProcessDispatchRoutePlanner.DiagnoseWorkflow(workflowHandled: false);
+
+        Assert.Equal(
+            ProcessDispatchRoutePlanner.ResolveDatabaseRequirement(agentRoute, hasDatabaseRequirementFailure: true),
+            databaseDiagnostic.Decision);
+        Assert.Equal(ProcessDispatchRouteDecisionReason.DatabaseRequirementFailure, databaseDiagnostic.Reason);
+        Assert.Equal(
+            ProcessDispatchRoutePlanner.ResolveDatabaseRequirement(subprocessRoute, hasDatabaseRequirementFailure: true),
+            ignoredDatabaseDiagnostic.Decision);
+        Assert.Equal(ProcessDispatchRouteDecisionReason.DatabaseRequirementIgnoredForSubprocess, ignoredDatabaseDiagnostic.Reason);
+        Assert.Equal(ProcessDispatchRoutePlanner.ResolveUpstreamMaterialization(materializationRequested: true), upstreamDiagnostic.Decision);
+        Assert.Equal(ProcessDispatchRouteDecisionReason.UpstreamMaterializationRequested, upstreamDiagnostic.Reason);
+        Assert.Equal(ProcessDispatchRoutePlanner.ResolveStrandedRecovery(recoveryCompleted: true), recoveryDiagnostic.Decision);
+        Assert.Equal(ProcessDispatchRouteDecisionReason.StrandedRecoveryCompleted, recoveryDiagnostic.Reason);
+        Assert.Equal(ProcessDispatchRoutePlanner.ResolveSubprocess(subprocessRoute), subprocessDiagnostic.Decision);
+        Assert.Equal(ProcessDispatchRouteDecisionReason.SubprocessStep, subprocessDiagnostic.Reason);
+        Assert.Equal(ProcessDispatchRoutePlanner.ResolveWorkflow(workflowHandled: false), workflowDiagnostic.Decision);
+        Assert.Equal(ProcessDispatchRouteDecisionReason.WorkflowNotHandled, workflowDiagnostic.Reason);
     }
 
     [Fact]
@@ -15647,6 +15865,89 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void ProcessArtifactExpectationMatcher_SB008_INV_001_exposes_match_diagnostics_without_changing_legacy_match()
+    {
+        var firstEvidenceId = Guid.NewGuid();
+        var secondEvidenceId = Guid.NewGuid();
+        var deliverableId = Guid.NewGuid();
+        var expectedArtifacts = new[]
+        {
+            new ProcessArtifactExpectationSnapshot(
+                deliverableId,
+                ProcessArtifactKind.Deliverable,
+                "Release packet",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Create release packet.",
+                string.Empty),
+            new ProcessArtifactExpectationSnapshot(
+                firstEvidenceId,
+                ProcessArtifactKind.Evidence,
+                "Release packet",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Create release packet evidence.",
+                string.Empty),
+            new ProcessArtifactExpectationSnapshot(
+                secondEvidenceId,
+                ProcessArtifactKind.Evidence,
+                "Second release packet",
+                true,
+                ProcessArtifactTrustRequirement.ReviewRequired,
+                ProcessSensitivityLevel.Internal,
+                "Create second release packet evidence.",
+                string.Empty)
+        };
+
+        var kindDisambiguated = ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch(
+            expectedArtifacts,
+            ProcessArtifactKind.Evidence,
+            item => string.Equals(item.Title, "Release packet", StringComparison.OrdinalIgnoreCase));
+        var legacyMatch = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+            expectedArtifacts,
+            ProcessArtifactKind.Evidence,
+            item => string.Equals(item.Title, "Release packet", StringComparison.OrdinalIgnoreCase));
+        var noMatch = ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch(
+            expectedArtifacts,
+            ProcessArtifactKind.Evidence,
+            item => string.Equals(item.Title, "Missing packet", StringComparison.OrdinalIgnoreCase));
+        var singleStrongMismatchedKind = ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch(
+            expectedArtifacts,
+            ProcessArtifactKind.Evidence,
+            item => item.Id == deliverableId);
+        var ambiguousKind = ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch(
+            expectedArtifacts,
+            ProcessArtifactKind.Evidence,
+            item => item.ArtifactKind == ProcessArtifactKind.Evidence);
+        var ambiguousStrong = ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch(
+            expectedArtifacts,
+            ProcessArtifactKind.Prompt,
+            item => item.Title.Contains("release", StringComparison.OrdinalIgnoreCase));
+
+        Assert.Equal(firstEvidenceId, legacyMatch);
+        Assert.Equal(legacyMatch, kindDisambiguated.MatchedArtifactId);
+        Assert.Equal(CoreArtifactExpectationMatchReason.KindDisambiguated, kindDisambiguated.Reason);
+        Assert.Equal(2, kindDisambiguated.StrongMatchCount);
+        Assert.Equal(1, kindDisambiguated.KindMatchCount);
+        Assert.Null(noMatch.MatchedArtifactId);
+        Assert.Equal(CoreArtifactExpectationMatchReason.NoStrongMatch, noMatch.Reason);
+        Assert.Equal(deliverableId, singleStrongMismatchedKind.MatchedArtifactId);
+        Assert.Equal(CoreArtifactExpectationMatchReason.StrongMatch, singleStrongMismatchedKind.Reason);
+        Assert.Equal(1, singleStrongMismatchedKind.StrongMatchCount);
+        Assert.Equal(0, singleStrongMismatchedKind.KindMatchCount);
+        Assert.Null(ambiguousKind.MatchedArtifactId);
+        Assert.Equal(CoreArtifactExpectationMatchReason.AmbiguousKindMatch, ambiguousKind.Reason);
+        Assert.Equal(2, ambiguousKind.StrongMatchCount);
+        Assert.Equal(2, ambiguousKind.KindMatchCount);
+        Assert.Null(ambiguousStrong.MatchedArtifactId);
+        Assert.Equal(CoreArtifactExpectationMatchReason.AmbiguousStrongMatch, ambiguousStrong.Reason);
+        Assert.Equal(3, ambiguousStrong.StrongMatchCount);
+        Assert.Equal(0, ambiguousStrong.KindMatchCount);
+    }
+
+    [Fact]
     public void ProcessArtifactProjectionPlanner_SB07_INV_001_plans_execution_artifact_without_storage_side_effects()
     {
         var executionRunId = Guid.NewGuid();
@@ -17500,6 +17801,37 @@ Ancestor path to the target work node:
                     context.RecoveryExecutionRunId,
                     context.RecoveredForExecutionRunId));
         }
+    }
+
+    [Fact]
+    public async Task ProcessDispatchFinalizerAdapter_SB011_INV_001_rejects_dispatch_claim_not_created_by_route_adapter()
+    {
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
+            "Reject locally created route claim.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [],
+            []);
+        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var localRouteClaim = new ProcessRouteDispatchClaim(Guid.NewGuid(), "local-claim");
+        var workflowOutcome = ProcessWorkflowExecutionOutcome.CreateHandled(
+            ProcessStepRunStatus.Completed,
+            "workflow completion",
+            new ProcessWorkflowRunLink
+            {
+                WorkflowRunId = Guid.NewGuid()
+            });
+        var adapter = new ProcessDispatchFinalizerAdapter(
+            (_, _, _) => throw new InvalidOperationException("Finalizer should not be called for an unadapted route claim."),
+            (_, _, _, _) => throw new InvalidOperationException("Finalized transition should not be applied for an unadapted route claim."));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            adapter.FinalizeWorkflowCompletionAsync(
+                new ProcessDispatchWorkflowFinalizerInput(routeCandidate, workflowOutcome, localRouteClaim),
+                CancellationToken.None));
+
+        Assert.Contains("must be created by ProcessDispatchRouteModelAdapters", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

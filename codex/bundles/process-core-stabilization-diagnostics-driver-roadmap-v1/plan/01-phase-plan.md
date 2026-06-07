@@ -4,6 +4,12 @@
 
 This bundle uses 12 broader phases and 36 substantial subbundles. It is designed to advance from narrow Core pure-rule expansion toward a stable Process Core and future domain drivers without creating production driver APIs yet.
 
+## Execution Order
+
+- Execute SB001 through SB036 in numeric order.
+- Treat SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, and SB036 as critical stop gates.
+- Do not start a downstream phase until the prior critical gate is complete or honestly blocked.
+
 ## Subbundle Dependency Map
 
 ```mermaid

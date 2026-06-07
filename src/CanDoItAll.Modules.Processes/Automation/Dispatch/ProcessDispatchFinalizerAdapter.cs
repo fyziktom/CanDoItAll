@@ -20,7 +20,7 @@ internal sealed class ProcessDispatchFinalizerAdapter(
         await FinalizeAndApplyAsync(
             candidate,
             ProcessDispatchFinalizerContextFactory.ForWorkflow(candidate, input.WorkflowOutcome),
-            ToDispatcherClaim(input.DispatchClaim),
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -38,7 +38,7 @@ internal sealed class ProcessDispatchFinalizerAdapter(
                 ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.RecoveryOutcome),
                 input.Trigger,
                 input.RenewLeaseAsync),
-            ToDispatcherClaim(input.DispatchClaim),
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -56,7 +56,7 @@ internal sealed class ProcessDispatchFinalizerAdapter(
                 ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.ExecutionOutcome),
                 input.Trigger,
                 input.RenewLeaseAsync),
-            ToDispatcherClaim(input.DispatchClaim),
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -74,7 +74,7 @@ internal sealed class ProcessDispatchFinalizerAdapter(
                 input.SubprocessRunId,
                 input.TerminalStatus,
                 input.TransitionReason),
-            ToDispatcherClaim(input.DispatchClaim),
+            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -93,8 +93,4 @@ internal sealed class ProcessDispatchFinalizerAdapter(
         await applyFinalizedStepTransitionAsync(candidate, finalizedCompletion, dispatchClaim, cancellationToken);
     }
 
-    private static ProcessStepDispatchClaim ToDispatcherClaim(ProcessRouteDispatchClaim dispatchClaim)
-    {
-        return new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken);
-    }
 }

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.Versioning;
 using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
@@ -29,6 +30,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         var startupReceipts = ResolveKeptAliveDotnetRunStartupReceipts(detail);
         if (startupReceipts.Count == 0)
+        {
+            return;
+        }
+
+        if (OperatingSystem.IsBrowser())
         {
             return;
         }
@@ -138,6 +144,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    [UnsupportedOSPlatform("browser")]
     private static IReadOnlyList<int> StopRecordedProcessTree(IReadOnlyList<int> processIds)
     {
         if (OperatingSystem.IsBrowser())
@@ -313,6 +320,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             or StaticWebAssetsAliasCleanupStatus.SkippedMappingMismatch
             or StaticWebAssetsAliasCleanupStatus.Failed;
 
+    [SupportedOSPlatform("windows")]
     private static string? ResolveCurrentSubstDriveTarget(string drive)
     {
         try
@@ -347,6 +355,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
     }
 
+    [SupportedOSPlatform("windows")]
     private static bool TryDismountSubstDrive(string drive, out string failureMessage)
     {
         failureMessage = string.Empty;

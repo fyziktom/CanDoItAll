@@ -7,7 +7,19 @@ internal static class ProcessArtifactExpectationMatcher
         ProcessArtifactKind expectedKind,
         Func<ProcessArtifactExpectationSnapshot, bool> matchesExpectedArtifact)
     {
-        return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+        return DiagnoseStrongExpectedArtifactMatch(
+            expectedArtifacts,
+            expectedKind,
+            matchesExpectedArtifact)
+            .MatchedArtifactId;
+    }
+
+    public static global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationMatchDiagnostic DiagnoseStrongExpectedArtifactMatch(
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
+        ProcessArtifactKind expectedKind,
+        Func<ProcessArtifactExpectationSnapshot, bool> matchesExpectedArtifact)
+    {
+        return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch(
             expectedArtifacts,
             ProcessCoreArtifactModelAdapters.ToCoreArtifactKind(expectedKind),
             matchesExpectedArtifact,

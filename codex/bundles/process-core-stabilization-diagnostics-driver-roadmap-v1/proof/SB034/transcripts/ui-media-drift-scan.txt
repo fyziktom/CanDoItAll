@@ -1,0 +1,2 @@
+No UI, mobile, browser, or media drift was detected in changed files.
+Checked changed files under src, tests, and the current bundle.

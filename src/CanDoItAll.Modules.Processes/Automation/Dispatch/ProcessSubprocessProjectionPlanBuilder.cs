@@ -93,42 +93,7 @@ internal static class ProcessSubprocessProjectionPlanBuilder
         ProcessArtifactRecord artifact,
         ProcessArtifactExpectation expectation)
     {
-        if (artifact.ArtifactKind != expectation.ArtifactKind)
-        {
-            return false;
-        }
-
-        if (artifact.SensitivityLevel < expectation.SensitivityLevel)
-        {
-            return false;
-        }
-
-        if (!SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement))
-        {
-            return false;
-        }
-
-        return artifact.ArtifactExpectationId.HasValue
-            ? artifact.ArtifactExpectationId.Value == expectation.Id
-            : string.Equals(artifact.Title, expectation.Title, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool SatisfiesTrustRequirement(
-        ProcessArtifactTrustStatus trustStatus,
-        ProcessArtifactTrustRequirement trustRequirement)
-    {
-        return trustRequirement switch
-        {
-            ProcessArtifactTrustRequirement.None => true,
-            ProcessArtifactTrustRequirement.ReviewRequired => trustStatus is
-                ProcessArtifactTrustStatus.ReviewRequired or
-                ProcessArtifactTrustStatus.Approved or
-                ProcessArtifactTrustStatus.TrustedSource,
-            ProcessArtifactTrustRequirement.HumanApproved => trustStatus == ProcessArtifactTrustStatus.Approved,
-            ProcessArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessArtifactTrustStatus.Approved,
-            ProcessArtifactTrustRequirement.TrustedSource => trustStatus == ProcessArtifactTrustStatus.TrustedSource,
-            _ => false
-        };
+        return ProcessArtifactExpectationSatisfactionAdapter.SatisfiesArtifactExpectation(artifact, expectation);
     }
 
     private static ProcessSensitivityLevel ResolveSensitivity(

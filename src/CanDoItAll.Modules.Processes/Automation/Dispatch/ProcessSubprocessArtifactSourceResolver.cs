@@ -8,15 +8,26 @@ internal static class ProcessSubprocessArtifactSourceResolver
         ProcessArtifactExpectation expectation,
         out string diagnostic)
     {
-        var sourceArtifact = global::CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
+        var sourceDiagnostic = DiagnoseSourceArtifact(
+            childArtifacts,
+            parentExpectations,
+            expectation);
+        diagnostic = sourceDiagnostic.Message;
+
+        return sourceDiagnostic.SourceArtifact is null
+            ? null
+            : childArtifacts.FirstOrDefault(artifact => artifact.Id == sourceDiagnostic.SourceArtifact.Id);
+    }
+
+    public static global::CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceDiagnostic DiagnoseSourceArtifact(
+        IReadOnlyList<ProcessArtifactRecord> childArtifacts,
+        IReadOnlyList<ProcessArtifactExpectation> parentExpectations,
+        ProcessArtifactExpectation expectation)
+    {
+        return global::CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceResolver.DiagnoseSourceArtifact(
             childArtifacts.Select(ProcessCoreArtifactModelAdapters.ToCoreArtifactRecordSnapshot).ToList(),
             parentExpectations.Select(ProcessCoreArtifactModelAdapters.ToCoreExpectationSnapshot).ToList(),
-            ProcessCoreArtifactModelAdapters.ToCoreExpectationSnapshot(expectation),
-            out diagnostic);
-
-        return sourceArtifact is null
-            ? null
-            : childArtifacts.FirstOrDefault(artifact => artifact.Id == sourceArtifact.Id);
+            ProcessCoreArtifactModelAdapters.ToCoreExpectationSnapshot(expectation));
     }
 
     public static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveOutputArtifactMappings(

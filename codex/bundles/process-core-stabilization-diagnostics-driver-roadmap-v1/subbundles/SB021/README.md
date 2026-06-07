@@ -1,7 +1,7 @@
 # SB021 - Gate G - projection/validation descriptor proof
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Close descriptor convergence.
@@ -15,20 +15,20 @@ Close descriptor convergence.
 - If this is a critical gate, all earlier phase proof must be green.
 
 ## Exact Source References
-- `src/CanDoItAll.Processes.Core/`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/`
+- `repo://src/CanDoItAll.Processes.Core`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1`
 
 ## Deliverables
-Source order, lineage, satisfaction, browser evidence behavior remain module-local and green.
+- Source order, lineage, satisfaction, browser evidence behavior remain module-local and green.
 
 ## Dependency Impact
-This subbundle advances phase `P7`. Downstream work is untrustworthy if behavior parity, dependency scans, or source-boundary proof fails.
+- This subbundle advances phase `P7`. Downstream work is untrustworthy if behavior parity, dependency scans, or source-boundary proof fails.
 
 ## Validation Depth
-Required proof: focused integration.
+- Required proof: focused integration.
 
 ## Implementation Steps
 1. Review current source before editing.
@@ -46,23 +46,33 @@ Required proof: focused integration.
 No storage in Core.
 
 ## Acceptance Checklist
-- [ ] Existing runtime behavior is preserved.
-- [ ] Core remains dependency-clean.
-- [ ] No production process driver API is introduced.
-- [ ] Source scans pass.
-- [ ] Proof transcript is recorded.
-- [ ] No UI/media files changed.
+- [x] Existing runtime behavior is preserved.
+- [x] Core remains dependency-clean.
+- [x] No production process driver API is introduced.
+- [x] Source scans pass.
+- [x] Proof transcript is recorded.
+- [x] No UI/media files changed.
 
 ## Proof Required
+- Critical proof must include `bundle://proof/SB021/manifest.md` with changed-file hashes, command transcripts, source assertions, anti-stub audit output, and portable references.
+- Critical proof must include `bundle://proof/SB021/semantic-invariants.md` with Semantic Adequacy Gate coverage: shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit, and raw-note literal closure.
 - Build or targeted test proof as appropriate.
 - Architecture/source scan proof.
 - For critical gates, a semantic invariant document and red-team note.
 
 ## Browser Validation Logging
-N/A runtime/service/Core refactor. If UI files change, fail this subbundle and reopen scope rather than adding mobile/small/medium proof.
+- N/A runtime/service/Core refactor. If UI files change, fail this subbundle and reopen scope rather than adding mobile/small/medium proof.
 
 ## Progression Gate
-SB021 closes only when proof is recorded and downstream dependency impact is reviewed.
+- SB021 closes only when proof is recorded and downstream dependency impact is reviewed.
+
+## Closure Proof
+- Result: `Passed`
+- Manifest: `bundle://proof/SB021/manifest.md`
+- Semantic invariants: `bundle://proof/SB021/semantic-invariants.md`
+- Build transcript: `bundle://proof/SB021/transcripts/build.txt`
+- Architecture transcript: `bundle://proof/SB021/transcripts/architecture-projection-validation-descriptor-tests.txt`
+- Integration transcript: `bundle://proof/SB021/transcripts/process-dispatch-projection-validation-descriptor-integration-tests.txt`
 
 ## Suggested Agent Prompt
 Implement `SB021 - Gate G - projection/validation descriptor proof` exactly as specified. Preserve all process runtime behavior. Keep production driver APIs out of scope. Record proof before moving on.

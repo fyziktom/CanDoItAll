@@ -11,6 +11,13 @@ A stable Process Core should eventually support domain helper drivers such as:
 ## Current bundle decision
 This bundle should not create production drivers yet. It should prepare the next decision gate.
 
+Detailed docs/tests-only artifacts:
+- `bundle://architecture/06-driver-contract-proposal.md`
+- `bundle://architecture/07-driver-permission-negative-scenarios.md`
+- `bundle://architecture/08-driver-lane-map-dotnet-rust.md`
+- `bundle://architecture/09-driver-lane-map-office-business-analysis.md`
+- `bundle://architecture/10-driver-domain-lane-closure.md`
+
 ## Proposed driver contract lanes
 | Lane | Mode | Allowed |
 | --- | --- | --- |

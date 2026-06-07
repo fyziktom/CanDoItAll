@@ -1,0 +1,29 @@
+# Process_core_stabilization_SB010_SB011_INV_001_confines_route_model_payload_bridge_to_adapters
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2064:    public void Process_core_stabilization_SB010_SB011_INV_001_confines_route_model_payload_bridge_to_adapters()
+
+# ProcessDispatchFinalizerAdapter_SB011_INV_001_rejects_dispatch_claim_not_created_by_route_adapter
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17645:    public async Task ProcessDispatchFinalizerAdapter_SB011_INV_001_rejects_dispatch_claim_not_created_by_route_adapter()
+
+# ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim)
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2042:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim)", finalizerAdapterSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2094:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim)", finalizerAdapterSource, StringComparison.Ordinal);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:23:            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:41:            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:59:            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:77:            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(input.DispatchClaim),
+
+# private static ProcessStepDispatchClaim ToDispatcherClaim
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2043:        Assert.DoesNotContain("private static ProcessStepDispatchClaim ToDispatcherClaim", finalizerAdapterSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2104:        Assert.DoesNotContain("private static ProcessStepDispatchClaim ToDispatcherClaim", finalizerAdapterSource, StringComparison.Ordinal);
+
+# new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken)
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2044:        Assert.DoesNotContain("new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken)", finalizerAdapterSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2105:        Assert.DoesNotContain("new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken)", finalizerAdapterSource, StringComparison.Ordinal);
+
+# RequireSource(DispatchClaimSources, dispatchClaim, nameof(dispatchClaim)).DispatchClaim
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2089:        Assert.Contains("RequireSource(DispatchClaimSources, dispatchClaim, nameof(dispatchClaim)).DispatchClaim", routeModelAdapterSource, StringComparison.Ordinal);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteModelAdapters.cs:98:        return RequireSource(DispatchClaimSources, dispatchClaim, nameof(dispatchClaim)).DispatchClaim;
+
+# must be created by ProcessDispatchRouteModelAdapters
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17672:        Assert.Contains("must be created by ProcessDispatchRouteModelAdapters", exception.Message, StringComparison.Ordinal);
+

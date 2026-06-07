@@ -1,0 +1,2 @@
+Command: Select-String CA1416 in post-browser-entry-guard-build.txt
+ExitCode: 

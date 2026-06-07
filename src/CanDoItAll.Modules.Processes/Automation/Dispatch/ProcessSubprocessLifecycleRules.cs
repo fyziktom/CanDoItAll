@@ -36,7 +36,7 @@ internal static class ProcessSubprocessLifecycleRules
         string normalizedTrigger,
         string automationActor)
     {
-        return ToTransitionRequest(
+        return ProcessTransitionIntentAdapters.ToTransitionRequest(
             global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildStartTransitionFacts(
                 stepRunId,
                 concurrencyToken,
@@ -89,7 +89,7 @@ internal static class ProcessSubprocessLifecycleRules
         string reason,
         string automationActor)
     {
-        return ToTransitionRequest(
+        return ProcessTransitionIntentAdapters.ToTransitionRequest(
             global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildBlockTransitionFacts(
                 stepRunId,
                 reason,
@@ -134,7 +134,7 @@ internal static class ProcessSubprocessLifecycleRules
     {
         ArgumentNullException.ThrowIfNull(subprocessRun);
 
-        return ToTransitionRequest(
+        return ProcessTransitionIntentAdapters.ToTransitionRequest(
             global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionFacts(
                 stepRunId,
                 new global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts(
@@ -143,20 +143,6 @@ internal static class ProcessSubprocessLifecycleRules
                     subprocessRun.Status),
                 terminalStatus,
                 automationActor));
-    }
-
-    private static ProcessStepTransitionRequest ToTransitionRequest(
-        global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessParentTransitionFacts transitionFacts)
-    {
-        return new ProcessStepTransitionRequest
-        {
-            StepRunId = transitionFacts.StepRunId,
-            StepRunConcurrencyToken = transitionFacts.StepRunConcurrencyToken,
-            TargetStatus = transitionFacts.TargetStatus,
-            Reason = transitionFacts.Reason,
-            DecidedBy = transitionFacts.DecidedBy,
-            SuppressAutomationDispatch = transitionFacts.SuppressAutomationDispatch
-        };
     }
 
     public static ProcessStepRunStatus? ResolveParentStepStatus(ProcessRunStatus subprocessStatus)

@@ -1,0 +1,11 @@
+Command: Select-String API guard and inventory source assertions
+
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:86:    public void Process_core_public_api_surface_is_explicitly_guarded()
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:245:        Assert.Equal(expected, ReadProcessCorePublicApiSurface());
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4262:    private static IReadOnlyList<string> ReadProcessCorePublicApiSurface()
+codex\bundles\process-core-stabilization-diagnostics-driver-roadmap-v1\architecture\04-core-public-api-inventory.md:1:# Core Public API Inventory
+codex\bundles\process-core-stabilization-diagnostics-driver-roadmap-v1\architecture\04-core-public-api-inventory.md:6:- Guard test: `Process_core_public_api_surface_is_explicitly_guarded`
+codex\bundles\process-core-stabilization-diagnostics-driver-roadmap-v1\architecture\04-core-public-api-inventory.md:36:## Stability Rule
+codex\bundles\process-core-stabilization-diagnostics-driver-roadmap-v1\architecture\04-core-public-api-inventory.md:37:- New public Core types, enum values, constructors, properties, or public methods must update the reflection snapshot in `Process_core_public_api_surface_is_explicitly_guarded`.
+
+ExitCode: 

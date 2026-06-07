@@ -1,0 +1,20 @@
+No forbidden dependency/side-effect tokens were found in CanDoItAll.Processes.Core source.
+Tokens:
+- CanDoItAll.Modules
+- CanDoItAll.Infrastructure
+- CanDoItAll.AgentFramework
+- Microsoft.EntityFrameworkCore
+- DbContext
+- IStorage
+- StoragePlacement
+- WorkspacePathResolver
+- WorkspaceScopeDescriptor
+- File.
+- Directory.
+- ProcessRunAutomationDispatchService
+- IProcessDriver
+- DriverPack
+- DriverRegistry
+- ILogger<
+- IServiceProvider
+- IServiceScopeFactory

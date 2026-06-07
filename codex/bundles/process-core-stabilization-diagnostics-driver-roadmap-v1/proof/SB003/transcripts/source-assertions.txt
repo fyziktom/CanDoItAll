@@ -1,0 +1,15 @@
+Command: Select-String source assertions for SB003 platform-warning fix
+
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:37:        if (OperatingSystem.IsBrowser())
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:44:            var stoppedProcessIds = StopRecordedProcessTree(receipt.AppProcessTreeIds);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:147:    [UnsupportedOSPlatform("browser")]
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:148:    private static IReadOnlyList<int> StopRecordedProcessTree(IReadOnlyList<int> processIds)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:150:        if (OperatingSystem.IsBrowser())
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:210:                : ResolveCurrentSubstDriveTarget(normalizedDrive);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:218:            if (TryDismountSubstDrive(normalizedDrive, out var failureMessage))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:323:    [SupportedOSPlatform("windows")]
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:324:    private static string? ResolveCurrentSubstDriveTarget(string drive)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:358:    [SupportedOSPlatform("windows")]
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs:359:    private static bool TryDismountSubstDrive(string drive, out string failureMessage)
+
+ExitCode: 

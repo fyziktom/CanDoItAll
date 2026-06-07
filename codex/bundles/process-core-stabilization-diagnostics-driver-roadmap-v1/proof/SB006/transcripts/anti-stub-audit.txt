@@ -1,0 +1,3 @@
+Command: git diff --name-only -- src/CanDoItAll.Processes.Core; verify no SB004-SB006 production Core source change
+No Process Core production source changed in SB004-SB006. API guard changes are test/documentation only; no production TODO/NotImplemented/stub path was introduced by this phase.
+ExitCode: 0

@@ -582,69 +582,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessArtifactExpectationMode ResolveArtifactExpectationMode(DispatchArtifactExpectation expectation)
     {
-        var contractText = CollapsePromptWhitespace(string.Join(
-            ' ',
-            expectation.Title,
-            expectation.ValidationRequirementSummary,
-            expectation.AllowedFutureUsageSummary)).ToLowerInvariant();
-        if (TryResolveExplicitArtifactExpectationMode(contractText, out var explicitMode))
-        {
-            return explicitMode;
-        }
-
-        if (contractText.Contains("runtime proof", StringComparison.Ordinal) ||
-            contractText.Contains("browser proof", StringComparison.Ordinal) ||
-            contractText.Contains("test output", StringComparison.Ordinal) ||
-            contractText.Contains("build output", StringComparison.Ordinal) ||
-            contractText.Contains("command output", StringComparison.Ordinal) ||
-            contractText.Contains("screenshot", StringComparison.Ordinal) ||
-            ContainsRuntimeLogSignal(contractText))
-        {
-            return ProcessArtifactExpectationMode.RuntimeProof;
-        }
-
-        return expectation.ArtifactKind switch
-        {
-            ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord => ProcessArtifactExpectationMode.Decision,
-            ProcessArtifactKind.Deliverable => ProcessArtifactExpectationMode.Deliverable,
-            ProcessArtifactKind.Evidence or ProcessArtifactKind.Transcript or ProcessArtifactKind.Dataset => ProcessArtifactExpectationMode.Evidence,
-            _ => ProcessArtifactExpectationMode.Narrative
-        };
-    }
-
-    private static bool TryResolveExplicitArtifactExpectationMode(
-        string contractText,
-        out ProcessArtifactExpectationMode mode)
-    {
-        mode = ProcessArtifactExpectationMode.Narrative;
-        if (!contractText.Contains("artifact mode", StringComparison.OrdinalIgnoreCase) &&
-            !contractText.Contains("expectation mode", StringComparison.OrdinalIgnoreCase) &&
-            !contractText.Contains("mode:", StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        foreach (var candidateMode in Enum.GetValues<ProcessArtifactExpectationMode>())
-        {
-            if (contractText.Contains(candidateMode.ToString().ToLowerInvariant(), StringComparison.OrdinalIgnoreCase))
-            {
-                mode = candidateMode;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool ContainsRuntimeLogSignal(string contractText)
-    {
-        return contractText.Contains("test log", StringComparison.Ordinal) ||
-               contractText.Contains("build log", StringComparison.Ordinal) ||
-               contractText.Contains("command log", StringComparison.Ordinal) ||
-               contractText.Contains("runtime log", StringComparison.Ordinal) ||
-               contractText.Contains("execution log", StringComparison.Ordinal) ||
-               contractText.Contains("browser console log", StringComparison.Ordinal) ||
-               contractText.Contains("console log", StringComparison.Ordinal);
+        return ProcessArtifactValidationDescriptorAdapter.ResolveArtifactExpectationMode(expectation);
     }
 
     private static bool IsArtifactCandidateForExpectation(
@@ -803,21 +741,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactProjectionSourceKind sourceKind)
     {
-        return sourceKind switch
-        {
-            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact => ProcessArtifactProducerKind.AgentExecutionArtifact,
-            ProcessArtifactProjectionSourceKind.WorkspaceWrite => ProcessArtifactProducerKind.WorkspaceWrite,
-            ProcessArtifactProjectionSourceKind.ExistingManagedFile => ProcessArtifactProducerKind.ExistingManagedFile,
-            ProcessArtifactProjectionSourceKind.AssistantResponse => ProcessArtifactProducerKind.AssistantResponse,
-            ProcessArtifactProjectionSourceKind.WorkflowRun => ProcessArtifactProducerKind.WorkflowRun,
-            ProcessArtifactProjectionSourceKind.WorkflowArtifact => ProcessArtifactProducerKind.WorkflowArtifact,
-            ProcessArtifactProjectionSourceKind.SubprocessArtifact => ProcessArtifactProducerKind.SubprocessArtifact,
-            ProcessArtifactProjectionSourceKind.CompletedDecision => ProcessArtifactProducerKind.CompletedDecision,
-            ProcessArtifactProjectionSourceKind.ProcessMock => ProcessArtifactProducerKind.ProcessMock,
-            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser => ProcessArtifactProducerKind.ProviderNativeBrowser,
-            ProcessArtifactProjectionSourceKind.Manual => ProcessArtifactProducerKind.Manual,
-            _ => ProcessArtifactProducerKind.Unknown
-        };
+        return ProcessArtifactValidationDescriptorAdapter.ResolveArtifactProducerKind(sourceKind);
     }
 
     private static bool IsManagerRecoveryLineage(ProcessArtifactProjectionLineage lineage)

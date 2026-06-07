@@ -14,21 +14,34 @@ public static class ProcessSubprocessArtifactSourceResolver
         ProcessArtifactExpectationSnapshot expectation,
         out string diagnostic)
     {
+        var result = DiagnoseSourceArtifact(childArtifacts, parentExpectations, expectation);
+        diagnostic = result.Message;
+
+        return result.SourceArtifact;
+    }
+
+    public static ProcessSubprocessArtifactSourceDiagnostic DiagnoseSourceArtifact(
+        IReadOnlyList<ProcessArtifactRecordSnapshot> childArtifacts,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> parentExpectations,
+        ProcessArtifactExpectationSnapshot expectation)
+    {
         ArgumentNullException.ThrowIfNull(childArtifacts);
         ArgumentNullException.ThrowIfNull(parentExpectations);
 
-        diagnostic = string.Empty;
-        if (!TryBuildSubprocessOutputMappingIndex(parentExpectations, out var mappingsByParentExpectationId, out diagnostic))
+        if (!TryBuildSubprocessOutputMappingIndex(parentExpectations, out var mappingsByParentExpectationId, out var diagnostic))
         {
-            return null;
+            return ProcessSubprocessArtifactSourceDiagnostic.None(
+                ProcessSubprocessArtifactSourceDiagnosticReason.AmbiguousMapping,
+                diagnostic);
         }
 
         if (mappingsByParentExpectationId.Count > 0)
         {
             if (!mappingsByParentExpectationId.TryGetValue(expectation.Id, out var mapping))
             {
-                diagnostic = $"Parent artifact expectation '{expectation.Title}' has no explicit subprocess child expectation mapping.";
-                return null;
+                return ProcessSubprocessArtifactSourceDiagnostic.None(
+                    ProcessSubprocessArtifactSourceDiagnosticReason.MissingExplicitMapping,
+                    $"Parent artifact expectation '{expectation.Title}' has no explicit subprocess child expectation mapping.");
             }
 
             var mappedArtifacts = childArtifacts
@@ -41,14 +54,23 @@ public static class ProcessSubprocessArtifactSourceResolver
             {
                 if (mapping.IsLegacyTextMapping)
                 {
-                    diagnostic = "Using legacy subprocess child expectation text mapping from artifact requirement summaries; move this mapping to the explicit subprocess child expectation field.";
+                    return ProcessSubprocessArtifactSourceDiagnostic.FromSource(
+                        mappedArtifacts[0],
+                        ProcessSubprocessArtifactSourceDiagnosticReason.LegacyTextMapping,
+                        mappedArtifacts.Count,
+                        "Using legacy subprocess child expectation text mapping from artifact requirement summaries; move this mapping to the explicit subprocess child expectation field.");
                 }
 
-                return mappedArtifacts[0];
+                return ProcessSubprocessArtifactSourceDiagnostic.FromSource(
+                    mappedArtifacts[0],
+                    ProcessSubprocessArtifactSourceDiagnosticReason.LatestEligibleMappedArtifact,
+                    mappedArtifacts.Count,
+                    string.Empty);
             }
 
-            diagnostic = $"Subprocess child expectation '{mapping.ChildExpectationId:D}' did not produce an eligible artifact for parent expectation '{expectation.Title}'.";
-            return null;
+            return ProcessSubprocessArtifactSourceDiagnostic.None(
+                ProcessSubprocessArtifactSourceDiagnosticReason.MissingEligibleMappedArtifact,
+                $"Subprocess child expectation '{mapping.ChildExpectationId:D}' did not produce an eligible artifact for parent expectation '{expectation.Title}'.");
         }
 
         var eligibleParentExpectations = parentExpectations
@@ -59,16 +81,25 @@ public static class ProcessSubprocessArtifactSourceResolver
             .ToList();
         if (eligibleParentExpectations.Count == 1 && eligibleChildArtifacts.Count == 1)
         {
-            diagnostic = "Using legacy same-kind subprocess artifact fallback because no explicit subprocess child expectation mapping is configured.";
-            return eligibleChildArtifacts[0];
+            return ProcessSubprocessArtifactSourceDiagnostic.FromSource(
+                eligibleChildArtifacts[0],
+                ProcessSubprocessArtifactSourceDiagnosticReason.LegacySameKindFallback,
+                eligibleChildArtifacts.Count,
+                "Using legacy same-kind subprocess artifact fallback because no explicit subprocess child expectation mapping is configured.");
         }
 
         if (eligibleParentExpectations.Count > 1 || eligibleChildArtifacts.Count > 1)
         {
-            diagnostic = "Subprocess artifact projection is ambiguous; explicit subprocess child expectation mapping is required when multiple parent expectations or child artifacts can match.";
+            return ProcessSubprocessArtifactSourceDiagnostic.None(
+                ProcessSubprocessArtifactSourceDiagnosticReason.AmbiguousFallback,
+                "Subprocess artifact projection is ambiguous; explicit subprocess child expectation mapping is required when multiple parent expectations or child artifacts can match.",
+                eligibleChildArtifacts.Count);
         }
 
-        return null;
+        return ProcessSubprocessArtifactSourceDiagnostic.None(
+            ProcessSubprocessArtifactSourceDiagnosticReason.MissingEligibleMappedArtifact,
+            string.Empty,
+            eligibleChildArtifacts.Count);
     }
 
     public static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveOutputArtifactMappings(
@@ -186,25 +217,52 @@ public static class ProcessSubprocessArtifactSourceResolver
     {
         return artifact.ArtifactKind == expectation.ArtifactKind &&
                artifact.SensitivityLevel >= expectation.SensitivityLevel &&
-               SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement);
+               ProcessArtifactExpectationSatisfactionRules.SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement);
+    }
+}
+
+public enum ProcessSubprocessArtifactSourceDiagnosticReason
+{
+    LatestEligibleMappedArtifact,
+    LegacyTextMapping,
+    LegacySameKindFallback,
+    AmbiguousMapping,
+    MissingExplicitMapping,
+    MissingEligibleMappedArtifact,
+    AmbiguousFallback
+}
+
+public readonly record struct ProcessSubprocessArtifactSourceDiagnostic(
+    ProcessArtifactRecordSnapshot? SourceArtifact,
+    ProcessSubprocessArtifactSourceDiagnosticReason Reason,
+    string Message,
+    int EligibleArtifactCount)
+{
+    public bool HasSourceArtifact => SourceArtifact is not null;
+
+    public static ProcessSubprocessArtifactSourceDiagnostic FromSource(
+        ProcessArtifactRecordSnapshot sourceArtifact,
+        ProcessSubprocessArtifactSourceDiagnosticReason reason,
+        int eligibleArtifactCount,
+        string message)
+    {
+        return new ProcessSubprocessArtifactSourceDiagnostic(
+            sourceArtifact,
+            reason,
+            message,
+            eligibleArtifactCount);
     }
 
-    private static bool SatisfiesTrustRequirement(
-        ProcessCoreArtifactTrustStatus trustStatus,
-        ProcessCoreArtifactTrustRequirement trustRequirement)
+    public static ProcessSubprocessArtifactSourceDiagnostic None(
+        ProcessSubprocessArtifactSourceDiagnosticReason reason,
+        string message,
+        int eligibleArtifactCount = 0)
     {
-        return trustRequirement switch
-        {
-            ProcessCoreArtifactTrustRequirement.None => true,
-            ProcessCoreArtifactTrustRequirement.ReviewRequired => trustStatus is
-                ProcessCoreArtifactTrustStatus.ReviewRequired or
-                ProcessCoreArtifactTrustStatus.Approved or
-                ProcessCoreArtifactTrustStatus.TrustedSource,
-            ProcessCoreArtifactTrustRequirement.HumanApproved => trustStatus == ProcessCoreArtifactTrustStatus.Approved,
-            ProcessCoreArtifactTrustRequirement.ApprovalRequired => trustStatus == ProcessCoreArtifactTrustStatus.Approved,
-            ProcessCoreArtifactTrustRequirement.TrustedSource => trustStatus == ProcessCoreArtifactTrustStatus.TrustedSource,
-            _ => false
-        };
+        return new ProcessSubprocessArtifactSourceDiagnostic(
+            null,
+            reason,
+            message,
+            eligibleArtifactCount);
     }
 }
 

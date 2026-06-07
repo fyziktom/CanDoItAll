@@ -8,11 +8,11 @@
 - Browser/mobile/small/medium proof is out of scope unless UI files unexpectedly change.
 
 ## Critical Path Risks
-1. **Core surface creep**: additional pure rules could accidentally pull in process-module or infrastructure dependencies.
-2. **Adapter leakage**: route/artifact/subprocess adapters could become new hidden mini-dispatchers.
-3. **Warning normalization**: `CA1416` warnings may be ignored because build passes.
-4. **Driver API overreach**: driver-readiness work could accidentally become production API/DI/runtime wiring.
-5. **False confidence from docs-only phases**: proposal documents must be backed by negative source scans.
+- **Core surface creep**: additional pure rules could accidentally pull in process-module or infrastructure dependencies.
+- **Adapter leakage**: route/artifact/subprocess adapters could become new hidden mini-dispatchers.
+- **Warning normalization**: `CA1416` warnings may be ignored because build passes.
+- **Driver API overreach**: driver-readiness work could accidentally become production API/DI/runtime wiring.
+- **False confidence from docs-only phases**: proposal documents must be backed by negative source scans.
 
 ## Validation Risks
 - Full integration project may be too slow; focused integration proof must be well chosen.
