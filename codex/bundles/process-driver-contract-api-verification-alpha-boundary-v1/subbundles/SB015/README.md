@@ -1,7 +1,7 @@
 # SB015 — Gate E: verification contracts cannot mutate state
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Define verification-only request/response contracts that can express diagnostics but not state mutation.
@@ -12,15 +12,15 @@ Define verification-only request/response contracts that can express diagnostics
 - Hard safety requirement: no broad Core runtime extraction and no production driver runtime.
 
 ## Prerequisites
-Previous subbundle in the same phase must be closed.
+- Previous subbundle in the same phase must be closed.
 
 ## Exact Source References
-- `/src/CanDoItAll.Processes.Core`
-- `/src/CanDoItAll.Processes.Contracts`
-- `/src/CanDoItAll.Modules.Processes/Automation/Dispatch`
-- `/tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs`
-- `/tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `/codex/bundles/process-driver-contract-prerequisites-verification-alpha-v1/reviews/01-execution-report.md`
+- `repo://src/CanDoItAll.Processes.Core`
+- `repo://src/CanDoItAll.Processes.Contracts`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://codex/bundles/process-driver-contract-prerequisites-verification-alpha-v1/reviews/01-execution-report.md`
 
 ## Deliverables
 - Implement or document: Gate E: verification contracts cannot mutate state
@@ -28,10 +28,10 @@ Previous subbundle in the same phase must be closed.
 - Update execution report row for SB015
 
 ## Dependency Impact
-Critical foundation for downstream phases.
+- Critical foundation for downstream phases.
 
 ## Validation Depth
-Critical gate: build, targeted tests, source scans, semantic invariants, manifest, and red-team notes.
+- Critical gate: build, targeted tests, source scans, semantic invariants, manifest, and red-team notes.
 
 ## Implementation Steps
 1. Re-open the exact source references and the previous proof artifacts.
@@ -68,10 +68,13 @@ Critical gate: build, targeted tests, source scans, semantic invariants, manifes
 - Manifest and semantic invariants for critical gates
 
 ## Browser Validation Logging
-N/A. Runtime/Core/service architecture work only. If UI/media files are touched, fail the subbundle and record the unexpected drift.
+- N/A. Runtime/Core/service architecture work only. If UI/media files are touched, fail the subbundle and record the unexpected drift.
 
 ## Progression Gate
-Downstream phases may continue only after this critical gate passes and is recorded.
+- Downstream phases may continue only after this critical gate passes and is recorded.
 
 ## Suggested Agent Prompt
 Implement SB015 only. Preserve existing behavior, add proof, and stop if a forbidden runtime/Core/driver side effect appears.
+
+
+

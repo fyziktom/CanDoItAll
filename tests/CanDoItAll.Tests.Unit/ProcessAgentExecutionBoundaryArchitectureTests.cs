@@ -2171,7 +2171,23 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.False(Directory.Exists(Path.Combine(root, "src", "CanDoItAll.Modules.Processes.Core")));
         Assert.DoesNotContain("IProcessDriverPack", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain("DriverPack", sourceText, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProcessDriver", sourceText, StringComparison.Ordinal);
+        foreach (var forbiddenDriverRuntimeToken in new[]
+        {
+            "IProcessDriverRegistry",
+            "ProcessDriverRegistry",
+            "ProcessDriverRuntimeSelector",
+            "ProcessDriverManagerCommand",
+            "ProcessDriverRuntime",
+            "ProcessDriverProvider",
+            "ProcessDriverHost",
+            "ProcessDriverServiceCollectionExtensions",
+            "AddProcessDriver",
+            "MapProcessDriver"
+        })
+        {
+            Assert.DoesNotContain(forbiddenDriverRuntimeToken, sourceText, StringComparison.Ordinal);
+        }
+
         Assert.DoesNotContain("CanDoItAll.Modules.Processes.Core", sourceText, StringComparison.Ordinal);
         Assert.DoesNotContain(proofArtifactPaths, path =>
         {

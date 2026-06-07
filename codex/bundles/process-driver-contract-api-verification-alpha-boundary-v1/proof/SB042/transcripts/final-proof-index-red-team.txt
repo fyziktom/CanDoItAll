@@ -1,0 +1,34 @@
+Command: powershell proof-index path audit for final closure
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB042 final proof index and red-team fake-proof resistance audit
+ExitCode: 0
+Output:
+Final fake-proof resistance audit: passed.
+Verified artifact-backed proof paths exist for build, full unit, focused tests, source scans, failing-first contract absence, prepared validator, completed validator, and final red-team review.
+Rejected shallow proof forms: table-only status, non-empty file existence alone, fixture-only positive checks without source assertions, and broad ProcessDriver token bans that block approved contract-only vocabulary.
+No production driver runtime was introduced: no registry, selector, DI extension, manager command, host, provider, shell execution, workspace write, storage write, process mutation, transition mutation, finalizer application, or retry scheduler.
+exists: repo://src/CanDoItAll.Processes.Drivers.Abstractions/CanDoItAll.Processes.Drivers.Abstractions.csproj
+exists: repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractApiVerificationBoundaryTests.cs
+exists: repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB006/transcripts/failing-first-contract-project-absent.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB009/transcripts/passing-focused-contract-tests.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB037/transcripts/dotnet-build-no-restore.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB037/transcripts/dotnet-test-unit-no-build.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB037/transcripts/focused-process-driver-tests.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB037/transcripts/source-scans.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB041/transcripts/prepared-validator-final.txt
+exists: repo://codex/bundles/process-driver-contract-api-verification-alpha-boundary-v1/proof/SB041/transcripts/completed-validator.txt
+Invariant: SB003_INV_001
+Invariant: SB006_INV_001
+Invariant: SB009_INV_001
+Invariant: SB012_INV_001
+Invariant: SB015_INV_001
+Invariant: SB018_INV_001
+Invariant: SB021_INV_001
+Invariant: SB024_INV_001
+Invariant: SB027_INV_001
+Invariant: SB030_INV_001
+Invariant: SB033_INV_001
+Invariant: SB036_INV_001
+Invariant: SB039_INV_001
+Invariant: SB042_INV_001

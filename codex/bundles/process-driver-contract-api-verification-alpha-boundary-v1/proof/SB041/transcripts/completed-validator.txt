@@ -1,0 +1,9 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-contract-api-verification-alpha-boundary-v1 --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB041 completed-stage validator after report citation repair
+ExitCode: 0
+Output:
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-driver-contract-api-verification-alpha-boundary-v1
+
+Invariant: SB041_INV_001
+Invariant: SB042_INV_001

@@ -1,0 +1,22 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ProcessDriverContractPrerequisitesVerificationTests|FullyQualifiedName~ProcessDriverContractApiVerificationBoundaryTests" -v minimal
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB037 focused process driver prerequisite and contract API proof
+ExitCode: 0
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    21, Přeskočeno:     0, Celkem:    21, Doba trvání: 14 s - CanDoItAll.Tests.Unit.dll (net10.0)
+
+Invariant: SB003_INV_001
+Invariant: SB006_INV_001
+Invariant: SB009_INV_001
+Invariant: SB012_INV_001
+Invariant: SB015_INV_001
+Invariant: SB018_INV_001
+Invariant: SB021_INV_001
+Invariant: SB024_INV_001
+Invariant: SB027_INV_001
+Invariant: SB030_INV_001
+Invariant: SB033_INV_001
+Invariant: SB037_INV_001

@@ -1,0 +1,3 @@
+CSC : warning CS8618: Non-nullable property 'Name' must contain a non-null value when exiting constructor.
+Test Failed: Expected verification artifact proof/SB006/manifest.md to exist.
+TargetFramework net6.0 is unsupported for this process verifier rehearsal.

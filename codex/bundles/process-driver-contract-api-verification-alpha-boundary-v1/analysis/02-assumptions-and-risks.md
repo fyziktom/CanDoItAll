@@ -6,12 +6,12 @@
 - The first future domain lane should be `.NET/Rust transcript verifier` because it can inspect existing artifacts without command execution.
 
 ## Critical Path Risks
-1. Contract-only API accidentally becomes a runtime API through registry/DI/selector naming.
-2. The `.NET/Rust` rehearsal accidentally allows command execution or workspace writes.
-3. Audit/redaction models become optional instead of required.
-4. Core starts referencing driver abstractions, reversing dependency direction.
-5. Tests allow broad `Driver` token exemptions and weaken earlier safety gates.
-6. Domain lane docs imply Office/Graph or business-record mutation before permission gates exist.
+- Contract-only API accidentally becomes a runtime API through registry/DI/selector naming.
+- The `.NET/Rust` rehearsal accidentally allows command execution or workspace writes.
+- Audit/redaction models become optional instead of required.
+- Core starts referencing driver abstractions, reversing dependency direction.
+- Tests allow broad `Driver` token exemptions and weaken earlier safety gates.
+- Domain lane docs imply Office/Graph or business-record mutation before permission gates exist.
 
 ## Validation Risks
 - Build-only proof is insufficient. The bundle must include architecture tests that fail on runtime driver APIs, DI hooks, registries, manager commands, shell/Graph/storage mutation, and broad Core dependencies.
@@ -23,3 +23,4 @@
 - Any production driver abstraction includes an execution method, runtime selector, service registration, shell command, Graph/Office operation, or artifact/process mutation method.
 - Any test fixture or contract permits state mutation under `VerificationOnly` or `ManagerReadonly`.
 - Any bundle proof is status-only without transcripts.
+

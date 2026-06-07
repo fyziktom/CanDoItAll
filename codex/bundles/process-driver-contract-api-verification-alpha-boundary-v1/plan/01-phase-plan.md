@@ -1,5 +1,9 @@
 # Phase Plan
 
+## Execution Order
+- P01 before P02 before P03 before P04 before P05 before P06 before P07 before P08 before P09 before P10 before P11 before P12 before P13 before P14.
+- Critical gates SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, and SB042 must pass before dependent phases continue.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -89,3 +93,4 @@ Every critical gate must prove:
 - no UI/media drift
 - no stub or placeholder implementation
 - execution report rows remain separate
+
