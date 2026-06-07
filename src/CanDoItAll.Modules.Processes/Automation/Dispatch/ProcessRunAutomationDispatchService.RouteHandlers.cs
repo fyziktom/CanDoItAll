@@ -110,11 +110,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         await CreateFinalizerAdapter().FinalizeRecoveredCompletionAsync(
-            candidate,
-            recoveryOutcome,
-            trigger,
-            renewLeaseAsync,
-            dispatchClaim,
+            new ProcessDispatchRecoveredFinalizerInput(
+                ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate),
+                ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(recoveryOutcome),
+                trigger,
+                renewLeaseAsync,
+                ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim)),
             cancellationToken);
     }
 
@@ -127,11 +128,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         await CreateFinalizerAdapter().FinalizeDirectAgentCompletionAsync(
-            candidate,
-            executionOutcome,
-            trigger,
-            renewLeaseAsync,
-            dispatchClaim,
+            new ProcessDispatchDirectAgentFinalizerInput(
+                ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate),
+                ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(executionOutcome),
+                trigger,
+                renewLeaseAsync,
+                ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim)),
             cancellationToken);
     }
 }

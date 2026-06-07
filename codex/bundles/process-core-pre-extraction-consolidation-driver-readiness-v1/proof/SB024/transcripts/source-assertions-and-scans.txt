@@ -1,0 +1,40 @@
+Command: SB024 Gate H source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB024-INV-001 artifact parity source assertions
+
+Command: projection order and shared DTO scan
+Projection orchestrator source-family order is stable => True
+Validation/projection/satisfaction paths share ProcessArtifactExpectationSnapshot => True
+Duplicate ProcessProjectionArtifactExpectation token absent => True
+Duplicate ProcessArtifactValidationExpectation token absent => True
+Projection expectation converter tokens absent => True
+Satisfaction snapshot avoids dispatcher expectation aliases => True
+Exit code: 0
+
+Command: lineage and key scan
+Projection source adapters call ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage => True
+Projection source adapters call ProcessArtifactProjectionLineageBuilder.BuildLineage => True
+Projection source adapters cover process mock, workspace write, existing managed file, assistant response, and provider-native browser source kinds => True
+Lineage builder uses compact manager-recovery sha256 keys => True
+Lineage builder records SourceExternalReferenceKey => True
+Exit code: 0
+
+Command: provider-native browser and validation scan
+Provider-native browser projection consumes SuccessfulBrowserToolOutputFiles => True
+Provider-native browser projection consumes ProviderNativeBrowserWorkingDirectory => True
+Provider-native browser projection plans expected and discovered outputs => True
+Provider-native browser projection updates candidate state for expected and discovered write outcomes => True
+Provider-native browser projection avoids session observation source injection => True
+Focused integration tests cover provider-native matching, lineage, stale satisfaction reset, successful browser output files, and artifact validation behavior => True
+Exit code: 0
+
+Command: no Core/no-production-process-driver/no-UI scans
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden production process-driver tokens in SB024 artifact boundary source>
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0
+
+Command: anti-stub implementation scan
+<no TODO/HACK/NotImplemented/NotSupported implementation markers in SB024 artifact boundary source>
+Exit code: 0

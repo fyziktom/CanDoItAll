@@ -1,0 +1,65 @@
+Command: SB034 broad smoke source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB034-INV-001 broad smoke matrix source assertions
+
+Command: build/test transcript scan
+Solution build transcript exists => True
+Solution build completed with zero errors => True
+Full unit test transcript exists => True
+Full unit tests passed => True
+Focused integration transcript exists => True
+Focused integration matrix passed => True
+Exit code: 0
+
+Command: report row integrity scan
+SB001 has separate passed row => True
+SB002 has separate passed row => True
+SB003 has separate passed row => True
+SB004 has separate passed row => True
+SB005 has separate passed row => True
+SB006 has separate passed row => True
+SB007 has separate passed row => True
+SB008 has separate passed row => True
+SB009 has separate passed row => True
+SB010 has separate passed row => True
+SB011 has separate passed row => True
+SB012 has separate passed row => True
+SB013 has separate passed row => True
+SB014 has separate passed row => True
+SB015 has separate passed row => True
+SB016 has separate passed row => True
+SB017 has separate passed row => True
+SB018 has separate passed row => True
+SB019 has separate passed row => True
+SB020 has separate passed row => True
+SB021 has separate passed row => True
+SB022 has separate passed row => True
+SB023 has separate passed row => True
+SB024 has separate passed row => True
+SB025 has separate passed row => True
+SB026 has separate passed row => True
+SB027 has separate passed row => True
+SB028 has separate passed row => True
+SB029 has separate passed row => True
+SB030 has separate passed row => True
+SB031 has separate passed row => True
+SB032 has separate passed row => True
+SB033 has separate passed row => True
+SB034 has separate passed row => True
+No collapsed SB001-SB034 report row => True
+No collapsed SB001-SB036 report row => True
+Exit code: 0
+
+Command: production boundary scan
+src\CanDoItAll.Processes.Core absent => True
+src\CanDoItAll.Modules.Processes.Core absent => True
+Production source contains no process-driver runtime tokens => True
+Exit code: 0
+
+Command: no UI/mobile drift scan
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0
+
+Command: anti-stub implementation scan
+<no TODO/HACK/NotImplemented/NotSupported markers in changed production dispatch files>
+Exit code: 0

@@ -2,18 +2,6 @@ using CanDoItAll.Processes.Contracts;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal interface IProcessRouteCandidateSource
-{
-}
-
-internal interface IProcessRouteDispatchClaimSource
-{
-}
-
-internal interface IProcessRouteExecutionOutcomeSource
-{
-}
-
 internal sealed record ProcessRouteExecutionRunSnapshot(
     Guid Id);
 
@@ -55,13 +43,11 @@ internal sealed record ProcessRouteCandidate(
     ProcessRouteStepSnapshot StepRun,
     Guid TechnicalAgentId,
     Guid? RecoveryExecutionRunId,
-    IReadOnlyList<ProcessRouteArtifactInput> ArtifactInputs,
-    IProcessRouteCandidateSource Source);
+    IReadOnlyList<ProcessRouteArtifactInput> ArtifactInputs);
 
 internal sealed record ProcessRouteDispatchClaim(
     Guid StepRunId,
-    string ClaimToken,
-    IProcessRouteDispatchClaimSource Source);
+    string ClaimToken);
 
 internal sealed record ProcessRouteExecutionOutcome(
     ProcessRouteExecutionRunSnapshot ExecutionRun,
@@ -70,5 +56,4 @@ internal sealed record ProcessRouteExecutionOutcome(
     string CompletionReason,
     IReadOnlyList<string> MissingRequiredTools,
     int AttemptNumber,
-    Guid? SelectedBranchOutcomeId,
-    IProcessRouteExecutionOutcomeSource Source);
+    Guid? SelectedBranchOutcomeId);

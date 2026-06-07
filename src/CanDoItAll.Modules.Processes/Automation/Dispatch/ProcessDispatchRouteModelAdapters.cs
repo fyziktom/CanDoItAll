@@ -1,13 +1,21 @@
+using System.Runtime.CompilerServices;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessDispatchRouteModelAdapters
 {
+    private static readonly ConditionalWeakTable<ProcessRouteCandidate, DispatcherCandidateSource> CandidateSources = new();
+
+    private static readonly ConditionalWeakTable<ProcessRouteDispatchClaim, DispatcherDispatchClaimSource> DispatchClaimSources = new();
+
+    private static readonly ConditionalWeakTable<ProcessRouteExecutionOutcome, DispatcherExecutionOutcomeSource> ExecutionOutcomeSources = new();
+
     public static ProcessRouteCandidate FromDispatcherCandidate(
         ProcessRunAutomationDispatchService.DispatchCandidate candidate)
     {
         ArgumentNullException.ThrowIfNull(candidate);
 
-        return new ProcessRouteCandidate(
+        var routeCandidate = new ProcessRouteCandidate(
             new ProcessRouteRunSnapshot(
                 candidate.Run.Id,
                 candidate.Run.Status,
@@ -41,29 +49,33 @@ internal static class ProcessDispatchRouteModelAdapters
                             artifact.ReviewSummary,
                             artifact.ProvenanceSummary))
                         .ToList()))
-                .ToList(),
-            new DispatcherCandidateSource(candidate));
+                .ToList());
+        CandidateSources.Add(routeCandidate, new DispatcherCandidateSource(candidate));
+
+        return routeCandidate;
     }
 
     public static ProcessRunAutomationDispatchService.DispatchCandidate ToDispatcherCandidate(
         ProcessRouteCandidate candidate)
     {
-        return RequireSource<DispatcherCandidateSource>(candidate.Source).Candidate;
+        return RequireSource(CandidateSources, candidate, nameof(candidate)).Candidate;
     }
 
     public static ProcessRouteDispatchClaim FromDispatcherClaim(
         ProcessRunAutomationDispatchService.ProcessStepDispatchClaim dispatchClaim)
     {
-        return new ProcessRouteDispatchClaim(
+        var routeClaim = new ProcessRouteDispatchClaim(
             dispatchClaim.StepRunId,
-            dispatchClaim.ClaimToken,
-            new DispatcherDispatchClaimSource(dispatchClaim));
+            dispatchClaim.ClaimToken);
+        DispatchClaimSources.Add(routeClaim, new DispatcherDispatchClaimSource(dispatchClaim));
+
+        return routeClaim;
     }
 
     public static ProcessRunAutomationDispatchService.ProcessStepDispatchClaim ToDispatcherClaim(
         ProcessRouteDispatchClaim dispatchClaim)
     {
-        return RequireSource<DispatcherDispatchClaimSource>(dispatchClaim.Source).DispatchClaim;
+        return RequireSource(DispatchClaimSources, dispatchClaim, nameof(dispatchClaim)).DispatchClaim;
     }
 
     public static ProcessRouteExecutionOutcome FromDispatcherExecutionOutcome(
@@ -71,36 +83,49 @@ internal static class ProcessDispatchRouteModelAdapters
     {
         ArgumentNullException.ThrowIfNull(executionOutcome);
 
-        return new ProcessRouteExecutionOutcome(
+        var routeOutcome = new ProcessRouteExecutionOutcome(
             new ProcessRouteExecutionRunSnapshot(executionOutcome.Detail.Run.Id),
             executionOutcome.ResponseText,
             executionOutcome.CompletionStatus,
             executionOutcome.CompletionReason,
             executionOutcome.MissingRequiredTools,
             executionOutcome.AttemptNumber,
-            executionOutcome.SelectedBranchOutcomeId,
-            new DispatcherExecutionOutcomeSource(executionOutcome));
+            executionOutcome.SelectedBranchOutcomeId);
+        ExecutionOutcomeSources.Add(routeOutcome, new DispatcherExecutionOutcomeSource(executionOutcome));
+
+        return routeOutcome;
     }
 
     public static ProcessRunAutomationDispatchService.DispatchExecutionOutcome ToDispatcherExecutionOutcome(
         ProcessRouteExecutionOutcome executionOutcome)
     {
-        return RequireSource<DispatcherExecutionOutcomeSource>(executionOutcome.Source).ExecutionOutcome;
+        return RequireSource(ExecutionOutcomeSources, executionOutcome, nameof(executionOutcome)).ExecutionOutcome;
     }
 
-    private static TSource RequireSource<TSource>(object source)
+    private static TSource RequireSource<TKey, TSource>(
+        ConditionalWeakTable<TKey, TSource> sourceTable,
+        TKey routeModel,
+        string routeModelName)
+        where TKey : class
         where TSource : class
     {
-        return source as TSource ??
-            throw new InvalidOperationException($"Route model source must be {typeof(TSource).Name}.");
+        ArgumentNullException.ThrowIfNull(routeModel);
+
+        if (sourceTable.TryGetValue(routeModel, out var source))
+        {
+            return source;
+        }
+
+        throw new InvalidOperationException(
+            $"Route model '{routeModelName}' must be created by {nameof(ProcessDispatchRouteModelAdapters)} before it can be converted back to dispatcher payload.");
     }
 
     private sealed record DispatcherCandidateSource(
-        ProcessRunAutomationDispatchService.DispatchCandidate Candidate) : IProcessRouteCandidateSource;
+        ProcessRunAutomationDispatchService.DispatchCandidate Candidate);
 
     private sealed record DispatcherDispatchClaimSource(
-        ProcessRunAutomationDispatchService.ProcessStepDispatchClaim DispatchClaim) : IProcessRouteDispatchClaimSource;
+        ProcessRunAutomationDispatchService.ProcessStepDispatchClaim DispatchClaim);
 
     private sealed record DispatcherExecutionOutcomeSource(
-        ProcessRunAutomationDispatchService.DispatchExecutionOutcome ExecutionOutcome) : IProcessRouteExecutionOutcomeSource;
+        ProcessRunAutomationDispatchService.DispatchExecutionOutcome ExecutionOutcome);
 }

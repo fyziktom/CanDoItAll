@@ -1,5 +1,20 @@
 # Phase Plan
 
+## Phase Sequence
+
+- P1 Baseline and guardrails: `SB001` through `SB003`.
+- P2 Route DTO source-payload burn-down: `SB004` through `SB006`.
+- P3 Finalizer intent boundary: `SB007` through `SB009`.
+- P4 Hydration side-effect collaborator split: `SB010` through `SB012`.
+- P5 Pre-execution and materialization purity split: `SB013` through `SB015`.
+- P6 Subprocess runtime and projection persistence split: `SB016` through `SB018`.
+- P7 Direct-agent execution and runtime proof snapshot: `SB019` through `SB021`.
+- P8 Artifact rule candidate hardening: `SB022` through `SB024`.
+- P9 Static wrapper and facade burn-down: `SB025` through `SB027`.
+- P10 Core candidate contract rehearsal: `SB028` through `SB030`.
+- P11 Driver verification readiness: `SB031` through `SB033`.
+- P12 Final smoke, red-team, and next decision: `SB034` through `SB036`.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -117,4 +132,3 @@ flowchart TD
 - `SB034`: Broad smoke matrix — Run build, full unit tests, focused integration suites, source scans.
 - `SB035`: Final red-team and line-count review — Review whether a narrow Core proposal is now justified; list exact blockers if not.
 - `SB036`: Gate L final closure — Complete execution report, final Core readiness decision, driver readiness decision, and proof index.
-

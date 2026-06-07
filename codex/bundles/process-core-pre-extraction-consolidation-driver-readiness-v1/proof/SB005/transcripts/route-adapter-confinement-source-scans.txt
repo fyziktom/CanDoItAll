@@ -1,0 +1,35 @@
+Command: SB005 route adapter confinement source scans
+Working directory: C:\repositories\CanDoItAll
+Run label: SB005 route adapter confinement
+
+Command: rg adapter calls in route handlers/services
+<no adapter calls in route handlers/services>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: rg adapter calls in allowed application-edge files
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerAdapter.cs:20:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerAdapter.cs:46:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerAdapter.cs:47:            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.RecoveryOutcome),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerAdapter.cs:80:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerAdapter.cs:81:            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.ExecutionOutcome),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerAdapter.cs:114:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCompetingExecutionGuardService.cs:16:        var dispatcherCandidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentExecutionAdapter.cs:11:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentExecutionAdapter.cs:16:        return ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(executionOutcome);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRecoveryRuntimeService.cs:21:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRecoveryRuntimeService.cs:23:            ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRecoveryRuntimeService.cs:29:            : ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(recoveryOutcome);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs:22:            ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:36:            : ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+Exit code: 0
+
+Command: rg route Source payload residue in route models/services/handlers
+<no route source payload residue in route-facing files>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: no Core/no-driver/no-UI drift scans
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden Core/driver tokens in process dispatch source>
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0

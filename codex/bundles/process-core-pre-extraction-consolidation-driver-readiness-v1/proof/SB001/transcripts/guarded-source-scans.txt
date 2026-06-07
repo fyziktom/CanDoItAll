@@ -1,0 +1,16 @@
+Command: Test-Path forbidden Process Core project directories
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+Exit code: 0
+
+Command: rg production driver API definitions in process module/contracts
+<no matches>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: git diff --name-only -- UI/media drift scan
+<no UI/media changed files>
+Exit code: 0
+
+Command: rg production stubs in process dispatch source
+<no production stub markers matched>
+Exit code: 1 (rg returns 1 for no matches)

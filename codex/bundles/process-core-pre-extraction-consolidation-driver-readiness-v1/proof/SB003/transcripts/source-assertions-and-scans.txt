@@ -1,0 +1,31 @@
+Command: SB003 Gate A source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB003-INV-001 source assertions and anti-stub audit
+
+Command: Test-Path forbidden Process Core project directories
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+Exit code: 0
+
+Command: rg production driver/Core API tokens in process dispatch source
+<no matches>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: current bundle gate-row collapse scan
+Individual SB gate rows: 38
+<no collapsed SB001-SB036 row in execution report>
+Exit code: 0
+
+Command: git changed UI/mobile/media paths outside bundle docs
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0
+
+Command: rg production stub markers in dispatch source
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:104:                    "The candidate artifact is a placeholder, gap marker, or missing-artifact diagnostic.",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:379:            builder.AppendLine("- If you start from a template, replace placeholder output with the requested product, document, analysis, workflow, or other concrete deliverable before you conclude.");
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:515:            builder.AppendLine("- After browser inspection, review the bounded snapshot, screenshot, or tool-returned content. If it shows placeholder starter content or lacks the requested workflow, return Blocked or repair instead of claiming proof.");
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.GovernedOutcomes.cs:526:            "placeholder",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RecoveryDirective.cs:305:            builder.AppendLine("Inspect the bounded `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, irrelevant content, or non-interactive behavior instead of the requested product behavior, treat it as a routing, rendering, static-content, or client-interaction defect and repair or block instead of returning Completed.");
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:345:        return $"Required artifact contract validation failed: {summary}. The process step is blocked instead of completing with missing, malformed, stale, placeholder, or weakly produced artifacts.";
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1033:        return text.Contains("placeholder", StringComparison.Ordinal) ||
+Exit code: 0 (rg returns 1 for no matches)

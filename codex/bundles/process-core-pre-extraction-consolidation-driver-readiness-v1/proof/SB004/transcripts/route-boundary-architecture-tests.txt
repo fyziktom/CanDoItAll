@@ -1,0 +1,8 @@
+Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Debug --no-build --filter FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests
+Working directory: C:\repositories\CanDoItAll
+Run label: SB004 route boundary architecture tests
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    80, Přeskočeno:     0, Celkem:    80, Doba trvání: 34 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Exit code: 0

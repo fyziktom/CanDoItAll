@@ -16,23 +16,11 @@ internal sealed class ProcessDispatchFinalizerAdapter(
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        await FinalizeWorkflowCompletionAsync(
-            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
-            input.WorkflowOutcome,
-            ToDispatcherClaim(input.DispatchClaim),
-            cancellationToken);
-    }
-
-    public async Task FinalizeWorkflowCompletionAsync(
-        DispatchCandidate candidate,
-        ProcessWorkflowExecutionOutcome workflowOutcome,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
+        var candidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate);
         await FinalizeAndApplyAsync(
             candidate,
-            ProcessDispatchFinalizerContextFactory.ForWorkflow(candidate, workflowOutcome),
-            dispatchClaim,
+            ProcessDispatchFinalizerContextFactory.ForWorkflow(candidate, input.WorkflowOutcome),
+            ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -42,31 +30,15 @@ internal sealed class ProcessDispatchFinalizerAdapter(
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        await FinalizeRecoveredCompletionAsync(
-            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
-            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.RecoveryOutcome),
-            input.Trigger,
-            input.RenewLeaseAsync,
-            ToDispatcherClaim(input.DispatchClaim),
-            cancellationToken);
-    }
-
-    public async Task FinalizeRecoveredCompletionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome recoveryOutcome,
-        string trigger,
-        Func<CancellationToken, Task> renewLeaseAsync,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
+        var candidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate);
         await FinalizeAndApplyAsync(
             candidate,
             ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery(
                 candidate,
-                recoveryOutcome,
-                trigger,
-                renewLeaseAsync),
-            dispatchClaim,
+                ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.RecoveryOutcome),
+                input.Trigger,
+                input.RenewLeaseAsync),
+            ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -76,31 +48,15 @@ internal sealed class ProcessDispatchFinalizerAdapter(
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        await FinalizeDirectAgentCompletionAsync(
-            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
-            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.ExecutionOutcome),
-            input.Trigger,
-            input.RenewLeaseAsync,
-            ToDispatcherClaim(input.DispatchClaim),
-            cancellationToken);
-    }
-
-    public async Task FinalizeDirectAgentCompletionAsync(
-        DispatchCandidate candidate,
-        DispatchExecutionOutcome executionOutcome,
-        string trigger,
-        Func<CancellationToken, Task> renewLeaseAsync,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
+        var candidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate);
         await FinalizeAndApplyAsync(
             candidate,
             ProcessDispatchFinalizerContextFactory.ForDirectAgent(
                 candidate,
-                executionOutcome,
-                trigger,
-                renewLeaseAsync),
-            dispatchClaim,
+                ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.ExecutionOutcome),
+                input.Trigger,
+                input.RenewLeaseAsync),
+            ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 
@@ -110,31 +66,15 @@ internal sealed class ProcessDispatchFinalizerAdapter(
     {
         ArgumentNullException.ThrowIfNull(input);
 
-        await FinalizeSubprocessCompletionAsync(
-            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
-            input.SubprocessRunId,
-            input.TerminalStatus,
-            input.TransitionReason,
-            ToDispatcherClaim(input.DispatchClaim),
-            cancellationToken);
-    }
-
-    public async Task FinalizeSubprocessCompletionAsync(
-        DispatchCandidate candidate,
-        Guid subprocessRunId,
-        ProcessStepRunStatus terminalStatus,
-        string transitionReason,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
+        var candidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate);
         await FinalizeAndApplyAsync(
             candidate,
             ProcessDispatchFinalizerContextFactory.ForSubprocess(
                 candidate,
-                subprocessRunId,
-                terminalStatus,
-                transitionReason),
-            dispatchClaim,
+                input.SubprocessRunId,
+                input.TerminalStatus,
+                input.TransitionReason),
+            ToDispatcherClaim(input.DispatchClaim),
             cancellationToken);
     }
 

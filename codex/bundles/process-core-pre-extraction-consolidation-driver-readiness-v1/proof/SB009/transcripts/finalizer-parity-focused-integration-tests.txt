@@ -1,0 +1,10 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration Debug --no-build --filter FullyQualifiedName~ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions|FullyQualifiedName~DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer
+Working directory: C:\repositories\CanDoItAll
+Run label: SB009-INV-001 finalizer parity focused integration tests
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 89 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+
+Exit code: 0

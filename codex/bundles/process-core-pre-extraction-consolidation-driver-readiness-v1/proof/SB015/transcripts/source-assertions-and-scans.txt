@@ -1,0 +1,38 @@
+Command: SB015 Gate E source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB015-INV-001 pre-execution parity source assertions
+
+Command: database block and no-op scan
+Database blocker resolves target status => True
+Database blocker builds transition request => True
+Pre-execution guard returns unsupported no-op decision => True
+Route service logs unsupported/no-transition cases without throwing => True
+Route service owns claim-bound transition execution => True
+Exit code: 0
+
+Command: materialization request/fingerprint/dedup scan
+Materialization facts resolver selects missing inputs => True
+Materialization fingerprint is built from route facts and missing-input facts => True
+Journal coordinator deduplicates by fingerprint => True
+Journal coordinator writes missing-upstream materialization event => True
+Materialization coordinator reuses pure rerun request builder => True
+Exit code: 0
+
+Command: start reload behavior scan
+Start transition planner builds start request => True
+Start transition route handler loads dispatch candidate after continuation transition => True
+Start transition route handler updates route context candidate on reload => True
+Start transition route handler preserves not-handled result for refreshed candidate => True
+Exit code: 0
+
+Command: no Core/no-production-process-driver/no-UI scans
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden production process-driver tokens in process dispatch source>
+Driver token scan exit code: 1
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0
+
+Command: anti-stub implementation scan
+<no TODO/HACK/NotImplemented/NotSupported implementation markers in process dispatch source>
+Stub marker scan exit code: 1

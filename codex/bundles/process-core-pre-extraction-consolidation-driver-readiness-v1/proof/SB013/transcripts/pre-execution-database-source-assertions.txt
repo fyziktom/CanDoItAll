@@ -1,0 +1,38 @@
+Command: SB013 database requirement split source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB013-INV-001 database requirement pure decision side-effect assertions
+
+Command: pre-execution route facts scan
+Pre-execution route facts record exists => True
+Route facts use ProcessRouteRunSnapshot => True
+Route facts use ProcessRouteStepSnapshot => True
+Route facts use ProcessRouteArtifactInput => True
+Route facts avoid route source payload => True
+Exit code: 0
+
+Command: pure database decision scan
+Pre-execution guard builds ProcessDispatchDatabaseRequirementDecision => True
+Pre-execution guard calls ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus => True
+Pre-execution guard builds transition request but does not execute transition => True
+Pre-execution guard avoids TransitionStepWithClaimAsync => True
+Exit code: 0
+
+Command: side-effect route service scan
+Database route service resolves database requirement failure => True
+Database route service builds decision through guard handler => True
+Database route service owns stepTransitionService.TransitionStepWithClaimAsync => True
+Database route service logs unsupported/no-transition cases => True
+Exit code: 0
+
+Command: no adapter/Core/driver/UI scans
+Pre-execution source avoids ProcessDispatchRouteModelAdapters => True
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden production process-driver tokens in process dispatch source>
+Driver token scan exit code: 1
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0
+
+Command: anti-stub implementation scan
+<no TODO/HACK/NotImplemented/NotSupported implementation markers in process dispatch source>
+Stub marker scan exit code: 1

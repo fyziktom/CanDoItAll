@@ -100,9 +100,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
         CancellationToken cancellationToken)
     {
         await CreateFinalizerAdapter().FinalizeWorkflowCompletionAsync(
-            candidate,
-            workflowOutcome,
-            dispatchClaim,
+            new ProcessDispatchWorkflowFinalizerInput(
+                ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate),
+                workflowOutcome,
+                ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim)),
             cancellationToken);
     }
 

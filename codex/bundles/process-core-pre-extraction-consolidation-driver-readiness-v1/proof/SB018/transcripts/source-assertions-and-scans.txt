@@ -1,0 +1,40 @@
+Command: SB018 Gate F source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB018-INV-001 subprocess parity source assertions
+
+Command: subprocess lifecycle and observing scan
+Runtime service builds start transition request => True
+Runtime service uses ProcessSubprocessRunObservationCoordinator => True
+Runtime service builds capability-gap block transition => True
+Runtime service logs observing active child run => True
+Runtime service builds terminal mirror transition => True
+Exit code: 0
+
+Command: completed projection and parent finalizer scan
+Runtime service delegates completed projection to projection persistence => True
+Runtime service finalizes completed subprocess through ProcessDispatchSubprocessFinalizerInput => True
+Projection persistence owns projection plan builder => True
+Projection persistence owns writer coordinator => True
+Projection persistence owns gap journal coordinator => True
+Projection persistence owns SaveChangesAsync => True
+Exit code: 0
+
+Command: lineage and dispatcher boundary scan
+Subprocess finalizer context uses SubprocessParent executor kind => True
+Artifact validation accepts subprocess child lineage => True
+Runtime/projection helpers avoid production process-driver tokens => True
+Runtime service avoids DispatchCandidate aliases => True
+Runtime service avoids ProcessDispatchRouteModelAdapters => True
+Exit code: 0
+
+Command: no Core/no-production-process-driver/no-UI scans
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden production process-driver tokens in process dispatch source>
+Driver token scan exit code: 1
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0
+
+Command: anti-stub implementation scan
+<no TODO/HACK/NotImplemented/NotSupported implementation markers in process dispatch source>
+Stub marker scan exit code: 1

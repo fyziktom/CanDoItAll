@@ -1,0 +1,33 @@
+Command: rg --files src/CanDoItAll.Modules.Processes/Automation/Dispatch | Measure-Object
+Dispatch source files: 204
+Exit code: 0
+
+Command: line counts for dispatch source files
+Dispatch source total lines: 34155
+Top-level dispatch files by line count:
+1871	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs
+1276	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+1147	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs
+873	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactProjectionFacetImplementations.cs
+858	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs
+845	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs
+831	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ProjectPaths.cs
+809	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs
+793	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs
+754	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Grounding.cs
+732	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExternalTargetGroundingService.cs
+719	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs
+590	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.GovernedOutcomes.cs
+547	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs
+533	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessWorkflowRunCoordinator.cs
+520	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs
+515	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessAutomationSessionObservation.cs
+504	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.BrowserProof.cs
+466	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessAutomationExecutionClient.cs
+462	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+405	src/CanDoItAll.Modules.Processes/Automation/Dispatch\WorkflowSubprocessArtifactMapper.cs
+385	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs
+375	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessBrowserProofValidator.cs
+366	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RecoveryDirective.cs
+339	src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactProjectionSourceAdapters.cs
+Exit code: 0

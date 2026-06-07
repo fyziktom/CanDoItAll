@@ -1,0 +1,8 @@
+Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --configuration Debug --no-build --filter 'FullyQualifiedName~ProcessDispatchCandidateFactory_CreateSubprocessCandidate_preserves_current_route_defaults|FullyQualifiedName~ProcessDispatchCandidateFactory_CreateWorkflowCandidate_preserves_current_route_defaults|FullyQualifiedName~StartTransitionRouteHandler_SB015_INV_001_preserves_reload_and_continue_candidates_behavior|FullyQualifiedName~ProcessDispatchRoutePlanner_SB11_INV_001_classifies_database_upstream_and_recovery_routes_without_side_effects|FullyQualifiedName~ProcessDispatchRoutePlanner_SB11_INV_002_routes_subprocess_workflow_and_agent_execution|FullyQualifiedName~DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer|FullyQualifiedName~ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions'
+Working directory: C:\repositories\CanDoItAll
+Run label: SB006-INV-001 route parity focused integration tests
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     7, Přeskočeno:     0, Celkem:     7, Doba trvání: 71 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+Exit code: 0

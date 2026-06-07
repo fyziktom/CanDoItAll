@@ -1,0 +1,27 @@
+Command: SB004 route DTO source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB004 route DTO source payload split
+
+Command: rg route source interfaces in route model source
+<no route source interfaces or Source properties in route models>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: rg adapter-owned source sidecars
+7:    private static readonly ConditionalWeakTable<ProcessRouteCandidate, DispatcherCandidateSource> CandidateSources = new();
+9:    private static readonly ConditionalWeakTable<ProcessRouteDispatchClaim, DispatcherDispatchClaimSource> DispatchClaimSources = new();
+11:    private static readonly ConditionalWeakTable<ProcessRouteExecutionOutcome, DispatcherExecutionOutcomeSource> ExecutionOutcomeSources = new();
+61:        return RequireSource(CandidateSources, candidate, nameof(candidate)).Candidate;
+78:        return RequireSource(DispatchClaimSources, dispatchClaim, nameof(dispatchClaim)).DispatchClaim;
+102:        return RequireSource(ExecutionOutcomeSources, executionOutcome, nameof(executionOutcome)).ExecutionOutcome;
+Exit code: 0
+
+Command: rg adapter leaks in route services and handlers
+<no adapter calls in route services/handlers>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: no Core/no-driver/no-UI drift scans
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden Core/driver tokens in process dispatch source>
+<no UI/mobile/media changed paths outside bundle docs>
+Exit code: 0

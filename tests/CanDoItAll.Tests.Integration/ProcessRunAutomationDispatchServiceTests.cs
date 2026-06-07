@@ -1055,8 +1055,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var stepRunId = Guid.NewGuid();
         var claim = new ProcessRouteDispatchClaim(
             stepRunId,
-            "claim-token",
-            new TestRouteDispatchClaimSource());
+            "claim-token");
         var readyCandidate = CreateRouteCandidate(
             processRunId,
             stepRunId,
@@ -20767,8 +20766,7 @@ Ancestor path to the target work node:
                 stepStatus == ProcessStepRunStatus.InProgress ? DateTimeOffset.UtcNow : null),
             Guid.NewGuid(),
             RecoveryExecutionRunId: null,
-            ArtifactInputs: [],
-            Source: new TestRouteCandidateSource());
+            ArtifactInputs: []);
     }
 
     private sealed class TestStartTransitionRouteFacet : IProcessDispatchStartTransitionRouteFacet
@@ -20807,14 +20805,6 @@ Ancestor path to the target work node:
 
             return Task.FromResult(RefreshedCandidate);
         }
-    }
-
-    private sealed class TestRouteCandidateSource : IProcessRouteCandidateSource
-    {
-    }
-
-    private sealed class TestRouteDispatchClaimSource : IProcessRouteDispatchClaimSource
-    {
     }
 
     private static object CreateDispatchCandidateCore(

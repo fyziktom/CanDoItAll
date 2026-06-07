@@ -1,0 +1,31 @@
+Command: SB006 Gate B source assertions
+Working directory: C:\repositories\CanDoItAll
+Run label: SB006-INV-001 route DTO parity source assertions
+
+Command: route model source-payload residue scan
+<no route source payload residue in route models>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: route handler/service adapter leak scan
+<no adapter or Source calls in route handlers/services>
+Exit code: 1 (rg returns 1 for no matches)
+
+Command: adapter edge sidecar source scan
+7:    private static readonly ConditionalWeakTable<ProcessRouteCandidate, DispatcherCandidateSource> CandidateSources = new();
+9:    private static readonly ConditionalWeakTable<ProcessRouteDispatchClaim, DispatcherDispatchClaimSource> DispatchClaimSources = new();
+11:    private static readonly ConditionalWeakTable<ProcessRouteExecutionOutcome, DispatcherExecutionOutcomeSource> ExecutionOutcomeSources = new();
+Exit code: 0
+
+Command: no Core/no-driver/no-UI/no-stub scans
+src\CanDoItAll.Processes.Core => False
+src\CanDoItAll.Modules.Processes.Core => False
+<no forbidden Core/driver tokens in process dispatch source>
+<no UI/mobile/media changed paths outside bundle docs>
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:104:                    "The candidate artifact is a placeholder, gap marker, or missing-artifact diagnostic.",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.GovernedOutcomes.cs:526:            "placeholder",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:379:            builder.AppendLine("- If you start from a template, replace placeholder output with the requested product, document, analysis, workflow, or other concrete deliverable before you conclude.");
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:515:            builder.AppendLine("- After browser inspection, review the bounded snapshot, screenshot, or tool-returned content. If it shows placeholder starter content or lacks the requested workflow, return Blocked or repair instead of claiming proof.");
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:345:        return $"Required artifact contract validation failed: {summary}. The process step is blocked instead of completing with missing, malformed, stale, placeholder, or weakly produced artifacts.";
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1033:        return text.Contains("placeholder", StringComparison.Ordinal) ||
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RecoveryDirective.cs:305:            builder.AppendLine("Inspect the bounded `browser_snapshot` output before concluding. If it still shows starter-template, placeholder, irrelevant content, or non-interactive behavior instead of the requested product behavior, treat it as a routing, rendering, static-content, or client-interaction defect and repair or block instead of returning Completed.");
+Exit code: 0
