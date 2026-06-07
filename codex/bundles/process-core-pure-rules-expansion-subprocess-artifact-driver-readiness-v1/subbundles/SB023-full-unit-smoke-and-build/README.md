@@ -1,8 +1,7 @@
-# SB023 - Full unit smoke and build
+﻿# SB023 - Full unit smoke and build
 
 ## Status
-Prepared.
-
+- Status: `Completed`
 ## Objective
 Run full unit project and solution build; preserve prior green count or explain unrelated changes.
 
@@ -16,7 +15,7 @@ Run full unit project and solution build; preserve prior green count or explain 
 - Core seed from `process-core-narrow-seed-route-rules-driver-proposal-prep-v1` is present and green.
 
 ## Exact Source References
-- `CanDoItAll.slnx`
+- `repo://CanDoItAll.slnx`
 
 ## Deliverables
 - Build transcript
@@ -65,10 +64,10 @@ Run full unit project and solution build; preserve prior green count or explain 
 - Anti-stub scan.
 
 ## Browser Validation Logging
-N/A - runtime/service/backend architecture refactor only. Do not create small/medium/mobile/browser screenshots.
-
+- N/A: runtime/service/backend architecture refactor only.
+- Do not create small/medium/mobile/browser screenshots unless UI files unexpectedly change; revert or record a blocker if they do.
 ## Progression Gate
-Do not start the next subbundle if this subbundle changed Core or module behavior without passing focused proof and source scans.
-
+- Do not start the next subbundle until this subbundle's required proof, scans, and execution-report row are complete.
+- Reopen this subbundle if downstream parity, dependency, driver-token, anti-stub, or no-UI/media scans contradict its proof.
 ## Suggested Agent Prompt
 Implement `SB023 - Full unit smoke and build` exactly as scoped. Preserve existing process behavior, keep Core pure, keep driver work docs/tests-only, and record proof before proceeding.

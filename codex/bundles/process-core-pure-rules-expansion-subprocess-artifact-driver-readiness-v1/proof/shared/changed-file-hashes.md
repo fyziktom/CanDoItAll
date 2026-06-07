@@ -1,0 +1,22 @@
+﻿# Changed File Hashes
+
+- SB003: repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs SHA-256 176377a57ec3d873b38b42fb7d282edcc96aeb773a62360f42db88ec70b48d2c
+- SB006: repo://src/CanDoItAll.Processes.Core/Subprocess/ProcessSubprocessLifecycleRules.cs SHA-256 f7ab443c9b5fa6a9e41bc29b45614e692f3131dba0236d8cd2f9c6ca94cb1f4c
+- SB006: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs SHA-256 4d5339b2ce92f505f9bec3648ca6addc239e7fe6d53570f004fac8922d0730d2
+- SB009: repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs SHA-256 924c8f5d3ad6b52ed9e7585cfd07b91a258c9e081d370e57bccd888ad88b5e12
+- SB009: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessArtifactSourceResolver.cs SHA-256 20fb0edd26d5dff3da360ed3761820b12652b50ef05fc1fa8afb363860f10230
+- SB012: repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessCoreArtifactModels.cs SHA-256 656075a2db894e26de2f4d2dd523972386f2b4623055858d583fa88c826ebf71
+- SB012: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCoreArtifactModelAdapters.cs SHA-256 e5838ad9d3dcc5106de3b1bad0f5072094332205af67cf4ab81c52136c8bf9ba
+- SB015: repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactExpectationMatcher.cs SHA-256 61e7c8cc1ca3b900121e2cb5d7b4540abcdd6bf4d06313bd90134e83196c7e42
+- SB015: repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactRecordedSatisfactionRules.cs SHA-256 9a4779a7714fe36177045e6925115ba7c0563d0a4df8a15c5fafcec0507a2cdd
+- SB018: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCoreArtifactModelAdapters.cs SHA-256 e5838ad9d3dcc5106de3b1bad0f5072094332205af67cf4ab81c52136c8bf9ba
+- SB018: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/WorkflowSubprocessArtifactMapper.cs SHA-256 c7633e716046aef60120c6c97cb47ebda924c096d5f6928d28a8ad614c86ba5f
+- SB021: repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs SHA-256 176377a57ec3d873b38b42fb7d282edcc96aeb773a62360f42db88ec70b48d2c
+- SB021: repo://.gitignore SHA-256 f3711155ad81a2c2340195c9452faef377d95f569abdc3ac47cbaf756ff82377
+- SB024: repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs SHA-256 7ae3ecdff28c859d1d4f3ebbd169d99f0365d44899610cbad9d67d9861e60640
+- SB027: repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/architecture/04-core-extraction-scorecard.md SHA-256 e03b8e4e105e6f2e237d8684e64eda998fd52ed32b9d7d49240f34da2ddd2197
+- SB027: repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/architecture/05-core-public-contract-map.md SHA-256 43ce936f6bde2efd69d213b01f6b768da079f9c2082b73b1442a8a6472463df3
+- SB030: repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/architecture/06-driver-verification-read-model-proposal.md SHA-256 32a522f4951b744e0ac89cbcabaa3f4174da4e22c246e4f0f9bfa6564d443467
+- SB030: repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/architecture/07-driver-negative-architecture-guard.md SHA-256 bf45f5b9b33106262b46f83ffd942d7027c331987e96e0dc6c9d8d04a6526aec
+- SB033: repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/reviews/02-final-red-team-review.md SHA-256 e08c1bf342dbe42f9e7afc7c8399e34f7eecb8f55400c514b4143616f0e7f914
+- SB036: repo://codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/reviews/01-execution-report.md SHA-256 c8a879d70a9b65085f8de613414b735a144a10b95b812e506b80b9e3ff1cbe5c

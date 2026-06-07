@@ -1,0 +1,11 @@
+﻿# SB036 Semantic Invariants
+- Invariant ID: SB036-INV-001
+- Source raw note: Run completed-stage validation and close the handoff.
+- Expected behavior: Completed validator passes after all subbundle statuses, report rows, and critical proof artifacts are closed.
+- Disallowed shallow implementation: Marking final closure complete before the completed-stage validator passes.
+- Failing-first test: N/A - no production behavior changed; process closure is validated by the completed-stage bundle validator.
+- Passing test: bundle://proof/SB036/transcripts/completed-validator.txt
+- Changed source files: codex/bundles/process-core-pure-rules-expansion-subprocess-artifact-driver-readiness-v1/reviews/01-execution-report.md
+- Production assertions: bundle://reviews/01-execution-report.md
+- Red-team negative case: bundle://proof/shared/transcripts/source-assertions.txt
+- Downstream dependency check: bundle://proof/SB036/transcripts/completed-validator.txt

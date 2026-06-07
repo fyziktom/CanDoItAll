@@ -1,0 +1,7 @@
+Command: rg -n 'Microsoft\.EntityFrameworkCore|\bDbContext\b|AppDbContext|CanDoItAll\.Modules|CanDoItAll\.Infrastructure|CanDoItAll\.AgentFramework|\bIStorage\b|StoragePlacement|Workspace|File\.|Directory\.|IServiceScopeFactory|ILogger<ProcessRunAutomationDispatchService>|TransitionStep|DispatchClaim|ProcessDispatchFinalizer|FinalizeSubprocess|FinalizeWorkflow|FinalizeDirectAgent|IProcessDriverPack|ProcessDriverRegistry|DriverPack' src\\CanDoItAll.Processes.Core -g '*.cs' -g '*.csproj' -g '!bin/**' -g '!obj/**'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: core-forbidden-scan.txt
+ExitCode: 0
+Output:
+No forbidden Core dependencies or side-effect tokens found.
+SB003-INV-001 SB006-INV-001 SB009-INV-001 SB012-INV-001 SB015-INV-001 SB018-INV-001 SB021-INV-001 SB024-INV-001 SB027-INV-001 SB030-INV-001 SB033-INV-001 SB036-INV-001

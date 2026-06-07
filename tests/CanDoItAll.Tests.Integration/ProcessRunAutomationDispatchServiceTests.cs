@@ -14,6 +14,17 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using CoreArtifactExpectationMatcher = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationMatcher;
+using CoreArtifactExpectationSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSnapshot;
+using CoreArtifactKind = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactKind;
+using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
+using CoreArtifactRecordedSatisfactionRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordedSatisfactionRules;
+using CoreArtifactResolver = CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceResolver;
+using CoreSensitivityLevel = CanDoItAll.Processes.Core.Artifacts.ProcessCoreSensitivityLevel;
+using CoreSubprocessLifecycleRules = CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules;
+using CoreSubprocessRunFacts = CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts;
+using CoreTrustRequirement = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustRequirement;
+using CoreTrustStatus = CanDoItAll.Processes.Core.Artifacts.ProcessCoreArtifactTrustStatus;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -375,6 +386,37 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ProcessCoreSubprocessLifecycleRules_SB006_INV_001_preserve_parent_status_reason_semantics()
+    {
+        var stepRunId = Guid.NewGuid();
+        var concurrencyToken = Guid.NewGuid();
+        var startFacts = CoreSubprocessLifecycleRules.BuildStartTransitionFacts(
+            stepRunId,
+            concurrencyToken,
+            "manual-dispatch",
+            "process-automation-dispatch");
+        var terminalFacts = CoreSubprocessLifecycleRules.BuildTerminalMirrorTransitionFacts(
+            stepRunId,
+            new CoreSubprocessRunFacts(Guid.NewGuid(), "Vendor intake", ProcessRunStatus.Failed),
+            ProcessStepRunStatus.Failed,
+            "process-automation-dispatch");
+
+        Assert.Equal(stepRunId, startFacts.StepRunId);
+        Assert.Equal(concurrencyToken, startFacts.StepRunConcurrencyToken);
+        Assert.Equal(ProcessStepRunStatus.InProgress, startFacts.TargetStatus);
+        Assert.Equal("Started subprocess by the durable process automation dispatcher (manual-dispatch).", startFacts.Reason);
+        Assert.True(startFacts.SuppressAutomationDispatch);
+
+        Assert.Equal(ProcessStepRunStatus.Failed, terminalFacts.TargetStatus);
+        Assert.Equal("Subprocess run 'Vendor intake' failed.", terminalFacts.Reason);
+        Assert.True(terminalFacts.SuppressAutomationDispatch);
+        Assert.Equal(ProcessStepRunStatus.Completed, CoreSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Completed));
+        Assert.Equal(ProcessStepRunStatus.Blocked, CoreSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Blocked));
+        Assert.Equal(ProcessStepRunStatus.Failed, CoreSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Cancelled));
+        Assert.Null(CoreSubprocessLifecycleRules.ResolveParentStepStatus(ProcessRunStatus.Active));
+    }
+
+    [Fact]
     public void ProcessSubprocessCapabilityGapInspector_SB09_INV_001_formats_unassigned_gap_steps()
     {
         var summary = ProcessSubprocessCapabilityGapInspector.BuildStepSummary(
@@ -498,6 +540,104 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Equal(string.Empty, workflowDiagnostic);
         Assert.Equal(subprocessArtifact.Id, subprocessResult?.Id);
         Assert.Equal(string.Empty, subprocessDiagnostic);
+    }
+
+    [Fact]
+    public void ProcessCoreSubprocessArtifactSourceResolver_SB009_INV_001_rejects_ambiguous_child_mapping_and_selects_latest_eligible_artifact()
+    {
+        var childExpectationId = Guid.NewGuid();
+        var firstParentId = Guid.NewGuid();
+        var secondParentId = Guid.NewGuid();
+        var ambiguousParentExpectations = new[]
+        {
+            CreateCoreExpectation(firstParentId, "Evidence A", childExpectationId),
+            CreateCoreExpectation(secondParentId, "Evidence B", childExpectationId)
+        };
+
+        var ambiguousResult = CoreArtifactResolver.ResolveSourceArtifact(
+            [],
+            ambiguousParentExpectations,
+            ambiguousParentExpectations[0],
+            out var ambiguousDiagnostic);
+
+        var selectedArtifactId = Guid.NewGuid();
+        var olderArtifact = CreateCoreArtifact(Guid.NewGuid(), childExpectationId, DateTimeOffset.UtcNow.AddMinutes(-5));
+        var newerArtifact = CreateCoreArtifact(selectedArtifactId, childExpectationId, DateTimeOffset.UtcNow);
+        var positiveExpectation = CreateCoreExpectation(Guid.NewGuid(), "Signed vendor attestation", childExpectationId);
+        var positiveResult = CoreArtifactResolver.ResolveSourceArtifact(
+            [olderArtifact, newerArtifact],
+            [positiveExpectation],
+            positiveExpectation,
+            out var positiveDiagnostic);
+
+        Assert.Null(ambiguousResult);
+        Assert.Contains($"Subprocess child expectation '{childExpectationId:D}' maps to multiple parent artifact expectations.", ambiguousDiagnostic, StringComparison.Ordinal);
+        Assert.Equal(selectedArtifactId, positiveResult?.Id);
+        Assert.Equal(string.Empty, positiveDiagnostic);
+    }
+
+    [Fact]
+    public void ProcessCoreArtifactExpectationMatcher_SB015_INV_001_disambiguates_by_kind_and_recorded_satisfaction_ids()
+    {
+        var deliverableId = Guid.NewGuid();
+        var evidenceId = Guid.NewGuid();
+        var expectedArtifacts = new[]
+        {
+            CreateCoreExpectation(deliverableId, "Vendor packet", null, CoreArtifactKind.Deliverable),
+            CreateCoreExpectation(evidenceId, "Vendor packet", null, CoreArtifactKind.Evidence)
+        };
+
+        var matchedId = CoreArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+            expectedArtifacts,
+            CoreArtifactKind.Deliverable,
+            static artifact => artifact.Title == "Vendor packet");
+        var ambiguousId = CoreArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+            expectedArtifacts,
+            CoreArtifactKind.Brief,
+            static artifact => artifact.Title == "Vendor packet");
+        var recorded = CoreArtifactRecordedSatisfactionRules.HasRecordedExpectedArtifact(
+            deliverableId,
+            new HashSet<Guid>(),
+            [null, deliverableId]);
+
+        Assert.Equal(deliverableId, matchedId);
+        Assert.Null(ambiguousId);
+        Assert.True(recorded);
+    }
+
+    private static CoreArtifactExpectationSnapshot CreateCoreExpectation(
+        Guid id,
+        string title,
+        Guid? childExpectationId,
+        CoreArtifactKind artifactKind = CoreArtifactKind.Evidence,
+        CoreTrustRequirement trustRequirement = CoreTrustRequirement.ReviewRequired,
+        CoreSensitivityLevel sensitivityLevel = CoreSensitivityLevel.Internal)
+    {
+        return new CoreArtifactExpectationSnapshot(
+            id,
+            artifactKind,
+            title,
+            IsRequired: true,
+            trustRequirement,
+            sensitivityLevel,
+            "validation summary",
+            "future usage summary",
+            childExpectationId);
+    }
+
+    private static CoreArtifactRecordSnapshot CreateCoreArtifact(
+        Guid id,
+        Guid? artifactExpectationId,
+        DateTimeOffset createdAtUtc)
+    {
+        return new CoreArtifactRecordSnapshot(
+            id,
+            artifactExpectationId,
+            CoreArtifactKind.Evidence,
+            "Signed vendor attestation",
+            CoreTrustStatus.ReviewRequired,
+            CoreSensitivityLevel.Internal,
+            createdAtUtc);
     }
 
     [Theory]

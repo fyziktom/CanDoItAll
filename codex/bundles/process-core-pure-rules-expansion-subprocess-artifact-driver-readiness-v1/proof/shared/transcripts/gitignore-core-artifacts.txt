@@ -1,0 +1,10 @@
+Command: git check-ignore -v src\CanDoItAll.Processes.Core\Artifacts\ProcessArtifactExpectationMatcher.cs src\CanDoItAll.Processes.Core\Artifacts\ProcessArtifactRecordedSatisfactionRules.cs src\CanDoItAll.Processes.Core\Artifacts\ProcessCoreArtifactModels.cs src\CanDoItAll.Processes.Core\Artifacts\ProcessSubprocessArtifactSourceResolver.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: Core artifact source gitignore exception check
+ExitCode: 0
+Output:
+SB021-INV-001 Core artifact source files match the explicit unignore rule and are visible to git status.
+.gitignore:45:!src/CanDoItAll.Processes.Core/Artifacts/*.cs	"src\\CanDoItAll.Processes.Core\\Artifacts\\ProcessArtifactExpectationMatcher.cs"
+.gitignore:45:!src/CanDoItAll.Processes.Core/Artifacts/*.cs	"src\\CanDoItAll.Processes.Core\\Artifacts\\ProcessArtifactRecordedSatisfactionRules.cs"
+.gitignore:45:!src/CanDoItAll.Processes.Core/Artifacts/*.cs	"src\\CanDoItAll.Processes.Core\\Artifacts\\ProcessCoreArtifactModels.cs"
+.gitignore:45:!src/CanDoItAll.Processes.Core/Artifacts/*.cs	"src\\CanDoItAll.Processes.Core\\Artifacts\\ProcessSubprocessArtifactSourceResolver.cs"

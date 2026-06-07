@@ -1,0 +1,11 @@
+﻿# SB018 Semantic Invariants
+- Invariant ID: SB018-INV-001
+- Source raw note: Consolidate module-local adapters and prevent Core type leakage in side-effect services.
+- Expected behavior: Module wrappers convert entities to Core snapshots at the boundary while runtime services remain module-local.
+- Disallowed shallow implementation: Injecting Core rules through side-effect services without a clear adapter boundary.
+- Failing-first test: bundle://proof/SB018/transcripts/failing-first.txt
+- Passing test: bundle://proof/shared/transcripts/unit-architecture.txt
+- Changed source files: src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCoreArtifactModelAdapters.cs, src/CanDoItAll.Modules.Processes/Automation/Dispatch/WorkflowSubprocessArtifactMapper.cs
+- Production assertions: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCoreArtifactModelAdapters.cs
+- Red-team negative case: bundle://proof/SB018/transcripts/failing-first.txt
+- Downstream dependency check: bundle://proof/shared/transcripts/build.txt

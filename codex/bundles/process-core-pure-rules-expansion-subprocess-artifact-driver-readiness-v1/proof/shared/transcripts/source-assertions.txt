@@ -1,0 +1,18 @@
+Command: source assertions for Core pure-rule expansion
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: source-assertions.txt
+ExitCode: 0
+Output:
+SB003-INV-001 Core project remains registered and dependency-limited.
+repo://src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj references repo://src/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj only.
+SB006-INV-001 repo://src/CanDoItAll.Processes.Core/Subprocess/ProcessSubprocessLifecycleRules.cs owns parent subprocess status and reason facts.
+SB009-INV-001 repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs owns child expectation mapping and artifact eligibility rules.
+SB012-INV-001 repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessCoreArtifactModels.cs owns artifact expectation and validation snapshots.
+SB015-INV-001 repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactExpectationMatcher.cs and repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactRecordedSatisfactionRules.cs own pure matching and recorded-satisfaction descriptors.
+SB018-INV-001 repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessCoreArtifactModelAdapters.cs and module wrappers keep runtime entities module-local.
+SB021-INV-001 repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs asserts approved Core namespaces and forbidden dependency tokens.
+SB024-INV-001 repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs proves route, subprocess, artifact focused integration parity.
+SB027-INV-001 bundle://architecture/04-core-extraction-scorecard.md and bundle://architecture/05-core-public-contract-map.md record final Core contract decision.
+SB030-INV-001 bundle://architecture/06-driver-verification-read-model-proposal.md and bundle://architecture/07-driver-negative-architecture-guard.md keep driver work docs/tests-only.
+SB033-INV-001 bundle://reviews/02-final-red-team-review.md audits fake-proof resistance.
+SB036-INV-001 completed validator transcript closes the bundle.

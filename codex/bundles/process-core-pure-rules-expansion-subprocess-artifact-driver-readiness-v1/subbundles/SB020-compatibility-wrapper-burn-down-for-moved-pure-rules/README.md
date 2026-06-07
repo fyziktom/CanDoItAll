@@ -1,8 +1,7 @@
-# SB020 - Compatibility wrapper burn-down for moved pure rules
+﻿# SB020 - Compatibility wrapper burn-down for moved pure rules
 
 ## Status
-Prepared.
-
+- Status: `Completed`
 ## Objective
 Remove module-local wrappers only when all callers can safely call Core or an adapter directly.
 
@@ -16,7 +15,7 @@ Remove module-local wrappers only when all callers can safely call Core or an ad
 - Core seed from `process-core-narrow-seed-route-rules-driver-proposal-prep-v1` is present and green.
 
 ## Exact Source References
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
 
 ## Deliverables
 - Removed or documented wrappers
@@ -65,10 +64,10 @@ Remove module-local wrappers only when all callers can safely call Core or an ad
 - Anti-stub scan.
 
 ## Browser Validation Logging
-N/A - runtime/service/backend architecture refactor only. Do not create small/medium/mobile/browser screenshots.
-
+- N/A: runtime/service/backend architecture refactor only.
+- Do not create small/medium/mobile/browser screenshots unless UI files unexpectedly change; revert or record a blocker if they do.
 ## Progression Gate
-Do not start the next subbundle if this subbundle changed Core or module behavior without passing focused proof and source scans.
-
+- Do not start the next subbundle until this subbundle's required proof, scans, and execution-report row are complete.
+- Reopen this subbundle if downstream parity, dependency, driver-token, anti-stub, or no-UI/media scans contradict its proof.
 ## Suggested Agent Prompt
 Implement `SB020 - Compatibility wrapper burn-down for moved pure rules` exactly as scoped. Preserve existing process behavior, keep Core pure, keep driver work docs/tests-only, and record proof before proceeding.

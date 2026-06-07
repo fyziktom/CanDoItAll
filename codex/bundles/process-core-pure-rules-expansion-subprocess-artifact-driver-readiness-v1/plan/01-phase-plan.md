@@ -18,6 +18,11 @@ flowchart TD
     SB033 --> SB034 --> SB035 --> SB036
 ```
 
+## Execution Order
+- Execute subbundles strictly in numeric order from SB001 through SB036.
+- Stop at each critical gate before starting the next phase.
+- Reopen the prerequisite subbundle if a later scan or parity test weakens earlier proof.
+
 ## Phases
 
 | Phase | Subbundles | Theme |
@@ -36,7 +41,18 @@ flowchart TD
 | 12 | SB034-SB036 | Red-team, completed validator, final closure |
 
 ## Critical Subbundles
-SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036.
+- SB003 - Gate A baseline proof closure.
+- SB006 - Gate B subprocess lifecycle parity.
+- SB009 - Gate C subprocess artifact mapping parity.
+- SB012 - Gate D artifact expectation snapshot parity.
+- SB015 - Gate E artifact matcher/satisfaction parity.
+- SB018 - Gate F adapter boundary proof.
+- SB021 - Gate G public API hygiene proof.
+- SB024 - Gate H integration closure.
+- SB027 - Gate I Core docs and scorecard.
+- SB030 - Gate J driver docs-only proof.
+- SB033 - Gate K broad proof closure.
+- SB036 - Gate L completed validator and final handoff.
 
 ## Phase Gates
 Every critical subbundle must have:

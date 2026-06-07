@@ -41,6 +41,8 @@ bld/
 project.lock.json
 project.fragment.lock.json
 artifacts/
+!src/CanDoItAll.Processes.Core/Artifacts/
+!src/CanDoItAll.Processes.Core/Artifacts/*.cs
 .artifacts/
 !Templates/Processes/processes/business-plan-development/artifacts/
 !Templates/Processes/processes/business-plan-development/artifacts/*.json

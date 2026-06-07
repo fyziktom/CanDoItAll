@@ -25,6 +25,63 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Process_core_pure_rules_expansion_stays_inside_approved_namespaces_without_side_effect_dependencies()
+    {
+        var root = FindRepositoryRoot();
+        var coreRoot = Path.Combine(root, "src", "CanDoItAll.Processes.Core");
+        var coreProject = File.ReadAllText(Path.Combine(coreRoot, "CanDoItAll.Processes.Core.csproj"));
+        var coreSource = ReadNarrowProcessCoreSource(root);
+        var topLevelDirectories = Directory
+            .EnumerateDirectories(coreRoot)
+            .Select(Path.GetFileName)
+            .Where(name => !string.Equals(name, "bin", StringComparison.OrdinalIgnoreCase))
+            .Where(name => !string.Equals(name, "obj", StringComparison.OrdinalIgnoreCase))
+            .Select(static name => name!)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        var forbiddenCoreTokens = new[]
+        {
+            "Microsoft.EntityFrameworkCore",
+            "DbContext",
+            "AppDbContext",
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "IStorage",
+            "StoragePlacement",
+            "Workspace",
+            "File.",
+            "Directory.",
+            "IServiceScopeFactory",
+            "TransitionStep",
+            "DispatchClaim",
+            "ProcessDispatchFinalizer",
+            "FinalizeSubprocess",
+            "FinalizeWorkflow",
+            "FinalizeDirectAgent",
+            "IProcessDriverPack",
+            "ProcessDriverRegistry",
+            "DriverPack"
+        };
+
+        Assert.Equal(["Artifacts", "Routing", "Subprocess"], topLevelDirectories);
+        Assert.Contains(@"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />", coreProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Routing", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Subprocess", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Artifacts", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessSubprocessLifecycleRules", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessSubprocessArtifactSourceResolver", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public sealed record ProcessArtifactExpectationSnapshot", coreSource, StringComparison.Ordinal);
+        Assert.Contains("public static class ProcessArtifactExpectationMatcher", coreSource, StringComparison.Ordinal);
+
+        foreach (var forbiddenCoreToken in forbiddenCoreTokens)
+        {
+            Assert.DoesNotContain(forbiddenCoreToken, coreSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void Execution_boundary_design_stays_on_staging_facade_cutline()
     {
         var design = ReadRepositoryFile(
@@ -1313,7 +1370,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("finalizerAdapter.FinalizeSubprocessCompletionAsync", subprocessRuntimeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRouteCandidate? routeCandidate", subprocessRuntimeSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessRouteDispatchClaim? routeDispatchClaim", subprocessRuntimeSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedSubprocessSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules", subprocessLifecycleRulesSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", combinedSubprocessSource.Replace(subprocessLifecycleRulesSource, string.Empty), StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverPack", combinedSubprocessSource, StringComparison.Ordinal);
         Assert.DoesNotContain("DriverPack", combinedSubprocessSource, StringComparison.Ordinal);
     }
@@ -2336,6 +2394,10 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
                 Assert.True(File.Exists(path), path);
                 return File.ReadAllText(path);
             }));
+        var recordedSatisfactionRulesSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessArtifactRecordedSatisfactionRules.cs"));
+        var sideEffectHelperSource = helperSource.Replace(recordedSatisfactionRulesSource, string.Empty);
         var forbiddenTokens = new[]
         {
             "CanDoItAll.Processes.Core",
@@ -2352,6 +2414,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         };
 
         Assert.Contains("internal sealed record ProcessArtifactSatisfactionSnapshot", helperSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordedSatisfactionRules", recordedSatisfactionRulesSource, StringComparison.Ordinal);
         Assert.Contains("internal static class ProcessRequiredArtifactAutoSatisfactionRules", helperSource, StringComparison.Ordinal);
         Assert.Contains("internal static class ProcessQualityValidationEvidenceAggregator", helperSource, StringComparison.Ordinal);
         Assert.Contains("internal static class ProcessIncompleteImplementationSignalRules", helperSource, StringComparison.Ordinal);
@@ -2362,7 +2425,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
 
         foreach (var forbiddenToken in forbiddenTokens)
         {
-            Assert.DoesNotContain(forbiddenToken, helperSource, StringComparison.Ordinal);
+            Assert.DoesNotContain(forbiddenToken, sideEffectHelperSource, StringComparison.Ordinal);
         }
     }
 
@@ -3504,7 +3567,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessHelperDriver", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory), StringComparison.Ordinal);
         Assert.All(proofPaths, path =>
         {
             var relativePath = Path.GetRelativePath(bundleRoot, path);
@@ -3566,7 +3629,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessHelperDriver", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory), StringComparison.Ordinal);
         Assert.DoesNotContain("| SB001-SB033 |", gateSection, StringComparison.Ordinal);
 
         foreach (var subbundleId in Enumerable.Range(1, 33).Select(static index => $"SB{index:000}"))
@@ -3621,7 +3684,6 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "IProcessDriverRegistry",
             "IProcessHelperDriver",
             "ProcessDriverRegistry",
-            "CanDoItAll.Processes.Core",
             "CanDoItAll.Modules.Processes.Core"
         };
 
@@ -3633,6 +3695,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.False(Directory.Exists(Path.Combine(srcRoot, "CanDoItAll.Modules.Processes.Core")));
         Assert.All(forbiddenProductionTokens, token =>
             Assert.DoesNotContain(token, dispatchSource, StringComparison.Ordinal));
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", ReadDispatchSourceExcludingCorePureRuleAdapters(dispatchDirectory), StringComparison.Ordinal);
         Assert.DoesNotContain(changedFilesOutsideBundle, IsUiOrMobileProofPath);
         Assert.DoesNotContain("| SB001-SB036 |", gateSection, StringComparison.Ordinal);
 
@@ -3725,10 +3788,26 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             .Where(static name => !string.IsNullOrWhiteSpace(name))
             .Select(static name => name!)
             .ToArray();
+        var allowedCoreAdapterFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "ProcessCoreArtifactModelAdapters.cs",
+            "ProcessDispatchRouteModelAdapters.cs",
+            "ProcessSubprocessLifecycleRules.cs",
+            "ProcessSubprocessArtifactSourceResolver.cs",
+            "ProcessArtifactExpectationMatcher.cs",
+            "ProcessArtifactRecordedSatisfactionRules.cs"
+        };
         var dispatchModuleSource = string.Join(
             Environment.NewLine,
             Directory
                 .EnumerateFiles(dispatchDirectory, "*.cs")
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+        var sideEffectDispatchModuleSource = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(dispatchDirectory, "*.cs")
+                .Where(path => !allowedCoreAdapterFiles.Contains(Path.GetFileName(path)))
                 .Order(StringComparer.Ordinal)
                 .Select(File.ReadAllText));
 
@@ -3774,7 +3853,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain("IProcessDriverPack", dispatchModuleSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IProcessDriverRegistry", dispatchModuleSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverRegistry", dispatchModuleSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", dispatchModuleSource, StringComparison.Ordinal);
+        Assert.Contains("global::CanDoItAll.Processes.Core.Artifacts.ProcessSubprocessArtifactSourceResolver", subprocessResolverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", sideEffectDispatchModuleSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -4038,6 +4118,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         Assert.DoesNotContain(@"..\CanDoItAll.Modules.Plugins\", coreProject, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("namespace CanDoItAll.Processes.Core.Routing", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Subprocess", coreSource, StringComparison.Ordinal);
+        Assert.Contains("namespace CanDoItAll.Processes.Core.Artifacts", coreSource, StringComparison.Ordinal);
         Assert.Contains("public enum ProcessDispatchRouteStage", coreSource, StringComparison.Ordinal);
         Assert.Contains("public static class ProcessDispatchRoutePipeline", coreSource, StringComparison.Ordinal);
         Assert.Contains("public static class ProcessDispatchRoutePlanner", coreSource, StringComparison.Ordinal);
@@ -4055,6 +4137,8 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "WorkspacePathResolver",
             "IStorage",
             "StoragePlacement",
+            "File.",
+            "Directory.",
             "AgentFramework",
             "Maf",
             "ProcessRunAutomationDispatchService",
@@ -4078,6 +4162,27 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             Environment.NewLine,
             Directory
                 .EnumerateFiles(Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Core"), "*.cs", SearchOption.AllDirectories)
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+    }
+
+    private static string ReadDispatchSourceExcludingCorePureRuleAdapters(string dispatchDirectory)
+    {
+        var allowedCoreAdapterFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "ProcessCoreArtifactModelAdapters.cs",
+            "ProcessDispatchRouteModelAdapters.cs",
+            "ProcessSubprocessLifecycleRules.cs",
+            "ProcessSubprocessArtifactSourceResolver.cs",
+            "ProcessArtifactExpectationMatcher.cs",
+            "ProcessArtifactRecordedSatisfactionRules.cs"
+        };
+
+        return string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(dispatchDirectory, "*.cs")
+                .Where(path => !allowedCoreAdapterFiles.Contains(Path.GetFileName(path)))
                 .Order(StringComparer.Ordinal)
                 .Select(File.ReadAllText));
     }

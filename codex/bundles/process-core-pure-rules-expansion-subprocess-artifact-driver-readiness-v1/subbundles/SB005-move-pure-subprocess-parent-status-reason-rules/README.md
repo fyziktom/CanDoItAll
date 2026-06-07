@@ -1,8 +1,7 @@
-# SB005 - Move pure subprocess parent status/reason rules
+﻿# SB005 - Move pure subprocess parent status/reason rules
 
 ## Status
-Prepared.
-
+- Status: `Completed`
 ## Objective
 Move only deterministic subprocess parent status and reason building rules into Core.
 
@@ -16,8 +15,8 @@ Move only deterministic subprocess parent status and reason building rules into 
 - Core seed from `process-core-narrow-seed-route-rules-driver-proposal-prep-v1` is present and green.
 
 ## Exact Source References
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
 
 ## Deliverables
 - Core lifecycle rule class
@@ -66,10 +65,10 @@ Move only deterministic subprocess parent status and reason building rules into 
 - Anti-stub scan.
 
 ## Browser Validation Logging
-N/A - runtime/service/backend architecture refactor only. Do not create small/medium/mobile/browser screenshots.
-
+- N/A: runtime/service/backend architecture refactor only.
+- Do not create small/medium/mobile/browser screenshots unless UI files unexpectedly change; revert or record a blocker if they do.
 ## Progression Gate
-Do not start the next subbundle if this subbundle changed Core or module behavior without passing focused proof and source scans.
-
+- Do not start the next subbundle until this subbundle's required proof, scans, and execution-report row are complete.
+- Reopen this subbundle if downstream parity, dependency, driver-token, anti-stub, or no-UI/media scans contradict its proof.
 ## Suggested Agent Prompt
 Implement `SB005 - Move pure subprocess parent status/reason rules` exactly as scoped. Preserve existing process behavior, keep Core pure, keep driver work docs/tests-only, and record proof before proceeding.

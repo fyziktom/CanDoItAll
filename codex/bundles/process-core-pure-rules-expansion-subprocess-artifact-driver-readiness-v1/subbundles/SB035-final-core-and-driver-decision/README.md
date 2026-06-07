@@ -1,8 +1,7 @@
-# SB035 - Final Core and driver decision
+﻿# SB035 - Final Core and driver decision
 
 ## Status
-Prepared.
-
+- Status: `Completed`
 ## Objective
 Decide whether next work should further expand Core, stabilize, or start driver contract proposal.
 
@@ -16,7 +15,7 @@ Decide whether next work should further expand Core, stabilize, or start driver 
 - Core seed from `process-core-narrow-seed-route-rules-driver-proposal-prep-v1` is present and green.
 
 ## Exact Source References
-- `architecture/03-driver-readiness-proposal-lane.md`
+- `bundle://architecture/03-driver-readiness-proposal-lane.md`
 
 ## Deliverables
 - Final decision file
@@ -64,10 +63,10 @@ Decide whether next work should further expand Core, stabilize, or start driver 
 - Anti-stub scan.
 
 ## Browser Validation Logging
-N/A - runtime/service/backend architecture refactor only. Do not create small/medium/mobile/browser screenshots.
-
+- N/A: runtime/service/backend architecture refactor only.
+- Do not create small/medium/mobile/browser screenshots unless UI files unexpectedly change; revert or record a blocker if they do.
 ## Progression Gate
-Do not start the next subbundle if this subbundle changed Core or module behavior without passing focused proof and source scans.
-
+- Do not start the next subbundle until this subbundle's required proof, scans, and execution-report row are complete.
+- Reopen this subbundle if downstream parity, dependency, driver-token, anti-stub, or no-UI/media scans contradict its proof.
 ## Suggested Agent Prompt
 Implement `SB035 - Final Core and driver decision` exactly as scoped. Preserve existing process behavior, keep Core pure, keep driver work docs/tests-only, and record proof before proceeding.

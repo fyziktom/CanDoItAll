@@ -1,0 +1,7 @@
+﻿Command: git grep -n "Process_core_pure_rules_expansion_stays_inside_approved_namespaces_without_side_effect_dependencies" HEAD -- tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB021 failing-first absence check
+ExitCode: 1
+Output:
+Invariant: SB021-INV-001
+No matching baseline implementation found in HEAD.

@@ -1,0 +1,11 @@
+﻿# SB006 Semantic Invariants
+- Invariant ID: SB006-INV-001
+- Source raw note: Move pure subprocess parent status and reason rules into Core.
+- Expected behavior: Parent subprocess transition facts preserve the module status and reason outputs while Core remains side-effect free.
+- Disallowed shallow implementation: Hard-coding happy-path status text or leaving the deterministic status/reason logic in module services.
+- Failing-first test: bundle://proof/SB006/transcripts/failing-first.txt
+- Passing test: bundle://proof/shared/transcripts/focused-integration.txt
+- Changed source files: src/CanDoItAll.Processes.Core/Subprocess/ProcessSubprocessLifecycleRules.cs, src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs
+- Production assertions: repo://src/CanDoItAll.Processes.Core/Subprocess/ProcessSubprocessLifecycleRules.cs
+- Red-team negative case: bundle://proof/SB006/transcripts/failing-first.txt
+- Downstream dependency check: bundle://proof/shared/transcripts/build.txt

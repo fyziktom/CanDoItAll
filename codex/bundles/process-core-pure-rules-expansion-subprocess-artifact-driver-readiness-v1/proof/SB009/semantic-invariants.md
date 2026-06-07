@@ -1,0 +1,11 @@
+﻿# SB009 Semantic Invariants
+- Invariant ID: SB009-INV-001
+- Source raw note: Move deterministic subprocess artifact source mapping and eligibility rules into Core.
+- Expected behavior: Child expectation mapping rejects ambiguous parents and selects only eligible latest artifacts through Core snapshots.
+- Disallowed shallow implementation: Choosing the first artifact or ignoring ambiguous child expectation matches.
+- Failing-first test: bundle://proof/SB009/transcripts/failing-first.txt
+- Passing test: bundle://proof/shared/transcripts/focused-integration.txt
+- Changed source files: src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs, src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessArtifactSourceResolver.cs
+- Production assertions: repo://src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs
+- Red-team negative case: bundle://proof/SB009/transcripts/failing-first.txt
+- Downstream dependency check: bundle://proof/shared/transcripts/build.txt

@@ -1,8 +1,7 @@
-# SB025 - Update Core extraction scorecard
+﻿# SB025 - Update Core extraction scorecard
 
 ## Status
-Prepared.
-
+- Status: `Completed`
 ## Objective
 Reflect which Core families moved and what remains blocked.
 
@@ -16,7 +15,7 @@ Reflect which Core families moved and what remains blocked.
 - Core seed from `process-core-narrow-seed-route-rules-driver-proposal-prep-v1` is present and green.
 
 ## Exact Source References
-- `codex/bundles/process-core-pre-extraction-consolidation-driver-readiness-v1/architecture/03-final-core-readiness-decision-template.md`
+- `repo://codex/bundles/process-core-pre-extraction-consolidation-driver-readiness-v1/architecture/03-final-core-readiness-decision-template.md`
 
 ## Deliverables
 - Updated scorecard
@@ -65,10 +64,10 @@ Reflect which Core families moved and what remains blocked.
 - Anti-stub scan.
 
 ## Browser Validation Logging
-N/A - runtime/service/backend architecture refactor only. Do not create small/medium/mobile/browser screenshots.
-
+- N/A: runtime/service/backend architecture refactor only.
+- Do not create small/medium/mobile/browser screenshots unless UI files unexpectedly change; revert or record a blocker if they do.
 ## Progression Gate
-Do not start the next subbundle if this subbundle changed Core or module behavior without passing focused proof and source scans.
-
+- Do not start the next subbundle until this subbundle's required proof, scans, and execution-report row are complete.
+- Reopen this subbundle if downstream parity, dependency, driver-token, anti-stub, or no-UI/media scans contradict its proof.
 ## Suggested Agent Prompt
 Implement `SB025 - Update Core extraction scorecard` exactly as scoped. Preserve existing process behavior, keep Core pure, keep driver work docs/tests-only, and record proof before proceeding.

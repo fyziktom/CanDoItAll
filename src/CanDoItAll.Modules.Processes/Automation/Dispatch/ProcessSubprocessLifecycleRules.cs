@@ -36,15 +36,12 @@ internal static class ProcessSubprocessLifecycleRules
         string normalizedTrigger,
         string automationActor)
     {
-        return new ProcessStepTransitionRequest
-        {
-            StepRunId = stepRunId,
-            StepRunConcurrencyToken = concurrencyToken,
-            TargetStatus = ProcessStepRunStatus.InProgress,
-            Reason = $"Started subprocess by the durable process automation dispatcher ({normalizedTrigger}).",
-            DecidedBy = automationActor,
-            SuppressAutomationDispatch = true
-        };
+        return ToTransitionRequest(
+            global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildStartTransitionFacts(
+                stepRunId,
+                concurrencyToken,
+                normalizedTrigger,
+                automationActor));
     }
 
     public static ProcessStepTransitionRequest BuildEnsureFailureBlockTransitionRequest(
@@ -92,14 +89,11 @@ internal static class ProcessSubprocessLifecycleRules
         string reason,
         string automationActor)
     {
-        return new ProcessStepTransitionRequest
-        {
-            StepRunId = stepRunId,
-            TargetStatus = ProcessStepRunStatus.Blocked,
-            Reason = reason,
-            DecidedBy = automationActor,
-            SuppressAutomationDispatch = true
-        };
+        return ToTransitionRequest(
+            global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildBlockTransitionFacts(
+                stepRunId,
+                reason,
+                automationActor));
     }
 
     public static ProcessStepTransitionRequest BuildTerminalMirrorTransitionRequest(
@@ -140,38 +134,44 @@ internal static class ProcessSubprocessLifecycleRules
     {
         ArgumentNullException.ThrowIfNull(subprocessRun);
 
+        return ToTransitionRequest(
+            global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionFacts(
+                stepRunId,
+                new global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts(
+                    subprocessRun.RunId,
+                    subprocessRun.RunName,
+                    subprocessRun.Status),
+                terminalStatus,
+                automationActor));
+    }
+
+    private static ProcessStepTransitionRequest ToTransitionRequest(
+        global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessParentTransitionFacts transitionFacts)
+    {
         return new ProcessStepTransitionRequest
         {
-            StepRunId = stepRunId,
-            TargetStatus = terminalStatus,
-            Reason = BuildParentTransitionReason(subprocessRun),
-            DecidedBy = automationActor,
-            SuppressAutomationDispatch = terminalStatus != ProcessStepRunStatus.Completed
+            StepRunId = transitionFacts.StepRunId,
+            StepRunConcurrencyToken = transitionFacts.StepRunConcurrencyToken,
+            TargetStatus = transitionFacts.TargetStatus,
+            Reason = transitionFacts.Reason,
+            DecidedBy = transitionFacts.DecidedBy,
+            SuppressAutomationDispatch = transitionFacts.SuppressAutomationDispatch
         };
     }
 
     public static ProcessStepRunStatus? ResolveParentStepStatus(ProcessRunStatus subprocessStatus)
     {
-        return subprocessStatus switch
-        {
-            ProcessRunStatus.Completed => ProcessStepRunStatus.Completed,
-            ProcessRunStatus.Blocked => ProcessStepRunStatus.Blocked,
-            ProcessRunStatus.Cancelled or ProcessRunStatus.Failed => ProcessStepRunStatus.Failed,
-            _ => null
-        };
+        return global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.ResolveParentStepStatus(subprocessStatus);
     }
 
     public static string BuildParentTransitionReason(ProcessSubprocessRunStartResult subprocessRun)
     {
         ArgumentNullException.ThrowIfNull(subprocessRun);
 
-        return subprocessRun.Status switch
-        {
-            ProcessRunStatus.Completed => $"Subprocess run '{subprocessRun.RunName}' completed.",
-            ProcessRunStatus.Blocked => $"Subprocess run '{subprocessRun.RunName}' is blocked.",
-            ProcessRunStatus.Cancelled => $"Subprocess run '{subprocessRun.RunName}' was cancelled.",
-            ProcessRunStatus.Failed => $"Subprocess run '{subprocessRun.RunName}' failed.",
-            _ => $"Subprocess run '{subprocessRun.RunName}' is {subprocessRun.Status}."
-        };
+        return global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessLifecycleRules.BuildParentTransitionReason(
+            new global::CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts(
+                subprocessRun.RunId,
+                subprocessRun.RunName,
+                subprocessRun.Status));
     }
 }

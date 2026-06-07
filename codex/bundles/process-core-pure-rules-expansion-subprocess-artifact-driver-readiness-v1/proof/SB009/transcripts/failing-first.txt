@@ -1,0 +1,7 @@
+Command: git show HEAD:src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB009 failing-first absence proof
+ExitCode: 128
+Output:
+SB009-INV-001 failing-first: pre-change HEAD did not contain the new Core/adapter surface required by this invariant.
+fatal: path 'src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs' exists on disk, but not in 'HEAD'
