@@ -1,0 +1,18 @@
+SB015 changed file SHA-256 hashes
+Generated: 2026-06-06T18:03:15.0988074-04:00
+
+| Path | SHA-256 |
+| --- | --- |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchPreExecutionRouteFacts.cs` | `0FD4A66DBD993AA3CDC4D5B9F23365CF12EFFD3D4CEF32E748DCABE1BB859AFC` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchPreExecutionGuardHandler.cs` | `31F38E82A8338BA8A097021C6473755B5EAC0DA51667431E280FBCFB390646B6` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs` | `378A86C6B73DC1BCE27FBE9E8DD55E7AB89AFAF75138E8DF7AFF7064BE679105` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMissingUpstreamArtifactMaterialization.cs` | `85948B01D66AB4790211563ECE290C3761CB551A1C5E8785906F25CBEF6F9948` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMissingUpstreamArtifactMaterializationSideEffects.cs` | `227987736DC4E0885C57FA85A3AA1577AF4717B53CA50E7341C1A7BA7A4B1E18` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs` | `80A339F55DCAE142B9999929BF324E607D05C1433D22128F627E54400E118F65` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs` | `132C932717AC789B2D21F3F5C5114EBD02DB0514B80FDDCBFE8F714D86EFE655` |
+| `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs` | `A379E4294A6AD8A03AB06B30177B461880AF49D5C62FE2A524D6EC55842890AB` |
+| `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs` | `8AA822B160B5DE0559F02E1A8D54B534F9368A5CE6FF55A2E4A59AEAB8C7A912` |
+| `bundle://inventories/02-source-hotspots.md` | `D85E090C1E0B897A9C6DEBDD51E2334BC0A212AECBC7BD6C7E280DA774767FCB` |
+| `bundle://reviews/01-execution-report.md` | `D3B0B1EB4B82560F6733F2052A31B8BD5466FDC6FE38485E8D4E832E4D1DF872` |
+| `bundle://subbundles/SB015/README.md` | `EF703201A4C42732B2968AEA0DE319BF3E019261C3F1233656EF65C3A1AA2086` |
+| `bundle://proof/SB015/semantic-invariants.md` | `2E52A475380A854897D27A0C2A64AAA99DF9D4FA907275A4E01C3DF8568832D8` |

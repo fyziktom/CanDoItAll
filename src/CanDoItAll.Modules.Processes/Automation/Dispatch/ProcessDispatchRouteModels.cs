@@ -14,6 +14,9 @@ internal interface IProcessRouteExecutionOutcomeSource
 {
 }
 
+internal sealed record ProcessRouteExecutionRunSnapshot(
+    Guid Id);
+
 internal sealed record ProcessRouteRunSnapshot(
     Guid Id,
     ProcessRunStatus Status,
@@ -61,7 +64,7 @@ internal sealed record ProcessRouteDispatchClaim(
     IProcessRouteDispatchClaimSource Source);
 
 internal sealed record ProcessRouteExecutionOutcome(
-    ProcessAutomationExecutionRunDetail Detail,
+    ProcessRouteExecutionRunSnapshot ExecutionRun,
     string ResponseText,
     ProcessStepRunStatus CompletionStatus,
     string CompletionReason,

@@ -1,0 +1,11 @@
+Command: SB028 entry gate validation
+Working directory: C:\repositories\CanDoItAll
+
+PASS SB027 README is completed
+PASS SB027 closure gate passed
+PASS no Process Core directory exists before SB028
+PASS production driver API token absent before SB028: IProcessDriverPack
+PASS production driver API token absent before SB028: IProcessDriverRegistry
+PASS production driver API token absent before SB028: ProcessDriverRegistry
+
+RESULT: PASS

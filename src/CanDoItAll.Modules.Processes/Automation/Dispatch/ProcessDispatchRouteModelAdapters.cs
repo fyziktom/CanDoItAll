@@ -72,7 +72,7 @@ internal static class ProcessDispatchRouteModelAdapters
         ArgumentNullException.ThrowIfNull(executionOutcome);
 
         return new ProcessRouteExecutionOutcome(
-            executionOutcome.Detail,
+            new ProcessRouteExecutionRunSnapshot(executionOutcome.Detail.Run.Id),
             executionOutcome.ResponseText,
             executionOutcome.CompletionStatus,
             executionOutcome.CompletionReason,

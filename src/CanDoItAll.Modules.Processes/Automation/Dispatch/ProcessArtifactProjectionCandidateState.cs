@@ -6,7 +6,7 @@ internal static class ProcessArtifactProjectionCandidateState
 {
     public static bool TryApplyExpectedWriteOutcome(
         ProcessProjectionMutableCandidateState candidateState,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         Result<ProcessArtifactProjectionWriteResult> writeResult,
         out string errorSummary)
     {
@@ -47,7 +47,7 @@ internal static class ProcessArtifactProjectionCandidateState
 
     public static bool TryApplyExpectedRecordOnlyOutcome(
         ProcessProjectionMutableCandidateState candidateState,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
         out string errorSummary)
     {

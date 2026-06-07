@@ -1,7 +1,7 @@
 # SB024 - Gate H - projection/validation DTO parity
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Prove projection source-family order, external reference keys, lineage, expected artifact satisfaction, and browser/provider-native evidence behavior are unchanged.
@@ -13,19 +13,19 @@ Prove projection source-family order, external reference keys, lineage, expected
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB023 closed.
+- SB023 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -35,10 +35,10 @@ SB023 closed.
 - Execution report row for `SB024`.
 
 ## Dependency Impact
-Downstream phases may proceed only after this closes.
+- Downstream phases may proceed only after this closes.
 
 ## Validation Depth
-Critical gate validation: build + unit/focused integration + source scans + manifest + semantic invariants.
+- Critical gate validation: build + unit/focused integration + source scans + manifest + semantic invariants.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,13 +60,19 @@ Critical gate validation: build + unit/focused integration + source scans + mani
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
+
+## Completion Notes
+- Gate H passed for projection source-family order, source adapter external-reference keys, recovery lineage, artifact satisfaction, and provider-native browser evidence behavior.
+- Validation, projection, matching/resolution, and satisfaction all share module-local `ProcessArtifactExpectationSnapshot`.
+- Critical proof is artifact-backed with build, unit, integration, source assertion, changed-file hash, manifest, and semantic invariant artifacts.
+- Browser validation: N/A - runtime/service refactor only; no UI files changed.
 
 ## Proof Required
 - Build/test transcript or explanation if proof is deferred to the next critical gate.
@@ -74,11 +80,20 @@ Critical gate validation: build + unit/focused integration + source scans + mani
 - Anti-stub scan.
 - No-Core/no-driver scan.
 
+## Proof Captured
+- Manifest: `bundle://proof/SB024/manifest.md`
+- Semantic invariants: `bundle://proof/SB024/semantic-invariants.md`
+- Build: `bundle://proof/SB024/transcripts/critical-build.txt`
+- Unit tests: `bundle://proof/SB024/transcripts/projection-validation-parity-unit-tests.txt`
+- Integration tests: `bundle://proof/SB024/transcripts/projection-validation-parity-integration-tests.txt`
+- Source assertions and forbidden-token scans: `bundle://proof/SB024/transcripts/source-assertions-and-scans.txt`
+- Changed-file hashes: `bundle://proof/SB024/transcripts/changed-file-hashes.txt`
+
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-Do not proceed past this critical gate until all proof is complete.
+- Do not proceed past this critical gate until all proof is complete.
 
 ## Suggested Agent Prompt
 Implement `SB024` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.

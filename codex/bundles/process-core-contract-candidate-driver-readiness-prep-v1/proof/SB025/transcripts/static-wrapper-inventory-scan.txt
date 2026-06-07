@@ -1,0 +1,48 @@
+Command: SB025 static wrapper inventory scan
+Working directory: C:\repositories\CanDoItAll
+
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteModels.cs
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteModelAdapters.cs
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationService.cs
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchSubprocessRuntimeService.cs
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerApplicationService.cs
+PASS source reference exists: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs
+PASS source reference exists: .\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs
+PASS source reference exists: .\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs
+PASS source reference exists: .\codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\analysis\04-static-wrapper-inventory.md
+PASS inventory term present: Route eligibility wrappers
+PASS inventory term present: Subprocess artifact resolver wrappers
+PASS inventory term present: Technical agent binding wrapper
+PASS inventory term present: Recovery query wrapper
+PASS inventory term present: Artifact quality and project-structure wrappers
+PASS inventory term present: Artifact path, text, and provider-native wrappers
+PASS inventory term present: Artifact expectation and satisfaction wrappers
+PASS inventory term present: Artifact projection utility wrappers
+PASS inventory term present: Tool validation wrappers
+PASS inventory term present: Finalizer artifact validation wrappers
+PASS inventory term present: Concurrency and retry wrappers
+PASS inventory term present: Completion artifact recovery wrappers
+PASS inventory term present: Host cleanup wrappers
+PASS inventory term present: Target grounding and operation contract nested wrappers
+PASS inventory term present: Pure rule
+PASS inventory term present: Application helper
+PASS inventory term present: Compatibility boundary
+PASS inventory term present: SB026 owns the actual pure-rule movement
+PASS inventory term present: SB027 owns parity proof
+
+Observed ProcessRunAutomationDispatchService static declarations: 771
+Observed ProcessRunAutomationDispatchService internal static declarations: 111
+Observed ProcessDispatchRouteModelAdapters static declarations: 8
+
+Route adapter static declarations:
+3:internal static class ProcessDispatchRouteModelAdapters
+5:    public static ProcessRouteCandidate FromDispatcherCandidate(
+48:    public static ProcessRunAutomationDispatchService.DispatchCandidate ToDispatcherCandidate(
+54:    public static ProcessRouteDispatchClaim FromDispatcherClaim(
+63:    public static ProcessRunAutomationDispatchService.ProcessStepDispatchClaim ToDispatcherClaim(
+69:    public static ProcessRouteExecutionOutcome FromDispatcherExecutionOutcome(
+85:    public static ProcessRunAutomationDispatchService.DispatchExecutionOutcome ToDispatcherExecutionOutcome(
+91:    private static TSource RequireSource<TSource>(object source)
+
+RESULT: PASS

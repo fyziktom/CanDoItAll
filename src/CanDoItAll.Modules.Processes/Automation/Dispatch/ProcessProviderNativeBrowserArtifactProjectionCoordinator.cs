@@ -12,7 +12,6 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
     private readonly IProcessProjectionFileIo fileIo;
     private readonly IProcessProjectionArtifactClassifier artifactClassifier;
     private readonly IProcessProjectionExpectationMatcher expectationMatcher;
-    private readonly IProcessProjectionSessionObservationSource sessionObservationSource;
     private readonly IProcessProjectionBrowserOutputRules browserOutputRules;
     private readonly IProcessProjectionCandidateStateUpdater candidateState;
 
@@ -21,7 +20,6 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
         IProcessProjectionFileIo fileIo,
         IProcessProjectionArtifactClassifier artifactClassifier,
         IProcessProjectionExpectationMatcher expectationMatcher,
-        IProcessProjectionSessionObservationSource sessionObservationSource,
         IProcessProjectionBrowserOutputRules browserOutputRules,
         IProcessProjectionCandidateStateUpdater candidateState)
     {
@@ -29,20 +27,19 @@ internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator 
         this.fileIo = fileIo;
         this.artifactClassifier = artifactClassifier;
         this.expectationMatcher = expectationMatcher;
-        this.sessionObservationSource = sessionObservationSource;
         this.browserOutputRules = browserOutputRules;
         this.candidateState = candidateState;
     }
 
     public async Task ProjectAsync(ProcessArtifactProjectionContext context)
     {
-        var browserOutputsByToolName = sessionObservationSource.ResolveSuccessfulBrowserToolOutputFiles(context.Run);
+        var browserOutputsByToolName = context.Observations.SuccessfulBrowserToolOutputFiles;
         if (browserOutputsByToolName.Count == 0)
         {
             return;
         }
 
-        var browserWorkingDirectory = sessionObservationSource.ResolveProviderNativeBrowserWorkingDirectory(context.Run) ?? context.WorkspaceRoot;
+        var browserWorkingDirectory = context.Observations.ProviderNativeBrowserWorkingDirectory ?? context.WorkspaceRoot;
         if (string.IsNullOrWhiteSpace(browserWorkingDirectory))
         {
             return;

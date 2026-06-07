@@ -1,0 +1,34 @@
+Command: SB032 all-source assertions and forbidden-scope scans
+Working directory: C:\repositories\CanDoItAll
+
+PASS smoke transcript passed: bundle://proof/SB032/transcripts/build.txt
+PASS smoke transcript passed: bundle://proof/SB032/transcripts/full-unit-tests.txt
+PASS smoke transcript passed: bundle://proof/SB032/transcripts/focused-dispatch-integration-tests.txt
+PASS smoke transcript passed: bundle://proof/SB032/transcripts/focused-subprocess-projection-execution-integration-tests.txt
+PASS full unit test transcript reports 1024 total tests
+PASS focused smoke transcript includes test: ProcessDispatchCandidateFactory_CreateSubprocessCandidate_preserves_current_route_defaults
+PASS focused smoke transcript includes test: StartTransitionRouteHandler_SB015_INV_001_preserves_reload_and_continue_candidates_behavior
+PASS focused smoke transcript includes test: IsRunClosedToAutomation_keeps_reopened_step_dispatchable_inside_failed_run
+PASS focused smoke transcript includes test: WorkflowSubprocessArtifactMapper_SB11_INV_001_resolves_explicit_mappings_without_dispatch_partials
+PASS focused smoke transcript includes test: SubprocessArtifactProjectionMapping_SB09_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict
+PASS focused smoke transcript includes test: ShouldRetryIncompleteSuccessfulRun_returns_true_for_completed_run_that_only_missed_required_tools
+PASS focused smoke transcript includes test: ResolveCompletionStatus_allows_process_mock_completed_step_with_required_artifact_projection
+PASS focused smoke transcript includes test: MatchExpectedArtifactId_prefers_route_specific_provider_native_browser_screenshot_expectation
+PASS forbidden production token absent in repo://src: IProcessDriverPack
+PASS forbidden production token absent in repo://src: IProcessDriverRegistry
+PASS forbidden production token absent in repo://src: ProcessDriverRegistry
+PASS forbidden production token absent in repo://src: IProcessHelperDriver
+PASS forbidden production token absent in repo://src: IProcessSwDevHelperDriver
+PASS forbidden production token absent in repo://src: IProcessDotNetSwDevHelperDriver
+PASS forbidden production token absent in repo://src: CanDoItAll.Processes.Core
+PASS no Process Core directory exists at repo://src/CanDoItAll.Processes.Core
+PASS no module Process Core directory exists at repo://src/CanDoItAll.Modules.Processes.Core
+PASS route services remain adapter-free
+PASS route services remain source-payload-free
+PASS direct-agent runtime remains adapter-free
+PASS finalizer application service remains adapter-free
+PASS projection context remains free of full execution detail
+PASS no UI/mobile/media file drift detected in git diff
+PASS no TODO/STUB/NotImplementedException markers found in changed source/doc added lines
+
+RESULT: PASS

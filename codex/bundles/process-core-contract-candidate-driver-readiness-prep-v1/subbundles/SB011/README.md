@@ -1,7 +1,7 @@
 # SB011 - Direct-agent binding and cooperation boundary
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Move technical-agent binding, project-structure access mutation, recovery execution selection, manual directive loading, and cooperation metadata into explicit collaborators.
@@ -13,19 +13,20 @@ Move technical-agent binding, project-structure access mutation, recovery execut
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB010 closed.
+- SB010 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentCandidateAssembler.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -35,10 +36,10 @@ SB010 closed.
 - Execution report row for `SB011`.
 
 ## Dependency Impact
-Feeds the next critical gate.
+- Feeds the next critical gate.
 
 ## Validation Depth
-Focused source/test proof; full gate proof can be accumulated by the next critical gate.
+- Focused source/test proof; full gate proof can be accumulated by the next critical gate.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,13 +61,13 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
 
 ## Proof Required
 - Build/test transcript or explanation if proof is deferred to the next critical gate.
@@ -75,10 +76,16 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - No-Core/no-driver scan.
 
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
+- May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
+
+## Closure Notes
+- Entry gate: Passed. SB010 is completed.
+- Closure gate: Passed. Direct-agent binding, project-structure access logging, execution-run blocking, recovery/directive lookup, and cooperation metadata are isolated in `ProcessDispatchDirectAgentCandidateAssembler` and existing binding/recovery/cooperation collaborators.
+- Test proof: `bundle://proof/SB011/transcripts/direct-agent-boundary-architecture-tests.txt`.
+- Source assertions and guard scans: `bundle://proof/SB011/transcripts/source-assertions-and-scans.txt`.
 
 ## Suggested Agent Prompt
 Implement `SB011` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.

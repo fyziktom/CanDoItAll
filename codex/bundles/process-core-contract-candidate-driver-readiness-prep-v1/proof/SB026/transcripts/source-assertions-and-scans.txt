@@ -1,0 +1,20 @@
+Command: SB026 source assertions and forbidden-scope scans
+Working directory: C:\repositories\CanDoItAll
+
+PASS dispatcher wrapper removed: internal static bool IsRunClosedToAutomation
+PASS dispatcher wrapper removed: internal static bool IsRunEligibleForDispatchCandidate
+PASS dispatcher wrapper removed: internal static bool IsStepStatusDispatchableForRun
+PASS dispatcher wrapper removed: internal static ProcessArtifactRecord? ResolveSubprocessSourceArtifact
+PASS dispatcher wrapper removed: internal static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveSubprocessOutputArtifactMappings
+PASS no dispatcher facade calls remain for moved route/subprocess pure rules
+PASS focused tests call rule/resolver owner directly: ProcessDispatchRouteEligibility.IsRunClosedToAutomation
+PASS focused tests call rule/resolver owner directly: ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate
+PASS focused tests call rule/resolver owner directly: ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun
+PASS focused tests call rule/resolver owner directly: ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact
+PASS no Process Core project/directory exists at repo://src/CanDoItAll.Processes.Core
+PASS no production driver API token found in repo://src/**/*.cs
+PASS no Process Core namespace/project token found in repo://src/**/*.cs
+PASS no UI/mobile/media file drift detected in git diff
+PASS no TODO/STUB/NotImplementedException markers found in SB026 added diff lines
+
+RESULT: PASS

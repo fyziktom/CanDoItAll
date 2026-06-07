@@ -1,26 +1,18 @@
 namespace CanDoItAll.Modules.Processes;
 
-internal delegate Task<ProcessRunAutomationDispatchService.DispatchExecutionOutcome> ProcessDirectAgentExecutionRunner(
-    ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-    string trigger,
-    Func<CancellationToken, Task>? renewLeaseAsync,
+internal delegate Task<ProcessRouteExecutionOutcome> ProcessDirectAgentExecutionRunner(
+    ProcessDispatchDirectAgentExecutionInput input,
     CancellationToken cancellationToken);
 
 internal sealed class ProcessDispatchDirectAgentRuntimeService(
     ProcessDirectAgentExecutionRunner executeUntilSettledAsync)
 {
     public async Task<ProcessRouteExecutionOutcome> ExecuteUntilSettledAsync(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Func<CancellationToken, Task> renewLeaseAsync,
+        ProcessDispatchDirectAgentExecutionInput input,
         CancellationToken cancellationToken)
     {
-        var executionOutcome = await executeUntilSettledAsync(
-            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
-            trigger,
-            renewLeaseAsync,
+        return await executeUntilSettledAsync(
+            input,
             cancellationToken);
-
-        return ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(executionOutcome);
     }
 }

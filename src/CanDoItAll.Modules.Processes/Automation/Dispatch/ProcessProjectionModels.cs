@@ -9,8 +9,12 @@ internal sealed record ProcessProjectionRunSnapshot(
     string InputSummary,
     string ResultSummary,
     string? SerializedSessionStateJson,
-    IReadOnlyList<ProcessAutomationExecutionArtifact> Artifacts,
-    ProcessAutomationExecutionRunDetail Detail);
+    IReadOnlyList<ProcessAutomationExecutionArtifact> Artifacts);
+
+internal sealed record ProcessProjectionObservationSnapshot(
+    IReadOnlyList<string> SuccessfulWorkspaceFileMutationReceiptPaths,
+    IReadOnlyDictionary<string, IReadOnlyList<string>> SuccessfulBrowserToolOutputFiles,
+    string? ProviderNativeBrowserWorkingDirectory);
 
 internal sealed record ProcessProjectionStepSnapshot(
     Guid Id,
@@ -23,7 +27,7 @@ internal sealed record ProcessProjectionCandidateSnapshot(
     Guid RunId,
     Guid? ProjectId,
     ProcessProjectionStepSnapshot Step,
-    IReadOnlyList<ProcessProjectionArtifactExpectation> ExpectedArtifacts,
+    IReadOnlyList<ProcessArtifactExpectationSnapshot> ExpectedArtifacts,
     ProcessProjectionMutableCandidateState MutableState)
 {
     public string CurrentRunManagedArtifactRoot { get; } = WorkspaceScopeDescriptor.NormalizeRelativePath(
@@ -114,7 +118,7 @@ internal static class ProcessProjectionSnapshotBuilderAdapter
                 candidate.StepRun.CurrentExecutorName,
                 candidate.StepRun.DecisionSummary),
             candidate.ExpectedArtifacts
-                .Select(ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation)
+                .Select(ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation)
                 .ToList(),
             new ProcessProjectionMutableCandidateState(
                 candidate.RecordedArtifactExpectationIds,
@@ -132,8 +136,26 @@ internal static class ProcessProjectionSnapshotBuilderAdapter
             detail.Run.InputSummary,
             detail.Run.ResultSummary,
             detail.Run.SerializedSessionStateJson,
-            detail.Artifacts,
-            detail);
+            detail.Artifacts);
+    }
+
+    public static ProcessProjectionObservationSnapshot FromExecutionDetailObservations(
+        ProcessAutomationExecutionRunDetail detail)
+    {
+        ArgumentNullException.ThrowIfNull(detail);
+
+        var canTrustCompletedInternalToolLogs = detail.Run.State == ProcessAutomationExecutionState.Completed &&
+                                                detail.Run.Outcome == ProcessAutomationRunOutcome.Succeeded;
+        return new ProcessProjectionObservationSnapshot(
+            ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(detail)
+                .Where(IsSuccessfulWorkspaceFileMutationReceipt)
+                .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
+            ProcessAutomationObservationSnapshot
+                .Create(detail, canTrustCompletedInternalToolLogs)
+                .BrowserToolOutputFiles,
+            ProcessProviderNativeBrowserOutputFacts.ResolveProviderNativeBrowserWorkingDirectory(detail));
     }
 
     public static ProcessProjectionStepDispatchClaim FromDispatchClaim(
@@ -165,5 +187,24 @@ internal static class ProcessProjectionSnapshotBuilderAdapter
                 lineage.RecoveryExecutionRunId,
                 lineage.RecoveredForExecutionRunId,
                 lineage.ReworkPacketId);
+    }
+
+    private static bool IsSuccessfulWorkspaceFileMutationReceipt(ProcessAutomationToolExecutionReceipt receipt)
+    {
+        var toolName = ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName);
+        return (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
+                string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal)) &&
+               !ProcessToolReceiptFacts.IsFailedReceipt(receipt);
+    }
+
+    private static IReadOnlyList<string> ResolveManagedWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
+    {
+        var text = string.Join(
+            Environment.NewLine,
+            [
+                receipt.RequestSummary,
+                receipt.ExitSummary
+            ]);
+        return ProcessConcreteProductPathRules.ResolveWorkspacePathsFromToolRequest(text);
     }
 }

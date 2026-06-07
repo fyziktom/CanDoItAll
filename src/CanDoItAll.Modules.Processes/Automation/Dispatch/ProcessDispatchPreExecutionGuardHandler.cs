@@ -17,13 +17,13 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
     ProcessMissingUpstreamArtifactMaterializationCoordinator materializationCoordinator)
 {
     public ProcessDispatchDatabaseRequirementDecision BuildDatabaseRequirementDecision(
-        ProcessRouteCandidate candidate,
+        ProcessDispatchPreExecutionRouteFacts routeFacts,
         string failureMessage,
         string automationActor)
     {
-        var targetStatus = ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus(candidate.StepRun.Status);
+        var targetStatus = ProcessDispatchDatabaseRequirementBlocker.ResolveTargetStatus(routeFacts.StepRun.Status);
         var isUnsupportedNoOpTarget = ProcessDispatchDatabaseRequirementBlocker.IsUnsupportedNoOpTarget(
-            candidate.StepRun.Status,
+            routeFacts.StepRun.Status,
             targetStatus);
         if (isUnsupportedNoOpTarget)
         {
@@ -34,7 +34,7 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
                 TransitionRequest: null);
         }
 
-        var isTransitionAllowed = ProcessStepRunTransitions.IsAllowed(candidate.StepRun.Status, targetStatus);
+        var isTransitionAllowed = ProcessStepRunTransitions.IsAllowed(routeFacts.StepRun.Status, targetStatus);
         if (!isTransitionAllowed)
         {
             return new ProcessDispatchDatabaseRequirementDecision(
@@ -49,22 +49,22 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
             IsUnsupportedNoOpTarget: false,
             IsTransitionAllowed: true,
             ProcessDispatchDatabaseRequirementBlocker.BuildTransitionRequest(
-                candidate.StepRun.Id,
-                candidate.StepRun.ConcurrencyToken,
+                routeFacts.StepRun.Id,
+                routeFacts.StepRun.ConcurrencyToken,
                 targetStatus,
                 failureMessage,
                 automationActor));
     }
 
     public ProcessDispatchMissingUpstreamArtifactMaterializationPlan PlanMissingUpstreamArtifactMaterialization(
-        ProcessRouteCandidate candidate)
+        ProcessDispatchPreExecutionRouteFacts routeFacts)
     {
-        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(candidate);
+        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(routeFacts);
 
         return new ProcessDispatchMissingUpstreamArtifactMaterializationPlan(
             facts,
             facts.HasMissingInputs
-                ? ProcessMissingUpstreamArtifactMaterializationBlocker.BuildBlockReason(candidate, facts)
+                ? ProcessMissingUpstreamArtifactMaterializationBlocker.BuildBlockReason(routeFacts, facts)
                 : string.Empty);
     }
 
@@ -87,7 +87,7 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
     }
 
     public async Task<bool> RecordAndRequestMissingUpstreamArtifactMaterializationAsync(
-        ProcessRouteCandidate candidate,
+        ProcessDispatchPreExecutionRouteFacts routeFacts,
         ProcessDispatchMissingUpstreamArtifactMaterializationPlan plan,
         CancellationToken cancellationToken)
     {
@@ -97,7 +97,7 @@ internal sealed class ProcessDispatchPreExecutionGuardHandler(
         }
 
         return await materializationCoordinator.RecordAndRequestAsync(
-            candidate,
+            routeFacts,
             plan.Facts,
             plan.BlockReason,
             cancellationToken);

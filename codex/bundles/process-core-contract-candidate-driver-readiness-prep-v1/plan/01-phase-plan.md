@@ -1,5 +1,8 @@
 # Phase Plan
 
+## Execution Order
+Execute subbundles in numeric order from SB001 through SB033. Each critical gate must pass before downstream work starts; if a later observation weakens an earlier gate, reopen that earlier subbundle and rerun its closure proof.
+
 ## Subbundle Dependency Map
 
 ```mermaid

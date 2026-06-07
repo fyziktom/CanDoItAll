@@ -66,7 +66,7 @@ internal sealed class ProcessProjectionPathResolver : IProcessProjectionPathReso
     public IReadOnlyList<string> ResolveExpectedManagedArtifactRelativePaths(
         ProcessProjectionCandidateSnapshot candidate,
         WorkspaceScopeDescriptor workspaceScope,
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         var paths = new List<string>();
         if (ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(
@@ -316,7 +316,7 @@ internal sealed class ProcessProjectionArtifactClassifier : IProcessProjectionAr
     {
         return ProcessArtifactKindClassificationRules.ResolveProcessArtifactKind(
             artifact,
-            ProcessProjectionArtifactExpectationResolver.ResolveArtifactExpectation(
+            ProcessArtifactExpectationResolver.ResolveArtifactExpectation(
                 candidate.ExpectedArtifacts,
                 projectStructureContractText: null,
                 artifact)?.ArtifactKind);
@@ -347,8 +347,8 @@ internal sealed class ProcessProjectionExpectationMatcher(IProcessProjectionFile
     IProcessProjectionExpectationMatcher
 {
     public bool ExistingManagedArtifactFileMatches(
-        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string workspaceRoot,
         string relativePath)
     {
@@ -376,7 +376,7 @@ internal sealed class ProcessProjectionExpectationMatcher(IProcessProjectionFile
         }
 
         var syntheticArtifact = CreateExistingManagedSyntheticArtifact(expectedArtifact, relativePath, fullPath);
-        var matchedExpectationId = ProcessProjectionArtifactExpectationResolver.MatchExpectedArtifactId(
+        var matchedExpectationId = ProcessArtifactExpectationResolver.MatchExpectedArtifactId(
             expectedArtifacts,
             syntheticArtifact,
             textContent);
@@ -395,34 +395,34 @@ internal sealed class ProcessProjectionExpectationMatcher(IProcessProjectionFile
              key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)));
     }
 
-    public ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
+    public ProcessArtifactExpectationSnapshot? ResolveArtifactExpectation(
         ProcessProjectionCandidateSnapshot candidate,
         ProcessAutomationExecutionArtifact artifact)
     {
-        return ProcessProjectionArtifactExpectationResolver.ResolveArtifactExpectation(
+        return ProcessArtifactExpectationResolver.ResolveArtifactExpectation(
             candidate.ExpectedArtifacts,
             projectStructureContractText: null,
             artifact);
     }
 
-    public ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
+    public ProcessArtifactExpectationSnapshot? ResolveArtifactExpectation(
         ProcessProjectionCandidateSnapshot candidate,
         string projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact)
     {
-        return ProcessProjectionArtifactExpectationResolver.ResolveArtifactExpectation(
+        return ProcessArtifactExpectationResolver.ResolveArtifactExpectation(
             candidate.ExpectedArtifacts,
             projectStructureContractText,
             artifact);
     }
 
-    public ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
+    public ProcessArtifactExpectationSnapshot? ResolveArtifactExpectation(
         ProcessProjectionCandidateSnapshot candidate,
         string projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact,
         string? artifactTextContent)
     {
-        return ProcessProjectionArtifactExpectationResolver.ResolveArtifactExpectation(
+        return ProcessArtifactExpectationResolver.ResolveArtifactExpectation(
             candidate.ExpectedArtifacts,
             projectStructureContractText,
             artifact,
@@ -434,19 +434,19 @@ internal sealed class ProcessProjectionExpectationMatcher(IProcessProjectionFile
         ProcessProjectionRunSnapshot run,
         ProcessAutomationExecutionArtifact artifact)
     {
-        return ProcessProjectionArtifactExpectationResolver.ResolveArtifactExpectation(
+        return ProcessArtifactExpectationResolver.ResolveArtifactExpectation(
             candidate.ExpectedArtifacts,
             run.InputSummary,
             artifact)?.Id;
     }
 
     public bool WorkspaceWrittenFileMatchesExpectedArtifact(
-        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string path,
         string content)
     {
-        return ProcessProjectionArtifactExpectationResolver.WorkspaceWrittenFileMatchesExpectedArtifact(
+        return ProcessArtifactExpectationResolver.WorkspaceWrittenFileMatchesExpectedArtifact(
             expectedArtifacts,
             expectedArtifact,
             path,
@@ -454,7 +454,7 @@ internal sealed class ProcessProjectionExpectationMatcher(IProcessProjectionFile
     }
 
     private static ProcessAutomationExecutionArtifact CreateExistingManagedSyntheticArtifact(
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string relativePath,
         string fullPath)
     {
@@ -563,7 +563,7 @@ internal sealed class ProcessProjectionProcessMockRules : IProcessProjectionProc
     }
 
     public bool ProcessMockArtifactMatchesExpectation(
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessProjectionProcessMockArtifact projection)
     {
         var observedTokens = ProcessArtifactTextMatchRules
@@ -621,7 +621,7 @@ internal sealed class ProcessProjectionProcessMockRules : IProcessProjectionProc
 internal sealed class ProcessProjectionProjectStructureMatcher : IProcessProjectionProjectStructureMatcher
 {
     public bool TryResolveProjectStructureExpectedArtifactPath(
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string projectStructureContractText,
         out string governedPath)
     {
@@ -644,15 +644,6 @@ internal sealed class ProcessProjectionProjectStructureMatcher : IProcessProject
 
 internal sealed class ProcessProjectionSessionObservationSource : IProcessProjectionSessionObservationSource
 {
-    public IReadOnlyList<string> ResolveSuccessfulWorkspaceFileMutationReceiptPaths(ProcessProjectionRunSnapshot run)
-    {
-        return ProcessAutomationReceiptObservationHelper.ResolveSuccessfulReceipts(run.Detail)
-            .Where(IsSuccessfulWorkspaceFileMutationReceipt)
-            .SelectMany(ResolveManagedWorkspacePathsFromReceipt)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
-    }
-
     public IReadOnlyList<ProcessProjectionSessionFileContent> ResolveSuccessfulSessionFileWrites(string? serializedSessionStateJson)
     {
         return ProcessAutomationSessionObservation
@@ -660,39 +651,6 @@ internal sealed class ProcessProjectionSessionObservationSource : IProcessProjec
             .FileWrites
             .Select(item => new ProcessProjectionSessionFileContent(item.Path, item.Content))
             .ToList();
-    }
-
-    public IReadOnlyDictionary<string, IReadOnlyList<string>> ResolveSuccessfulBrowserToolOutputFiles(ProcessProjectionRunSnapshot run)
-    {
-        var canTrustCompletedInternalToolLogs = run.State == ProcessAutomationExecutionState.Completed &&
-                                                run.Outcome == ProcessAutomationRunOutcome.Succeeded;
-        return ProcessAutomationObservationSnapshot
-            .Create(run.Detail, canTrustCompletedInternalToolLogs)
-            .BrowserToolOutputFiles;
-    }
-
-    public string? ResolveProviderNativeBrowserWorkingDirectory(ProcessProjectionRunSnapshot run)
-    {
-        return ProcessProviderNativeBrowserOutputFacts.ResolveProviderNativeBrowserWorkingDirectory(run.Detail);
-    }
-
-    private static bool IsSuccessfulWorkspaceFileMutationReceipt(ProcessAutomationToolExecutionReceipt receipt)
-    {
-        var toolName = ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName);
-        return (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
-                string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal)) &&
-               !ProcessToolReceiptFacts.IsFailedReceipt(receipt);
-    }
-
-    private static IReadOnlyList<string> ResolveManagedWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
-    {
-        var text = string.Join(
-            Environment.NewLine,
-            [
-                receipt.RequestSummary,
-                receipt.ExitSummary
-            ]);
-        return ProcessConcreteProductPathRules.ResolveWorkspacePathsFromToolRequest(text);
     }
 }
 
@@ -728,7 +686,7 @@ internal sealed class ProcessProjectionResponseTextRules : IProcessProjectionRes
     }
 
     public bool IsUsableProjectedResponseArtifactContent(
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string responseText)
     {
         if (string.IsNullOrWhiteSpace(responseText))
@@ -744,7 +702,7 @@ internal sealed class ProcessProjectionResponseTextRules : IProcessProjectionRes
         }
 
         return ProcessArtifactTextMatchRules.HasExpectedArtifactContentSignals(
-            ProcessArtifactValidationSnapshotBuilder.FromProjectionExpectation(expectedArtifact),
+            expectedArtifact,
             responseText,
             normalizedResponse,
             containsArtifactResponseSection: responseText.Contains("##", StringComparison.Ordinal));
@@ -753,7 +711,7 @@ internal sealed class ProcessProjectionResponseTextRules : IProcessProjectionRes
     public bool TryResolveResponseTextArtifactRelativePath(
         ProcessProjectionCandidateSnapshot candidate,
         WorkspaceScopeDescriptor workspaceScope,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         out string relativePath)
     {
         if (ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(
@@ -835,7 +793,7 @@ internal sealed class ProcessProjectionBrowserOutputRules : IProcessProjectionBr
 
 internal sealed class ProcessProjectionDecisionArtifactRules : IProcessProjectionDecisionArtifactRules
 {
-    public bool ShouldAutoRecordCompletedDecisionArtifact(ProcessProjectionArtifactExpectation expectedArtifact)
+    public bool ShouldAutoRecordCompletedDecisionArtifact(ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         return ProcessExecutionArtifactMetadataRules.ShouldAutoRecordCompletedDecisionArtifact(expectedArtifact);
     }
@@ -867,7 +825,7 @@ internal sealed class ProcessProjectionDecisionArtifactRules : IProcessProjectio
         ProcessProjectionCandidateSnapshot candidate,
         ProcessProjectionRunSnapshot run,
         string responseText,
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         var executorName = string.IsNullOrWhiteSpace(candidate.Step.CurrentExecutorName)
             ? "The assigned approver"
@@ -986,7 +944,7 @@ internal sealed class ProcessProjectionCandidateStateUpdater : IProcessProjectio
 {
     public bool TryApplyExpectedWriteOutcome(
         ProcessProjectionMutableCandidateState candidateState,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         Result<ProcessArtifactProjectionWriteResult> writeResult,
         out string errorSummary)
     {
@@ -1012,7 +970,7 @@ internal sealed class ProcessProjectionCandidateStateUpdater : IProcessProjectio
 
     public bool TryApplyExpectedRecordOnlyOutcome(
         ProcessProjectionMutableCandidateState candidateState,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
         out string errorSummary)
     {

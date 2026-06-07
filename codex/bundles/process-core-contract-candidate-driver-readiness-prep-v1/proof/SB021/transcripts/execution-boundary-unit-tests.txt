@@ -1,0 +1,23 @@
+SB021 execution boundary unit tests
+Generated: 2026-06-06T18:59:32.6091297-04:00
+Filtered test names:
+- Process_core_contract_candidate_driver_readiness_SB019_INV_001_moves_direct_agent_runtime_to_execution_input_model
+- Process_core_contract_candidate_driver_readiness_SB020_INV_001_slims_route_execution_outcome_to_run_snapshot
+- Process_core_contract_candidate_driver_readiness_SB021_INV_001_preserves_execution_retry_provider_and_finalizer_paths
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.78]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.96]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.99]   Starting:    CanDoItAll.Tests.Unit
+[xUnit.net 00:00:01.08]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_core_contract_candidate_driver_readiness_SB019_INV_001_moves_direct_agent_runtime_to_execution_input_model [14 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_core_contract_candidate_driver_readiness_SB020_INV_001_slims_route_execution_outcome_to_run_snapshot [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_core_contract_candidate_driver_readiness_SB021_INV_001_preserves_execution_retry_provider_and_finalizer_paths [9 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 3
+     Úspěšné: 3
+ Celkový čas: 2,8144 Sekundy
+Exit code: 0

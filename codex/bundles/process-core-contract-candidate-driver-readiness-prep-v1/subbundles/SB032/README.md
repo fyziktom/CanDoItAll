@@ -1,7 +1,7 @@
 # SB032 - Broad focused smoke matrix
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Run build, full unit tests, focused dispatch integration tests, focused subprocess/projection/execution tests, and all source scans.
@@ -13,19 +13,19 @@ Run build, full unit tests, focused dispatch integration tests, focused subproce
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB031 closed.
+- SB031 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -35,10 +35,10 @@ SB031 closed.
 - Execution report row for `SB032`.
 
 ## Dependency Impact
-Feeds the next critical gate.
+- Feeds the next critical gate.
 
 ## Validation Depth
-Focused source/test proof; full gate proof can be accumulated by the next critical gate.
+- Focused source/test proof; full gate proof can be accumulated by the next critical gate.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,13 +60,13 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
 
 ## Proof Required
 - Build/test transcript or explanation if proof is deferred to the next critical gate.
@@ -74,11 +74,26 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - Anti-stub scan.
 - No-Core/no-driver scan.
 
+## Completion Notes
+- Broad smoke passed: solution build, full unit tests, focused dispatch integration tests, focused subprocess/projection/execution integration tests, and all-source guard scans.
+- Full unit test transcript reports 1,024 passing tests.
+- No `CanDoItAll.Processes.Core` project or production driver API was introduced.
+
+## Proof Captured
+- `bundle://proof/SB032/transcripts/entry-gate.txt`
+- `bundle://proof/SB032/transcripts/build.txt`
+- `bundle://proof/SB032/transcripts/full-unit-tests.txt`
+- `bundle://proof/SB032/transcripts/focused-dispatch-integration-tests.txt`
+- `bundle://proof/SB032/transcripts/focused-subprocess-projection-execution-integration-tests.txt`
+- `bundle://proof/SB032/transcripts/source-assertions-and-scans.txt`
+- `bundle://proof/SB032/transcripts/closure-gate.txt`
+- `bundle://proof/SB032/transcripts/changed-file-hashes.txt`
+
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
+- May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
 
 ## Suggested Agent Prompt
 Implement `SB032` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.

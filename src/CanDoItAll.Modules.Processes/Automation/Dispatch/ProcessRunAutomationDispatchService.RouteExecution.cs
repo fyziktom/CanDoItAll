@@ -63,14 +63,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessRouteExecutionContext execution)
     {
         var candidateHydrationStarted = Stopwatch.GetTimestamp();
-        var candidate = await CreateCandidateHydrationService().LoadAsync(
+        execution.Candidate = await CreateCandidateHydrationService().LoadRouteCandidateAsync(
             execution.ProcessRunId,
             execution.DispatchClaim.StepRunId,
             execution.Trigger,
             execution.DispatchCancellationToken);
-        execution.Candidate = candidate is null
-            ? null
-            : ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
         logger.LogDebug(
             "Hydrated claimed dispatch candidate for process run {ProcessRunId}, step {StepRunId}. CandidateFound={CandidateFound} ElapsedMilliseconds={ElapsedMilliseconds}.",
             execution.ProcessRunId,

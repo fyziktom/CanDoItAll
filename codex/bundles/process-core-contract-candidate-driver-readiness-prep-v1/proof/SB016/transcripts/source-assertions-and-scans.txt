@@ -1,0 +1,107 @@
+SB016 source assertions and scans
+Generated: 2026-06-06T18:13:32.9045557-04:00
+
+Scoped production files:
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeModels.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs
+Scoped test files:
+- tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+
+## subprocess runtime input record exists
+Command: rg -n --fixed-strings 'internal sealed record ProcessDispatchSubprocessRuntimeInput(' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1266:        Assert.Contains("internal sealed record ProcessDispatchSubprocessRuntimeInput(", runtimeModelsSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeModels.cs:3:internal sealed record ProcessDispatchSubprocessRuntimeInput(
+
+## runtime input carries route candidate
+Command: rg -n --fixed-strings 'ProcessRouteCandidate Candidate' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1267:        Assert.Contains("ProcessRouteCandidate Candidate", runtimeModelsSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1464:        Assert.Contains("ProcessRouteCandidate Candidate", finalizerInputsSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeModels.cs:4:    ProcessRouteCandidate Candidate,
+
+## runtime input carries route dispatch claim
+Command: rg -n --fixed-strings 'ProcessRouteDispatchClaim DispatchClaim' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1268:        Assert.Contains("ProcessRouteDispatchClaim DispatchClaim", runtimeModelsSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1465:        Assert.Contains("ProcessRouteDispatchClaim DispatchClaim", finalizerInputsSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeModels.cs:7:    ProcessRouteDispatchClaim DispatchClaim)
+
+## route handler constructs subprocess runtime input
+Command: rg -n --fixed-strings 'new ProcessDispatchSubprocessRuntimeInput(' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1272:        Assert.Contains("new ProcessDispatchSubprocessRuntimeInput(", routeHandlersSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs:122:            new ProcessDispatchSubprocessRuntimeInput(
+
+## route facet accepts subprocess runtime input
+Command: rg -n --fixed-strings 'ProcessDispatchSubprocessRuntimeInput input' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1271:        Assert.Contains("ProcessDispatchSubprocessRuntimeInput input", routeFacetsSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1274:        Assert.Contains("ProcessDispatchSubprocessRuntimeInput input", subprocessRuntimeSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1279:        Assert.Contains("ProcessDispatchSubprocessRuntimeInput input", projectionPlanBuilderSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1280:        Assert.Contains("ProcessDispatchSubprocessRuntimeInput input", projectionWriterSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1281:        Assert.Contains("ProcessDispatchSubprocessRuntimeInput input", projectionGapJournalSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1477:        Assert.Contains("ProcessDispatchSubprocessRuntimeInput input", subprocessRuntimeSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:23:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:71:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:144:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:172:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs:12:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs:13:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:171:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs:52:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:23:        ProcessDispatchSubprocessRuntimeInput input,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:137:        ProcessDispatchSubprocessRuntimeInput input,
+
+## runtime uses route claim for claim guard
+Command: rg -n --fixed-strings 'ensureStepDispatchClaimHeldAsync(input.DispatchClaim' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1276:        Assert.Contains("ensureStepDispatchClaimHeldAsync(input.DispatchClaim", subprocessRuntimeSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:141:        await ensureStepDispatchClaimHeldAsync(input.DispatchClaim, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:186:            await ensureStepDispatchClaimHeldAsync(input.DispatchClaim, cancellationToken);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:221:        await ensureStepDispatchClaimHeldAsync(input.DispatchClaim, cancellationToken);
+
+## runtime finalizes subprocess through route-owned input
+Command: rg -n --fixed-strings 'new ProcessDispatchSubprocessFinalizerInput(' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1277:        Assert.Contains("new ProcessDispatchSubprocessFinalizerInput(", subprocessRuntimeSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1478:        Assert.Contains("new ProcessDispatchSubprocessFinalizerInput(", subprocessRuntimeSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:106:                new ProcessDispatchSubprocessFinalizerInput(
+
+## projection plan builder consumes runtime input
+Command: rg -n --fixed-strings 'ProcessDispatchSubprocessRuntimeInput input' <scoped files>
+23:        ProcessDispatchSubprocessRuntimeInput input,
+71:        ProcessDispatchSubprocessRuntimeInput input,
+144:        ProcessDispatchSubprocessRuntimeInput input,
+172:        ProcessDispatchSubprocessRuntimeInput input,
+
+## projection writer consumes runtime input
+Command: rg -n --fixed-strings 'ProcessDispatchSubprocessRuntimeInput input' <scoped files>
+12:        ProcessDispatchSubprocessRuntimeInput input,
+
+## projection gap journal consumes runtime input
+Command: rg -n --fixed-strings 'ProcessDispatchSubprocessRuntimeInput input' <scoped files>
+13:        ProcessDispatchSubprocessRuntimeInput input,
+
+## factory edge owns route claim conversion
+Command: rg -n --fixed-strings 'new ProcessStepDispatchClaim(claim.StepRunId, claim.ClaimToken)' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1283:        Assert.Contains("new ProcessStepDispatchClaim(claim.StepRunId, claim.ClaimToken)", routeHandlerFactorySource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs:93:                new ProcessStepDispatchClaim(claim.StepRunId, claim.ClaimToken),
+
+## SB016 unit guard exists
+Command: rg -n --fixed-strings 'Process_core_contract_candidate_driver_readiness_SB016_INV_001_moves_subprocess_runtime_to_route_input_model' <scoped files>
+1235:    public void Process_core_contract_candidate_driver_readiness_SB016_INV_001_moves_subprocess_runtime_to_route_input_model()
+
+## subprocess runtime dispatcher alias forbidden scan
+Command: rg -n 'using DispatchCandidate|using ProcessStepDispatchClaim|ProcessRunAutomationDispatchService\.DispatchCandidate|ProcessRunAutomationDispatchService\.ProcessStepDispatchClaim|ProcessDispatchRouteModelAdapters\.ToDispatcherCandidate|ProcessDispatchFinalizerAdapter finalizerAdapter|finalizerAdapter\.FinalizeSubprocessCompletionAsync|ProcessRouteCandidate\? routeCandidate|ProcessRouteDispatchClaim\? routeDispatchClaim' <scoped files>
+No matches.
+
+## Process Core/driver API token scan in changed production files
+Command: rg -n 'ProcessCore|Process Core|CanDoItAll\.Processes\.Core|CoreCandidate|DriverReadiness|driver readiness|IProcessDriver|ProcessDriver|IProcessDriverPack|DriverPack' <scoped files>
+No matches.
+
+## anti-stub scan in changed production files
+Command: rg -n 'TODO|throw new NotImplementedException|return default' <scoped files>
+No matches.
+

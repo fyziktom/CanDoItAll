@@ -31,10 +31,10 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
     public static bool CanProjectResponseTextArtifactWithoutDeclaredPath(
         ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
         => CanProjectResponseTextArtifactWithoutDeclaredPath(
-            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation());
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact));
 
     public static bool CanProjectResponseTextArtifactWithoutDeclaredPath(
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         return expectedArtifact.ArtifactKind is ProcessArtifactKind.Brief
             or ProcessArtifactKind.Checklist
@@ -51,12 +51,12 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
         => BuildFallbackResponseTextArtifactRelativePath(
             currentRunManagedArtifactRoot,
             stepSequence,
-            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation());
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact));
 
     public static string BuildFallbackResponseTextArtifactRelativePath(
         string currentRunManagedArtifactRoot,
         int stepSequence,
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         var expectedSlug = FileSafeSlugBuilder.Build(expectedArtifact.Title);
         if (string.IsNullOrWhiteSpace(expectedSlug))
@@ -71,7 +71,7 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
     }
 
     private static bool IsPathlessResponseProjectableDeliverable(
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Deliverable)
         {
@@ -85,7 +85,7 @@ internal static class ProcessResponseTextArtifactSatisfactionRules
     }
 
     private static bool IsPathlessResponseProjectableEvidence(
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         if (expectedArtifact.ArtifactKind != ProcessArtifactKind.Evidence)
         {

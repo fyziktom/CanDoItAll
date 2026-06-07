@@ -1,0 +1,13 @@
+Command: SB025 source assertions and forbidden-scope scans
+Working directory: C:\repositories\CanDoItAll
+
+PASS no Process Core project/directory exists at repo://src/CanDoItAll.Processes.Core
+PASS no production driver API token found in repo://src/**/*.cs
+PASS no Process Core namespace/project token found in repo://src/**/*.cs
+PASS no UI/mobile/media file drift detected in git diff
+PASS no TODO/STUB/NotImplementedException markers found in SB025 artifacts
+PASS SB025 inventory uses portable refs only
+PASS SB025 inventory mentions forbidden Core/driver API only as constraints, not source additions
+PASS inventory guards side-effect behavior from pure-rule movement
+
+RESULT: PASS

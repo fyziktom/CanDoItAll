@@ -1,65 +1,40 @@
-using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
-using CanDoItAll.Infrastructure.Storage;
-using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
-using DispatchCandidate = ProcessRunAutomationDispatchService.DispatchCandidate;
-using ProcessStepDispatchClaim = ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
-
 internal sealed class ProcessDispatchSubprocessRuntimeService(
     ProcessDispatchStepTransitionService stepTransitionService,
     ProcessDispatchFinalizerApplicationService finalizerApplicationService,
     IDbContextFactory<AppDbContext> dbContextFactory,
     IServiceScopeFactory serviceScopeFactory,
-    IWorkspacePathResolver workspacePathResolver,
-    IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor,
-    IClock clock,
-    Func<ProcessStepDispatchClaim, CancellationToken, Task> ensureStepDispatchClaimHeldAsync,
+    ProcessSubprocessProjectionPersistenceService projectionPersistenceService,
     ILogger<ProcessRunAutomationDispatchService> logger)
 {
     public async Task HandleSubprocessDispatchAsync(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Guid? triggerStepRunId,
-        ProcessRouteDispatchClaim dispatchClaim,
+        ProcessDispatchSubprocessRuntimeInput input,
         CancellationToken cancellationToken)
     {
-        await HandleSubprocessDispatchAsync(
-            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate),
-            trigger,
-            triggerStepRunId,
-            new ProcessStepDispatchClaim(dispatchClaim.StepRunId, dispatchClaim.ClaimToken),
-            cancellationToken);
-    }
+        ArgumentNullException.ThrowIfNull(input);
 
-    public async Task HandleSubprocessDispatchAsync(
-        DispatchCandidate candidate,
-        string trigger,
-        Guid? triggerStepRunId,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
-        var stepRunSnapshot = candidate.StepRun;
+        var stepRunSnapshot = input.StepRun;
         if (stepRunSnapshot.Status != ProcessStepRunStatus.InProgress)
         {
             var startResult = await stepTransitionService.TransitionStepWithClaimAsync(
                 ProcessSubprocessLifecycleRules.BuildStartTransitionRequest(
                     stepRunSnapshot,
-                    ProcessRunAutomationDispatchService.NormalizeTrigger(trigger, triggerStepRunId),
+                    ProcessRunAutomationDispatchService.NormalizeTrigger(input.Trigger, input.TriggerStepRunId),
                     ProcessRunAutomationDispatchService.AutomationActor),
-                dispatchClaim,
+                input.DispatchClaim,
                 cancellationToken);
             if (startResult.IsFailure)
             {
                 logger.LogInformation(
                     "Process subprocess step {StepRunId} could not be claimed on run {RunId}. Errors: {Errors}",
                     stepRunSnapshot.Id,
-                    candidate.Run.Id,
+                    input.Run.Id,
                     string.Join(" | ", startResult.Errors.Select(error => error.Message)));
                 return;
             }
@@ -74,7 +49,7 @@ internal sealed class ProcessDispatchSubprocessRuntimeService(
                     stepRunSnapshot,
                     string.Join(" | ", subprocessResult.Errors.Select(error => error.Message)),
                     ProcessRunAutomationDispatchService.AutomationActor),
-                dispatchClaim,
+                input.DispatchClaim,
                 cancellationToken);
             return;
         }
@@ -92,14 +67,14 @@ internal sealed class ProcessDispatchSubprocessRuntimeService(
                         stepRunSnapshot,
                         capabilityGapBlockReason,
                         ProcessRunAutomationDispatchService.AutomationActor),
-                    dispatchClaim,
+                    input.DispatchClaim,
                     cancellationToken);
                 if (blockResult.IsFailure)
                 {
                     logger.LogWarning(
                         "Subprocess step {StepRunId} on run {RunId} could not be blocked after child run {SubprocessRunId} exposed capability gaps. Errors: {Errors}",
                         stepRunSnapshot.Id,
-                        candidate.Run.Id,
+                        input.Run.Id,
                         subprocessRun.RunId,
                         string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
                 }
@@ -110,7 +85,7 @@ internal sealed class ProcessDispatchSubprocessRuntimeService(
             logger.LogInformation(
                 "Subprocess step {StepRunId} on run {RunId} is observing child run {SubprocessRunId} with status {SubprocessStatus}.",
                 stepRunSnapshot.Id,
-                candidate.Run.Id,
+                input.Run.Id,
                 subprocessRun.RunId,
                 subprocessRun.Status);
             return;
@@ -118,14 +93,19 @@ internal sealed class ProcessDispatchSubprocessRuntimeService(
 
         if (terminalStatus.Value == ProcessStepRunStatus.Completed)
         {
-            await ProjectCompletedSubprocessArtifactsAsync(candidate, subprocessRun, dispatchClaim, cancellationToken);
+            await projectionPersistenceService.ProjectCompletedArtifactsAsync(
+                input,
+                subprocessRun,
+                cancellationToken);
             var transitionReason = ProcessSubprocessLifecycleRules.BuildParentTransitionReason(subprocessRun);
+
             await finalizerApplicationService.FinalizeSubprocessCompletionAsync(
-                candidate,
-                subprocessRun.RunId,
-                terminalStatus.Value,
-                transitionReason,
-                dispatchClaim,
+                new ProcessDispatchSubprocessFinalizerInput(
+                    input.Candidate,
+                    subprocessRun.RunId,
+                    terminalStatus.Value,
+                    transitionReason,
+                    input.DispatchClaim),
                 cancellationToken);
 
             return;
@@ -137,106 +117,16 @@ internal sealed class ProcessDispatchSubprocessRuntimeService(
                 subprocessRun,
                 terminalStatus.Value,
                 ProcessRunAutomationDispatchService.AutomationActor),
-            dispatchClaim,
+            input.DispatchClaim,
             cancellationToken);
         if (transitionResult.IsFailure)
         {
             logger.LogWarning(
                 "Subprocess step {StepRunId} on run {RunId} could not mirror child run {SubprocessRunId}. Errors: {Errors}",
                 stepRunSnapshot.Id,
-                candidate.Run.Id,
+                input.Run.Id,
                 subprocessRun.RunId,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
         }
-    }
-
-    private async Task ProjectCompletedSubprocessArtifactsAsync(
-        DispatchCandidate candidate,
-        ProcessSubprocessRunStartResult subprocessRun,
-        ProcessStepDispatchClaim dispatchClaim,
-        CancellationToken cancellationToken)
-    {
-        await ensureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
-        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var expectations = await dbContext.Set<ProcessArtifactExpectation>()
-            .Where(item =>
-                item.StepDefinitionId == candidate.StepRun.StepDefinitionId &&
-                item.IsRequired)
-            .OrderBy(item => item.Title)
-            .ToListAsync(cancellationToken);
-        if (expectations.Count == 0)
-        {
-            return;
-        }
-
-        var parentArtifacts = await dbContext.Set<ProcessArtifactRecord>()
-            .Where(item =>
-                item.ProcessRunId == candidate.Run.Id &&
-                item.StepRunId == candidate.StepRun.Id)
-            .ToListAsync(cancellationToken);
-        var missingProjectableExpectations = expectations
-            .Where(ProcessSubprocessArtifactSourceResolver.IsCompletionProjectionAllowed)
-            .Where(expectation => !parentArtifacts.Any(artifact =>
-                ProcessSubprocessProjectionPlanBuilder.SatisfiesCurrentArtifactExpectation(
-                    artifact,
-                    expectation,
-                    subprocessRun.RunId)))
-            .ToList();
-        if (missingProjectableExpectations.Count == 0)
-        {
-            return;
-        }
-
-        var childArtifacts = await dbContext.Set<ProcessArtifactRecord>()
-            .AsNoTracking()
-            .Where(item => item.ProcessRunId == subprocessRun.RunId)
-            .ToListAsync(cancellationToken);
-        childArtifacts = childArtifacts
-            .OrderByDescending(item => item.CreatedAtUtc)
-            .ToList();
-        var now = clock.GetUtcNow();
-        var scopedProfileId = databaseProfileRuntimeAccessor.ResolveCurrentProfile().Profile.Id.ToString("N");
-        var gapJournalCoordinator = new ProcessSubprocessProjectionGapJournalCoordinator();
-        var projectionWriterCoordinator = new ProcessSubprocessProjectionWriterCoordinator(workspacePathResolver);
-
-        foreach (var expectation in missingProjectableExpectations)
-        {
-            await ensureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
-            var sourceArtifact = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
-                childArtifacts,
-                missingProjectableExpectations,
-                expectation,
-                out var projectionDiagnostic);
-            if (sourceArtifact is null)
-            {
-                await gapJournalCoordinator.RecordAsync(
-                    dbContext,
-                    candidate,
-                    subprocessRun,
-                    expectation,
-                    projectionDiagnostic,
-                    now,
-                    cancellationToken);
-                continue;
-            }
-
-            var projectionPlan = ProcessSubprocessProjectionPlanBuilder.Build(
-                candidate,
-                subprocessRun,
-                expectation,
-                sourceArtifact,
-                projectionDiagnostic,
-                scopedProfileId);
-            await projectionWriterCoordinator.WriteAsync(
-                dbContext,
-                candidate,
-                subprocessRun,
-                projectionPlan,
-                now,
-                cancellationToken);
-        }
-
-        await ensureStepDispatchClaimHeldAsync(dispatchClaim, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

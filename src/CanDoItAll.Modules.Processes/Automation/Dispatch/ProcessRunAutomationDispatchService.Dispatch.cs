@@ -99,7 +99,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        await CreateFinalizerApplicationService().FinalizeWorkflowCompletionAsync(
+        await CreateFinalizerAdapter().FinalizeWorkflowCompletionAsync(
             candidate,
             workflowOutcome,
             dispatchClaim,
@@ -119,44 +119,6 @@ internal sealed partial class ProcessRunAutomationDispatchService
             processRunId,
             stepRunId,
             cancellationToken);
-    }
-
-    internal static bool IsRunClosedToAutomation(
-        ProcessRunStatus? runStatus,
-        ProcessStepRunStatus? stepStatus)
-    {
-        return ProcessDispatchRouteEligibility.IsRunClosedToAutomation(runStatus, stepStatus);
-    }
-
-    internal static bool IsRunEligibleForDispatchCandidate(ProcessRunStatus? runStatus)
-    {
-        return ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate(runStatus);
-    }
-
-    internal static bool IsStepStatusDispatchableForRun(
-        ProcessRunStatus runStatus,
-        ProcessStepRunStatus stepStatus)
-    {
-        return ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(runStatus, stepStatus);
-    }
-
-    internal static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
-        IReadOnlyList<ProcessArtifactRecord> childArtifacts,
-        IReadOnlyList<ProcessArtifactExpectation> parentExpectations,
-        ProcessArtifactExpectation expectation,
-        out string diagnostic)
-    {
-        return ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
-            childArtifacts,
-            parentExpectations,
-            expectation,
-            out diagnostic);
-    }
-
-    internal static IReadOnlyList<ProcessSubprocessOutputArtifactMapping> ResolveSubprocessOutputArtifactMappings(
-        IReadOnlyList<ProcessArtifactExpectation> parentExpectations)
-    {
-        return ProcessSubprocessArtifactSourceResolver.ResolveOutputArtifactMappings(parentExpectations);
     }
 
     private ProcessMissingUpstreamArtifactMaterializationJournalCoordinator CreateMissingUpstreamArtifactMaterializationJournalCoordinator()

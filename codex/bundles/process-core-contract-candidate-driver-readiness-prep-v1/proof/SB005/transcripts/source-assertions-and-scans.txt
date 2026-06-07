@@ -1,0 +1,31 @@
+Command: SB005 source assertions, route adapter scan, no-Core/no-driver scan, anti-stub scan, UI/media drift scan
+Invariant: SB005-ROUTE-001
+Test names: Process_dispatch_route_service_model_decoupling_boundary_uses_route_models_and_narrow_services; Process_dispatch_route_service_ownership_gate_uses_route_models_for_pre_execution_and_failure_closure
+Route execution assertions:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs:22:            ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim),
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs:66:        execution.Candidate = await CreateCandidateHydrationService().LoadRouteCandidateAsync(
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1023:        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModelAdapters.cs"));
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1036:        Assert.Contains("LoadRouteCandidateAsync", routeExecutionSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1037:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters.FromDispatcherCandidate", routeExecutionSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1098:        Assert.Contains("LoadRouteCandidateAsync", hydrationSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1102:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", recoveryRuntimeSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1103:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", directAgentRuntimeSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1105:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters", routeServicesSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1107:        Assert.DoesNotContain("var dispatcherCandidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate);", routeServicesSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1108:        Assert.DoesNotContain("var dispatcherClaim = ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim);", routeServicesSource, StringComparison.Ordinal);
+Adapter usage files after SB005:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCandidateHydrationService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCompetingExecutionGuardService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchDirectAgentRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchFinalizerApplicationService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchRecoveryRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchRouteModelAdapters.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchSubprocessRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RouteExecution.cs
+No-Core/no-driver scan in src:
+No forbidden production source matches.
+Anti-stub scan in process production source:
+No production dispatch stub markers found.
+UI/media drift scan:
+No UI/media files changed.
+ExitCode: 0

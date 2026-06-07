@@ -1,0 +1,36 @@
+Command: SB003 source assertions, no-Core/no-driver scan, anti-stub scan, UI/media drift scan
+Invariant: SB003-INV-001
+Test name: Process_core_contract_candidate_gate_a_SB003_INV_001_keeps_bundle_rows_and_production_guardrails
+Source assertions:
+303:        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+352:        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+411:        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+535:        Assert.DoesNotContain("IProcessDriverPack", driverReadiness, StringComparison.Ordinal);
+602:        Assert.DoesNotContain("interface IProcessDriverPack", processesModuleSource, StringComparison.Ordinal);
+689:        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
+937:        Assert.DoesNotContain("IProcessDriverPack", combinedSource, StringComparison.Ordinal);
+997:        Assert.DoesNotContain("IProcessDriverPack", combinedBoundarySource, StringComparison.Ordinal);
+998:        Assert.DoesNotContain("ProcessDriverRegistry", combinedBoundarySource, StringComparison.Ordinal);
+1186:        Assert.DoesNotContain("IProcessDriverPack", sourceText, StringComparison.Ordinal);
+1325:        Assert.DoesNotContain("interface IProcessDriverPack", sourceText, StringComparison.Ordinal);
+1399:        Assert.DoesNotContain("IProcessDriverPack", extractedSource, StringComparison.Ordinal);
+1632:            "IProcessDriverPack",
+2320:        Assert.DoesNotContain("IProcessDriverPack", combinedSource, StringComparison.Ordinal);
+2390:            "IProcessDriverPack",
+2467:        Assert.DoesNotContain("IProcessDriverPack", resolverSource, StringComparison.Ordinal);
+2521:        Assert.DoesNotContain("IProcessDriverPack", dispatchSource, StringComparison.Ordinal);
+2522:        Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+2524:        Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+2535:    public void Process_core_contract_candidate_gate_a_SB003_INV_001_keeps_bundle_rows_and_production_guardrails()
+2548:            "process-core-contract-candidate-driver-readiness-prep-v1");
+2584:        Assert.DoesNotContain("IProcessDriverPack", dispatchSource, StringComparison.Ordinal);
+2585:        Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+2587:        Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+2591:        foreach (var subbundleId in Enumerable.Range(1, 33).Select(static index => $"SB{index:000}"))
+No-Core/no-driver scan in src:
+No forbidden production source matches.
+Anti-stub scan in process production source:
+No production dispatch stub markers found.
+UI/media drift scan:
+No UI/media files changed.
+ExitCode: 0

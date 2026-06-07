@@ -1,0 +1,13 @@
+# SB013 changed file hashes
+| Path | SHA-256 |
+| --- | --- |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchPreExecutionRouteFacts.cs` | `0FD4A66DBD993AA3CDC4D5B9F23365CF12EFFD3D4CEF32E748DCABE1BB859AFC` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchPreExecutionGuardHandler.cs` | `31F38E82A8338BA8A097021C6473755B5EAC0DA51667431E280FBCFB390646B6` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs` | `378A86C6B73DC1BCE27FBE9E8DD55E7AB89AFAF75138E8DF7AFF7064BE679105` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMissingUpstreamArtifactMaterialization.cs` | `E04DD4CE0FD84C20512126CDC012F25DE970B97094CEE34292CF76DF742F5445` |
+| `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs` | `58675D2A44D66BEA2D5E8B0FCDDE5EFA7EAF43752BF7B06C5048E79EA7DA5DC2` |
+| `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs` | `F83ACB599EED7C310ED67A31140A94E69F2E24C199CC59FB03D21792C836A821` |
+| `bundle://inventories/01-current-source-references.md` | `A994BDE15086EC6469B2CAC15804E25B551ABEBF9511187B7DB74B0324B650DC` |
+| `bundle://inventories/02-source-hotspots.md` | `2B654D56A311C3E7DC2ED21CF0207A068CEA5DC0D67BC1874A7BED7963ABF939` |
+| `bundle://reviews/01-execution-report.md` | `09D1A1E9E8A881B9AFD3D26C62EC88F9A60C792FA982EA8F8B7AC33A2CBD7657` |
+| `bundle://subbundles/SB013/README.md` | `C0FD87D0DD95284E59186B3860837079284C2B1299A40853975DE1FCAD90F65F` |

@@ -22,7 +22,7 @@ internal static class ProcessArtifactProjectionPlanner
     public static ProcessArtifactProjectionPlan PlanExecutionArtifact(
         Guid executionRunId,
         ProcessAutomationExecutionArtifact artifact,
-        ProcessProjectionArtifactExpectation? matchedExpectation,
+        ProcessArtifactExpectationSnapshot? matchedExpectation,
         ProcessArtifactKind fallbackArtifactKind,
         ProcessStepRunStatus completionStatus,
         string runResultSummary,
@@ -89,7 +89,7 @@ internal static class ProcessArtifactProjectionPlanner
         => $"agentframework-browser-artifact:{executionRunId:D}:{WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath)}";
 
     public static ProcessArtifactTrustStatus ResolveProjectedArtifactTrustStatus(
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessStepRunStatus completionStatus)
     {
         ArgumentNullException.ThrowIfNull(expectedArtifact);

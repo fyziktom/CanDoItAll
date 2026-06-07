@@ -1,0 +1,8 @@
+Command: scoped no-Core/no-driver, anti-stub, and UI/media drift scans
+No-Core/no-driver scan in src:
+No forbidden production source matches.
+Anti-stub scan in process production source:
+No production dispatch stub markers found.
+UI/media drift scan:
+No UI/media files changed.
+ExitCode: 0

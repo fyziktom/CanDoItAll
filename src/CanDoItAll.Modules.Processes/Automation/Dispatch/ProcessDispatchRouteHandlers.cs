@@ -119,10 +119,11 @@ internal sealed class SubprocessRouteHandler(
         }
 
         await subprocessFacet.HandleSubprocessDispatchAsync(
-            context.Candidate,
-            context.Execution.Trigger,
-            context.Execution.TriggerStepRunId,
-            context.Execution.DispatchClaim,
+            new ProcessDispatchSubprocessRuntimeInput(
+                context.Candidate,
+                context.Execution.Trigger,
+                context.Execution.TriggerStepRunId,
+                context.Execution.DispatchClaim),
             context.Execution.DispatchCancellationToken);
 
         return ProcessDispatchRouteHandlerResult.DispatchComplete;
@@ -218,9 +219,10 @@ internal sealed class DirectAgentExecutionRouteHandler(
     public async Task<ProcessDispatchRouteHandlerResult> HandleAsync(ProcessDispatchRouteContext context)
     {
         var executionOutcome = await directAgentFacet.ExecuteUntilSettledAsync(
-            context.Candidate,
-            context.Execution.Trigger,
-            context.Execution.DispatchRenewLeaseAsync,
+            new ProcessDispatchDirectAgentExecutionInput(
+                context.Candidate,
+                context.Execution.Trigger,
+                context.Execution.DispatchRenewLeaseAsync),
             context.Execution.DispatchCancellationToken);
         context.Execution.DispatchHeartbeat?.ThrowIfClaimLost();
         context.SetDirectAgentExecutionOutcome(executionOutcome);
@@ -253,7 +255,7 @@ internal sealed class CompetingExecutionGuardRouteHandler(
             "Skipping non-successful automation completion transition for run {RunId}, step {StepRunId}, execution run {ExecutionRunId} because execution run {CompetingExecutionRunId} is still active for the same process step.",
             context.Candidate.Run.Id,
             context.Candidate.StepRun.Id,
-            executionOutcome.Detail.Run.Id,
+            executionOutcome.ExecutionRun.Id,
             competingExecution.Id);
 
         return ProcessDispatchRouteHandlerResult.DispatchComplete;

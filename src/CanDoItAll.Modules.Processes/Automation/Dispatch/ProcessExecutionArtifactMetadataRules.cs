@@ -160,9 +160,9 @@ internal static class ProcessExecutionArtifactMetadataRules
 
     internal static bool ShouldAutoRecordCompletedDecisionArtifact(DispatchArtifactExpectation expectedArtifact)
         => ShouldAutoRecordCompletedDecisionArtifact(
-            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact).ToProjectionExpectation());
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact));
 
-    internal static bool ShouldAutoRecordCompletedDecisionArtifact(ProcessProjectionArtifactExpectation expectedArtifact)
+    internal static bool ShouldAutoRecordCompletedDecisionArtifact(ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         return expectedArtifact.IsRequired &&
                expectedArtifact.ArtifactKind is ProcessArtifactKind.Decision or ProcessArtifactKind.DecisionRecord &&

@@ -1,0 +1,13 @@
+Command: SB024 critical source assertions and forbidden-scope scans
+Working directory: C:\repositories\CanDoItAll
+
+PASS: Projection source-family order remains execution, mock, workspace, existing, response, provider-native browser, completed decision.
+PASS: Validation, projection, matcher, resolver, and satisfaction surfaces share ProcessArtifactExpectationSnapshot.
+PASS: Old projection/validation expectation DTO names and conversion helpers are absent from active source.
+PASS: Projection source adapters preserve external reference key and lineage builder paths.
+PASS: Provider-native browser projection uses observation snapshots and expected/discovered adapter plans.
+PASS: Critical unit and integration guard names are present in source.
+PASS: No Process Core project/directory introduced in SB024 scope.
+PASS: No production driver API token introduced in process module source.
+PASS: No UI/browser surface files changed; browser validation remains N/A.
+PASS: No stub/TODO markers in changed SB024 source files.

@@ -1,0 +1,197 @@
+SB017 source assertions and scans
+Generated: 2026-06-06T18:21:51.2614762-04:00
+
+Scoped production files:
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs
+- src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs
+Scoped test files:
+- tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+- tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
+
+## projection persistence service exists
+Command: rg -n --fixed-strings 'internal sealed class ProcessSubprocessProjectionPersistenceService(' <scoped files>
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:9:internal sealed class ProcessSubprocessProjectionPersistenceService(
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1312:        Assert.Contains("internal sealed class ProcessSubprocessProjectionPersistenceService(", projectionPersistenceSource, StringComparison.Ordinal);
+
+## runtime delegates completed projection persistence
+Command: rg -n --fixed-strings 'projectionPersistenceService.ProjectCompletedArtifactsAsync(' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1328:        Assert.Contains("projectionPersistenceService.ProjectCompletedArtifactsAsync(", subprocessRuntimeSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:96:            await projectionPersistenceService.ProjectCompletedArtifactsAsync(
+
+## persistence service opens db context
+Command: rg -n --fixed-strings 'dbContextFactory.CreateDbContextAsync' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1315:        Assert.Contains("dbContextFactory.CreateDbContextAsync", projectionPersistenceSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:25:        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+## persistence service queries required expectations
+Command: rg -n --fixed-strings 'ProcessArtifactExpectation' <scoped files>
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs:15:        ProcessArtifactExpectation expectation,
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:273:        Assert.True(File.Exists(Path.Combine(processesDispatchDirectory, "ProcessArtifactExpectationMatcher.cs")));
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1316:        Assert.Contains("ProcessArtifactExpectation", projectionPersistenceSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1682:        Assert.Contains("internal enum ProcessArtifactExpectationMode", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1718:        Assert.Contains("internal sealed record ProcessArtifactExpectationValidationResult", typeSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1781:        Assert.DoesNotContain("private async Task<IReadOnlyList<ProcessArtifactExpectationValidationResult>> ValidateRequiredCompletionArtifactsAsync", mainSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:2058:            "ProcessArtifactExpectationMatcher.cs",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:25:        ProcessArtifactExpectation expectation,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:62:        ProcessArtifactExpectation expectation,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:72:        ProcessArtifactExpectation expectation,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:94:        ProcessArtifactExpectation expectation)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:135:        ProcessArtifactExpectation expectation,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:174:        ProcessArtifactExpectation expectation,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:26:        var expectations = await dbContext.Set<ProcessArtifactExpectation>()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:304:                new ProcessArtifactExpectationSatisfactionViewModel(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:310:                    ProcessArtifactExpectationSatisfactionStatus.Missing,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:311:                    ProcessArtifactExpectationSourceKind.None,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:443:        var workflowExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:471:        var subprocessExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15475:    public void ProcessArtifactExpectationMatcher_SB05_INV_002_disambiguates_strong_match_by_kind()
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15501:        var matchedId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15677:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Evidence,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15680:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15684:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15689:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Decision,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15699:        var financeExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15708:        var complianceExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15754:        var financeExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15761:        var complianceExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15806:        var expectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15840:        var parentFinanceExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15882:        var parentFinanceExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15924:        var parentExpectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16383:        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Decision, result.Mode);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16791:            Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative, result.Mode);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17480:            artifactExpectationMode: ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Decision);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17640:        static ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult ValidateDirectArtifact(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17648:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode? artifactExpectationMode = null)
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17778:            new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17781:                ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Evidence,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17790:            new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17793:                ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Evidence,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17828:        var failure = new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17831:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17864:        var failure = new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17867:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17903:        var failure = new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17906:            ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:18512:            new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:18515:                ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.RuntimeProof,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:18523:            new ProcessRunAutomationDispatchService.ProcessArtifactExpectationValidationResult(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:18526:                ProcessRunAutomationDispatchService.ProcessArtifactExpectationMode.Narrative,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20299:        ProcessArtifactExpectation Expectation,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20318:        var expectation = new ProcessArtifactExpectation
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20340:        ProcessArtifactExpectation expectation,
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20371:                new Dictionary<Guid, ProcessArtifactExpectation> { [fixture.Expectation.Id] = fixture.Expectation },
+
+## persistence service queries parent and child artifacts
+Command: rg -n --fixed-strings 'ProcessArtifactRecord' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1317:        Assert.Contains("ProcessArtifactRecord", projectionPersistenceSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1939:            "ProcessArtifactRecordedSatisfactionRules.cs",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:26:        ProcessArtifactRecord sourceArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:61:        ProcessArtifactRecord artifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:93:        ProcessArtifactRecord artifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:136:        ProcessArtifactRecord sourceArtifact)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:146:        ProcessArtifactRecord sourceArtifact)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:153:        ProcessArtifactRecord sourceArtifact,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs:175:        ProcessArtifactRecord sourceArtifact)
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:37:        var parentArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:55:        var childArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs:40:        var artifact = new ProcessArtifactRecord
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs:58:        await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:479:        var subprocessArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:7042:        var staleArtifact = CreateProcessArtifactRecord(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:7058:        var wrongRootArtifact = CreateProcessArtifactRecord(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:7074:        var currentArtifact = CreateProcessArtifactRecord(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:10863:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15848:        var wrongTitleArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15858:        var mappedArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15889:        var wrongTitleArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15899:        var secondArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:15931:        var childArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16153:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16189:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16271:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16328:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16362:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16397:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16432:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16467:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16502:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16552:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16614:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16662:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16714:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16767:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16823:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16879:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16942:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:16997:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17035:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17085:        var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17499:        var workflowArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17530:        var subprocessArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17562:        var managerArtifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:17661:            var artifact = new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20339:    private static ProcessArtifactRecord CreateProcessArtifactRecord(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20345:        return new ProcessArtifactRecord
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:20363:        IReadOnlyList<ProcessArtifactRecord> existingArtifacts)
+
+## persistence service preserves current expectation satisfaction check
+Command: rg -n --fixed-strings 'ProcessSubprocessProjectionPlanBuilder.SatisfiesCurrentArtifactExpectation' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1318:        Assert.Contains("ProcessSubprocessProjectionPlanBuilder.SatisfiesCurrentArtifactExpectation", projectionPersistenceSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:45:                ProcessSubprocessProjectionPlanBuilder.SatisfiesCurrentArtifactExpectation(
+
+## persistence service preserves source artifact resolution
+Command: rg -n --fixed-strings 'ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1319:        Assert.Contains("ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact", projectionPersistenceSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:70:            var sourceArtifact = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
+
+## persistence service preserves gap journaling
+Command: rg -n --fixed-strings 'gapJournalCoordinator.RecordAsync' <scoped files>
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:77:                await gapJournalCoordinator.RecordAsync(
+
+## persistence service preserves projection writing
+Command: rg -n --fixed-strings 'projectionWriterCoordinator.WriteAsync' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1323:        Assert.Contains("projectionWriterCoordinator.WriteAsync", projectionPersistenceSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1333:        Assert.DoesNotContain("projectionWriterCoordinator.WriteAsync", subprocessRuntimeSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:95:            await projectionWriterCoordinator.WriteAsync(
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:427:        Assert.DoesNotContain("projectionWriterCoordinator.WriteAsync", subprocessRuntimeSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:429:        Assert.Contains("projectionWriterCoordinator.WriteAsync", subprocessProjectionPersistenceSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:432:        Assert.DoesNotContain("projectionWriterCoordinator.WriteAsync", dispatchSource, StringComparison.Ordinal);
+
+## persistence service saves projection changes once
+Command: rg -n --fixed-strings 'dbContext.SaveChangesAsync' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1217:        Assert.Contains("dbContext.SaveChangesAsync", sideEffectsSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1324:        Assert.Contains("dbContext.SaveChangesAsync", projectionPersistenceSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs:105:        await dbContext.SaveChangesAsync(cancellationToken);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:430:        Assert.Contains("dbContext.SaveChangesAsync", subprocessProjectionPersistenceSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:1674:        await dbContext.SaveChangesAsync();
+
+## factory constructs projection persistence service
+Command: rg -n --fixed-strings 'new ProcessSubprocessProjectionPersistenceService(' <scoped files>
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs:89:            new ProcessSubprocessProjectionPersistenceService(
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1341:        Assert.Contains("new ProcessSubprocessProjectionPersistenceService(", routeHandlerFactorySource, StringComparison.Ordinal);
+
+## SB017 unit guard exists
+Command: rg -n --fixed-strings 'Process_core_contract_candidate_driver_readiness_SB017_INV_001_extracts_subprocess_projection_persistence' <scoped files>
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:1299:    public void Process_core_contract_candidate_driver_readiness_SB017_INV_001_extracts_subprocess_projection_persistence()
+
+## SB018 integration guard updated
+Command: rg -n --fixed-strings 'ProcessSubprocessBoundary_SB18_INV_001_dispatch_delegates_runtime_projection_side_effects' <scoped files>
+tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs:391:    public void ProcessSubprocessBoundary_SB18_INV_001_dispatch_delegates_runtime_projection_side_effects()
+
+## runtime projection persistence forbidden token scan
+Command: rg -n 'ProjectCompletedSubprocessArtifactsAsync|CreateDbContextAsync|SaveChangesAsync|ProcessSubprocessProjectionPlanBuilder\.Build|projectionWriterCoordinator\.WriteAsync|ProcessSubprocessProjectionGapJournalCoordinator|ProcessSubprocessProjectionWriterCoordinator|IWorkspacePathResolver|IDatabaseProfileRuntimeAccessor|IClock clock|ensureStepDispatchClaimHeldAsync' <scoped files>
+No matches.
+
+## Process Core/driver API token scan in changed production files
+Command: rg -n 'ProcessCore|Process Core|CanDoItAll\.Processes\.Core|CoreCandidate|DriverReadiness|driver readiness|IProcessDriver|ProcessDriver|IProcessDriverPack|DriverPack' <scoped files>
+No matches.
+
+## anti-stub scan in changed production files
+Command: rg -n 'TODO|throw new NotImplementedException|return default' <scoped files>
+No matches.
+

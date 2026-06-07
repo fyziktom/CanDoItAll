@@ -1,0 +1,46 @@
+SB011 source assertions and guard scans
+
+Hydration service wires direct-agent assembler explicitly:
+59:        var directAgentCandidateAssembler = new ProcessDispatchDirectAgentCandidateAssembler(
+65:        var candidateAssembler = new ProcessDispatchHydratedCandidateAssembler(
+
+Hydrated assembler delegates direct-agent path and no longer owns binding/recovery/cooperation:
+9:    ProcessDispatchDirectAgentCandidateAssembler directAgentCandidateAssembler)
+73:            var directAgentCandidate = await directAgentCandidateAssembler.TryCreateAsync(
+
+Direct-agent assembler owns binding, recovery, manual directive, project access logging, and cooperation metadata:
+13:internal sealed class ProcessDispatchDirectAgentCandidateAssembler(
+54:        if (ProcessAutomationExecutionRunSelection.HasBlockingAutomationExecutionRun(
+63:        var recoveryExecutionRunId = ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId(stepRun, executionRuns);
+65:        var manualRecoveryDirective = await ProcessDispatchRecoveryQueryHelper.LoadLatestManualRecoveryDirectiveAsync(
+71:        var bindingResult = await ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync(
+83:                ProcessExecutionArtifactMetadataRules.BuildMissingTechnicalAgentBindingDiagnostic(
+94:            ProcessDispatchTechnicalAgentBindingCoordinator.TryResolveProjectStructureAccessProjectId(run, out var projectStructureAccessProjectId))
+121:        var directAgentContext = ProcessDispatchCandidateAssemblyContextFactory.WithDirectAgentFacts(
+128:                ProcessDispatchCooperationMetadataResolver.ResolveProcessCooperationMetadata(
+137:        return ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(directAgentContext);
+
+Existing binding/recovery/cooperation collaborators remain explicit:
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:5:internal static class ProcessDispatchCooperationMetadataResolver
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRecoveryQueryHelper.cs:6:internal static class ProcessDispatchRecoveryQueryHelper
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchTechnicalAgentBindingCoordinator.cs:23:internal static class ProcessDispatchTechnicalAgentBindingCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchTechnicalAgentBindingCoordinator.cs:71:        await executionClient.SaveAgentAsync(agentEditor, cancellationToken);
+
+Architecture test covers SB011 contract:
+2401:        var directAgentCandidateAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchDirectAgentCandidateAssembler.cs"));
+2508:        var directAgentAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchDirectAgentCandidateAssembler.cs"));
+2546:    public void Process_core_contract_candidate_driver_readiness_SB011_INV_001_moves_direct_agent_binding_recovery_and_cooperation_to_explicit_assembler()
+2556:        var directAgentAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchDirectAgentCandidateAssembler.cs"));
+2561:        Assert.Contains("new ProcessDispatchDirectAgentCandidateAssembler(", hydrationServiceSource, StringComparison.Ordinal);
+2562:        Assert.Contains("ProcessDispatchDirectAgentCandidateAssembler directAgentCandidateAssembler", hydratedAssemblerSource, StringComparison.Ordinal);
+2569:        Assert.Contains("internal sealed class ProcessDispatchDirectAgentCandidateAssembler", directAgentAssemblerSource, StringComparison.Ordinal);
+2605:        var directAgentAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchDirectAgentCandidateAssembler.cs"));
+
+Anti-stub scan in SB011 production files:
+No matches.
+
+No Process Core or process driver API in production source:
+No matches.
+
+No UI/mobile proof path drift under active bundle proof:
+No matching proof paths.

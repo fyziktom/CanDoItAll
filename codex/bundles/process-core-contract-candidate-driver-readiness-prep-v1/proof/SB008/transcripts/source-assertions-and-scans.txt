@@ -1,0 +1,62 @@
+SB008 source assertions and guard scans
+
+Application service is route-facing and alias-free:
+3:internal sealed class ProcessDispatchFinalizerApplicationService(ProcessDispatchFinalizerAdapter finalizerAdapter)
+6:        ProcessDispatchWorkflowFinalizerInput input,
+8:        => finalizerAdapter.FinalizeWorkflowCompletionAsync(input, cancellationToken);
+11:        ProcessDispatchRecoveredFinalizerInput input,
+13:        => finalizerAdapter.FinalizeRecoveredCompletionAsync(input, cancellationToken);
+16:        ProcessDispatchDirectAgentFinalizerInput input,
+18:        => finalizerAdapter.FinalizeDirectAgentCompletionAsync(input, cancellationToken);
+21:        ProcessDispatchSubprocessFinalizerInput input,
+23:        => finalizerAdapter.FinalizeSubprocessCompletionAsync(input, cancellationToken);
+
+No dispatcher aliases or route-model conversions remain in application service:
+No matches.
+
+Narrow finalizer adapter owns dispatcher aliases, conversions, and context factory calls:
+3:using DispatchCandidate = ProcessRunAutomationDispatchService.DispatchCandidate;
+4:using DispatchExecutionOutcome = ProcessRunAutomationDispatchService.DispatchExecutionOutcome;
+7:using ProcessStepDispatchClaim = ProcessRunAutomationDispatchService.ProcessStepDispatchClaim;
+20:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+22:            ToDispatcherClaim(input.DispatchClaim),
+34:            ProcessDispatchFinalizerContextFactory.ForWorkflow(candidate, workflowOutcome),
+46:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+47:            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.RecoveryOutcome),
+50:            ToDispatcherClaim(input.DispatchClaim),
+64:            ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery(
+80:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+81:            ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.ExecutionOutcome),
+84:            ToDispatcherClaim(input.DispatchClaim),
+98:            ProcessDispatchFinalizerContextFactory.ForDirectAgent(
+114:            ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate),
+118:            ToDispatcherClaim(input.DispatchClaim),
+132:            ProcessDispatchFinalizerContextFactory.ForSubprocess(
+
+Legacy dispatcher finalizer callers use the adapter edge:
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchSubprocessRuntimeService.cs:161:                await finalizerAdapter.FinalizeSubprocessCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:12:        var finalizerApplicationService = CreateFinalizerApplicationService(finalizerAdapter);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:107:        await CreateFinalizerAdapter().FinalizeRecoveredCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:124:        await CreateFinalizerAdapter().FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:102:        await CreateFinalizerAdapter().FinalizeWorkflowCompletionAsync(
+
+Architecture test covers SB008 contract:
+1060:        Assert.DoesNotContain("using DispatchCandidate =", routeFacingSource, StringComparison.Ordinal);
+1102:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", recoveryRuntimeSource, StringComparison.Ordinal);
+1103:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", directAgentRuntimeSource, StringComparison.Ordinal);
+1107:        Assert.DoesNotContain("var dispatcherCandidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate);", routeServicesSource, StringComparison.Ordinal);
+1324:    public void Process_core_contract_candidate_driver_readiness_SB008_INV_001_moves_dispatcher_aliases_to_finalizer_adapter()
+1339:        Assert.DoesNotContain("using DispatchCandidate", finalizerApplicationSource, StringComparison.Ordinal);
+1346:        Assert.Contains("using DispatchCandidate = ProcessRunAutomationDispatchService.DispatchCandidate;", finalizerAdapterSource, StringComparison.Ordinal);
+1349:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate", finalizerAdapterSource, StringComparison.Ordinal);
+1356:        Assert.Contains("CreateFinalizerAdapter().FinalizeWorkflowCompletionAsync(", dispatchSource, StringComparison.Ordinal);
+2037:            "using DispatchCandidate =",
+
+Anti-stub scan in SB008 production files:
+No matches.
+
+No Process Core or process driver API in production source:
+No matches.
+
+No UI/mobile proof path drift under active bundle proof:
+No matching proof paths.

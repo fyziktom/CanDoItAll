@@ -13,7 +13,7 @@ internal static class ProcessArtifactValidationSnapshotBuilder
             projectStructureContractText ?? string.Empty);
     }
 
-    public static ProcessArtifactValidationExpectation FromDispatchExpectation(
+    public static ProcessArtifactExpectationSnapshot FromDispatchExpectation(
         ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
         => new(
             expectedArtifact.Id,
@@ -24,20 +24,4 @@ internal static class ProcessArtifactValidationSnapshotBuilder
             expectedArtifact.SensitivityLevel,
             expectedArtifact.ValidationRequirementSummary,
             expectedArtifact.AllowedFutureUsageSummary);
-
-    public static ProcessArtifactValidationExpectation FromProjectionExpectation(
-        ProcessProjectionArtifactExpectation expectedArtifact)
-        => new(
-            expectedArtifact.Id,
-            expectedArtifact.ArtifactKind,
-            expectedArtifact.Title,
-            expectedArtifact.IsRequired,
-            expectedArtifact.TrustRequirement,
-            expectedArtifact.SensitivityLevel,
-            expectedArtifact.ValidationRequirementSummary,
-            expectedArtifact.AllowedFutureUsageSummary);
-
-    public static ProcessProjectionArtifactExpectation ToProjectionExpectation(
-        ProcessRunAutomationDispatchService.DispatchArtifactExpectation expectedArtifact)
-        => FromDispatchExpectation(expectedArtifact).ToProjectionExpectation();
 }

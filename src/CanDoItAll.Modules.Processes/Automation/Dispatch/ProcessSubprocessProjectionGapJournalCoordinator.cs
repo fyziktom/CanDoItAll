@@ -10,7 +10,7 @@ internal sealed class ProcessSubprocessProjectionGapJournalCoordinator
 {
     public async Task RecordAsync(
         AppDbContext dbContext,
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessDispatchSubprocessRuntimeInput input,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessArtifactExpectation expectation,
         string projectionDiagnostic,
@@ -18,17 +18,17 @@ internal sealed class ProcessSubprocessProjectionGapJournalCoordinator
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
-        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(subprocessRun);
         ArgumentNullException.ThrowIfNull(expectation);
 
-        var fingerprint = CreateFingerprint(candidate.Run.Id, candidate.StepRun.Id, subprocessRun.RunId, expectation.Id);
+        var fingerprint = CreateFingerprint(input.Run.Id, input.StepRun.Id, subprocessRun.RunId, expectation.Id);
         var existingGap = await dbContext.Set<ProcessJournalEntry>()
             .AsNoTracking()
             .AnyAsync(
                 item =>
-                    item.ProcessRunId == candidate.Run.Id &&
-                    item.StepRunId == candidate.StepRun.Id &&
+                    item.ProcessRunId == input.Run.Id &&
+                    item.StepRunId == input.StepRun.Id &&
                     item.EventType == ProcessRuntimeEventTypes.ArtifactValidationDiagnostic &&
                     item.CorrelationId == fingerprint,
                 cancellationToken);
@@ -40,21 +40,21 @@ internal sealed class ProcessSubprocessProjectionGapJournalCoordinator
         await dbContext.Set<ProcessJournalEntry>().AddAsync(
             new ProcessJournalEntry
             {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
+                ProcessRunId = input.Run.Id,
+                StepRunId = input.StepRun.Id,
                 EventType = ProcessRuntimeEventTypes.ArtifactValidationDiagnostic,
                 Title = $"Subprocess artifact projection gap: {expectation.Title}",
                 Description = string.IsNullOrWhiteSpace(projectionDiagnostic)
                     ? $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'."
                     : $"Completed subprocess run '{subprocessRun.RunName}' did not produce a child artifact that can satisfy parent expectation '{expectation.Title}'. {projectionDiagnostic}",
                 CorrelationId = fingerprint,
-                OperatingMode = candidate.Run.OperatingMode,
-                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                OperatingMode = input.Run.OperatingMode,
+                PolicyVersion = $"definition-version:{input.Run.ProcessDefinitionVersionId:D}",
+                EnvironmentMode = input.Run.OperatingMode.ToString(),
                 ReplayContextJson = JsonSerializer.Serialize(new
                 {
-                    candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
+                    input.Run.Id,
+                    StepRunId = input.StepRun.Id,
                     SubprocessRunId = subprocessRun.RunId,
                     ExpectationId = expectation.Id,
                     ExpectationTitle = expectation.Title,

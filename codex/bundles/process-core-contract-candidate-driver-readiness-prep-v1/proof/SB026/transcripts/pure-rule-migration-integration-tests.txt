@@ -1,0 +1,10 @@
+Command: dotnet test .\tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-build --filter "<SB026 pure-rule migration filter>"
+Working directory: C:\repositories\CanDoItAll
+Filter: FullyQualifiedName~IsRunClosedToAutomation_keeps_reopened_step_dispatchable_inside_failed_run|FullyQualifiedName~IsStepStatusDispatchableForRun_restricts_failed_runs_to_reopened_inprogress_steps|FullyQualifiedName~IsRunEligibleForDispatchCandidate_allows_failed_run_recovery_without_reopening_closed_runs|FullyQualifiedName~ProcessDispatchRouteEligibility_SB05_INV_002_preserves_run_and_step_dispatch_rules|FullyQualifiedName~SubprocessArtifactProjectionMapping_SB09_INV_001_uses_child_expectation_id_when_same_kind_titles_conflict|FullyQualifiedName~SubprocessArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_child_mapping|FullyQualifiedName~SubprocessArtifactProjectionMapping_SB09_INV_001_warns_when_legacy_same_kind_fallback_maps
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    25, Přeskočeno:     0, Celkem:    25, Doba trvání: 41 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+
+Exit code: 0

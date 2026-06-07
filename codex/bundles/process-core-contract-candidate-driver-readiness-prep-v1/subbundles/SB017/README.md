@@ -1,7 +1,7 @@
 # SB017 - Subprocess projection persistence service
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Split completed-child artifact projection query/write/save changes from subprocess lifecycle orchestration into explicit application-local persistence service.
@@ -13,19 +13,18 @@ Split completed-child artifact projection query/write/save changes from subproce
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB016 closed.
+- SB016 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -35,10 +34,10 @@ SB016 closed.
 - Execution report row for `SB017`.
 
 ## Dependency Impact
-Feeds the next critical gate.
+- Feeds the next critical gate.
 
 ## Validation Depth
-Focused source/test proof; full gate proof can be accumulated by the next critical gate.
+- Focused source/test proof; full gate proof can be accumulated by the next critical gate.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,25 +59,31 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
 
 ## Proof Required
-- Build/test transcript or explanation if proof is deferred to the next critical gate.
-- Source assertion transcript.
-- Anti-stub scan.
-- No-Core/no-driver scan.
+- Focused unit architecture proof: `bundle://proof/SB017/transcripts/subprocess-projection-persistence-unit-tests.txt`.
+- Focused integration boundary proof: `bundle://proof/SB017/transcripts/subprocess-projection-persistence-integration-tests.txt`.
+- Source assertion, anti-stub, and no-Core/no-driver proof: `bundle://proof/SB017/transcripts/source-assertions-and-scans.txt`.
+- Hash proof: `bundle://proof/SB017/transcripts/changed-file-hashes.txt`.
 
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
+- Passed. SB018 may proceed with subprocess lifecycle/projection parity guarded by focused unit and integration proof.
+
+## Closure Notes
+- Added `ProcessSubprocessProjectionPersistenceService` for completed-child artifact projection query/write/save behavior.
+- `ProcessDispatchSubprocessRuntimeService` now delegates completed projection persistence and no longer contains the EF projection query, `ProcessSubprocessProjectionPlanBuilder.Build`, `ProcessSubprocessProjectionWriterCoordinator`, gap journal coordinator, workspace/profile dependencies, claim guard, or `SaveChangesAsync`.
+- The dispatch factory constructs the persistence service with the existing EF, workspace, profile, clock, and route-claim guard dependencies.
+- Browser validation remains N/A because no UI files changed.
 
 ## Suggested Agent Prompt
 Implement `SB017` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.

@@ -8,7 +8,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var preExecutionGuardHandler = CreatePreExecutionGuardHandler();
         var candidateHydrationService = CreateCandidateHydrationService();
         var runClosureGuardService = CreateRunClosureGuardService();
-        var finalizerApplicationService = CreateFinalizerApplicationService();
+        var finalizerAdapter = CreateFinalizerAdapter();
+        var finalizerApplicationService = CreateFinalizerApplicationService(finalizerAdapter);
         var recoveryRuntimeService = CreateRecoveryRuntimeService();
         var directAgentRuntimeService = CreateDirectAgentRuntimeService();
         var competingExecutionGuardService = CreateCompetingExecutionGuardService();
@@ -49,7 +50,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => new(TryRecoverStrandedMissingCompletionArtifactsAsync);
 
     private ProcessDispatchDirectAgentRuntimeService CreateDirectAgentRuntimeService()
-        => new(ExecuteUntilSettledAsync);
+    {
+        var executionAdapter = new ProcessDispatchDirectAgentExecutionAdapter(ExecuteUntilSettledAsync);
+
+        return new ProcessDispatchDirectAgentRuntimeService(executionAdapter.ExecuteUntilSettledAsync);
+    }
 
     private ProcessDispatchCompetingExecutionGuardService CreateCompetingExecutionGuardService()
         => new(executionClient, clock, StaleAutomationExecutionRunTimeout);
@@ -70,8 +75,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             logger);
     }
 
-    private ProcessDispatchFinalizerApplicationService CreateFinalizerApplicationService()
+    private ProcessDispatchFinalizerAdapter CreateFinalizerAdapter()
         => new(FinalizeStepCompletionAsync, ApplyFinalizedStepTransitionAsync);
+
+    private ProcessDispatchFinalizerApplicationService CreateFinalizerApplicationService(ProcessDispatchFinalizerAdapter finalizerAdapter)
+        => new(finalizerAdapter);
 
     private ProcessDispatchSubprocessRuntimeService CreateSubprocessRuntimeService(
         ProcessDispatchStepTransitionService stepTransitionService,
@@ -82,10 +90,14 @@ internal sealed partial class ProcessRunAutomationDispatchService
             finalizerApplicationService,
             dbContextFactory,
             serviceScopeFactory,
-            workspacePathResolver,
-            databaseProfileRuntimeAccessor,
-            clock,
-            EnsureStepDispatchClaimHeldAsync,
+            new ProcessSubprocessProjectionPersistenceService(
+                dbContextFactory,
+                workspacePathResolver,
+                databaseProfileRuntimeAccessor,
+                clock,
+                (claim, token) => EnsureStepDispatchClaimHeldAsync(
+                    new ProcessStepDispatchClaim(claim.StepRunId, claim.ClaimToken),
+                    token)),
             logger);
     }
 
@@ -97,7 +109,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        await CreateFinalizerApplicationService().FinalizeRecoveredCompletionAsync(
+        await CreateFinalizerAdapter().FinalizeRecoveredCompletionAsync(
             candidate,
             recoveryOutcome,
             trigger,
@@ -114,7 +126,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         ProcessStepDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        await CreateFinalizerApplicationService().FinalizeDirectAgentCompletionAsync(
+        await CreateFinalizerAdapter().FinalizeDirectAgentCompletionAsync(
             candidate,
             executionOutcome,
             trigger,

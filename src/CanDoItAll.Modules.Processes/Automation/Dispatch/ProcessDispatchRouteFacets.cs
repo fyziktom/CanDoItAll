@@ -49,10 +49,7 @@ internal interface IProcessDispatchRecoveryRouteFacet
 internal interface IProcessDispatchSubprocessRouteFacet
 {
     Task HandleSubprocessDispatchAsync(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Guid? triggerStepRunId,
-        ProcessRouteDispatchClaim dispatchClaim,
+        ProcessDispatchSubprocessRuntimeInput input,
         CancellationToken cancellationToken);
 }
 
@@ -88,9 +85,7 @@ internal interface IProcessDispatchWorkflowRouteFacet
 internal interface IProcessDispatchDirectAgentRouteFacet
 {
     Task<ProcessRouteExecutionOutcome> ExecuteUntilSettledAsync(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Func<CancellationToken, Task> renewLeaseAsync,
+        ProcessDispatchDirectAgentExecutionInput input,
         CancellationToken cancellationToken);
 }
 

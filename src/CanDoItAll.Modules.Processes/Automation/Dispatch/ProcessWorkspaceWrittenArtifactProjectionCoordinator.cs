@@ -42,7 +42,7 @@ internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IPr
         }
 
         var fileWrites = sessionObservationSource.ResolveSuccessfulSessionFileWrites(context.Run.SerializedSessionStateJson);
-        var receiptFileWrites = sessionObservationSource.ResolveSuccessfulWorkspaceFileMutationReceiptPaths(context.Run)
+        var receiptFileWrites = context.Observations.SuccessfulWorkspaceFileMutationReceiptPaths
             .Select(path => new ProcessProjectionSessionFileContent(path, string.Empty))
             .ToList();
         if (fileWrites.Count == 0 && receiptFileWrites.Count == 0)

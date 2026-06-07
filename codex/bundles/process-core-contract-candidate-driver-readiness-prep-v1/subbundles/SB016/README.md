@@ -1,7 +1,7 @@
 # SB016 - Subprocess orchestration model boundary
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Introduce subprocess route/runtime input models and remove dispatcher aliases from ProcessDispatchSubprocessRuntimeService where practical.
@@ -13,19 +13,21 @@ Introduce subprocess route/runtime input models and remove dispatcher aliases fr
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB015 closed.
+- SB015 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeModels.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteFacets.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteHandlers.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
 
 
 ## Deliverables
@@ -35,10 +37,10 @@ SB015 closed.
 - Execution report row for `SB016`.
 
 ## Dependency Impact
-Feeds the next critical gate.
+- Feeds the next critical gate.
 
 ## Validation Depth
-Focused source/test proof; full gate proof can be accumulated by the next critical gate.
+- Focused source/test proof; full gate proof can be accumulated by the next critical gate.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,25 +62,30 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
 
 ## Proof Required
-- Build/test transcript or explanation if proof is deferred to the next critical gate.
-- Source assertion transcript.
-- Anti-stub scan.
-- No-Core/no-driver scan.
+- Focused unit architecture proof: `bundle://proof/SB016/transcripts/subprocess-runtime-route-input-architecture-tests.txt`.
+- Source assertion, anti-stub, and no-Core/no-driver proof: `bundle://proof/SB016/transcripts/source-assertions-and-scans.txt`.
+- Hash proof: `bundle://proof/SB016/transcripts/changed-file-hashes.txt`.
 
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
+- Passed. The focused unit proof compiles the affected source, and SB017 may proceed with subprocess projection persistence extraction.
+
+## Closure Notes
+- Added `ProcessDispatchSubprocessRuntimeInput` as the subprocess route/runtime boundary.
+- `ProcessDispatchSubprocessRuntimeService` no longer carries dispatcher candidate or dispatcher claim aliases, no longer calls `ProcessDispatchRouteModelAdapters.ToDispatcherCandidate`, and finalizes completed subprocesses through route-owned finalizer input.
+- Projection plan, writer, and gap journal helpers now consume the subprocess runtime input while SB017 still owns the persistence extraction from the runtime method.
+- Browser validation remains N/A because no UI files changed.
 
 ## Suggested Agent Prompt
 Implement `SB016` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.

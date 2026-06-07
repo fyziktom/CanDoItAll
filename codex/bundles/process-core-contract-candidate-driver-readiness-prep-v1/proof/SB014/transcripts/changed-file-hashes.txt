@@ -1,0 +1,11 @@
+# SB014 changed file hashes
+| Path | SHA-256 |
+| --- | --- |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMissingUpstreamArtifactMaterialization.cs` | `85948B01D66AB4790211563ECE290C3761CB551A1C5E8785906F25CBEF6F9948` |
+| `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMissingUpstreamArtifactMaterializationSideEffects.cs` | `227987736DC4E0885C57FA85A3AA1577AF4717B53CA50E7341C1A7BA7A4B1E18` |
+| `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs` | `BC54B9C6CA4F66B6AB3230CA4A37A99526BB4C891622AC18DD3638E136EA0978` |
+| `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs` | `F83ACB599EED7C310ED67A31140A94E69F2E24C199CC59FB03D21792C836A821` |
+| `bundle://inventories/01-current-source-references.md` | `DFC8622B3980548760B8E950B02D230819F98244327C46D8DFAC2335FA66B4D8` |
+| `bundle://inventories/02-source-hotspots.md` | `E66A3DA995639306C40BEEE4D28A98E42924171B7B2E01F1CA80F46E8D199893` |
+| `bundle://reviews/01-execution-report.md` | `718E1665D65E68044DC842CBCE56BAEBB4F6757B96FF3412D5C2AB3B235E1040` |
+| `bundle://subbundles/SB014/README.md` | `9D1E8230E89954B3E463ADE9D5CF8EB1C4331933652AFA0702AF4F2321B2BBF8` |

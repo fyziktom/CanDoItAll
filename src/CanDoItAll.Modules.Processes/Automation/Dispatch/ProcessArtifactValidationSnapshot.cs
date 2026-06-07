@@ -1,13 +1,13 @@
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed record ProcessArtifactValidationSnapshot(
-    IReadOnlyList<ProcessArtifactValidationExpectation> ExpectedArtifacts,
+    IReadOnlyList<ProcessArtifactExpectationSnapshot> ExpectedArtifacts,
     string ProjectStructureContractText)
 {
     public static ProcessArtifactValidationSnapshot Empty { get; } = new([], string.Empty);
 }
 
-internal sealed record ProcessArtifactValidationExpectation(
+internal sealed record ProcessArtifactExpectationSnapshot(
     Guid Id,
     ProcessArtifactKind ArtifactKind,
     string Title,
@@ -15,16 +15,4 @@ internal sealed record ProcessArtifactValidationExpectation(
     ProcessArtifactTrustRequirement TrustRequirement,
     ProcessSensitivityLevel SensitivityLevel,
     string ValidationRequirementSummary,
-    string AllowedFutureUsageSummary)
-{
-    public ProcessProjectionArtifactExpectation ToProjectionExpectation()
-        => new(
-            Id,
-            ArtifactKind,
-            Title,
-            IsRequired,
-            TrustRequirement,
-            SensitivityLevel,
-            ValidationRequirementSummary,
-            AllowedFutureUsageSummary);
-}
+    string AllowedFutureUsageSummary);

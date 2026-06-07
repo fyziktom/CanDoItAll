@@ -57,7 +57,6 @@ internal sealed class ProcessArtifactProjectionOrchestrator
                     facets.FileIo,
                     facets.ArtifactClassifier,
                     facets.ExpectationMatcher,
-                    facets.SessionObservationSource,
                     facets.BrowserOutputRules,
                     facets.CandidateState),
                 new ProcessCompletedDecisionArtifactCoordinator(

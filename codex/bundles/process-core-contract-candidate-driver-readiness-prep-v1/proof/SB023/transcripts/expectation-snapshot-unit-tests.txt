@@ -1,0 +1,7 @@
+Command: dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Debug --no-build --filter "FullyQualifiedName~Artifact_validation_matcher_core_uses_validation_snapshot_expectations|FullyQualifiedName~Process_core_contract_candidate_driver_readiness_SB023_INV_001_converges_validation_projection_and_satisfaction_expectation_snapshots" Working directory: C:\repositories\CanDoItAll Filtered test names: - Artifact_validation_matcher_core_uses_validation_snapshot_expectations - Process_core_contract_candidate_driver_readiness_SB023_INV_001_converges_validation_projection_and_satisfaction_expectation_snapshots 
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 30 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+
+Exit code: 0

@@ -9,14 +9,14 @@ internal sealed class ProcessSubprocessProjectionWriterCoordinator(IWorkspacePat
 {
     public async Task WriteAsync(
         AppDbContext dbContext,
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessDispatchSubprocessRuntimeInput input,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessSubprocessArtifactProjectionPlan plan,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
-        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(subprocessRun);
         ArgumentNullException.ThrowIfNull(plan);
 
@@ -39,8 +39,8 @@ internal sealed class ProcessSubprocessProjectionWriterCoordinator(IWorkspacePat
 
         var artifact = new ProcessArtifactRecord
         {
-            ProcessRunId = candidate.Run.Id,
-            StepRunId = candidate.StepRun.Id,
+            ProcessRunId = input.Run.Id,
+            StepRunId = input.StepRun.Id,
             ArtifactExpectationId = plan.ArtifactExpectationId,
             ArtifactKind = plan.ArtifactKind,
             Title = plan.Title,
@@ -59,19 +59,19 @@ internal sealed class ProcessSubprocessProjectionWriterCoordinator(IWorkspacePat
         await dbContext.Set<ProcessJournalEntry>().AddAsync(
             new ProcessJournalEntry
             {
-                ProcessRunId = candidate.Run.Id,
-                StepRunId = candidate.StepRun.Id,
+                ProcessRunId = input.Run.Id,
+                StepRunId = input.StepRun.Id,
                 EventType = "artifact-recorded",
                 Title = "Recorded process artifact",
                 Description = artifact.Title,
                 CorrelationId = Guid.NewGuid().ToString("N"),
-                OperatingMode = candidate.Run.OperatingMode,
-                PolicyVersion = $"definition-version:{candidate.Run.ProcessDefinitionVersionId:D}",
-                EnvironmentMode = candidate.Run.OperatingMode.ToString(),
+                OperatingMode = input.Run.OperatingMode,
+                PolicyVersion = $"definition-version:{input.Run.ProcessDefinitionVersionId:D}",
+                EnvironmentMode = input.Run.OperatingMode.ToString(),
                 ReplayContextJson = JsonSerializer.Serialize(new
                 {
-                    RunId = candidate.Run.Id,
-                    StepRunId = candidate.StepRun.Id,
+                    RunId = input.Run.Id,
+                    StepRunId = input.StepRun.Id,
                     SubprocessRunId = subprocessRun.RunId,
                     SourceArtifactId = plan.ProjectionLineage.SourceArtifactId,
                     Summary = artifact.ProvenanceSummary

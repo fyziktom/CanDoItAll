@@ -91,7 +91,7 @@ internal static class ProcessArtifactPathValidationRules
     }
 
     public static bool ExpectedArtifactExplicitlyTargetsPath(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string normalizedPath)
     {
         return TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath) &&

@@ -3,10 +3,10 @@ using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal static class ProcessProjectionArtifactExpectationResolver
+internal static class ProcessArtifactExpectationResolver
 {
-    public static ProcessProjectionArtifactExpectation? ResolveArtifactExpectation(
-        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
+    public static ProcessArtifactExpectationSnapshot? ResolveArtifactExpectation(
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
         string? projectStructureContractText,
         ProcessAutomationExecutionArtifact artifact,
         string? artifactTextContent = null)
@@ -61,7 +61,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
     }
 
     public static Guid? MatchExpectedArtifactId(
-        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
         ProcessAutomationExecutionArtifact artifact,
         string? artifactTextContent = null)
     {
@@ -82,7 +82,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
             expectedArtifacts,
             expectedKind,
             item => MatchesExpectedArtifact(
-                ProcessArtifactValidationSnapshotBuilder.FromProjectionExpectation(expectedArtifactsById[item.Id]),
+                expectedArtifactsById[item.Id],
                 artifact,
                 relativePath,
                 displayName,
@@ -93,9 +93,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
             return strongMatchedExpectationId.Value;
         }
 
-        var validationExpectations = expectedArtifacts
-            .Select(ProcessArtifactValidationSnapshotBuilder.FromProjectionExpectation)
-            .ToList();
+        var validationExpectations = expectedArtifacts.ToList();
         var providerNativeVisualMatches = validationExpectations
             .Select(item => new
             {
@@ -142,8 +140,8 @@ internal static class ProcessProjectionArtifactExpectationResolver
     }
 
     public static bool WorkspaceWrittenFileMatchesExpectedArtifact(
-        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string path,
         string content)
     {
@@ -169,7 +167,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
     }
 
     private static bool MatchesExpectedArtifact(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName,
@@ -212,7 +210,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
     }
 
     private static int ScoreProviderNativeVisualArtifactExpectation(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName)
@@ -233,8 +231,8 @@ internal static class ProcessProjectionArtifactExpectationResolver
     }
 
     private static bool IsManagedNarrativeArtifactFallbackMatch(
-        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
-        ProcessArtifactValidationExpectation expectedArtifact,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName,
@@ -260,16 +258,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
     }
 
     private static bool ShouldIgnoreProductSourceForNarrativeExpectation(
-        ProcessProjectionArtifactExpectation expectedArtifact,
-        string normalizedPath)
-    {
-        return ShouldIgnoreProductSourceForNarrativeExpectation(
-            ProcessArtifactValidationSnapshotBuilder.FromProjectionExpectation(expectedArtifact),
-            normalizedPath);
-    }
-
-    private static bool ShouldIgnoreProductSourceForNarrativeExpectation(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string normalizedPath)
     {
         return IsLikelyProductSourceOrProjectFileName(ResolvePromptFileName(normalizedPath)) &&
@@ -277,7 +266,7 @@ internal static class ProcessProjectionArtifactExpectationResolver
                !ProcessArtifactPathValidationRules.ExpectedArtifactExplicitlyTargetsPath(expectedArtifact, normalizedPath);
     }
 
-    private static bool IsNarrativeEvidenceArtifactExpectation(ProcessArtifactValidationExpectation expectedArtifact)
+    private static bool IsNarrativeEvidenceArtifactExpectation(ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         var text = CollapsePromptWhitespace($"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}");
         return text.Contains("change set", StringComparison.OrdinalIgnoreCase) ||

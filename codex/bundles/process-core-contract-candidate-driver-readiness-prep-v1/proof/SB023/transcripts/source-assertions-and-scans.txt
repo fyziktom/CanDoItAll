@@ -1,0 +1,11 @@
+Command: SB023 source assertions and forbidden-token scans
+Working directory: C:\repositories\CanDoItAll
+
+PASS: ProcessArtifactExpectationSnapshot is the shared module-local expectation read model.
+PASS: Projection candidate snapshots use ProcessArtifactExpectationSnapshot.
+PASS: Validation snapshots use ProcessArtifactExpectationSnapshot.
+PASS: Satisfaction snapshots use ProcessArtifactExpectationSnapshot instead of dispatcher nested expected artifacts.
+PASS: ProcessProjectionArtifactExpectation.cs is absent and projection-specific conversion helpers are absent.
+PASS: No Process Core project/directory introduced in SB023 scope.
+PASS: No production driver API token introduced in process module source.
+PASS: No stub/TODO markers in changed SB023 source files.

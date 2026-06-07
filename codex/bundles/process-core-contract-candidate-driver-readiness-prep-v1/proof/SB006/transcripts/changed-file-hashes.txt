@@ -1,0 +1,12 @@
+Command: Get-FileHash changed SB006 files after closure status update
+
+Algorithm Hash                                                             Path
+--------- ----                                                             ----
+SHA256    285684EC66E3070BB670ABB8CCBC147AEB018CF98667BF46DDCA93697FC9E08F C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteExecution.cs
+SHA256    942823AC584D4F3FA684E178ADA12B5CBA30B7F9BD57EFD60E00F08082BAF65A C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs
+SHA256    1AFA955890BB3392DF761FD0AA13CC3905AA337D6FF68D9D9125C270D029FFD4 C:\repositories\CanDoItAll\codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\analysis\03-route-source-payload-usage-map.md
+SHA256    5F05286259400C31E1A2832C69ABCD46C05319A2C28903C2526B0E52FE1CEEF2 C:\repositories\CanDoItAll\codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\reviews\01-execution-report.md
+SHA256    EB5DC8DF78B5DC258C032458F41850B01FA40C8366567E16990C065AF900426D C:\repositories\CanDoItAll\codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\subbundles\SB006\README.md
+
+
+ExitCode: 0

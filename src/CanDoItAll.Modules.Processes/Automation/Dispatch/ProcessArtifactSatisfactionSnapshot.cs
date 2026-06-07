@@ -3,7 +3,7 @@ using CanDoItAll.AgentFramework.Models;
 namespace CanDoItAll.Modules.Processes;
 
 internal sealed record ProcessArtifactSatisfactionSnapshot(
-    IReadOnlyList<ProcessRunAutomationDispatchService.DispatchArtifactExpectation> ExpectedArtifacts,
+    IReadOnlyList<ProcessArtifactExpectationSnapshot> ExpectedArtifacts,
     IReadOnlySet<Guid> RecordedArtifactExpectationIds,
     IReadOnlyList<ProcessAutomationExecutionArtifact> ExecutionArtifacts,
     IReadOnlyList<ProcessAutomationToolExecutionReceipt> ToolReceipts);
@@ -15,10 +15,11 @@ internal static class ProcessArtifactSatisfactionSnapshotBuilder
         ProcessAutomationExecutionRunDetail detail)
     {
         return new ProcessArtifactSatisfactionSnapshot(
-            candidate.ExpectedArtifacts,
+            candidate.ExpectedArtifacts
+                .Select(ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation)
+                .ToList(),
             candidate.RecordedArtifactExpectationIds,
             detail.Artifacts,
             detail.ToolReceipts);
     }
 }
-

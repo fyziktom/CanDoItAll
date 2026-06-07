@@ -3,9 +3,9 @@ namespace CanDoItAll.Modules.Processes;
 internal static class ProcessArtifactExpectationMatcher
 {
     public static Guid? MatchStrongExpectedArtifactId(
-        IReadOnlyList<ProcessProjectionArtifactExpectation> expectedArtifacts,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
         ProcessArtifactKind expectedKind,
-        Func<ProcessProjectionArtifactExpectation, bool> matchesExpectedArtifact)
+        Func<ProcessArtifactExpectationSnapshot, bool> matchesExpectedArtifact)
     {
         ArgumentNullException.ThrowIfNull(expectedArtifacts);
         ArgumentNullException.ThrowIfNull(matchesExpectedArtifact);

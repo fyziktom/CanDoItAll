@@ -1,0 +1,37 @@
+SB021 execution/retry/provider integration tests
+Generated: 2026-06-06T18:59:59.6926608-04:00
+Filtered test names:
+- ProcessAutomationExecutionRunSelection_SB06_INV_001_selects_latest_current_attempt_competing_run
+- ProcessAutomationExecutionRunSelection_SB06_INV_002_preserves_stale_and_approval_blocking_rules
+- ProcessAutomationExecutionRunSelection_SB06_INV_003_preserves_completion_and_fresh_recovery_skip_rules
+- HasPriorNoProgressRetrySignal_SB09_INV_001_detects_repeated_fingerprint_after_restart
+- ShouldRetryIncompleteSuccessfulRun_returns_true_for_completed_run_that_only_missed_required_tools
+- ShouldRetryIncompleteSuccessfulRun_compresses_repeated_no_progress_missing_tool_attempt
+- ShouldRetryIncompleteSuccessfulRun_returns_true_for_provider_failure_that_returned_no_text
+- ShouldRetryRecoverableFailedRun_returns_true_for_provider_transport_failure_on_non_implementation_step
+- OrderFallbackProviders_excludes_ollama_from_process_recovery_fallbacks
+- ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:02.55]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:02.82]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:02.87]   Starting:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessAutomationExecutionRunSelection_SB06_INV_002_preserves_stale_and_approval_blocking_rules [18 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions [52 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ShouldRetryIncompleteSuccessfulRun_returns_true_for_provider_failure_that_returned_no_text [134 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ShouldRetryIncompleteSuccessfulRun_returns_true_for_completed_run_that_only_missed_required_tools [52 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessAutomationExecutionRunSelection_SB06_INV_001_selects_latest_current_attempt_competing_run [4 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ShouldRetryIncompleteSuccessfulRun_compresses_repeated_no_progress_missing_tool_attempt [11 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.HasPriorNoProgressRetrySignal_SB09_INV_001_detects_repeated_fingerprint_after_restart [46 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ProcessAutomationExecutionRunSelection_SB06_INV_003_preserves_completion_and_fresh_recovery_skip_rules [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.OrderFallbackProviders_excludes_ollama_from_process_recovery_fallbacks [4 ms]
+[xUnit.net 00:00:03.25]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.ProcessRunAutomationDispatchServiceTests.ShouldRetryRecoverableFailedRun_returns_true_for_provider_transport_failure_on_non_implementation_step [4 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 10
+     Úspěšné: 10
+ Celkový čas: 4,6766 Sekundy
+Exit code: 0

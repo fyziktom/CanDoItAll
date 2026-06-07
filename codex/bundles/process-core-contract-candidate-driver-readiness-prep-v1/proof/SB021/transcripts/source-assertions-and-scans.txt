@@ -1,0 +1,33 @@
+SB021 source assertions and scans
+Generated: 2026-06-06T19:01:48.7612651-04:00
+
+Positive source assertions:
+PASS: internal sealed record ProcessDispatchDirectAgentExecutionInput in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentExecutionModels.cs
+PASS: ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(input.Candidate) in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentExecutionAdapter.cs
+PASS: ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(executionOutcome) in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentExecutionAdapter.cs
+PASS: ProcessDispatchDirectAgentExecutionInput input in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs
+PASS: ProcessRouteExecutionRunSnapshot ExecutionRun in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteModels.cs
+PASS: executionOutcome.ExecutionRun.Id in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCompetingExecutionGuardService.cs
+PASS: ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCompetingExecutionGuardService.cs
+PASS: new ProcessDispatchDirectAgentFinalizerInput( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs
+PASS: ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(input.ExecutionOutcome) in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs
+PASS: ProcessDispatchFinalizerContextFactory.ForDirectAgent in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs
+PASS: ShouldRetryIncompleteSuccessfulRun( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: ShouldRetryRecoverableFailedRun( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: TryCreateNoProgressRetrySignal( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: HasPriorNoProgressRetrySignalAsync(candidate, noProgressSignal, cancellationToken) in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: PersistNoProgressRetryCompressedDiagnosticAsync( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: PersistNoProgressRetryObservedAsync( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: TryRepairAssignedAgentProvidersAsync( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: providerFallbackCount: 1 in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+PASS: BuildProviderRepairRecoveryDirective( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ProviderRecovery.cs
+PASS: new ProcessProviderRepairCoordinator( in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionAttemptLoopFacade.cs
+PASS: ProcessAssignedAgentProviderRepairCoordinator in .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs
+
+Negative source scans:
+PASS: direct-agent runtime contains no dispatcher candidate/outcome or route-model adapter conversion tokens.
+PASS: route boundary files contain no full execution Detail field or guard-side dispatcher outcome conversion.
+PASS: no Process Core or production driver API tokens in Gate G production files.
+PASS: anti-stub scan found no TODO/HACK/STUB/NotImplemented/NotSupported placeholder patterns in Gate G production files.
+
+Browser validation: N/A - runtime/service refactor only; no UI files changed.

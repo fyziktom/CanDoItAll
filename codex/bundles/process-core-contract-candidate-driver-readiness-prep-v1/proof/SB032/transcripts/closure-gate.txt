@@ -1,0 +1,16 @@
+Command: SB032 closure gate validation
+Working directory: C:\repositories\CanDoItAll
+
+PASS SB032 README marked Completed
+PASS SB032 acceptance checklist has no unchecked items
+PASS execution report SB032 row marked Passed
+PASS execution report includes SB032 evidence section
+PASS required passing transcript exists: bundle://proof/SB032/transcripts/entry-gate.txt
+PASS required passing transcript exists: bundle://proof/SB032/transcripts/build.txt
+PASS required passing transcript exists: bundle://proof/SB032/transcripts/full-unit-tests.txt
+PASS required passing transcript exists: bundle://proof/SB032/transcripts/focused-dispatch-integration-tests.txt
+PASS required passing transcript exists: bundle://proof/SB032/transcripts/focused-subprocess-projection-execution-integration-tests.txt
+PASS required passing transcript exists: bundle://proof/SB032/transcripts/source-assertions-and-scans.txt
+PASS no Process Core directory exists
+
+RESULT: PASS

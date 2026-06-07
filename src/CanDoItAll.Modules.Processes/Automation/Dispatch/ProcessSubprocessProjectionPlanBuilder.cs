@@ -20,14 +20,14 @@ internal sealed record ProcessSubprocessArtifactProjectionPlan(
 internal static class ProcessSubprocessProjectionPlanBuilder
 {
     public static ProcessSubprocessArtifactProjectionPlan Build(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessDispatchSubprocessRuntimeInput input,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessArtifactExpectation expectation,
         ProcessArtifactRecord sourceArtifact,
         string projectionDiagnostic,
         string scopedProfileId)
     {
-        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(input);
         ArgumentNullException.ThrowIfNull(subprocessRun);
         ArgumentNullException.ThrowIfNull(expectation);
         ArgumentNullException.ThrowIfNull(sourceArtifact);
@@ -40,7 +40,7 @@ internal static class ProcessSubprocessProjectionPlanBuilder
                 SourceArtifactId = sourceArtifact.Id,
                 SourceExternalReferenceKey = sourceArtifact.ExternalReferenceKey
             })!;
-        var managedStoragePath = BuildManagedStoragePath(candidate, expectation, scopedProfileId);
+        var managedStoragePath = BuildManagedStoragePath(input, expectation, scopedProfileId);
 
         return new ProcessSubprocessArtifactProjectionPlan(
             expectation.Id,
@@ -48,13 +48,13 @@ internal static class ProcessSubprocessProjectionPlanBuilder
             expectation.Title,
             ProcessArtifactTrustStatus.ReviewRequired,
             ResolveSensitivity(expectation, sourceArtifact),
-            BuildProvenance(candidate, subprocessRun, sourceArtifact),
+            BuildProvenance(input, subprocessRun, sourceArtifact),
             expectation.AllowedFutureUsageSummary,
             BuildReviewSummary(subprocessRun, sourceArtifact, projectionDiagnostic),
             managedStoragePath,
             BuildExternalReferenceKey(subprocessRun.RunId, sourceArtifact.Id),
             projectionLineage,
-            BuildMarkdown(candidate, subprocessRun, expectation, sourceArtifact));
+            BuildMarkdown(input, subprocessRun, expectation, sourceArtifact));
     }
 
     public static bool SatisfiesCurrentArtifactExpectation(
@@ -68,7 +68,7 @@ internal static class ProcessSubprocessProjectionPlanBuilder
     }
 
     private static string BuildManagedStoragePath(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessDispatchSubprocessRuntimeInput input,
         ProcessArtifactExpectation expectation,
         string scopedProfileId)
     {
@@ -84,8 +84,8 @@ internal static class ProcessSubprocessProjectionPlanBuilder
             "organization",
             scopedProfileId,
             "process-runs",
-            candidate.Run.Id.ToString("D"),
-            candidate.StepRun.Id.ToString("D"),
+            input.Run.Id.ToString("D"),
+            input.StepRun.Id.ToString("D"),
             $"{fileSlug}.md"));
     }
 
@@ -141,11 +141,11 @@ internal static class ProcessSubprocessProjectionPlanBuilder
     }
 
     private static string BuildProvenance(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessDispatchSubprocessRuntimeInput input,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessArtifactRecord sourceArtifact)
     {
-        return $"Auto-projected from completed subprocess run '{subprocessRun.RunName}' ({subprocessRun.RunId:D}) for parent subprocess step '{candidate.StepRun.Title}'. Source subprocess artifact '{sourceArtifact.Title}' ({sourceArtifact.Id:D}).";
+        return $"Auto-projected from completed subprocess run '{subprocessRun.RunName}' ({subprocessRun.RunId:D}) for parent subprocess step '{input.StepRun.Title}'. Source subprocess artifact '{sourceArtifact.Title}' ({sourceArtifact.Id:D}).";
     }
 
     private static string BuildReviewSummary(
@@ -169,7 +169,7 @@ internal static class ProcessSubprocessProjectionPlanBuilder
     }
 
     private static string BuildMarkdown(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
+        ProcessDispatchSubprocessRuntimeInput input,
         ProcessSubprocessRunStartResult subprocessRun,
         ProcessArtifactExpectation expectation,
         ProcessArtifactRecord sourceArtifact)
@@ -177,8 +177,8 @@ internal static class ProcessSubprocessProjectionPlanBuilder
         return $"""
             # {expectation.Title}
 
-            Parent process run: {candidate.Run.Id:D}
-            Parent subprocess step: {candidate.StepRun.Id:D}
+            Parent process run: {input.Run.Id:D}
+            Parent subprocess step: {input.StepRun.Id:D}
             Subprocess run: {subprocessRun.RunId:D}
             Subprocess artifact: {sourceArtifact.Id:D}
             Subprocess artifact title: {sourceArtifact.Title}

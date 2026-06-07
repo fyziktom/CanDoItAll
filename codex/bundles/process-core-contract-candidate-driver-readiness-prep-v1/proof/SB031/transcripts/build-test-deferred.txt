@@ -1,0 +1,8 @@
+Command: SB031 build/test deferral record
+Working directory: C:\repositories\CanDoItAll
+
+Build/test proof: Deferred to SB032 broad smoke.
+Reason: SB031 changed documentation-only artifacts and no production source or test source.
+Guardrail: SB031 source assertions prove no Process Core project, no production driver API in repo://src, no UI/media drift, and no stub markers in added SB031 lines.
+
+RESULT: PASS

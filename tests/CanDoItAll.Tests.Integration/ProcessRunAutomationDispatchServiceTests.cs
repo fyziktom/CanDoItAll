@@ -105,7 +105,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         ProcessStepRunStatus stepStatus,
         bool expected)
     {
-        var closed = ProcessRunAutomationDispatchService.IsRunClosedToAutomation(runStatus, stepStatus);
+        var closed = ProcessDispatchRouteEligibility.IsRunClosedToAutomation(runStatus, stepStatus);
 
         Assert.Equal(expected, closed);
     }
@@ -122,7 +122,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         ProcessStepRunStatus stepStatus,
         bool expected)
     {
-        var dispatchable = ProcessRunAutomationDispatchService.IsStepStatusDispatchableForRun(runStatus, stepStatus);
+        var dispatchable = ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(runStatus, stepStatus);
 
         Assert.Equal(expected, dispatchable);
     }
@@ -405,6 +405,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var subprocessRuntimeSource = File.ReadAllText(Path.Combine(
             dispatchDirectory,
             "ProcessDispatchSubprocessRuntimeService.cs"));
+        var subprocessProjectionPersistenceSource = File.ReadAllText(Path.Combine(
+            dispatchDirectory,
+            "ProcessSubprocessProjectionPersistenceService.cs"));
         var subprocessHelperSource = string.Join(
             Environment.NewLine,
             new[]
@@ -419,8 +422,12 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         Assert.Contains("ProcessDispatchSubprocessRuntimeService", routeServicesSource, StringComparison.Ordinal);
         Assert.Contains("ProcessSubprocessRunObservationCoordinator", subprocessRuntimeSource, StringComparison.Ordinal);
         Assert.Contains("ProcessSubprocessLifecycleRules.BuildTerminalMirrorTransitionRequest", subprocessRuntimeSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessSubprocessProjectionPlanBuilder.Build", subprocessRuntimeSource, StringComparison.Ordinal);
-        Assert.Contains("projectionWriterCoordinator.WriteAsync", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("projectionPersistenceService.ProjectCompletedArtifactsAsync", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessSubprocessProjectionPlanBuilder.Build", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("projectionWriterCoordinator.WriteAsync", subprocessRuntimeSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessSubprocessProjectionPlanBuilder.Build", subprocessProjectionPersistenceSource, StringComparison.Ordinal);
+        Assert.Contains("projectionWriterCoordinator.WriteAsync", subprocessProjectionPersistenceSource, StringComparison.Ordinal);
+        Assert.Contains("dbContext.SaveChangesAsync", subprocessProjectionPersistenceSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessSubprocessProjectionPlanBuilder.Build", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("projectionWriterCoordinator.WriteAsync", dispatchSource, StringComparison.Ordinal);
         Assert.DoesNotContain("EnsureSubprocessRunForStepAsync", dispatchSource, StringComparison.Ordinal);
@@ -503,7 +510,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         ProcessRunStatus? runStatus,
         bool expected)
     {
-        var eligible = ProcessRunAutomationDispatchService.IsRunEligibleForDispatchCandidate(runStatus);
+        var eligible = ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate(runStatus);
 
         Assert.Equal(expected, eligible);
     }
@@ -1037,8 +1044,79 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ProcessDispatchStartTransitionPlanner.ShouldSkipFreshAutomationDispatch(
                 routeSnapshot,
                 now,
-                TimeSpan.FromMinutes(10)),
+            TimeSpan.FromMinutes(10)),
             ProcessRunAutomationDispatchService.ShouldSkipFreshAutomationDispatch(routeSnapshot, now));
+    }
+
+    [Fact]
+    public async Task StartTransitionRouteHandler_SB015_INV_001_preserves_reload_and_continue_candidates_behavior()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var claim = new ProcessRouteDispatchClaim(
+            stepRunId,
+            "claim-token",
+            new TestRouteDispatchClaimSource());
+        var readyCandidate = CreateRouteCandidate(
+            processRunId,
+            stepRunId,
+            ProcessStepRunStatus.Ready);
+        var successFacet = new TestStartTransitionRouteFacet
+        {
+            TransitionResult = CanDoItAll.SharedKernel.Result.Success()
+        };
+        var successContext = CreateRouteContext(
+            processRunId,
+            readyCandidate,
+            claim);
+
+        var successResult = await CreateStartTransitionRouteHandler(successFacet).HandleAsync(successContext);
+
+        Assert.Equal(ProcessDispatchRouteHandlerResultKind.NotHandled, successResult.Kind);
+        Assert.Equal(0, successFacet.LoadDispatchCandidateCallCount);
+        Assert.Equal(ProcessStepRunStatus.InProgress, successFacet.TransitionRequest?.TargetStatus);
+        Assert.True(successFacet.TransitionRequest?.SuppressAutomationDispatch);
+        Assert.Same(readyCandidate, successContext.Candidate);
+
+        var continueFacet = new TestStartTransitionRouteFacet
+        {
+            TransitionResult = CanDoItAll.SharedKernel.Result.Failure(
+                CanDoItAll.SharedKernel.Error.Failure("The step was already claimed.", "claim-conflict"))
+        };
+        var continueContext = CreateRouteContext(
+            processRunId,
+            readyCandidate,
+            claim);
+
+        var continueResult = await CreateStartTransitionRouteHandler(continueFacet).HandleAsync(continueContext);
+
+        Assert.Equal(ProcessDispatchRouteHandlerResultKind.ContinueCandidates, continueResult.Kind);
+        Assert.Equal(1, continueFacet.LoadDispatchCandidateCallCount);
+        Assert.Equal(processRunId, continueFacet.LoadProcessRunId);
+        Assert.Equal(stepRunId, continueFacet.LoadClaimedStepRunId);
+        Assert.Same(readyCandidate, continueContext.Candidate);
+
+        var refreshedCandidate = CreateRouteCandidate(
+            processRunId,
+            stepRunId,
+            ProcessStepRunStatus.InProgress);
+        var reloadFacet = new TestStartTransitionRouteFacet
+        {
+            TransitionResult = CanDoItAll.SharedKernel.Result.Failure(
+                CanDoItAll.SharedKernel.Error.Failure("The transition was applied by another worker.", "claim-conflict")),
+            RefreshedCandidate = refreshedCandidate
+        };
+        var reloadContext = CreateRouteContext(
+            processRunId,
+            readyCandidate,
+            claim);
+
+        var reloadResult = await CreateStartTransitionRouteHandler(reloadFacet).HandleAsync(reloadContext);
+
+        Assert.Equal(ProcessDispatchRouteHandlerResultKind.NotHandled, reloadResult.Kind);
+        Assert.Equal(1, reloadFacet.LoadDispatchCandidateCallCount);
+        Assert.Same(refreshedCandidate, reloadContext.Candidate);
+        Assert.Same(refreshedCandidate, reloadContext.Execution.Candidate);
     }
 
     [Fact]
@@ -1245,8 +1323,9 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ]
         };
         var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(routeCandidate);
 
-        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(routeCandidate);
+        var facts = ProcessMissingUpstreamArtifactMaterializationFactsResolver.Create(routeFacts);
 
         Assert.Equal(2, facts.MissingInputs.Count);
         Assert.Equal(runnableSourceStepRunId, facts.MaterializationTarget?.SourceStepRunId);
@@ -1293,16 +1372,17 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ArtifactInputs = [inputA, inputB]
         };
         var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(routeCandidate);
         var routeInputA = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == expectationA);
         var routeInputB = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == expectationB);
         var facts = new ProcessMissingUpstreamArtifactMaterializationFacts([routeInputB, routeInputA], routeInputB);
         var reorderedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([routeInputA, routeInputB], routeInputB);
         var retargetedFacts = new ProcessMissingUpstreamArtifactMaterializationFacts([routeInputA, routeInputB], routeInputA);
 
-        var fingerprint = ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeCandidate, facts);
+        var fingerprint = ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeFacts, facts);
 
-        Assert.Equal(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeCandidate, reorderedFacts));
-        Assert.NotEqual(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeCandidate, retargetedFacts));
+        Assert.Equal(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeFacts, reorderedFacts));
+        Assert.NotEqual(fingerprint, ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeFacts, retargetedFacts));
         Assert.Matches("^[a-f0-9]{64}$", fingerprint);
     }
 
@@ -1334,13 +1414,14 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             ArtifactInputs = [implementationPacket, implementationPacketDuplicate]
         };
         var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(routeCandidate);
         var routeImplementationPacket = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == implementationPacket.ArtifactExpectationId);
         var routeImplementationPacketDuplicate = routeCandidate.ArtifactInputs.Single(input => input.ArtifactExpectationId == implementationPacketDuplicate.ArtifactExpectationId);
         var facts = new ProcessMissingUpstreamArtifactMaterializationFacts(
             [routeImplementationPacket, routeImplementationPacketDuplicate],
             routeImplementationPacket);
 
-        var request = ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildRequest(routeCandidate, facts);
+        var request = ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildRequest(routeFacts, facts);
 
         Assert.Equal(sourceStepRunId, request.StepRunId);
         Assert.Equal(sourceConcurrencyToken, request.StepRunConcurrencyToken);
@@ -15397,7 +15478,7 @@ Ancestor path to the target work node:
         var evidenceId = Guid.NewGuid();
         var expectedArtifacts = new[]
         {
-            new ProcessProjectionArtifactExpectation(
+            new ProcessArtifactExpectationSnapshot(
                 deliverableId,
                 ProcessArtifactKind.Deliverable,
                 "Release packet",
@@ -15406,7 +15487,7 @@ Ancestor path to the target work node:
                 ProcessSensitivityLevel.Internal,
                 "Create release packet.",
                 string.Empty),
-            new ProcessProjectionArtifactExpectation(
+            new ProcessArtifactExpectationSnapshot(
                 evidenceId,
                 ProcessArtifactKind.Evidence,
                 "Release packet",
@@ -15785,7 +15866,7 @@ Ancestor path to the target work node:
             CreatedAtUtc = DateTimeOffset.UtcNow
         };
 
-        var result = ProcessRunAutomationDispatchService.ResolveSubprocessSourceArtifact(
+        var result = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
             [wrongTitleArtifact, mappedArtifact],
             [parentFinanceExpectation],
             parentFinanceExpectation,
@@ -15826,7 +15907,7 @@ Ancestor path to the target work node:
             CreatedAtUtc = DateTimeOffset.UtcNow
         };
 
-        var result = ProcessRunAutomationDispatchService.ResolveSubprocessSourceArtifact(
+        var result = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
             [wrongTitleArtifact, secondArtifact],
             [parentFinanceExpectation],
             parentFinanceExpectation,
@@ -15858,7 +15939,7 @@ Ancestor path to the target work node:
             CreatedAtUtc = DateTimeOffset.UtcNow
         };
 
-        var result = ProcessRunAutomationDispatchService.ResolveSubprocessSourceArtifact(
+        var result = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
             [childArtifact],
             [parentExpectation],
             parentExpectation,
@@ -17061,6 +17142,224 @@ Ancestor path to the target work node:
         Assert.Contains("ProcessStepCompletionExecutorKind.ManagerArtifactRecovery", combinedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("TargetStatus = workflowOutcome.CompletionStatus", combinedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("sourceArtifact?.ManagedStoragePath ?? string.Empty", combinedSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions()
+    {
+        var recoveredForExecutionRunId = Guid.NewGuid();
+        var candidate = (ProcessRunAutomationDispatchService.DispatchCandidate)CreateDispatchCandidateCore(
+            "Finalize a route-owned process step.",
+            ProcessStepKind.Work,
+            [],
+            false,
+            [],
+            []);
+        candidate = candidate with { RecoveryExecutionRunId = recoveredForExecutionRunId };
+        var dispatchClaim = new ProcessRunAutomationDispatchService.ProcessStepDispatchClaim(Guid.NewGuid(), "claim-token");
+        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+        var routeClaim = ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim);
+        var workflowRunId = Guid.NewGuid();
+        var workflowOutcome = ProcessWorkflowExecutionOutcome.CreateHandled(
+            ProcessStepRunStatus.Completed,
+            "workflow completion",
+            new ProcessWorkflowRunLink
+            {
+                WorkflowRunId = workflowRunId
+            });
+        var recoveryDetail = CreateSuccessfulExecutionDetail("recovery response", null);
+        var recoveryOutcome = new ProcessRunAutomationDispatchService.DispatchExecutionOutcome(
+            recoveryDetail,
+            "recovery response",
+            ProcessStepRunStatus.Completed,
+            "recovery completion",
+            [],
+            2,
+            SelectedBranchOutcomeId: null);
+        var directSelectedBranchOutcomeId = Guid.NewGuid();
+        var directDetail = CreateSuccessfulExecutionDetail("direct response", null);
+        var directOutcome = new ProcessRunAutomationDispatchService.DispatchExecutionOutcome(
+            directDetail,
+            "direct response",
+            ProcessStepRunStatus.Completed,
+            "direct completion",
+            [],
+            1,
+            directSelectedBranchOutcomeId);
+        var subprocessRunId = Guid.NewGuid();
+        var renewLeaseAsync = (CancellationToken _) => Task.CompletedTask;
+        var capturedContexts = new List<ProcessRunAutomationDispatchService.ProcessStepCompletionFinalizerContext>();
+        var capturedClaims = new List<ProcessRunAutomationDispatchService.ProcessStepDispatchClaim>();
+        var appliedTransitions = new List<(
+            ProcessRunAutomationDispatchService.DispatchCandidate Candidate,
+            ProcessRunAutomationDispatchService.ProcessStepCompletionFinalizerResult Result,
+            ProcessRunAutomationDispatchService.ProcessStepDispatchClaim Claim)>();
+        var returnFinalizerResult = true;
+        var adapter = new ProcessDispatchFinalizerAdapter(
+            (context, claim, _) =>
+            {
+                capturedContexts.Add(context);
+                capturedClaims.Add(claim);
+
+                return Task.FromResult(returnFinalizerResult
+                    ? CreateFinalizerResult(context)
+                    : null);
+            },
+            (appliedCandidate, result, claim, _) =>
+            {
+                appliedTransitions.Add((appliedCandidate, result, claim));
+                return Task.CompletedTask;
+            });
+        var finalizerApplicationService = new ProcessDispatchFinalizerApplicationService(adapter);
+
+        returnFinalizerResult = false;
+        await finalizerApplicationService.FinalizeWorkflowCompletionAsync(
+            new ProcessDispatchWorkflowFinalizerInput(routeCandidate, workflowOutcome, routeClaim),
+            CancellationToken.None);
+
+        Assert.Single(capturedContexts);
+        Assert.Empty(appliedTransitions);
+        Assert.Equal(
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+            capturedContexts[0].ExecutorKind);
+        capturedContexts.Clear();
+        capturedClaims.Clear();
+        returnFinalizerResult = true;
+
+        await finalizerApplicationService.FinalizeWorkflowCompletionAsync(
+            new ProcessDispatchWorkflowFinalizerInput(routeCandidate, workflowOutcome, routeClaim),
+            CancellationToken.None);
+        await finalizerApplicationService.FinalizeRecoveredCompletionAsync(
+            new ProcessDispatchRecoveredFinalizerInput(
+                routeCandidate,
+                ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(recoveryOutcome),
+                "recovery-trigger",
+                renewLeaseAsync,
+                routeClaim),
+            CancellationToken.None);
+        await finalizerApplicationService.FinalizeDirectAgentCompletionAsync(
+            new ProcessDispatchDirectAgentFinalizerInput(
+                routeCandidate,
+                ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(directOutcome),
+                "direct-trigger",
+                renewLeaseAsync,
+                routeClaim),
+            CancellationToken.None);
+        await finalizerApplicationService.FinalizeSubprocessCompletionAsync(
+            new ProcessDispatchSubprocessFinalizerInput(
+                routeCandidate,
+                subprocessRunId,
+                ProcessStepRunStatus.Completed,
+                "subprocess completion",
+                routeClaim),
+            CancellationToken.None);
+
+        Assert.Collection(
+            capturedContexts,
+            context =>
+            {
+                Assert.Equal(ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole, context.ExecutorKind);
+                Assert.Equal(ProcessStepRunStatus.Completed, context.CompletionStatus);
+                Assert.Equal("workflow completion", context.CompletionReason);
+                Assert.Null(context.SelectedBranchOutcomeId);
+                Assert.Null(context.ExecutionDetail);
+                Assert.Equal(workflowRunId, context.WorkflowRunId);
+                Assert.Null(context.SubprocessRunId);
+                Assert.Equal("workflow completion", context.ResponseText);
+                Assert.False(context.ProjectExecutionArtifacts);
+                Assert.False(context.AllowManagerArtifactRecovery);
+                Assert.Equal("workflow-execution-outcome", context.Trigger);
+                Assert.Null(context.RenewLeaseAsync);
+                Assert.Null(context.RecoveryExecutionRunId);
+                Assert.Null(context.RecoveredForExecutionRunId);
+            },
+            context =>
+            {
+                Assert.Equal(ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.ManagerArtifactRecovery, context.ExecutorKind);
+                Assert.Equal(ProcessStepRunStatus.Completed, context.CompletionStatus);
+                Assert.Equal("recovery completion", context.CompletionReason);
+                Assert.Null(context.SelectedBranchOutcomeId);
+                Assert.Same(recoveryDetail, context.ExecutionDetail);
+                Assert.Null(context.WorkflowRunId);
+                Assert.Null(context.SubprocessRunId);
+                Assert.Equal("recovery response", context.ResponseText);
+                Assert.False(context.ProjectExecutionArtifacts);
+                Assert.False(context.AllowManagerArtifactRecovery);
+                Assert.Equal("recovery-trigger", context.Trigger);
+                Assert.Same(renewLeaseAsync, context.RenewLeaseAsync);
+                Assert.Equal(recoveryDetail.Run.Id, context.RecoveryExecutionRunId);
+                Assert.Equal(recoveredForExecutionRunId, context.RecoveredForExecutionRunId);
+            },
+            context =>
+            {
+                Assert.Equal(ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent, context.ExecutorKind);
+                Assert.Equal(ProcessStepRunStatus.Completed, context.CompletionStatus);
+                Assert.Equal("direct completion", context.CompletionReason);
+                Assert.Equal(directSelectedBranchOutcomeId, context.SelectedBranchOutcomeId);
+                Assert.Same(directDetail, context.ExecutionDetail);
+                Assert.Null(context.WorkflowRunId);
+                Assert.Null(context.SubprocessRunId);
+                Assert.Equal("direct response", context.ResponseText);
+                Assert.True(context.ProjectExecutionArtifacts);
+                Assert.True(context.AllowManagerArtifactRecovery);
+                Assert.Equal("direct-trigger", context.Trigger);
+                Assert.Same(renewLeaseAsync, context.RenewLeaseAsync);
+                Assert.Null(context.RecoveryExecutionRunId);
+                Assert.Null(context.RecoveredForExecutionRunId);
+            },
+            context =>
+            {
+                Assert.Equal(ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.SubprocessParent, context.ExecutorKind);
+                Assert.Equal(ProcessStepRunStatus.Completed, context.CompletionStatus);
+                Assert.Equal("subprocess completion", context.CompletionReason);
+                Assert.Null(context.SelectedBranchOutcomeId);
+                Assert.Null(context.ExecutionDetail);
+                Assert.Null(context.WorkflowRunId);
+                Assert.Equal(subprocessRunId, context.SubprocessRunId);
+                Assert.Equal("subprocess completion", context.ResponseText);
+                Assert.False(context.ProjectExecutionArtifacts);
+                Assert.False(context.AllowManagerArtifactRecovery);
+                Assert.Equal("subprocess-execution-outcome", context.Trigger);
+                Assert.Null(context.RenewLeaseAsync);
+                Assert.Null(context.RecoveryExecutionRunId);
+                Assert.Null(context.RecoveredForExecutionRunId);
+            });
+        Assert.All(capturedClaims, claim => Assert.Equal(dispatchClaim, claim));
+        Assert.Equal(4, appliedTransitions.Count);
+        Assert.All(appliedTransitions, transition =>
+        {
+            Assert.Same(candidate, transition.Candidate);
+            Assert.Equal(dispatchClaim, transition.Claim);
+        });
+        Assert.Collection(
+            appliedTransitions.Select(transition => transition.Result.ArtifactValidationContext),
+            context => Assert.Equal(workflowRunId, context.WorkflowRunId),
+            context =>
+            {
+                Assert.Equal(recoveryDetail.Run.Id, context.RecoveryExecutionRunId);
+                Assert.Equal(recoveredForExecutionRunId, context.RecoveredForExecutionRunId);
+            },
+            context => Assert.Equal(directDetail.Run.Id, context.ExecutionRunId),
+            context => Assert.Equal(subprocessRunId, context.SubprocessRunId));
+
+        static ProcessRunAutomationDispatchService.ProcessStepCompletionFinalizerResult CreateFinalizerResult(
+            ProcessRunAutomationDispatchService.ProcessStepCompletionFinalizerContext context)
+        {
+            return new ProcessRunAutomationDispatchService.ProcessStepCompletionFinalizerResult(
+                context.CompletionStatus,
+                context.CompletionReason,
+                BlockCause: null,
+                context.SelectedBranchOutcomeId,
+                Guid.NewGuid(),
+                [],
+                new ProcessRunAutomationDispatchService.ProcessStepTransitionArtifactValidationContext(
+                    context.ExecutorKind,
+                    context.ExecutionDetail?.Run.Id,
+                    context.WorkflowRunId,
+                    context.SubprocessRunId,
+                    context.RecoveryExecutionRunId,
+                    context.RecoveredForExecutionRunId));
+        }
     }
 
     [Fact]
@@ -20268,13 +20567,13 @@ Ancestor path to the target work node:
                 string.Empty);
     }
 
-    private static ProcessProjectionArtifactExpectation CreateProjectionExpectation(
+    private static ProcessArtifactExpectationSnapshot CreateProjectionExpectation(
         ProcessArtifactKind artifactKind,
         string title,
         bool isRequired,
         string validationRequirementSummary)
     {
-        return new ProcessProjectionArtifactExpectation(
+        return new ProcessArtifactExpectationSnapshot(
             Guid.NewGuid(),
             artifactKind,
             title,
@@ -20418,6 +20717,104 @@ Ancestor path to the target work node:
         Assert.Same(context.ExternalReferenceKeys, candidate.ExternalReferenceKeys);
         Assert.Same(context.BranchOutcomes, candidate.BranchOutcomes);
         Assert.Equal(context.RequiresExplicitBranchOutcomeSelection, candidate.RequiresExplicitBranchOutcomeSelection);
+    }
+
+    private static StartTransitionRouteHandler CreateStartTransitionRouteHandler(
+        TestStartTransitionRouteFacet facet)
+    {
+        return new StartTransitionRouteHandler(
+            facet,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger<ProcessRunAutomationDispatchService>.Instance);
+    }
+
+    private static ProcessDispatchRouteContext CreateRouteContext(
+        Guid processRunId,
+        ProcessRouteCandidate candidate,
+        ProcessRouteDispatchClaim claim)
+    {
+        var execution = new ProcessRouteExecutionContext(
+            processRunId,
+            triggerStepRunId: null,
+            "process-runtime",
+            claim,
+            _ => Task.CompletedTask,
+            CancellationToken.None)
+        {
+            Candidate = candidate
+        };
+
+        return new ProcessDispatchRouteContext(execution, candidate);
+    }
+
+    private static ProcessRouteCandidate CreateRouteCandidate(
+        Guid processRunId,
+        Guid stepRunId,
+        ProcessStepRunStatus stepStatus)
+    {
+        return new ProcessRouteCandidate(
+            new ProcessRouteRunSnapshot(
+                processRunId,
+                ProcessRunStatus.Active,
+                ProcessOperatingMode.AssistedExecution,
+                Guid.NewGuid()),
+            new ProcessRouteStepSnapshot(
+                stepRunId,
+                Guid.NewGuid(),
+                "Run claimed work",
+                stepStatus,
+                ProcessStepKind.Work,
+                Guid.NewGuid(),
+                stepStatus == ProcessStepRunStatus.InProgress ? DateTimeOffset.UtcNow : null),
+            Guid.NewGuid(),
+            RecoveryExecutionRunId: null,
+            ArtifactInputs: [],
+            Source: new TestRouteCandidateSource());
+    }
+
+    private sealed class TestStartTransitionRouteFacet : IProcessDispatchStartTransitionRouteFacet
+    {
+        public CanDoItAll.SharedKernel.Result TransitionResult { get; init; } = CanDoItAll.SharedKernel.Result.Success();
+
+        public ProcessRouteCandidate? RefreshedCandidate { get; init; }
+
+        public ProcessStepTransitionRequest? TransitionRequest { get; private set; }
+
+        public int LoadDispatchCandidateCallCount { get; private set; }
+
+        public Guid LoadProcessRunId { get; private set; }
+
+        public Guid LoadClaimedStepRunId { get; private set; }
+
+        public Task<CanDoItAll.SharedKernel.Result> TransitionStepWithClaimAsync(
+            ProcessStepTransitionRequest request,
+            ProcessRouteDispatchClaim dispatchClaim,
+            CancellationToken cancellationToken)
+        {
+            TransitionRequest = request;
+
+            return Task.FromResult(TransitionResult);
+        }
+
+        public Task<ProcessRouteCandidate?> LoadDispatchCandidateAsync(
+            Guid processRunId,
+            Guid claimedStepRunId,
+            string trigger,
+            CancellationToken cancellationToken)
+        {
+            LoadDispatchCandidateCallCount++;
+            LoadProcessRunId = processRunId;
+            LoadClaimedStepRunId = claimedStepRunId;
+
+            return Task.FromResult(RefreshedCandidate);
+        }
+    }
+
+    private sealed class TestRouteCandidateSource : IProcessRouteCandidateSource
+    {
+    }
+
+    private sealed class TestRouteDispatchClaimSource : IProcessRouteDispatchClaimSource
+    {
     }
 
     private static object CreateDispatchCandidateCore(

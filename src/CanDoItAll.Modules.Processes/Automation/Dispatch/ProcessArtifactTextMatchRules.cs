@@ -49,7 +49,7 @@ internal static class ProcessArtifactTextMatchRules
     };
 
     public static bool HasExpectedArtifactContentSignals(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string responseText,
         string normalizedResponse,
         bool containsArtifactResponseSection)
@@ -81,7 +81,7 @@ internal static class ProcessArtifactTextMatchRules
     }
 
     public static bool HasExpectedArtifactValidationSignals(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string normalizedResponse)
     {
         var responseTokens = TokenizeArtifactContentSignalText(normalizedResponse)
@@ -90,7 +90,7 @@ internal static class ProcessArtifactTextMatchRules
     }
 
     public static bool HasExpectedArtifactValidationSignals(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         IReadOnlySet<string> responseTokens)
     {
         var validationTokens = TokenizeArtifactContentSignalText(expectedArtifact.ValidationRequirementSummary)

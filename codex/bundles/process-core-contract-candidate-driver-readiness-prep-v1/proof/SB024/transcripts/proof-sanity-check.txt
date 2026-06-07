@@ -1,0 +1,45 @@
+Command: SB024 proof sanity check
+Working directory: C:\repositories\CanDoItAll
+
+PASS referenced proof path exists: bundle://proof/SB024/transcripts/critical-build.txt
+PASS referenced proof path exists: bundle://proof/SB024/transcripts/projection-validation-parity-unit-tests.txt
+PASS referenced proof path exists: bundle://proof/SB024/transcripts/projection-validation-parity-integration-tests.txt
+PASS referenced proof path exists: bundle://proof/SB024/transcripts/source-assertions-and-scans.txt
+PASS referenced proof path exists: bundle://proof/SB024/transcripts/proof-sanity-check.txt
+PASS referenced proof path exists: bundle://proof/SB024/transcripts/changed-file-hashes.txt
+PASS referenced proof path exists: bundle://proof/SB024/semantic-invariants.md
+PASS semantic label present: Invariant ID
+PASS semantic label present: Source raw note
+PASS semantic label present: Expected behavior
+PASS semantic label present: Disallowed shallow implementation
+PASS semantic label present: Failing-first test
+PASS semantic label present: Passing test
+PASS semantic label present: Changed source files
+PASS semantic label present: Production assertions
+PASS semantic label present: Red-team negative case
+PASS semantic label present: Downstream dependency check
+PASS manifest and transcripts include test: Process_core_contract_candidate_driver_readiness_SB024_INV_001_preserves_projection_validation_dto_parity_paths
+PASS manifest and transcripts include test: Artifact_projection_source_family_order_stays_execution_mock_workspace_existing_response_browser_decision
+PASS manifest and transcripts include test: Artifact_projection_source_adapters_are_local_and_used_by_migrated_source_paths
+PASS manifest and transcripts include test: Provider_native_browser_projection_SB10_INV_001_uses_write_coordinator_for_expected_and_discovered_modes
+PASS manifest and transcripts include test: Process_core_contract_candidate_driver_readiness_SB022_INV_001_splits_projection_run_snapshot_from_execution_detail_observations
+PASS manifest and transcripts include test: Process_core_contract_candidate_driver_readiness_SB023_INV_001_converges_validation_projection_and_satisfaction_expectation_snapshots
+PASS manifest and transcripts include test: ApplyArtifactProjectionLineage_SB02_INV_001_uses_compact_key_for_long_recovery_lineage
+PASS manifest and transcripts include test: ProcessArtifactProjectionLineageBuilder_SB05_INV_001_hashes_recovery_key_and_records_lineage
+PASS manifest and transcripts include test: ProcessArtifactExpectationMatcher_SB05_INV_002_disambiguates_strong_match_by_kind
+PASS manifest and transcripts include test: ProcessArtifactProjectionPlanner_SB09_INV_001_normalizes_projection_adapter_keys
+PASS manifest and transcripts include test: ProcessArtifactProjectionSourceAdapters_SB05_SB08_preserve_key_and_lineage_parity
+PASS manifest and transcripts include test: ResolveCompletionStatus_allows_process_mock_completed_step_with_required_artifact_projection
+PASS manifest and transcripts include test: ResolveCompletionStatus_blocks_process_mock_required_artifact_when_metadata_does_not_match_expectation
+PASS manifest and transcripts include test: ResolveSuccessfulBrowserToolOutputFiles_reads_provider_native_filenames_from_execution_log
+PASS manifest and transcripts include test: ResolveMissingRequiredArtifactSummary_accepts_declared_browser_artifact_with_matching_output
+PASS manifest and transcripts include test: MatchExpectedArtifactId_matches_provider_native_browser_screenshot_to_pathless_visual_expectation
+PASS manifest and transcripts include test: MatchExpectedArtifactId_prefers_route_specific_provider_native_browser_screenshot_expectation
+PASS manifest Production Behavior Artifact Matrix present
+PASS semantic Production Behavior Artifact Matrix present
+PASS manifest uses portable references only
+PASS semantic invariant contract uses portable references only
+PASS manifest carries failing-first N/A rationale
+PASS semantic invariant carries failing-first N/A rationale
+
+RESULT: PASS

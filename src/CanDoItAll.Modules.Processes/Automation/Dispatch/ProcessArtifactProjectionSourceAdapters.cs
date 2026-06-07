@@ -32,7 +32,7 @@ internal static class ProcessMockArtifactProjectionSourceAdapter
 {
     public static string BuildExternalReferenceKey(
         ProcessMockArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -47,7 +47,7 @@ internal static class ProcessMockArtifactProjectionSourceAdapter
 
     public static ProcessArtifactProjectionPlan Plan(
         ProcessMockArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessStepRunStatus completionStatus,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
@@ -80,7 +80,7 @@ internal static class ProcessMockArtifactProjectionSourceAdapter
 
     private static string BuildSourceExternalReferenceKey(
         ProcessMockArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
         => ProcessArtifactProjectionPlanner.BuildProcessMockArtifactExternalReferenceKey(
             source.StepRunId,
             expectedArtifact.Id,
@@ -91,7 +91,7 @@ internal static class WorkspaceWrittenArtifactProjectionSourceAdapter
 {
     public static string BuildExternalReferenceKey(
         WorkspaceWrittenArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -106,7 +106,7 @@ internal static class WorkspaceWrittenArtifactProjectionSourceAdapter
 
     public static ProcessArtifactProjectionPlan Plan(
         WorkspaceWrittenArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessStepRunStatus completionStatus,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
@@ -144,7 +144,7 @@ internal static class WorkspaceWrittenArtifactProjectionSourceAdapter
 
     private static string BuildSourceExternalReferenceKey(
         WorkspaceWrittenArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
         => ProcessArtifactProjectionPlanner.BuildWorkspaceWrittenArtifactExternalReferenceKey(
             source.ExecutionRunId,
             expectedArtifact.Id,
@@ -155,7 +155,7 @@ internal static class ExistingManagedArtifactProjectionSourceAdapter
 {
     public static string BuildExternalReferenceKey(
         ExistingManagedArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -170,7 +170,7 @@ internal static class ExistingManagedArtifactProjectionSourceAdapter
 
     public static ProcessArtifactProjectionPlan Plan(
         ExistingManagedArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessStepRunStatus completionStatus,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
@@ -206,7 +206,7 @@ internal static class ExistingManagedArtifactProjectionSourceAdapter
 
     private static string BuildSourceExternalReferenceKey(
         ExistingManagedArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact)
+        ProcessArtifactExpectationSnapshot expectedArtifact)
         => ProcessArtifactProjectionPlanner.BuildExistingManagedArtifactExternalReferenceKey(
             source.ExecutionRunId,
             expectedArtifact.Id,
@@ -230,7 +230,7 @@ internal static class ResponseTextArtifactProjectionSourceAdapter
 
     public static ProcessArtifactProjectionPlan Plan(
         ResponseTextArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessStepRunStatus completionStatus,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
@@ -287,7 +287,7 @@ internal static class ProviderNativeBrowserArtifactProjectionSourceAdapter
 
     public static ProcessArtifactProjectionPlan PlanExpectedOutput(
         ProviderNativeBrowserArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessStepRunStatus completionStatus,
         ProcessArtifactRecoveryProjectionContext recoveryContext)
     {
@@ -321,7 +321,7 @@ internal static class ProviderNativeBrowserArtifactProjectionSourceAdapter
 
     public static ProcessArtifactProjectionPlan PlanDiscoveredOutput(
         ProviderNativeBrowserArtifactProjectionSource source,
-        ProcessProjectionArtifactExpectation? matchedExpectation,
+        ProcessArtifactExpectationSnapshot? matchedExpectation,
         ProcessArtifactKind fallbackArtifactKind,
         string fallbackTitle,
         ProcessStepRunStatus completionStatus,
@@ -368,7 +368,7 @@ internal static class ProviderNativeBrowserArtifactProjectionSourceAdapter
 internal static class ProcessArtifactProjectionSourceAdapterDefaults
 {
     public static string ResolveAllowedFutureUsage(
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string fallback)
     {
         ArgumentNullException.ThrowIfNull(expectedArtifact);

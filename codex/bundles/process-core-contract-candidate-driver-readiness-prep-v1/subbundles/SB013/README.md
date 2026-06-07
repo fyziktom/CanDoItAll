@@ -1,7 +1,7 @@
 # SB013 - Pre-execution route fact DTOs
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Remove dispatcher-shaped inputs from database requirement and upstream materialization decisions; use route candidate facts and explicit transition services.
@@ -13,19 +13,24 @@ Remove dispatcher-shaped inputs from database requirement and upstream materiali
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB012 closed.
+- SB012 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchPreExecutionRouteFacts.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchPreExecutionGuardHandler.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessMissingUpstreamArtifactMaterialization.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDatabaseRequirementBlocker.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchStartTransitionPlanner.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -35,10 +40,10 @@ SB012 closed.
 - Execution report row for `SB013`.
 
 ## Dependency Impact
-Feeds the next critical gate.
+- Feeds the next critical gate.
 
 ## Validation Depth
-Focused source/test proof; full gate proof can be accumulated by the next critical gate.
+- Focused source/test proof; full gate proof can be accumulated by the next critical gate.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,13 +65,13 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
 
 ## Proof Required
 - Build/test transcript or explanation if proof is deferred to the next critical gate.
@@ -75,10 +80,16 @@ Focused source/test proof; full gate proof can be accumulated by the next critic
 - No-Core/no-driver scan.
 
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-May proceed to the next subbundle only if source compiles locally or the change is proof/documentation only.
+- Passed. SB014 may proceed.
+
+## Closure Notes
+- Entry gate: Passed. SB012 is completed.
+- Closure gate: Passed. `ProcessDispatchPreExecutionRouteFacts` strips `ProcessRouteCandidate.Source` from database requirement and upstream materialization decisions while leaving transition execution in `ProcessDispatchStepTransitionService`.
+- Test proof: `bundle://proof/SB013/transcripts/pre-execution-route-facts-architecture-tests.txt` and `bundle://proof/SB013/transcripts/pre-execution-route-facts-integration-tests.txt`.
+- Source assertions and guard scans: `bundle://proof/SB013/transcripts/source-assertions-and-scans.txt`.
 
 ## Suggested Agent Prompt
 Implement `SB013` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.

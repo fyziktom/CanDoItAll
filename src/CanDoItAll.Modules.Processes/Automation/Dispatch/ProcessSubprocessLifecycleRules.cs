@@ -3,21 +3,58 @@ namespace CanDoItAll.Modules.Processes;
 internal static class ProcessSubprocessLifecycleRules
 {
     public static ProcessStepTransitionRequest BuildStartTransitionRequest(
+        ProcessRouteStepSnapshot stepRun,
+        string normalizedTrigger,
+        string automationActor)
+    {
+        ArgumentNullException.ThrowIfNull(stepRun);
+
+        return BuildStartTransitionRequest(
+            stepRun.Id,
+            stepRun.ConcurrencyToken,
+            normalizedTrigger,
+            automationActor);
+    }
+
+    public static ProcessStepTransitionRequest BuildStartTransitionRequest(
         ProcessStepRun stepRun,
         string normalizedTrigger,
         string automationActor)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
 
+        return BuildStartTransitionRequest(
+            stepRun.Id,
+            stepRun.ConcurrencyToken,
+            normalizedTrigger,
+            automationActor);
+    }
+
+    private static ProcessStepTransitionRequest BuildStartTransitionRequest(
+        Guid stepRunId,
+        Guid concurrencyToken,
+        string normalizedTrigger,
+        string automationActor)
+    {
         return new ProcessStepTransitionRequest
         {
-            StepRunId = stepRun.Id,
-            StepRunConcurrencyToken = stepRun.ConcurrencyToken,
+            StepRunId = stepRunId,
+            StepRunConcurrencyToken = concurrencyToken,
             TargetStatus = ProcessStepRunStatus.InProgress,
             Reason = $"Started subprocess by the durable process automation dispatcher ({normalizedTrigger}).",
             DecidedBy = automationActor,
             SuppressAutomationDispatch = true
         };
+    }
+
+    public static ProcessStepTransitionRequest BuildEnsureFailureBlockTransitionRequest(
+        ProcessRouteStepSnapshot stepRun,
+        string reason,
+        string automationActor)
+    {
+        ArgumentNullException.ThrowIfNull(stepRun);
+
+        return BuildBlockTransitionRequest(stepRun.Id, reason, automationActor);
     }
 
     public static ProcessStepTransitionRequest BuildEnsureFailureBlockTransitionRequest(
@@ -27,14 +64,17 @@ internal static class ProcessSubprocessLifecycleRules
     {
         ArgumentNullException.ThrowIfNull(stepRun);
 
-        return new ProcessStepTransitionRequest
-        {
-            StepRunId = stepRun.Id,
-            TargetStatus = ProcessStepRunStatus.Blocked,
-            Reason = reason,
-            DecidedBy = automationActor,
-            SuppressAutomationDispatch = true
-        };
+        return BuildBlockTransitionRequest(stepRun.Id, reason, automationActor);
+    }
+
+    public static ProcessStepTransitionRequest BuildCapabilityGapBlockTransitionRequest(
+        ProcessRouteStepSnapshot stepRun,
+        string reason,
+        string automationActor)
+    {
+        ArgumentNullException.ThrowIfNull(stepRun);
+
+        return BuildBlockTransitionRequest(stepRun.Id, reason, automationActor);
     }
 
     public static ProcessStepTransitionRequest BuildCapabilityGapBlockTransitionRequest(
@@ -44,14 +84,37 @@ internal static class ProcessSubprocessLifecycleRules
     {
         ArgumentNullException.ThrowIfNull(stepRun);
 
+        return BuildBlockTransitionRequest(stepRun.Id, reason, automationActor);
+    }
+
+    private static ProcessStepTransitionRequest BuildBlockTransitionRequest(
+        Guid stepRunId,
+        string reason,
+        string automationActor)
+    {
         return new ProcessStepTransitionRequest
         {
-            StepRunId = stepRun.Id,
+            StepRunId = stepRunId,
             TargetStatus = ProcessStepRunStatus.Blocked,
             Reason = reason,
             DecidedBy = automationActor,
             SuppressAutomationDispatch = true
         };
+    }
+
+    public static ProcessStepTransitionRequest BuildTerminalMirrorTransitionRequest(
+        ProcessRouteStepSnapshot stepRun,
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessStepRunStatus terminalStatus,
+        string automationActor)
+    {
+        ArgumentNullException.ThrowIfNull(stepRun);
+
+        return BuildTerminalMirrorTransitionRequest(
+            stepRun.Id,
+            subprocessRun,
+            terminalStatus,
+            automationActor);
     }
 
     public static ProcessStepTransitionRequest BuildTerminalMirrorTransitionRequest(
@@ -61,11 +124,25 @@ internal static class ProcessSubprocessLifecycleRules
         string automationActor)
     {
         ArgumentNullException.ThrowIfNull(stepRun);
+
+        return BuildTerminalMirrorTransitionRequest(
+            stepRun.Id,
+            subprocessRun,
+            terminalStatus,
+            automationActor);
+    }
+
+    private static ProcessStepTransitionRequest BuildTerminalMirrorTransitionRequest(
+        Guid stepRunId,
+        ProcessSubprocessRunStartResult subprocessRun,
+        ProcessStepRunStatus terminalStatus,
+        string automationActor)
+    {
         ArgumentNullException.ThrowIfNull(subprocessRun);
 
         return new ProcessStepTransitionRequest
         {
-            StepRunId = stepRun.Id,
+            StepRunId = stepRunId,
             TargetStatus = terminalStatus,
             Reason = BuildParentTransitionReason(subprocessRun),
             DecidedBy = automationActor,

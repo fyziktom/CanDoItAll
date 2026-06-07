@@ -1,0 +1,355 @@
+Command: dispatch hotspot inventory scans for route models, adapter usage, dispatcher nested model usage, and file sizes
+Dispatch file size inventory:
+
+Name                                                                                    Length
+----                                                                                    ------
+IProcessArtifactProjectionSourceCoordinator.cs                                             173
+ProcessArtifactEvidenceValidationRules.cs                                                 4838
+ProcessArtifactExpectationMatcher.cs                                                      1048
+ProcessArtifactKindClassificationRules.cs                                                 4018
+ProcessArtifactLineageValidator.cs                                                       16451
+ProcessArtifactPathValidationRules.cs                                                     4965
+ProcessArtifactProjectionCandidateState.cs                                                3596
+ProcessArtifactProjectionContext.cs                                                        847
+ProcessArtifactProjectionFacetImplementations.cs                                         41204
+ProcessArtifactProjectionFacets.cs                                                        9783
+ProcessArtifactProjectionLineageBuilder.cs                                                3287
+ProcessArtifactProjectionOrchestrator.cs                                                  3239
+ProcessArtifactProjectionPlanner.cs                                                       7029
+ProcessArtifactProjectionSourceAdapters.cs                                               18628
+ProcessArtifactProjectionWriteCoordinator.cs                                              5158
+ProcessArtifactProjectStructureRequirementValidationRules.cs                             10088
+ProcessArtifactProviderNativeVisualValidationRules.cs                                     8457
+ProcessArtifactQualityValidationRules.cs                                                 13380
+ProcessArtifactRecordedSatisfactionRules.cs                                                655
+ProcessArtifactSatisfactionBlockerSummaryBuilder.cs                                        888
+ProcessArtifactSatisfactionSnapshot.cs                                                     928
+ProcessArtifactTextMatchRules.cs                                                          8190
+ProcessArtifactValidationSnapshot.cs                                                       993
+ProcessArtifactValidationSnapshotBuilder.cs                                               1944
+ProcessAssignedAgentProviderRepairCoordinator.cs                                          4160
+ProcessAutomationDatabaseRequirementResolver.cs                                           1230
+ProcessAutomationExecutionClient.cs                                                      20398
+ProcessAutomationExecutionLogObservation.cs                                               5008
+ProcessAutomationExecutionRunSelection.cs                                                 8282
+ProcessAutomationObservationSnapshot.cs                                                   6177
+ProcessAutomationReceiptObservationHelper.cs                                              2206
+ProcessAutomationSessionObservation.cs                                                   21624
+ProcessBrowserProofValidator.cs                                                          18338
+ProcessCarriedImplementationProofRules.cs                                                 4878
+ProcessCompletedDecisionArtifactCoordinator.cs                                            4495
+ProcessCompletionBlockerRules.cs                                                          3229
+ProcessCompletionDecisionRules.cs                                                         1933
+ProcessConcreteProductPathRules.cs                                                       11946
+ProcessConcurrentExecutionAdoptionCoordinator.cs                                          2306
+ProcessCriticalToolFailureRules.cs                                                        2598
+ProcessCriticalToolFailureSuppressionRules.cs                                             4485
+ProcessDeclaredStepOutcomeRules.cs                                                        5666
+ProcessDispatchArtifactInputAssembler.cs                                                  5411
+ProcessDispatchAssignmentRouteHelper.cs                                                   2297
+ProcessDispatchBranchDependencyContext.cs                                                 1429
+ProcessDispatchCandidateAssemblyContext.cs                                                3603
+ProcessDispatchCandidateFactory.cs                                                        2921
+ProcessDispatchCandidateHeaderSelector.cs                                                 1797
+ProcessDispatchCandidateHydrationLoader.cs                                               10258
+ProcessDispatchCandidateHydrationService.cs                                              10194
+ProcessDispatchClaimLease.cs                                                             10116
+ProcessDispatchCompetingExecutionGuardService.cs                                          1330
+ProcessDispatchCooperationMetadataResolver.cs                                             9715
+ProcessDispatchDatabaseRequirementBlocker.cs                                              1406
+ProcessDispatchDirectAgentRuntimeService.cs                                               1057
+ProcessDispatchExpectedArtifactLoader.cs                                                  1073
+ProcessDispatchFailureClosureService.cs                                                   6097
+ProcessDispatchFinalizerApplicationService.cs                                             6427
+ProcessDispatchGuardLease.cs                                                              1887
+ProcessDispatchLeaseHeartbeat.cs                                                          4278
+ProcessDispatchManagedArtifactPromptPathPreparer.cs                                       2772
+ProcessDispatchPreExecutionGuardHandler.cs                                                3996
+ProcessDispatchRecoveryQueryHelper.cs                                                     1509
+ProcessDispatchRecoveryRuntimeService.cs                                                  1399
+ProcessDispatchRouteExecutionModels.cs                                                    3806
+ProcessDispatchRouteFacets.cs                                                             3911
+ProcessDispatchRouteHandlerFactory.cs                                                     1794
+ProcessDispatchRouteHandlerPipeline.cs                                                    1798
+ProcessDispatchRouteHandlers.cs                                                          13803
+ProcessDispatchRouteModelAdapters.cs                                                      4572
+ProcessDispatchRouteModels.cs                                                             2004
+ProcessDispatchRoutePipeline.cs                                                           1079
+ProcessDispatchRoutePlanner.cs                                                            2642
+ProcessDispatchRouteServices.cs                                                          12146
+ProcessDispatchRouteSnapshot.cs                                                           4092
+ProcessDispatchRunClosureGuardService.cs                                                  1234
+ProcessDispatchStartTransitionPlanner.cs                                                  1842
+ProcessDispatchStepTransitionService.cs                                                   2274
+ProcessDispatchSubprocessRuntimeService.cs                                               10607
+ProcessDispatchTechnicalAgentBindingCoordinator.cs                                        4978
+ProcessDotNetHostEvidenceRules.cs                                                         7888
+ProcessExecutionArtifactMetadataRules.cs                                                  9289
+ProcessExecutionArtifactProjectionCoordinator.cs                                          6140
+ProcessExecutionArtifactTextContentRules.cs                                               2187
+ProcessExecutionAttemptContext.cs                                                          578
+ProcessExecutionAttemptLoopFacade.cs                                                      1289
+ProcessExecutionAttemptResultNormalizer.cs                                                2214
+ProcessExecutionInvocationRequestBuilder.cs                                               1942
+ProcessExecutionPostAttemptFacts.cs                                                       1027
+ProcessExecutionPostAttemptFactsBuilder.cs                                                1958
+ProcessExecutionResponseTextResolver.cs                                                   2519
+ProcessExecutionRetryReasonAggregator.cs                                                  6350
+ProcessExecutionRunQueryBuilder.cs                                                         857
+ProcessExistingManagedArtifactProjectionCoordinator.cs                                    8143
+ProcessExternalTargetGroundingService.cs                                                 34645
+ProcessExternalTargetReferenceGuard.cs                                                     346
+ProcessFailedExecutionInspectionCoordinator.cs                                            1237
+ProcessFreshImplementationArtifactSatisfactionRules.cs                                    1661
+ProcessGovernedArtifactInspectionRules.cs                                                 9536
+ProcessHistoricalCarriedProofQueryCoordinator.cs                                          1344
+ProcessImplementationReceiptTimeline.cs                                                   5880
+ProcessImplementationStackRules.cs                                                       12440
+ProcessIncompleteImplementationSignalRules.cs                                             4633
+ProcessIncompleteSuccessfulRunRetryRules.cs                                               3239
+ProcessManagedArtifactPathClassificationRules.cs                                          3805
+ProcessMissingUpstreamArtifactMaterialization.cs                                         13996
+ProcessMockArtifactProjectionCoordinator.cs                                               5886
+ProcessNoProgressEvidenceDeltaRules.cs                                                     962
+ProcessNoProgressRetryJournalQueryCoordinator.cs                                          1225
+ProcessNoProgressRetryJournalWriter.cs                                                    4586
+ProcessNoProgressRetrySignal.cs                                                           2461
+ProcessNoProgressRetrySignalBuilder.cs                                                    9790
+ProcessObservedExecutionOutcomeBuilder.cs                                                  982
+ProcessProjectionArtifactExpectation.cs                                                    372
+ProcessProjectionArtifactExpectationResolver.cs                                          14890
+ProcessProjectionModels.cs                                                                5891
+ProcessProjectStructureArtifactPathRules.cs                                               7895
+ProcessProviderFallbackSelectionRules.cs                                                  2134
+ProcessProviderHealthProbeCoordinator.cs                                                  2437
+ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs                             16604
+ProcessProviderNativeBrowserOutputFacts.cs                                                3697
+ProcessProviderNativeBrowserProbeFailureRules.cs                                          2423
+ProcessProviderRecoveryDirectiveBuilder.cs                                                1588
+ProcessProviderRepairCoordinator.cs                                                       2594
+ProcessQualityValidationEvidenceAggregator.cs                                             1643
+ProcessRecoverableFailedRunRetryRules.cs                                                  2687
+ProcessRecoverableProviderFailureRules.cs                                                 6451
+ProcessRecoveredExecutionAdoptionCoordinator.cs                                           1049
+ProcessRecoveryRetryDecisionRules.cs                                                      3087
+ProcessRequiredArtifactAutoSatisfactionRules.cs                                           2030
+ProcessRequiredToolValidationRules.cs                                                     6850
+ProcessResponseTextArtifactProjectionCoordinator.cs                                       8616
+ProcessResponseTextArtifactSatisfactionRules.cs                                           6611
+ProcessRunAutomationDispatchService.ArtifactKinds.cs                                      3466
+ProcessRunAutomationDispatchService.ArtifactProjection.cs                                 2124
+ProcessRunAutomationDispatchService.ArtifactProjectionCoordinators.cs                      110
+ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs                       13089
+ProcessRunAutomationDispatchService.ArtifactValidation.cs                                90333
+ProcessRunAutomationDispatchService.BrowserProof.cs                                      24594
+ProcessRunAutomationDispatchService.ClaimLifecycle.cs                                     3207
+ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs                        42531
+ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs                       10883
+ProcessRunAutomationDispatchService.Concurrency.cs                                       43598
+ProcessRunAutomationDispatchService.Cooperation.cs                                        2421
+ProcessRunAutomationDispatchService.Costing.cs                                            7364
+ProcessRunAutomationDispatchService.cs                                                    8397
+ProcessRunAutomationDispatchService.DecisionServices.cs                                   9755
+ProcessRunAutomationDispatchService.Dispatch.cs                                           7578
+ProcessRunAutomationDispatchService.DomainRecoveryGuidance.cs                             1495
+ProcessRunAutomationDispatchService.DotnetRunCleanup.cs                                  20781
+ProcessRunAutomationDispatchService.ExceptionClosure.cs                                   1216
+ProcessRunAutomationDispatchService.Execution.cs                                         22909
+ProcessRunAutomationDispatchService.ExecutionMetadata.cs                                 55977
+ProcessRunAutomationDispatchService.ExecutionPrompt.cs                                   82163
+ProcessRunAutomationDispatchService.ExecutionSnapshotMetadata.cs                          6474
+ProcessRunAutomationDispatchService.FinalizerContextFactory.cs                            4515
+ProcessRunAutomationDispatchService.GovernedOutcomes.cs                                  25518
+ProcessRunAutomationDispatchService.GovernedRules.cs                                     42818
+ProcessRunAutomationDispatchService.Grounding.cs                                         36083
+ProcessRunAutomationDispatchService.ImplementationProof.cs                               26472
+ProcessRunAutomationDispatchService.ImplementationProofBridges.cs                         3728
+ProcessRunAutomationDispatchService.InvocationMetadataBuilder.cs                          4395
+ProcessRunAutomationDispatchService.Models.cs                                             5075
+ProcessRunAutomationDispatchService.OperationContractResolver.cs                          1478
+ProcessRunAutomationDispatchService.OutputValidation.cs                                   6278
+ProcessRunAutomationDispatchService.ProjectPaths.cs                                      37698
+ProcessRunAutomationDispatchService.ProviderRecovery.cs                                   1580
+ProcessRunAutomationDispatchService.RecoveryDirective.cs                                 33453
+ProcessRunAutomationDispatchService.RecoveryPackets.cs                                   18961
+ProcessRunAutomationDispatchService.RouteExecution.cs                                     3497
+ProcessRunAutomationDispatchService.RouteHandlers.cs                                      5420
+ProcessRunAutomationDispatchService.StepCompletionFinalizer.ArtifactContentReaders.cs     9644
+ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs                           60580
+ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs      7226
+ProcessRunAutomationDispatchService.StepCompletionFinalizer.TransitionRequestBuilder.cs   2055
+ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs                      4434
+ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs    4987
+ProcessRunAutomationDispatchService.TargetGroundingLedgerBuilder.cs                       2209
+ProcessRunAutomationDispatchService.ToolValidation.cs                                    36718
+ProcessRunAutomationDispatchService.WebHostProof.cs                                       2913
+ProcessScopedManagedArtifactPathRules.cs                                                  2449
+ProcessShallowManagedArtifactReferenceGuard.cs                                            1410
+ProcessStorageContentKindRules.cs                                                         1323
+ProcessSubprocessArtifactSourceResolver.cs                                                1091
+ProcessSubprocessCapabilityGapInspector.cs                                                3187
+ProcessSubprocessLifecycleRules.cs                                                        3672
+ProcessSubprocessProjectionGapJournalCoordinator.cs                                       3648
+ProcessSubprocessProjectionPlanBuilder.cs                                                 8022
+ProcessSubprocessProjectionWriterCoordinator.cs                                           4141
+ProcessSubprocessRunObservationCoordinator.cs                                              665
+ProcessToolReceiptFacts.cs                                                                3830
+ProcessWorkflowRunCoordinator.cs                                                         25767
+ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs                                   8919
+WorkflowSubprocessArtifactMapper.cs                                                      20112
+
+
+Adapter usage files:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCandidateHydrationService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCompetingExecutionGuardService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchDirectAgentRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchFinalizerApplicationService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchRecoveryRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchRouteModelAdapters.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchSubprocessRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RouteExecution.cs
+Dispatcher nested candidate/claim/outcome usage files:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessArtifactSatisfactionSnapshot.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessConcurrentExecutionAdoptionCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCandidateFactory.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCandidateHeaderSelector.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchCandidateHydrationService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchClaimLease.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchDirectAgentRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchFailureClosureService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchFinalizerApplicationService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchRecoveryRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchRouteModelAdapters.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchStepTransitionService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessDispatchSubprocessRuntimeService.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionAttemptResultNormalizer.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionInvocationRequestBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionPostAttemptFactsBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionRetryReasonAggregator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessExecutionRunQueryBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessFailedExecutionInspectionCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessHistoricalCarriedProofQueryCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessImplementationStackRules.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessIncompleteSuccessfulRunRetryRules.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessNoProgressEvidenceDeltaRules.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessNoProgressRetryJournalQueryCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessNoProgressRetryJournalWriter.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessNoProgressRetrySignalBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessObservedExecutionOutcomeBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessProjectionModels.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessProviderRepairCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRecoverableFailedRunRetryRules.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.BrowserProof.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Concurrency.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.DecisionServices.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.DomainRecoveryGuidance.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.DotnetRunCleanup.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Execution.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.FinalizerContextFactory.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.GovernedOutcomes.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.GovernedRules.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.Grounding.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ImplementationProofBridges.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.InvocationMetadataBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.OperationContractResolver.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.OutputValidation.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RecoveryDirective.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RecoveryPackets.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.TransitionRequestBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.TargetGroundingLedgerBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessRunAutomationDispatchService.ToolValidation.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessSubprocessProjectionGapJournalCoordinator.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessSubprocessProjectionPlanBuilder.cs
+src/CanDoItAll.Modules.Processes/Automation/Dispatch\ProcessSubprocessProjectionWriterCoordinator.cs
+Route model source payload declarations:
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:99:        ProcessRunAutomationDispatchService.DispatchCandidate Candidate) : IProcessRouteCandidateSource;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:102:        ProcessRunAutomationDispatchService.ProcessStepDispatchClaim DispatchClaim) : IProcessRouteDispatchClaimSource;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:105:        ProcessRunAutomationDispatchService.DispatchExecutionOutcome ExecutionOutcome) : IProcessRouteExecutionOutcomeSource;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:5:internal interface IProcessRouteCandidateSource
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:9:internal interface IProcessRouteDispatchClaimSource
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:13:internal interface IProcessRouteExecutionOutcomeSource
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:56:    IProcessRouteCandidateSource Source);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:61:    IProcessRouteDispatchClaimSource Source);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:71:    IProcessRouteExecutionOutcomeSource Source);
+Existing architecture guard tests near current bundle themes:
+9:    public void Process_core_and_driver_pack_projects_are_not_introduced_prematurely()
+263:    public void Artifact_boundary_helpers_stay_inside_processes_module_without_core_project()
+282:    public void Artifact_validation_snapshot_boundary_is_process_module_local_without_driver_contracts()
+310:    public void Tool_validation_boundary_helpers_are_module_local_without_core_or_driver_contracts()
+362:    public void Implementation_proof_helpers_are_module_local_without_core_or_driver_contracts()
+494:    public void Artifact_validation_gate_a_records_live_inventory_and_blocks_driver_or_viewport_drift()
+503:        var driverReadiness = ReadRepositoryFile(
+508:            "04-driver-readiness-map.md");
+534:        Assert.Contains("Do not implement driver APIs", driverReadiness, StringComparison.Ordinal);
+535:        Assert.DoesNotContain("IProcessDriverPack", driverReadiness, StringComparison.Ordinal);
+536:        Assert.DoesNotContain("DriverPack", driverReadiness, StringComparison.Ordinal);
+537:        Assert.DoesNotContain("ProcessDriver", driverReadiness, StringComparison.Ordinal);
+547:    public void Process_dispatch_claim_route_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift()
+875:    public void Process_dispatch_claim_route_gate_c_SB12_INV_002_records_line_counts_and_blocks_core_driver_or_viewport_drift()
+886:        var finalizerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs"));
+932:        Assert.True(finalizerSource.Split(Environment.NewLine).Length <= 1433);
+935:        var combinedSource = string.Join(Environment.NewLine, dispatchSource, concurrencySource, finalizerSource, helperSource);
+1002:    public void Process_dispatch_route_service_model_decoupling_boundary_uses_route_models_and_narrow_services()
+1035:        Assert.Contains("IProcessDispatchFinalizerRouteFacet finalizerFacet", factorySource, StringComparison.Ordinal);
+1075:    public void Process_dispatch_route_service_ownership_gate_uses_route_models_for_pre_execution_and_failure_closure()
+1108:        Assert.Contains("finalizerApplicationService.FinalizeRecoveredCompletionAsync", routeServicesSource, StringComparison.Ordinal);
+1109:        Assert.Contains("finalizerApplicationService.FinalizeWorkflowCompletionAsync", routeServicesSource, StringComparison.Ordinal);
+1110:        Assert.Contains("finalizerApplicationService.FinalizeDirectAgentCompletionAsync", routeServicesSource, StringComparison.Ordinal);
+1126:    public void Process_dispatch_pre_execution_guard_gate_a_SB04_INV_001_locks_local_boundary_without_core_driver_or_viewport_drift()
+1175:        Assert.Contains("No production driver API", hardConstraints, StringComparison.Ordinal);
+1200:    public void Process_dispatch_claim_route_SB13_INV_001_extracts_finalizer_context_factory_with_route_field_parity()
+1219:        var finalizerApplicationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchFinalizerApplicationService.cs"));
+1224:        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery", finalizerApplicationSource, StringComparison.Ordinal);
+1225:        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForDirectAgent", finalizerApplicationSource, StringComparison.Ordinal);
+1226:        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForWorkflow", finalizerApplicationSource, StringComparison.Ordinal);
+1227:        Assert.Contains("ProcessDispatchFinalizerContextFactory.ForSubprocess", finalizerApplicationSource, StringComparison.Ordinal);
+1242:            "SubprocessRunId: subprocessRunId",
+1244:            "Trigger: \"subprocess-execution-outcome\""
+1261:    public void Step_completion_finalizer_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift()
+1267:            "process-dispatch-step-completion-finalizer-boundary-v1",
+1269:            "02-finalizer-method-classification-template.md");
+1273:            "process-dispatch-step-completion-finalizer-boundary-v1",
+1291:            "process-dispatch-step-completion-finalizer-boundary-v1",
+1313:            "process-dispatch-step-completion-finalizer-boundary-v1",
+1337:    public void Step_completion_finalizer_gate_a_SB04_INV_002_preserves_nested_type_surface_before_movement()
+1366:    public void Step_completion_finalizer_gate_b_SB08_INV_001_extracts_types_and_readers_without_surface_or_stub_drift()
+1404:    public void Step_completion_finalizer_gate_c_SB12_INV_001_extracts_validation_invariant_and_transition_helpers_with_field_parity()
+1435:        Assert.Contains("BuildFinalizedStepTransitionRequest(candidate, finalizerResult)", mainSource, StringComparison.Ordinal);
+1460:    public void Artifact_validation_matcher_core_uses_validation_snapshot_expectations()
+1547:        Assert.Contains("ScoreProviderNativeVisualArtifactExpectation", source, StringComparison.Ordinal);
+1551:        Assert.Contains("ProcessArtifactProviderNativeVisualValidationRules.ScoreProviderNativeVisualArtifactExpectation", dispatcherSource, StringComparison.Ordinal);
+1700:    public void Execution_artifact_projection_path_uses_projection_planner_before_recording_artifact()
+1725:    public void Artifact_projection_helpers_do_not_reference_dispatcher_nested_expectations()
+1749:    public void Artifact_projection_source_adapters_are_local_and_used_by_migrated_source_paths()
+1816:    public void Artifact_projection_source_family_order_stays_execution_mock_workspace_existing_response_browser_decision()
+1846:    public void Artifact_projection_facets_use_focused_implementations_without_all_facet_service()
+1910:    public void Artifact_projection_boundary_keeps_dispatcher_nested_models_inside_snapshot_adapter()
+1922:        var projectionBoundaryFiles = coordinatorFiles
+1948:        foreach (var file in projectionBoundaryFiles)
+1987:    public void Artifact_projection_direct_file_io_stays_inside_file_io_facet()
+2020:    public void Artifact_projection_write_coordinator_is_created_once_by_artifact_projection_flow()
+2038:    public void Process_mock_projection_SB05_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+2061:    public void Workspace_written_projection_SB06_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+2086:    public void Existing_managed_projection_SB07_INV_001_uses_write_coordinator_without_direct_storage_record_block()
+2112:    public void Response_text_projection_SB09_INV_001_uses_write_coordinator_without_moving_file_creation_or_short_circuit()
+2154:    public void Provider_native_browser_projection_SB10_INV_001_uses_write_coordinator_for_expected_and_discovered_modes()
+2199:    public void Completed_decision_projection_SB11_INV_001_uses_record_only_coordinator_without_storage_placement()
+2242:    public void Process_dispatch_candidate_hydration_gate_b_SB08_INV_001_uses_selector_and_snapshot_loader_without_side_effect_drift()
+2283:    public void Process_dispatch_candidate_hydration_gate_c_SB12_INV_001_uses_assembly_helpers_without_core_or_driver_drift()
+2327:    public void Process_dispatch_candidate_hydration_gate_d_SB16_INV_001_keeps_binding_side_effects_explicit_and_recovery_queries_local()
+2447:    public void Process_dispatch_cooperation_resolver_SB13_INV_001_moves_profile_resolution_without_driver_api()
+2474:    public void Process_dispatch_execution_retry_provider_gate_a_SB04_INV_001_keeps_refactor_module_local_without_driver_or_ui_proof()
+ExitCode: 0

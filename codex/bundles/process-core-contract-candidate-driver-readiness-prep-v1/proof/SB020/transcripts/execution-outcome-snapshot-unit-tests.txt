@@ -1,0 +1,21 @@
+SB020 execution outcome route snapshot unit tests
+Generated: 2026-06-06T18:55:20.0650647-04:00
+Filtered test names:
+- Process_dispatch_route_service_model_decoupling_boundary_uses_route_models_and_narrow_services
+- Process_core_contract_candidate_driver_readiness_SB020_INV_001_slims_route_execution_outcome_to_run_snapshot
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.79]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.94]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.97]   Starting:    CanDoItAll.Tests.Unit
+[xUnit.net 00:00:01.03]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_dispatch_route_service_model_decoupling_boundary_uses_route_models_and_narrow_services [13 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessAgentExecutionBoundaryArchitectureTests.Process_core_contract_candidate_driver_readiness_SB020_INV_001_slims_route_execution_outcome_to_run_snapshot [1 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 2
+     Úspěšné: 2
+ Celkový čas: 2,0770 Sekundy
+Exit code: 0

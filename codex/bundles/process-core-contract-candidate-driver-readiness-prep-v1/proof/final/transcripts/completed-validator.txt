@@ -1,0 +1,156 @@
+Command: final completed bundle validator
+Working directory: C:\repositories\CanDoItAll
+
+PASS root README status completed
+PASS root README validation summary token present: Execution status: `Completed`
+PASS root README validation summary token present: Subbundle gate review: `Passed SB001-SB033`
+PASS root README validation summary token present: Final closure gate: `Passed`
+PASS root README validation summary token present: Final Core cutline
+PASS execution report status completed
+PASS subbundle gate row passed: SB001
+PASS subbundle README completed: SB001
+PASS subbundle README checklist closed: SB001
+PASS subbundle gate row passed: SB002
+PASS subbundle README completed: SB002
+PASS subbundle README checklist closed: SB002
+PASS subbundle gate row passed: SB003
+PASS subbundle README completed: SB003
+PASS subbundle README checklist closed: SB003
+PASS subbundle gate row passed: SB004
+PASS subbundle README completed: SB004
+PASS subbundle README checklist closed: SB004
+PASS subbundle gate row passed: SB005
+PASS subbundle README completed: SB005
+PASS subbundle README checklist closed: SB005
+PASS subbundle gate row passed: SB006
+PASS subbundle README completed: SB006
+PASS subbundle README checklist closed: SB006
+PASS subbundle gate row passed: SB007
+PASS subbundle README completed: SB007
+PASS subbundle README checklist closed: SB007
+PASS subbundle gate row passed: SB008
+PASS subbundle README completed: SB008
+PASS subbundle README checklist closed: SB008
+PASS subbundle gate row passed: SB009
+PASS subbundle README completed: SB009
+PASS subbundle README checklist closed: SB009
+PASS subbundle gate row passed: SB010
+PASS subbundle README completed: SB010
+PASS subbundle README checklist closed: SB010
+PASS subbundle gate row passed: SB011
+PASS subbundle README completed: SB011
+PASS subbundle README checklist closed: SB011
+PASS subbundle gate row passed: SB012
+PASS subbundle README completed: SB012
+PASS subbundle README checklist closed: SB012
+PASS subbundle gate row passed: SB013
+PASS subbundle README completed: SB013
+PASS subbundle README checklist closed: SB013
+PASS subbundle gate row passed: SB014
+PASS subbundle README completed: SB014
+PASS subbundle README checklist closed: SB014
+PASS subbundle gate row passed: SB015
+PASS subbundle README completed: SB015
+PASS subbundle README checklist closed: SB015
+PASS subbundle gate row passed: SB016
+PASS subbundle README completed: SB016
+PASS subbundle README checklist closed: SB016
+PASS subbundle gate row passed: SB017
+PASS subbundle README completed: SB017
+PASS subbundle README checklist closed: SB017
+PASS subbundle gate row passed: SB018
+PASS subbundle README completed: SB018
+PASS subbundle README checklist closed: SB018
+PASS subbundle gate row passed: SB019
+PASS subbundle README completed: SB019
+PASS subbundle README checklist closed: SB019
+PASS subbundle gate row passed: SB020
+PASS subbundle README completed: SB020
+PASS subbundle README checklist closed: SB020
+PASS subbundle gate row passed: SB021
+PASS subbundle README completed: SB021
+PASS subbundle README checklist closed: SB021
+PASS subbundle gate row passed: SB022
+PASS subbundle README completed: SB022
+PASS subbundle README checklist closed: SB022
+PASS subbundle gate row passed: SB023
+PASS subbundle README completed: SB023
+PASS subbundle README checklist closed: SB023
+PASS subbundle gate row passed: SB024
+PASS subbundle README completed: SB024
+PASS subbundle README checklist closed: SB024
+PASS subbundle gate row passed: SB025
+PASS subbundle README completed: SB025
+PASS subbundle README checklist closed: SB025
+PASS subbundle gate row passed: SB026
+PASS subbundle README completed: SB026
+PASS subbundle README checklist closed: SB026
+PASS subbundle gate row passed: SB027
+PASS subbundle README completed: SB027
+PASS subbundle README checklist closed: SB027
+PASS subbundle gate row passed: SB028
+PASS subbundle README completed: SB028
+PASS subbundle README checklist closed: SB028
+PASS subbundle gate row passed: SB029
+PASS subbundle README completed: SB029
+PASS subbundle README checklist closed: SB029
+PASS subbundle gate row passed: SB030
+PASS subbundle README completed: SB030
+PASS subbundle README checklist closed: SB030
+PASS subbundle gate row passed: SB031
+PASS subbundle README completed: SB031
+PASS subbundle README checklist closed: SB031
+PASS subbundle gate row passed: SB032
+PASS subbundle README completed: SB032
+PASS subbundle README checklist closed: SB032
+PASS subbundle gate row passed: SB033
+PASS subbundle README completed: SB033
+PASS subbundle README checklist closed: SB033
+PASS critical proof artifact exists: bundle://proof/SB003/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB003/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB006/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB006/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB009/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB009/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB012/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB012/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB015/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB015/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB018/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB018/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB021/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB021/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB024/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB024/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB027/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB027/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB030/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB030/semantic-invariants.md
+PASS critical proof artifact exists: bundle://proof/SB033/manifest.md
+PASS critical proof artifact exists: bundle://proof/SB033/semantic-invariants.md
+PASS passing transcript exists: bundle://proof/SB032/transcripts/build.txt
+PASS passing transcript exists: bundle://proof/SB032/transcripts/full-unit-tests.txt
+PASS passing transcript exists: bundle://proof/SB032/transcripts/focused-dispatch-integration-tests.txt
+PASS passing transcript exists: bundle://proof/SB032/transcripts/focused-subprocess-projection-execution-integration-tests.txt
+PASS passing transcript exists: bundle://proof/SB032/transcripts/source-assertions-and-scans.txt
+PASS passing transcript exists: bundle://proof/SB033/transcripts/critical-build.txt
+PASS passing transcript exists: bundle://proof/SB033/transcripts/gate-k-architecture-tests.txt
+PASS passing transcript exists: bundle://proof/SB033/transcripts/source-assertions-and-scans.txt
+PASS passing transcript exists: bundle://proof/SB033/transcripts/proof-sanity-check.txt
+PASS passing transcript exists: bundle://proof/SB033/transcripts/closure-gate.txt
+PASS passing transcript exists: bundle://proof/final/transcripts/final-full-unit-tests.txt
+PASS final full unit transcript reports 1025 total tests
+PASS raw-note closure audit passed
+PASS forbidden production token absent in repo://src: IProcessDriverPack
+PASS forbidden production token absent in repo://src: IProcessDriverRegistry
+PASS forbidden production token absent in repo://src: ProcessDriverRegistry
+PASS forbidden production token absent in repo://src: IProcessHelperDriver
+PASS forbidden production token absent in repo://src: IProcessSwDevHelperDriver
+PASS forbidden production token absent in repo://src: IProcessDotNetSwDevHelperDriver
+PASS forbidden production token absent in repo://src: CanDoItAll.Processes.Core
+PASS no Process Core directory exists at repo://src/CanDoItAll.Processes.Core
+PASS no module Process Core directory exists at repo://src/CanDoItAll.Modules.Processes.Core
+PASS no UI/mobile/media file drift detected in git diff
+PASS final red-team recommendation is narrow Core only
+
+RESULT: PASS

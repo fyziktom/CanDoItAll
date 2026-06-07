@@ -1,0 +1,36 @@
+Command: SB030 critical proof sanity check
+Working directory: C:\repositories\CanDoItAll
+
+PASS required proof file exists: codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\proof\SB030\manifest.md
+PASS required proof file exists: codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\proof\SB030\semantic-invariants.md
+PASS required proof file exists: codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\proof\SB030\transcripts\entry-gate.txt
+PASS required proof file exists: codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\proof\SB030\transcripts\critical-build.txt
+PASS required proof file exists: codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\proof\SB030\transcripts\gate-j-architecture-tests.txt
+PASS required proof file exists: codex\bundles\process-core-contract-candidate-driver-readiness-prep-v1\proof\SB030\transcripts\source-assertions-and-scans.txt
+PASS semantic invariant label present: Invariant ID
+PASS semantic invariant label present: Source raw note
+PASS semantic invariant label present: Expected behavior
+PASS semantic invariant label present: Disallowed shallow implementation
+PASS semantic invariant label present: Failing-first test
+PASS semantic invariant label present: Passing test
+PASS semantic invariant label present: Changed source files
+PASS semantic invariant label present: Production assertions
+PASS semantic invariant label present: Red-team negative case
+PASS semantic invariant label present: Downstream dependency check
+PASS portable references only in checked critical proof document
+PASS portable references only in checked critical proof document
+PASS manifest includes Production Behavior Artifact Matrix
+PASS semantic invariant contract includes Production Behavior Artifact Matrix
+PASS manifest records behavior-preserving failing-first rationale
+PASS semantic invariant records behavior-preserving failing-first rationale
+PASS manifest changed hash placeholder removed
+PASS manifest test appears in transcript: Process_core_contract_candidate_driver_readiness_SB030_INV_001_keeps_driver_readiness_docs_traceability_only
+PASS source assertion transcript contains: RESULT: PASS
+PASS source assertion transcript contains: PASS production driver API token absent in repo://src: IProcessDriverPack
+PASS source assertion transcript contains: PASS production driver API token absent in repo://src: IProcessDriverRegistry
+PASS source assertion transcript contains: PASS production driver API token absent in repo://src: ProcessDriverRegistry
+PASS source assertion transcript contains: PASS no Process Core directory exists at repo://src/CanDoItAll.Processes.Core
+PASS source assertion transcript contains: PASS no UI/mobile/media file drift detected in git diff
+PASS source assertion transcript contains: PASS no TODO/STUB/NotImplementedException markers found in SB030 added diff lines
+
+RESULT: PASS

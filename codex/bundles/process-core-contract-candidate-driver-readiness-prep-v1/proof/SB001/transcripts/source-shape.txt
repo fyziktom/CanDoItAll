@@ -1,0 +1,40 @@
+Command: rg -n "class|record|struct|interface|enum" SB001 source files
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs:9:internal sealed class ProcessDispatchDirectAgentRuntimeService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs:9:internal sealed class ProcessDispatchFinalizerApplicationService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:1:using CanDoItAll.Infrastructure.ControlPlane;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:2:using CanDoItAll.Infrastructure.Persistence;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:3:using CanDoItAll.Infrastructure.Storage;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs:14:internal sealed class ProcessDispatchSubprocessRuntimeService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:3:internal static class ProcessDispatchRouteModelAdapters
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:92:        where TSource : class
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:98:    private sealed record DispatcherCandidateSource(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:101:    private sealed record DispatcherDispatchClaimSource(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs:104:    private sealed record DispatcherExecutionOutcomeSource(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:7:internal sealed class ProcessDispatchDatabaseRequirementRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:76:internal sealed class ProcessDispatchUpstreamMaterializationRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:127:internal sealed class ProcessDispatchRecoveryRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:164:internal sealed class ProcessDispatchSubprocessRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:183:internal sealed class ProcessDispatchStartTransitionRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:212:internal sealed class ProcessDispatchWorkflowRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:243:internal sealed class ProcessDispatchDirectAgentRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:260:internal sealed class ProcessDispatchGuardRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs:287:internal sealed class ProcessDispatchFinalizerRouteService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:3:using CanDoItAll.Infrastructure.ControlPlane;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:4:using CanDoItAll.Infrastructure.Persistence;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:5:using CanDoItAll.Infrastructure.Storage;
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:14:internal sealed class ProcessDispatchCandidateHydrationService(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:80:            var recordedArtifactExpectationIds = snapshot.ExistingArtifacts
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:100:                recordedArtifactExpectationIds,
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:178:                    "Granted project-structure read access for project {ProjectId} to technical agent {TechnicalAgentId} before dispatching process run {RunId}, step {StepRunId}.",
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs:199:                    recordedArtifactExpectationIds);
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:5:internal interface IProcessRouteCandidateSource
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:9:internal interface IProcessRouteDispatchClaimSource
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:13:internal interface IProcessRouteExecutionOutcomeSource
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:17:internal sealed record ProcessRouteRunSnapshot(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:23:internal sealed record ProcessRouteStepSnapshot(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:32:internal sealed record ProcessRouteArtifactInput(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:43:internal sealed record ProcessRouteArtifactReference(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:50:internal sealed record ProcessRouteCandidate(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:58:internal sealed record ProcessRouteDispatchClaim(
+src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs:63:internal sealed record ProcessRouteExecutionOutcome(
+ExitCode: 0

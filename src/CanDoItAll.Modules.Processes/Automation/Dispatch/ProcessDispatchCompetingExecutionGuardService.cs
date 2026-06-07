@@ -14,14 +14,13 @@ internal sealed class ProcessDispatchCompetingExecutionGuardService(
         CancellationToken cancellationToken)
     {
         var dispatcherCandidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate);
-        var dispatcherOutcome = ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome(executionOutcome);
         var executionRuns = await executionClient.ListExecutionRunsAsync(
             ProcessExecutionRunQueryBuilder.ForCandidate(dispatcherCandidate),
             cancellationToken);
 
         return ProcessAutomationExecutionRunSelection.ResolveCompetingActiveAutomationExecutionRun(
             executionRuns,
-            dispatcherOutcome.Detail.Run.Id,
+            executionOutcome.ExecutionRun.Id,
             candidate.StepRun.StartedAtUtc,
             clock.GetUtcNow(),
             ProcessRunAutomationDispatchService.AutomationActor,

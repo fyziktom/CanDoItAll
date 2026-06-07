@@ -1,0 +1,154 @@
+SB013 source assertions and guard scans
+Pre-execution route facts
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: internal sealed record ProcessDispatchPreExecutionRouteFacts
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: ProcessRouteRunSnapshot Run
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: ProcessRouteStepSnapshot StepRun
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: IReadOnlyList<ProcessRouteArtifactInput> ArtifactInputs
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: IProcessRouteCandidateSource Source
+Route service conversion and explicit transition service
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(candidate);
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: preExecutionGuardHandler.BuildDatabaseRequirementDecision(
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(routeFacts)
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: stepTransitionService.TransitionStepWithClaimAsync
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)
+Pre-execution handler decisions consume route facts
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: ProcessDispatchPreExecutionRouteFacts routeFacts
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: ProcessRouteCandidate candidate
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: TransitionStepWithClaimAsync
+Materialization decision and side-effect helpers consume route facts
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: ProcessDispatchPreExecutionRouteFacts routeFacts
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: ProcessMissingUpstreamArtifactMaterializationFingerprint.Create(routeFacts, facts)
+PASS contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: ProcessMissingUpstreamArtifactRerunRequestBuilder.BuildRequest(routeFacts, facts)
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: ProcessRouteCandidate candidate
+No Core/no driver scan
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: CanDoItAll.Processes.Core
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: IProcessDriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: DriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: ProcessDriver
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: CanDoItAll.Processes.Core
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: IProcessDriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: DriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: ProcessDriver
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: CanDoItAll.Processes.Core
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: IProcessDriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: DriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: ProcessDriver
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: CanDoItAll.Processes.Core
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: IProcessDriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: DriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: ProcessDriver
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: CanDoItAll.Processes.Core
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: IProcessDriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: DriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: ProcessDriver
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: CanDoItAll.Processes.Core
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: IProcessDriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: DriverPack
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: ProcessDriver
+Anti-stub scan
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: TODO
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: stub
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs :: throw new NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: TODO
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: stub
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs :: throw new NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: TODO
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: stub
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs :: throw new NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: TODO
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: stub
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs :: throw new NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: TODO
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: stub
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDatabaseRequirementBlocker.cs :: throw new NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: TODO
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: stub
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: NotImplementedException
+PASS not contains: .\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchStartTransitionPlanner.cs :: throw new NotImplementedException
+Relevant source token map
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:32:        ProcessDispatchPreExecutionRouteFacts routeFacts)
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:51:        ProcessDispatchPreExecutionRouteFacts routeFacts)
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:110:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:128:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:154:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:169:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:189:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:252:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:19:    public ProcessDispatchDatabaseRequirementDecision BuildDatabaseRequirementDecision(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:20:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:59:    public ProcessDispatchMissingUpstreamArtifactMaterializationPlan PlanMissingUpstreamArtifactMaterialization(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:60:        ProcessDispatchPreExecutionRouteFacts routeFacts)
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:89:    public async Task<bool> RecordAndRequestMissingUpstreamArtifactMaterializationAsync(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:90:        ProcessDispatchPreExecutionRouteFacts routeFacts,
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:826:            "TransitionStepWithClaimAsync",
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:847:        Assert.Contains("TransitionStepWithClaimAsync", routeBoundarySource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:862:        Assert.DoesNotContain("TransitionStepWithClaimAsync", startTransitionSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1023:        var adapterSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchRouteModelAdapters.cs"));
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1037:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters.FromDispatcherCandidate", routeExecutionSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1095:        Assert.Contains("preExecutionGuardHandler.BuildDatabaseRequirementDecision(", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1097:        Assert.Contains("preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(routeFacts)", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1102:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", recoveryRuntimeSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1103:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate)", directAgentRuntimeSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1105:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1107:        Assert.DoesNotContain("var dispatcherCandidate = ProcessDispatchRouteModelAdapters.ToDispatcherCandidate(candidate);", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1108:        Assert.DoesNotContain("var dispatcherClaim = ProcessDispatchRouteModelAdapters.ToDispatcherClaim(dispatchClaim);", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1120:        Assert.Contains("stepTransitionService.TransitionStepWithClaimAsync", failureClosureSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1135:        var routeFactsSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchPreExecutionRouteFacts.cs"));
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1149:        Assert.Contains("internal sealed record ProcessDispatchPreExecutionRouteFacts", routeFactsSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1153:        Assert.Contains("FromCandidate(ProcessRouteCandidate candidate)", routeFactsSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1156:        Assert.Contains("var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(candidate);", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1157:        Assert.Contains("preExecutionGuardHandler.BuildDatabaseRequirementDecision(", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1158:        Assert.Contains("preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(routeFacts)", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1159:        Assert.Contains("preExecutionGuardHandler.RecordAndRequestMissingUpstreamArtifactMaterializationAsync(", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1161:        Assert.Contains("stepTransitionService.TransitionStepWithClaimAsync", routeServicesSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1163:        Assert.Contains("BuildDatabaseRequirementDecision(", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1164:        Assert.Contains("PlanMissingUpstreamArtifactMaterialization(", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1165:        Assert.Contains("RecordAndRequestMissingUpstreamArtifactMaterializationAsync(", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1166:        Assert.Contains("ProcessDispatchPreExecutionRouteFacts routeFacts", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1167:        Assert.DoesNotContain("ProcessRouteCandidate candidate", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1168:        Assert.DoesNotContain("TransitionStepWithClaimAsync", preExecutionGuardHandlerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1170:        Assert.Contains("ProcessDispatchPreExecutionRouteFacts routeFacts", materializationSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1174:        Assert.DoesNotContain("ProcessRouteCandidate candidate", materializationSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1178:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters", combinedPreExecutionSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1316:        Assert.DoesNotContain("TransitionStepWithClaimAsync", factorySource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1401:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters.", finalizerApplicationSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1407:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherCandidate", finalizerAdapterSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1408:        Assert.Contains("ProcessDispatchRouteModelAdapters.ToDispatcherExecutionOutcome", finalizerAdapterSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2496:        Assert.DoesNotContain("ProcessDispatchRouteModelAdapters", hydratedCandidateAssemblerSource, StringComparison.Ordinal);
+.\tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2756:            "TransitionStepWithClaimAsync",
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs:3:internal sealed record ProcessDispatchPreExecutionRouteFacts(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs:8:    public static ProcessDispatchPreExecutionRouteFacts FromCandidate(ProcessRouteCandidate candidate)
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionRouteFacts.cs:12:        return new ProcessDispatchPreExecutionRouteFacts(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:19:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:25:        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(candidate);
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:26:        var decision = preExecutionGuardHandler.BuildDatabaseRequirementDecision(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:55:        var transitionResult = await stepTransitionService.TransitionStepWithClaimAsync(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:83:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:87:        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(candidate);
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:88:        var plan = preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(routeFacts);
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:102:                var blockResult = await stepTransitionService.TransitionStepWithClaimAsync(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:122:        return await preExecutionGuardHandler.RecordAndRequestMissingUpstreamArtifactMaterializationAsync(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:134:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:149:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:171:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:190:    public async Task<Result> TransitionStepWithClaimAsync(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:195:        return await stepTransitionService.TransitionStepWithClaimAsync(
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:233:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:251:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:269:        ProcessRouteCandidate candidate,
+.\src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:295:        ProcessRouteCandidate candidate,
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1247:        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1248:        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(routeCandidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1296:        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1297:        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(routeCandidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1338:        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1339:        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(routeCandidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17082:        var routeCandidate = ProcessDispatchRouteModelAdapters.FromDispatcherCandidate(candidate);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17083:        var routeClaim = ProcessDispatchRouteModelAdapters.FromDispatcherClaim(dispatchClaim);
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17157:                ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(recoveryOutcome),
+.\tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17165:                ProcessDispatchRouteModelAdapters.FromDispatcherExecutionOutcome(directOutcome),

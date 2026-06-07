@@ -68,7 +68,7 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
 
     public async Task<bool> TryRecordForResponseProjectionAsync(
         ProcessArtifactProjectionContext context,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string projectedRelativePath,
         string targetFullPath)
     {
@@ -92,7 +92,7 @@ internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IPro
 
     private async Task<bool> RecordExistingManagedArtifactAsync(
         ProcessArtifactProjectionContext context,
-        ProcessProjectionArtifactExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string projectedRelativePath,
         string logSourceName,
         string artifactSummary,

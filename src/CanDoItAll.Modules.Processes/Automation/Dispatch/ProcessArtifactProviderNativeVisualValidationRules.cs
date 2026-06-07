@@ -7,7 +7,7 @@ internal static class ProcessArtifactProviderNativeVisualValidationRules
     private const string BrowserScreenshotToolName = "browser_take_screenshot";
 
     public static int ScoreProviderNativeVisualArtifactExpectation(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName)

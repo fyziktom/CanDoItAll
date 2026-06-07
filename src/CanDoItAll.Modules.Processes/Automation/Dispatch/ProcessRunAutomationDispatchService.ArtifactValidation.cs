@@ -505,7 +505,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             normalizedPath);
 
     private static bool ExpectedArtifactExplicitlyTargetsPath(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string normalizedPath)
         => ProcessArtifactPathValidationRules.ExpectedArtifactExplicitlyTargetsPath(expectedArtifact, normalizedPath);
 
@@ -517,7 +517,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             normalizedPath);
 
     private static bool ShouldIgnoreProductSourceForNarrativeExpectation(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string normalizedPath)
     {
         return IsLikelyProductSourceOrProjectFileName(ResolvePromptFileName(normalizedPath)) &&
@@ -542,7 +542,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => IsNarrativeEvidenceArtifactExpectation(
             ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact));
 
-    private static bool IsNarrativeEvidenceArtifactExpectation(ProcessArtifactValidationExpectation expectedArtifact)
+    private static bool IsNarrativeEvidenceArtifactExpectation(ProcessArtifactExpectationSnapshot expectedArtifact)
     {
         var text = CollapsePromptWhitespace($"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}");
         return text.Contains("change set", StringComparison.OrdinalIgnoreCase) ||
@@ -643,7 +643,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             normalizedResponse);
 
     private static bool HasExpectedArtifactContentSignals(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string responseText,
         string normalizedResponse)
         => ProcessArtifactTextMatchRules.HasExpectedArtifactContentSignals(
@@ -660,7 +660,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             normalizedResponse);
 
     private static bool HasExpectedArtifactValidationSignals(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         string normalizedResponse)
         => ProcessArtifactTextMatchRules.HasExpectedArtifactValidationSignals(expectedArtifact, normalizedResponse);
 
@@ -672,7 +672,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             responseTokens);
 
     private static bool HasExpectedArtifactValidationSignals(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         IReadOnlySet<string> responseTokens)
         => ProcessArtifactTextMatchRules.HasExpectedArtifactValidationSignals(expectedArtifact, responseTokens);
 
@@ -1395,7 +1395,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static Guid? MatchExpectedArtifactId(
-        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
         ProcessAutomationExecutionArtifact artifact,
         string? artifactTextContent)
     {
@@ -1415,12 +1415,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var displaySlug = FileSafeSlugBuilder.Build(displayName);
         var fileSlug = FileSafeSlugBuilder.Build(fileNameWithoutExtension);
         var expectedKind = ResolveExpectedArtifactKind(artifact);
-        var projectionExpectations = expectedArtifacts
-            .Select(item => item.ToProjectionExpectation())
-            .ToList();
         var expectedArtifactsById = expectedArtifacts.ToDictionary(item => item.Id);
         var strongMatchedExpectationId = ProcessArtifactExpectationMatcher.MatchStrongExpectedArtifactId(
-            projectionExpectations,
+            expectedArtifacts,
             expectedKind,
             item => MatchesExpectedArtifact(
                 expectedArtifactsById[item.Id],
@@ -1473,7 +1470,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static Guid? MatchExpectedArtifactIdByTextContent(
-        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
         ProcessAutomationExecutionArtifact artifact,
         ProcessArtifactKind expectedKind,
         string? artifactTextContent)
@@ -1515,7 +1512,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static bool MatchesExpectedArtifact(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName,
@@ -1553,7 +1550,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     }
 
     private static int ScoreProviderNativeVisualArtifactExpectation(
-        ProcessArtifactValidationExpectation expectedArtifact,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName)
@@ -1578,8 +1575,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
         => ProcessArtifactTextMatchRules.MatchesExpectedArtifactByTitleTokens(expectedTitle, relativePath, displayName);
 
     private static bool IsManagedNarrativeArtifactFallbackMatch(
-        IReadOnlyList<ProcessArtifactValidationExpectation> expectedArtifacts,
-        ProcessArtifactValidationExpectation expectedArtifact,
+        IReadOnlyList<ProcessArtifactExpectationSnapshot> expectedArtifacts,
+        ProcessArtifactExpectationSnapshot expectedArtifact,
         ProcessAutomationExecutionArtifact artifact,
         string relativePath,
         string displayName,
@@ -2049,7 +2046,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         DispatchArtifactExpectation expectedArtifact,
         ProcessStepRunStatus completionStatus)
         => ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(
-            ProcessArtifactValidationSnapshotBuilder.ToProjectionExpectation(expectedArtifact),
+            ProcessArtifactValidationSnapshotBuilder.FromDispatchExpectation(expectedArtifact),
             completionStatus);
 
     internal static string BuildCompletedDecisionArtifactProvenanceSummary(

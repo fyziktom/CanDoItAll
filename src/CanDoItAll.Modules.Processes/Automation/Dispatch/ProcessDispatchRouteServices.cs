@@ -22,17 +22,18 @@ internal sealed class ProcessDispatchDatabaseRequirementRouteService(
     {
         var databaseRequirementFailure = databaseRequirementResolver.Resolve() ??
             throw new InvalidOperationException("Database requirement blocking was requested, but no active database requirement failure was resolved.");
+        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(candidate);
         var decision = preExecutionGuardHandler.BuildDatabaseRequirementDecision(
-            candidate,
+            routeFacts,
             databaseRequirementFailure.Message,
             ProcessRunAutomationDispatchService.AutomationActor);
         if (decision.IsUnsupportedNoOpTarget)
         {
             logger.LogWarning(
                 "Process automation dispatch for run {RunId}, step {StepRunId} requires PostgreSQL but current status {Status} has no supported blocking transition. Reason: {Reason}",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                candidate.StepRun.Status,
+                routeFacts.Run.Id,
+                routeFacts.StepRun.Id,
+                routeFacts.StepRun.Status,
                 databaseRequirementFailure.Message);
             return;
         }
@@ -41,9 +42,9 @@ internal sealed class ProcessDispatchDatabaseRequirementRouteService(
         {
             logger.LogWarning(
                 "Process automation dispatch for run {RunId}, step {StepRunId} requires PostgreSQL but current status {Status} cannot transition to {TargetStatus}. Reason: {Reason}",
-                candidate.Run.Id,
-                candidate.StepRun.Id,
-                candidate.StepRun.Status,
+                routeFacts.Run.Id,
+                routeFacts.StepRun.Id,
+                routeFacts.StepRun.Status,
                 decision.TargetStatus,
                 databaseRequirementFailure.Message);
             return;
@@ -60,7 +61,7 @@ internal sealed class ProcessDispatchDatabaseRequirementRouteService(
         {
             logger.LogWarning(
                 "Process step {StepRunId} could not be moved to {TargetStatus} after PostgreSQL runtime requirement failed. Errors: {Errors}",
-                candidate.StepRun.Id,
+                routeFacts.StepRun.Id,
                 decision.TargetStatus,
                 string.Join(" | ", transitionResult.Errors.Select(error => error.Message)));
             return;
@@ -68,8 +69,8 @@ internal sealed class ProcessDispatchDatabaseRequirementRouteService(
 
         logger.LogWarning(
             "Blocked process automation dispatch for run {RunId}, step {StepRunId} because the active database profile is not PostgreSQL.",
-            candidate.Run.Id,
-            candidate.StepRun.Id);
+            routeFacts.Run.Id,
+            routeFacts.StepRun.Id);
     }
 }
 
@@ -83,16 +84,17 @@ internal sealed class ProcessDispatchUpstreamMaterializationRouteService(
         ProcessRouteDispatchClaim dispatchClaim,
         CancellationToken cancellationToken)
     {
-        var plan = preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(candidate);
+        var routeFacts = ProcessDispatchPreExecutionRouteFacts.FromCandidate(candidate);
+        var plan = preExecutionGuardHandler.PlanMissingUpstreamArtifactMaterialization(routeFacts);
         if (!plan.HasMissingInputs)
         {
             return false;
         }
 
-        if (candidate.StepRun.Status != ProcessStepRunStatus.Blocked)
+        if (routeFacts.StepRun.Status != ProcessStepRunStatus.Blocked)
         {
             var snapshot = await stepTransitionService.LoadStepRunTransitionSnapshotAsync(
-                candidate.StepRun.Id,
+                routeFacts.StepRun.Id,
                 cancellationToken);
             if (snapshot is not null &&
                 snapshot.Status is ProcessStepRunStatus.Ready or ProcessStepRunStatus.WaitingApproval or ProcessStepRunStatus.InProgress)
@@ -100,7 +102,7 @@ internal sealed class ProcessDispatchUpstreamMaterializationRouteService(
                 var blockResult = await stepTransitionService.TransitionStepWithClaimAsync(
                     preExecutionGuardHandler.BuildMissingUpstreamArtifactBlockTransitionRequest(
                         plan,
-                        candidate.StepRun.Id,
+                        routeFacts.StepRun.Id,
                         snapshot.ConcurrencyToken,
                         ProcessRunAutomationDispatchService.AutomationActor),
                     dispatchClaim,
@@ -109,8 +111,8 @@ internal sealed class ProcessDispatchUpstreamMaterializationRouteService(
                 {
                     logger.LogWarning(
                         "Could not block downstream step {StepRunId} before upstream artifact materialization for run {RunId}. Errors: {Errors}",
-                        candidate.StepRun.Id,
-                        candidate.Run.Id,
+                        routeFacts.StepRun.Id,
+                        routeFacts.Run.Id,
                         string.Join(" | ", blockResult.Errors.Select(error => error.Message)));
                     return true;
                 }
@@ -118,7 +120,7 @@ internal sealed class ProcessDispatchUpstreamMaterializationRouteService(
         }
 
         return await preExecutionGuardHandler.RecordAndRequestMissingUpstreamArtifactMaterializationAsync(
-            candidate,
+            routeFacts,
             plan,
             cancellationToken);
     }
@@ -152,11 +154,12 @@ internal sealed class ProcessDispatchRecoveryRouteService(
         CancellationToken cancellationToken)
     {
         await finalizerApplicationService.FinalizeRecoveredCompletionAsync(
-            candidate,
-            recoveryOutcome,
-            trigger,
-            renewLeaseAsync,
-            dispatchClaim,
+            new ProcessDispatchRecoveredFinalizerInput(
+                candidate,
+                recoveryOutcome,
+                trigger,
+                renewLeaseAsync,
+                dispatchClaim),
             cancellationToken);
     }
 }
@@ -165,17 +168,11 @@ internal sealed class ProcessDispatchSubprocessRouteService(
     ProcessDispatchSubprocessRuntimeService subprocessRuntimeService) : IProcessDispatchSubprocessRouteFacet
 {
     public async Task HandleSubprocessDispatchAsync(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Guid? triggerStepRunId,
-        ProcessRouteDispatchClaim dispatchClaim,
+        ProcessDispatchSubprocessRuntimeInput input,
         CancellationToken cancellationToken)
     {
         await subprocessRuntimeService.HandleSubprocessDispatchAsync(
-            candidate,
-            trigger,
-            triggerStepRunId,
-            dispatchClaim,
+            input,
             cancellationToken);
     }
 }
@@ -233,9 +230,10 @@ internal sealed class ProcessDispatchWorkflowRouteService(
         CancellationToken cancellationToken)
     {
         await finalizerApplicationService.FinalizeWorkflowCompletionAsync(
-            candidate,
-            workflowOutcome,
-            dispatchClaim,
+            new ProcessDispatchWorkflowFinalizerInput(
+                candidate,
+                workflowOutcome,
+                dispatchClaim),
             cancellationToken);
     }
 }
@@ -244,15 +242,11 @@ internal sealed class ProcessDispatchDirectAgentRouteService(
     ProcessDispatchDirectAgentRuntimeService directAgentRuntimeService) : IProcessDispatchDirectAgentRouteFacet
 {
     public async Task<ProcessRouteExecutionOutcome> ExecuteUntilSettledAsync(
-        ProcessRouteCandidate candidate,
-        string trigger,
-        Func<CancellationToken, Task> renewLeaseAsync,
+        ProcessDispatchDirectAgentExecutionInput input,
         CancellationToken cancellationToken)
     {
         return await directAgentRuntimeService.ExecuteUntilSettledAsync(
-            candidate,
-            trigger,
-            renewLeaseAsync,
+            input,
             cancellationToken);
     }
 }
@@ -296,11 +290,12 @@ internal sealed class ProcessDispatchFinalizerRouteService(
         CancellationToken cancellationToken)
     {
         await finalizerApplicationService.FinalizeDirectAgentCompletionAsync(
-            candidate,
-            executionOutcome,
-            trigger,
-            renewLeaseAsync,
-            dispatchClaim,
+            new ProcessDispatchDirectAgentFinalizerInput(
+                candidate,
+                executionOutcome,
+                trigger,
+                renewLeaseAsync,
+                dispatchClaim),
             cancellationToken);
     }
 }

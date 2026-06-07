@@ -1,0 +1,54 @@
+SB010 source assertions and guard scans
+
+Hydration service delegates EF snapshot loading and hydrated candidate assembly:
+46:        var snapshot = await ProcessDispatchCandidateHydrationLoader.LoadAsync(
+56:        var artifactInputPreparationService = new ProcessDispatchCandidateArtifactInputPreparationService(
+59:        var candidateAssembler = new ProcessDispatchHydratedCandidateAssembler(
+67:        return await candidateAssembler.TryAssembleAsync(
+
+Hydration service no longer owns candidate decision loop or inline artifact preparation:
+No matches.
+
+Artifact input preparation collaborator owns workspace/profile prompt path preparation:
+9:internal sealed class ProcessDispatchCandidateArtifactInputPreparationService(
+10:    IWorkspacePathResolver workspacePathResolver,
+11:    IDatabaseProfileRuntimeAccessor databaseProfileRuntimeAccessor)
+27:        return ProcessDispatchManagedArtifactPromptPathPreparer.PrepareArtifactInputsForPrompt(
+28:            ProcessDispatchArtifactInputAssembler.BuildResolvedArtifactInputs(
+
+Hydrated candidate assembler owns route assembly and direct-agent binding decisions:
+11:internal sealed class ProcessDispatchHydratedCandidateAssembler(
+31:        foreach (var stepRun in snapshot.DispatchableSteps)
+38:            var branchContext = ProcessDispatchBranchDependencyContext.Create(
+42:            var expectedArtifacts = await ProcessDispatchExpectedArtifactLoader.LoadAsync(
+50:            var preparedArtifactInputs = artifactInputPreparationService.Prepare(snapshot, stepRun);
+65:                return ProcessDispatchCandidateFactory.CreateSubprocessCandidate(assemblyContext);
+78:                return ProcessDispatchCandidateFactory.CreateWorkflowCandidate(assemblyContext);
+93:            if (ProcessAutomationExecutionRunSelection.HasBlockingAutomationExecutionRun(
+102:            var recoveryExecutionRunId = ProcessDispatchRecoveryQueryHelper.ResolveRecoverableExecutionRunId(stepRun, executionRuns);
+110:            var bindingResult = await ProcessDispatchTechnicalAgentBindingCoordinator.ResolveAsync(
+176:            return ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(directAgentContext);
+
+Architecture test covers SB010 contract:
+2356:        var hydrationAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchHydratedCandidateAssembler.cs"));
+2384:        Assert.Contains("ProcessDispatchHydratedCandidateAssembler", hydrationServiceSource, StringComparison.Ordinal);
+2389:    public void Process_core_contract_candidate_driver_readiness_SB010_INV_001_splits_hydration_query_artifact_preparation_and_assembly()
+2399:        var artifactPreparationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateArtifactInputPreparationService.cs"));
+2400:        var hydratedCandidateAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchHydratedCandidateAssembler.cs"));
+2403:        Assert.Contains("new ProcessDispatchCandidateArtifactInputPreparationService(", hydrationServiceSource, StringComparison.Ordinal);
+2404:        Assert.Contains("new ProcessDispatchHydratedCandidateAssembler(", hydrationServiceSource, StringComparison.Ordinal);
+2417:        Assert.Contains("internal sealed class ProcessDispatchCandidateArtifactInputPreparationService", artifactPreparationSource, StringComparison.Ordinal);
+2425:        Assert.Contains("internal sealed class ProcessDispatchHydratedCandidateAssembler", hydratedCandidateAssemblerSource, StringComparison.Ordinal);
+2452:        var hydrationAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchHydratedCandidateAssembler.cs"));
+2453:        var artifactPreparationSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchCandidateArtifactInputPreparationService.cs"));
+2502:        var hydrationAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchHydratedCandidateAssembler.cs"));
+2553:        var hydrationAssemblerSource = File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchHydratedCandidateAssembler.cs"));
+
+Anti-stub scan in SB010 production files:
+No matches.
+
+No Process Core or process driver API in production source:
+No matches.
+
+No UI/mobile proof path drift under active bundle proof:
+No matching proof paths.

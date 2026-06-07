@@ -1,0 +1,7 @@
+Command: dotnet test .\tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Debug --no-build --filter "FullyQualifiedName~Artifact_projection_boundary_keeps_dispatcher_nested_models_inside_snapshot_adapter|FullyQualifiedName~Process_core_contract_candidate_driver_readiness_SB022_INV_001_splits_projection_run_snapshot_from_execution_detail_observations" Working directory: C:\repositories\CanDoItAll Filtered test names: - Artifact_projection_boundary_keeps_dispatcher_nested_models_inside_snapshot_adapter - Process_core_contract_candidate_driver_readiness_SB022_INV_001_splits_projection_run_snapshot_from_execution_detail_observations 
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 38 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+
+Exit code: 0

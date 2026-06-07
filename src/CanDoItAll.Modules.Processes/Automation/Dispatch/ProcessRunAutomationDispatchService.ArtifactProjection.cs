@@ -28,6 +28,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
         var context = new ProcessArtifactProjectionContext(
             ProcessProjectionSnapshotBuilderAdapter.FromDispatchCandidate(candidate),
             ProcessProjectionSnapshotBuilderAdapter.FromExecutionDetail(detail),
+            ProcessProjectionSnapshotBuilderAdapter.FromExecutionDetailObservations(detail),
             responseText,
             workspaceRoot,
             workspaceScope,

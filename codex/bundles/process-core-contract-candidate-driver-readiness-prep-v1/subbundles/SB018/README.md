@@ -1,7 +1,7 @@
 # SB018 - Gate F - subprocess lifecycle/projection parity
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Prove child-run observation, capability-gap block, terminal mirror, completed projection, gap journal, and parent finalizer behavior are unchanged.
@@ -13,19 +13,24 @@ Prove child-run observation, capability-gap block, terminal mirror, completed pr
 - Runtime/service refactor only; browser validation is expected N/A.
 
 ## Prerequisites
-SB017 closed.
+- SB017 closed.
 
 ## Exact Source References
 
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModels.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteModelAdapters.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchRouteServices.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateHydrationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
-- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchDirectAgentRuntimeService.cs`
-- `tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeModels.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchSubprocessRuntimeService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPersistenceService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessRunObservationCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessCapabilityGapInspector.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessLifecycleRules.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionPlanBuilder.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionWriterCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessSubprocessProjectionGapJournalCoordinator.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerApplicationService.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchFinalizerInputs.cs`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
 
 
 ## Deliverables
@@ -35,10 +40,10 @@ SB017 closed.
 - Execution report row for `SB018`.
 
 ## Dependency Impact
-Downstream phases may proceed only after this closes.
+- Downstream phases may proceed only after this closes.
 
 ## Validation Depth
-Critical gate validation: build + unit/focused integration + source scans + manifest + semantic invariants.
+- Critical gate validation: build + unit/focused integration + source scans + manifest + semantic invariants.
 
 ## Implementation Steps
 1. Re-read the exact source references and update the local inventory for this slice.
@@ -60,25 +65,34 @@ Critical gate validation: build + unit/focused integration + source scans + mani
 - Do not leave adapter logic in route-facing services unless this subbundle explicitly owns a named edge adapter.
 
 ## Acceptance Checklist
-- [ ] Behavior preserved.
-- [ ] Source references inspected.
-- [ ] Tests/source scans updated.
-- [ ] No Core project.
-- [ ] No production driver API.
-- [ ] No UI/mobile proof drift.
-- [ ] Execution report row added.
+- [x] Behavior preserved.
+- [x] Source references inspected.
+- [x] Tests/source scans updated.
+- [x] No Core project.
+- [x] No production driver API.
+- [x] No UI/mobile proof drift.
+- [x] Execution report row added.
 
 ## Proof Required
-- Build/test transcript or explanation if proof is deferred to the next critical gate.
-- Source assertion transcript.
-- Anti-stub scan.
-- No-Core/no-driver scan.
+- Critical build proof: `bundle://proof/SB018/transcripts/critical-build.txt`.
+- Focused unit architecture proof: `bundle://proof/SB018/transcripts/subprocess-boundary-unit-tests.txt`.
+- Focused integration parity proof: `bundle://proof/SB018/transcripts/subprocess-lifecycle-projection-integration-tests.txt`.
+- Source assertion, anti-stub, and no-Core/no-driver proof: `bundle://proof/SB018/transcripts/source-assertions-and-scans.txt`.
+- Hash proof: `bundle://proof/SB018/transcripts/changed-file-hashes.txt`.
+- Critical manifest: `bundle://proof/SB018/manifest.md`.
+- Semantic invariants: `bundle://proof/SB018/semantic-invariants.md`.
 
 ## Browser Validation Logging
-N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
+- N/A - runtime/service refactor only. If any UI file changes unexpectedly, stop and reopen the scope.
 
 ## Progression Gate
-Do not proceed past this critical gate until all proof is complete.
+- Passed. SB019-SB033 may proceed only while subprocess lifecycle/projection/finalizer parity remains guarded by `SB018-INV-001`.
+
+## Closure Notes
+- `ProcessDispatchSubprocessRuntimeInput` gives subprocess orchestration a route-owned input boundary.
+- `ProcessSubprocessProjectionPersistenceService` owns completed-child projection queries, gap journaling, artifact writes, and `SaveChangesAsync`.
+- `ProcessDispatchSubprocessRuntimeService` still owns subprocess observation, start/block/mirror orchestration, capability-gap block routing, and parent finalizer dispatch.
+- Browser validation remains N/A because no UI files changed.
 
 ## Suggested Agent Prompt
 Implement `SB018` from `process-core-contract-candidate-driver-readiness-prep-v1`. Preserve runtime behavior. Keep this work module-local and do not introduce Process Core or production driver APIs.
