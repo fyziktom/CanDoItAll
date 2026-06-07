@@ -2,7 +2,7 @@
 
 ## Status
 
-Prepared.
+- Status: Completed
 
 ## Objective
 
@@ -20,11 +20,11 @@ Convert VerificationOnly, ManagerReadonly, and ExecutionCapableFuture mode seman
 
 ## Exact Source References
 
-- `/src/CanDoItAll.Processes.Core`
-- `/src/CanDoItAll.Modules.Processes/Automation/Dispatch`
-- `/tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
-- `/tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
-- `/codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1`
+- `repo://src/CanDoItAll.Processes.Core`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`
+- `repo://tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs`
+- `repo://codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1`
 
 ## Deliverables
 
@@ -35,7 +35,7 @@ Convert VerificationOnly, ManagerReadonly, and ExecutionCapableFuture mode seman
 
 ## Dependency Impact
 
-Standard. Downstream phases become invalid if this subbundle changes permission semantics, Core dependency hygiene, route order, driver API availability, or proof assumptions.
+- Standard. Downstream phases become invalid if this subbundle changes permission semantics, Core dependency hygiene, route order, driver API availability, or proof assumptions.
 
 ## Validation Depth
 
@@ -68,13 +68,13 @@ Standard. Downstream phases become invalid if this subbundle changes permission 
 
 ## Acceptance Checklist
 
-- [ ] Objective completed.
-- [ ] Behavior preserved.
-- [ ] No forbidden Core dependency.
-- [ ] No production driver API.
-- [ ] No UI/media drift.
-- [ ] Proof recorded.
-- [ ] Execution report row updated.
+- [x] Objective completed.
+- [x] Behavior preserved.
+- [x] No forbidden Core dependency.
+- [x] No production driver API.
+- [x] No UI/media drift.
+- [x] Proof recorded.
+- [x] Execution report row updated.
 
 ## Proof Required
 
@@ -86,11 +86,11 @@ Standard. Downstream phases become invalid if this subbundle changes permission 
 
 ## Browser Validation Logging
 
-N/A - backend/Core/service architecture only unless UI/media files unexpectedly change.
+- N/A - backend/Core/service architecture only unless UI/media files unexpectedly change.
 
 ## Progression Gate
 
-Do not proceed until the acceptance checklist is green and the execution report row is updated.
+- Do not proceed until the acceptance checklist is green and the execution report row is updated.
 
 ## Suggested Agent Prompt
 

@@ -1,0 +1,9 @@
+Command: PowerShell source scans for Core dependencies, production driver tokens, UI/media drift, anti-stub markers, and subbundle rows
+Exit code: 0
+PASS: Core forbidden dependency scan found no forbidden tokens.
+PASS: Production driver runtime token scan found no forbidden tokens.
+PASS: UI/media drift scan found no changed UI or media files outside the bundle.
+PASS: Anti-stub scan found no TODO comments or NotImplemented markers in production source.
+PASS: Subbundle gate rows are separate for SB001 through SB039.
+PASS: Public Core API snapshot guard is covered by Process_driver_prerequisites_SB006_INV_001_keep_core_public_api_governed_and_dependency_clean.
+PASS: Critical invariant IDs covered in focused test transcript: SB003_INV_001, SB006_INV_001, SB009_INV_001, SB012_INV_001, SB015_INV_001, SB018_INV_001, SB021_INV_001, SB024_INV_001, SB027_INV_001, SB030_INV_001, SB033_INV_001, SB036_INV_001, SB039_INV_001.

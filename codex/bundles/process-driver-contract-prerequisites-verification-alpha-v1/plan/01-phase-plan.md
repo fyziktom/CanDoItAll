@@ -1,5 +1,11 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute SB001 through SB039 in numeric order.
+- Stop after every critical gate until its proof manifest, semantic invariants, tests, scans, and execution-report rows pass closure.
+- Reopen the earliest failed prerequisite if a downstream phase weakens permission, audit, sandbox, Core boundary, or no-production-driver assumptions.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -131,4 +137,6 @@ Critical gates:
 
 ## Phase Gates
 
-Each critical gate must pass before downstream implementation starts. If a critical gate fails, downstream proof is invalid and execution must return to the failed phase.
+- Each critical gate must pass before downstream implementation starts.
+- If a critical gate fails, downstream proof is invalid and execution must return to the failed phase.
+- Every critical gate requires artifact-backed proof under `proof/SBxx/`, semantic invariants, source assertions, anti-stub audit, and execution-report gate rows.

@@ -1,0 +1,29 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~ProcessDriverContractPrerequisitesVerificationTests --logger console;verbosity=detailed
+Exit code: 0
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.27]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.43]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.46]   Starting:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB015_INV_001_keep_command_and_sandbox_policy_denial_only [15 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB033_INV_001_document_core_package_rules_without_broad_runtime_ownership [2 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB030_INV_001_defer_production_driver_contract_until_all_prerequisites_are_green [3 s]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB003_INV_001_preserve_baseline_branch_and_no_runtime_guardrails [4 s]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB012_INV_001_capture_audit_facts_and_redact_sensitive_values [9 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB009_INV_001_enforce_permission_modes_and_capability_denials [6 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB006_INV_001_keep_core_public_api_governed_and_dependency_clean [32 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB036_INV_001_keep_domain_driver_roadmap_consistent_with_deferred_runtime [1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB021_INV_001_make_dotnet_rust_transcript_lane_readonly [3 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB027_INV_001_keep_office_and_business_lanes_readonly [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB024_INV_001_keep_core_descriptor_consumers_allowlisted [19 ms]
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB018_INV_001_rehearse_verification_contract_without_production_runtime_api [3 s]
+[xUnit.net 00:00:15.73]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB039_INV_001_keep_final_report_rows_separate_and_source_free_of_stubs [3 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 13
+     Úspěšné: 13
+ Celkový čas: 16,5869 Sekundy
+

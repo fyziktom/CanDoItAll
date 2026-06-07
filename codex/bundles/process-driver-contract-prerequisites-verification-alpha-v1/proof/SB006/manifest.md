@@ -1,0 +1,27 @@
+# SB006 Proof Manifest
+
+- Subbundle: SB006
+- Status: Completed
+- Owned requirement: REQ-002 deterministic dependency-clean Core
+- Semantic invariant contract: bundle://proof/SB006/semantic-invariants.md
+- Changed file hashes:
+  - repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs SHA-256 FEEBCDEAC91B755517FD5B3E725B0FCCF02BAE64A397E8FC3A9BA28243E4A036
+  - bundle://architecture/06-production-driver-contract-decision-template.md SHA-256 C0FC2D392625FFB83BA25DC352E073134635557E84AB5BD8C189FDAF32DF4C23
+- Command transcripts:
+  - Passing transcript: bundle://proof/shared/transcripts/focused-prerequisite-tests.txt
+  - Build transcript: bundle://proof/shared/transcripts/solution-build.txt
+  - Full unit transcript: bundle://proof/shared/transcripts/full-unit-tests.txt
+  - Focused integration transcript: bundle://proof/shared/transcripts/focused-process-integration-tests.txt
+  - Source assertions transcript: bundle://proof/shared/transcripts/source-scans.txt
+- Failing-first transcript: N/A - no production behavior change; adversarial negative proof is implemented as policy-denial test cases in the passing transcript.
+- Test name: Process_driver_prerequisites_SB006_INV_001_keep_core_public_api_governed_and_dependency_clean
+- Source assertions:
+  - repo://src/CanDoItAll.Processes.Core remains dependency-clean.
+  - repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch keeps Core descriptor consumption in named adapters.
+  - repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs holds the executable prerequisite model.
+- Anti-stub audit: bundle://proof/shared/transcripts/source-scans.txt
+- Semantic positive proof: Process_driver_prerequisites_SB006_INV_001_keep_core_public_api_governed_and_dependency_clean in bundle://proof/shared/transcripts/focused-prerequisite-tests.txt
+- Red-team negative case: Rejects forbidden Core dependencies and missing governance language.
+- Downstream smoke proof: bundle://proof/shared/transcripts/focused-process-integration-tests.txt and bundle://proof/shared/transcripts/source-scans.txt
+- Report evidence: bundle://reviews/01-execution-report.md
+- Invariant ID: SB006_INV_001

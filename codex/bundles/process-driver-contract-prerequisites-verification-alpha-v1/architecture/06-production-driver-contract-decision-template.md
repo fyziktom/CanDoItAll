@@ -22,3 +22,10 @@ All must be true:
 ## Default
 
 Defer unless every prerequisite is green.
+
+## Current Bundle Decision
+
+- Decision: defer production driver contract implementation in this bundle.
+- Rationale: this bundle proves prerequisite permission, audit, sandbox, lane, and governance rules only.
+- Follow-up path: a later bundle may propose a contract-only production API after the completed-stage proof remains green.
+- Explicit non-approval: no production driver runtime, registry, dependency-injection registration, runtime selector, manager command, shell execution, Graph/Office runtime calls, workspace writes, storage writes, or process mutation is approved here.
