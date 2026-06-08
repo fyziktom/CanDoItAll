@@ -1,0 +1,1 @@
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-domain-gateway-adapters-stabilization-v1

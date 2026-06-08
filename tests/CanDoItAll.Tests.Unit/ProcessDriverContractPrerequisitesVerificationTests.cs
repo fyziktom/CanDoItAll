@@ -767,6 +767,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
             "ProcessDispatchRouteModelAdapters.cs",
             "ProcessDispatchRunClosureGuardService.cs",
             "ProcessDispatchStartTransitionPlanner.cs",
+            "ProcessDomainEvidenceReadOnlyAdapters.cs",
             "ProcessExecutionEvidenceDescriptorAdapter.cs",
             "ProcessFinalizerEvidenceDescriptorAdapter.cs",
             "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",

@@ -85,4 +85,4 @@ graph TD
 
 ## Phase Gates
 
-Every third subbundle is a critical gate and must include artifact-backed proof manifest, semantic-invariants file, changed-file hashes, command transcripts, source assertions, anti-stub audit, and red-team/adversarial negative proof.
+- Every third subbundle is a critical gate and must include artifact-backed proof manifest, semantic-invariants file, changed-file hashes, command transcripts, source assertions, anti-stub audit, and red-team/adversarial negative proof.

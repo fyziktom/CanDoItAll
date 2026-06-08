@@ -59,6 +59,21 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
         AssertNoRuntimeOrExternalAccessSamples(readme);
     }
 
+    [Fact]
+    public void Process_driver_package_readmes_SB042_INV_001_gateway_documents_typed_v1_migration_without_runtime_approval()
+    {
+        var readme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");
+
+        Assert.Contains("explicit v1.x entry point", readme, StringComparison.Ordinal);
+        Assert.Contains("VerifyArtifactEvidence", readme, StringComparison.Ordinal);
+        Assert.Contains("VerifyOfficeEvidence", readme, StringComparison.Ordinal);
+        Assert.Contains("VerifyBusinessAnalysis", readme, StringComparison.Ordinal);
+        Assert.Contains("AggregateObservations", readme, StringComparison.Ordinal);
+        Assert.Contains("Readiness Matrix", readme, StringComparison.Ordinal);
+        Assert.Contains("Do not introduce lane-name lookup", readme, StringComparison.Ordinal);
+        AssertNoRuntimeOrExternalAccessSamples(readme);
+    }
+
     private static void AssertNoRuntimeOrExternalAccessSamples(
         string readme)
     {

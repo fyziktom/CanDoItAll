@@ -1,9 +1,14 @@
 using System.Runtime.CompilerServices;
+using CanDoItAll.Processes.Core.Artifacts;
 using CanDoItAll.Processes.Drivers.Abstractions.Audit;
 using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Gateway;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
+using CanDoItAll.Processes.Drivers.ArtifactEvidence;
+using CanDoItAll.Processes.Drivers.BusinessAnalysis;
+using CanDoItAll.Processes.Drivers.ObservationAggregation;
+using CanDoItAll.Processes.Drivers.OfficeEvidence;
 using CanDoItAll.Processes.Drivers.RuntimeEvidence;
 using CanDoItAll.Processes.Drivers.TranscriptVerification;
 using CanDoItAll.Processes.Drivers.VerificationGateway;
@@ -12,8 +17,12 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessDriverVerificationGatewayTests
 {
+    private const string ArtifactEvidencePayload = """{"projection":[{"source":"file-write"}],"validation":[{"kind":"deliverable"}]}""";
+    private const string OfficeEvidencePayload = """{"items":[{"kind":"email","id":"message-1"},{"kind":"document","id":"document-1"}]}""";
+    private const string BusinessAnalysisPayload = """{"items":[{"kind":"deliverable","id":"analysis-1"},{"kind":"evidence","id":"evidence-1"}]}""";
+
     [Fact]
-    public void Process_driver_verification_gateway_SB020_INV_001_explicitly_runs_transcript_and_runtime_lanes_only()
+    public void Process_driver_verification_gateway_SB018_INV_001_explicitly_runs_all_approved_readonly_lanes()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
         var implementedLanes = gateway.ImplementedLanes.Select(descriptor => descriptor.Lane).ToArray();
@@ -21,31 +30,57 @@ public sealed class ProcessDriverVerificationGatewayTests
         Assert.Equal(
             [
                 ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification,
-                ProcessDriverVerificationGatewayLane.RuntimeEvidenceConsistency
+                ProcessDriverVerificationGatewayLane.RuntimeEvidenceConsistency,
+                ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency,
+                ProcessDriverVerificationGatewayLane.OfficeEvidenceRead,
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead
             ],
             implementedLanes);
 
         var transcriptResult = gateway.VerifyTranscript(CreateTranscriptRequest("Build succeeded."));
         var runtimeResult = gateway.VerifyRuntimeEvidence(CreateRuntimeEvidenceRequest());
+        var artifactResult = gateway.VerifyArtifactEvidence(CreateArtifactEvidenceRequest());
+        var officeResult = gateway.VerifyOfficeEvidence(CreateOfficeEvidenceRequest());
+        var businessResult = gateway.VerifyBusinessAnalysis(CreateBusinessAnalysisRequest());
+        var aggregateResult = gateway.AggregateObservations(new ProcessDriverObservationAggregationRequest(
+            [transcriptResult, runtimeResult, artifactResult, officeResult, businessResult],
+            DateTimeOffset.Parse("2026-06-08T16:00:00Z"),
+            "manager:gateway-aggregate"));
 
-        Assert.True(transcriptResult.Accepted);
-        Assert.Equal(ProcessDriverDenialReason.None, transcriptResult.DenialReason);
-        Assert.True(transcriptResult.NoMutationPerformed);
-        Assert.Equal(ProcessDriverContractVersion.Current, transcriptResult.ContractVersion);
+        AssertAcceptedReadonlyResponse(
+            transcriptResult,
+            ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification);
+        AssertAcceptedReadonlyResponse(
+            runtimeResult,
+            ProcessDriverCapabilityScopeKind.RuntimeFactsRead);
+        AssertAcceptedReadonlyResponse(
+            artifactResult,
+            ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead);
+        AssertAcceptedReadonlyResponse(
+            officeResult,
+            ProcessDriverCapabilityScopeKind.OfficeEvidenceRead);
+        AssertAcceptedReadonlyResponse(
+            businessResult,
+            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+        Assert.Equal(5, aggregateResult.ResponseCount);
+        Assert.Equal(5, aggregateResult.AcceptedCount);
+        Assert.Equal(0, aggregateResult.DeniedCount);
+        Assert.True(aggregateResult.AggregationMutationFree);
+        Assert.True(aggregateResult.AllResponsesMutationFree);
+        Assert.Equal(ProcessDriverContractVersion.Current, aggregateResult.ContractVersion);
         Assert.Contains(
-            transcriptResult.Diagnostics,
-            diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
-        Assert.True(runtimeResult.Accepted);
-        Assert.Equal(ProcessDriverDenialReason.None, runtimeResult.DenialReason);
-        Assert.True(runtimeResult.NoMutationPerformed);
-        Assert.Equal(ProcessDriverContractVersion.Current, runtimeResult.ContractVersion);
+            aggregateResult.LaneSummaries,
+            summary => summary.Lane == ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead);
         Assert.Contains(
-            runtimeResult.Diagnostics,
-            diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
+            aggregateResult.LaneSummaries,
+            summary => summary.Lane == ProcessDriverCapabilityScopeKind.OfficeEvidenceRead);
+        Assert.Contains(
+            aggregateResult.LaneSummaries,
+            summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB020_INV_002_source_has_no_dynamic_registry_selector_di_or_manager_surface()
+    public void Process_driver_verification_gateway_SB018_INV_002_source_has_no_dynamic_registry_selector_di_or_manager_surface()
     {
         var gatewayProject = ReadRepositoryFile(
             "src",
@@ -59,38 +94,51 @@ public sealed class ProcessDriverVerificationGatewayTests
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.csproj", gatewayProject, StringComparison.Ordinal);
         Assert.Contains("CanDoItAll.Processes.Drivers.TranscriptVerification.csproj", gatewayProject, StringComparison.Ordinal);
         Assert.Contains("CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj", gatewayProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.ArtifactEvidence.csproj", gatewayProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.OfficeEvidence.csproj", gatewayProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj", gatewayProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.ObservationAggregation.csproj", gatewayProject, StringComparison.Ordinal);
         Assert.DoesNotContain("<PackageReference", gatewayProject, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("VerifyTranscript", source, StringComparison.Ordinal);
         Assert.Contains("VerifyRuntimeEvidence", source, StringComparison.Ordinal);
+        Assert.Contains("VerifyArtifactEvidence", source, StringComparison.Ordinal);
+        Assert.Contains("VerifyOfficeEvidence", source, StringComparison.Ordinal);
+        Assert.Contains("VerifyBusinessAnalysis", source, StringComparison.Ordinal);
+        Assert.Contains("AggregateObservations", source, StringComparison.Ordinal);
         Assert.DoesNotContain("Verify(ProcessDriverVerificationGatewayLane", source, StringComparison.Ordinal);
         Assert.DoesNotContain("object ", source, StringComparison.Ordinal);
         AssertNoForbiddenRuntimeSurface(source + gatewayProject);
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB021_INV_001_rejects_side_effects_and_keeps_unimplemented_lanes_absent()
+    public void Process_driver_verification_gateway_SB018_INV_003_rejects_side_effects_across_all_domain_lanes()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
-        var implementedLanes = gateway.ImplementedLanes.Select(descriptor => descriptor.Lane).ToArray();
-
-        Assert.DoesNotContain(ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency, implementedLanes);
-        Assert.DoesNotContain(ProcessDriverVerificationGatewayLane.OfficeEvidenceRead, implementedLanes);
-        Assert.DoesNotContain(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, implementedLanes);
 
         foreach (var operation in ProcessDriverVerificationTestHarness.SideEffectOperations)
         {
-            var transcriptResult = gateway.VerifyTranscript(CreateTranscriptRequest(
-                "Build succeeded.",
-                requestedOperations: [operation]));
-            var runtimeResult = gateway.VerifyRuntimeEvidence(CreateRuntimeEvidenceRequest([operation]));
-
-            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(transcriptResult, operation);
-            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(runtimeResult, operation);
+            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(
+                gateway.VerifyTranscript(CreateTranscriptRequest(
+                    "Build succeeded.",
+                    requestedOperations: [operation])),
+                operation);
+            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(
+                gateway.VerifyRuntimeEvidence(CreateRuntimeEvidenceRequest([operation])),
+                operation);
+            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(
+                gateway.VerifyArtifactEvidence(CreateArtifactEvidenceRequest([operation])),
+                operation);
+            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(
+                gateway.VerifyOfficeEvidence(CreateOfficeEvidenceRequest(requestedOperations: [operation])),
+                operation);
+            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(
+                gateway.VerifyBusinessAnalysis(CreateBusinessAnalysisRequest(requestedOperations: [operation])),
+                operation);
         }
     }
 
     [Fact]
-    public void Process_driver_verification_gateway_SB027_INV_001_audit_redaction_and_no_mutation_cover_accepted_and_denied_responses()
+    public void Process_driver_verification_gateway_SB033_INV_001_audit_redaction_and_no_mutation_cover_accepted_and_denied_responses()
     {
         var gateway = ProcessDriverVerificationGateway.CreateDefault();
         var acceptedTranscript = gateway.VerifyTranscript(CreateTranscriptRequest("Build succeeded."));
@@ -100,6 +148,33 @@ public sealed class ProcessDriverVerificationGatewayTests
         var acceptedRuntime = gateway.VerifyRuntimeEvidence(CreateRuntimeEvidenceRequest());
         var deniedRuntime = gateway.VerifyRuntimeEvidence(CreateRuntimeEvidenceRequest(
             [ProcessDriverOperation.ExecuteCommand]));
+        var acceptedArtifact = gateway.VerifyArtifactEvidence(CreateArtifactEvidenceRequest());
+        var deniedArtifact = gateway.VerifyArtifactEvidence(CreateArtifactEvidenceRequest(
+            [ProcessDriverOperation.WriteArtifact]));
+        var acceptedOffice = gateway.VerifyOfficeEvidence(CreateOfficeEvidenceRequest());
+        var redactedOffice = gateway.VerifyOfficeEvidence(CreateOfficeEvidenceRequest(
+            items:
+            [
+                new OfficeEvidenceItem(
+                    OfficeEvidenceItemKind.EmailMessage,
+                    "message-redacted",
+                    string.Empty,
+                    string.Empty,
+                    [],
+                    null,
+                    "token=fixture-secret reviewer@example.invalid")
+            ]));
+        var acceptedBusiness = gateway.VerifyBusinessAnalysis(CreateBusinessAnalysisRequest());
+        var redactedBusiness = gateway.VerifyBusinessAnalysis(CreateBusinessAnalysisRequest(
+            items:
+            [
+                new BusinessAnalysisEvidenceItem(
+                    BusinessAnalysisEvidenceItemKind.Deliverable,
+                    "analysis-redacted",
+                    "Risk summary",
+                    "Assumption: fixture-secret reviewer@example.invalid. Contradiction: supplied evidence conflicts with the conclusion.",
+                    DateTimeOffset.Parse("2026-06-08T13:20:00Z"))
+            ]));
 
         AssertGatewayResponseEnvelope(
             acceptedTranscript,
@@ -129,6 +204,34 @@ public sealed class ProcessDriverVerificationGatewayTests
             "manager:runtime-readonly",
             ProcessDriverCapabilityScopeKind.RuntimeFactsRead,
             [ProcessDriverOperation.ExecuteCommand]);
+        AssertGatewayResponseEnvelope(
+            acceptedArtifact,
+            accepted: true,
+            ProcessDriverDenialReason.None,
+            "manager:artifact-readonly",
+            ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead,
+            ProcessDriverVerificationTestHarness.ArtifactEvidenceReadonlyOperations);
+        AssertGatewayResponseEnvelope(
+            deniedArtifact,
+            accepted: false,
+            ProcessDriverDenialReason.MutationDenied,
+            "manager:artifact-readonly",
+            ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead,
+            [ProcessDriverOperation.WriteArtifact]);
+        AssertGatewayResponseEnvelope(
+            acceptedOffice,
+            accepted: true,
+            ProcessDriverDenialReason.None,
+            "manager:office-readonly",
+            ProcessDriverCapabilityScopeKind.OfficeEvidenceRead,
+            ProcessDriverVerificationTestHarness.OfficeReadonlyOperations);
+        AssertGatewayResponseEnvelope(
+            acceptedBusiness,
+            accepted: true,
+            ProcessDriverDenialReason.None,
+            "manager:business-readonly",
+            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead,
+            ProcessDriverVerificationTestHarness.BusinessAnalysisReadonlyOperations);
         ProcessDriverVerificationTestHarness.AssertRedaction(
             deniedTranscript,
             ProcessDriverRedactionStatus.Redacted,
@@ -138,6 +241,34 @@ public sealed class ProcessDriverVerificationGatewayTests
             deniedTranscript,
             "fixture-secret",
             "reviewer@example.invalid");
+        ProcessDriverVerificationTestHarness.AssertDiagnosticsAndAuditDoNotContain(
+            redactedOffice,
+            "fixture-secret",
+            "reviewer@example.invalid");
+        ProcessDriverVerificationTestHarness.AssertDiagnosticsAndAuditDoNotContain(
+            redactedBusiness,
+            "fixture-secret",
+            "reviewer@example.invalid",
+            "conflicts with the conclusion");
+    }
+
+    private static void AssertAcceptedReadonlyResponse(
+        ProcessDriverVerificationResponse response,
+        ProcessDriverCapabilityScopeKind expectedLane)
+    {
+        Assert.True(response.Accepted);
+        Assert.Equal(ProcessDriverDenialReason.None, response.DenialReason);
+        Assert.True(response.NoMutationPerformed);
+        Assert.Equal(ProcessDriverContractVersion.Current, response.ContractVersion);
+        Assert.Contains(
+            response.Diagnostics,
+            diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
+        ProcessDriverVerificationTestHarness.AssertReadonlyAuditFacts(
+            response,
+            expectedLane == ProcessDriverCapabilityScopeKind.RuntimeFactsRead
+                ? ProcessDriverPermissionMode.ManagerReadonly
+                : ProcessDriverPermissionMode.VerificationOnly,
+            expectedLane);
     }
 
     private static void AssertGatewayResponseEnvelope(
@@ -170,7 +301,7 @@ public sealed class ProcessDriverVerificationGatewayTests
         string transcriptText,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null)
     {
-        var transcriptUri = "bundle://proof/SB020/transcripts/dotnet-transcript.txt";
+        var transcriptUri = "bundle://proof/SB018/transcripts/dotnet-transcript.txt";
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
             transcriptUri,
@@ -209,7 +340,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB020/transcripts/runtime-evidence.json",
+            "bundle://proof/SB018/transcripts/runtime-evidence.json",
             "runtime evidence gateway",
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
@@ -234,6 +365,158 @@ public sealed class ProcessDriverVerificationGatewayTests
             ProviderRepairDiagnostic: null,
             ProjectionSourceOrder: [],
             RequestedAt: DateTimeOffset.Parse("2026-06-08T12:00:00Z"));
+    }
+
+    private static ArtifactEvidenceVerificationRequest CreateArtifactEvidenceRequest(
+        IReadOnlyList<ProcessDriverOperation>? requestedOperations = null)
+    {
+        var projectionReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            "bundle://proof/SB018/artifact-projection-evidence.json",
+            ArtifactEvidencePayload,
+            ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
+        var validationReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            "bundle://proof/SB018/artifact-projection-validation.json",
+            ArtifactEvidencePayload,
+            ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation);
+        var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverVerificationTestHarness.CreateReadonlyScope(
+                ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead,
+                ProcessDriverPermissionMode.VerificationOnly),
+            [projectionReference, validationReference],
+            requestedOperations ?? ProcessDriverVerificationTestHarness.ArtifactEvidenceReadonlyOperations,
+            "manager:artifact-readonly");
+
+        return new ArtifactEvidenceVerificationRequest(
+            verificationRequest,
+            ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
+                projectionReference,
+                ArtifactEvidencePayload),
+            [CreateArtifactProjectionLineage()],
+            [ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite)],
+            [],
+            [CreateArtifactValidationRequirement()],
+            [],
+            [],
+            DateTimeOffset.Parse("2026-06-08T14:00:00Z"));
+    }
+
+    private static OfficeEvidenceVerificationRequest CreateOfficeEvidenceRequest(
+        IReadOnlyList<OfficeEvidenceItem>? items = null,
+        IReadOnlyList<ProcessDriverOperation>? requestedOperations = null)
+    {
+        var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
+            "bundle://proof/SB018/office-evidence.json",
+            OfficeEvidencePayload,
+            coreDescriptorFamily: null);
+        var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverVerificationTestHarness.CreateReadonlyScope(
+                ProcessDriverCapabilityScopeKind.OfficeEvidenceRead,
+                ProcessDriverPermissionMode.VerificationOnly),
+            [evidenceReference],
+            requestedOperations ?? ProcessDriverVerificationTestHarness.OfficeReadonlyOperations,
+            "manager:office-readonly");
+
+        return new OfficeEvidenceVerificationRequest(
+            verificationRequest,
+            ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(
+                evidenceReference,
+                OfficeEvidencePayload),
+            items ?? [CreateCompleteOfficeItem()],
+            DateTimeOffset.Parse("2026-06-08T12:10:00Z"));
+    }
+
+    private static BusinessAnalysisVerificationRequest CreateBusinessAnalysisRequest(
+        IReadOnlyList<BusinessAnalysisEvidenceItem>? items = null,
+        IReadOnlyList<ProcessDriverOperation>? requestedOperations = null)
+    {
+        var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
+            "bundle://proof/SB018/business-analysis.json",
+            BusinessAnalysisPayload,
+            coreDescriptorFamily: null);
+        var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverVerificationTestHarness.CreateReadonlyScope(
+                ProcessDriverCapabilityScopeKind.BusinessAnalysisRead,
+                ProcessDriverPermissionMode.VerificationOnly),
+            [evidenceReference],
+            requestedOperations ?? ProcessDriverVerificationTestHarness.BusinessAnalysisReadonlyOperations,
+            "manager:business-readonly");
+
+        return new BusinessAnalysisVerificationRequest(
+            verificationRequest,
+            ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(
+                evidenceReference,
+                BusinessAnalysisPayload),
+            items ?? [CreateCompleteBusinessItem(), CreateSupportingBusinessEvidenceItem()],
+            DateTimeOffset.Parse("2026-06-08T13:10:00Z"));
+    }
+
+    private static ProcessArtifactProjectionLineageDescriptor CreateArtifactProjectionLineage()
+    {
+        return ProcessArtifactProjectionEvidenceDescriptorRules.DescribeLineage(
+            ProcessCoreArtifactProjectionSourceKind.FileWrite,
+            sourceExecutionRunId: Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            recoveryExecutionRunId: null,
+            recoveredForExecutionRunId: null,
+            projectedExecutionRunId: Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+            workflowRunId: null,
+            workflowArtifactId: null,
+            subprocessRunId: null,
+            sourceArtifactId: Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+            reworkPacketId: null,
+            sourceExternalReferenceKey: "repo://tests/artifacts/release-notes.md",
+            contentHash: ProcessDriverEvidencePolicy.ComputeSha256("release notes"),
+            projectionIdentityHash: ProcessDriverEvidencePolicy.ComputeSha256("release notes projection"));
+    }
+
+    private static ProcessArtifactValidationRequirementDescriptor CreateArtifactValidationRequirement()
+    {
+        return new ProcessArtifactValidationRequirementDescriptor(
+            ExpectationId: Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+            ArtifactKind: ProcessCoreArtifactKind.Deliverable,
+            Title: "Release notes",
+            IsRequired: true,
+            ValidationRequirementSummary: "Runtime proof transcript required.",
+            AllowedFutureUsageSummary: "May be used by final closure.",
+            Mode: ProcessCoreArtifactExpectationMode.RuntimeProof);
+    }
+
+    private static OfficeEvidenceItem CreateCompleteOfficeItem()
+    {
+        return new OfficeEvidenceItem(
+            OfficeEvidenceItemKind.EmailMessage,
+            "message-1",
+            "Customer escalation follow-up",
+            "manager@example.invalid",
+            ["owner@example.invalid"],
+            DateTimeOffset.Parse("2026-06-08T12:00:00Z"),
+            "Follow-up message confirms the action item was assigned.");
+    }
+
+    private static BusinessAnalysisEvidenceItem CreateCompleteBusinessItem()
+    {
+        return new BusinessAnalysisEvidenceItem(
+            BusinessAnalysisEvidenceItemKind.Deliverable,
+            "analysis-1",
+            "Customer churn analysis",
+            "Requirement: explain churn risk. Deliverable text cites supplied evidence.",
+            DateTimeOffset.Parse("2026-06-08T13:00:00Z"));
+    }
+
+    private static BusinessAnalysisEvidenceItem CreateSupportingBusinessEvidenceItem()
+    {
+        return new BusinessAnalysisEvidenceItem(
+            BusinessAnalysisEvidenceItemKind.SupportingEvidence,
+            "evidence-1",
+            "Interview summary",
+            "Evidence: supplied customer feedback supports the churn analysis.",
+            DateTimeOffset.Parse("2026-06-08T13:05:00Z"));
     }
 
     private static void AssertNoForbiddenRuntimeSurface(string source)

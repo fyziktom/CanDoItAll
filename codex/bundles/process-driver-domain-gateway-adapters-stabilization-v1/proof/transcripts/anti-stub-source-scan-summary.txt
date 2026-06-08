@@ -1,0 +1,35 @@
+Command: rg -n forbidden driver package dependencies and side-effect hooks
+Exit code: 0
+Result: no forbidden driver-package dependencies or side-effect hooks found. Raw output: bundle://proof/source-scans/driver-packages-forbidden-dependencies-scan.txt
+
+Command: rg -n gateway and adapter runtime hooks
+Exit code: 0
+Result: no gateway/adapter runtime, DI, persistence, network, file, or process hooks found. Raw output: bundle://proof/source-scans/gateway-adapter-runtime-hook-scan.txt
+
+Command: rg -n unit skip ledger markers
+Exit code: 0
+Result: no unit Fact/Skip, Theory/Skip, or historical fixture quarantine marker found. Raw output: bundle://proof/source-scans/unit-skip-ledger-scan.txt
+
+Command: git status --short UI/media drift filter
+Exit code: 0
+Result: no UI or media files changed. Raw output: bundle://proof/source-scans/ui-media-drift-scan.txt
+
+Critical invariant IDs checked by anti-stub/source scans:
+SB003-INV-001
+SB006-INV-001
+SB009-INV-001
+SB012-INV-001
+SB015-INV-001
+SB018-INV-001
+SB021-INV-001
+SB024-INV-001
+SB027-INV-001
+SB030-INV-001
+SB033-INV-001
+SB036-INV-001
+SB039-INV-001
+SB042-INV-001
+SB045-INV-001
+SB048-INV-001
+SB051-INV-001
+SB054-INV-001

@@ -1,7 +1,7 @@
 # SB007 - Core public API snapshot refresh
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Implement the `Core public API snapshot refresh` slice in phase `P03 Core/API governance` while preserving read-only driver boundaries and stable Process Core.
@@ -35,10 +35,10 @@ Implement the `Core public API snapshot refresh` slice in phase `P03 Core/API go
 - Execution report row updated for this exact subbundle.
 
 ## Dependency Impact
-This subbundle may invalidate downstream phases if it changes package dependencies, public APIs, gateway lane semantics, evidence policy, or process adapter boundaries.
+- This subbundle may invalidate downstream phases if it changes package dependencies, public APIs, gateway lane semantics, evidence policy, or process adapter boundaries.
 
 ## Validation Depth
-Focused validation plus source scan. Downstream critical gate will aggregate proof.
+- Focused validation plus source scan. Downstream critical gate will aggregate proof.
 
 ## Implementation Steps
 1. Re-read live source before editing.
@@ -71,10 +71,10 @@ No runtime host, registry, selector, DI, manager command, scheduler/workflow hoo
 
 
 ## Browser Validation Logging
-N/A unless UI/media files change. If UI/media files change, fail and re-scope rather than adding small/medium/mobile proof.
+- N/A unless UI/media files change. If UI/media files change, fail and re-scope rather than adding small/medium/mobile proof.
 
 ## Progression Gate
-Do not proceed to downstream phases unless this subbundle row is passed and downstream dependencies are checked.
+- Do not proceed to downstream phases unless this subbundle row is passed and downstream dependencies are checked.
 
 ## Suggested Agent Prompt
 Implement `SB007 - Core public API snapshot refresh` from `process-driver-domain-gateway-adapters-stabilization-v1`. Preserve hard constraints. Use live source, tests, and proof artifacts; do not rely on report-only status.

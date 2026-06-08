@@ -232,8 +232,12 @@ public sealed class ProcessDriverObservationAggregationTests
     {
         var root = FindRepositoryRoot();
         var packageSource = ReadProjectSource(root);
-        var productionSourceOutsidePackage = ReadProductionSourceOutsideAggregation(root);
-        var productionProjectsOutsidePackage = ReadProductionProjectsOutsideAggregation(root);
+        var productionSourceOutsidePackage = ReadProductionSourceOutsideAggregation(
+            root,
+            CreateApprovedSourceConsumers());
+        var productionProjectsOutsidePackage = ReadProductionProjectsOutsideAggregation(
+            root,
+            CreateApprovedProjectConsumers());
 
         Assert.DoesNotContain(
             "CanDoItAll.Processes.Drivers.ObservationAggregation",
@@ -292,6 +296,7 @@ public sealed class ProcessDriverObservationAggregationTests
 
         Assert.Contains("CreateReadonlyList", packageSource, StringComparison.Ordinal);
         Assert.Contains("Array.AsReadOnly", packageSource, StringComparison.Ordinal);
+        AssertApprovedConsumerReferences(root);
     }
 
     private static ProcessDriverVerificationResponse CreateResponse(
@@ -445,7 +450,9 @@ public sealed class ProcessDriverObservationAggregationTests
                 .Select(File.ReadAllText));
     }
 
-    private static string ReadProductionSourceOutsideAggregation(string repositoryRoot)
+    private static string ReadProductionSourceOutsideAggregation(
+        string repositoryRoot,
+        IReadOnlySet<string> approvedConsumerFileNames)
     {
         var packageRoot = Path.GetFullPath(Path.Combine(
             repositoryRoot,
@@ -456,12 +463,15 @@ public sealed class ProcessDriverObservationAggregationTests
             Environment.NewLine,
             Directory
                 .EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.cs", SearchOption.AllDirectories)
-                .Where(path => IsRepositorySourceFileOutsidePackage(path, packageRoot))
+                .Where(path => IsRepositorySourceFileOutsidePackage(path, packageRoot) &&
+                    !approvedConsumerFileNames.Contains(Path.GetFileName(path)))
                 .Order(StringComparer.Ordinal)
                 .Select(File.ReadAllText));
     }
 
-    private static string ReadProductionProjectsOutsideAggregation(string repositoryRoot)
+    private static string ReadProductionProjectsOutsideAggregation(
+        string repositoryRoot,
+        IReadOnlySet<string> approvedProjectFileNames)
     {
         var packageRoot = Path.GetFullPath(Path.Combine(
             repositoryRoot,
@@ -472,9 +482,49 @@ public sealed class ProcessDriverObservationAggregationTests
             Environment.NewLine,
             Directory
                 .EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.csproj", SearchOption.AllDirectories)
-                .Where(path => IsRepositorySourceFileOutsidePackage(path, packageRoot))
+                .Where(path => IsRepositorySourceFileOutsidePackage(path, packageRoot) &&
+                    !approvedProjectFileNames.Contains(Path.GetFileName(path)))
                 .Order(StringComparer.Ordinal)
                 .Select(File.ReadAllText));
+    }
+
+    private static HashSet<string> CreateApprovedSourceConsumers()
+    {
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "ProcessDriverVerificationGateway.cs",
+            "ProcessDomainEvidenceReadOnlyAdapters.cs"
+        };
+    }
+
+    private static HashSet<string> CreateApprovedProjectConsumers()
+    {
+        return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "CanDoItAll.Modules.Processes.csproj",
+            "CanDoItAll.Processes.Drivers.VerificationGateway.csproj"
+        };
+    }
+
+    private static void AssertApprovedConsumerReferences(string repositoryRoot)
+    {
+        var gatewaySource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.Processes.Drivers.VerificationGateway",
+            "ProcessDriverVerificationGateway.cs"));
+        var adapterSource = File.ReadAllText(Path.Combine(
+            repositoryRoot,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessDomainEvidenceReadOnlyAdapters.cs"));
+
+        Assert.Contains("ProcessDriverObservationAggregator", gatewaySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverObservationAggregationRequest", gatewaySource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverObservationAggregator", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverObservationAggregationRequest", adapterSource, StringComparison.Ordinal);
     }
 
     private static bool IsRepositorySourceFileOutsidePackage(string path, string packageRoot)

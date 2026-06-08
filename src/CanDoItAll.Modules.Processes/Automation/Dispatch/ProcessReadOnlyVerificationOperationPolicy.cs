@@ -17,6 +17,24 @@ internal static class ProcessReadOnlyVerificationOperationPolicy
         ProcessDriverOperation.ReturnDiagnostics
     ];
 
+    public static IReadOnlyList<ProcessDriverOperation> ArtifactEvidenceDefaults { get; } =
+    [
+        ProcessDriverOperation.InspectExistingEvidence,
+        ProcessDriverOperation.ReturnDiagnostics
+    ];
+
+    public static IReadOnlyList<ProcessDriverOperation> OfficeEvidenceDefaults { get; } =
+    [
+        ProcessDriverOperation.InspectExistingEvidence,
+        ProcessDriverOperation.ReturnDiagnostics
+    ];
+
+    public static IReadOnlyList<ProcessDriverOperation> BusinessAnalysisDefaults { get; } =
+    [
+        ProcessDriverOperation.InspectExistingEvidence,
+        ProcessDriverOperation.ReturnDiagnostics
+    ];
+
     public static IReadOnlyList<ProcessDriverOperation> Normalize(
         IReadOnlyList<ProcessDriverOperation>? requestedOperations,
         IReadOnlyList<ProcessDriverOperation> defaultOperations)

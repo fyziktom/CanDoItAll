@@ -1,0 +1,2 @@
+Command: rg -n 'CanDoItAll\.Processes\.Drivers' src/CanDoItAll.Processes.Core -g '*.cs' -g '*.csproj'
+PASS: no Process Core references to process driver packages.

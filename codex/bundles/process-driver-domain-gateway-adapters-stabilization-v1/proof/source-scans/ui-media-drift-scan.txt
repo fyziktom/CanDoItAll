@@ -1,0 +1,80 @@
+Command: git status --short; filter changed files for UI/media extensions
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/plan/01-phase-plan.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB001/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB002/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB003/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB004/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB005/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB006/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB007/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB008/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB009/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB010/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB011/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB012/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB013/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB014/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB015/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB016/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB017/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB018/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB019/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB020/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB021/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB022/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB023/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB024/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB025/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB026/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB027/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB028/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB029/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB030/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB031/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB032/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB033/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB034/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB035/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB036/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB037/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB038/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB039/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB040/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB041/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB042/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB043/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB044/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB045/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB046/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB047/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB048/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB049/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB050/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB051/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB052/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB053/README.md
+ M codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/subbundles/SB054/README.md
+ M src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessReadOnlyVerificationOperationPolicy.cs
+ M src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj
+ M src/CanDoItAll.Processes.Drivers.VerificationGateway/CanDoItAll.Processes.Drivers.VerificationGateway.csproj
+ M src/CanDoItAll.Processes.Drivers.VerificationGateway/ProcessDriverVerificationGateway.cs
+ M tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj
+ M tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs
+ M tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+ M tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs
+ M tests/CanDoItAll.Tests.Unit/ProcessDriverObservationAggregationTests.cs
+ M tests/CanDoItAll.Tests.Unit/ProcessDriverPackageReadmeSamplesTests.cs
+ M tests/CanDoItAll.Tests.Unit/ProcessDriverVerificationGatewayTests.cs
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/analysis/01-current-state.md
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/inputs/00-original-request.md
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/inputs/01-source-artifacts.md
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/inputs/02-structured-input.md
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/proof/
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/shared-prompts/implementation-prompt.md
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/shared-prompts/qa-prompt.md
+?? codex/bundles/process-driver-domain-gateway-adapters-stabilization-v1/traceability/01-requirement-traceability.md
+?? src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDomainEvidenceReadOnlyAdapters.cs
+?? src/CanDoItAll.Processes.Drivers.VerificationGateway/README.md
+?? tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs
+PASS: no UI or media files changed.

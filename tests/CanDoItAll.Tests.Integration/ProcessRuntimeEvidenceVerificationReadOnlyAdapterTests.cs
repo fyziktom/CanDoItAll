@@ -120,6 +120,7 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
             "Dispatch");
         var allowedDriverConsumerFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            "ProcessDomainEvidenceReadOnlyAdapters.cs",
             "ProcessReadOnlyVerificationOperationPolicy.cs",
             "ProcessRuntimeEvidenceVerificationObservationMapper.cs",
             "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
@@ -141,6 +142,10 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         var combinedAllowedSource = string.Join(Environment.NewLine, allowedSources);
 
         Assert.Contains("CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj", moduleProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.ArtifactEvidence.csproj", moduleProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.OfficeEvidence.csproj", moduleProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj", moduleProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.ObservationAggregation.csproj", moduleProject, StringComparison.Ordinal);
         Assert.Empty(unapprovedDriverConsumers);
         Assert.DoesNotContain("IServiceCollection", combinedAllowedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AddScoped", combinedAllowedSource, StringComparison.Ordinal);

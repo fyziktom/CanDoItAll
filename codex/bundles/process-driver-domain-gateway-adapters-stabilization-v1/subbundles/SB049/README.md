@@ -1,7 +1,7 @@
 # SB049 - Manifest/semantic matrix audit
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Implement the `Manifest/semantic matrix audit` slice in phase `P17 Red-team and proof repair` while preserving read-only driver boundaries and stable Process Core.
@@ -35,10 +35,10 @@ Implement the `Manifest/semantic matrix audit` slice in phase `P17 Red-team and 
 - Execution report row updated for this exact subbundle.
 
 ## Dependency Impact
-This subbundle may invalidate downstream phases if it changes package dependencies, public APIs, gateway lane semantics, evidence policy, or process adapter boundaries.
+- This subbundle may invalidate downstream phases if it changes package dependencies, public APIs, gateway lane semantics, evidence policy, or process adapter boundaries.
 
 ## Validation Depth
-Focused validation plus source scan. Downstream critical gate will aggregate proof.
+- Focused validation plus source scan. Downstream critical gate will aggregate proof.
 
 ## Implementation Steps
 1. Re-read live source before editing.
@@ -71,10 +71,10 @@ No runtime host, registry, selector, DI, manager command, scheduler/workflow hoo
 
 
 ## Browser Validation Logging
-N/A unless UI/media files change. If UI/media files change, fail and re-scope rather than adding small/medium/mobile proof.
+- N/A unless UI/media files change. If UI/media files change, fail and re-scope rather than adding small/medium/mobile proof.
 
 ## Progression Gate
-Do not proceed to downstream phases unless this subbundle row is passed and downstream dependencies are checked.
+- Do not proceed to downstream phases unless this subbundle row is passed and downstream dependencies are checked.
 
 ## Suggested Agent Prompt
 Implement `SB049 - Manifest/semantic matrix audit` from `process-driver-domain-gateway-adapters-stabilization-v1`. Preserve hard constraints. Use live source, tests, and proof artifacts; do not rely on report-only status.

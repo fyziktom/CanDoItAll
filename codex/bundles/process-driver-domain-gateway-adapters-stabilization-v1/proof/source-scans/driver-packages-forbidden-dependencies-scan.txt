@@ -1,0 +1,2 @@
+Command: rg -n 'CanDoItAll\.Modules\.|CanDoItAll\.Infrastructure|CanDoItAll\.AgentFramework|Microsoft\.EntityFrameworkCore|DbContext|IServiceCollection|AddScoped|AddSingleton|HttpClient|System\.Diagnostics\.Process|Process\.Start|File\.|Directory\.|SaveChanges' src -g 'CanDoItAll.Processes.Drivers.*/**/*.cs' -g 'CanDoItAll.Processes.Drivers.*/**/*.csproj' -g '!**/bin/**' -g '!**/obj/**'
+PASS: no forbidden driver-package dependencies or side-effect hooks found.

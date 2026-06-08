@@ -1,7 +1,7 @@
 # SB015 - Gate E no generic runtime host proof
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Implement the `Gate E no generic runtime host proof` slice in phase `P05 Explicit gateway expansion foundation` while preserving read-only driver boundaries and stable Process Core.
@@ -35,10 +35,10 @@ Implement the `Gate E no generic runtime host proof` slice in phase `P05 Explici
 - Execution report row updated for this exact subbundle.
 
 ## Dependency Impact
-This subbundle may invalidate downstream phases if it changes package dependencies, public APIs, gateway lane semantics, evidence policy, or process adapter boundaries.
+- This subbundle may invalidate downstream phases if it changes package dependencies, public APIs, gateway lane semantics, evidence policy, or process adapter boundaries.
 
 ## Validation Depth
-Critical foundation. Must include semantic adequacy proof, adversarial negative proof, semantic positive proof, anti-stub audit, and source-backed transcripts.
+- Critical foundation. Must include semantic adequacy proof, adversarial negative proof, semantic positive proof, anti-stub audit, and source-backed transcripts.
 
 ## Implementation Steps
 1. Re-read live source before editing.
@@ -71,10 +71,10 @@ No runtime host, registry, selector, DI, manager command, scheduler/workflow hoo
 - Production Behavior Artifact Matrix with producer, consumer, lifecycle, and negative-test citations.
 
 ## Browser Validation Logging
-N/A unless UI/media files change. If UI/media files change, fail and re-scope rather than adding small/medium/mobile proof.
+- N/A unless UI/media files change. If UI/media files change, fail and re-scope rather than adding small/medium/mobile proof.
 
 ## Progression Gate
-Do not proceed to downstream phases unless this subbundle row is passed and downstream dependencies are checked.
+- Do not proceed to downstream phases unless this subbundle row is passed and downstream dependencies are checked.
 
 ## Suggested Agent Prompt
 Implement `SB015 - Gate E no generic runtime host proof` from `process-driver-domain-gateway-adapters-stabilization-v1`. Preserve hard constraints. Use live source, tests, and proof artifacts; do not rely on report-only status.
