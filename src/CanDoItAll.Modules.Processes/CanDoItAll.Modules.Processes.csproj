@@ -32,6 +32,7 @@
     <ProjectReference Include="..\CanDoItAll.Modules.CrmHr\CanDoItAll.Modules.CrmHr.csproj" />
     <ProjectReference Include="..\CanDoItAll.Modules.Projects\CanDoItAll.Modules.Projects.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.RuntimeEvidence\CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />

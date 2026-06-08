@@ -5545,6 +5545,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "ProcessDispatchStartTransitionPlanner.cs",
             "ProcessExecutionEvidenceDescriptorAdapter.cs",
             "ProcessFinalizerEvidenceDescriptorAdapter.cs",
+            "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
             "ProcessRetryDiagnosticDescriptorAdapter.cs",
             "ProcessRunAutomationDispatchService.Concurrency.cs",
             "ProcessSubprocessArtifactSourceResolver.cs",

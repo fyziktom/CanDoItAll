@@ -1,0 +1,12 @@
+Command: PowerShell fake-proof audit: verify critical manifests, semantic invariants, transcript references, SB030 failing-first proof, and non-production N/A exemptions
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-08T11:48:48.2766989Z
+EndTimeUtc: 2026-06-08T11:48:48.4137945Z
+ExitCode: 0
+Output:
+Fake-proof red-team audit passed.
+Critical manifests checked: 18
+Required manifest tokens checked: changed-file hashes, anti-stub audit, closure proof index
+SB030 failing-first and passing transcripts checked
+Execution report bundle:// proof paths checked
+

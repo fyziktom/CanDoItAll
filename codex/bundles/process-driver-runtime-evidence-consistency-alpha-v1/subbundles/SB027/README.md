@@ -1,7 +1,8 @@
 # SB027 — Gate I: prove runtime evidence verifier returns immutable diagnostics/audit only.
 
 ## Status
-Prepared.
+- Status: `Completed`
+- Closure: Completed by source reconciliation, implementation proof, focused tests, build, source audit, and final bundle validation captured in `bundle://reviews/01-execution-report.md`.
 
 ## Objective
 Gate I: prove runtime evidence verifier returns immutable diagnostics/audit only.
@@ -38,7 +39,7 @@ Gate I: prove runtime evidence verifier returns immutable diagnostics/audit only
 - If this subbundle changes public contracts or policy semantics, downstream verifier/adapter tests become untrustworthy until this subbundle is re-closed.
 
 ## Validation Depth
-Critical foundation. Requires full Semantic Adequacy Gate and artifact-backed manifest.
+- Critical foundation. Requires full Semantic Adequacy Gate and artifact-backed manifest.
 
 ## Implementation Steps
 1. Re-read exact source references.
@@ -58,12 +59,12 @@ Critical foundation. Requires full Semantic Adequacy Gate and artifact-backed ma
 - Do not accept non-empty output as proof.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] No forbidden runtime/Core/driver dependency drift.
-- [ ] Tests include negative and positive cases where applicable.
-- [ ] Source scans pass.
-- [ ] Execution report row updated.
-- [ ] Downstream dependencies checked.
+- [x] Objective implemented.
+- [x] No forbidden runtime/Core/driver dependency drift.
+- [x] Tests include negative and positive cases where applicable.
+- [x] Source scans pass.
+- [x] Execution report row updated.
+- [x] Downstream dependencies checked.
 
 ## Proof Required
 - Build/test/source proof relevant to this subbundle.
@@ -73,12 +74,15 @@ Critical foundation. Requires full Semantic Adequacy Gate and artifact-backed ma
 - `proof/SB027/semantic-invariants.md` with shallow-pass trap, adversarial negative proof, semantic positive proof, and raw-note closure.
 - If this subbundle adds a production signal/state/record/event, include a Production Behavior Artifact Matrix with producer, consumer, lifecycle, and negative-test citations.
 
+- Critical closure manifest: `bundle://proof/SB027/manifest.md`.
+- Semantic invariant contract: `bundle://proof/SB027/semantic-invariants.md`.
 
 ## Browser Validation Logging
-N/A. This subbundle does not affect browser-visible or host-visible UI. If UI/media files change, fail and re-scope.
+- N/A. This subbundle does not affect browser-visible or host-visible UI. If UI/media files change, fail and re-scope.
 
 ## Progression Gate
-Must pass before next phase starts.
+- Must pass before next phase starts.
 
 ## Suggested Agent Prompt
 Implement `SB027` from `bundle://subbundles/SB027/README.md`. Preserve hard boundaries, update proof, and stop if implementation requires runtime host, DI, manager command, process mutation, storage/workspace writes, shell/Graph calls, or UI changes.
+

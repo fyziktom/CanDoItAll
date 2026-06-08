@@ -1,0 +1,8 @@
+Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1 --stage completed
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-08T11:30:25.0611785Z
+ExitCode: 1
+Output:
+Bundle validation failed:
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1\reviews\01-execution-report.md: raw note closure proof must cite a command, test, file, gate row, or proof artifact: Preserve quality while moving faster | Solved | Build, focused tests, broad filtered unit tests, source audit, manifests, and validators cited in this report
+

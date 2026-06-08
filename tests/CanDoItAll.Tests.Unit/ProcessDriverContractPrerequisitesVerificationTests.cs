@@ -769,6 +769,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
             "ProcessDispatchStartTransitionPlanner.cs",
             "ProcessExecutionEvidenceDescriptorAdapter.cs",
             "ProcessFinalizerEvidenceDescriptorAdapter.cs",
+            "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
             "ProcessRetryDiagnosticDescriptorAdapter.cs",
             "ProcessRunAutomationDispatchService.Concurrency.cs",
             "ProcessSubprocessArtifactSourceResolver.cs",

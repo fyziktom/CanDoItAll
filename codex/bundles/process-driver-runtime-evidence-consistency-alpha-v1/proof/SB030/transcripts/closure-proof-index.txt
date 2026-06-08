@@ -1,0 +1,12 @@
+Command: PowerShell closure proof index for SB030
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-08T11:29:55.6188258Z
+ExitCode: 0
+Output:
+Invariant ID: SB030_INV_001
+Test name: SB030_INV_001
+Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs
+Passing proof: bundle://proof/SB030/transcripts/passing-runtime-evidence-adapter-after-architecture-guard.txt
+Build proof: bundle://proof/shared/transcripts/solution-build-no-restore.txt
+Anti-stub audit: bundle://proof/shared/transcripts/source-boundary-and-anti-stub-audit.txt
+Downstream check: gate rows in bundle://reviews/01-execution-report.md are passed.

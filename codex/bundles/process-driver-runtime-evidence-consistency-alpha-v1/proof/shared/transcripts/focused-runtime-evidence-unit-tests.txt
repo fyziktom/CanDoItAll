@@ -1,0 +1,10 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~ProcessDriverRuntimeEvidenceConsistencyAlphaTests -v minimal
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-08T11:08:09.4575852Z
+ExitCode: 0
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 219 ms - CanDoItAll.Tests.Unit.dll (net10.0)
+

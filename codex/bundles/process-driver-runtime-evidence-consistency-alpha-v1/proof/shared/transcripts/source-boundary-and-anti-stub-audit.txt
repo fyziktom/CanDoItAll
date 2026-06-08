@@ -1,0 +1,12 @@
+Command: PowerShell source boundary and anti-stub audit for process driver runtime evidence bundle
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-08T11:48:13.5347099Z
+EndTimeUtc: 2026-06-08T11:48:14.0616030Z
+ExitCode: 0
+Output:
+Core reverse dependency tokens checked: CanDoItAll.Processes.Drivers., CanDoItAll.Modules., CanDoItAll.Infrastructure, CanDoItAll.AgentFramework, Microsoft.EntityFrameworkCore, DbContext, IServiceCollection, ProcessDriverRegistry, ProcessDriverRuntimeSelector, ProcessDriverHost
+Driver forbidden tokens checked: CanDoItAll.Modules., CanDoItAll.Infrastructure, CanDoItAll.AgentFramework, Microsoft.EntityFrameworkCore, DbContext, IServiceCollection, AddScoped, AddSingleton, System.Diagnostics.Process, Process.Start, File., Directory., HttpClient, ProcessDriverRegistry, ProcessDriverRuntimeSelector, ProcessDriverManagerCommand, ProcessDriverHost
+Allowed process dispatch driver consumers: ProcessReadOnlyVerificationOperationPolicy.cs, ProcessRuntimeEvidenceVerificationObservationMapper.cs, ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs, ProcessTranscriptVerificationObservationMapper.cs, ProcessTranscriptVerificationPreflightPolicy.cs, ProcessTranscriptVerificationReadOnlyAdapter.cs
+Changed files checked for UI/media drift: 154
+No violations found.
+

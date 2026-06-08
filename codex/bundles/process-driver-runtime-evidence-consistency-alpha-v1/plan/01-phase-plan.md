@@ -103,4 +103,7 @@ graph TD
 
 ## Phase Gates
 
-Every third subbundle is a phase gate. Downstream phases must not start until the gate is green. Reopen downstream phases if an earlier gate later fails source scans, architecture tests, or behavior parity.
+- Every third subbundle is a phase gate.
+- Downstream phases must not start until the gate is green.
+- Reopen downstream phases if an earlier gate later fails source scans, architecture tests, or behavior parity.
+

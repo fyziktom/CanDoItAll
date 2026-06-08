@@ -1,0 +1,12 @@
+Command: PowerShell closure proof index for SB051
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-08T11:29:55.6743494Z
+ExitCode: 0
+Output:
+Invariant ID: SB051_INV_001
+Test name: SB051_INV_001
+Source assertion: repo://codex/bundles/process-driver-runtime-evidence-consistency-alpha-v1/reviews/01-execution-report.md
+Passing proof: bundle://proof/shared/transcripts/unit-tests-excluding-stale-architecture-fixtures.txt
+Build proof: bundle://proof/shared/transcripts/solution-build-no-restore.txt
+Anti-stub audit: bundle://proof/shared/transcripts/source-boundary-and-anti-stub-audit.txt
+Downstream check: gate rows in bundle://reviews/01-execution-report.md are passed.
