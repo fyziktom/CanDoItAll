@@ -1,9 +1,0 @@
-Command: SB14 source assertion summary for materialization parity
-Invariant ID: SB14-INV-001
-Source assertion: ProcessMissingUpstreamArtifactMaterializationFingerprint creates stable fingerprints across input order changes.
-Source assertion: ProcessMissingUpstreamArtifactRerunRequestBuilder preserves target agent, dependency step, origin run step id, and directive inputs.
-Source assertion: ProcessMissingUpstreamArtifactMaterializationCoordinator keeps materialization orchestration explicit and delegates journaling/rerun calls through injected functions.
-Test assertion: ProcessMissingUpstreamArtifactMaterializationFingerprint_SB09_INV_001_is_order_stable_and_target_sensitive passed in the focused integration slice.
-Test assertion: ProcessMissingUpstreamArtifactRerunRequestBuilder_SB12_INV_001_preserves_rerun_fields_and_directive_scope passed in the focused integration slice.
-Exit code: 0
-

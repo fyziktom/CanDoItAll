@@ -1,8 +1,0 @@
-SB012 failing-first diagnostic descriptor gap
-Invariant IDs: SB012-DIAGNOSTIC-001; SB012-BOUNDARY-001
-Before SB011/SB012 closure, the bundle had no Core diagnostics descriptor file, no retry diagnostic descriptor adapter, and no public API entries under CanDoItAll.Processes.Core.Diagnostics.
-Missing required paths:
-- repo://src/CanDoItAll.Processes.Core/Diagnostics/ProcessRetryDiagnosticDescriptors.cs
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRetryDiagnosticDescriptorAdapter.cs
-Expected result: fail until retry/provider/no-progress facts are descriptor-owned, adapter-owned, source-asserted, and covered by architecture and behavior tests.
-ExitCode: 1

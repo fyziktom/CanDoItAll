@@ -1,1 +1,0 @@
-Command: powershell -NoProfile -Command "if (Test-Path src/CanDoItAll.Processes.Drivers.Abstractions/CanDoItAll.Processes.Drivers.Abstractions.csproj) { exit 0 } else { exit 1 }" WorkingDirectory: C:\repositories\CanDoItAll RunLabel: SB006_INV_001 failing-first contract project absent before implementation ExitCode: 1 Output:  Invariant: SB006_INV_001

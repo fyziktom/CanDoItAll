@@ -1,5 +1,0 @@
-Command: rg -n 'EntityFrameworkCore|DbContext|IServiceProvider|ILogger|System.IO|File\\.|Directory\\.|Workspace|Storage|AgentFramework|IProcessDriver|ProcessDriver' src/CanDoItAll.Processes.Core -g '*.cs'
-ExitCode: 0
-RawExitCode: 1
-Result: Pass: no forbidden matches.
-Output:

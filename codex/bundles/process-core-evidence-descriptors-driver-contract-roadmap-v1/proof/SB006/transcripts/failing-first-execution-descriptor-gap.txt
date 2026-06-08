@@ -1,8 +1,0 @@
-SB006 failing-first execution descriptor gap
-Invariant IDs: SB006-EXEC-001; SB006-BOUNDARY-001
-Before SB005/SB006 closure, the bundle had no Core execution descriptor file, no execution descriptor adapter, and no public API entries under CanDoItAll.Processes.Core.Execution.
-Missing required paths:
-- repo://src/CanDoItAll.Processes.Core/Execution/ProcessExecutionEvidenceDescriptors.cs
-- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionEvidenceDescriptorAdapter.cs
-Expected result: fail until the descriptor contract is implemented, adapter-owned, source-asserted, and covered by architecture tests.
-ExitCode: 1

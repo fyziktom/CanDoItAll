@@ -1,8 +1,0 @@
-SB006-EXEC-001 changed file SHA-256 hashes
-7C87FB9798B3E19F44FE13CA8EBA78A71B817CA2D05DFAF3CB84140A1E05BB24 repo://src/CanDoItAll.Processes.Core/Execution/ProcessExecutionEvidenceDescriptors.cs
-F03698FC62199A2558275B10DECA4A3729D5BC59CF3D06351A0AAB2152318134 repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionEvidenceDescriptorAdapter.cs
-B26987A148BB542F80F3633CD0FB3832E6CF2DECA1E403B98A48A1A1B6021B95 repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Execution.cs
-5CCEBC3D9E0D0B7A705743F668B1B2CF40610EE56D5CC3EDF355EA9AECEA7040 repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessObservedExecutionOutcomeBuilder.cs
-EFC9269496889A633F20608036F83687D50040F08B4A7B43D14F97CDE54EEF94 repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
-0CA9A93CD4F3B016F25281708B571B75B8A777AC41FADC8DC83714D2A3749FD1 repo://codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1/architecture/05-core-consumer-allowed-call-site-map.md
-ExitCode: 0

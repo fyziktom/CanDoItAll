@@ -1,1 +1,0 @@
-Process Core project has no PackageReference and only references CanDoItAll.Processes.Contracts among local projects.

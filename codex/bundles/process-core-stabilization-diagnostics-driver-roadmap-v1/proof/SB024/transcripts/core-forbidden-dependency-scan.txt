@@ -1,1 +1,0 @@
-No forbidden module, infrastructure, AgentFramework, EF, storage, workspace path, file IO, driver, dispatcher, service provider, or logger tokens were found in Process Core source.

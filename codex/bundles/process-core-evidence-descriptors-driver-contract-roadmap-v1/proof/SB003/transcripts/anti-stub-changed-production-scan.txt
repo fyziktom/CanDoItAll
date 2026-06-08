@@ -1,5 +1,0 @@
-Command: rg -n 'TODO|NotImplemented|NotImplementedException' src/CanDoItAll.AgentFramework.Persistence/Validation/SandboxWorkspaceDocumentInvariantValidator.cs src/CanDoItAll.AgentFramework.Maf/Runtime/Workflows/MafWorkflowEventNormalizer.cs src/CanDoItAll.Modules.AgentFramework/Providers/WorkspaceBackedAgentProviderProfileRegistry.cs
-ExitCode: 0
-RawExitCode: 1
-Result: Pass: no forbidden matches.
-Output:

@@ -1,2 +1,0 @@
-Command: rg TODO/NotImplemented/stub in changed production source
-ExitCode: 1

@@ -1,7 +1,0 @@
-SB025-SB030 source assertions passed.
-Driver contract proposal remains docs/tests-only.
-Verification-only, manager-readonly, and execution-capable future gates are documented without production API shape.
-.NET and Rust lanes define read-only evidence schemas and deny shell execution driver behavior.
-Office and business-analysis lanes define read-only evidence schemas and deny Office API integration, connector/Graph runtime work, and business-record mutation.
-Production source remains free of process-helper-driver APIs, registries, selectors, manager commands, and DI hooks.
-No UI/media files changed.

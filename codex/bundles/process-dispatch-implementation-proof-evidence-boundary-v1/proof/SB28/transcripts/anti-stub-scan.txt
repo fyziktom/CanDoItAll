@@ -1,7 +1,0 @@
-Command: $paths = @("src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationStackRules.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessConcreteProductPathRules.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationReceiptTimeline.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDotNetHostEvidenceRules.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCarriedImplementationProofRules.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProofBridges.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs", "src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs"); $matches = rg -n "TODO|NotImplemented|throw new NotImplementedException|fixture-specific" $paths; if ($LASTEXITCODE -eq 1) { "No stubs, TODO markers, NotImplemented placeholders, or fixture-specific hooks found in implementation proof boundary files."; exit 0 }; exit $LASTEXITCODE
-Invariant IDs: SB04-IPBOUNDARY-001; SB08-IPBOUNDARY-001; SB13-IPBOUNDARY-001; SB18-IPBOUNDARY-001; SB23-IPBOUNDARY-001; SB27-IPBOUNDARY-001; SB28-IPBOUNDARY-001
-Working directory context only: C:\repositories\CanDoItAll
---- Output ---
-No stubs, TODO markers, NotImplemented placeholders, or fixture-specific hooks found in implementation proof boundary files.
---- End Output ---
-ExitCode: 0

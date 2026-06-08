@@ -1,5 +1,0 @@
-Command: rg forbidden Process Core and production driver API tokens under src/CanDoItAll.Modules.Processes/Automation/Dispatch
-ExitCode: 0
-WorkingDirectory: C:\repositories\CanDoItAll
-
-No matches found; scan passed.

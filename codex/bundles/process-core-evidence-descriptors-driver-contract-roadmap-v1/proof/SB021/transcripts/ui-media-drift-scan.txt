@@ -1,3 +1,0 @@
-UI/media drift scan
-ChangedUiOrMediaFileCount: 0
-Result: Passed - no UI or media files changed in SB019-SB021.

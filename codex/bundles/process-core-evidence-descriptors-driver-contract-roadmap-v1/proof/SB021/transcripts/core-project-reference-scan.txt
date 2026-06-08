@@ -1,7 +1,0 @@
-Core project reference scan
-Project: src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj
-ProjectReferenceCount: 1
-PackageReferenceCount: 0
-ForbiddenProjectReferenceCount: 0
-ExpectedProjectReference: ..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj
-Result: Passed - Core references only Processes.Contracts and has no PackageReference.

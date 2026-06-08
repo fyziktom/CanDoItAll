@@ -1,4 +1,0 @@
-Command: rg -n "using (DispatchCandidate|DispatchExecutionOutcome|ProcessStepDispatchClaim) =|ProcessRunAutomationDispatchService\.(DispatchCandidate|DispatchExecutionOutcome|ProcessStepDispatchClaim)|\bDispatchCandidate\s+(candidate|refreshedCandidate)|\bDispatchExecutionOutcome\s+(executionOutcome|recoveryOutcome)|\bProcessStepDispatchClaim\s+dispatchClaim" route-facing dispatch files
-ExitCode: 1
-Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
-Result: adversarial negative source scan found no dispatcher nested candidate, outcome, or claim type usage in route-facing model, snapshot, context, facet, handler, factory, or narrow service files.

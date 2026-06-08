@@ -1,7 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter FullyQualifiedName~ProcessRunAutomationDispatchServiceTests
-Exit code: 0
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:   540, Přeskočeno:     0, Celkem:   540, Doba trvání: 13 s - CanDoItAll.Tests.Integration.dll (net10.0)
-

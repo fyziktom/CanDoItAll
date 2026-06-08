@@ -1,7 +1,0 @@
-Command: rg -n 'IProcessDriverPack|IProcessDriverRegistry|ProcessDriverRegistry|IProcessHelperDriver|IProcessSwDevHelperDriver|IProcessDotNetSwDevHelperDriver|MapProcessDriver' src -g '*.cs' -g '*.csproj' -g '*.props' -g '*.targets' -g '*.slnx' -g '!**/bin/**' -g '!**/obj/**'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: driver-token-scan.txt
-ExitCode: 0
-Output:
-No production process-driver API, registry, DI, or mapper tokens found in src.
-SB030-INV-001 SB033-INV-001 SB036-INV-001

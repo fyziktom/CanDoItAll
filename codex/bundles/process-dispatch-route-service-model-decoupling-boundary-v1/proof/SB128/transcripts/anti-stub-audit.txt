@@ -1,4 +1,0 @@
-Command: rg -n "TODO|NotImplementedException|throw new Exception" touched route boundary files
-ExitCode: 1
-Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
-Result: anti-stub audit found no TODO, NotImplementedException, or throw new Exception markers in touched route boundary production files.

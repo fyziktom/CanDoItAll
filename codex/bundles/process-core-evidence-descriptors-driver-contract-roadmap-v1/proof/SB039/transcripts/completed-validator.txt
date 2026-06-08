@@ -1,2 +1,0 @@
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-core-evidence-descriptors-driver-contract-roadmap-v1
-ExitCode: 0

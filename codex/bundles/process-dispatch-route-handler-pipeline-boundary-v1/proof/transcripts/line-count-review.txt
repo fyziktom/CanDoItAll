@@ -1,9 +1,0 @@
-Command: PowerShell line count review for Dispatch.cs, RouteExecution.cs, and RouteHandlers.cs
-Line count review
-=================
-repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs 798 lines
-repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs 129 lines
-repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteHandlers.cs 473 lines
-
-ExitCode: 0
-

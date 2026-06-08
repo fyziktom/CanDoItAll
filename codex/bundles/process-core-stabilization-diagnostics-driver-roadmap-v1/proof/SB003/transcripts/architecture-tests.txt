@@ -1,6 +1,0 @@
-Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests -v:minimal
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:    84, Přeskočeno:     0, Celkem:    84, Doba trvání: 1 m 9 s - CanDoItAll.Tests.Unit.dll (net10.0)
-ExitCode: 0

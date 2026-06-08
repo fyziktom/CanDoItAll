@@ -1,3 +1,0 @@
-codex už to dodělal. je to pushnuté ve větevi maf-processes-refactor.
-
-Review the branch, verify whether the previous route-handler facet implementation work is complete, and prepare the next bundle. Continue gradual isolation toward a future process core, but do not rush Process Core unless it is clearly safe. Preserve all existing functionality. Keep work as refactoring and architecture hardening only. Some services remain large and should be decomposed through abstractions that can later be used to isolate concrete areas. Plan enough phases and refactor gates so Codex cannot simplify the work. Do not produce small/medium/mobile proof; this is runtime/service work and PC/large screen UI proof is N/A unless UI is touched.

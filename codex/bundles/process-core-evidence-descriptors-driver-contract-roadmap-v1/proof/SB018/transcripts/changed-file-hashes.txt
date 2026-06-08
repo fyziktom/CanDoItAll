@@ -1,3 +1,0 @@
-SHA-256 71E60955C752E4786A195BC022108DCFB13C4DC9105F7A7EDF5F60BEC059DD8B repo://codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/06-core-adapter-ownership-map.md
-SHA-256 0C73C7FFD5F15281F04C0C8011AEFCF2AE5D14BEFF6BD04C97EC6CB68C7827EF repo://codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1/architecture/05-core-consumer-allowed-call-site-map.md
-SHA-256 496A478F3DB29FF4B6BEBB50762205091A9AEC082A859BAD70D2C79FF0D8B9F6 repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs

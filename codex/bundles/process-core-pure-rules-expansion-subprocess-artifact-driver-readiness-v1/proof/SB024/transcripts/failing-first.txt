@@ -1,7 +1,0 @@
-﻿Command: git grep -n "ProcessCoreSubprocessArtifactSourceResolver_SB009_INV_001" HEAD -- tests/CanDoItAll.Tests.Integration/ProcessRunAutomationDispatchServiceTests.cs
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB024 failing-first absence check
-ExitCode: 1
-Output:
-Invariant: SB024-INV-001
-No matching baseline implementation found in HEAD.

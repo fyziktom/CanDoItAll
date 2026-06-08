@@ -1,7 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage completed --repo-root C:\repositories\CanDoItAll C:\repositories\CanDoItAll\codex\bundles\process-dispatch-implementation-proof-evidence-boundary-v1
-Invariant IDs: SB04-IPBOUNDARY-001; SB08-IPBOUNDARY-001; SB13-IPBOUNDARY-001; SB18-IPBOUNDARY-001; SB23-IPBOUNDARY-001; SB27-IPBOUNDARY-001; SB28-IPBOUNDARY-001
-Working directory context only: C:\repositories\CanDoItAll
---- Output ---
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-implementation-proof-evidence-boundary-v1
---- End Output ---
-ExitCode: 0

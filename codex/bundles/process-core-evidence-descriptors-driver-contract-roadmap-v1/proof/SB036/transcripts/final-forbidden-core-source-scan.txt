@@ -1,4 +1,0 @@
-Final forbidden Core source scan
-Pattern: CanDoItAll\.Modules\.|CanDoItAll\.Infrastructure|CanDoItAll\.AgentFramework|EntityFramework|DbContext|IStorage|WorkspacePathResolver|WorkspaceScopeDescriptor|\bFile\.|\bDirectory\.|FileInfo|DirectoryInfo|IServiceProvider|IServiceScopeFactory|IProcessDriver|ProcessDriver|DriverPack|DriverRegistry|RuntimeSelector|ManagerCommand|Blazor|RazorComponent
-MatchCount: 0
-Result: Passed - no forbidden side-effect, driver, module, infrastructure, AgentFramework, storage, filesystem, service-provider, or UI tokens in Core source.

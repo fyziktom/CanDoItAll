@@ -1,4 +1,0 @@
-SB009-BOUNDARY-001 core finalizer descriptor forbidden dependency scan
-No forbidden dependency, module finalizer, block-cause module enum, or side-effect tokens found in repo://src/CanDoItAll.Processes.Core/Finalization/ProcessFinalizerEvidenceDescriptors.cs.
-SB009-FINALIZER-001 finalizer descriptors remain pure Core data/rules.
-ExitCode: 0

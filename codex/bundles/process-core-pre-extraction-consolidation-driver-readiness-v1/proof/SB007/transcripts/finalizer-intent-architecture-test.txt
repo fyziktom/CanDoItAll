@@ -1,8 +1,0 @@
-Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Debug --no-build --filter 'FullyQualifiedName~Process_core_contract_candidate_driver_readiness_SB007_INV_001_uses_route_finalizer_input_models|FullyQualifiedName~Process_core_contract_candidate_driver_readiness_SB008_INV_001_moves_dispatcher_aliases_to_finalizer_adapter'
-Working directory: C:\repositories\CanDoItAll
-Run label: SB007 finalizer intent architecture tests
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 23 ms - CanDoItAll.Tests.Unit.dll (net10.0)
-Exit code: 0

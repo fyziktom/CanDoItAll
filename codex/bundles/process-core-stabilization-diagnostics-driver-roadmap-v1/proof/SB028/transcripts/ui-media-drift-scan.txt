@@ -1,3 +1,0 @@
-No UI, mobile, browser, or media drift was detected in changed files for SB025-SB030.
-Checked extensions: .razor, .css, .scss, .js, .ts, .tsx, .jsx, image/media extensions.
-Checked path tokens: mobile, small-screen, medium-screen, phone, tablet.

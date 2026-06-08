@@ -1,7 +1,0 @@
-Command: adversarial negative proof for shallow broad-host implementation
-ExitCode: 1
-WorkingDirectory: C:\repositories\CanDoItAll
-
-SB04-INV-001 SB08-INV-001 SB12-INV-001 SB16-INV-001 SB20-INV-001 SB24-INV-001 SB28-INV-001 SB32-INV-001 SB36-INV-001 SB40-INV-001 SB44-INV-001 SB48-INV-001 SB52-INV-001 SB56-INV-001 SB60-INV-001 SB64-INV-001 SB68-INV-001 SB72-INV-001
-Adversarial shallow case: retaining IProcessArtifactProjectionHost or DispatcherArtifactProjectionHost would fail the no-broad-host source scan and the updated architecture tests.
-This transcript intentionally records the rejected shallow case as non-zero proof; the passing scan is bundle://proof/shared/transcripts/source-scan-no-broad-host.txt.

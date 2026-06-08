@@ -1,6 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1 --stage completed
-Working directory context only: repo://
-Start time: 2026-06-07T21:27:46.6999871-04:00
---- Output ---
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1
-Exit code: 0

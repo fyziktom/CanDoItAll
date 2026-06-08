@@ -1,5 +1,0 @@
-Command: rg TODO/stub/NotImplemented tokens in touched production projection files
-ExitCode: 0
-WorkingDirectory: C:\repositories\CanDoItAll
-
-No matches found; scan passed.

@@ -1,5 +1,0 @@
-Command: rg removed broad host and stale host usage in projection flow
-ExitCode: 0
-WorkingDirectory: C:\repositories\CanDoItAll
-
-No matches found; scan passed.

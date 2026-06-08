@@ -1,8 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~Process_dispatch_claim_route_gate_c_SB12"
-Exit code: 0
-Invariant IDs: SB12_INV_001, SB12_INV_002
-
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 37 ms - CanDoItAll.Tests.Unit.dll (net10.0)

@@ -1,4 +1,0 @@
-Generated public API surface transcript.
-Output: codex\bundles\process-core-evidence-descriptors-driver-contract-roadmap-v1\proof\SB021\transcripts\current-core-public-api-surface-api-stability.txt
-LineCount: 487
-ExitCode: 0

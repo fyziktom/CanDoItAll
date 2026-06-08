@@ -1,5 +1,0 @@
-Driver readonly/proposal document scan for SB030
-DocumentCount: 6
-ForbiddenDocMarkerCount: 0
-MissingRequiredMarkerCount: 0
-Result: Passed - proposal documents remain readonly and contain required permission, denial, schema, and defer-decision markers.

@@ -1,5 +1,0 @@
-Command: SB16 adversarial red-team trap
-
-Expected failing-first outcome: nonzero when Process Core or driver API source is supplied to the final red-team gate.
-Simulated Process Core/driver API source rejected by final red-team gate.
-Exit code: 1

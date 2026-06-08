@@ -1,1 +1,0 @@
-No CanDoItAll.Processes.Core global using exists in CanDoItAll.Modules.Processes.

@@ -1,4 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-contract-prerequisites-verification-alpha-v1 --profile initiative --stage prepared --repo-root C:\repositories\CanDoItAll
-Exit code: 0
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-contract-prerequisites-verification-alpha-v1
-

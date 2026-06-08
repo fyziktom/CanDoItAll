@@ -1,3 +1,0 @@
-Command: Select-String post-fix build for ProcessRunAutomationDispatchService.DotnetRunCleanup.cs CA1416; pass when absent
-Post-fix build contains no process cleanup CA1416 warnings.
-ExitCode: 0

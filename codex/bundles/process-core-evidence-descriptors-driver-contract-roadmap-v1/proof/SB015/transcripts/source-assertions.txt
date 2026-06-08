@@ -1,6 +1,0 @@
-Projection evidence descriptor source assertions passed.
-Core descriptor file: src/CanDoItAll.Processes.Core/Artifacts/ProcessArtifactProjectionEvidenceDescriptors.cs
-Module adapter file: src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessArtifactProjectionEvidenceDescriptorAdapter.cs
-Adapter-owned call sites: ProcessArtifactProjectionLineageBuilder, ProcessArtifactProjectionOrchestrator, ProcessProviderNativeBrowserOutputFacts.
-Shared source/producers mappings moved to ProcessCoreArtifactModelAdapters to avoid duplicate mapping tables.
-No production driver API, registry, DI selector, EF, storage, file IO, or workspace path logic was added to Core.

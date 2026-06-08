@@ -1,9 +1,0 @@
-Command: SB13 finalizer context factory anti-stub and scope scan
-
-Factory SHA-256: 09B4F23CCD914EC47531F22E20895C6FFEA7D1BDA5E2F21C13915FF1EEE3833F
-Dispatch SHA-256: 1CABCB3E22F5899CCD6511CDCA279C622F294B4429FDA368C80CA0EF50CD0982
-Tests SHA-256: F50BF7BDBA41E30EF6E5BB57247E5FDB51C8981BCA217A535CC62C7469B4C6E8
-
-Result: Passed
-Finalizer context factory owns route-specific context construction and contains no finalizer/transition/EF/execution side effects.
-Exit code: 0

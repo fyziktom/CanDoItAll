@@ -1,4 +1,0 @@
-Command: source assertion for SB17-INV-001 final red-team closure
-Invariant ID: SB17-INV-001
-Source assertion: final red-team scans found no production dispatch Process Core or driver API identifiers, no side-effect tokens in candidate factory/context helpers, no TODO/NotImplemented in new helpers, and no prohibited viewport proof paths.
-ExitCode: 0

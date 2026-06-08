@@ -1,5 +1,0 @@
-Final Core project reference scan
-ProjectReferenceCount: 1
-PackageReferenceCount: 0
-ForbiddenProjectReferenceCount: 0
-Result: Passed - Core references only Processes.Contracts and has no package references.

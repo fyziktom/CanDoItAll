@@ -1,9 +1,0 @@
-Command: SB12 failing-first route gate against HEAD source shape
-
-Expected failing-first outcome: nonzero before SB09-SB11 helper movement.
-HEAD lacks ProcessDispatchRoutePlanner.cs.
-HEAD Dispatch.cs does not delegate pre-execution route decisions to ProcessDispatchRoutePlanner.
-HEAD integration tests lack SB11 route planner semantic proof.
-HEAD integration tests lack SB09 guard lease proof.
-HEAD integration tests lack SB10 start transition proof.
-Exit code: 1

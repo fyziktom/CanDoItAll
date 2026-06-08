@@ -1,8 +1,0 @@
-Command: SB08 failing-first helper parity gate against HEAD baseline
-Working directory: C:\repositories\CanDoItAll
-Start: 2026-06-05T07:07:20.2814781-04:00
-Exit code: 1
-Output:
-SB08_INV_001 failed as expected: HEAD baseline has no ProcessAutomationExecutionRunSelection helper file.
-SB08_INV_002 failed as expected: HEAD baseline wrappers do not delegate to ProcessAutomationExecutionRunSelection.
-SB08_INV_002 failed as expected: HEAD baseline keeps duplicated private blocking selection logic in Concurrency.cs.

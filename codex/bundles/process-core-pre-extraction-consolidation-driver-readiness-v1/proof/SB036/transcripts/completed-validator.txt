@@ -1,1 +1,0 @@
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-core-pre-extraction-consolidation-driver-readiness-v1

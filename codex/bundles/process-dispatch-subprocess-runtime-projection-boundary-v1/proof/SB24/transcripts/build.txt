@@ -1,4 +1,0 @@
-Command: dotnet build .\CanDoItAll.slnx --no-restore
-ExitCode: 0
-Result: Build succeeded with 0 warnings and 0 errors.
-Invariant IDs: SB24-INV-001

@@ -1,9 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --no-restore
-Working directory: C:\repositories\CanDoItAll
-Start time: 2026-06-07T21:12:23.2995974-04:00
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:  1073, Přeskočeno:     0, Celkem:  1073, Doba trvání: 4 m 12 s - CanDoItAll.Tests.Unit.dll (net10.0)
-Invariant ID: SB003_INV_001 SB006_INV_001 SB009_INV_001 SB012_INV_001 SB015_INV_001 SB018_INV_001 SB021_INV_001 SB024_INV_001 SB027_INV_001 SB030_INV_001 SB033_INV_001 SB036_INV_001 SB039_INV_001 SB042_INV_001 SB045_INV_001 SB048_INV_001
-Exit code: 0

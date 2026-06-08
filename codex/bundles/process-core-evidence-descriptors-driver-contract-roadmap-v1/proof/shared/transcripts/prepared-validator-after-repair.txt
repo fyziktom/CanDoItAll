@@ -1,4 +1,0 @@
-Command: python 'C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py' 'C:\repositories\CanDoItAll\codex\bundles\process-core-evidence-descriptors-driver-contract-roadmap-v1' --profile initiative --stage prepared --repo-root 'C:\repositories\CanDoItAll' --bundle-root 'C:\repositories\CanDoItAll\codex\bundles\process-core-evidence-descriptors-driver-contract-roadmap-v1'
-ExitCode: 0
-Output:
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-core-evidence-descriptors-driver-contract-roadmap-v1

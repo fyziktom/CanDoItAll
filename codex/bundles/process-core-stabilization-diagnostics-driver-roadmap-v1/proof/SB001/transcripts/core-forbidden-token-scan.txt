@@ -1,2 +1,0 @@
-Command: rg -n forbidden tokens in Process Core
-ExitCode: 1

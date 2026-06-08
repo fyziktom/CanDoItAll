@@ -1,4 +1,0 @@
-Command: dotnet build 'C:\repositories\CanDoItAll\CanDoItAll.slnx' --no-restore
-ExitCode: 0
-Invariant ID: ROUTE-SERVICE-MODEL-DECOUPLING-INV-001
-Result: solution build completed successfully. Existing warnings remained in unrelated files; no errors were produced.

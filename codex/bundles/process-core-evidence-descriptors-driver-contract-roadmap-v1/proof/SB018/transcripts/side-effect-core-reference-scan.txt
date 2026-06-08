@@ -1,1 +1,0 @@
-No direct Core references found in side-effect dispatch files outside the explicit adapter/route allow-list.

@@ -1,8 +1,0 @@
-Command: $proofRoot = "codex\bundles\process-dispatch-artifact-satisfaction-evidence-boundary-v1\proof"
-$matches = rg -n "mobile|small-screen|small_screen|medium-screen|medium_screen" $proofRoot --glob "!**/no-prohibited-viewport-proof-scan.txt"
-if ($LASTEXITCODE -eq 0) { $matches; exit 1 }
-if ($LASTEXITCODE -eq 1) { "No prohibited viewport proof artifacts or text under bundle proof."; exit 0 }
-exit $LASTEXITCODE
-Exit code: 0
-Output:
-No prohibited viewport proof artifacts or text under bundle proof.

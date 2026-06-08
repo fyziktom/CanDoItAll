@@ -1,9 +1,0 @@
-Command: git diff --name-only + git ls-files --others --exclude-standard | match '\.(razor|css|scss|js|ts|tsx|jsx|png|jpg|jpeg|gif|webp|svg)$|mobile|small-screen|small_screen|medium-screen|medium_screen|phone|tablet'
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: no-ui-media-drift-scan.txt
-ExitCode: 0
-Output:
-No changed UI/media/mobile/browser proof files found.
-Changed file count checked: 65
-Raw path list intentionally omitted to avoid secret-scanner false positives from folder slugs.
-SB003-INV-001 SB006-INV-001 SB009-INV-001 SB012-INV-001 SB015-INV-001 SB018-INV-001 SB021-INV-001 SB024-INV-001 SB027-INV-001 SB030-INV-001 SB033-INV-001 SB036-INV-001

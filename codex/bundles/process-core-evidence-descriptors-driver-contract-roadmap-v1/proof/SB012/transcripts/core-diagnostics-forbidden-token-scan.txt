@@ -1,4 +1,0 @@
-SB012-BOUNDARY-001 core diagnostics forbidden dependency scan
-No forbidden dependency, AgentFramework, module retry/provider, persistence, or side-effect tokens found in repo://src/CanDoItAll.Processes.Core/Diagnostics/ProcessRetryDiagnosticDescriptors.cs.
-SB012-DIAGNOSTIC-001 retry/provider/no-progress descriptors remain immutable Core data/rules.
-ExitCode: 0

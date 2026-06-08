@@ -1,6 +1,0 @@
-Command: source assertion for SB16-INV-001 runtime smoke and line-count gate
-Invariant ID: SB16-INV-001
-Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs line count is 1750 after extraction, down from SB01 baseline 1785.
-Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Cooperation.cs line count is 69 after extraction, down from SB01 baseline 261.
-Source assertion: full solution build transcript reports ExitCode: 0.
-ExitCode: 0

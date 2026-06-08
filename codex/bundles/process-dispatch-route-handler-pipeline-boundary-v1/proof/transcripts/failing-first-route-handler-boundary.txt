@@ -1,3 +1,0 @@
-Command: git show HEAD:src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.RouteExecution.cs | Select-String -Pattern 'CreateClaimedDispatchRouteHandlerPipeline' -Quiet; exit 1 when pre-refactor route body lacks handler pipeline
-MatchedHandlerPipeline: 
-ExitCode: 1

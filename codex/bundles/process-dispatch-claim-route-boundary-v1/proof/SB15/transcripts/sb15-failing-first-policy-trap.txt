@@ -1,5 +1,0 @@
-Command: SB15 adversarial proof-policy trap
-
-Expected failing-first outcome: nonzero when a prohibited proof path is supplied to the policy gate.
-Simulated prohibited viewport proof path rejected: proof/SB15/mobile-screenshot.png
-Exit code: 1

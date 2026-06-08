@@ -1,8 +1,0 @@
-Command: SB16 source assertion summary for runtime smoke
-Invariant ID: SB16-INV-001
-Source assertion: dotnet build passed after ProcessDispatchPreExecutionGuardHandler was wired into Dispatch.cs.
-Source assertion: Focused unit and integration dispatch guard/materialization slices passed after facade wiring.
-Source assertion: Runtime/service refactor did not touch UI files.
-Source assertion: Anti-stub scan found no placeholder implementation in touched production helpers.
-Exit code: 0
-

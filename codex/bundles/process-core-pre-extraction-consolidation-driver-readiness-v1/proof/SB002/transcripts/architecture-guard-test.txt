@@ -1,8 +1,0 @@
-Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --configuration Debug --no-build --filter FullyQualifiedName~Process_core_pre_extraction_consolidation_SB002_INV_001
-Working directory: C:\repositories\CanDoItAll
-Run label: SB002-INV-001 architecture guard rerun after report-row repair
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 3 s - CanDoItAll.Tests.Unit.dll (net10.0)
-Exit code: 0

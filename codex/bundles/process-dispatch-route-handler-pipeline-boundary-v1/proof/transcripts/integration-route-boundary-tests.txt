@@ -1,8 +1,0 @@
-Command: dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessDispatchRoutePlanner_SB11_INV_001|FullyQualifiedName~ProcessDispatchRoutePlanner_SB11_INV_002|FullyQualifiedName~ProcessDispatchRoutePipeline_SB38_INV_001|FullyQualifiedName~ProcessDispatchDatabaseRequirementBlocker_SB05_INV_001|FullyQualifiedName~DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer" --logger trx
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-dispatch-route-handler-pipeline-boundary-v1\evidence\test-results\lucys_LUCYSPOWER_2026-06-06_08_11_50.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 33 ms - CanDoItAll.Tests.Integration.dll (net10.0)
-ExitCode: 0
-

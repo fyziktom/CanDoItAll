@@ -1,9 +1,0 @@
-SB006 semantic closure
-SB006-EXEC-001 PASS: Core execution descriptors model run, attempt, and carried-proof facts; dispatcher outcome construction now consumes descriptor adapter output without changing the underlying post-attempt facts.
-SB006-BOUNDARY-001 PASS: Core forbidden dependency scan and adapter confinement scan both passed with ExitCode: 0.
-SB006-DRIVER-001 PASS: production process-driver token scan passed with ExitCode: 0 and did not introduce driver registry, pack, or selector APIs.
-SB006-UI-001 PASS: UI/media drift scan passed with ExitCode: 0.
-SB006-STUB-001 PASS: changed production anti-stub audit passed with ExitCode: 0.
-Architecture tests: 94 passed in bundle://proof/SB006/transcripts/execution-descriptor-architecture-tests-after-fix.txt.
-Focused integration tests: 7 passed in bundle://proof/SB006/transcripts/execution-descriptor-focused-integration-tests.txt.
-ExitCode: 0

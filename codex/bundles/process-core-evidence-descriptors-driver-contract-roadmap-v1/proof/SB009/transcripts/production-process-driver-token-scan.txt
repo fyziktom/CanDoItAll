@@ -1,4 +1,0 @@
-SB009-DRIVER-001 production process-driver token scan
-No production process-driver registry, pack, or driver interface tokens found in touched Core/dispatch production paths.
-SB009-FINALIZER-001 finalizer descriptors do not introduce production driver APIs.
-ExitCode: 0

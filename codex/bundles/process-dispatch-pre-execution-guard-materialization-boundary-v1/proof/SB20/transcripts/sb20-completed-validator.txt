@@ -1,5 +1,0 @@
-Command: python 'codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py' --stage completed --repo-root 'C:\repositories\CanDoItAll' --bundle-root 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-pre-execution-guard-materialization-boundary-v1' 'C:\repositories\CanDoItAll\codex\bundles\process-dispatch-pre-execution-guard-materialization-boundary-v1'
-Working directory: repo://
-
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-dispatch-pre-execution-guard-materialization-boundary-v1
-Exit code: 0

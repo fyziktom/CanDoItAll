@@ -1,7 +1,0 @@
-SB021 proof sanity check
-Generated: 2026-06-06T19:05:36.8374455-04:00
-Result: PASS
-Semantic labels verified: 10
-Manifest test names verified: 13
-Bundle refs verified: 12
-Repo refs verified: 22

@@ -1,3 +1,0 @@
-ED142B0B7C94A498BD8A045D76DFE8BA0C613FCB6C43434D15975D2CA9C5252A codex/bundles/process-core-evidence-descriptors-driver-contract-roadmap-v1/architecture/07-public-api-owner-classification.md
-496A478F3DB29FF4B6BEBB50762205091A9AEC082A859BAD70D2C79FF0D8B9F6 tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
-434E2BA364B7D655CFDF52EDE5D1B1B04D4A163AE2CC398AC1951031FAA4A17A src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj

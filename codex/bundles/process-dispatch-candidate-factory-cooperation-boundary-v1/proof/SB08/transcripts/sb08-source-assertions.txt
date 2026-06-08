@@ -1,9 +1,0 @@
-Command: source assertion for SB08-INV-001 and SB08-INV-002 route parity
-Invariant ID: SB08-INV-001
-Invariant ID: SB08-INV-002
-Test name: Process_dispatch_candidate_factory_gate_b_SB08_INV_001_owns_all_dispatch_candidate_construction
-Test name: ProcessDispatchCandidateFactory_CreateSubprocessCandidate_preserves_current_route_defaults
-Test name: ProcessDispatchCandidateFactory_CreateWorkflowCandidate_preserves_current_route_defaults
-Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.Dispatch.cs has no direct new DispatchCandidate constructor call.
-Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDispatchCandidateFactory.cs owns the single constructor call behind subprocess, workflow, and direct-agent methods.
-ExitCode: 0
