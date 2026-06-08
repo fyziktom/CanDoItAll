@@ -1,0 +1,5 @@
+Command: Compress-Archive bundle contents to sibling ZIP artifact
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB045 bundle zip generation
+The path 'C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-verifier-integration-hardening-v1\*' either does not exist or is not a valid file system path.
+ExitCode: 1

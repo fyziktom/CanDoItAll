@@ -9,25 +9,20 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessDriverContractPrerequisitesVerificationTests
 {
-    private const string BundleName = "process-driver-contract-prerequisites-verification-alpha-v1";
+    private const string BundleName = "process-driver-runtime-evidence-verifier-integration-hardening-v1";
 
     [Fact]
     public void Process_driver_prerequisites_SB003_INV_001_preserve_baseline_branch_and_no_runtime_guardrails()
     {
         var root = FindRepositoryRoot();
         var branchName = RunGit(root, "branch", "--show-current").Single();
-        var priorExecutionReport = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-core-evidence-descriptors-driver-contract-roadmap-v1",
-            "reviews",
-            "01-execution-report.md");
+        var executionReport = ReadBundleFile("reviews", "01-execution-report.md");
         var productionSource = ReadProductionSourceText(root);
         var changedFilesOutsideBundle = ReadGitChangedFilesOutsideCurrentBundle(root);
 
         Assert.Equal("maf-processes-refactor", branchName);
-        Assert.Contains("SB042", priorExecutionReport, StringComparison.Ordinal);
-        Assert.DoesNotContain("Final closure gate: `Not started`", priorExecutionReport, StringComparison.Ordinal);
+        Assert.Contains("| SB045 |", executionReport, StringComparison.Ordinal);
+        Assert.DoesNotContain("SB001-SB045 |", executionReport, StringComparison.Ordinal);
         AssertNoProductionDriverRuntimeTokens(productionSource);
         Assert.All(changedFilesOutsideBundle, path =>
             Assert.False(IsUiOrMediaPath(path), $"Unexpected UI or media drift outside bundle: {path}"));
@@ -39,15 +34,15 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
         var root = FindRepositoryRoot();
         var coreProject = ReadRepositoryFile("src", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Core.csproj");
         var coreSource = ReadProcessCoreSource(root);
-        var governanceDoc = ReadBundleFile("architecture", "05-core-api-governance.md");
+        var governanceDoc = ReadBundleFile("requirements", "02-hard-constraints.md");
         var publicApiSurface = ReadProcessCorePublicApiSurface();
 
         Assert.NotEmpty(publicApiSurface);
         Assert.All(publicApiSurface, line =>
             Assert.Contains("CanDoItAll.Processes.Core", line, StringComparison.Ordinal));
-        Assert.Contains("owner classification", governanceDoc, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("public Core change", governanceDoc, StringComparison.Ordinal);
-        Assert.Contains("forbidden dependency scans", governanceDoc, StringComparison.Ordinal);
+        Assert.Contains("Core must not reference driver abstractions or driver implementations", governanceDoc, StringComparison.Ordinal);
+        Assert.Contains("Driver packages must not reference Modules", governanceDoc, StringComparison.Ordinal);
+        Assert.Contains("No broad Process Core runtime extraction", governanceDoc, StringComparison.Ordinal);
         Assert.Contains(@"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />", coreProject, StringComparison.Ordinal);
         Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
 
@@ -196,12 +191,13 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
             "manager:lucy");
         var response = EvaluateVerificationRequest(request);
         var productionSource = ReadProductionSourceText(root);
-        var rehearsalDoc = ReadBundleFile("architecture", "03-verification-only-driver-contract-rehearsal.md");
+        var rehearsalDoc = ReadBundleFile("architecture", "03-runtime-evidence-consistency-verifier.md");
 
         Assert.True(response.Accepted);
         Assert.Equal(DriverDenialReason.None, response.DenialReason);
         Assert.True(response.NoMutationPerformed);
-        Assert.Contains("No mutation performed flag", rehearsalDoc, StringComparison.Ordinal);
+        Assert.Contains("verification-only alpha", rehearsalDoc, StringComparison.Ordinal);
+        Assert.Contains("returns diagnostics", rehearsalDoc, StringComparison.Ordinal);
         Assert.DoesNotContain("public interface IProcessDriver", rehearsalDoc, StringComparison.Ordinal);
         Assert.DoesNotContain("AddScoped", rehearsalDoc, StringComparison.Ordinal);
         Assert.DoesNotContain("AddSingleton", rehearsalDoc, StringComparison.Ordinal);
@@ -305,7 +301,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     public void Process_driver_prerequisites_SB030_INV_001_defer_production_driver_contract_until_all_prerequisites_are_green()
     {
         var root = FindRepositoryRoot();
-        var decisionDoc = ReadBundleFile("architecture", "06-production-driver-contract-decision-template.md");
+        var decisionDoc = ReadBundleFile("architecture", "06-runtime-host-deferral.md");
         var productionSource = ReadProductionSourceText(root);
         var prerequisiteResults = new[]
         {
@@ -317,8 +313,8 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
         };
 
         Assert.Equal(ProductionDriverContractDecision.Defer, DecideProductionDriverContract(prerequisiteResults));
-        Assert.Contains("Default", decisionDoc, StringComparison.Ordinal);
-        Assert.Contains("Defer", decisionDoc, StringComparison.Ordinal);
+        Assert.Contains("This bundle must not implement", decisionDoc, StringComparison.Ordinal);
+        Assert.Contains("A future host must define", decisionDoc, StringComparison.Ordinal);
         AssertNoProductionDriverRuntimeTokens(productionSource);
     }
 
@@ -326,13 +322,13 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     public void Process_driver_prerequisites_SB033_INV_001_document_core_package_rules_without_broad_runtime_ownership()
     {
         var targetSolution = ReadBundleFile("architecture", "01-target-solution.md");
-        var governanceDoc = ReadBundleFile("architecture", "05-core-api-governance.md");
-        var roadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-drivers.md");
+        var governanceDoc = ReadBundleFile("requirements", "02-hard-constraints.md");
+        var roadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-domain-drivers.md");
 
-        Assert.Contains("deterministic descriptors", targetSolution, StringComparison.Ordinal);
-        Assert.Contains("forbidden dependency", governanceDoc, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Every new public Core type/member requires owner classification", governanceDoc, StringComparison.Ordinal);
-        Assert.Contains("Remaining: API versioning, compatibility docs, descriptor governance", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Add a second verification-only alpha", targetSolution, StringComparison.Ordinal);
+        Assert.Contains("No broad Process Core runtime extraction", governanceDoc, StringComparison.Ordinal);
+        Assert.Contains("Core must not reference driver abstractions or driver implementations", governanceDoc, StringComparison.Ordinal);
+        Assert.Contains("Stable Core Pure Rules", roadmap, StringComparison.Ordinal);
         Assert.DoesNotContain("Core owns process mutation", targetSolution + governanceDoc + roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Core owns finalizer application", targetSolution + governanceDoc + roadmap, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Core owns runtime dispatch", targetSolution + governanceDoc + roadmap, StringComparison.OrdinalIgnoreCase);
@@ -341,16 +337,16 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     [Fact]
     public void Process_driver_prerequisites_SB036_INV_001_keep_domain_driver_roadmap_consistent_with_deferred_runtime()
     {
-        var laneRoadmap = ReadBundleFile("architecture", "04-domain-driver-lane-roadmap.md");
-        var longRangeRoadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-drivers.md");
-        var decisionTemplate = ReadBundleFile("architecture", "06-production-driver-contract-decision-template.md");
+        var laneRoadmap = ReadBundleFile("architecture", "05-driver-domain-roadmap.md");
+        var longRangeRoadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-domain-drivers.md");
+        var decisionTemplate = ReadBundleFile("architecture", "06-runtime-host-deferral.md");
         var combined = string.Join(Environment.NewLine, laneRoadmap, longRangeRoadmap, decisionTemplate);
 
-        Assert.Contains(".NET/Rust Transcript Verifier", laneRoadmap, StringComparison.Ordinal);
-        Assert.Contains("existing build/test/proof transcripts", laneRoadmap, StringComparison.Ordinal);
-        Assert.Contains("Milestone 3: Production Driver Contracts", longRangeRoadmap, StringComparison.Ordinal);
-        Assert.Contains("Future bundle only after this bundle passes", longRangeRoadmap, StringComparison.Ordinal);
-        Assert.Contains("Default", decisionTemplate, StringComparison.Ordinal);
+        Assert.Contains(".NET/Rust transcript verifier", laneRoadmap, StringComparison.Ordinal);
+        Assert.Contains("Runtime evidence consistency verifier", laneRoadmap, StringComparison.Ordinal);
+        Assert.Contains("Verification-Only Driver Family", longRangeRoadmap, StringComparison.Ordinal);
+        Assert.Contains("Execution-Capable Drivers", longRangeRoadmap, StringComparison.Ordinal);
+        Assert.Contains("This bundle must not implement", decisionTemplate, StringComparison.Ordinal);
         Assert.DoesNotContain("Implement production driver runtime in this bundle", combined, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("Run shell commands", combined, StringComparison.Ordinal);
         Assert.DoesNotContain("Workspace write allowed", combined, StringComparison.Ordinal);

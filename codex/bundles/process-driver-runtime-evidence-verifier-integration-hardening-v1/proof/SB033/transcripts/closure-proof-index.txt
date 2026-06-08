@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB033 closure proof index
+Invariant ID: SB033_INV_001
+Requirement: REQ-011
+Positive proof: bundle://proof/SB024/transcripts/focused-transcript-tests-after-shared-uri-policy-overload.txt
+Source proof: repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/06-runtime-host-deferral.md and repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/05-driver-domain-roadmap.md
+ExitCode: 0

@@ -174,6 +174,32 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
+    public void Process_driver_transcript_alpha_SB024_INV_002_evidence_uri_policy_rejects_unapproved_sources_without_mutation()
+    {
+        var verifier = new TranscriptVerificationAlphaVerifier();
+        var localTranscriptResult = verifier.Verify(CreateRequest(
+            "Build succeeded. token=sk-local-secret",
+            ProcessDriverTranscriptLanguage.DotNet,
+            transcriptUri: "file://C:/Users/lucys/secrets/transcript.txt"));
+        var remoteEvidenceResult = verifier.Verify(CreateRequest(
+            "Build succeeded. token=sk-remote-secret",
+            ProcessDriverTranscriptLanguage.DotNet,
+            evidenceUri: "https://example.invalid/transcript.txt"));
+
+        AssertUntrustedEvidenceDenied(localTranscriptResult);
+        AssertUntrustedEvidenceDenied(remoteEvidenceResult);
+        Assert.All(
+            localTranscriptResult.Diagnostics.Concat(remoteEvidenceResult.Diagnostics),
+            diagnostic =>
+            {
+                Assert.DoesNotContain("sk-local-secret", diagnostic.Message, StringComparison.Ordinal);
+                Assert.DoesNotContain("sk-remote-secret", diagnostic.Message, StringComparison.Ordinal);
+                Assert.DoesNotContain("C:/Users", diagnostic.Message, StringComparison.Ordinal);
+                Assert.DoesNotContain("example.invalid", diagnostic.Message, StringComparison.Ordinal);
+            });
+    }
+
+    [Fact]
     public void Process_driver_transcript_alpha_SB033_INV_001_alpha_package_and_process_adapter_have_no_runtime_hook()
     {
         var root = FindRepositoryRoot();
@@ -239,15 +265,15 @@ password=hunter2 rust.user@example.com
         var runtimeDeferral = ReadRepositoryFile(
             "codex",
             "bundles",
-            "process-driver-verification-alpha-dotnet-rust-core-stabilization-v1",
+            "process-driver-runtime-evidence-verifier-integration-hardening-v1",
             "architecture",
-            "06-production-runtime-deferral.md");
+            "06-runtime-host-deferral.md");
         var domainRoadmap = ReadRepositoryFile(
             "codex",
             "bundles",
-            "process-driver-verification-alpha-dotnet-rust-core-stabilization-v1",
+            "process-driver-runtime-evidence-verifier-integration-hardening-v1",
             "architecture",
-            "07-domain-driver-roadmap.md");
+            "05-driver-domain-roadmap.md");
         var docs = string.Join(Environment.NewLine, packageReadme, runtimeDeferral, domainRoadmap);
 
         Assert.Contains(".NET/Rust Transcript Verifier", docs, StringComparison.Ordinal);
@@ -267,12 +293,15 @@ password=hunter2 rust.user@example.com
         ProcessDriverPermissionMode permissionMode = ProcessDriverPermissionMode.VerificationOnly,
         ProcessDriverCapabilityScope? scope = null,
         string? transcriptHash = null,
-        string evidenceHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
+        string evidenceHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        string? transcriptUri = null,
+        string? evidenceUri = null)
     {
         var contentHash = ComputeSha256(transcriptText);
+        var resolvedTranscriptUri = transcriptUri ?? $"bundle://proof/SB012/transcripts/{language.ToString().ToLowerInvariant()}-transcript.txt";
         var evidenceReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            $"bundle://proof/SB012/transcripts/{language.ToString().ToLowerInvariant()}-transcript.txt",
+            evidenceUri ?? resolvedTranscriptUri,
             evidenceHash,
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var verificationRequest = new ProcessDriverVerificationRequest(
@@ -286,13 +315,23 @@ password=hunter2 rust.user@example.com
         return new TranscriptVerificationAlphaRequest(
             verificationRequest,
             new ProcessDriverTranscriptReference(
-                evidenceReference.Uri,
+                resolvedTranscriptUri,
                 transcriptHash ?? contentHash,
                 language,
                 language == ProcessDriverTranscriptLanguage.DotNet ? "dotnet" : "cargo",
                 language == ProcessDriverTranscriptLanguage.DotNet ? "net10.0" : "rust-stable"),
             transcriptText,
             DateTimeOffset.Parse("2026-06-07T21:00:00Z"));
+    }
+
+    private static void AssertUntrustedEvidenceDenied(ProcessDriverVerificationResponse result)
+    {
+        Assert.False(result.Accepted);
+        Assert.True(result.NoMutationPerformed);
+        Assert.Equal(ProcessDriverDenialReason.MissingEvidence, result.DenialReason);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.TranscriptUntrusted);
+        Assert.All(result.AuditFacts, fact =>
+            Assert.Equal(ProcessDriverAuditFactKind.OperationDenied, fact.Kind));
     }
 
     private static ProcessDriverCapabilityScope CreateDotNetRustScope()

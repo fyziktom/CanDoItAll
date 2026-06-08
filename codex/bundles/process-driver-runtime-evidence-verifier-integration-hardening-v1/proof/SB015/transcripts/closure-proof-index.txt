@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB015 closure proof index
+Invariant ID: SB015_INV_001
+Requirement: REQ-007
+Positive proof: bundle://proof/SB024/transcripts/process-transcript-readonly-adapter-integration-tests.txt
+Source proof: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationReadOnlyAdapter.cs
+ExitCode: 0

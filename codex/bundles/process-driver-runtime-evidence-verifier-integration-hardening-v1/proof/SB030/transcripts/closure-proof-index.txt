@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB030 closure proof index
+Invariant ID: SB030_INV_001
+Requirement: REQ-003, REQ-010
+Positive proof: bundle://proof/SB045/transcripts/source-boundary-and-anti-stub-audit-after-uri-policy.txt
+Source proof: repo://src/CanDoItAll.Processes.Drivers.Abstractions/Evidence/ProcessDriverEvidencePolicy.cs and repo://tests/CanDoItAll.Tests.Unit/ProcessDriverRuntimeEvidenceConsistencyAlphaTests.cs
+ExitCode: 0

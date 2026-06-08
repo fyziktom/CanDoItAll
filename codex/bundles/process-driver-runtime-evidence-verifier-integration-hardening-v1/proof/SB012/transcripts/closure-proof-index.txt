@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB012 closure proof index
+Invariant ID: SB012_INV_001
+Requirement: REQ-006
+Positive proof: bundle://proof/SB024/transcripts/focused-transcript-tests-after-shared-uri-policy-overload.txt
+Source proof: repo://src/CanDoItAll.Processes.Drivers.Abstractions/Audit/ProcessDriverRedactionPolicy.cs and repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification/TranscriptVerificationAuditFactBuilder.cs
+ExitCode: 0

@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB003 closure proof index
+Invariant ID: SB003_INV_001
+Requirement: REQ-001
+Positive proof: bundle://proof/SB002/transcripts/process-driver-contract-prerequisites-after-runtime-evidence-refactor.txt
+Source proof: repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs and repo://tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs
+ExitCode: 0

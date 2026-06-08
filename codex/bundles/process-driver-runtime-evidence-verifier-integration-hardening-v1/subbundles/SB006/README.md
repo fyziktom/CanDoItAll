@@ -1,7 +1,7 @@
 # SB006 — Gate B parser parity
 
 ## Status
-Prepared for implementation.
+- Status: Completed
 
 ## Objective
 Run failing-first parser tests, alpha integration tests, source scans, anti-stub audit; assert no command execution or file IO was introduced.
@@ -21,7 +21,6 @@ Run failing-first parser tests, alpha integration tests, source scans, anti-stub
 - `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
 - `repo://src/CanDoItAll.Processes.Core`
 - `repo://tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs`
-- `repo://codex/bundles/process-driver-alpha-consumer-evidence-pipeline-v1/reviews/01-execution-report.md`
 
 ## Deliverables
 - Production/source/test/docs changes required by this subbundle.
@@ -29,10 +28,10 @@ Run failing-first parser tests, alpha integration tests, source scans, anti-stub
 - Updated gate row in `reviews/01-execution-report.md`.
 
 ## Dependency Impact
-This subbundle affects downstream phases because prevent the alpha verifier from becoming the next monolith while preserving exact diagnostics. If this proof fails, reopen dependent phases before continuing.
+- This subbundle affects downstream phases because prevent the alpha verifier from becoming the next monolith while preserving exact diagnostics. If this proof fails, reopen dependent phases before continuing.
 
 ## Validation Depth
-Critical foundation. Must include semantic adequacy proof, failing/adversarial negative proof, positive proof, anti-stub audit, changed-file hashes, and command transcripts.
+- Critical foundation. Must include semantic adequacy proof, failing/adversarial negative proof, positive proof, anti-stub audit, changed-file hashes, and command transcripts.
 
 ## Implementation Steps
 1. Re-read exact source references before editing.
@@ -65,10 +64,12 @@ Critical foundation. Must include semantic adequacy proof, failing/adversarial n
 - `proof/SB006/manifest.md` and `proof/SB006/semantic-invariants.md` are required.
 
 ## Browser Validation Logging
-N/A backend/Core/driver contract work unless UI files unexpectedly change; if they do, fail this subbundle instead of adding mobile/small/medium proof.
+- N/A backend/Core/driver contract work unless UI files unexpectedly change; if they do, fail this subbundle instead of adding mobile/small/medium proof.
 
 ## Progression Gate
-Must pass before downstream phases continue.
+- Must pass before downstream phases continue.
 
 ## Suggested Agent Prompt
 Implement SB006 for `process-driver-runtime-evidence-verifier-integration-hardening-v1`. Keep changes within scope, preserve all previous behavior, and record artifact-backed proof. Stop if any forbidden runtime/Core/driver/UI boundary is crossed.
+
+

@@ -18,4 +18,13 @@ public static class ProcessDriverCapabilityScopeRules
             permissionMode == scope.RequiredPermissionMode &&
             IsReadonlyScope(scope);
     }
+
+    public static bool IsRuntimeFactsReadScope(
+        ProcessDriverCapabilityScope scope,
+        ProcessDriverPermissionMode permissionMode)
+    {
+        return scope.Kind == ProcessDriverCapabilityScopeKind.RuntimeFactsRead &&
+            permissionMode == scope.RequiredPermissionMode &&
+            IsReadonlyScope(scope);
+    }
 }

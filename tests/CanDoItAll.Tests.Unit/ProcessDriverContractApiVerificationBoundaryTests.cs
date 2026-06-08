@@ -245,7 +245,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var publicTypes = typeof(ProcessDriverPermissionMode).Assembly.GetExportedTypes();
         var version = ProcessDriverContractVersion.Current;
 
-        Assert.Equal(new ProcessDriverContractVersion(1, 1, 0), version);
+        Assert.Equal(new ProcessDriverContractVersion(1, 2, 0), version);
         Assert.Contains(ProcessDriverPermissionMode.ExecutionCapableFuture, Enum.GetValues<ProcessDriverPermissionMode>());
         AssertNoForbiddenProductionDriverRuntimeTokens(contractSource);
         Assert.DoesNotContain(publicTypes, type => type.IsInterface);

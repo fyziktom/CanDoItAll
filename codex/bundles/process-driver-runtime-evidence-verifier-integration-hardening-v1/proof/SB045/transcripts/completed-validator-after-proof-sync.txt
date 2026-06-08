@@ -1,0 +1,5 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-runtime-evidence-verifier-integration-hardening-v1 --stage completed --repo-root C:\repositories\CanDoItAll
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: SB045 completed validator after proof sync
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-verifier-integration-hardening-v1
+ExitCode: 0

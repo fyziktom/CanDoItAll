@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB018 closure proof index
+Invariant ID: SB018_INV_001
+Requirement: REQ-008
+Positive proof: bundle://proof/SB018/transcripts/focused-runtime-evidence-consistency-tests-after-uri-policy-fix.txt
+Source proof: repo://src/CanDoItAll.Processes.Drivers.RuntimeEvidence/RuntimeEvidenceConsistencyAlphaVerifier.cs
+ExitCode: 0

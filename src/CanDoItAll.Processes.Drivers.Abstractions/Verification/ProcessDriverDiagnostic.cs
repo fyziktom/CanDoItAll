@@ -40,5 +40,12 @@ public enum ProcessDriverDiagnosticCategory
     UnsupportedTranscriptFormat = 21,
     AnalyzerWarning = 22,
     NullableWarning = 23,
-    PlatformCompatibilityWarning = 24
+    PlatformCompatibilityWarning = 24,
+    RuntimeEvidenceInconsistent = 25,
+    RetryContradiction = 26,
+    FinalizerContradiction = 27,
+    ProjectionOrderDrift = 28,
+    ProviderRepairInconsistent = 29,
+    NoProgressFingerprintMissing = 30,
+    UnsupportedContractVersion = 31
 }

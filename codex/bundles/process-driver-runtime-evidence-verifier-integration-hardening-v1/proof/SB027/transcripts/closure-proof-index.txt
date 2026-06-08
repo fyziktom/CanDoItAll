@@ -1,0 +1,8 @@
+Command: proof index path/invariant verification
+WorkingDirectory: repo://
+RunLabel: SB027 closure proof index
+Invariant ID: SB027_INV_001
+Requirement: REQ-010
+Positive proof: bundle://proof/SB024/transcripts/process-transcript-readonly-adapter-integration-tests.txt
+Source proof: repo://tests/CanDoItAll.Tests.Integration/ProcessTranscriptVerificationReadOnlyAdapterTests.cs and repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/05-driver-domain-roadmap.md
+ExitCode: 0

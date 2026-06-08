@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using CanDoItAll.Processes.Drivers.Abstractions.Audit;
 using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
@@ -28,9 +26,11 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
     {
         ArgumentNullException.ThrowIfNull(payload);
 
-        var evidenceReferences = NormalizeEvidenceReferences(payload.EvidenceReferences);
+        var evidenceReferences = ProcessDriverEvidencePolicy.NormalizeEvidenceReferences(payload.EvidenceReferences);
         var requestedOperations = NormalizeRequestedOperations(payload.RequestedOperations);
-        var transcriptEvidence = CreateTranscriptEvidenceReference(payload.TranscriptReference, payload.TranscriptText);
+        var transcriptEvidence = ProcessDriverEvidencePolicy.CreateTranscriptEvidenceReference(
+            payload.TranscriptReference,
+            payload.TranscriptText);
         var primaryEvidence = evidenceReferences.FirstOrDefault() ?? transcriptEvidence;
         var preflightDenial = ValidatePreflight(
             payload,
@@ -110,8 +110,10 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
                 primaryEvidence);
         }
 
-        if (!IsApprovedSuppliedEvidenceUri(payload.TranscriptReference.Uri) ||
-            evidenceReferences.Any(reference => !IsApprovedSuppliedEvidenceUri(reference.Uri)))
+        var uriPolicyResult = ProcessDriverEvidencePolicy.ValidateApprovedSuppliedEvidenceUris(
+            payload.TranscriptReference,
+            evidenceReferences);
+        if (!uriPolicyResult.Accepted)
         {
             return CreatePreflightDenial(
                 payload,
@@ -121,7 +123,7 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
                 primaryEvidence);
         }
 
-        if (evidenceReferences.Any(reference => !IsSha256(reference.ContentHash)))
+        if (evidenceReferences.Any(reference => !ProcessDriverEvidencePolicy.HasValidSha256ContentHash(reference)))
         {
             return CreatePreflightDenial(
                 payload,
@@ -131,8 +133,7 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
                 primaryEvidence);
         }
 
-        var expectedTranscriptHash = NormalizeHash(payload.TranscriptReference.TranscriptHash);
-        if (!IsSha256(expectedTranscriptHash) || expectedTranscriptHash != ComputeSha256(payload.TranscriptText))
+        if (!ProcessDriverEvidencePolicy.TranscriptHashMatches(payload.TranscriptReference, payload.TranscriptText))
         {
             return CreatePreflightDenial(
                 payload,
@@ -152,10 +153,7 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
         string diagnosticMessage,
         ProcessDriverEvidenceReference evidenceReference)
     {
-        var redaction = new ProcessDriverRedactionDescriptor(
-            ProcessDriverRedactionStatus.None,
-            [],
-            ComputeSha256(string.Empty));
+        var redaction = ProcessDriverRedactionPolicy.Redact(string.Empty).Descriptor;
         var diagnostic = new ProcessDriverDiagnostic(
             ProcessDriverDiagnosticSeverity.Error,
             diagnosticCategory,
@@ -200,28 +198,6 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
             payload.RequestedAt);
     }
 
-    private static IReadOnlyList<ProcessDriverEvidenceReference> NormalizeEvidenceReferences(
-        IReadOnlyList<ProcessDriverEvidenceReference>? evidenceReferences)
-    {
-        var normalized = new List<ProcessDriverEvidenceReference>();
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var evidenceReference in evidenceReferences ?? [])
-        {
-            var normalizedReference = new ProcessDriverEvidenceReference(
-                evidenceReference.Kind,
-                evidenceReference.Uri.Trim(),
-                NormalizeHash(evidenceReference.ContentHash),
-                evidenceReference.CoreDescriptorFamily);
-            var key = $"{normalizedReference.Kind}|{normalizedReference.Uri}|{normalizedReference.ContentHash}";
-            if (seen.Add(key))
-            {
-                normalized.Add(normalizedReference);
-            }
-        }
-
-        return normalized;
-    }
-
     private static IReadOnlyList<ProcessDriverOperation> NormalizeRequestedOperations(
         IReadOnlyList<ProcessDriverOperation>? requestedOperations)
     {
@@ -242,19 +218,6 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
         ];
     }
 
-    private static ProcessDriverEvidenceReference CreateTranscriptEvidenceReference(
-        ProcessDriverTranscriptReference transcriptReference,
-        string transcriptText)
-    {
-        var transcriptHash = NormalizeHash(transcriptReference.TranscriptHash);
-
-        return new ProcessDriverEvidenceReference(
-            ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            transcriptReference.Uri.Trim(),
-            IsSha256(transcriptHash) ? transcriptHash : ComputeSha256(transcriptText),
-            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
-    }
-
     private static IReadOnlyList<ProcessDriverAuditFact> CreateDeniedAuditFacts(
         ProcessTranscriptVerificationReadOnlyEvidencePayload payload,
         ProcessDriverDenialReason denialReason,
@@ -262,7 +225,7 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
         string diagnosticSummary)
     {
         var operations = NormalizeRequestedOperations(payload.RequestedOperations);
-        var outputHash = ComputeSha256(diagnosticSummary);
+        var outputHash = ProcessDriverEvidencePolicy.ComputeSha256(diagnosticSummary);
 
         return operations
             .Select(operation => new ProcessDriverAuditFact(
@@ -297,37 +260,10 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
             operation,
             denialReason,
             payload.TranscriptReference.Uri.Trim(),
-            NormalizeHash(payload.TranscriptReference.TranscriptHash));
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(material));
+            ProcessDriverEvidencePolicy.NormalizeHash(payload.TranscriptReference.TranscriptHash));
+        var bytes = Convert.FromHexString(ProcessDriverEvidencePolicy.ComputeSha256(material));
 
         return new Guid(bytes[..16]);
-    }
-
-    private static bool IsApprovedSuppliedEvidenceUri(string uri)
-    {
-        var trimmed = uri.Trim();
-
-        return trimmed.StartsWith("bundle://", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("process://", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("artifact://", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("repo://tests/", StringComparison.OrdinalIgnoreCase) ||
-            trimmed.StartsWith("repo://codex/bundles/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string ComputeSha256(string value)
-    {
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
-    }
-
-    private static string NormalizeHash(string value)
-    {
-        return value.Trim().ToUpperInvariant();
-    }
-
-    private static bool IsSha256(string value)
-    {
-        return value.Length == 64 && value.All(static character =>
-            character is >= '0' and <= '9' or >= 'A' and <= 'F' or >= 'a' and <= 'f');
     }
 
     private sealed record PreflightDenial(ProcessDriverVerificationResponse Response);
