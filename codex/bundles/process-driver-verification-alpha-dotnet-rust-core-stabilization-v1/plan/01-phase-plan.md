@@ -1,5 +1,23 @@
 # Phase Plan
 
+## Phase Sequence
+
+1. P01: Baseline, Proof Intake, And Active Guardrails
+2. P02: Contract API Stability And Versioning
+3. P03: Alpha Driver Package Boundary
+4. P04: .NET Transcript Verification Rules
+5. P05: Rust Transcript Verification Rules
+6. P06: Verification Request/Response Integration
+7. P07: Audit, Redaction, And No-Mutation Proof
+8. P08: Evidence Reference And Hash Policy
+9. P09: Process Module Test-Only Consumer Rehearsal
+10. P10: Core Descriptor Compatibility And Consumer Allowlist
+11. P11: Office/Business Lane Denial Hardening
+12. P12: Driver Runtime Deferral And Future Host Roadmap
+13. P13: Package Docs, Samples, And Migration Notes
+14. P14: Broad Smoke Matrix And Red-Team
+15. P15: Final Decision And Next-Bundle Handoff
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -174,4 +192,3 @@ graph TD
 ### P15 — Final Decision And Next-Bundle Handoff
 - Subbundles: SB043, SB044, SB045
 - Closure gate: `SB045` must pass build/test/source-scan proof relevant to this phase before downstream work starts.
-

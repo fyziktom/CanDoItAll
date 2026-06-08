@@ -1,7 +1,7 @@
 # Domain Driver Roadmap
 
 ## Phase 1: .NET/Rust Transcript Verifier
-Read-only over supplied transcripts and evidence references.
+Implemented as a verification-only alpha package. It is read-only over supplied transcripts and evidence references, returns diagnostics/audit/redaction/no-mutation proof, and remains disconnected from process runtime.
 
 ## Phase 2: Runtime Evidence Consistency Verifier
 Read-only over Core execution/finalizer/retry/projection descriptors.

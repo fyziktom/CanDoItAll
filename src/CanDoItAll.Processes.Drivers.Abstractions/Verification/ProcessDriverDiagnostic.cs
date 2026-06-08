@@ -25,5 +25,20 @@ public enum ProcessDriverDiagnosticCategory
     RuntimeProofGap = 6,
     MutationAttemptDenied = 7,
     RedactionApplied = 8,
-    CompatibilityWarning = 9
+    CompatibilityWarning = 9,
+    CargoTestFailure = 10,
+    CompileError = 11,
+    ClippyWarning = 12,
+    MissingCargoArtifact = 13,
+    UnsupportedToolchain = 14,
+    PanicDetected = 15,
+    TranscriptMissing = 16,
+    TranscriptUntrusted = 17,
+    EvidenceHashMismatch = 18,
+    InsufficientProof = 19,
+    NoIssueDetected = 20,
+    UnsupportedTranscriptFormat = 21,
+    AnalyzerWarning = 22,
+    NullableWarning = 23,
+    PlatformCompatibilityWarning = 24
 }

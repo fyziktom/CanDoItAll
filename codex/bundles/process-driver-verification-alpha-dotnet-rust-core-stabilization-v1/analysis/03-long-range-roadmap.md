@@ -5,16 +5,17 @@ Status: substantially complete.
 Next: keep API governance, descriptor versioning, and adapter allow-lists updated with every Core addition.
 
 ## Milestone B: Driver Abstractions
-Status: contract-only package exists.
-Next: add production verification-only alpha implementation without runtime integration.
+Status: contract package exists and now includes read-only operation/scope rules plus audit-backed verification responses.
+Next: keep contract versioning and source scans active for every verifier addition.
 
 ## Milestone C: First Verification-Only Alpha
 Candidate: `.NET/Rust transcript verifier`.
-Allowed: parse supplied transcript/evidence content and return diagnostics.
+Status: implemented as `CanDoItAll.Processes.Drivers.TranscriptVerification`.
+Allowed: parse supplied transcript/evidence content and return diagnostics, audit facts, redaction metadata, evidence hashes, and no-mutation proof.
 Denied: command execution, package restore, workspace/storage writes, process mutation.
 
 ## Milestone D: Process Module Consumer Adapter
-After alpha library proves safe, add a process-module adapter that can call the alpha from controlled proof/evidence workflows, still no manager command or scheduler integration.
+After this alpha remains safe under follow-up review, add a process-module adapter that can call the alpha from controlled proof/evidence workflows, still no manager command or scheduler integration.
 
 ## Milestone E: Business Analysis Read-Only Driver
 Use existing artifact/evidence snapshots and business-analysis deliverables only. No CRM/business-record mutation.

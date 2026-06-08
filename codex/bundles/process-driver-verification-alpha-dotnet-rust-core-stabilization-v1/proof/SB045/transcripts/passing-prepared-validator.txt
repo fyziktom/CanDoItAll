@@ -1,0 +1,7 @@
+Command: python "C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py" "C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-alpha-dotnet-rust-core-stabilization-v1" --stage prepared --repo-root "C:\repositories\CanDoItAll"
+Invariant ID: SB045-INV-001
+Expectation: success
+ExitCode: 0
+Output:
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-alpha-dotnet-rust-core-stabilization-v1
+

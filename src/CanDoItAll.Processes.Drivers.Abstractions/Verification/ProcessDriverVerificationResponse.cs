@@ -11,4 +11,5 @@ public sealed record ProcessDriverVerificationResponse(
     IReadOnlyList<ProcessDriverEvidenceReference> EvidenceReferences,
     ProcessDriverRedactionDescriptor Redaction,
     bool NoMutationPerformed,
+    IReadOnlyList<ProcessDriverAuditFact> AuditFacts,
     ProcessDriverContractVersion ContractVersion);

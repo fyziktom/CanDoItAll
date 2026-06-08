@@ -1,8 +1,7 @@
 # SB033 — Gate K read-only lane closure
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Gate K read-only lane closure within phase `P11 — Office/Business Lane Denial Hardening`. This is part of the verification-only driver alpha and Core stabilization path.
 
@@ -29,10 +28,10 @@ Gate K read-only lane closure within phase `P11 — Office/Business Lane Denial 
 - Manifest and semantic invariants for critical gate subbundles.
 
 ## Dependency Impact
-Downstream phases depend on this subbundle preserving verification-only semantics and not creating runtime driver infrastructure.
+- Downstream phases depend on this subbundle preserving verification-only semantics and not creating runtime driver infrastructure.
 
 ## Validation Depth
-Critical gate: build/test/source-scan/anti-stub/validator proof required.
+- Critical gate: build/test/source-scan/anti-stub/validator proof required.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -53,12 +52,12 @@ No production runtime driver integration is allowed in this bundle.
 - Do not mark the subbundle complete without source-backed proof.
 
 ## Acceptance Checklist
-- [ ] Scope implemented without forbidden runtime surface.
-- [ ] Existing functionality preserved.
-- [ ] Focused tests pass.
-- [ ] Source scans pass.
-- [ ] Execution report row updated.
-- [ ] Critical gate manifest and semantic invariants written.
+- [x] Scope implemented without forbidden runtime surface.
+- [x] Existing functionality preserved.
+- [x] Focused tests pass.
+- [x] Source scans pass.
+- [x] Execution report row updated.
+- [x] Critical gate manifest and semantic invariants written.
 
 ## Proof Required
 - Focused unit/architecture tests.
@@ -66,10 +65,15 @@ No production runtime driver integration is allowed in this bundle.
 - Build/unit/focused integration proof at critical gates.
 
 ## Browser Validation Logging
-N/A. Backend/Core/driver contract work only. If UI/media files change, fail the subbundle and revert or split out a separate UI bundle.
+- N/A. Backend/Core/driver contract work only. If UI/media files change, fail the subbundle and revert or split out a separate UI bundle.
 
 ## Progression Gate
-Must pass before downstream phase starts.
+- Must pass before downstream phase starts.
 
 ## Suggested Agent Prompt
 Implement `SB033 — Gate K read-only lane closure` exactly as scoped. Preserve verification-only semantics and write proof before moving on.
+
+## Closure Proof
+- Manifest: bundle://proof/SB033/manifest.md
+- Semantic invariants: bundle://proof/SB033/semantic-invariants.md
+

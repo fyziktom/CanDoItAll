@@ -25,6 +25,7 @@
     <Project Path="src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj" />
     <Project Path="src/CanDoItAll.Processes.Contracts/CanDoItAll.Processes.Contracts.csproj" />
     <Project Path="src/CanDoItAll.Processes.Drivers.Abstractions/CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Drivers.TranscriptVerification/CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
     <Project Path="src/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />
     <Project Path="src/CanDoItAll.Modules.Prompts/CanDoItAll.Modules.Prompts.csproj" />
     <Project Path="src/CanDoItAll.Modules.Resources/CanDoItAll.Modules.Resources.csproj" />

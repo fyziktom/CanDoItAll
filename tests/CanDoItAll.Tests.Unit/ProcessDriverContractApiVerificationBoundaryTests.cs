@@ -39,6 +39,8 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
 
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverPermissionMode", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverCapabilityScope", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverCapabilityScopeRules", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverOperationRules", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Evidence.ProcessDriverEvidenceReference", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Audit.ProcessDriverAuditFact", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Verification.ProcessDriverVerificationRequest", publicTypeNames);
@@ -137,6 +139,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
             EvidenceReferences: [evidenceReference],
             Redaction: new ProcessDriverRedactionDescriptor(ProcessDriverRedactionStatus.None, [], evidenceReference.ContentHash),
             NoMutationPerformed: true,
+            AuditFacts: [],
             ContractVersion: ProcessDriverContractVersion.Current);
 
         Assert.All(request.RequestedOperations, operation =>
@@ -242,7 +245,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var publicTypes = typeof(ProcessDriverPermissionMode).Assembly.GetExportedTypes();
         var version = ProcessDriverContractVersion.Current;
 
-        Assert.Equal(new ProcessDriverContractVersion(1, 0, 0), version);
+        Assert.Equal(new ProcessDriverContractVersion(1, 1, 0), version);
         Assert.Contains(ProcessDriverPermissionMode.ExecutionCapableFuture, Enum.GetValues<ProcessDriverPermissionMode>());
         AssertNoForbiddenProductionDriverRuntimeTokens(contractSource);
         Assert.DoesNotContain(publicTypes, type => type.IsInterface);
@@ -309,12 +312,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
 
     private static ProcessDriverDenialReason ResolveExpectedDenial(ProcessDriverOperation operation)
     {
-        return operation switch
-        {
-            ProcessDriverOperation.ExecuteCommand or ProcessDriverOperation.RestorePackage => ProcessDriverDenialReason.UnsafeCommand,
-            ProcessDriverOperation.CallOfficeGraph => ProcessDriverDenialReason.ExternalCallDenied,
-            _ => ProcessDriverDenialReason.MutationDenied
-        };
+        return ProcessDriverOperationRules.ResolveReadonlyDenialReason(operation);
     }
 
     private static IReadOnlyList<ProcessDriverDiagnosticCategory> ClassifyTranscript(string transcriptText)

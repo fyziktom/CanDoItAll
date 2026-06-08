@@ -1,8 +1,7 @@
 # SB011 — .NET transcript fixtures and negative cases
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 .NET transcript fixtures and negative cases within phase `P04 — .NET Transcript Verification Rules`. This is part of the verification-only driver alpha and Core stabilization path.
 
@@ -29,10 +28,10 @@ Prepared.
 - Manifest and semantic invariants for critical gate subbundles.
 
 ## Dependency Impact
-Downstream phases depend on this subbundle preserving verification-only semantics and not creating runtime driver infrastructure.
+- Downstream phases depend on this subbundle preserving verification-only semantics and not creating runtime driver infrastructure.
 
 ## Validation Depth
-Focused proof required; full proof may be deferred to the phase gate.
+- Focused proof required; full proof may be deferred to the phase gate.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -51,11 +50,11 @@ No production runtime driver integration is allowed in this bundle.
 - Do not mark the subbundle complete without source-backed proof.
 
 ## Acceptance Checklist
-- [ ] Scope implemented without forbidden runtime surface.
-- [ ] Existing functionality preserved.
-- [ ] Focused tests pass.
-- [ ] Source scans pass.
-- [ ] Execution report row updated.
+- [x] Scope implemented without forbidden runtime surface.
+- [x] Existing functionality preserved.
+- [x] Focused tests pass.
+- [x] Source scans pass.
+- [x] Execution report row updated.
 
 
 ## Proof Required
@@ -64,10 +63,11 @@ No production runtime driver integration is allowed in this bundle.
 - Build/unit/focused integration proof at critical gates.
 
 ## Browser Validation Logging
-N/A. Backend/Core/driver contract work only. If UI/media files change, fail the subbundle and revert or split out a separate UI bundle.
+- N/A. Backend/Core/driver contract work only. If UI/media files change, fail the subbundle and revert or split out a separate UI bundle.
 
 ## Progression Gate
-May proceed only if focused proof passes and no forbidden drift appears.
+- May proceed only if focused proof passes and no forbidden drift appears.
 
 ## Suggested Agent Prompt
 Implement `SB011 — .NET transcript fixtures and negative cases` exactly as scoped. Preserve verification-only semantics and write proof before moving on.
+
