@@ -1,0 +1,79 @@
+Command: rg source assertions for adapter behavior, denial tests, and docs
+Working directory: C:\repositories\CanDoItAll
+Start time: 2026-06-07T21:19:25.7914212-04:00
+--- Pattern: ProcessTranscriptVerificationReadOnlyAdapter ---
+Command: rg -n ProcessTranscriptVerificationReadOnlyAdapter <target files>
+codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1\architecture\07-release-gate-matrix.md:8:| Process module adapter | Single narrow read-only adapter; no generic runtime registration, scheduler hook, workflow hook, manager command, external call, file read, storage write, workspace write, or process mutation. | Covered by `ProcessTranscriptVerificationReadOnlyAdapterTests`. |
+codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1\architecture\07-release-gate-matrix.md:16:- Focused integration: `dotnet test tests/CanDoItAll.Tests.Integration/CanDoItAll.Tests.Integration.csproj --no-restore --filter FullyQualifiedName~ProcessTranscriptVerificationReadOnlyAdapterTests`
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:11:public sealed class ProcessTranscriptVerificationReadOnlyAdapterTests
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:21:        var adapter = new ProcessTranscriptVerificationReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:57:        var adapter = new ProcessTranscriptVerificationReadOnlyAdapter(_ =>
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:84:        var adapter = new ProcessTranscriptVerificationReadOnlyAdapter(_ =>
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:114:        var adapter = new ProcessTranscriptVerificationReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:146:        var adapter = new ProcessTranscriptVerificationReadOnlyAdapter(_ =>
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:11:internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:15:    public ProcessTranscriptVerificationReadOnlyAdapter()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:20:    internal ProcessTranscriptVerificationReadOnlyAdapter(
+src\CanDoItAll.Processes.Drivers.TranscriptVerification\README.md:24:- `CanDoItAll.Modules.Processes` owns `ProcessTranscriptVerificationReadOnlyAdapter`.
+Exit code: 0
+--- Pattern: IsApprovedSuppliedEvidenceUri ---
+Command: rg -n IsApprovedSuppliedEvidenceUri <target files>
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:113:        if (!IsApprovedSuppliedEvidenceUri(payload.TranscriptReference.Uri) ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:114:            evidenceReferences.Any(reference => !IsApprovedSuppliedEvidenceUri(reference.Uri)))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:306:    private static bool IsApprovedSuppliedEvidenceUri(string uri)
+Exit code: 0
+--- Pattern: EvidenceHashMismatch ---
+Command: rg -n EvidenceHashMismatch <target files>
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:140:                ProcessDriverDiagnosticCategory.EvidenceHashMismatch,
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:73:        Assert.Contains(observation.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.EvidenceHashMismatch);
+Exit code: 0
+--- Pattern: NoMutationPerformed ---
+Command: rg -n NoMutationPerformed <target files>
+src\CanDoItAll.Processes.Drivers.TranscriptVerification\README.md:26:- Hash mismatch, unsupported lane, untrusted evidence URI, and mutation attempts return denied observations with `NoMutationPerformed = true`.
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:175:            NoMutationPerformed: true,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:196:            response.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:359:    bool NoMutationPerformed,
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:28:        Assert.True(observation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:71:        Assert.True(observation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:97:        Assert.True(mutationObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:101:        Assert.True(untrustedObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:128:        Assert.True(observation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:156:        Assert.True(observation.NoMutationPerformed);
+Exit code: 0
+--- Pattern: ProcessTranscriptVerificationSourceLane ---
+Command: rg -n ProcessTranscriptVerificationSourceLane <target files>
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:29:        Assert.Equal(ProcessTranscriptVerificationSourceLane.DotNetRustTranscriptVerification, observation.SourceLane);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:190:            ProcessTranscriptVerificationSourceLane.DotNetRustTranscriptVerification,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:353:    ProcessTranscriptVerificationSourceLane SourceLane,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:365:internal enum ProcessTranscriptVerificationSourceLane
+Exit code: 0
+--- Pattern: OfficeEvidenceRead ---
+Command: rg -n OfficeEvidenceRead <target files>
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:141:    [InlineData(ProcessDriverCapabilityScopeKind.OfficeEvidenceRead)]
+Exit code: 0
+--- Pattern: BusinessAnalysisRead ---
+Command: rg -n BusinessAnalysisRead <target files>
+tests\CanDoItAll.Tests.Integration\ProcessTranscriptVerificationReadOnlyAdapterTests.cs:142:    [InlineData(ProcessDriverCapabilityScopeKind.BusinessAnalysisRead)]
+Exit code: 0
+--- Pattern: Process Module Adapter ---
+Command: rg -n Process Module Adapter <target files>
+src\CanDoItAll.Processes.Drivers.TranscriptVerification\README.md:23:## Process Module Adapter
+Exit code: 0
+--- Pattern: No generic process-driver runtime ---
+Command: rg -n No generic process-driver runtime <target files>
+src\CanDoItAll.Processes.Drivers.TranscriptVerification\README.md:12:- No generic process-driver runtime. The process module may consume this verifier only through the narrow read-only adapter that supplies already-resolved transcript content and evidence references.
+Exit code: 0
+--- Pattern: Runtime Evidence Consistency Verifier Proposal ---
+Command: rg -n Runtime Evidence Consistency Verifier Proposal <target files>
+codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1\architecture\06-runtime-evidence-consistency-verifier-proposal.md:1:# Runtime Evidence Consistency Verifier Proposal
+Exit code: 0
+--- Pattern: Release Gate Matrix ---
+Command: rg -n Release Gate Matrix <target files>
+codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1\architecture\07-release-gate-matrix.md:1:# Release Gate Matrix
+Exit code: 0
+--- Pattern: Next Bundle Decision ---
+Command: rg -n Next Bundle Decision <target files>
+codex\bundles\process-driver-alpha-consumer-evidence-pipeline-v1\architecture\08-next-bundle-decision.md:1:# Next Bundle Decision
+Exit code: 0
+Invariant ID: SB003_INV_001 SB006_INV_001 SB009_INV_001 SB012_INV_001 SB015_INV_001 SB018_INV_001 SB021_INV_001 SB024_INV_001 SB027_INV_001 SB030_INV_001 SB033_INV_001 SB036_INV_001 SB039_INV_001 SB042_INV_001 SB045_INV_001 SB048_INV_001
+Exit code: 0

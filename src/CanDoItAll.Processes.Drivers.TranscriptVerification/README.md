@@ -9,7 +9,7 @@ This package is the first verification-only alpha for supplied .NET and Rust tra
 
 ## Explicit Non-Goals
 - No command execution, package restore, workspace writes, storage writes, process mutation, Graph or Office calls, runtime registration, selector, host, or manager command.
-- No process-module integration. Runtime adoption requires a later sandbox and allowlist bundle.
+- No generic process-driver runtime. The process module may consume this verifier only through the narrow read-only adapter that supplies already-resolved transcript content and evidence references.
 
 ## API Sample
 
@@ -19,6 +19,12 @@ var response = verifier.Verify(request);
 ```
 
 The response is accepted only when the permission mode, capability scope, operations, transcript hash, and evidence hashes satisfy the read-only verification contract.
+
+## Process Module Adapter
+- `CanDoItAll.Modules.Processes` owns `ProcessTranscriptVerificationReadOnlyAdapter`.
+- The adapter accepts supplied transcript text and approved evidence references; it does not open files, call external systems, mutate process state, or register a runtime driver.
+- Hash mismatch, unsupported lane, untrusted evidence URI, and mutation attempts return denied observations with `NoMutationPerformed = true`.
+- The verifier package still has no dependency on `CanDoItAll.Modules.Processes`, infrastructure, storage, workspace, Graph, Office, or process runtime services.
 
 ## Roadmap
 - Phase 1: .NET/Rust Transcript Verifier over existing build, test, and proof transcripts.

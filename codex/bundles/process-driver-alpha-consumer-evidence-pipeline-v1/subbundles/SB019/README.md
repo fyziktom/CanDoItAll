@@ -1,7 +1,7 @@
 # SB019 — Audit fact consistency
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Normalize audit facts for caller/mode/lane/operation/evidence ids/denial/redaction/hash.
@@ -17,13 +17,13 @@ Normalize audit facts for caller/mode/lane/operation/evidence ids/denial/redacti
 - If any critical gate before this subbundle fails, stop and repair before continuing.
 
 ## Exact Source References
-- `/src/CanDoItAll.Processes.Drivers.TranscriptVerification`
-- `/src/CanDoItAll.Processes.Drivers.Abstractions`
-- `/src/CanDoItAll.Processes.Core`
-- `/src/CanDoItAll.Modules.Processes/Automation/Dispatch`
-- `/tests/CanDoItAll.Tests.Unit`
-- `/tests/CanDoItAll.Tests.Integration`
-- `/codex/bundles/process-driver-verification-alpha-dotnet-rust-core-stabilization-v1`
+- `repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification`
+- `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
+- `repo://src/CanDoItAll.Processes.Core`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://tests/CanDoItAll.Tests.Unit`
+- `repo://tests/CanDoItAll.Tests.Integration`
+- `repo://codex/bundles/process-driver-verification-alpha-dotnet-rust-core-stabilization-v1`
 
 ## Deliverables
 - Source/docs/tests/proof appropriate for this subbundle objective.
@@ -36,7 +36,7 @@ Normalize audit facts for caller/mode/lane/operation/evidence ids/denial/redacti
 - Downstream phases rely on this subbundle if it changes API, adapter boundaries, evidence payloads, audit semantics, or denial behavior.
 
 ## Validation Depth
-Focused proof sufficient, but must be covered by the next critical gate.
+- Focused proof sufficient, but must be covered by the next critical gate.
 
 ## Implementation Steps
 1. Re-read exact source references.
@@ -57,12 +57,12 @@ Focused proof sufficient, but must be covered by the next critical gate.
 - Do not add UI/mobile/browser proof unless UI files changed unexpectedly; if so, fail and re-scope.
 
 ## Acceptance Checklist
-- [ ] Objective completed.
-- [ ] Original behavior preserved.
-- [ ] No forbidden runtime or mutation surface added.
-- [ ] Tests/scans updated.
-- [ ] Execution report updated.
-- [ ] Critical gate proof completed if applicable.
+- [x] Objective completed.
+- [x] Original behavior preserved.
+- [x] No forbidden runtime or mutation surface added.
+- [x] Tests/scans updated.
+- [x] Execution report updated.
+- [x] Critical gate proof completed if applicable.
 
 ## Proof Required
 - Build/test/source proof appropriate for the subbundle.
@@ -70,10 +70,10 @@ Focused proof sufficient, but must be covered by the next critical gate.
 - Anti-stub scan for changed production source.
 
 ## Browser Validation Logging
-N/A runtime/service bundle. Record N/A and cite no UI/media drift source scan.
+- N/A runtime/service bundle. Record N/A and cite no UI/media drift source scan.
 
 ## Progression Gate
-Proceed only if this subbundle's proof is present and no critical reopen trigger fires.
+- Proceed only if this subbundle's proof is present and no critical reopen trigger fires.
 
 ## Suggested Agent Prompt
 Implement `SB019 — Audit fact consistency` from `process-driver-alpha-consumer-evidence-pipeline-v1`. Preserve all hard constraints and update proof before continuing.

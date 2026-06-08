@@ -174,7 +174,7 @@ password=hunter2 rust.user@example.com
     }
 
     [Fact]
-    public void Process_driver_transcript_alpha_SB033_INV_001_alpha_package_has_no_runtime_hook_or_process_module_dependency()
+    public void Process_driver_transcript_alpha_SB033_INV_001_alpha_package_and_process_adapter_have_no_runtime_hook()
     {
         var root = FindRepositoryRoot();
         var solution = ReadRepositoryFile("CanDoItAll.slnx");
@@ -187,6 +187,12 @@ password=hunter2 rust.user@example.com
             "src",
             "CanDoItAll.Modules.Processes",
             "CanDoItAll.Modules.Processes.csproj");
+        var processAdapterSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessTranscriptVerificationReadOnlyAdapter.cs");
 
         Assert.Contains(
             "src/CanDoItAll.Processes.Drivers.TranscriptVerification/CanDoItAll.Processes.Drivers.TranscriptVerification.csproj",
@@ -209,7 +215,16 @@ password=hunter2 rust.user@example.com
         Assert.DoesNotContain("IServiceCollection", source, StringComparison.Ordinal);
         Assert.DoesNotContain("AddScoped", source, StringComparison.Ordinal);
         Assert.DoesNotContain("AddSingleton", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Drivers.TranscriptVerification", modulesProcessesProject, StringComparison.Ordinal);
+        Assert.Contains(
+            @"<ProjectReference Include=""..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj"" />",
+            modulesProcessesProject,
+            StringComparison.Ordinal);
+        Assert.Contains("ProcessTranscriptVerificationReadOnlyAdapter", processAdapterSource, StringComparison.Ordinal);
+        Assert.Contains("TranscriptVerificationAlphaVerifier", processAdapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("IServiceCollection", modulesProcessesProject + processAdapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddScoped", modulesProcessesProject + processAdapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("AddSingleton", modulesProcessesProject + processAdapterSource, StringComparison.Ordinal);
+        AssertNoForbiddenRuntimeTokens(modulesProcessesProject + processAdapterSource);
         AssertNoForbiddenRuntimeTokens(source);
         AssertNoForbiddenAlphaPackageTokens(source);
     }

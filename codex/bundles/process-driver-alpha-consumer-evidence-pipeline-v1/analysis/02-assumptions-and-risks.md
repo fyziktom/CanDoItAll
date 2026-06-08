@@ -8,16 +8,16 @@
 - UI/mobile/small/medium proof remains out of scope unless production UI files unexpectedly change; if they do, the bundle should fail and be re-scoped.
 
 ## Critical Path Risks
-1. A controlled adapter accidentally becomes a generic runtime driver selector.
-2. Evidence content resolution accidentally reads arbitrary workspace paths or untrusted files.
-3. The verifier diagnostics are attached to process state or artifacts as writes without an explicit later approval.
-4. Audit facts are emitted but not redacted or not linked to evidence hashes.
-5. The .NET/Rust verifier starts executing commands instead of reading supplied transcripts.
-6. Office or business-analysis lanes sneak in Graph calls, task/email mutation, document mutation, or business-record mutation.
-7. Core starts referencing driver abstractions or transcript verifier packages.
-8. Tests only cover happy-path transcripts and miss hash mismatch, permission denial, mutation attempt, unsupported language, empty transcript, or secret leakage.
-9. The process module adapter is too broad and hides side effects behind a neutral name.
-10. The next roadmap approves runtime driver registry too early.
+- A controlled adapter accidentally becomes a generic runtime driver selector.
+- Evidence content resolution accidentally reads arbitrary workspace paths or untrusted files.
+- The verifier diagnostics are attached to process state or artifacts as writes without an explicit later approval.
+- Audit facts are emitted but not redacted or not linked to evidence hashes.
+- The .NET/Rust verifier starts executing commands instead of reading supplied transcripts.
+- Office or business-analysis lanes sneak in Graph calls, task/email mutation, document mutation, or business-record mutation.
+- Core starts referencing driver abstractions or transcript verifier packages.
+- Tests only cover happy-path transcripts and miss hash mismatch, permission denial, mutation attempt, unsupported language, empty transcript, or secret leakage.
+- The process module adapter is too broad and hides side effects behind a neutral name.
+- The next roadmap approves runtime driver registry too early.
 
 ## Validation Risks
 - Build-only proof is insufficient. Every critical phase requires source scans, architecture tests, focused behavior tests, anti-stub audit, and fake-proof review.

@@ -1,0 +1,12 @@
+# SB015 Semantic Invariants
+
+- Invariant ID: SB015_INV_001
+- Source raw note: Move toward stable Core and drivers; add a more complex evidence pipeline while preserving quality and explicit proof.
+- Expected behavior: the adapter rejects hash mismatches and unapproved evidence URIs before verifier invocation.
+- Disallowed shallow implementation: A generic driver runtime hook, DI registration, file/network read, workspace write, process mutation, fixture-only verifier call, or prose-only closure is not acceptable.
+- Failing-first test: N/A for process no behavior before this bundle; negative proof covers hash mismatch, untrusted URI, mutation request, and non-.NET/Rust lane rejection through bundle://proof/shared/transcripts/passing-focused-adapter-integration-tests.txt and bundle://proof/shared/transcripts/passing-source-scans.txt.
+- Passing test: bundle://proof/shared/transcripts/passing-full-unit-tests.txt, bundle://proof/shared/transcripts/passing-process-architecture-guard-tests.txt, and bundle://proof/shared/transcripts/passing-focused-adapter-integration-tests.txt.
+- Changed source files: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationReadOnlyAdapter.cs, repo://tests/CanDoItAll.Tests.Integration/ProcessTranscriptVerificationReadOnlyAdapterTests.cs, repo://tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs, and repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification/README.md.
+- Production assertions: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationReadOnlyAdapter.cs performs preflight permission, source-lane, URI, transcript-hash, evidence-hash, audit, redaction, and no-mutation checks before invoking the verifier delegate.
+- Red-team negative case: bundle://proof/shared/transcripts/passing-focused-adapter-integration-tests.txt proves rejected hash mismatch, untrusted URI, mutation request, Office lane, and business-analysis lane paths; bundle://proof/shared/transcripts/passing-source-scans.txt proves no runtime hook, no Core driver dependency, no stub marker, and no UI/media drift.
+- Downstream dependency check: bundle://proof/shared/transcripts/passing-solution-build.txt, bundle://proof/shared/transcripts/passing-process-architecture-guard-tests.txt, and repo://codex/bundles/process-driver-alpha-consumer-evidence-pipeline-v1/architecture/08-next-bundle-decision.md keep downstream runtime work deferred.

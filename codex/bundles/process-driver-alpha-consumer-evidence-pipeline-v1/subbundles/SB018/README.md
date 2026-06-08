@@ -1,7 +1,7 @@
 # SB018 — Gate F observation parity
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Critical gate: output fields, denial paths, no-mutation flag, evidence reference preservation, and no process mutation.
@@ -17,13 +17,13 @@ Critical gate: output fields, denial paths, no-mutation flag, evidence reference
 - If any critical gate before this subbundle fails, stop and repair before continuing.
 
 ## Exact Source References
-- `/src/CanDoItAll.Processes.Drivers.TranscriptVerification`
-- `/src/CanDoItAll.Processes.Drivers.Abstractions`
-- `/src/CanDoItAll.Processes.Core`
-- `/src/CanDoItAll.Modules.Processes/Automation/Dispatch`
-- `/tests/CanDoItAll.Tests.Unit`
-- `/tests/CanDoItAll.Tests.Integration`
-- `/codex/bundles/process-driver-verification-alpha-dotnet-rust-core-stabilization-v1`
+- `repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification`
+- `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
+- `repo://src/CanDoItAll.Processes.Core`
+- `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch`
+- `repo://tests/CanDoItAll.Tests.Unit`
+- `repo://tests/CanDoItAll.Tests.Integration`
+- `repo://codex/bundles/process-driver-verification-alpha-dotnet-rust-core-stabilization-v1`
 
 ## Deliverables
 - Source/docs/tests/proof appropriate for this subbundle objective.
@@ -36,7 +36,7 @@ Critical gate: output fields, denial paths, no-mutation flag, evidence reference
 - Downstream phases rely on this subbundle if it changes API, adapter boundaries, evidence payloads, audit semantics, or denial behavior.
 
 ## Validation Depth
-Critical gate: build/test/source-scan/anti-stub/red-team evidence required.
+- Critical gate: build/test/source-scan/anti-stub/red-team evidence required.
 
 ## Implementation Steps
 1. Re-read exact source references.
@@ -57,12 +57,12 @@ Critical gate: build/test/source-scan/anti-stub/red-team evidence required.
 - Do not add UI/mobile/browser proof unless UI files changed unexpectedly; if so, fail and re-scope.
 
 ## Acceptance Checklist
-- [ ] Objective completed.
-- [ ] Original behavior preserved.
-- [ ] No forbidden runtime or mutation surface added.
-- [ ] Tests/scans updated.
-- [ ] Execution report updated.
-- [ ] Critical gate proof completed if applicable.
+- [x] Objective completed.
+- [x] Original behavior preserved.
+- [x] No forbidden runtime or mutation surface added.
+- [x] Tests/scans updated.
+- [x] Execution report updated.
+- [x] Critical gate proof completed if applicable.
 
 ## Proof Required
 - Build/test/source proof appropriate for the subbundle.
@@ -70,10 +70,10 @@ Critical gate: build/test/source-scan/anti-stub/red-team evidence required.
 - Anti-stub scan for changed production source.
 
 ## Browser Validation Logging
-N/A runtime/service bundle. Record N/A and cite no UI/media drift source scan.
+- N/A runtime/service bundle. Record N/A and cite no UI/media drift source scan.
 
 ## Progression Gate
-Proceed only if this subbundle's proof is present and no critical reopen trigger fires.
+- Proceed only if this subbundle's proof is present and no critical reopen trigger fires.
 
 ## Suggested Agent Prompt
 Implement `SB018 — Gate F observation parity` from `process-driver-alpha-consumer-evidence-pipeline-v1`. Preserve all hard constraints and update proof before continuing.
