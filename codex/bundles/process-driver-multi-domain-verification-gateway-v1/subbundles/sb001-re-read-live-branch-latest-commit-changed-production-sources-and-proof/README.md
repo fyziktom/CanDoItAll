@@ -1,7 +1,10 @@
 # SB001 — Re-read live branch, latest commit, changed production sources and proof manifests.
 
 ## Status
-Prepared.
+- Status: `Completed`
+- Entry gate: `Passed`
+- Closure gate: `Passed`
+- Completed: `2026-06-08`
 
 ## Objective
 Re-read live branch, latest commit, changed production sources and proof manifests.
@@ -30,7 +33,7 @@ Re-read live branch, latest commit, changed production sources and proof manifes
 - Updated proof artifacts under `proof/SB001/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,24 +62,26 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
 
 
 ## Proof Required
-- Build/focused test transcript.
-- Source scan transcript.
-- Anti-stub audit.
-- Subbundle row in execution report.
+- Build transcript: `bundle://proof/SB001/transcripts/solution-build-no-restore.txt`.
+- Focused test transcript: `bundle://proof/SB001/transcripts/focused-baseline-unit-tests.txt`.
+- Source scan transcript: `bundle://proof/SB001/transcripts/source-scan-and-anti-stub-audit.txt`.
+- Anti-stub audit: `bundle://proof/SB001/transcripts/source-scan-and-anti-stub-audit.txt`.
+- Source reconciliation transcript: `bundle://proof/SB001/transcripts/source-reconciliation.txt`.
+- Subbundle row in execution report: `bundle://reviews/01-execution-report.md`.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Noncritical: downstream work may continue only if focused proof is green.
+- Noncritical: downstream work may continue only if focused proof is green.
 
 ## Suggested Agent Prompt
 Implement SB001: Re-read live branch, latest commit, changed production sources and proof manifests.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

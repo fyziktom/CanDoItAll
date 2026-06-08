@@ -1,0 +1,7 @@
+SB042 red-team compatibility docs shallow-proof rejection
+PASS: rejected status-only proof; missing 10 required Gate N signals
+PASS: rejected stale-doc-only proof; missing 10 required Gate N signals
+PASS: rejected test-only proof; missing 10 required Gate N signals
+PASS: rejected report-only proof; missing 10 required Gate N signals
+PASS: semantic positive proof fixture contains all required Gate N signals
+RESULT: PASS

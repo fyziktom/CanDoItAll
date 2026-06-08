@@ -1,0 +1,22 @@
+SB030 Gate J red-team Office evidence shallow-proof rejection
+UTC: 2026-06-08T17:03:57Z
+
+Shallow implementation under test:
+- Claims Office verifier is read-only because package source lacks Graph token.
+- Skips supplied-content envelope tests, missing metadata diagnostics, side-effect denial cases, audit fact assertions, and focused pass count.
+
+PASS required anti-shallow token present: Office_evidence_alpha_SB028_INV_001_verifies_supplied_email_and_document_metadata_text_only
+PASS required anti-shallow token present: Office_evidence_alpha_SB028_INV_002_reports_missing_supplied_metadata_without_connector_calls
+PASS required anti-shallow token present: Office_evidence_alpha_SB028_INV_003_rejects_untrusted_mismatched_and_wrong_envelopes_before_analysis
+PASS required anti-shallow token present: Office_evidence_alpha_SB029_INV_001_denies_category_mutation_task_creation_document_write_graph_call_and_attachment_fetch
+PASS required anti-shallow token present: ProcessDriverVerificationTestHarness.AssertNoMutation
+PASS required anti-shallow token present: ProcessDriverVerificationTestHarness.AssertNormalizedAuditFacts
+PASS required anti-shallow token present: ProcessDriverVerificationTestHarness.AssertSideEffectDenied
+PASS required anti-shallow token present: ProcessDriverAuditFactKind.OperationDenied
+PASS required anti-shallow token present: ProcessDriverDiagnosticCategory.EvidenceHashMismatch
+PASS required anti-shallow token present: ProcessDriverOperation.CallOfficeGraph
+PASS required anti-shallow token present: attachment-fetch
+PASS focused transcript proves the expected 5-test pass.
+PASS source scan proves no runtime-host/side-effect drift and passed.
+
+RESULT: PASSED - shallow Office evidence-only closure is rejected.

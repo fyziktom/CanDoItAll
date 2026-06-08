@@ -1,0 +1,13 @@
+Command: SB009 Gate C API governance and reverse-dependency scan
+Working directory: C:\repositories\CanDoItAll
+Run label: SB009 governance scan 2026-06-08
+--- output ---
+PASS: Core references Contracts and does not reference driver packages.
+PASS: Driver abstractions have no project or package references.
+PASS: TranscriptVerification depends only on driver abstractions.
+PASS: RuntimeEvidence keeps the explicit Core descriptor plus driver-abstraction dependency.
+PASS: Core source has no driver/runtime-host tokens.
+PASS: Driver abstractions source has no runtime-host/DI/module/infrastructure tokens.
+PASS: No UI/media drift in Gate C tracked source/test/bundle architecture changes.
+PASS: No secret-like patterns in Gate C scan targets.
+Exit code: 0

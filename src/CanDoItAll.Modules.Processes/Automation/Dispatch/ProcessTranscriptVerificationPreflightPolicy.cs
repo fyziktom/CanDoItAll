@@ -21,6 +21,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverDenialReason.MissingPermissionMode,
                 ProcessDriverDiagnosticCategory.UnsupportedTranscriptFormat,
                 "Verification request is missing a permission mode.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -32,6 +33,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverDenialReason.CapabilityScopeDenied,
                 ProcessDriverDiagnosticCategory.UnsupportedTranscriptFormat,
                 "Capability scope is not the process read-only .NET/Rust transcript verification lane.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -48,6 +50,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverOperationRules.ResolveReadonlyDenialReason(operation),
                 ProcessDriverDiagnosticCategory.MutationAttemptDenied,
                 $"Operation {operation} is denied by the process read-only evidence adapter.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -59,6 +62,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverDenialReason.MissingEvidence,
                 ProcessDriverDiagnosticCategory.InsufficientProof,
                 "Process transcript verification requires at least one supplied evidence reference.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -73,6 +77,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverDenialReason.MissingEvidence,
                 ProcessDriverDiagnosticCategory.TranscriptUntrusted,
                 "Evidence source is not an approved supplied process evidence payload reference.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -84,6 +89,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverDenialReason.MissingEvidence,
                 ProcessDriverDiagnosticCategory.InsufficientProof,
                 "Every supplied process evidence reference must include a valid SHA-256 content hash.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -95,6 +101,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
                 ProcessDriverDenialReason.MissingEvidence,
                 ProcessDriverDiagnosticCategory.EvidenceHashMismatch,
                 "Supplied transcript content does not match the process evidence hash.",
+                evidenceReferences,
                 primaryEvidence);
         }
 
@@ -107,6 +114,7 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
         ProcessDriverDenialReason denialReason,
         ProcessDriverDiagnosticCategory diagnosticCategory,
         string diagnosticMessage,
+        IReadOnlyList<ProcessDriverEvidenceReference> evidenceReferences,
         ProcessDriverEvidenceReference evidenceReference)
     {
         var redaction = ProcessDriverRedactionPolicy.Redact(string.Empty).Descriptor;
@@ -115,12 +123,15 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
             diagnosticCategory,
             diagnosticMessage,
             evidenceReference);
+        var diagnosticSummary = ProcessDriverRedactionPolicy.RedactDiagnosticSummary(diagnosticMessage).RedactedText;
         var auditFacts = CreateDeniedAuditFacts(
             payload,
             requestedOperations,
             denialReason,
             redaction,
-            diagnosticMessage);
+            evidenceReferences,
+            evidenceReference,
+            diagnosticSummary);
         var response = new ProcessDriverVerificationResponse(
             Accepted: false,
             DenialReason: denialReason,
@@ -139,19 +150,24 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
         IReadOnlyList<ProcessDriverOperation> requestedOperations,
         ProcessDriverDenialReason denialReason,
         ProcessDriverRedactionDescriptor redaction,
+        IReadOnlyList<ProcessDriverEvidenceReference> evidenceReferences,
+        ProcessDriverEvidenceReference primaryEvidence,
         string diagnosticSummary)
     {
         var outputHash = ProcessDriverEvidencePolicy.ComputeSha256(diagnosticSummary);
+        var auditEvidenceReferences = CreateAuditEvidenceReferences(evidenceReferences, primaryEvidence);
 
         return requestedOperations
             .Select(operation => new ProcessDriverAuditFact(
-                CreateStableAuditId(payload, operation, denialReason),
+                CreateStableAuditId(payload, operation, denialReason, auditEvidenceReferences),
                 payload.RequestedAt,
                 ProcessDriverAuditFactKind.OperationDenied,
                 payload.CallerContext.Trim(),
                 payload.PermissionMode,
                 payload.Scope,
+                payload.Scope.Kind,
                 operation,
+                auditEvidenceReferences,
                 denialReason,
                 redaction,
                 diagnosticSummary,
@@ -162,7 +178,8 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
     private static Guid CreateStableAuditId(
         ProcessTranscriptVerificationReadOnlyEvidencePayload payload,
         ProcessDriverOperation operation,
-        ProcessDriverDenialReason denialReason)
+        ProcessDriverDenialReason denialReason,
+        IReadOnlyList<ProcessDriverEvidenceReference> evidenceReferences)
     {
         var material = string.Join(
             "|",
@@ -176,10 +193,32 @@ internal static class ProcessTranscriptVerificationPreflightPolicy
             operation,
             denialReason,
             payload.TranscriptReference.Uri.Trim(),
-            ProcessDriverEvidencePolicy.NormalizeHash(payload.TranscriptReference.TranscriptHash));
+            ProcessDriverEvidencePolicy.NormalizeHash(payload.TranscriptReference.TranscriptHash),
+            string.Join(",", evidenceReferences.Select(CreateEvidenceId)));
         var bytes = Convert.FromHexString(ProcessDriverEvidencePolicy.ComputeSha256(material));
 
         return new Guid(bytes[..16]);
+    }
+
+    private static IReadOnlyList<ProcessDriverEvidenceReference> CreateAuditEvidenceReferences(
+        IReadOnlyList<ProcessDriverEvidenceReference> evidenceReferences,
+        ProcessDriverEvidenceReference primaryEvidence)
+    {
+        IReadOnlyList<ProcessDriverEvidenceReference> references = evidenceReferences.Count == 0
+            ? [primaryEvidence]
+            : evidenceReferences;
+
+        return ProcessDriverEvidencePolicy.NormalizeEvidenceReferences(references);
+    }
+
+    private static string CreateEvidenceId(ProcessDriverEvidenceReference evidenceReference)
+    {
+        return string.Join(
+            ":",
+            evidenceReference.Kind,
+            evidenceReference.Uri.Trim(),
+            ProcessDriverEvidencePolicy.NormalizeHash(evidenceReference.ContentHash),
+            evidenceReference.CoreDescriptorFamily);
     }
 }
 

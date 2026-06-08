@@ -1,0 +1,14 @@
+Command: SB011 malicious transcript corpus source/no-drift/anti-stub audit
+Working directory: C:\repositories\CanDoItAll
+Run label: SB011 source audit 2026-06-08
+--- output ---
+PASS: Malicious corpus fixture exists: tests\CanDoItAll.Tests.Unit\TestData\ProcessDriverContractTranscripts\malicious-prompt-path-secret-transcript.txt
+PASS: Malicious corpus fixture exists: tests\CanDoItAll.Tests.Unit\TestData\ProcessDriverContractTranscripts\malicious-mixed-dotnet-rust-transcript.txt
+PASS: Malicious corpus fixture exists: tests\CanDoItAll.Tests.Unit\TestData\ProcessDriverContractTranscripts\malicious-oversized-transcript.txt
+PASS: Prompt/path/secret fixture covers injection text, path-like text, and secret-like text.
+PASS: Mixed fixture covers .NET and Rust markers.
+PASS: Oversized fixture length is 4310, above redaction default.
+PASS: No UI/media drift in tracked source/test/bundle changes.
+PASS: No stub/placeholder markers in SB011 changed files.
+PASS: No repository secret-pattern matches in SB011 changed files.
+Exit code: 0

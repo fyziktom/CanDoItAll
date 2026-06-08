@@ -1,0 +1,13 @@
+Command: SB021 Gate G adversarial negative proof
+Working directory: C:\repositories\CanDoItAll
+Run label: reject gateway runtime-host closure 2026-06-08
+--- output ---
+Invariant ID: SB021_INV_001
+Simulated claim: Gate G passed because the gateway can call one verifier.
+Rejected: missing clean solution build transcript.
+Rejected: missing focused tests proving side-effect operations are denied through both implemented gateway lanes.
+Rejected: missing proof that unimplemented artifact, Office, and business-analysis lanes are absent from the concrete gateway.
+Rejected: missing source scan proving no generic lane dispatch, object payload, DI, registry, selector, runtime host, manager command, scheduler, workflow, file, HTTP, workspace, or storage surface.
+Rejected: missing SB019/SB020 source-backed manifests.
+Simulated verifier exit code: 1
+Actual transcript exit code: 0

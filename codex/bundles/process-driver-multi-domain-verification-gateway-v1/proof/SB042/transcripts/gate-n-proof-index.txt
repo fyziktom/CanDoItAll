@@ -1,0 +1,39 @@
+SB042 Gate N proof index
+PASS: solution build transcript shows 0 warnings
+PASS: solution build transcript shows 0 errors
+PASS: focused compatibility transcript shows 15 passing tests
+PASS: Gate N source/doc scan passed
+PASS: Gate N scan checked production contract version
+PASS: Gate N scan checked driver snapshot hash
+PASS: Gate N scan checked migration doc descriptor allow-list
+PASS: Gate N red-team rejection passed
+PASS: red-team rejects status-only proof
+PASS: red-team rejects stale-doc-only proof
+PASS: red-team rejects test-only proof
+PASS: red-team rejects report-only proof
+PASS: SB042 manifest marked completed
+PASS: SB042 manifest identifies Gate N
+PASS: SB042 manifest includes production behavior artifact matrix
+PASS: SB042 semantic invariant exists
+PASS: SB042 semantic invariant includes artifact matrix
+PASS: SB042 semantic invariant includes downstream dependency check
+PASS: SB040 upstream manifest completed
+PASS: SB041 upstream manifest completed
+PASS: execution report handoff moved to SB043
+PASS: execution report marks SB042 passed
+PASS: execution report includes SB042 semantic evidence section
+PASS: root README status advanced through SB042
+PASS: root README handoff advanced to SB043
+PASS: SB042 subbundle marked completed
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB042\manifest.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB042\transcripts\red-team-compatibility-docs-shallow-proof-rejection.txt
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB041\manifest.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB040\manifest.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB042\transcripts\gate-n-focused-contract-compatibility-tests.txt
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB042\semantic-invariants.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB042\transcripts\gate-n-solution-build-no-restore.txt
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\reviews\01-execution-report.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\README.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\subbundles\sb042-gate-n-compatibility-snapshots-and-docs-match-production-api\README.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB042\transcripts\gate-n-compatibility-snapshots-docs-source-scan.txt
+RESULT: PASS

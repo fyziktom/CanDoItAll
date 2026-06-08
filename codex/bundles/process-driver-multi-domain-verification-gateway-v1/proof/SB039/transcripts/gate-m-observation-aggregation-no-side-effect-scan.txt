@@ -1,0 +1,92 @@
+SB039 Gate M observation aggregation no-side-effect scan
+Package source files: 3
+Outside production source/project files scanned: 1280
+PASS: SB037 manifest exists
+PASS: SB038 manifest exists
+PASS: SB037 manifest is completed
+PASS: SB038 manifest is completed
+PASS: ObservationAggregation remains abstraction-only
+PASS: ObservationAggregation package has no package references
+PASS: ObservationAggregation package has no Core project reference
+PASS: production source outside aggregation package does not reference 'CanDoItAll.Processes.Drivers.ObservationAggregation'
+PASS: production source outside aggregation package does not reference 'ProcessDriverObservationAggregator'
+PASS: production source outside aggregation package does not reference 'ProcessDriverObservationAggregationRequest'
+PASS: production source outside aggregation package does not reference 'ProcessDriverObservationAggregate'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Processes.Core'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Processes.Drivers.TranscriptVerification'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Processes.Drivers.RuntimeEvidence'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Processes.Drivers.OfficeEvidence'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Processes.Drivers.BusinessAnalysis'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Processes.Drivers.ArtifactEvidence'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Modules.'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.Infrastructure'
+PASS: aggregation package excludes forbidden Gate M token 'CanDoItAll.AgentFramework'
+PASS: aggregation package excludes forbidden Gate M token 'IServiceCollection'
+PASS: aggregation package excludes forbidden Gate M token 'ServiceCollection'
+PASS: aggregation package excludes forbidden Gate M token 'AddTransient'
+PASS: aggregation package excludes forbidden Gate M token 'AddScoped'
+PASS: aggregation package excludes forbidden Gate M token 'AddSingleton'
+PASS: aggregation package excludes forbidden Gate M token 'IHostedService'
+PASS: aggregation package excludes forbidden Gate M token 'BackgroundService'
+PASS: aggregation package excludes forbidden Gate M token 'PeriodicTimer'
+PASS: aggregation package excludes forbidden Gate M token 'Channel<'
+PASS: aggregation package excludes forbidden Gate M token 'DbContext'
+PASS: aggregation package excludes forbidden Gate M token 'DbSet<'
+PASS: aggregation package excludes forbidden Gate M token 'EntityTypeBuilder'
+PASS: aggregation package excludes forbidden Gate M token 'MigrationBuilder'
+PASS: aggregation package excludes forbidden Gate M token 'SaveChanges'
+PASS: aggregation package excludes forbidden Gate M token 'ExecuteSql'
+PASS: aggregation package excludes forbidden Gate M token 'ProcessDriverRegistry'
+PASS: aggregation package excludes forbidden Gate M token 'ProcessDriverRuntimeSelector'
+PASS: aggregation package excludes forbidden Gate M token 'ProcessDriverManagerCommand'
+PASS: aggregation package excludes forbidden Gate M token 'ProcessDriverHost'
+PASS: aggregation package excludes forbidden Gate M token 'ProcessDriverProvider'
+PASS: aggregation package excludes forbidden Gate M token 'ICommand'
+PASS: aggregation package excludes forbidden Gate M token 'CommandHandler'
+PASS: aggregation package excludes forbidden Gate M token 'Scheduler'
+PASS: aggregation package excludes forbidden Gate M token 'Schedule'
+PASS: aggregation package excludes forbidden Gate M token 'Hangfire'
+PASS: aggregation package excludes forbidden Gate M token 'Quartz'
+PASS: aggregation package excludes forbidden Gate M token 'MediatR'
+PASS: aggregation package excludes forbidden Gate M token 'File.'
+PASS: aggregation package excludes forbidden Gate M token 'Directory.'
+PASS: aggregation package excludes forbidden Gate M token 'HttpClient'
+PASS: aggregation package excludes forbidden Gate M token 'System.Diagnostics.Process'
+PASS: aggregation package excludes forbidden Gate M token 'Process.Start'
+PASS: aggregation package excludes forbidden Gate M token 'TranscriptVerificationAlphaVerifier'
+PASS: aggregation package excludes forbidden Gate M token 'RuntimeEvidenceAlphaVerifier'
+PASS: aggregation package excludes forbidden Gate M token 'OfficeEvidenceAlphaVerifier'
+PASS: aggregation package excludes forbidden Gate M token 'BusinessAnalysisAlphaVerifier'
+PASS: aggregation package excludes forbidden Gate M token 'ArtifactEvidenceAlphaVerifier'
+PASS: aggregation package includes Gate M positive signal 'ProcessDriverVerificationResponse'
+PASS: aggregation package includes Gate M positive signal 'AuditFacts'
+PASS: aggregation package includes Gate M positive signal 'ResolveLane'
+PASS: aggregation package includes Gate M positive signal 'AggregationMutationFree: true'
+PASS: aggregation package includes Gate M positive signal 'ProcessDriverEvidencePolicy.NormalizeEvidenceReferences'
+PASS: aggregation package includes Gate M positive signal 'ProcessDriverRedactionPolicy.RedactDiagnosticSummary'
+PASS: aggregation package includes Gate M positive signal 'CreateReadonlyList'
+PASS: aggregation package includes Gate M positive signal 'Array.AsReadOnly'
+PASS: aggregation package includes Gate M positive signal 'ProcessDriverContractVersion.Current'
+PASS: focused tests include Gate M coverage 'Process_driver_observation_aggregation_SB037_INV_001'
+PASS: focused tests include Gate M coverage 'Process_driver_observation_aggregation_SB037_INV_002'
+PASS: focused tests include Gate M coverage 'Process_driver_observation_aggregation_SB037_INV_003'
+PASS: focused tests include Gate M coverage 'Process_driver_observation_aggregation_SB038_INV_001'
+PASS: focused tests include Gate M coverage 'Process_driver_observation_aggregation_SB038_INV_002'
+PASS: ObservationAggregation production package has no .razor UI/media files
+PASS: ObservationAggregation production package has no .css UI/media files
+PASS: ObservationAggregation production package has no .js UI/media files
+PASS: ObservationAggregation production package has no .ts UI/media files
+PASS: ObservationAggregation production package has no .png UI/media files
+PASS: ObservationAggregation production package has no .jpg UI/media files
+PASS: ObservationAggregation production package has no .jpeg UI/media files
+PASS: ObservationAggregation production package has no .svg UI/media files
+PASS: ObservationAggregation production package has no .webp UI/media files
+PASS: ObservationAggregation production package has no .gif UI/media files
+PASS: no high-confidence secret pattern in src\CanDoItAll.Processes.Drivers.ObservationAggregation\CanDoItAll.Processes.Drivers.ObservationAggregation.csproj
+PASS: no high-confidence secret pattern in tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB037\manifest.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB038\manifest.md
+PASS: no high-confidence secret pattern in C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ObservationAggregation\ProcessDriverObservationAggregate.cs
+PASS: no high-confidence secret pattern in C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ObservationAggregation\ProcessDriverObservationAggregationRequest.cs
+PASS: no high-confidence secret pattern in C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ObservationAggregation\ProcessDriverObservationAggregator.cs
+RESULT: PASS

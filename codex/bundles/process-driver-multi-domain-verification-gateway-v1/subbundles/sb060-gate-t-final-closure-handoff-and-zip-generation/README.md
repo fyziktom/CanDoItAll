@@ -1,7 +1,7 @@
 # SB060 — Gate T: final closure, handoff and zip generation.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Gate T: final closure, handoff and zip generation.
@@ -30,7 +30,7 @@ Gate T: final closure, handoff and zip generation.
 - Updated proof artifacts under `proof/SB060/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,12 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -73,10 +73,11 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - proof/SB060/manifest.md and proof/SB060/semantic-invariants.md.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB060: Gate T: final closure, handoff and zip generation.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.
+

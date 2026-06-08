@@ -1,0 +1,28 @@
+Gate S proof index
+Generated: 2026-06-08T16:16:03.2193290-04:00
+PASS: Artifact exists: bundle://proof/SB057/transcripts/gate-s-solution-build-no-restore.txt
+PASS: Artifact exists: bundle://proof/SB057/transcripts/gate-s-focused-roadmap-guard-tests.txt
+PASS: Artifact exists: bundle://proof/SB057/transcripts/gate-s-roadmap-denial-source-scan.txt
+PASS: Artifact exists: bundle://proof/SB057/transcripts/red-team-gate-s-runtime-host-roadmap-approval-rejection.txt
+PASS: Artifact exists: bundle://proof/SB057/semantic-invariants.md
+PASS: Artifact exists: bundle://proof/SB055/manifest.md
+PASS: Artifact exists: bundle://proof/SB056/manifest.md
+PASS: Build transcript contains: 0 upozornění
+PASS: Build transcript contains: Počet chyb: 0
+PASS: Focused roadmap guard transcript contains: Neúspěšné:     0
+PASS: Focused roadmap guard transcript contains: Úspěšné:     1
+PASS: Focused roadmap guard transcript contains: Celkem:     1
+PASS: Source scan transcript contains: RESULT: PASSED
+PASS: Source scan transcript contains: Runtime host status: `Not approved`
+PASS: Source scan transcript contains: Execution-capable driver status: `Not approved`
+PASS: Source scan transcript contains: No UI or media files changed
+PASS: Red-team transcript contains: RESULT: PASSED
+PASS: Red-team transcript contains: Rejected shallow proof - runtime host approved from roadmap prose only
+PASS: Red-team transcript contains: Accepted only complete Gate S proof
+PASS: Semantic invariants contains: Status: `Completed`
+PASS: Semantic invariants contains: ## Production Behavior Artifact Matrix
+PASS: Semantic invariants contains: SB057_INV_001
+PASS: SB055 manifest contains: Status: `Completed`
+PASS: SB056 manifest contains: Status: `Completed`
+PASS: Gate S proof artifacts are high-confidence secret clean.
+RESULT: PASSED

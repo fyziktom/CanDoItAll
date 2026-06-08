@@ -40,8 +40,13 @@
     <ProjectReference Include="..\..\src\CanDoItAll.Modules.Factory\CanDoItAll.Modules.Factory.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.Abstractions\CanDoItAll.Processes.Drivers.Abstractions.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.ArtifactEvidence\CanDoItAll.Processes.Drivers.ArtifactEvidence.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.BusinessAnalysis\CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.ObservationAggregation\CanDoItAll.Processes.Drivers.ObservationAggregation.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.OfficeEvidence\CanDoItAll.Processes.Drivers.OfficeEvidence.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
     <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
+    <ProjectReference Include="..\..\src\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj" />
     <ProjectReference Include="..\..\tools\CanDoItAll.Manager\CanDoItAll.Manager.csproj" />
   </ItemGroup>
 

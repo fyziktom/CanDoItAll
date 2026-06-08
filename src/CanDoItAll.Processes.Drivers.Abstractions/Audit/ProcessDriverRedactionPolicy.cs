@@ -57,6 +57,11 @@ public static partial class ProcessDriverRedactionPolicy
         return new ProcessDriverRedactionResult(descriptor, redacted, wasTruncated);
     }
 
+    public static ProcessDriverRedactionResult RedactDiagnosticSummary(string value)
+    {
+        return Redact(value, DefaultMaxAuditSummaryLength);
+    }
+
     private static string RedactPattern(
         string value,
         Regex pattern,

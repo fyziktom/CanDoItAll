@@ -1,7 +1,7 @@
 # SB006 — Gate B: full unit project is green or remaining debt is explicitly quarantined with owner and reopen trigger.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Gate B: full unit project is green or remaining debt is explicitly quarantined with owner and reopen trigger.
@@ -30,7 +30,7 @@ Gate B: full unit project is green or remaining debt is explicitly quarantined w
 - Updated proof artifacts under `proof/SB006/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,12 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -72,11 +72,18 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Anti-stub audit.
 - proof/SB006/manifest.md and proof/SB006/semantic-invariants.md.
 
+## Closure Proof
+- Solution build passed with 0 warnings and 0 errors: `bundle://proof/SB006/transcripts/gate-b-solution-build-no-restore.txt`.
+- Full unit project passed with 1058 passed, 21 SB004-owned skips, and 0 failures: `bundle://proof/SB006/transcripts/gate-b-full-unit-tests.txt`.
+- Remaining debt ledger owns every skip and has a reopen trigger: `bundle://proof/SB006/remaining-debt-ledger.md`.
+- Semantic positive proof and adversarial negative proof passed: `bundle://proof/SB006/transcripts/gate-b-proof-index.txt`; `bundle://proof/SB006/transcripts/red-team-status-only-gate-b-rejection.txt`.
+- Proof manifest and semantic invariants: `bundle://proof/SB006/manifest.md`; `bundle://proof/SB006/semantic-invariants.md`.
+
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB006: Gate B: full unit project is green or remaining debt is explicitly quarantined with owner and reopen trigger.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

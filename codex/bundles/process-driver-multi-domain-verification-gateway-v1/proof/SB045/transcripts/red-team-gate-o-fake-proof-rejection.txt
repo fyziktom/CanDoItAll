@@ -1,0 +1,11 @@
+SB045 Gate O red-team fake-proof rejection
+PASS rejected shallow proof case: StatusOnlyReport
+PASS rejected shallow proof case: NonEmptyDiagnosticsOnly
+PASS rejected shallow proof case: UnredactedSecretLeak
+PASS rejected shallow proof case: FixtureOnlyParsing
+PASS rejected shallow proof case: MissingSecretRedactionProof
+PASS rejected shallow proof case: MissingTypedVerifierCoverage
+PASS rejected shallow proof case: MissingSemanticAssertions
+PASS SB044 focused red-team tests passed 3/3.
+PASS SB044 scan proves status-only, non-empty diagnostic, unredacted secret, and fixture-only parsing rejection paths.
+RESULT: PASSED - Gate O rejects fake proof without source-backed semantic artifacts.

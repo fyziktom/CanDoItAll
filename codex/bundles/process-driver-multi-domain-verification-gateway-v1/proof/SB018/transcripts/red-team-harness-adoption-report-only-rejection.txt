@@ -1,0 +1,13 @@
+Command: SB018 Gate F adversarial negative proof
+Working directory: C:\repositories\CanDoItAll
+Run label: reject harness adoption report-only closure 2026-06-08
+--- output ---
+Invariant ID: SB018_INV_001
+Simulated claim: Gate F passed because a report row says the shared harness exists.
+Rejected: missing clean solution build transcript.
+Rejected: missing focused tests proving harness tests plus transcript/runtime verifier tests still pass.
+Rejected: missing source scan proving both verifier test files consume shared setup and assertion helpers.
+Rejected: missing no-weakening proof for focused fact counts and absence of skipped tests.
+Rejected: missing SB016/SB017 source-backed manifests.
+Simulated verifier exit code: 1
+Actual transcript exit code: 0

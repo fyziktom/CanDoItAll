@@ -17,22 +17,24 @@ internal static class TranscriptVerificationAuditFactBuilder
         var requestedOperations = request.VerificationRequest.RequestedOperations.Count == 0
             ? [ProcessDriverOperation.InspectExistingEvidence]
             : request.VerificationRequest.RequestedOperations;
-        var diagnosticSummary = ProcessDriverRedactionPolicy.Redact(
-            string.Join(" ", diagnostics.Select(diagnostic => diagnostic.Message)),
-            ProcessDriverRedactionPolicy.DefaultMaxAuditSummaryLength).RedactedText;
+        var diagnosticSummary = ProcessDriverRedactionPolicy.RedactDiagnosticSummary(
+            string.Join(" ", diagnostics.Select(diagnostic => diagnostic.Message))).RedactedText;
         var factKind = accepted
             ? ProcessDriverAuditFactKind.DiagnosticReturned
             : ProcessDriverAuditFactKind.OperationDenied;
+        var auditEvidenceReferences = CreateAuditEvidenceReferences(request);
 
         return requestedOperations
             .Select(operation => new ProcessDriverAuditFact(
-                CreateStableAuditId(request, operation, denialReason),
+                CreateStableAuditId(request, operation, denialReason, auditEvidenceReferences),
                 request.RequestedAt,
                 factKind,
                 request.VerificationRequest.CallerContext,
                 request.VerificationRequest.PermissionMode,
                 request.VerificationRequest.Scope,
+                request.VerificationRequest.Scope.Kind,
                 operation,
+                auditEvidenceReferences,
                 denialReason,
                 redaction,
                 diagnosticSummary,
@@ -43,7 +45,8 @@ internal static class TranscriptVerificationAuditFactBuilder
     private static Guid CreateStableAuditId(
         TranscriptVerificationAlphaRequest request,
         ProcessDriverOperation operation,
-        ProcessDriverDenialReason denialReason)
+        ProcessDriverDenialReason denialReason,
+        IReadOnlyList<ProcessDriverEvidenceReference> evidenceReferences)
     {
         var material = string.Join(
             "|",
@@ -54,9 +57,29 @@ internal static class TranscriptVerificationAuditFactBuilder
             operation,
             denialReason,
             request.TranscriptReference.Uri,
-            ProcessDriverEvidencePolicy.NormalizeHash(request.TranscriptReference.TranscriptHash));
+            ProcessDriverEvidencePolicy.NormalizeHash(request.TranscriptReference.TranscriptHash),
+            string.Join(",", evidenceReferences.Select(CreateEvidenceId)));
         var bytes = Convert.FromHexString(ProcessDriverEvidencePolicy.ComputeSha256(material));
 
         return new Guid(bytes[..16]);
+    }
+
+    private static IReadOnlyList<ProcessDriverEvidenceReference> CreateAuditEvidenceReferences(
+        TranscriptVerificationAlphaRequest request)
+    {
+        return ProcessDriverEvidencePolicy.NormalizeEvidenceReferences(
+            request.VerificationRequest.EvidenceReferences
+                .Concat([request.SuppliedContent.EvidenceReference])
+                .ToArray());
+    }
+
+    private static string CreateEvidenceId(ProcessDriverEvidenceReference evidenceReference)
+    {
+        return string.Join(
+            ":",
+            evidenceReference.Kind,
+            evidenceReference.Uri.Trim(),
+            ProcessDriverEvidencePolicy.NormalizeHash(evidenceReference.ContentHash),
+            evidenceReference.CoreDescriptorFamily);
     }
 }

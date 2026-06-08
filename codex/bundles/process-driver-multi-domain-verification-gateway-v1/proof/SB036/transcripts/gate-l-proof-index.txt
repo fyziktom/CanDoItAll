@@ -1,0 +1,35 @@
+SB036 Gate L semantic positive proof index
+UTC: 2026-06-08T17:55:16Z
+
+Required proof files:
+PASS exists: bundle://proof\SB034\manifest.md
+PASS exists: bundle://proof\SB035\manifest.md
+PASS exists: bundle://proof\SB036\manifest.md
+PASS exists: bundle://proof\SB036\semantic-invariants.md
+PASS exists: bundle://proof\SB036\transcripts\gate-l-solution-build-no-restore.txt
+PASS exists: bundle://proof\SB036\transcripts\gate-l-focused-artifact-evidence-tests.txt
+PASS exists: bundle://proof\SB036\transcripts\gate-l-artifact-evidence-no-side-effect-scan.txt
+PASS exists: bundle://proof\SB036\transcripts\red-team-artifact-evidence-shallow-proof-rejection.txt
+PASS exists: bundle://subbundles\sb036-gate-l-artifact-evidence-verifier-is-deterministic-and-side-effect-fre\README.md
+PASS exists: bundle://reviews\01-execution-report.md
+
+Transcript assertions:
+PASS solution build transcript reports 0 warnings
+PASS solution build transcript reports 0 errors
+PASS focused transcript includes expected 6-test count
+PASS Gate L source scan passed
+PASS Gate L source scan proves no runtime or mutation drift
+PASS red-team shallow-proof rejection passed
+
+Manifest and invariant assertions:
+PASS manifest marks Gate L critical
+PASS manifest includes production behavior artifact matrix
+PASS manifest records focused pass count
+PASS semantic invariants name shallow-pass trap
+PASS semantic invariants include production behavior artifact matrix
+PASS semantic invariants cover supplied descriptor-only behavior
+PASS SB036 README is completed
+PASS execution report closes SB036 row
+PASS execution report hands off to SB037
+
+RESULT: PASSED

@@ -27,4 +27,31 @@ public static class ProcessDriverCapabilityScopeRules
             permissionMode == scope.RequiredPermissionMode &&
             IsReadonlyScope(scope);
     }
+
+    public static bool IsOfficeEvidenceReadScope(
+        ProcessDriverCapabilityScope scope,
+        ProcessDriverPermissionMode permissionMode)
+    {
+        return scope.Kind == ProcessDriverCapabilityScopeKind.OfficeEvidenceRead &&
+            permissionMode == scope.RequiredPermissionMode &&
+            IsReadonlyScope(scope);
+    }
+
+    public static bool IsBusinessAnalysisReadScope(
+        ProcessDriverCapabilityScope scope,
+        ProcessDriverPermissionMode permissionMode)
+    {
+        return scope.Kind == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead &&
+            permissionMode == scope.RequiredPermissionMode &&
+            IsReadonlyScope(scope);
+    }
+
+    public static bool IsArtifactEvidenceReadScope(
+        ProcessDriverCapabilityScope scope,
+        ProcessDriverPermissionMode permissionMode)
+    {
+        return scope.Kind == ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead &&
+            permissionMode == scope.RequiredPermissionMode &&
+            IsReadonlyScope(scope);
+    }
 }

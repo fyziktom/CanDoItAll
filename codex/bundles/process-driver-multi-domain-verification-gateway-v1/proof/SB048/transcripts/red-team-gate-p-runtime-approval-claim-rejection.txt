@@ -1,0 +1,13 @@
+SB048 Gate P red-team runtime approval claim rejection
+PASS rejected approval claim: runtime host approval: granted
+PASS rejected approval claim: runtime host is approved
+PASS rejected approval claim: DI registration is approved
+PASS rejected approval claim: manager command is approved
+PASS rejected approval claim: scheduler is approved
+PASS rejected approval claim: workflow hook is approved
+PASS rejected approval claim: execution-capable drivers are approved
+PASS rejected approval claim: ExecutionCapableFuture is approved
+PASS rejected approval claim: workspace write allowed
+PASS rejected approval claim: storage write allowed
+PASS docs-wide source scan rejects current runtime approval claims.
+RESULT: PASSED - Gate P rejects docs that imply approved runtime host or execution-capable drivers.

@@ -1,0 +1,217 @@
+Command: git status --short --branch; git log -1 --oneline --decorate; git diff --name-only
+Working directory: C:\repositories\CanDoItAll
+Run label: SB001 source reconciliation refreshed with proof-output secret-pattern redaction 2026-06-08
+Redaction policy: command output is redacted only for provider-token-shaped substrings; exit codes and path existence assertions are preserved.
+--- git status --short --branch ---
+## maf-processes-refactor...origin/maf-processes-refactor [ahead 1]
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/plan/01-phase-plan.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/reviews/01-execution-report.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb001-re-read-live-branch-latest-commit-changed-production-sources-and-proof/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb002-inventory-actual-test-debt-and-separate-current-scope-failures-from-hi/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb003-gate-a-source-backed-baseline-closure-with-no-report-only-proof/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb004-fix-or-quarantine-stale-architecture-fixture-path-tests-with-explicit-/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb005-fix-tuningrequestservicetests-file-lock-cleanup-or-mark-with-isolated-/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb006-gate-b-full-unit-project-is-green-or-remaining-debt-is-explicitly-quar/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb007-refresh-core-public-api-owner-classification-and-descriptor-compatibil/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb008-refresh-driver-abstraction-public-api-versioning-snapshot-and-forbid-r/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb009-gate-c-core-driver-api-governance-and-reverse-dependency-scans-pass/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb010-split-net-rust-parser-rules-request-validation-evidence-policy-audit-b/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb011-add-malicious-transcript-corpus-prompt-injection-text-path-like-text-s/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb012-gate-d-transcript-verifier-parity-security-and-no-mutation-proof/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb013-split-runtime-evidence-verifier-into-policy-descriptor-normalizer-cont/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb014-expand-contradiction-matrix-execution-finalizer-retry-provider-no-prog/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb015-gate-e-runtime-evidence-verifier-parity-and-no-side-effect-proof/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb016-create-reusable-test-helpers-for-readonly-scopes-side-effect-operation/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb017-create-shared-audit-redaction-no-mutation-assertions-for-all-verificat/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb018-gate-f-harness-adoption-in-transcript-runtime-tests-without-weakening-/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb019-design-explicit-allow-listed-verification-gateway-for-known-lanes-no-d/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb020-implement-gateway-for-transcriptverification-and-runtimeevidence-packa/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb021-gate-g-gateway-cannot-mutate-cannot-discover-arbitrary-drivers-and-can/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb022-create-explicit-supplied-evidence-content-envelope-for-transcripts-and/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb023-enforce-uri-hash-size-content-type-policies-and-denial-diagnostics-acr/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb024-gate-h-evidence-boundary-denies-untrusted-mismatched-oversized-missing/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb025-normalize-audit-facts-across-all-drivers-include-caller-lane-operation/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb026-centralize-redaction-policy-for-secret-email-connection-string-and-bou/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb027-gate-i-audit-redaction-no-mutation-proof-covers-every-accepted-and-den/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb028-add-office-evidence-verifier-alpha-over-supplied-email-document-metada/README.md
+ D codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb029-add-office-denial-tests-category-mutation-task-[secret-pattern-redacted]/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb030-gate-j-office-verifier-is-read-only-and-evidence-only/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb031-add-business-analysis-verifier-alpha-over-supplied-deliverable-evidenc/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb032-add-diagnostics-for-missing-requirements-unsupported-assumptions-contr/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb033-gate-k-business-analysis-verifier-is-read-only-and-evidence-only/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb034-add-artifact-projection-validation-descriptor-verifier-over-supplied-c/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb035-detect-descriptor-contradictions-projection-order-drift-missing-lineag/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb036-gate-l-artifact-evidence-verifier-is-deterministic-and-side-effect-fre/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb037-add-read-only-observation-aggregator-combining-transcript-runtime-offi/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb038-ensure-aggregator-is-not-persisted-scheduled-registered-or-command-tri/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb039-gate-m-process-observation-aggregation-remains-read-only-and-allow-lis/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb040-add-api-compatibility-tests-for-core-descriptor-families-and-driver-co/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb041-add-migration-compatibility-docs-for-v1-0-contracts-and-alpha-verifier/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb042-gate-n-compatibility-snapshots-and-docs-match-production-api/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb043-expand-transcript-runtime-office-business-artifact-corpora-with-realis/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb044-add-red-team-tests-for-fake-proof-non-empty-diagnostics-status-only-re/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb045-gate-o-semantic-adequacy-and-fake-proof-resistance-across-all-read-onl/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb046-update-runtime-host-approval-matrix-registry-selector-di-manager-sched/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb047-define-exact-future-production-runtime-prerequisites-audit-persistence/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb048-gate-p-docs-cannot-imply-approved-runtime-host-or-execution-capable-dr/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb049-add-package-readme-samples-for-all-alpha-verifier-packages-using-suppl/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb050-run-solution-build-full-unit-focused-unit-integration-and-source-scans/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb051-gate-q-package-source-validation-and-dependency-scans-pass/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb052-ensure-subbundle-manifests-include-changed-file-hashes-semantic-adequa/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb053-run-prepared-completed-validators-proof-index-scan-and-red-team-fake-p/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb054-gate-r-bundle-closure-passes-with-no-collapsed-rows-and-no-report-only/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb055-refresh-stable-process-core-roadmap-with-remaining-non-core-runtime-si/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb056-refresh-domain-driver-roadmap-transcript-runtimeevidence-artifact-offi/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb057-gate-s-roadmap-denies-premature-runtime-host-and-lists-explicit-approv/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb058-decide-whether-next-bundle-may-introduce-production-verification-host-/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb059-prepare-next-backlog-candidates-and-reopen-triggers-from-validation-re/README.md
+ M codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb060-gate-t-final-closure-handoff-and-zip-generation/README.md
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/analysis/01-current-state.md
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/inputs/00-original-request.md
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/inputs/01-source-artifacts.md
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/inputs/02-structured-input.md
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/proof/SB001/
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/proof/SB002/
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/reviews/00-bundle-self-review.md
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb029-add-office-denial-tests-category-mutation-taskcreation-document-write/
+?? codex/bundles/process-driver-multi-domain-verification-gateway-v1/traceability/01-requirement-traceability.md
+Exit code: 0
+--- git log -1 --oneline --decorate ---
+ff599298c (HEAD -> maf-processes-refactor) added bundle
+Exit code: 0
+--- git diff --name-only ---
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/plan/01-phase-plan.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/reviews/01-execution-report.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb001-re-read-live-branch-latest-commit-changed-production-sources-and-proof/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb002-inventory-actual-test-debt-and-separate-current-scope-failures-from-hi/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb003-gate-a-source-backed-baseline-closure-with-no-report-only-proof/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb004-fix-or-quarantine-stale-architecture-fixture-path-tests-with-explicit-/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb005-fix-tuningrequestservicetests-file-lock-cleanup-or-mark-with-isolated-/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb006-gate-b-full-unit-project-is-green-or-remaining-debt-is-explicitly-quar/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb007-refresh-core-public-api-owner-classification-and-descriptor-compatibil/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb008-refresh-driver-abstraction-public-api-versioning-snapshot-and-forbid-r/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb009-gate-c-core-driver-api-governance-and-reverse-dependency-scans-pass/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb010-split-net-rust-parser-rules-request-validation-evidence-policy-audit-b/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb011-add-malicious-transcript-corpus-prompt-injection-text-path-like-text-s/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb012-gate-d-transcript-verifier-parity-security-and-no-mutation-proof/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb013-split-runtime-evidence-verifier-into-policy-descriptor-normalizer-cont/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb014-expand-contradiction-matrix-execution-finalizer-retry-provider-no-prog/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb015-gate-e-runtime-evidence-verifier-parity-and-no-side-effect-proof/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb016-create-reusable-test-helpers-for-readonly-scopes-side-effect-operation/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb017-create-shared-audit-redaction-no-mutation-assertions-for-all-verificat/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb018-gate-f-harness-adoption-in-transcript-runtime-tests-without-weakening-/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb019-design-explicit-allow-listed-verification-gateway-for-known-lanes-no-d/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb020-implement-gateway-for-transcriptverification-and-runtimeevidence-packa/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb021-gate-g-gateway-cannot-mutate-cannot-discover-arbitrary-drivers-and-can/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb022-create-explicit-supplied-evidence-content-envelope-for-transcripts-and/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb023-enforce-uri-hash-size-content-type-policies-and-denial-diagnostics-acr/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb024-gate-h-evidence-boundary-denies-untrusted-mismatched-oversized-missing/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb025-normalize-audit-facts-across-all-drivers-include-caller-lane-operation/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb026-centralize-redaction-policy-for-secret-email-connection-string-and-bou/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb027-gate-i-audit-redaction-no-mutation-proof-covers-every-accepted-and-den/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb028-add-office-evidence-verifier-alpha-over-supplied-email-document-metada/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb030-gate-j-office-verifier-is-read-only-and-evidence-only/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb031-add-business-analysis-verifier-alpha-over-supplied-deliverable-evidenc/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb032-add-diagnostics-for-missing-requirements-unsupported-assumptions-contr/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb033-gate-k-business-analysis-verifier-is-read-only-and-evidence-only/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb034-add-artifact-projection-validation-descriptor-verifier-over-supplied-c/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb035-detect-descriptor-contradictions-projection-order-drift-missing-lineag/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb036-gate-l-artifact-evidence-verifier-is-deterministic-and-side-effect-fre/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb037-add-read-only-observation-aggregator-combining-transcript-runtime-offi/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb038-ensure-aggregator-is-not-persisted-scheduled-registered-or-command-tri/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb039-gate-m-process-observation-aggregation-remains-read-only-and-allow-lis/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb040-add-api-compatibility-tests-for-core-descriptor-families-and-driver-co/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb041-add-migration-compatibility-docs-for-v1-0-contracts-and-alpha-verifier/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb042-gate-n-compatibility-snapshots-and-docs-match-production-api/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb043-expand-transcript-runtime-office-business-artifact-corpora-with-realis/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb044-add-red-team-tests-for-fake-proof-non-empty-diagnostics-status-only-re/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb045-gate-o-semantic-adequacy-and-fake-proof-resistance-across-all-read-onl/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb046-update-runtime-host-approval-matrix-registry-selector-di-manager-sched/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb047-define-exact-future-production-runtime-prerequisites-audit-persistence/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb048-gate-p-docs-cannot-imply-approved-runtime-host-or-execution-capable-dr/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb049-add-package-readme-samples-for-all-alpha-verifier-packages-using-suppl/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb050-run-solution-build-full-unit-focused-unit-integration-and-source-scans/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb051-gate-q-package-source-validation-and-dependency-scans-pass/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb052-ensure-subbundle-manifests-include-changed-file-hashes-semantic-adequa/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb053-run-prepared-completed-validators-proof-index-scan-and-red-team-fake-p/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb054-gate-r-bundle-closure-passes-with-no-collapsed-rows-and-no-report-only/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb055-refresh-stable-process-core-roadmap-with-remaining-non-core-runtime-si/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb056-refresh-domain-driver-roadmap-transcript-runtimeevidence-artifact-offi/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb057-gate-s-roadmap-denies-premature-runtime-host-and-lists-explicit-approv/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb058-decide-whether-next-bundle-may-introduce-production-verification-host-/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb059-prepare-next-backlog-candidates-and-reopen-triggers-from-validation-re/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb060-gate-t-final-closure-handoff-and-zip-generation/README.md', LF will be replaced by CRLF the next time Git touches it
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/plan/01-phase-plan.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/reviews/01-execution-report.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb001-re-read-live-branch-latest-commit-changed-production-sources-and-proof/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb002-inventory-actual-test-debt-and-separate-current-scope-failures-from-hi/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb003-gate-a-source-backed-baseline-closure-with-no-report-only-proof/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb004-fix-or-quarantine-stale-architecture-fixture-path-tests-with-explicit-/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb005-fix-tuningrequestservicetests-file-lock-cleanup-or-mark-with-isolated-/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb006-gate-b-full-unit-project-is-green-or-remaining-debt-is-explicitly-quar/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb007-refresh-core-public-api-owner-classification-and-descriptor-compatibil/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb008-refresh-driver-abstraction-public-api-versioning-snapshot-and-forbid-r/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb009-gate-c-core-driver-api-governance-and-reverse-dependency-scans-pass/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb010-split-net-rust-parser-rules-request-validation-evidence-policy-audit-b/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb011-add-malicious-transcript-corpus-prompt-injection-text-path-like-text-s/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb012-gate-d-transcript-verifier-parity-security-and-no-mutation-proof/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb013-split-runtime-evidence-verifier-into-policy-descriptor-normalizer-cont/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb014-expand-contradiction-matrix-execution-finalizer-retry-provider-no-prog/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb015-gate-e-runtime-evidence-verifier-parity-and-no-side-effect-proof/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb016-create-reusable-test-helpers-for-readonly-scopes-side-effect-operation/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb017-create-shared-audit-redaction-no-mutation-assertions-for-all-verificat/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb018-gate-f-harness-adoption-in-transcript-runtime-tests-without-weakening-/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb019-design-explicit-allow-listed-verification-gateway-for-known-lanes-no-d/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb020-implement-gateway-for-transcriptverification-and-runtimeevidence-packa/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb021-gate-g-gateway-cannot-mutate-cannot-discover-arbitrary-drivers-and-can/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb022-create-explicit-supplied-evidence-content-envelope-for-transcripts-and/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb023-enforce-uri-hash-size-content-type-policies-and-denial-diagnostics-acr/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb024-gate-h-evidence-boundary-denies-untrusted-mismatched-oversized-missing/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb025-normalize-audit-facts-across-all-drivers-include-caller-lane-operation/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb026-centralize-redaction-policy-for-secret-email-connection-string-and-bou/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb027-gate-i-audit-redaction-no-mutation-proof-covers-every-accepted-and-den/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb028-add-office-evidence-verifier-alpha-over-supplied-email-document-metada/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb029-add-office-denial-tests-category-mutation-task-[secret-pattern-redacted]/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb030-gate-j-office-verifier-is-read-only-and-evidence-only/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb031-add-business-analysis-verifier-alpha-over-supplied-deliverable-evidenc/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb032-add-diagnostics-for-missing-requirements-unsupported-assumptions-contr/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb033-gate-k-business-analysis-verifier-is-read-only-and-evidence-only/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb034-add-artifact-projection-validation-descriptor-verifier-over-supplied-c/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb035-detect-descriptor-contradictions-projection-order-drift-missing-lineag/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb036-gate-l-artifact-evidence-verifier-is-deterministic-and-side-effect-fre/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb037-add-read-only-observation-aggregator-combining-transcript-runtime-offi/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb038-ensure-aggregator-is-not-persisted-scheduled-registered-or-command-tri/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb039-gate-m-process-observation-aggregation-remains-read-only-and-allow-lis/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb040-add-api-compatibility-tests-for-core-descriptor-families-and-driver-co/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb041-add-migration-compatibility-docs-for-v1-0-contracts-and-alpha-verifier/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb042-gate-n-compatibility-snapshots-and-docs-match-production-api/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb043-expand-transcript-runtime-office-business-artifact-corpora-with-realis/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb044-add-red-team-tests-for-fake-proof-non-empty-diagnostics-status-only-re/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb045-gate-o-semantic-adequacy-and-fake-proof-resistance-across-all-read-onl/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb046-update-runtime-host-approval-matrix-registry-selector-di-manager-sched/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb047-define-exact-future-production-runtime-prerequisites-audit-persistence/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb048-gate-p-docs-cannot-imply-approved-runtime-host-or-execution-capable-dr/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb049-add-package-readme-samples-for-all-alpha-verifier-packages-using-suppl/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb050-run-solution-build-full-unit-focused-unit-integration-and-source-scans/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb051-gate-q-package-source-validation-and-dependency-scans-pass/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb052-ensure-subbundle-manifests-include-changed-file-hashes-semantic-adequa/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb053-run-prepared-completed-validators-proof-index-scan-and-red-team-fake-p/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb054-gate-r-bundle-closure-passes-with-no-collapsed-rows-and-no-report-only/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb055-refresh-stable-process-core-roadmap-with-remaining-non-core-runtime-si/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb056-refresh-domain-driver-roadmap-transcript-runtimeevidence-artifact-offi/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb057-gate-s-roadmap-denies-premature-runtime-host-and-lists-explicit-approv/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb058-decide-whether-next-bundle-may-introduce-production-verification-host-/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb059-prepare-next-backlog-candidates-and-reopen-triggers-from-validation-re/README.md
+codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb060-gate-t-final-closure-handoff-and-zip-generation/README.md
+Exit code: 0
+--- tracked source references exist ---
+src\CanDoItAll.Processes.Core => True
+src\CanDoItAll.Processes.Drivers.Abstractions => True
+src\CanDoItAll.Processes.Drivers.TranscriptVerification => True
+src\CanDoItAll.Processes.Drivers.RuntimeEvidence => True
+src\CanDoItAll.Modules.Processes\Automation\Dispatch => True
+tests\CanDoItAll.Tests.Unit => True
+tests\CanDoItAll.Tests.Integration => True

@@ -1,8 +1,22 @@
 # SB033 Semantic Invariants
 
+## SB033_INV_001
 - Invariant ID: `SB033_INV_001`
-- Shallow-pass trap: status-only, non-empty diagnostic-only, fixture-only, or report-only proof.
-- Adversarial negative proof required.
-- Semantic positive proof required.
-- Raw-note literal closure required.
-- Downstream dependency check required.
+- Source raw note: `Prepare broader phases toward stable Core and domain drivers`.
+- Expected behavior: Gate K can close only when the BusinessAnalysis verifier is proven read-only and evidence-only through package dependency checks, supplied-content envelope policy, positive supplied deliverable/evidence text proof, missing metadata diagnostics, typed business diagnostic matrix, side-effect denial proof, audit fact assertions, no-mutation response proof, and no runtime/CRM/source scan.
+- Disallowed shallow implementation: claiming closure because the package exists, because one diagnostic is non-empty, or because a scan omits one CRM token while skipping supplied-envelope binding, mutation denial, typed diagnostics, audit facts, raw-text non-leak proof, focused pass count, and no-side-effect source proof.
+- Failing-first test: `bundle://proof/SB033/transcripts/red-team-business-analysis-shallow-proof-rejection.txt` rejects closure without positive BusinessAnalysis tests, missing metadata tests, envelope denial tests, typed category diagnostics, side-effect denial tests, audit fact assertions, no-mutation assertions, raw-text non-leak assertions, 5/5 focused pass proof, and no-side-effect source scan.
+- Passing test: `bundle://proof/SB033/transcripts/gate-k-proof-index.txt` verifies SB031/SB032 manifests, clean build, 5/5 focused BusinessAnalysis tests, Gate K source scan, red-team rejection, and this invariant contract.
+- Changed source files: `repo://src/CanDoItAll.Processes.Drivers.BusinessAnalysis`; `repo://tests/CanDoItAll.Tests.Unit/ProcessDriverBusinessAnalysisAlphaTests.cs`; `repo://src/CanDoItAll.Processes.Drivers.Abstractions/Verification/ProcessDriverDiagnostic.cs`.
+- Production assertions: BusinessAnalysis verifier accepts only supplied in-memory deliverable/evidence text, binds `BusinessAnalysisPayload` to `BusinessReadonlyArtifact`, emits typed business diagnostics from explicit supplied text markers, returns immutable diagnostics/audit facts, and always reports `NoMutationPerformed: true`.
+- Security assertions: business-record mutation is denied before analysis; source scan proves no runtime host, registry, selector, provider, DI, CRM, CrmHr, HTTP, process, file, directory, DbContext, workspace, storage, UI/media, or secret-like drift in Gate K targets.
+- Adversarial negative case: a closure that checks only package existence, non-empty diagnostics, or one no-CRM scan is rejected with simulated verifier exit code 1.
+- Downstream dependency check: SB034 and later verifier phases may proceed only from proof that BusinessAnalysis remains supplied-content-only and mutation-free; if BusinessAnalysis proof weakens, reopen SB031-SB033.
+
+## Production Behavior Artifact Matrix
+| Artifact | Producer | Consumer | Lifecycle | Negative-test citation |
+| --- | --- | --- | --- | --- |
+| Business supplied evidence envelope | `ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload` and caller-provided `BusinessAnalysisVerificationRequest` | `BusinessAnalysisVerificationRequestPolicy` | Must be JSON, bounded, SHA-256 hashed, approved URI-backed, and bound to an included `BusinessReadonlyArtifact` reference before item analysis | `Business_analysis_alpha_SB031_INV_003_rejects_invalid_envelopes_and_business_record_mutation` |
+| Business diagnostic category matrix | `BusinessAnalysisDiagnosticRules` | `BusinessAnalysisAlphaVerifier` response diagnostics and audit summary mapper | Created from supplied item text markers only; missing requirements, unsupported assumptions, contradiction markers and evidence gaps use typed categories and bounded messages | `Business_analysis_alpha_SB032_INV_001_reports_missing_requirements_unsupported_assumptions_contradictions_and_evidence_gaps` |
+| Business operation-denied audit fact | `BusinessAnalysisAuditFactMapper` | `ProcessDriverVerificationResponse.AuditFacts` and downstream gate proof | Created for denied side-effect operations with caller, lane, operation, evidence references, denial reason, redaction descriptor, bounded summary, and output hash | `Business_analysis_alpha_SB031_INV_003_rejects_invalid_envelopes_and_business_record_mutation` |
+| Mutation-free BusinessAnalysis response envelope | `BusinessAnalysisAlphaVerifier` | Future domain verifier gates and observation aggregation phases | Returned for accepted and denied responses; no CRM, business-record, process, workspace, storage, connector, or external call side effects are performed | `bundle://proof/SB033/transcripts/gate-k-focused-business-analysis-tests.txt` |

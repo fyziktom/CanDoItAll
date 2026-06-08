@@ -62,9 +62,12 @@ internal static class TranscriptVerificationRequestPolicy
             return ProcessDriverDenialReason.MissingEvidence;
         }
 
+        var suppliedEvidenceReferences = evidenceReferences
+            .Concat([request.SuppliedContent.EvidenceReference])
+            .ToArray();
         var uriPolicyResult = ProcessDriverEvidencePolicy.ValidateApprovedSuppliedEvidenceUris(
             request.TranscriptReference,
-            evidenceReferences);
+            suppliedEvidenceReferences);
         if (!uriPolicyResult.Accepted)
         {
             diagnostics.Add(CreatePolicyDiagnostic(
@@ -85,11 +88,58 @@ internal static class TranscriptVerificationRequestPolicy
             return ProcessDriverDenialReason.MissingEvidence;
         }
 
+        if (!ProcessDriverSuppliedEvidenceContentRules.HasExpectedEnvelope(
+            request.SuppliedContent,
+            ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+            ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType))
+        {
+            diagnostics.Add(CreatePolicyDiagnostic(
+                ProcessDriverDiagnosticCategory.InsufficientProof,
+                "Supplied transcript evidence must use the transcript text envelope and plain text content type.",
+                primaryEvidence));
+
+            return ProcessDriverDenialReason.MissingEvidence;
+        }
+
+        if (!ProcessDriverSuppliedEvidenceContentRules.HasAllowedSize(request.SuppliedContent))
+        {
+            diagnostics.Add(CreatePolicyDiagnostic(
+                ProcessDriverDiagnosticCategory.InsufficientProof,
+                "Supplied transcript evidence size is missing or exceeds the allowed verification envelope limit.",
+                primaryEvidence));
+
+            return ProcessDriverDenialReason.MissingEvidence;
+        }
+
         if (evidenceReferences.Any(evidence => !ProcessDriverEvidencePolicy.HasValidSha256ContentHash(evidence)))
         {
             diagnostics.Add(CreatePolicyDiagnostic(
                 ProcessDriverDiagnosticCategory.InsufficientProof,
                 "Every evidence reference must include a valid SHA-256 content hash.",
+                primaryEvidence));
+
+            return ProcessDriverDenialReason.MissingEvidence;
+        }
+
+        if (!ProcessDriverSuppliedEvidenceContentRules.HasValidContentHash(request.SuppliedContent))
+        {
+            diagnostics.Add(CreatePolicyDiagnostic(
+                ProcessDriverDiagnosticCategory.InsufficientProof,
+                "Supplied transcript evidence must include a valid SHA-256 content hash.",
+                primaryEvidence));
+
+            return ProcessDriverDenialReason.MissingEvidence;
+        }
+
+        if (!TranscriptReferenceMatchesSuppliedContent(request) ||
+            !ProcessDriverSuppliedEvidenceContentRules.HasEvidenceReferenceHashBinding(request.SuppliedContent) ||
+            !ProcessDriverSuppliedEvidenceContentRules.HashMatchesSuppliedPayload(
+                request.SuppliedContent,
+                request.TranscriptText))
+        {
+            diagnostics.Add(CreatePolicyDiagnostic(
+                ProcessDriverDiagnosticCategory.EvidenceHashMismatch,
+                "Supplied transcript evidence envelope does not match the supplied transcript reference or content hash.",
                 primaryEvidence));
 
             return ProcessDriverDenialReason.MissingEvidence;
@@ -106,6 +156,18 @@ internal static class TranscriptVerificationRequestPolicy
         }
 
         return ProcessDriverDenialReason.None;
+    }
+
+    private static bool TranscriptReferenceMatchesSuppliedContent(TranscriptVerificationAlphaRequest request)
+    {
+        var suppliedReference = request.SuppliedContent.EvidenceReference;
+
+        return suppliedReference.Kind == ProcessDriverEvidenceReferenceKind.CommandTranscript &&
+            suppliedReference.CoreDescriptorFamily == ProcessDriverCoreDescriptorFamily.ExecutionEvidence &&
+            string.Equals(
+                suppliedReference.Uri.Trim(),
+                request.TranscriptReference.Uri.Trim(),
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static ProcessDriverDiagnostic CreatePolicyDiagnostic(

@@ -1,7 +1,7 @@
 # SB034 — Add artifact/projection/validation descriptor verifier over supplied Core artifact descriptors.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Add artifact/projection/validation descriptor verifier over supplied Core artifact descriptors.
@@ -30,7 +30,7 @@ Add artifact/projection/validation descriptor verifier over supplied Core artifa
 - Updated proof artifacts under `proof/SB034/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,11 +59,16 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+
+## Closure Proof
+- Focused artifact-evidence alpha and contract tests: `bundle://proof/SB034/transcripts/focused-artifact-evidence-alpha-tests.txt`.
+- Source scan and anti-stub audit: `bundle://proof/SB034/transcripts/artifact-evidence-alpha-source-scan-and-anti-stub-audit.txt`.
+- Proof manifest: `bundle://proof/SB034/manifest.md`.
 
 
 ## Proof Required
@@ -73,10 +78,10 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Subbundle row in execution report.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Noncritical: downstream work may continue only if focused proof is green.
+- Noncritical: downstream work may continue only if focused proof is green.
 
 ## Suggested Agent Prompt
 Implement SB034: Add artifact/projection/validation descriptor verifier over supplied Core artifact descriptors.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

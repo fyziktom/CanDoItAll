@@ -52,8 +52,9 @@ graph TD
 
 ## Critical Subbundles
 
-SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060
+- SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060
 
 ## Phase Gates
 
-Every third subbundle is a phase gate. Downstream phases must not start until the gate passes build/test/source-scan proof and semantic adequacy proof. If any earlier gate fails later, reopen dependent downstream phases.
+- Every third subbundle is a phase gate. Downstream phases must not start until the gate passes build/test/source-scan proof and semantic adequacy proof.
+- If any earlier gate fails later, reopen dependent downstream phases.

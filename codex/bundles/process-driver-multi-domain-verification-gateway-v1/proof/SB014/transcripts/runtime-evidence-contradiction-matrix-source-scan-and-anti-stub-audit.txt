@@ -1,0 +1,16 @@
+Command: SB014 runtime evidence contradiction matrix source/no-drift/anti-stub audit
+Working directory: C:\repositories\CanDoItAll
+Run label: SB014 source audit 2026-06-08
+--- output ---
+PASS: Expanded contradiction rule present: terminal run that is still active
+PASS: Expanded contradiction rule present: critical tool failure count without the unresolved failure flag
+PASS: Expanded contradiction rule present: result without a step-run concurrency token
+PASS: Expanded contradiction rule present: maximum execution attempts
+PASS: Expanded contradiction rule present: recoverable provider failure without affected agent count
+PASS: Expanded contradiction rule present: execution id, tool signature, artifact fingerprint
+PASS: Expanded contradiction rule present: duplicate source kinds
+PASS: No forbidden runtime/IO/module/infrastructure tokens in runtime evidence package source.
+PASS: No UI/media drift in tracked source/test/bundle changes.
+PASS: No stub/placeholder markers in SB014 changed files.
+PASS: No secret-like patterns in SB014 changed files.
+Exit code: 0

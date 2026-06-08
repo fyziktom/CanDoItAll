@@ -1,0 +1,48 @@
+{
+  "scenario": "SB043 runtime negative fixture",
+  "executionRun": {
+    "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+    "state": "Completed",
+    "outcome": "Succeeded",
+    "isTerminal": true,
+    "isActive": true,
+    "completedAtUtc": null
+  },
+  "attempt": {
+    "attemptNumber": 3,
+    "status": "Completed",
+    "hasUnresolvedCriticalToolFailures": false,
+    "unresolvedCriticalToolFailureCount": 2
+  },
+  "finalizer": {
+    "hasResult": true,
+    "shouldApplyTransition": true,
+    "intentCompletionStatus": "Completed",
+    "resultCompletionStatus": "Failed",
+    "stepRunConcurrencyToken": null
+  },
+  "retry": {
+    "shouldRetry": true,
+    "attemptNumber": 3,
+    "maxExecutionAttempts": 3,
+    "primaryFailureKind": "None"
+  },
+  "providerRepair": {
+    "hasRecoverableProviderFailure": true,
+    "hasRepairOutcome": true,
+    "failedProviderName": "",
+    "failureSummary": "",
+    "fallbackProviderName": "",
+    "fallbackModel": ""
+  },
+  "noProgress": {
+    "hasSignal": true,
+    "fingerprint": "",
+    "toolSignature": ""
+  },
+  "projectionSourceOrder": [
+    "CompletedDecision",
+    "FileWrite",
+    "FileWrite"
+  ]
+}

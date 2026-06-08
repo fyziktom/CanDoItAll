@@ -1,0 +1,7 @@
+SB039 red-team observation aggregation shallow-proof rejection
+PASS: rejected status-only proof; missing 9 required Gate M signals
+PASS: rejected non-empty-diagnostic-only proof; missing 9 required Gate M signals
+PASS: rejected fixture-only proof; missing 9 required Gate M signals
+PASS: rejected report-only proof; missing 9 required Gate M signals
+PASS: semantic positive proof fixture contains all required Gate M signals
+RESULT: PASS

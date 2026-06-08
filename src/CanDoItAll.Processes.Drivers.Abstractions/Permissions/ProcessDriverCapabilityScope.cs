@@ -13,5 +13,6 @@ public enum ProcessDriverCapabilityScopeKind
     DotNetRustTranscriptVerification = 1,
     RuntimeFactsRead = 2,
     OfficeEvidenceRead = 3,
-    BusinessAnalysisRead = 4
+    BusinessAnalysisRead = 4,
+    ArtifactEvidenceRead = 5
 }

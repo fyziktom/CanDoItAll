@@ -1,7 +1,7 @@
 # SB021 — Gate G: gateway cannot mutate, cannot discover arbitrary drivers and cannot be used as generic runtime host.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Gate G: gateway cannot mutate, cannot discover arbitrary drivers and cannot be used as generic runtime host.
@@ -30,7 +30,7 @@ Gate G: gateway cannot mutate, cannot discover arbitrary drivers and cannot be u
 - Updated proof artifacts under `proof/SB021/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,12 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -72,11 +72,18 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Anti-stub audit.
 - proof/SB021/manifest.md and proof/SB021/semantic-invariants.md.
 
+## Closure Proof
+- Solution build passed with 0 warnings and 0 errors: `bundle://proof/SB021/transcripts/gate-g-solution-build-no-restore.txt`.
+- Focused verification gateway tests passed: `bundle://proof/SB021/transcripts/gate-g-focused-verification-gateway-tests.txt`.
+- Gateway no-runtime-host scan passed: `bundle://proof/SB021/transcripts/gate-g-gateway-no-runtime-host-scan.txt`.
+- Semantic positive proof and adversarial negative proof passed: `bundle://proof/SB021/transcripts/gate-g-proof-index.txt`; `bundle://proof/SB021/transcripts/red-team-gateway-runtime-host-rejection.txt`.
+- Proof manifest and semantic invariants: `bundle://proof/SB021/manifest.md`; `bundle://proof/SB021/semantic-invariants.md`.
+
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB021: Gate G: gateway cannot mutate, cannot discover arbitrary drivers and cannot be used as generic runtime host.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

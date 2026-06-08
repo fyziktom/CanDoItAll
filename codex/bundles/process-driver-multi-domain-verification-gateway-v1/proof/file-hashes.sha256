@@ -87,7 +87,7 @@ B4ECDE75320781BAA0B821DB66246C74888F110AE0FAE34C71C1BD4DA15D60BA  subbundles/sb0
 6B6D617597E313A6E2544432CEA895CDCFEDE5B9CF4C0E995DDEF0280C4A5906  subbundles/sb026-centralize-redaction-policy-for-secret-email-connection-string-and-bou/README.md
 9A81C0E6B55046354074573F8427308BE52298A916F5007D9878B7319C7ABB20  subbundles/sb027-gate-i-audit-redaction-no-mutation-proof-covers-every-accepted-and-den/README.md
 77EEE1612FACE1811EEAF141A1B176A54B9E5DC0E442C6B3C1387A08674F7E3A  subbundles/sb028-add-office-evidence-verifier-alpha-over-supplied-email-document-metada/README.md
-D18A319296DA273CA20C64914A35DBED29FACF19718C4B0E76A22884E4B36E01  subbundles/sb029-add-office-denial-tests-category-mutation-task-creation-document-write/README.md
+ED560712C6E9E30E592F9562D6F111BC1D7373ECF86744D5215CE62B0625F28A  subbundles/sb029-add-office-denial-tests-category-mutation-taskcreation-document-write/README.md
 DF62F5293DC71596F02B2D400E892508025493BCB3F294ABC5E82CF04A2BCE8F  subbundles/sb030-gate-j-office-verifier-is-read-only-and-evidence-only/README.md
 EB4D78EB101402392224E11A0ECF9F40AAABF5E4075312EF9BA7C256D59A6419  subbundles/sb031-add-business-analysis-verifier-alpha-over-supplied-deliverable-evidenc/README.md
 640C21F9B639BCA70E15A39A203B4232C415BE0920F721BADE52206F5DFCF498  subbundles/sb032-add-diagnostics-for-missing-requirements-unsupported-assumptions-contr/README.md

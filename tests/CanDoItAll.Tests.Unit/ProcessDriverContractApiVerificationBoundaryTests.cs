@@ -1,7 +1,11 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
+using CanDoItAll.Processes.Core.Execution;
 using CanDoItAll.Processes.Drivers.Abstractions.Audit;
 using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
+using CanDoItAll.Processes.Drivers.Abstractions.Gateway;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
 
@@ -9,6 +13,57 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessDriverContractApiVerificationBoundaryTests
 {
+    [Fact]
+    public void Process_core_public_api_SB007_INV_001_snapshot_matches_owner_classification_and_descriptor_surface()
+    {
+        var snapshot = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "06-core-public-api-owner-classification.md");
+
+        AssertDocumentedPublicSurface(
+            snapshot,
+            typeof(ProcessExecutionEvidenceDescriptor).Assembly,
+            "CanDoItAll.Processes.Core.",
+            expectedCount: 64,
+            expectedHash: "99e2a6a6033d749f388a440360e4ef6db5b92c1d1fb2949a9f22d321ccd606d1");
+        Assert.Contains("Allowed project reference: `CanDoItAll.Processes.Contracts`", snapshot, StringComparison.Ordinal);
+        Assert.Contains("Runtime capability: none", snapshot, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Core.Artifacts", snapshot, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Core.Execution", snapshot, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Core.Finalization", snapshot, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Core.Routing", snapshot, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB008_INV_001_versioning_snapshot_matches_runtime_free_surface()
+    {
+        var snapshot = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "07-driver-abstraction-api-versioning-snapshot.md");
+        var publicTypes = typeof(ProcessDriverPermissionMode).Assembly.GetExportedTypes();
+
+        AssertDocumentedPublicSurface(
+            snapshot,
+            typeof(ProcessDriverPermissionMode).Assembly,
+            "CanDoItAll.Processes.Drivers.Abstractions.",
+            expectedCount: 34,
+            expectedHash: "f92df2a77fbc8800345444c17edca2929f97328f9266dccb54d37bd4dd4781c5");
+        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), ProcessDriverContractVersion.Current);
+        Assert.Contains("Contract version: `1.10.0`", snapshot, StringComparison.Ordinal);
+        Assert.Contains("Runtime surfaces denied", snapshot, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain(publicTypes, type => type.IsInterface);
+        Assert.DoesNotContain(publicTypes, type => type.Name.Contains("Host", StringComparison.Ordinal));
+        Assert.DoesNotContain(publicTypes, type => type.Name.Contains("Provider", StringComparison.Ordinal));
+        Assert.DoesNotContain(publicTypes, type => type.Name.Contains("Selector", StringComparison.Ordinal));
+        Assert.DoesNotContain(publicTypes, type => type.Name.Contains("Registry", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Process_driver_contract_api_SB006_INV_001_contract_project_is_solution_bound_dependency_clean_and_runtime_free()
     {
@@ -41,6 +96,12 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverCapabilityScope", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverCapabilityScopeRules", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Permissions.ProcessDriverOperationRules", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Gateway.ProcessDriverVerificationGatewayLane", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Gateway.ProcessDriverVerificationGatewayLaneDescriptor", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Gateway.ProcessDriverVerificationGatewayLaneRules", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Evidence.ProcessDriverSuppliedEvidenceContent", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Evidence.ProcessDriverSuppliedEvidenceContentKind", publicTypeNames);
+        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Evidence.ProcessDriverSuppliedEvidenceContentRules", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Evidence.ProcessDriverEvidenceReference", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Audit.ProcessDriverAuditFact", publicTypeNames);
         Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Verification.ProcessDriverVerificationRequest", publicTypeNames);
@@ -65,6 +126,13 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.Contains(ProcessDriverOperation.WriteWorkspaceStorage, sideEffectOperations);
         Assert.Contains(ProcessDriverOperation.CallOfficeGraph, sideEffectOperations);
         Assert.Contains(ProcessDriverOperation.MutateBusinessRecord, sideEffectOperations);
+        Assert.Contains(ProcessDriverDiagnosticCategory.BusinessRequirementMissing, Enum.GetValues<ProcessDriverDiagnosticCategory>());
+        Assert.Contains(ProcessDriverDiagnosticCategory.BusinessUnsupportedAssumption, Enum.GetValues<ProcessDriverDiagnosticCategory>());
+        Assert.Contains(ProcessDriverDiagnosticCategory.BusinessContradictionMarker, Enum.GetValues<ProcessDriverDiagnosticCategory>());
+        Assert.Contains(ProcessDriverDiagnosticCategory.BusinessEvidenceGap, Enum.GetValues<ProcessDriverDiagnosticCategory>());
+        Assert.Contains(ProcessDriverDiagnosticCategory.ArtifactLineageMissing, Enum.GetValues<ProcessDriverDiagnosticCategory>());
+        Assert.Contains(ProcessDriverDiagnosticCategory.ArtifactTrustSensitivityMismatch, Enum.GetValues<ProcessDriverDiagnosticCategory>());
+        Assert.Contains(ProcessDriverDiagnosticCategory.ArtifactSatisfactionInconsistent, Enum.GetValues<ProcessDriverDiagnosticCategory>());
 
         var denied = sideEffectOperations
             .Select(operation => new ProcessDriverDeniedOperation(
@@ -90,6 +158,11 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
             [ProcessDriverRedactionKind.Secret, ProcessDriverRedactionKind.EmailAddress],
             "BEE3701B1528648B7D54A6B29311D8D822F32F87F20D5D4C5A26C8417E109B0F");
         var scope = CreateReadonlyScopes()[0];
+        var evidenceReference = new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CommandTranscript,
+            "bundle://proof/SB006/transcripts/passing-focused-tests.txt",
+            "D6FCF6DB6C7C547B70C972A70902DA6203B08F4EF34690CD8E34C41858F3F7D5",
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var fact = new ProcessDriverAuditFact(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             DateTimeOffset.Parse("2026-06-07T20:30:00Z"),
@@ -97,22 +170,22 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
             "manager:readonly",
             ProcessDriverPermissionMode.VerificationOnly,
             scope,
+            scope.Kind,
             ProcessDriverOperation.ExecuteCommand,
+            [evidenceReference],
             ProcessDriverDenialReason.UnsafeCommand,
             redaction,
             "Command execution denied for verification-only contract.",
             "BEE3701B1528648B7D54A6B29311D8D822F32F87F20D5D4C5A26C8417E109B0F");
-        var evidenceReference = new ProcessDriverEvidenceReference(
-            ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            "bundle://proof/SB006/transcripts/passing-focused-tests.txt",
-            "D6FCF6DB6C7C547B70C972A70902DA6203B08F4EF34690CD8E34C41858F3F7D5",
-            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
 
         Assert.Equal(ProcessDriverAuditFactKind.OperationDenied, fact.Kind);
+        Assert.Equal(ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification, fact.Lane);
+        Assert.Equal(ProcessDriverOperation.ExecuteCommand, fact.RequestedOperation);
         Assert.Equal(ProcessDriverRedactionStatus.Redacted, fact.Redaction.Status);
         Assert.Contains(ProcessDriverRedactionKind.Secret, fact.Redaction.AppliedKinds);
         Assert.Contains(ProcessDriverRedactionKind.EmailAddress, fact.Redaction.AppliedKinds);
         Assert.Equal(ProcessDriverDenialReason.UnsafeCommand, fact.DenialReason);
+        Assert.Contains(evidenceReference, fact.EvidenceReferences);
         Assert.Equal(ProcessDriverEvidenceReferenceKind.CommandTranscript, evidenceReference.Kind);
         Assert.Equal(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, evidenceReference.CoreDescriptorFamily);
     }
@@ -223,18 +296,690 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
-    public void Process_driver_contract_api_SB027_INV_001_office_and_business_analysis_lanes_stay_readonly()
+    public void Process_driver_contract_api_SB040_INV_001_core_descriptor_family_ordinals_are_backward_compatible_and_gateway_allow_list_is_explicit()
+    {
+        var expectedFamilies = new Dictionary<ProcessDriverCoreDescriptorFamily, int>
+        {
+            [ProcessDriverCoreDescriptorFamily.ExecutionEvidence] = 1,
+            [ProcessDriverCoreDescriptorFamily.FinalizerEvidence] = 2,
+            [ProcessDriverCoreDescriptorFamily.RetryDiagnostics] = 3,
+            [ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence] = 4,
+            [ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation] = 5
+        };
+        var descriptors = ProcessDriverVerificationGatewayLaneRules.AllowedLanes.ToDictionary(
+            descriptor => descriptor.Lane);
+        var gatewayCoreFamilies = descriptors.Values
+            .Select(descriptor => descriptor.CoreDescriptorFamily)
+            .OfType<ProcessDriverCoreDescriptorFamily>()
+            .ToArray();
+
+        Assert.Equal(expectedFamilies.Count, Enum.GetValues<ProcessDriverCoreDescriptorFamily>().Length);
+        foreach (var expectedFamily in expectedFamilies)
+        {
+            Assert.Equal(expectedFamily.Value, (int)expectedFamily.Key);
+        }
+
+        Assert.Equal(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, descriptors[ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification].CoreDescriptorFamily);
+        Assert.Equal(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, descriptors[ProcessDriverVerificationGatewayLane.RuntimeEvidenceConsistency].CoreDescriptorFamily);
+        Assert.Equal(ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence, descriptors[ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency].CoreDescriptorFamily);
+        Assert.Null(descriptors[ProcessDriverVerificationGatewayLane.OfficeEvidenceRead].CoreDescriptorFamily);
+        Assert.Null(descriptors[ProcessDriverVerificationGatewayLane.BusinessAnalysisRead].CoreDescriptorFamily);
+        Assert.DoesNotContain(ProcessDriverCoreDescriptorFamily.FinalizerEvidence, gatewayCoreFamilies);
+        Assert.DoesNotContain(ProcessDriverCoreDescriptorFamily.RetryDiagnostics, gatewayCoreFamilies);
+        Assert.All(descriptors.Values, descriptor =>
+            Assert.All(descriptor.AllowedOperations, operation =>
+                Assert.True(ProcessDriverOperationRules.IsReadonlyVerificationOperation(operation))));
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB040_INV_002_contract_version_history_documents_every_public_descriptor_family_change()
+    {
+        var snapshot = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "07-driver-abstraction-api-versioning-snapshot.md");
+        var version = ProcessDriverContractVersion.Current;
+        var expectedVersionHistory = new[]
+        {
+            ("SB025", "1.5.0"),
+            ("SB028", "1.6.0"),
+            ("SB031", "1.7.0"),
+            ("SB032", "1.8.0"),
+            ("SB034", "1.9.0"),
+            ("SB035", "1.10.0")
+        };
+
+        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
+        Assert.Equal(1, version.Major);
+        Assert.Equal(10, version.Minor);
+        Assert.Equal(0, version.Patch);
+        Assert.Contains("Contract version: `1.10.0`", snapshot, StringComparison.Ordinal);
+        Assert.Contains("Version source: `ProcessDriverContractVersion.Current => 1.10.0`", snapshot, StringComparison.Ordinal);
+        foreach (var (subbundle, expectedVersion) in expectedVersionHistory)
+        {
+            Assert.Contains($"## {subbundle}", snapshot, StringComparison.Ordinal);
+            Assert.Contains($"ProcessDriverContractVersion.Current` is `{expectedVersion}`", snapshot, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("## SB040 API Compatibility Contract Note", snapshot, StringComparison.Ordinal);
+        Assert.Contains("ExecutionEvidence = 1", snapshot, StringComparison.Ordinal);
+        Assert.Contains("FinalizerEvidence = 2", snapshot, StringComparison.Ordinal);
+        Assert.Contains("RetryDiagnostics = 3", snapshot, StringComparison.Ordinal);
+        Assert.Contains("ArtifactProjectionEvidence = 4", snapshot, StringComparison.Ordinal);
+        Assert.Contains("ArtifactProjectionValidation = 5", snapshot, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriverContractVersion.Current => 1.11.0", snapshot, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB041_INV_001_v1_migration_docs_match_current_contract_and_alpha_verifier_behavior()
+    {
+        var migrationDoc = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "09-v1-contract-migration-compatibility.md");
+        var version = ProcessDriverContractVersion.Current;
+
+        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
+        Assert.Contains("Current driver contract version: `1.10.0`", migrationDoc, StringComparison.Ordinal);
+        Assert.Contains("Compatibility line: `v1.x verification-only alpha`", migrationDoc, StringComparison.Ordinal);
+        Assert.Contains("Major compatibility rule: v1 consumers must reject any contract with `Major != 1`", migrationDoc, StringComparison.Ordinal);
+        Assert.Contains("ExecutionCapableFuture` remains a denied future marker", migrationDoc, StringComparison.Ordinal);
+        Assert.Contains("Core descriptor family ordinals are compatibility-significant", migrationDoc, StringComparison.Ordinal);
+
+        foreach (var requiredText in new[]
+        {
+            "CanDoItAll.Processes.Drivers.TranscriptVerification",
+            "CanDoItAll.Processes.Drivers.RuntimeEvidence",
+            "CanDoItAll.Processes.Drivers.OfficeEvidence",
+            "CanDoItAll.Processes.Drivers.BusinessAnalysis",
+            "CanDoItAll.Processes.Drivers.ArtifactEvidence",
+            "CanDoItAll.Processes.Drivers.ObservationAggregation",
+            "`TranscriptText` bound to `CommandTranscript`",
+            "`CoreDescriptorPayload` bound to `CoreDescriptor`",
+            "`OfficeEvidencePayload` bound to `OfficeReadonlyArtifact`",
+            "`BusinessAnalysisPayload` bound to `BusinessReadonlyArtifact`",
+            "`ProcessDriverVerificationResponse` envelopes only",
+            "Does not invoke verifiers, discover drivers, register DI services, persist observations, schedule work, trigger commands, or mutate state."
+        })
+        {
+            Assert.Contains(requiredText, migrationDoc, StringComparison.Ordinal);
+        }
+
+        foreach (var deniedRuntimeClaim in new[]
+        {
+            "runtime host approval: granted",
+            "runtime host is approved",
+            "DI registration is approved",
+            "scheduler is approved",
+            "manager command is approved",
+            "workspace write allowed",
+            "storage write allowed"
+        })
+        {
+            Assert.DoesNotContain(deniedRuntimeClaim, migrationDoc, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB046_INV_001_runtime_host_approval_matrix_keeps_runtime_surfaces_unapproved()
+    {
+        var matrix = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "10-runtime-host-approval-matrix.md");
+        var migrationDoc = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "09-v1-contract-migration-compatibility.md");
+        var contractSource = ReadContractSource(FindRepositoryRoot());
+
+        Assert.Contains("Current decision: all runtime-host surfaces are `Not approved`", matrix, StringComparison.Ordinal);
+        Assert.Contains("Contract line: `v1.x verification-only alpha`", matrix, StringComparison.Ordinal);
+        Assert.Contains("architecture/10-runtime-host-approval-matrix.md", migrationDoc, StringComparison.Ordinal);
+        Assert.Contains("ExecutionCapableFuture` remains a denied marker", matrix, StringComparison.Ordinal);
+        Assert.Contains("Future Approval Gates", matrix, StringComparison.Ordinal);
+        Assert.Contains("lifecycle ownership", matrix, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Audit persistence", matrix, StringComparison.Ordinal);
+        Assert.Contains("Sandbox and allow-list policy", matrix, StringComparison.Ordinal);
+        Assert.Contains("Approval and authorization", matrix, StringComparison.Ordinal);
+        Assert.Contains("Compatibility review", matrix, StringComparison.Ordinal);
+        Assert.Contains("Red-team proof", matrix, StringComparison.Ordinal);
+
+        foreach (var surface in new[]
+        {
+            "Runtime host",
+            "Driver registry",
+            "Runtime selector",
+            "DI registration",
+            "Manager command",
+            "Scheduler hook",
+            "Workflow hook",
+            "Execution-capable drivers"
+        })
+        {
+            Assert.Contains($"| {surface} | `Not approved` |", matrix, StringComparison.Ordinal);
+        }
+
+        foreach (var deniedApprovalClaim in new[]
+        {
+            "Current decision: approved",
+            "runtime host is approved",
+            "registry is approved",
+            "selector is approved",
+            "DI registration is approved",
+            "manager command is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved",
+            "execution-capable drivers are approved"
+        })
+        {
+            Assert.DoesNotContain(deniedApprovalClaim, matrix, StringComparison.OrdinalIgnoreCase);
+        }
+
+        AssertNoForbiddenProductionDriverRuntimeTokens(contractSource);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB047_INV_001_future_runtime_prerequisites_are_exact_and_unsatisfied()
+    {
+        var prerequisites = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "11-future-production-runtime-prerequisites.md");
+        var matrix = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "10-runtime-host-approval-matrix.md");
+
+        Assert.Contains("Runtime host status: `Not approved`", prerequisites, StringComparison.Ordinal);
+        Assert.Contains("Prerequisite status: every prerequisite in this document is `Not satisfied`", prerequisites, StringComparison.Ordinal);
+        Assert.Contains("architecture/11-future-production-runtime-prerequisites.md", matrix, StringComparison.Ordinal);
+
+        foreach (var prerequisite in new[]
+        {
+            "Audit persistence",
+            "Sandbox boundary",
+            "Command and external-call allow-list",
+            "Lifecycle ownership",
+            "Approval and authorization",
+            "Compatibility governance"
+        })
+        {
+            Assert.Contains($"| {prerequisite} | `Not satisfied` |", prerequisites, StringComparison.Ordinal);
+        }
+
+        foreach (var requiredEvidence in new[]
+        {
+            "Request id, caller context, lane, permission mode, capability scope, requested operation, denial reason, and timestamp.",
+            "Process isolation model and resource limits.",
+            "Tests proving unknown commands, unknown connectors, unknown paths, unknown lanes, and unknown operations fail predictably.",
+            "Owning module and package boundary.",
+            "How approval is recorded, revoked, expired, and audited.",
+            "`ProcessDriverContractVersion.Current`.",
+            "Driver abstraction public API snapshot and surface hash.",
+            "Red-team tests rejecting report-only approval"
+        })
+        {
+            Assert.Contains(requiredEvidence, prerequisites, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenApprovalClaim in new[]
+        {
+            "Prerequisite status: satisfied",
+            "Runtime host status: approved",
+            "runtime host may run now",
+            "execution-capable driver is approved",
+            "workspace write is approved",
+            "storage write is approved"
+        })
+        {
+            Assert.DoesNotContain(forbiddenApprovalClaim, prerequisites, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB057_INV_001_roadmaps_deny_runtime_host_and_list_approval_gates()
+    {
+        var coreRoadmap = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "12-stable-process-core-roadmap.md");
+        var domainRoadmap = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "13-domain-driver-roadmap.md");
+
+        Assert.Contains("Runtime host status: `Not approved`", coreRoadmap, StringComparison.Ordinal);
+        Assert.Contains("Runtime host status: `Not approved`", domainRoadmap, StringComparison.Ordinal);
+        Assert.Contains("Execution-capable driver status: `Not approved`", domainRoadmap, StringComparison.Ordinal);
+        Assert.Contains("remaining runtime side effects stay outside Process Core", coreRoadmap, StringComparison.Ordinal);
+        Assert.Contains("continue read-only domain drivers and adapters", domainRoadmap, StringComparison.Ordinal);
+        Assert.Contains("prerequisites in `architecture/11-future-production-runtime-prerequisites.md` remain `Not satisfied`", domainRoadmap, StringComparison.Ordinal);
+
+        foreach (var approvalGate in new[]
+        {
+            "Runtime lifecycle ownership",
+            "Audit persistence",
+            "Sandbox boundary",
+            "allow-list",
+            "Approval and authorization",
+            "Compatibility governance",
+            "Red-team proof"
+        })
+        {
+            Assert.Contains(approvalGate, domainRoadmap, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var surface in new[]
+        {
+            "Verification host registration",
+            "Driver registry/selector",
+            "DI registration/startup hook",
+            "Manager command",
+            "Scheduler/workflow hook",
+            "Workspace/storage writes",
+            "File/network/connector calls",
+            "Finalizer/transition/claim mutation",
+            "Provider repair/retry execution"
+        })
+        {
+            Assert.Contains(surface, coreRoadmap, StringComparison.Ordinal);
+        }
+
+        var combinedRoadmaps = string.Concat(coreRoadmap, Environment.NewLine, domainRoadmap);
+        foreach (var forbiddenApprovalClaim in new[]
+        {
+            "Runtime host status: `Approved`",
+            "Execution-capable driver status: `Approved`",
+            "Default next bundle: production verification host registration",
+            "ExecutionCapableFuture is permission",
+            "runtime host may run now",
+            "driver registry is approved",
+            "DI registration is approved",
+            "manager command is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved"
+        })
+        {
+            Assert.DoesNotContain(forbiddenApprovalClaim, combinedRoadmaps, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB058_INV_001_next_bundle_keeps_production_host_registration_not_ready()
+    {
+        var decision = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "14-next-bundle-runtime-host-decision.md");
+        var approvalMatrix = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "10-runtime-host-approval-matrix.md");
+        var prerequisites = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "11-future-production-runtime-prerequisites.md");
+
+        Assert.Contains("Production verification host registration decision: `Not ready`", decision, StringComparison.Ordinal);
+        Assert.Contains("Next bundle path: `Continue read-only adapters and projection planning`", decision, StringComparison.Ordinal);
+        Assert.Contains("Runtime host status: `Not approved`", decision, StringComparison.Ordinal);
+        Assert.Contains("Prerequisite status: `Not satisfied`", decision, StringComparison.Ordinal);
+        Assert.Contains("Current decision: all runtime-host surfaces are `Not approved`.", approvalMatrix, StringComparison.Ordinal);
+        Assert.Contains("Prerequisite status: every prerequisite in this document is `Not satisfied`.", prerequisites, StringComparison.Ordinal);
+
+        foreach (var prerequisite in new[]
+        {
+            "Runtime lifecycle ownership",
+            "Audit persistence",
+            "Sandbox boundary",
+            "Command and external-call allow-list",
+            "Approval and authorization",
+            "Compatibility governance",
+            "Red-team proof"
+        })
+        {
+            Assert.Contains(prerequisite, decision, StringComparison.Ordinal);
+        }
+
+        foreach (var deniedSurface in new[]
+        {
+            "Production verification host registration",
+            "Generic runtime host",
+            "Driver registry or runtime selector",
+            "DI registration or startup hook",
+            "Manager command, scheduler hook, or workflow hook that invokes drivers",
+            "Workspace writes, storage writes, file/network/connector calls",
+            "Execution-capable driver contract line"
+        })
+        {
+            Assert.Contains(deniedSurface, decision, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenDecision in new[]
+        {
+            "Production verification host registration decision: `Ready`",
+            "Next bundle path: `Production verification host registration`",
+            "Runtime host status: `Approved`",
+            "Prerequisite status: `Satisfied`",
+            "register drivers in DI for the next bundle",
+            "manager command may invoke drivers",
+            "scheduler hook may invoke drivers",
+            "ExecutionCapableFuture is permission"
+        })
+        {
+            Assert.DoesNotContain(forbiddenDecision, decision, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB059_INV_001_backlog_candidates_keep_runtime_host_and_execution_blocked()
+    {
+        var backlog = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "15-next-backlog-candidates-and-reopen-triggers.md");
+        var decision = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "14-next-bundle-runtime-host-decision.md");
+
+        Assert.Contains("Backlog decision: `Continue read-only path`", backlog, StringComparison.Ordinal);
+        Assert.Contains("Runtime host registration candidate: `Blocked`", backlog, StringComparison.Ordinal);
+        Assert.Contains("Execution-capable driver candidate: `Blocked`", backlog, StringComparison.Ordinal);
+        Assert.Contains("Production verification host registration decision: `Not ready`", decision, StringComparison.Ordinal);
+
+        foreach (var readyCandidate in new[]
+        {
+            "Manager-visible read-only verification projection planning",
+            "Read-only adapter hardening",
+            "Compatibility and descriptor guard hardening"
+        })
+        {
+            Assert.Contains(readyCandidate, backlog, StringComparison.Ordinal);
+        }
+
+        foreach (var blockedCandidate in new[]
+        {
+            "Runtime-host approval pre-bundle",
+            "Production verification host registration",
+            "Execution-capable driver contract line"
+        })
+        {
+            Assert.Contains(blockedCandidate, backlog, StringComparison.Ordinal);
+        }
+
+        foreach (var reopenTrigger in new[]
+        {
+            "invoking drivers",
+            "registering services",
+            "persisting runtime-host state",
+            "writing workspace/storage",
+            "mutating processes",
+            "public API snapshots",
+            "supplied-content hash binding",
+            "UI/media files change"
+        })
+        {
+            Assert.Contains(reopenTrigger, backlog, StringComparison.OrdinalIgnoreCase);
+        }
+
+        foreach (var forbiddenBacklogClaim in new[]
+        {
+            "Runtime host registration candidate: `Ready`",
+            "Execution-capable driver candidate: `Ready`",
+            "production verification host registration is ready",
+            "execution-capable drivers are ready",
+            "manager-visible projection may invoke drivers",
+            "read-only adapter hardening may write workspace",
+            "runtime-host approval pre-bundle may skip audit persistence"
+        })
+        {
+            Assert.DoesNotContain(forbiddenBacklogClaim, backlog, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB027_INV_001_office_business_analysis_and_artifact_lanes_stay_readonly()
     {
         var scopes = CreateReadonlyScopes();
         var officeScope = Assert.Single(scopes, scope => scope.Kind == ProcessDriverCapabilityScopeKind.OfficeEvidenceRead);
         var businessScope = Assert.Single(scopes, scope => scope.Kind == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+        var artifactScope = Assert.Single(scopes, scope => scope.Kind == ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead);
 
         Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, officeScope.RequiredPermissionMode);
         Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, businessScope.RequiredPermissionMode);
+        Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, artifactScope.RequiredPermissionMode);
         Assert.False(officeScope.AllowsExternalCalls);
         Assert.False(officeScope.AllowsStorageWrites);
         Assert.False(businessScope.AllowsProcessMutation);
         Assert.False(businessScope.AllowsWorkspaceWrites);
+        Assert.False(artifactScope.AllowsExternalCalls);
+        Assert.False(artifactScope.AllowsProcessMutation);
+        Assert.True(ProcessDriverCapabilityScopeRules.IsOfficeEvidenceReadScope(
+            officeScope,
+            ProcessDriverPermissionMode.VerificationOnly));
+        Assert.True(ProcessDriverCapabilityScopeRules.IsBusinessAnalysisReadScope(
+            businessScope,
+            ProcessDriverPermissionMode.VerificationOnly));
+        Assert.True(ProcessDriverCapabilityScopeRules.IsArtifactEvidenceReadScope(
+            artifactScope,
+            ProcessDriverPermissionMode.VerificationOnly));
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB019_INV_001_gateway_allow_list_is_explicit_typed_and_runtime_free()
+    {
+        var root = FindRepositoryRoot();
+        var design = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-multi-domain-verification-gateway-v1",
+            "architecture",
+            "08-explicit-verification-gateway-design.md");
+        var contractSource = ReadContractSource(root);
+        var descriptors = ProcessDriverVerificationGatewayLaneRules.AllowedLanes;
+        var descriptorByLane = descriptors.ToDictionary(descriptor => descriptor.Lane);
+
+        Assert.Equal(5, descriptors.Count);
+        Assert.Equal(
+            Enum.GetValues<ProcessDriverVerificationGatewayLane>().OrderBy(lane => lane).ToArray(),
+            descriptors.Select(descriptor => descriptor.Lane).OrderBy(lane => lane).ToArray());
+        AssertGatewayDescriptor(
+            descriptorByLane[ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification],
+            ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification,
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverEvidenceReferenceKind.CommandTranscript,
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+            [ProcessDriverOperation.InspectExistingEvidence, ProcessDriverOperation.ReturnDiagnostics, ProcessDriverOperation.ExplainDenial]);
+        AssertGatewayDescriptor(
+            descriptorByLane[ProcessDriverVerificationGatewayLane.RuntimeEvidenceConsistency],
+            ProcessDriverCapabilityScopeKind.RuntimeFactsRead,
+            ProcessDriverPermissionMode.ManagerReadonly,
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+            [ProcessDriverOperation.ReadProcessFacts, ProcessDriverOperation.ReturnDiagnostics, ProcessDriverOperation.ExplainDenial]);
+        AssertGatewayDescriptor(
+            descriptorByLane[ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency],
+            ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead,
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence,
+            [ProcessDriverOperation.InspectExistingEvidence, ProcessDriverOperation.ReturnDiagnostics, ProcessDriverOperation.ExplainDenial]);
+        AssertGatewayDescriptor(
+            descriptorByLane[ProcessDriverVerificationGatewayLane.OfficeEvidenceRead],
+            ProcessDriverCapabilityScopeKind.OfficeEvidenceRead,
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
+            null,
+            [ProcessDriverOperation.InspectExistingEvidence, ProcessDriverOperation.ReturnDiagnostics, ProcessDriverOperation.ExplainDenial]);
+        AssertGatewayDescriptor(
+            descriptorByLane[ProcessDriverVerificationGatewayLane.BusinessAnalysisRead],
+            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead,
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
+            null,
+            [ProcessDriverOperation.InspectExistingEvidence, ProcessDriverOperation.ReturnDiagnostics, ProcessDriverOperation.ExplainDenial]);
+        Assert.All(descriptors, descriptor =>
+            Assert.All(descriptor.AllowedOperations, operation =>
+                Assert.True(ProcessDriverOperationRules.IsReadonlyVerificationOperation(operation))));
+        Assert.Contains("ProcessDriverVerificationGatewayLaneRules", design, StringComparison.Ordinal);
+        Assert.Contains("No dynamic lane discovery.", design, StringComparison.Ordinal);
+        Assert.Contains("Contract version is `1.10.0`", design, StringComparison.Ordinal);
+        AssertNoForbiddenProductionDriverRuntimeTokens(contractSource);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB022_INV_001_supplied_evidence_content_envelope_is_typed_hashable_and_payload_only()
+    {
+        const string transcriptText = "Build succeeded.";
+        const string descriptorPayload = """{"executionRunId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"}""";
+        const string artifactPayload = """{"projection":[{"source":"file-write"}],"validation":[{"kind":"deliverable"}]}""";
+        const string officePayload = """{"items":[{"kind":"email","id":"message-1"}]}""";
+        const string businessPayload = """{"items":[{"kind":"deliverable","id":"analysis-1"}]}""";
+        var transcriptReference = new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CommandTranscript,
+            "bundle://proof/SB022/transcripts/dotnet-transcript.txt",
+            ProcessDriverEvidencePolicy.ComputeSha256(transcriptText),
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+        var descriptorReference = new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            "bundle://proof/SB022/runtime-evidence.json",
+            ProcessDriverEvidencePolicy.ComputeSha256(descriptorPayload),
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+        var artifactReference = new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            "bundle://proof/SB034/artifact-projection-evidence.json",
+            ProcessDriverEvidencePolicy.ComputeSha256(artifactPayload),
+            ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
+        var officeReference = new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
+            "bundle://proof/SB028/office-evidence.json",
+            ProcessDriverEvidencePolicy.ComputeSha256(officePayload),
+            null);
+        var businessReference = new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
+            "bundle://proof/SB031/business-analysis.json",
+            ProcessDriverEvidencePolicy.ComputeSha256(businessPayload),
+            null);
+
+        var transcriptContent = ProcessDriverSuppliedEvidenceContentRules.CreateTranscriptText(
+            transcriptReference,
+            transcriptText);
+        var descriptorContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
+            descriptorReference,
+            descriptorPayload);
+        var artifactContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
+            artifactReference,
+            artifactPayload);
+        var officeContent = ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(
+            officeReference,
+            officePayload);
+        var businessContent = ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(
+            businessReference,
+            businessPayload);
+
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentKind.TranscriptText, transcriptContent.Kind);
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType, transcriptContent.ContentType);
+        Assert.Equal(transcriptReference, transcriptContent.EvidenceReference);
+        Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(transcriptText), transcriptContent.ContentHash);
+        Assert.True(transcriptContent.SizeBytes > 0);
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasExpectedEnvelope(
+            transcriptContent,
+            ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+            ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasAllowedSize(transcriptContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasValidContentHash(transcriptContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasEvidenceReferenceHashBinding(transcriptContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HashMatchesSuppliedPayload(
+            transcriptContent,
+            transcriptText));
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload, descriptorContent.Kind);
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentRules.JsonContentType, descriptorContent.ContentType);
+        Assert.Equal(descriptorReference, descriptorContent.EvidenceReference);
+        Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(descriptorPayload), descriptorContent.ContentHash);
+        Assert.True(descriptorContent.SizeBytes > 0);
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasExpectedEnvelope(
+            descriptorContent,
+            ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload,
+            ProcessDriverSuppliedEvidenceContentRules.JsonContentType));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasAllowedSize(descriptorContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasValidContentHash(descriptorContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasEvidenceReferenceHashBinding(descriptorContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HashMatchesSuppliedPayload(
+            descriptorContent,
+            descriptorPayload));
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload, artifactContent.Kind);
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentRules.JsonContentType, artifactContent.ContentType);
+        Assert.Equal(artifactReference, artifactContent.EvidenceReference);
+        Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(artifactPayload), artifactContent.ContentHash);
+        Assert.True(artifactContent.SizeBytes > 0);
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasExpectedEnvelope(
+            artifactContent,
+            ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload,
+            ProcessDriverSuppliedEvidenceContentRules.JsonContentType));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasAllowedSize(artifactContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasValidContentHash(artifactContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasEvidenceReferenceHashBinding(artifactContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HashMatchesSuppliedPayload(
+            artifactContent,
+            artifactPayload));
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentKind.OfficeEvidencePayload, officeContent.Kind);
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentRules.JsonContentType, officeContent.ContentType);
+        Assert.Equal(officeReference, officeContent.EvidenceReference);
+        Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(officePayload), officeContent.ContentHash);
+        Assert.True(officeContent.SizeBytes > 0);
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasExpectedEnvelope(
+            officeContent,
+            ProcessDriverSuppliedEvidenceContentKind.OfficeEvidencePayload,
+            ProcessDriverSuppliedEvidenceContentRules.JsonContentType));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasAllowedSize(officeContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasValidContentHash(officeContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasEvidenceReferenceHashBinding(officeContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HashMatchesSuppliedPayload(
+            officeContent,
+            officePayload));
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentKind.BusinessAnalysisPayload, businessContent.Kind);
+        Assert.Equal(ProcessDriverSuppliedEvidenceContentRules.JsonContentType, businessContent.ContentType);
+        Assert.Equal(businessReference, businessContent.EvidenceReference);
+        Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(businessPayload), businessContent.ContentHash);
+        Assert.True(businessContent.SizeBytes > 0);
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasExpectedEnvelope(
+            businessContent,
+            ProcessDriverSuppliedEvidenceContentKind.BusinessAnalysisPayload,
+            ProcessDriverSuppliedEvidenceContentRules.JsonContentType));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasAllowedSize(businessContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasValidContentHash(businessContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HasEvidenceReferenceHashBinding(businessContent));
+        Assert.True(ProcessDriverSuppliedEvidenceContentRules.HashMatchesSuppliedPayload(
+            businessContent,
+            businessPayload));
     }
 
     [Fact]
@@ -245,7 +990,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var publicTypes = typeof(ProcessDriverPermissionMode).Assembly.GetExportedTypes();
         var version = ProcessDriverContractVersion.Current;
 
-        Assert.Equal(new ProcessDriverContractVersion(1, 2, 0), version);
+        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
         Assert.Contains(ProcessDriverPermissionMode.ExecutionCapableFuture, Enum.GetValues<ProcessDriverPermissionMode>());
         AssertNoForbiddenProductionDriverRuntimeTokens(contractSource);
         Assert.DoesNotContain(publicTypes, type => type.IsInterface);
@@ -286,8 +1031,30 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
                 AllowsProcessMutation: false,
                 AllowsExternalCalls: false,
                 AllowsWorkspaceWrites: false,
+                AllowsStorageWrites: false),
+            new ProcessDriverCapabilityScope(
+                ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead,
+                ProcessDriverPermissionMode.VerificationOnly,
+                AllowsProcessMutation: false,
+                AllowsExternalCalls: false,
+                AllowsWorkspaceWrites: false,
                 AllowsStorageWrites: false)
         ];
+    }
+
+    private static void AssertGatewayDescriptor(
+        ProcessDriverVerificationGatewayLaneDescriptor descriptor,
+        ProcessDriverCapabilityScopeKind expectedScopeKind,
+        ProcessDriverPermissionMode expectedPermissionMode,
+        ProcessDriverEvidenceReferenceKind expectedEvidenceKind,
+        ProcessDriverCoreDescriptorFamily? expectedCoreDescriptorFamily,
+        IReadOnlyList<ProcessDriverOperation> expectedAllowedOperations)
+    {
+        Assert.Equal(expectedScopeKind, descriptor.RequiredScopeKind);
+        Assert.Equal(expectedPermissionMode, descriptor.RequiredPermissionMode);
+        Assert.Equal(expectedEvidenceKind, descriptor.PrimaryEvidenceKind);
+        Assert.Equal(expectedCoreDescriptorFamily, descriptor.CoreDescriptorFamily);
+        Assert.Equal(expectedAllowedOperations, descriptor.AllowedOperations);
     }
 
     private static ProcessDriverOperation[] CreateSideEffectOperations()
@@ -348,13 +1115,42 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     private static IReadOnlyList<string> ReadContractPublicTypeNames()
+        => ReadPublicTypeNames(typeof(ProcessDriverPermissionMode).Assembly);
+
+    private static IReadOnlyList<string> ReadPublicTypeNames(Assembly assembly)
     {
-        return typeof(ProcessDriverPermissionMode)
-            .Assembly
+        return assembly
             .GetExportedTypes()
             .Select(type => type.FullName ?? type.Name)
             .Order(StringComparer.Ordinal)
             .ToArray();
+    }
+
+    private static void AssertDocumentedPublicSurface(
+        string snapshot,
+        Assembly assembly,
+        string namespacePrefix,
+        int expectedCount,
+        string expectedHash)
+    {
+        var publicTypeNames = ReadPublicTypeNames(assembly)
+            .Where(typeName => typeName.StartsWith(namespacePrefix, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(expectedCount, publicTypeNames.Length);
+        Assert.Equal(expectedHash, ComputePublicApiSurfaceHash(publicTypeNames));
+        Assert.Contains($"Public type count: `{expectedCount}`", snapshot, StringComparison.Ordinal);
+        Assert.Contains($"Surface hash: `{expectedHash}`", snapshot, StringComparison.Ordinal);
+        Assert.All(publicTypeNames, publicTypeName =>
+            Assert.Contains($"`{publicTypeName}`", snapshot, StringComparison.Ordinal));
+    }
+
+    private static string ComputePublicApiSurfaceHash(IEnumerable<string> publicTypeNames)
+    {
+        var payload = string.Join('\n', publicTypeNames);
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(payload));
+
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static string ReadContractSource(string repositoryRoot)

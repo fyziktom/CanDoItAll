@@ -1,0 +1,8 @@
+SB044 fake-proof resistance source scan and anti-stub audit
+Repository: C:\repositories\CanDoItAll
+Checked SB044 fact count: 3
+Checked fake-proof issue token count: 20
+Verified status-only, non-empty diagnostic, unredacted secret, and fixture-only parsing rejection paths.
+Verified actual SB043 source-backed proof is loaded from manifest, focused transcript, source scan, report, tests, and fixtures.
+Verified no high-confidence secret patterns, UI/media files, or stub markers in the SB044 slice.
+PASS: SB044 source scan and anti-stub audit passed.

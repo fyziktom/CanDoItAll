@@ -55,6 +55,9 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
         var request = new TranscriptVerificationAlphaRequest(
             verificationRequest,
             payload.TranscriptReference,
+            ProcessDriverSuppliedEvidenceContentRules.CreateTranscriptText(
+                transcriptEvidence,
+                payload.TranscriptText),
             payload.TranscriptText,
             payload.RequestedAt);
 

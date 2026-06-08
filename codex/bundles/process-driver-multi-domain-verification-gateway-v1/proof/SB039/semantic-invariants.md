@@ -1,8 +1,23 @@
 # SB039 Semantic Invariants
 
+## SB039_INV_001
 - Invariant ID: `SB039_INV_001`
-- Shallow-pass trap: status-only, non-empty diagnostic-only, fixture-only, or report-only proof.
-- Adversarial negative proof required.
-- Semantic positive proof required.
-- Raw-note literal closure required.
-- Downstream dependency check required.
+- Source raw note: `Prepare broader phases toward stable Core and domain drivers`.
+- Expected behavior: Gate M can close only when ObservationAggregation is proven read-only, allow-listed, abstraction-only, unregistered, unpersisted, unscheduled, command-free, mutation-free, and limited to immutable in-memory envelopes over already-produced verification responses from the transcript/runtime/Office/business/artifact lanes.
+- Disallowed shallow implementation: claiming closure because a package exists, because one aggregate has non-empty diagnostics, because a fixture mentions the five lane names, or because a report row says passed while omitting clean build, focused tests, source scans, read-only snapshot proof, outside-production integration scan, red-team rejection, and source-backed manifests.
+- Failing-first test: `bundle://proof/SB039/transcripts/red-team-observation-aggregation-shallow-proof-rejection.txt` rejects status-only, non-empty-diagnostic-only, fixture-only, and report-only closure.
+- Passing test: `bundle://proof/SB039/transcripts/gate-m-proof-index.txt` verifies SB037/SB038 manifests, clean build, 5/5 focused ObservationAggregation tests, Gate M no-side-effect scan, red-team rejection, and this invariant contract.
+- Changed source files: `repo://src/CanDoItAll.Processes.Drivers.ObservationAggregation`; `repo://tests/CanDoItAll.Tests.Unit/ProcessDriverObservationAggregationTests.cs`.
+- Production assertions: ObservationAggregation consumes only `ProcessDriverVerificationResponse` envelopes, derives lanes from typed audit facts, rejects empty/auditless/mixed-lane response shapes, normalizes evidence references, aggregates redaction metadata, returns `AggregationMutationFree: true`, and exposes read-only snapshot collection envelopes.
+- Security assertions: source scans prove no Core, concrete verifier, module, infrastructure, runtime host, registry, selector, provider, DI, hosted-service, scheduler, persistence, EF, command, manager-command, HTTP, process, file, directory, storage, workspace, UI/media, or secret-like drift in Gate M targets.
+- Adversarial negative case: a closure that checks only status, package existence, fixture lane names, or non-empty diagnostics is rejected with simulated proof failure.
+- Downstream dependency check: SB040 and later compatibility phases may proceed only from proof that ObservationAggregation remains in-memory, read-only, allow-listed, and detached from runtime registration; if aggregation gains runtime, persistence, scheduling, command, or mutation behavior, reopen SB037-SB039.
+
+## Production Behavior Artifact Matrix
+| Artifact | Producer | Consumer | Lifecycle | Negative-test citation |
+| --- | --- | --- | --- | --- |
+| Observation aggregation request | Caller-provided `ProcessDriverObservationAggregationRequest` | `ProcessDriverObservationAggregator.Aggregate` | Carries already-produced verification responses, requested timestamp, and caller context; no verifier is invoked and no runtime host is discovered | `Process_driver_observation_aggregation_SB037_INV_002_rejects_empty_auditless_and_mixed_lane_responses` |
+| Typed lane resolution | `ProcessDriverAuditFact.Lane` on each response | `ResolveLane` | Exactly one distinct lane must exist per response; empty or mixed lanes throw `ArgumentException` instead of silently defaulting | `Process_driver_observation_aggregation_SB037_INV_002_rejects_empty_auditless_and_mixed_lane_responses` |
+| Observation aggregate envelope | `ProcessDriverObservationAggregator` | Future read-only reporting/compatibility phases | Contains counts, lane summaries, normalized evidence references, aggregate redaction descriptor, mutation-free flags, and current contract version as read-only snapshot collections | `Process_driver_observation_aggregation_SB038_INV_001_returns_readonly_snapshot_envelopes_without_tracking_mutable_inputs` |
+| Integration absence proof | Gate M source scan over production package and 1,280 outside production source/project files | Downstream gate proof | Proves ObservationAggregation has no DI registration, persistence, scheduler, command handler, manager command, runtime host, file/network/process calls, or production references outside its package | `Process_driver_observation_aggregation_SB038_INV_002_remains_unregistered_unpersisted_unscheduled_and_command_free` |
+| Shallow-proof rejection | Gate M red-team transcript | `gate-m-proof-index.txt` | Rejects status-only, non-empty-diagnostic-only, fixture-only, and report-only proof that lacks build/test/source/manifest/semantic artifacts | `bundle://proof/SB039/transcripts/red-team-observation-aggregation-shallow-proof-rejection.txt` |

@@ -5,5 +5,5 @@ public readonly record struct ProcessDriverContractVersion(
     int Minor,
     int Patch)
 {
-    public static ProcessDriverContractVersion Current => new(1, 2, 0);
+    public static ProcessDriverContractVersion Current => new(1, 10, 0);
 }

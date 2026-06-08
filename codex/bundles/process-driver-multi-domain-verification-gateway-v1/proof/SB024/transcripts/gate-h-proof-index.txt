@@ -1,0 +1,37 @@
+﻿SB024 Gate H semantic positive proof index
+UTC: 2026-06-08T16:18:40Z
+
+Required proof files:
+PASS exists: bundle://proof/SB022/manifest.md
+PASS exists: bundle://proof/SB023/manifest.md
+PASS exists: bundle://proof/SB024/manifest.md
+PASS exists: bundle://proof/SB024/semantic-invariants.md
+PASS exists: bundle://proof/SB024/transcripts/gate-h-solution-build-no-restore.txt
+PASS exists: bundle://proof/SB024/transcripts/gate-h-focused-evidence-boundary-tests.txt
+PASS exists: bundle://proof/SB024/transcripts/gate-h-evidence-boundary-no-side-effect-scan.txt
+PASS exists: bundle://proof/SB024/transcripts/red-team-evidence-boundary-shallow-proof-rejection.txt
+PASS exists: bundle://subbundles/sb024-gate-h-evidence-boundary-denies-untrusted-mismatched-oversized-missing/README.md
+PASS exists: bundle://reviews/01-execution-report.md
+
+Transcript assertions:
+PASS solution build transcript reports 0 errors
+PASS solution build transcript reports 0 warnings
+PASS focused transcript includes total test count
+PASS focused transcript includes expected 34-test count
+PASS Gate H source scan passed
+PASS Gate H source scan proves no runtime-host/side-effect drift
+PASS red-team shallow-proof rejection passed
+PASS red-team rejects shallow closure
+
+Manifest and invariant assertions:
+PASS manifest marks Gate H critical
+PASS manifest includes production behavior artifact matrix
+PASS manifest records focused pass count
+PASS semantic invariants name shallow-pass trap
+PASS semantic invariants include production behavior artifact matrix
+PASS semantic invariants cover all boundary denial families
+PASS SB024 README is completed
+PASS execution report closes SB024 row
+PASS execution report hands off to SB025
+
+RESULT: PASSED

@@ -1,0 +1,16 @@
+Command: SB015 Gate E semantic positive proof index
+Working directory: C:\repositories\CanDoItAll
+Run label: SB015 proof index 2026-06-08
+--- output ---
+Invariant ID: SB015_INV_001
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB013\manifest.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB014\manifest.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB015\transcripts\gate-e-solution-build-no-restore.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB015\transcripts\gate-e-focused-runtime-evidence-tests.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB015\transcripts\gate-e-runtime-evidence-no-side-effect-scan.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB015\transcripts\red-team-runtime-evidence-report-only-rejection.txt
+PASS: Solution build transcript proves 0 warnings, 0 errors, exit code 0.
+PASS: Focused runtime evidence tests prove 6 passed, 0 failures, exit code 0.
+PASS: No-side-effect source scan is green.
+PASS: Red-team negative proof rejects report-only/non-empty-diagnostic closure.
+Exit code: 0

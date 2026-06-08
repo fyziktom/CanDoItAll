@@ -1,0 +1,39 @@
+﻿SB026 redaction policy source scan and anti-stub audit
+UTC: 2026-06-08T16:33:16Z
+
+Target existence:
+PASS exists repo://src\CanDoItAll.Processes.Drivers.Abstractions\Audit\ProcessDriverRedactionPolicy.cs
+PASS exists repo://src\CanDoItAll.Processes.Drivers.TranscriptVerification\TranscriptVerificationAuditFactBuilder.cs
+PASS exists repo://src\CanDoItAll.Processes.Drivers.TranscriptVerification\TranscriptVerificationDiagnosticFactory.cs
+PASS exists repo://src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceAuditFactMapper.cs
+PASS exists repo://src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceDiagnosticFactory.cs
+PASS exists repo://src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationPreflightPolicy.cs
+PASS exists repo://tests\CanDoItAll.Tests.Unit\ProcessDriverVerificationTestHarness.cs
+PASS exists repo://tests\CanDoItAll.Tests.Unit\ProcessDriverVerificationTestHarnessTests.cs
+
+Redaction policy token assertions:
+PASS token present: RedactDiagnosticSummary
+PASS token present: DefaultMaxAuditSummaryLength
+PASS token present: ConnectionStringPattern
+PASS token present: ProcessDriverRedactionKind.ConnectionString
+PASS token present: ProcessDriverRedactionKind.Secret
+PASS token present: ProcessDriverRedactionKind.EmailAddress
+PASS token present: Process_driver_shared_harness_SB026_INV_001
+PASS token present: fixture-password
+PASS token present: plain-token
+PASS token present: reviewer@example.invalid
+PASS token present: Assert.True(fact.DiagnosticSummary.Length <= ProcessDriverRedactionPolicy.DefaultMaxAuditSummaryLength)
+
+Manual bounded-summary call-site assertions:
+PASS driver/preflight bounded diagnostic summaries use RedactDiagnosticSummary.
+
+Production forbidden token assertions:
+PASS no forbidden runtime/host/DI/IO/provider tokens in SB026 redaction surfaces.
+
+UI/media drift assertion:
+PASS no UI/media drift in SB026 scoped source targets.
+
+Repository secret-pattern assertion on SB026 scoped targets:
+PASS no secret-like patterns in SB026 scoped source targets.
+
+RESULT: PASSED

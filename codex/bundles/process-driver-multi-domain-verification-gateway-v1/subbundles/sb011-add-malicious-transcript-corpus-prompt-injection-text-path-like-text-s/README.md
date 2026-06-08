@@ -1,7 +1,7 @@
 # SB011 — Add malicious transcript corpus: prompt injection text, path-like text, secrets, oversized content, mixed .NET/Rust markers.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Add malicious transcript corpus: prompt injection text, path-like text, secrets, oversized content, mixed .NET/Rust markers.
@@ -30,7 +30,7 @@ Add malicious transcript corpus: prompt injection text, path-like text, secrets,
 - Updated proof artifacts under `proof/SB011/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,11 +59,11 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
 
 
 ## Proof Required
@@ -72,11 +72,16 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Anti-stub audit.
 - Subbundle row in execution report.
 
+## Closure Proof
+- Focused transcript verifier tests with malicious corpus passed: `bundle://proof/SB011/transcripts/focused-transcript-verifier-with-malicious-corpus.txt`.
+- Corpus/source/no-drift/anti-stub audit passed: `bundle://proof/SB011/transcripts/malicious-corpus-source-scan-and-anti-stub-audit.txt`.
+- Proof manifest: `bundle://proof/SB011/manifest.md`.
+
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Noncritical: downstream work may continue only if focused proof is green.
+- Noncritical: downstream work may continue only if focused proof is green.
 
 ## Suggested Agent Prompt
 Implement SB011: Add malicious transcript corpus: prompt injection text, path-like text, secrets, oversized content, mixed .NET/Rust markers.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

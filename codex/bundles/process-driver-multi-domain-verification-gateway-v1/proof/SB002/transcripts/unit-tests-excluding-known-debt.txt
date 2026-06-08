@@ -1,0 +1,10 @@
+Command: dotnet test tests/CanDoItAll.Tests.Unit/CanDoItAll.Tests.Unit.csproj --no-build -v minimal --filter 'FullyQualifiedName!~ProcessAgentExecutionBoundaryArchitectureTests&FullyQualifiedName!~TuningRequestServiceTests'
+Working directory: C:\repositories\CanDoItAll
+Run label: SB002 broad unit confirmation excluding known debt 2026-06-08
+Invariant ID: SB002-TEST-DEBT-INVENTORY
+--- output ---
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:   975, Přeskočeno:     0, Celkem:   975, Doba trvání: 3 m 55 s - CanDoItAll.Tests.Unit.dll (net10.0)
+Exit code: 0

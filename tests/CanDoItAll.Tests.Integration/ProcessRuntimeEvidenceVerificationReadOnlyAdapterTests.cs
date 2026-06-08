@@ -161,10 +161,18 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
         string evidenceUri = "bundle://proof/SB030/runtime-evidence-consistency.json")
     {
+        var effectiveProjectionSourceOrder = projectionSourceOrder ?? [];
+        var suppliedPayloadMaterial = CreateDescriptorPayloadMaterial(
+            executionEvidence,
+            finalizerEvidence,
+            retryDiagnostic,
+            noProgressDiagnostic,
+            providerRepairDiagnostic,
+            effectiveProjectionSourceOrder);
         var evidenceReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
             evidenceUri,
-            ComputeSha256("runtime-evidence-consistency"),
+            ComputeSha256(suppliedPayloadMaterial),
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
 
         return new ProcessRuntimeEvidenceVerificationReadOnlyEvidencePayload(
@@ -181,8 +189,26 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
             retryDiagnostic,
             noProgressDiagnostic,
             providerRepairDiagnostic,
-            projectionSourceOrder ?? [],
+            effectiveProjectionSourceOrder,
             DateTimeOffset.Parse("2026-06-08T02:00:00Z"));
+    }
+
+    private static string CreateDescriptorPayloadMaterial(
+        ProcessExecutionEvidenceDescriptor? executionEvidence,
+        ProcessFinalizerEvidenceDescriptor? finalizerEvidence,
+        ProcessRetryDiagnosticDescriptor? retryDiagnostic,
+        ProcessNoProgressRetryDiagnosticDescriptor? noProgressDiagnostic,
+        ProcessProviderRepairDiagnosticDescriptor? providerRepairDiagnostic,
+        IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor> projectionSourceOrder)
+    {
+        return string.Join(
+            "|",
+            executionEvidence?.Run.ExecutionRunId,
+            finalizerEvidence?.Intent.ProcessRunId,
+            retryDiagnostic?.AttemptNumber,
+            noProgressDiagnostic?.Fingerprint,
+            providerRepairDiagnostic?.FailureSummary,
+            projectionSourceOrder.Count);
     }
 
     private static ProcessDriverCapabilityScope CreateRuntimeScope()

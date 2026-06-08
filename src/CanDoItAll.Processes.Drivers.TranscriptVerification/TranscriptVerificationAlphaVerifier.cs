@@ -17,27 +17,21 @@ public sealed class TranscriptVerificationAlphaVerifier
             "Verification request is required.",
             nameof(request));
 
-        var evidenceReferences = ProcessDriverEvidencePolicy.NormalizeEvidenceReferences(
-            request.VerificationRequest.EvidenceReferences);
-        var transcriptEvidence = ProcessDriverEvidencePolicy.CreateTranscriptEvidenceReference(
-            request.TranscriptReference,
-            request.TranscriptText);
-        var primaryEvidence = evidenceReferences.FirstOrDefault() ?? transcriptEvidence;
-        var redaction = ProcessDriverRedactionPolicy.Redact(request.TranscriptText);
+        var evidenceContext = TranscriptVerificationEvidencePolicy.CreateContext(request);
         var diagnostics = new List<ProcessDriverDiagnostic>();
         var denialReason = TranscriptVerificationRequestPolicy.Validate(
             request,
-            evidenceReferences,
+            evidenceContext.NormalizedEvidenceReferences,
             diagnostics,
-            primaryEvidence);
+            evidenceContext.PrimaryEvidenceReference);
 
         if (denialReason == ProcessDriverDenialReason.None)
         {
             diagnostics.AddRange(parserSet.Parse(
                 request.TranscriptReference.Language,
                 request.TranscriptText,
-                primaryEvidence,
-                redaction));
+                evidenceContext.PrimaryEvidenceReference,
+                evidenceContext.Redaction));
         }
 
         if (diagnostics.Count == 0)
@@ -46,15 +40,15 @@ public sealed class TranscriptVerificationAlphaVerifier
                 ProcessDriverDiagnosticSeverity.Info,
                 ProcessDriverDiagnosticCategory.NoIssueDetected,
                 "Transcript verification found no known .NET or Rust diagnostic markers.",
-                primaryEvidence,
-                redaction));
+                evidenceContext.PrimaryEvidenceReference,
+                evidenceContext.Redaction));
         }
 
         var accepted = denialReason == ProcessDriverDenialReason.None;
         var auditFacts = TranscriptVerificationAuditFactBuilder.CreateAuditFacts(
             request,
             diagnostics,
-            redaction.Descriptor,
+            evidenceContext.Redaction.Descriptor,
             accepted,
             denialReason);
 
@@ -62,8 +56,8 @@ public sealed class TranscriptVerificationAlphaVerifier
             accepted,
             denialReason,
             diagnostics,
-            evidenceReferences.Count == 0 ? [transcriptEvidence] : evidenceReferences,
-            redaction.Descriptor,
+            evidenceContext.CreateResponseEvidenceReferences(),
+            evidenceContext.Redaction.Descriptor,
             NoMutationPerformed: true,
             auditFacts,
             ProcessDriverContractVersion.Current);

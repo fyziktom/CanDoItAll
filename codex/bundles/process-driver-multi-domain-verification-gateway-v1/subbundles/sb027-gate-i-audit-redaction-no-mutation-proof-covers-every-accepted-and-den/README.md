@@ -1,7 +1,7 @@
 # SB027 — Gate I: audit/redaction/no-mutation proof covers every accepted and denied response.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Gate I: audit/redaction/no-mutation proof covers every accepted and denied response.
@@ -30,7 +30,7 @@ Gate I: audit/redaction/no-mutation proof covers every accepted and denied respo
 - Updated proof artifacts under `proof/SB027/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,21 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
+
+## Closure Proof
+- Solution build: `bundle://proof/SB027/transcripts/gate-i-solution-build-no-restore.txt`.
+- Focused tests: `bundle://proof/SB027/transcripts/gate-i-focused-audit-redaction-no-mutation-tests.txt`.
+- Source scan and anti-stub audit: `bundle://proof/SB027/transcripts/gate-i-audit-redaction-no-mutation-source-scan.txt`.
+- Red-team negative proof: `bundle://proof/SB027/transcripts/red-team-audit-redaction-shallow-proof-rejection.txt`.
+- Semantic positive proof index: `bundle://proof/SB027/transcripts/gate-i-proof-index.txt`.
+- Proof manifest: `bundle://proof/SB027/manifest.md`.
+- Semantic invariants: `bundle://proof/SB027/semantic-invariants.md`.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -73,10 +82,10 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - proof/SB027/manifest.md and proof/SB027/semantic-invariants.md.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB027: Gate I: audit/redaction/no-mutation proof covers every accepted and denied response.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

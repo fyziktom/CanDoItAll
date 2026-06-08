@@ -1,0 +1,14 @@
+Command: SB013 runtime evidence split source/no-drift/anti-stub audit
+Working directory: C:\repositories\CanDoItAll
+Run label: SB013 source audit 2026-06-08
+--- output ---
+PASS: Split artifact present: internal static class RuntimeEvidenceDescriptorNormalizer
+PASS: Split artifact present: internal static class RuntimeEvidenceVerificationRequestPolicy
+PASS: Split artifact present: internal static class RuntimeEvidenceContradictionRules
+PASS: Split artifact present: internal static class RuntimeEvidenceDiagnosticFactory
+PASS: Split artifact present: internal static class RuntimeEvidenceAuditFactMapper
+PASS: No forbidden runtime/IO/module/infrastructure tokens in runtime evidence package source.
+PASS: No UI/media drift in tracked source/test/bundle changes.
+PASS: No stub/placeholder markers in SB013 changed files.
+PASS: No secret-like patterns in SB013 changed files.
+Exit code: 0

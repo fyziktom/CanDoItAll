@@ -1,0 +1,42 @@
+SB058 next-bundle runtime-host decision source scan and anti-stub audit
+Generated: 2026-06-08T16:20:35.8470524-04:00
+PASS: Artifact exists: repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/architecture/14-next-bundle-runtime-host-decision.md
+PASS: Artifact exists: repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/architecture/10-runtime-host-approval-matrix.md
+PASS: Artifact exists: repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/architecture/11-future-production-runtime-prerequisites.md
+PASS: Artifact exists: repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractApiVerificationBoundaryTests.cs
+PASS: Decision doc contains required text: Production verification host registration decision: `Not ready`
+PASS: Decision doc contains required text: Next bundle path: `Continue read-only adapters and projection planning`
+PASS: Decision doc contains required text: Runtime host status: `Not approved`
+PASS: Decision doc contains required text: Prerequisite status: `Not satisfied`
+PASS: Decision doc contains required text: The next bundle must continue read-only domain-driver adapter and projection planning work.
+PASS: Decision doc contains required text: The only acceptable near-term production-facing direction is manager-visible read-only verification projection planning
+PASS: Decision doc blocking prerequisite matrix contains required text: Runtime lifecycle ownership
+PASS: Decision doc blocking prerequisite matrix contains required text: Audit persistence
+PASS: Decision doc blocking prerequisite matrix contains required text: Sandbox boundary
+PASS: Decision doc blocking prerequisite matrix contains required text: Command and external-call allow-list
+PASS: Decision doc blocking prerequisite matrix contains required text: Approval and authorization
+PASS: Decision doc blocking prerequisite matrix contains required text: Compatibility governance
+PASS: Decision doc blocking prerequisite matrix contains required text: Red-team proof
+PASS: Decision doc denied surface list contains required text: Production verification host registration
+PASS: Decision doc denied surface list contains required text: Generic runtime host
+PASS: Decision doc denied surface list contains required text: Driver registry or runtime selector
+PASS: Decision doc denied surface list contains required text: DI registration or startup hook
+PASS: Decision doc denied surface list contains required text: Manager command, scheduler hook, or workflow hook that invokes drivers
+PASS: Decision doc denied surface list contains required text: Workspace writes, storage writes, file/network/connector calls
+PASS: Decision doc denied surface list contains required text: Execution-capable driver contract line
+PASS: Approval matrix contains required text: Current decision: all runtime-host surfaces are `Not approved`.
+PASS: Future prerequisites contains required text: Prerequisite status: every prerequisite in this document is `Not satisfied`.
+PASS: Focused guard source contains required text: Process_driver_contract_api_SB058_INV_001_next_bundle_keeps_production_host_registration_not_ready
+PASS: Decision doc excludes forbidden text: Production verification host registration decision: `Ready`
+PASS: Decision doc excludes forbidden text: Next bundle path: `Production verification host registration`
+PASS: Decision doc excludes forbidden text: Runtime host status: `Approved`
+PASS: Decision doc excludes forbidden text: Prerequisite status: `Satisfied`
+PASS: Decision doc excludes forbidden text: register drivers in DI for the next bundle
+PASS: Decision doc excludes forbidden text: manager command may invoke drivers
+PASS: Decision doc excludes forbidden text: scheduler hook may invoke drivers
+PASS: Decision doc excludes forbidden text: ExecutionCapableFuture is permission
+PASS: Driver package source has no runtime host, DI, EF, HTTP, file/directory, process, endpoint, or hosted-service tokens.
+PASS: No UI or media files changed in the current diff.
+PASS: No high-confidence secret patterns found in SB058 scan targets.
+PASS: No stub markers found in SB058 scan targets.
+RESULT: PASSED

@@ -1,0 +1,14 @@
+Command: SB015 Gate E runtime evidence no-side-effect source scan
+Working directory: C:\repositories\CanDoItAll
+Run label: SB015 source audit 2026-06-08
+--- output ---
+PASS: Required runtime evidence source assertion present: RuntimeEvidenceDescriptorNormalizer
+PASS: Required runtime evidence source assertion present: RuntimeEvidenceVerificationRequestPolicy
+PASS: Required runtime evidence source assertion present: RuntimeEvidenceContradictionRules
+PASS: Required runtime evidence source assertion present: RuntimeEvidenceAuditFactMapper
+PASS: Required runtime evidence source assertion present: NoMutationPerformed: true
+PASS: Required runtime evidence source assertion present: ProcessDriverContractVersion.Current
+PASS: No forbidden runtime/IO/integration/runtime-host tokens in runtime evidence package.
+PASS: No UI/media drift in tracked source/test/bundle changes.
+PASS: No secret-like patterns in Gate E scan targets.
+Exit code: 0

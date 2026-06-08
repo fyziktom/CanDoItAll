@@ -13,9 +13,7 @@ internal static class TranscriptVerificationDiagnosticFactory
         ProcessDriverEvidenceReference evidence,
         ProcessDriverRedactionResult redaction)
     {
-        var redactedMessage = ProcessDriverRedactionPolicy.Redact(
-            message,
-            ProcessDriverRedactionPolicy.DefaultMaxAuditSummaryLength).RedactedText;
+        var redactedMessage = ProcessDriverRedactionPolicy.RedactDiagnosticSummary(message).RedactedText;
 
         return new ProcessDriverDiagnostic(
             severity,

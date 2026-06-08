@@ -1,0 +1,37 @@
+# SB006 Remaining Debt Ledger
+
+## Summary
+- Gate: `SB006`
+- Status: `Explicitly quarantined`
+- Owner: `SB004 historical architecture fixture quarantine`
+- Count: `21` skipped tests
+- Reopen trigger: remove the quarantine and restore active coverage when the historical bundle fixtures are either restored, migrated into stable current-bundle fixture inputs, or replaced by equivalent source-backed architecture guards.
+- Current active replacement: `Process_driver_multi_domain_gate_a_owns_current_bundle_fixture_and_rejects_report_only_closure`.
+
+## Quarantined Tests
+- `Artifact_validation_gate_a_records_live_inventory_and_blocks_driver_or_viewport_drift`
+- `Execution_boundary_design_stays_on_staging_facade_cutline`
+- `Process_core_contract_candidate_driver_readiness_SB027_INV_001_preserves_pure_rule_parity_and_core_candidate_boundaries`
+- `Process_core_contract_candidate_driver_readiness_SB030_INV_001_keeps_driver_readiness_docs_traceability_only`
+- `Process_core_contract_candidate_driver_readiness_SB033_INV_001_closes_final_red_team_cutline_without_core_or_driver_api`
+- `Process_core_contract_candidate_gate_a_SB003_INV_001_keeps_bundle_rows_and_production_guardrails`
+- `Process_core_evidence_driver_contract_SB024_INV_001_keeps_driver_permission_model_non_production`
+- `Process_core_evidence_driver_contract_SB027_INV_001_keeps_domain_schemas_readonly`
+- `Process_core_evidence_driver_contract_SB033_INV_001_defers_driver_runtime_and_blocks_broad_core_extraction`
+- `Process_core_pre_extraction_consolidation_SB002_INV_001_guards_core_driver_ui_drift_and_collapsed_rows`
+- `Process_core_pre_extraction_consolidation_SB030_INV_001_keeps_core_rehearsal_docs_tests_only`
+- `Process_core_pre_extraction_consolidation_SB033_INV_001_keeps_driver_readiness_docs_tests_only`
+- `Process_core_stabilization_SB022_INV_001_limits_process_core_consumers_to_explicit_call_site_map`
+- `Process_core_stabilization_SB026_SB027_INV_001_keeps_driver_contract_proposal_non_production`
+- `Process_core_stabilization_SB028_SB030_INV_001_keeps_domain_lane_maps_read_only_and_side_effect_denied`
+- `Process_core_stabilization_SB034_SB036_INV_001_closes_final_handoff_with_scorecard_and_driver_denial`
+- `Process_dispatch_claim_route_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift`
+- `Process_dispatch_claim_route_gate_a_SB04_INV_002_rejects_placeholder_or_stale_inventories`
+- `Process_dispatch_pre_execution_guard_gate_a_SB04_INV_001_locks_local_boundary_without_core_driver_or_viewport_drift`
+- `Process_execution_boundary_inventory_records_direct_dispatcher_calls_before_movement`
+- `Step_completion_finalizer_gate_a_SB04_INV_001_records_live_inventory_and_blocks_core_driver_or_viewport_drift`
+
+## Validation
+- Source: `repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs`.
+- Proof: `bundle://proof/SB004/manifest.md`.
+- Gate B full unit proof: `bundle://proof/SB006/transcripts/gate-b-full-unit-tests.txt`.

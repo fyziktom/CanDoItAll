@@ -1,0 +1,101 @@
+SB042 Gate N compatibility snapshots/docs source scan
+PASS: SB040 manifest exists
+PASS: SB041 manifest exists
+PASS: SB040 manifest is completed
+PASS: SB041 manifest is completed
+PASS: driver abstraction snapshot type count remains documented as 34
+PASS: driver abstraction snapshot surface hash remains documented
+PASS: Core public API snapshot type count remains documented as 64
+PASS: Core public API snapshot surface hash remains documented
+PASS: production contract version source is 1.10.0
+PASS: snapshot matches production contract version
+PASS: migration doc matches production contract version
+PASS: production enum includes 'ExecutionEvidence = 1'
+PASS: driver snapshot documents 'ExecutionEvidence = 1'
+PASS: migration doc documents 'ExecutionEvidence = 1'
+PASS: production enum includes 'FinalizerEvidence = 2'
+PASS: driver snapshot documents 'FinalizerEvidence = 2'
+PASS: migration doc documents 'FinalizerEvidence = 2'
+PASS: production enum includes 'RetryDiagnostics = 3'
+PASS: driver snapshot documents 'RetryDiagnostics = 3'
+PASS: migration doc documents 'RetryDiagnostics = 3'
+PASS: production enum includes 'ArtifactProjectionEvidence = 4'
+PASS: driver snapshot documents 'ArtifactProjectionEvidence = 4'
+PASS: migration doc documents 'ArtifactProjectionEvidence = 4'
+PASS: production enum includes 'ArtifactProjectionValidation = 5'
+PASS: driver snapshot documents 'ArtifactProjectionValidation = 5'
+PASS: migration doc documents 'ArtifactProjectionValidation = 5'
+PASS: gateway production rules expose execution evidence mapping
+PASS: gateway production rules expose artifact projection mapping
+PASS: snapshot documents gateway descriptor allow-list
+PASS: migration doc inherits gateway descriptor allow-list
+PASS: focused compatibility test exists: Process_driver_contract_api_SB040_INV_001_core_descriptor_family_ordinals_are_backward_compatible_and_gateway_allow_list_is_explicit
+PASS: focused compatibility test exists: Process_driver_contract_api_SB040_INV_002_contract_version_history_documents_every_public_descriptor_family_change
+PASS: focused compatibility test exists: Process_driver_contract_api_SB041_INV_001_v1_migration_docs_match_current_contract_and_alpha_verifier_behavior
+PASS: driver abstractions production source excludes forbidden runtime token 'IProcessDriver'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverRegistry'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverPack'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverRuntimeSelector'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverManagerCommand'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverRuntime'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverProvider'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverHost'
+PASS: driver abstractions production source excludes forbidden runtime token 'ProcessDriverServiceCollectionExtensions'
+PASS: driver abstractions production source excludes forbidden runtime token 'AddProcessDriver'
+PASS: driver abstractions production source excludes forbidden runtime token 'MapProcessDriver'
+PASS: driver abstractions production source excludes forbidden runtime token 'IServiceCollection'
+PASS: driver abstractions production source excludes forbidden runtime token 'ServiceCollection'
+PASS: driver abstractions production source excludes forbidden runtime token 'HttpClient'
+PASS: driver abstractions production source excludes forbidden runtime token 'DbContext'
+PASS: driver abstractions production source excludes forbidden runtime token 'File.'
+PASS: driver abstractions production source excludes forbidden runtime token 'Directory.'
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .razor UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .razor UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .razor UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .razor UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .css UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .css UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .css UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .css UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .js UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .js UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .js UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .js UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .ts UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .ts UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .ts UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .ts UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .png UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .png UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .png UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .png UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .jpg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .jpg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .jpg UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .jpg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .jpeg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .jpeg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .jpeg UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .jpeg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .svg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .svg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .svg UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .svg UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .webp UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .webp UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .webp UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .webp UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md is not .gif UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md is not .gif UI/media
+PASS: Gate N scan target codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md is not .gif UI/media
+PASS: Gate N scan target tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs is not .gif UI/media
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\09-v1-contract-migration-compatibility.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md
+PASS: no high-confidence secret pattern in tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB040\manifest.md
+PASS: no high-confidence secret pattern in codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB041\manifest.md
+PASS: no high-confidence secret pattern in src\CanDoItAll.Processes.Drivers.Abstractions\Evidence\ProcessDriverEvidenceReference.cs
+PASS: no high-confidence secret pattern in src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverContractVersion.cs
+PASS: no high-confidence secret pattern in src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs
+RESULT: PASS

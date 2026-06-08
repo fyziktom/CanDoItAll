@@ -1,0 +1,9 @@
+Gate T handoff zip generation
+Generated: 2026-06-08T16:40:04.0215322-04:00
+Bundle source: bundle://
+Target zip: bundle://proof/SB060/handoff/process-driver-multi-domain-verification-gateway-v1-handoff.zip
+Removed existing target zip before regeneration.
+Zip exists: True
+Zip size bytes: 547615
+Zip SHA-256: 532e0bf1f6655b4747f575ca7e079059402ea98f26d39f3f2f5e2cab724c773d
+RESULT: PASSED

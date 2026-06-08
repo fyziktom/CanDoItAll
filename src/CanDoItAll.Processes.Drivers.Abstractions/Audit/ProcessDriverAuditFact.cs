@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 
 namespace CanDoItAll.Processes.Drivers.Abstractions.Audit;
@@ -9,7 +10,9 @@ public sealed record ProcessDriverAuditFact(
     string CallerContext,
     ProcessDriverPermissionMode PermissionMode,
     ProcessDriverCapabilityScope Scope,
+    ProcessDriverCapabilityScopeKind Lane,
     ProcessDriverOperation RequestedOperation,
+    IReadOnlyList<ProcessDriverEvidenceReference> EvidenceReferences,
     ProcessDriverDenialReason DenialReason,
     ProcessDriverRedactionDescriptor Redaction,
     string DiagnosticSummary,

@@ -1,0 +1,24 @@
+SB033 Gate K red-team BusinessAnalysis shallow-proof rejection
+UTC: 2026-06-08T17:23:19Z
+
+Shallow implementation under test:
+- Claims BusinessAnalysis verifier is read-only because package source exists and one diagnostic is non-empty.
+- Skips supplied-content envelope binding, mutation denial, typed category matrix, audit fact assertions, no-mutation proof, raw-text non-leak assertions, and focused pass count.
+
+PASS required anti-shallow token present: Business_analysis_alpha_SB031_INV_001_verifies_supplied_deliverable_and_evidence_text_only
+PASS required anti-shallow token present: Business_analysis_alpha_SB031_INV_002_reports_missing_supplied_metadata_without_raw_text_leakage
+PASS required anti-shallow token present: Business_analysis_alpha_SB031_INV_003_rejects_invalid_envelopes_and_business_record_mutation
+PASS required anti-shallow token present: Business_analysis_alpha_SB032_INV_001_reports_missing_requirements_unsupported_assumptions_contradictions_and_evidence_gaps
+PASS required anti-shallow token present: ProcessDriverVerificationTestHarness.AssertNoMutation
+PASS required anti-shallow token present: ProcessDriverVerificationTestHarness.AssertNormalizedAuditFacts
+PASS required anti-shallow token present: ProcessDriverVerificationTestHarness.AssertSideEffectDenied
+PASS required anti-shallow token present: ProcessDriverDiagnosticCategory.BusinessRequirementMissing
+PASS required anti-shallow token present: ProcessDriverDiagnosticCategory.BusinessUnsupportedAssumption
+PASS required anti-shallow token present: ProcessDriverDiagnosticCategory.BusinessContradictionMarker
+PASS required anti-shallow token present: ProcessDriverDiagnosticCategory.BusinessEvidenceGap
+PASS required anti-shallow token present: ProcessDriverOperation.MutateBusinessRecord
+PASS required anti-shallow token present: AssertDiagnosticsAndAuditDoNotContain
+PASS focused transcript proves the expected 5-test pass.
+PASS source scan proves no runtime/CRM/side-effect drift and passed.
+
+RESULT: PASSED - shallow BusinessAnalysis evidence-only closure is rejected.

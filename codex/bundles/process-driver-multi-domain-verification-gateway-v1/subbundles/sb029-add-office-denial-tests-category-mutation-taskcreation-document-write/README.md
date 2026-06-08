@@ -1,7 +1,7 @@
 # SB029 — Add Office denial tests: category mutation, task creation, document write, Graph call, attachment fetch denied.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Add Office denial tests: category mutation, task creation, document write, Graph call, attachment fetch denied.
@@ -30,7 +30,7 @@ Add Office denial tests: category mutation, task creation, document write, Graph
 - Updated proof artifacts under `proof/SB029/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,16 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
 
+## Closure Proof
+- Focused Office denial tests: `bundle://proof/SB029/transcripts/focused-office-denial-tests.txt`.
+- Source scan and anti-stub audit: `bundle://proof/SB029/transcripts/office-denial-source-scan-and-anti-stub-audit.txt`.
+- Proof manifest: `bundle://proof/SB029/manifest.md`.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -73,10 +77,10 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Subbundle row in execution report.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Noncritical: downstream work may continue only if focused proof is green.
+- Noncritical: downstream work may continue only if focused proof is green.
 
 ## Suggested Agent Prompt
 Implement SB029: Add Office denial tests: category mutation, task creation, document write, Graph call, attachment fetch denied.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

@@ -1,0 +1,20 @@
+Command: SB009 Gate C semantic positive proof index
+Working directory: C:\repositories\CanDoItAll
+Run label: SB009 proof index 2026-06-08
+--- output ---
+Invariant ID: SB009_INV_001
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB007\manifest.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB008\manifest.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\06-core-public-api-owner-classification.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\architecture\07-driver-abstraction-api-versioning-snapshot.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB009\transcripts\gate-c-solution-build-no-restore.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB009\transcripts\gate-c-focused-contract-api-boundary-tests.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB009\transcripts\gate-c-api-governance-reverse-dependency-scan.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB009\transcripts\red-team-report-only-api-governance-rejection.txt
+PASS: Core API snapshot has reflected count, ordinal hash, and no-runtime assertion.
+PASS: Driver abstraction snapshot has version, reflected count, ordinal hash, and runtime denial section.
+PASS: Solution build transcript proves 0 warnings, 0 errors, exit code 0.
+PASS: Focused API boundary tests prove 10 passed, 0 failures, exit code 0.
+PASS: Reverse-dependency and runtime-host scans are green.
+PASS: Red-team negative proof rejects report-only API governance closure.
+Exit code: 0

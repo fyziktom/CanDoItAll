@@ -1,0 +1,18 @@
+Command: rg forbidden/stub tokens over driver packages and read-only verification adapters; git diff UI/media drift scan
+Working directory: C:\repositories\CanDoItAll
+Run label: SB001 source scan and anti-stub audit 2026-06-08
+Invariant ID: SB001-SOURCE-RECONCILIATION
+--- Paths scanned ---
+src\CanDoItAll.Processes.Drivers.Abstractions
+src\CanDoItAll.Processes.Drivers.TranscriptVerification
+src\CanDoItAll.Processes.Drivers.RuntimeEvidence
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs
+--- forbidden activation/file/network/runtime tokens ---
+Exit code: 1 (1 means no matches)
+--- stub tokens ---
+Exit code: 1 (1 means no matches)
+--- UI/media drift in current diff ---
+No UI/media files changed in current diff.
+git diff exit code: 0
+Overall source scan result exit code: 0

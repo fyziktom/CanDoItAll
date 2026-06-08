@@ -47,5 +47,12 @@ public enum ProcessDriverDiagnosticCategory
     ProjectionOrderDrift = 28,
     ProviderRepairInconsistent = 29,
     NoProgressFingerprintMissing = 30,
-    UnsupportedContractVersion = 31
+    UnsupportedContractVersion = 31,
+    BusinessRequirementMissing = 32,
+    BusinessUnsupportedAssumption = 33,
+    BusinessContradictionMarker = 34,
+    BusinessEvidenceGap = 35,
+    ArtifactLineageMissing = 36,
+    ArtifactTrustSensitivityMismatch = 37,
+    ArtifactSatisfactionInconsistent = 38
 }

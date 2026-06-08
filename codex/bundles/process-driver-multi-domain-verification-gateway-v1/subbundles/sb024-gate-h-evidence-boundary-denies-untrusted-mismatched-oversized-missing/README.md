@@ -1,7 +1,7 @@
 # SB024 — Gate H: evidence boundary denies untrusted/mismatched/oversized/missing content.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Gate H: evidence boundary denies untrusted/mismatched/oversized/missing content.
@@ -30,7 +30,7 @@ Gate H: evidence boundary denies untrusted/mismatched/oversized/missing content.
 - Updated proof artifacts under `proof/SB024/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,21 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
+
+## Closure Proof
+- Solution build: `bundle://proof/SB024/transcripts/gate-h-solution-build-no-restore.txt`.
+- Focused tests: `bundle://proof/SB024/transcripts/gate-h-focused-evidence-boundary-tests.txt`.
+- Source scan and anti-stub audit: `bundle://proof/SB024/transcripts/gate-h-evidence-boundary-no-side-effect-scan.txt`.
+- Red-team negative proof: `bundle://proof/SB024/transcripts/red-team-evidence-boundary-shallow-proof-rejection.txt`.
+- Semantic positive proof index: `bundle://proof/SB024/transcripts/gate-h-proof-index.txt`.
+- Proof manifest: `bundle://proof/SB024/manifest.md`.
+- Semantic invariants: `bundle://proof/SB024/semantic-invariants.md`.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -73,10 +82,10 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - proof/SB024/manifest.md and proof/SB024/semantic-invariants.md.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB024: Gate H: evidence boundary denies untrusted/mismatched/oversized/missing content.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

@@ -15,6 +15,87 @@ namespace CanDoItAll.Tests.Unit;
 public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
 {
     [Fact]
+    public void Runtime_evidence_consistency_alpha_SB013_INV_001_internals_are_split_without_runtime_or_io_surface()
+    {
+        var root = FindRepositoryRoot();
+        var source = ReadProjectSource(root);
+
+        Assert.Contains("internal static class RuntimeEvidenceDescriptorNormalizer", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class RuntimeEvidenceVerificationRequestPolicy", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class RuntimeEvidenceContradictionRules", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class RuntimeEvidenceDiagnosticFactory", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class RuntimeEvidenceAuditFactMapper", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Diagnostics.Process", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Process.Start", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("File.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Directory.", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("HttpClient", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IServiceCollection", source, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Runtime_evidence_consistency_alpha_SB014_INV_001_expands_contradiction_matrix_across_descriptor_families()
+    {
+        var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
+        var request = CreateRequest(
+            executionEvidence: CreateInternallyContradictoryExecutionEvidence(),
+            finalizerEvidence: CreateInternallyContradictoryFinalizerEvidence(),
+            retryDiagnostic: new ProcessRetryDiagnosticDescriptor(
+                ShouldRetry: true,
+                AttemptNumber: 3,
+                MaxExecutionAttempts: 3,
+                RetryReasons: [],
+                RetryReasonSummary: string.Empty,
+                MissingRequiredTools: [],
+                FailedToolNames: [],
+                UnresolvedCriticalToolFailureCount: 0,
+                HasMissingRequiredTools: false,
+                HasUnresolvedCriticalToolFailures: false,
+                HasBuildFailure: false,
+                HasTestFailure: false,
+                HasRecoverableProviderFailure: false,
+                HasRecoverableExecutionInterruption: false,
+                HasRecoverableFinalizerFailure: false,
+                ProcessRetryDiagnosticFailureKind.None),
+            providerRepairDiagnostic: new ProcessProviderRepairDiagnosticDescriptor(
+                HasRecoverableProviderFailure: true,
+                HasRepairOutcome: true,
+                FailureSummary: string.Empty,
+                FailedProviderName: string.Empty,
+                FallbackProviderName: string.Empty,
+                FallbackModel: string.Empty,
+                AffectedAgentCount: 0),
+            noProgressDiagnostic: new ProcessNoProgressRetryDiagnosticDescriptor(
+                HasSignal: true,
+                Fingerprint: "no-progress",
+                ExecutionRunId: null,
+                ToolSignature: string.Empty,
+                ArtifactValidationFingerprint: string.Empty,
+                MutationDelta: string.Empty,
+                ProofDelta: string.Empty),
+            projectionSourceOrder:
+            [
+                ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite),
+                ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite)
+            ]);
+
+        var result = verifier.Verify(request);
+        var categories = result.Diagnostics.Select(diagnostic => diagnostic.Category).ToHashSet();
+
+        Assert.True(result.Accepted);
+        Assert.True(result.NoMutationPerformed);
+        Assert.Contains(ProcessDriverDiagnosticCategory.RuntimeEvidenceInconsistent, categories);
+        Assert.Contains(ProcessDriverDiagnosticCategory.FinalizerContradiction, categories);
+        Assert.Contains(ProcessDriverDiagnosticCategory.RetryContradiction, categories);
+        Assert.Contains(ProcessDriverDiagnosticCategory.ProviderRepairInconsistent, categories);
+        Assert.Contains(ProcessDriverDiagnosticCategory.NoProgressFingerprintMissing, categories);
+        Assert.Contains(ProcessDriverDiagnosticCategory.ProjectionOrderDrift, categories);
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("terminal run that is still active", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("maximum execution attempts", StringComparison.Ordinal));
+        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Message.Contains("duplicate source kinds", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Runtime_evidence_consistency_alpha_SB018_INV_001_detects_contradictory_core_descriptors_without_mutation()
     {
         var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
@@ -48,14 +129,10 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
 
         Assert.True(result.Accepted);
         Assert.Equal(ProcessDriverDenialReason.None, result.DenialReason);
-        Assert.True(result.NoMutationPerformed);
-        Assert.NotEmpty(result.AuditFacts);
-        Assert.All(result.AuditFacts, fact =>
-        {
-            Assert.Equal(ProcessDriverPermissionMode.ManagerReadonly, fact.PermissionMode);
-            Assert.Equal(ProcessDriverCapabilityScopeKind.RuntimeFactsRead, fact.Scope.Kind);
-            Assert.Matches("^[A-F0-9]{64}$", fact.OutputHash);
-        });
+        ProcessDriverVerificationTestHarness.AssertReadonlyAuditFacts(
+            result,
+            ProcessDriverPermissionMode.ManagerReadonly,
+            ProcessDriverCapabilityScopeKind.RuntimeFactsRead);
 
         var categories = result.Diagnostics.Select(diagnostic => diagnostic.Category).ToHashSet();
         Assert.Contains(ProcessDriverDiagnosticCategory.FinalizerContradiction, categories);
@@ -88,7 +165,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
             ]));
 
         Assert.True(consistent.Accepted);
-        Assert.True(consistent.NoMutationPerformed);
+        ProcessDriverVerificationTestHarness.AssertNoMutation(consistent);
         Assert.Contains(consistent.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
 
         var denied = verifier.Verify(CreateRequest(
@@ -96,10 +173,10 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
             finalizerEvidence: CreateFinalizerEvidence(hasResult: true, shouldApplyTransition: true, ProcessStepRunStatus.Completed),
             requestedOperations: [ProcessDriverOperation.ApplyFinalizer]));
 
-        Assert.False(denied.Accepted);
-        Assert.True(denied.NoMutationPerformed);
-        Assert.Equal(ProcessDriverDenialReason.MutationDenied, denied.DenialReason);
-        Assert.Contains(denied.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.MutationAttemptDenied);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            denied,
+            ProcessDriverDenialReason.MutationDenied,
+            ProcessDriverDiagnosticCategory.MutationAttemptDenied);
     }
 
     [Fact]
@@ -111,14 +188,131 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
             finalizerEvidence: CreateFinalizerEvidence(hasResult: true, shouldApplyTransition: true, ProcessStepRunStatus.Completed),
             evidenceUri: "https://example.invalid/core-descriptor.json"));
 
-        Assert.False(result.Accepted);
-        Assert.True(result.NoMutationPerformed);
-        Assert.Equal(ProcessDriverDenialReason.MissingEvidence, result.DenialReason);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.TranscriptUntrusted);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            result,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.TranscriptUntrusted);
         Assert.DoesNotContain(result.Diagnostics, diagnostic =>
             diagnostic.Message.Contains("example.invalid", StringComparison.Ordinal));
         Assert.All(result.AuditFacts, fact =>
             Assert.Equal(ProcessDriverAuditFactKind.OperationDenied, fact.Kind));
+    }
+
+    [Fact]
+    public void Runtime_evidence_consistency_alpha_SB023_INV_001_supplied_content_policy_rejects_untrusted_mismatched_oversized_and_invalid_content_type()
+    {
+        var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
+        var executionEvidence = CreateExecutionEvidence(ProcessAutomationRunOutcome.Succeeded);
+        var finalizerEvidence = CreateFinalizerEvidence(
+            hasResult: true,
+            shouldApplyTransition: true,
+            ProcessStepRunStatus.Completed);
+        var wrongContentType = verifier.Verify(CreateRequest(
+            executionEvidence,
+            finalizerEvidence,
+            suppliedContentFactory: reference => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType,
+                "runtime-evidence-consistency".Length,
+                reference.ContentHash)));
+        var untrustedEnvelopeUri = verifier.Verify(CreateRequest(
+            executionEvidence,
+            finalizerEvidence,
+            suppliedContentFactory: reference => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload,
+                reference with { Uri = "https://example.invalid/core-descriptor.json" },
+                ProcessDriverSuppliedEvidenceContentRules.JsonContentType,
+                "runtime-evidence-consistency".Length,
+                reference.ContentHash)));
+        var mismatchedEnvelopeHash = verifier.Verify(CreateRequest(
+            executionEvidence,
+            finalizerEvidence,
+            suppliedContentFactory: reference => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.JsonContentType,
+                "runtime-evidence-consistency".Length,
+                ProcessDriverEvidencePolicy.ComputeSha256("different runtime evidence"))));
+        var oversizedEnvelope = verifier.Verify(CreateRequest(
+            executionEvidence,
+            finalizerEvidence,
+            suppliedContentFactory: reference => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.JsonContentType,
+                ProcessDriverSuppliedEvidenceContentRules.MaxSuppliedEvidenceContentBytes + 1,
+                reference.ContentHash)));
+
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            wrongContentType,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.InsufficientProof);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            untrustedEnvelopeUri,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.TranscriptUntrusted);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            mismatchedEnvelopeHash,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.EvidenceHashMismatch);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            oversizedEnvelope,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.InsufficientProof);
+        Assert.All(untrustedEnvelopeUri.Diagnostics, diagnostic =>
+            Assert.DoesNotContain("example.invalid", diagnostic.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Runtime_evidence_consistency_alpha_SB024_INV_001_evidence_boundary_rejects_missing_supplied_content_envelope_without_descriptor_analysis()
+    {
+        var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
+        var result = verifier.Verify(CreateRequest(
+            executionEvidence: CreateExecutionEvidence(ProcessAutomationRunOutcome.Succeeded),
+            finalizerEvidence: CreateFinalizerEvidence(
+                hasResult: true,
+                shouldApplyTransition: true,
+                ProcessStepRunStatus.Completed),
+            suppliedContentFactory: reference => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.CoreDescriptorPayload,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.JsonContentType,
+                SizeBytes: 0,
+                ContentHash: reference.ContentHash)));
+
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            result,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.InsufficientProof);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+            diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+            diagnostic.Category == ProcessDriverDiagnosticCategory.RuntimeEvidenceInconsistent);
+    }
+
+    [Fact]
+    public void Runtime_evidence_consistency_alpha_SB025_INV_001_audit_facts_include_caller_lane_operation_evidence_denial_and_output_hash()
+    {
+        var verifier = new RuntimeEvidenceConsistencyAlphaVerifier();
+        var result = verifier.Verify(CreateRequest(
+            executionEvidence: CreateExecutionEvidence(ProcessAutomationRunOutcome.Succeeded),
+            finalizerEvidence: CreateFinalizerEvidence(
+                hasResult: true,
+                shouldApplyTransition: true,
+                ProcessStepRunStatus.Completed)));
+
+        Assert.True(result.Accepted);
+        ProcessDriverVerificationTestHarness.AssertNormalizedAuditFacts(
+            result,
+            "manager:runtime-readonly",
+            ProcessDriverCapabilityScopeKind.RuntimeFactsRead,
+            ProcessDriverVerificationTestHarness.RuntimeReadonlyOperations,
+            ProcessDriverDenialReason.None);
+        Assert.All(result.AuditFacts, fact =>
+            Assert.Contains(
+                fact.EvidenceReferences,
+                evidenceReference => evidenceReference.Kind == ProcessDriverEvidenceReferenceKind.CoreDescriptor));
     }
 
     [Fact]
@@ -164,23 +358,31 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
         ProcessNoProgressRetryDiagnosticDescriptor? noProgressDiagnostic = null,
         IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? projectionSourceOrder = null,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB018/runtime-evidence-consistency.json")
+        string evidenceUri = "bundle://proof/SB018/runtime-evidence-consistency.json",
+        Func<ProcessDriverEvidenceReference, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
-        var evidenceReference = new ProcessDriverEvidenceReference(
+        const string suppliedPayload = "runtime-evidence-consistency";
+        var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
             evidenceUri,
-            ProcessDriverEvidencePolicy.ComputeSha256("runtime-evidence-consistency"),
+            suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
-        var verificationRequest = new ProcessDriverVerificationRequest(
+        var suppliedContent = suppliedContentFactory?.Invoke(evidenceReference) ??
+            ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
+                evidenceReference,
+                suppliedPayload);
+        var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
             ProcessDriverPermissionMode.ManagerReadonly,
-            CreateRuntimeScope(),
+            ProcessDriverVerificationTestHarness.CreateReadonlyScope(
+                ProcessDriverCapabilityScopeKind.RuntimeFactsRead,
+                ProcessDriverPermissionMode.ManagerReadonly),
             [evidenceReference],
-            requestedOperations ?? [ProcessDriverOperation.ReadProcessFacts, ProcessDriverOperation.ReturnDiagnostics],
-            "manager:runtime-readonly",
-            ProcessDriverContractVersion.Current);
+            requestedOperations ?? ProcessDriverVerificationTestHarness.RuntimeReadonlyOperations,
+            "manager:runtime-readonly");
 
         return new RuntimeEvidenceConsistencyVerificationRequest(
             verificationRequest,
+            suppliedContent,
             executionEvidence,
             finalizerEvidence,
             retryDiagnostic,
@@ -188,17 +390,6 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
             providerRepairDiagnostic,
             projectionSourceOrder ?? [],
             DateTimeOffset.Parse("2026-06-08T12:00:00Z"));
-    }
-
-    private static ProcessDriverCapabilityScope CreateRuntimeScope()
-    {
-        return new ProcessDriverCapabilityScope(
-            ProcessDriverCapabilityScopeKind.RuntimeFactsRead,
-            ProcessDriverPermissionMode.ManagerReadonly,
-            AllowsProcessMutation: false,
-            AllowsExternalCalls: false,
-            AllowsWorkspaceWrites: false,
-            AllowsStorageWrites: false);
     }
 
     private static ProcessExecutionEvidenceDescriptor CreateExecutionEvidence(
@@ -229,6 +420,37 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
                 MissingRequiredToolCount: 0,
                 HasUnresolvedCriticalToolFailures: unresolvedCriticalToolFailures > 0,
                 UnresolvedCriticalToolFailureCount: unresolvedCriticalToolFailures,
+                SelectedBranchOutcomeId: null),
+            new ProcessExecutionCarriedProofDescriptor(
+                HasConcreteImplementationProof: true,
+                HasRunnableApplicationProof: true,
+                HasConcreteProductMutation: false));
+    }
+
+    private static ProcessExecutionEvidenceDescriptor CreateInternallyContradictoryExecutionEvidence()
+    {
+        return new ProcessExecutionEvidenceDescriptor(
+            new ProcessExecutionRunEvidenceDescriptor(
+                Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                ProcessAutomationExecutionState.Completed,
+                ProcessAutomationRunOutcome.Succeeded,
+                IsTerminal: true,
+                IsActive: true,
+                HasPendingToolApprovals: false,
+                DateTimeOffset.Parse("2026-06-08T11:00:00Z"),
+                DateTimeOffset.Parse("2026-06-08T11:01:00Z"),
+                CompletedAtUtc: null,
+                ProcessCoreExecutionRunObservationKind.Active),
+            new ProcessExecutionAttemptEvidenceDescriptor(
+                Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                AttemptNumber: 1,
+                ProcessStepRunStatus.Completed,
+                "completed",
+                MissingRequiredTools: [],
+                HasMissingRequiredTools: false,
+                MissingRequiredToolCount: 0,
+                HasUnresolvedCriticalToolFailures: false,
+                UnresolvedCriticalToolFailureCount: 2,
                 SelectedBranchOutcomeId: null),
             new ProcessExecutionCarriedProofDescriptor(
                 HasConcreteImplementationProof: true,
@@ -291,6 +513,37 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
                 ProcessCoreFinalizerBlockCauseKind.None,
                 SelectedBranchOutcomeId: null,
                 StepRunConcurrencyToken: Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+                ArtifactValidationResultCount: 1,
+                HasArtifactValidationResults: true));
+    }
+
+    private static ProcessFinalizerEvidenceDescriptor CreateInternallyContradictoryFinalizerEvidence()
+    {
+        return new ProcessFinalizerEvidenceDescriptor(
+            new ProcessFinalizerIntentEvidenceDescriptor(
+                ProcessCoreFinalizerKind.DirectAgent,
+                ProcessRunId: Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                StepRunId: Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+                ProcessStepRunStatus.Completed,
+                "finalizer intent completed",
+                SelectedBranchOutcomeId: null,
+                ExecutionRunId: Guid.Parse("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee"),
+                WorkflowRunId: null,
+                SubprocessRunId: null,
+                ProjectsExecutionArtifacts: true,
+                AllowsManagerArtifactRecovery: false,
+                Trigger: "test",
+                RequiresLeaseRenewal: false,
+                RecoveryExecutionRunId: null,
+                RecoveredForExecutionRunId: null),
+            new ProcessFinalizerResultEvidenceDescriptor(
+                HasResult: true,
+                ShouldApplyTransition: true,
+                CompletionStatus: ProcessStepRunStatus.Failed,
+                "finalizer result failed",
+                ProcessCoreFinalizerBlockCauseKind.None,
+                SelectedBranchOutcomeId: null,
+                StepRunConcurrencyToken: null,
                 ArtifactValidationResultCount: 1,
                 HasArtifactValidationResults: true));
     }

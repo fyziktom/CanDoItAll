@@ -1,7 +1,7 @@
 # SB036 — Gate L: artifact evidence verifier is deterministic and side-effect-free.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Gate L: artifact evidence verifier is deterministic and side-effect-free.
@@ -30,7 +30,7 @@ Gate L: artifact evidence verifier is deterministic and side-effect-free.
 - Updated proof artifacts under `proof/SB036/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,12 +59,21 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
+
+## Closure Proof
+- Solution build: `bundle://proof/SB036/transcripts/gate-l-solution-build-no-restore.txt`.
+- Focused artifact-evidence tests: `bundle://proof/SB036/transcripts/gate-l-focused-artifact-evidence-tests.txt`.
+- Source scan and anti-stub audit: `bundle://proof/SB036/transcripts/gate-l-artifact-evidence-no-side-effect-scan.txt`.
+- Red-team shallow-proof rejection: `bundle://proof/SB036/transcripts/red-team-artifact-evidence-shallow-proof-rejection.txt`.
+- Semantic proof index: `bundle://proof/SB036/transcripts/gate-l-proof-index.txt`.
+- Proof manifest: `bundle://proof/SB036/manifest.md`.
+- Semantic invariants: `bundle://proof/SB036/semantic-invariants.md`.
 
 ## Proof Required
 - Build/focused test transcript.
@@ -73,10 +82,10 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - proof/SB036/manifest.md and proof/SB036/semantic-invariants.md.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB036: Gate L: artifact evidence verifier is deterministic and side-effect-free.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

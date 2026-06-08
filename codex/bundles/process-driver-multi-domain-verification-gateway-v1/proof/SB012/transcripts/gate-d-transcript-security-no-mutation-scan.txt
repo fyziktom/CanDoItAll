@@ -1,0 +1,16 @@
+Command: SB012 Gate D transcript verifier security/no-mutation source scan
+Working directory: C:\repositories\CanDoItAll
+Run label: SB012 source audit 2026-06-08
+--- output ---
+PASS: Required transcript verifier source assertion present: TranscriptDiagnosticRules
+PASS: Required transcript verifier source assertion present: TranscriptVerificationEvidencePolicy
+PASS: Required transcript verifier source assertion present: TranscriptVerificationRedaction
+PASS: Required transcript verifier source assertion present: TranscriptVerificationRequestPolicy
+PASS: Required transcript verifier source assertion present: TranscriptVerificationAuditFactBuilder
+PASS: Required transcript verifier source assertion present: NoMutationPerformed: true
+PASS: No forbidden runtime/IO/integration tokens in transcript verifier package.
+PASS: Malicious corpus has exactly 3 SB011 fixtures.
+PASS: No UI/media drift in tracked source/test/bundle changes.
+PASS: No stub/placeholder markers in Gate D changed files.
+PASS: No repository secret-pattern matches in Gate D scan targets.
+Exit code: 0

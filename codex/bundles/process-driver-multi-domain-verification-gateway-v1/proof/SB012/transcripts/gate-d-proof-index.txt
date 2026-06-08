@@ -1,0 +1,16 @@
+Command: SB012 Gate D semantic positive proof index
+Working directory: C:\repositories\CanDoItAll
+Run label: SB012 proof index 2026-06-08
+--- output ---
+Invariant ID: SB012_INV_001
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB010\manifest.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB011\manifest.md
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB012\transcripts\gate-d-solution-build-no-restore.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB012\transcripts\gate-d-focused-transcript-verifier-tests.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB012\transcripts\gate-d-transcript-security-no-mutation-scan.txt
+PASS: Required artifact exists: codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB012\transcripts\red-team-transcript-status-only-rejection.txt
+PASS: Solution build transcript proves 0 warnings, 0 errors, exit code 0.
+PASS: Focused transcript tests prove 9 passed, 0 failures, exit code 0.
+PASS: Security/no-mutation scan is green and includes malicious corpus.
+PASS: Red-team negative proof rejects status-only/non-empty-diagnostic closure.
+Exit code: 0

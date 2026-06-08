@@ -1,0 +1,138 @@
+Gate T final source and proof scan
+Generated: 2026-06-08T16:34:50.5064682-04:00
+PASS: Artifact exists: bundle://README.md
+PASS: Artifact exists: bundle://reviews/01-execution-report.md
+PASS: Artifact exists: bundle://proof/SB060/final-handoff.md
+PASS: Artifact exists: bundle://proof/SB060/semantic-invariants.md
+PASS: Artifact exists: bundle://architecture/14-next-bundle-runtime-host-decision.md
+PASS: Artifact exists: bundle://architecture/15-next-backlog-candidates-and-reopen-triggers.md
+PASS: Root README contains required text: Execution status: `Completed through SB060`
+PASS: Root README contains required text: Subbundle gate review: `SB001-SB060 passed`
+PASS: Root README contains required text: Final closure gate: `Passed completed-stage validator on 2026-06-08`
+PASS: Root README contains required text: Browser validation analytics: `N/A - no UI/media drift occurred`
+PASS: Execution report contains required text: Status: `Completed`
+PASS: Execution report SB060 row contains required text: | SB060 | Passed | Passed | Checked | Passed |
+PASS: Execution report raw notes contains required text: | Prepare broader phases toward stable Core and domain drivers | Solved |
+PASS: Execution report raw notes contains required text: | Prepare zip bundle | Solved |
+PASS: SB060 semantic invariants contains required text: Status: `Completed`
+PASS: SB060 semantic invariants contains required text: ## Production Behavior Artifact Matrix
+PASS: Final handoff contains required text: Status: `Completed`
+PASS: Final handoff contains required text: Handoff zip: `bundle://proof/SB060/handoff/process-driver-multi-domain-verification-gateway-v1-handoff.zip`
+PASS: SB058 decision contains required text: Production verification host registration decision: `Not ready`
+PASS: SB059 backlog contains required text: Runtime host registration candidate: `Blocked`
+PASS: SB059 backlog contains required text: Execution-capable driver candidate: `Blocked`
+PASS: Final closure documents excludes forbidden text: | SB060 | Prepared |
+PASS: Final closure documents excludes forbidden text: | SB060 | Pending |
+PASS: Final closure documents excludes forbidden text: Final closure gate: `Not run`
+PASS: Final closure documents excludes forbidden text: Status: `In progress`
+PASS: Final closure documents excludes forbidden text: | Prepare broader phases toward stable Core and domain drivers | Prepared |
+PASS: Final closure documents excludes forbidden text: | Prepare zip bundle | Prepared |
+PASS: Final closure documents excludes forbidden text: Production verification host registration decision: `Ready`
+PASS: Final closure documents excludes forbidden text: Runtime host registration candidate: `Ready`
+PASS: Final closure documents excludes forbidden text: Execution-capable driver candidate: `Ready`
+PASS: Found 60 subbundle directories.
+PASS: Subbundle completed: sb001-re-read-live-branch-latest-commit-changed-production-sources-and-proof
+PASS: Subbundle completed: sb002-inventory-actual-test-debt-and-separate-current-scope-failures-from-hi
+PASS: Subbundle completed: sb003-gate-a-source-backed-baseline-closure-with-no-report-only-proof
+PASS: Subbundle completed: sb004-fix-or-quarantine-stale-architecture-fixture-path-tests-with-explicit-
+PASS: Subbundle completed: sb005-fix-tuningrequestservicetests-file-lock-cleanup-or-mark-with-isolated-
+PASS: Subbundle completed: sb006-gate-b-full-unit-project-is-green-or-remaining-debt-is-explicitly-quar
+PASS: Subbundle completed: sb007-refresh-core-public-api-owner-classification-and-descriptor-compatibil
+PASS: Subbundle completed: sb008-refresh-driver-abstraction-public-api-versioning-snapshot-and-forbid-r
+PASS: Subbundle completed: sb009-gate-c-core-driver-api-governance-and-reverse-dependency-scans-pass
+PASS: Subbundle completed: sb010-split-net-rust-parser-rules-request-validation-evidence-policy-audit-b
+PASS: Subbundle completed: sb011-add-malicious-transcript-corpus-prompt-injection-text-path-like-text-s
+PASS: Subbundle completed: sb012-gate-d-transcript-verifier-parity-security-and-no-mutation-proof
+PASS: Subbundle completed: sb013-split-runtime-evidence-verifier-into-policy-descriptor-normalizer-cont
+PASS: Subbundle completed: sb014-expand-contradiction-matrix-execution-finalizer-retry-provider-no-prog
+PASS: Subbundle completed: sb015-gate-e-runtime-evidence-verifier-parity-and-no-side-effect-proof
+PASS: Subbundle completed: sb016-create-reusable-test-helpers-for-readonly-scopes-side-effect-operation
+PASS: Subbundle completed: sb017-create-shared-audit-redaction-no-mutation-assertions-for-all-verificat
+PASS: Subbundle completed: sb018-gate-f-harness-adoption-in-transcript-runtime-tests-without-weakening-
+PASS: Subbundle completed: sb019-design-explicit-allow-listed-verification-gateway-for-known-lanes-no-d
+PASS: Subbundle completed: sb020-implement-gateway-for-transcriptverification-and-runtimeevidence-packa
+PASS: Subbundle completed: sb021-gate-g-gateway-cannot-mutate-cannot-discover-arbitrary-drivers-and-can
+PASS: Subbundle completed: sb022-create-explicit-supplied-evidence-content-envelope-for-transcripts-and
+PASS: Subbundle completed: sb023-enforce-uri-hash-size-content-type-policies-and-denial-diagnostics-acr
+PASS: Subbundle completed: sb024-gate-h-evidence-boundary-denies-untrusted-mismatched-oversized-missing
+PASS: Subbundle completed: sb025-normalize-audit-facts-across-all-drivers-include-caller-lane-operation
+PASS: Subbundle completed: sb026-centralize-redaction-policy-for-secret-email-connection-string-and-bou
+PASS: Subbundle completed: sb027-gate-i-audit-redaction-no-mutation-proof-covers-every-accepted-and-den
+PASS: Subbundle completed: sb028-add-office-evidence-verifier-alpha-over-supplied-email-document-metada
+PASS: Subbundle completed: sb029-add-office-denial-tests-category-mutation-taskcreation-document-write
+PASS: Subbundle completed: sb030-gate-j-office-verifier-is-read-only-and-evidence-only
+PASS: Subbundle completed: sb031-add-business-analysis-verifier-alpha-over-supplied-deliverable-evidenc
+PASS: Subbundle completed: sb032-add-diagnostics-for-missing-requirements-unsupported-assumptions-contr
+PASS: Subbundle completed: sb033-gate-k-business-analysis-verifier-is-read-only-and-evidence-only
+PASS: Subbundle completed: sb034-add-artifact-projection-validation-descriptor-verifier-over-supplied-c
+PASS: Subbundle completed: sb035-detect-descriptor-contradictions-projection-order-drift-missing-lineag
+PASS: Subbundle completed: sb036-gate-l-artifact-evidence-verifier-is-deterministic-and-side-effect-fre
+PASS: Subbundle completed: sb037-add-read-only-observation-aggregator-combining-transcript-runtime-offi
+PASS: Subbundle completed: sb038-ensure-aggregator-is-not-persisted-scheduled-registered-or-command-tri
+PASS: Subbundle completed: sb039-gate-m-process-observation-aggregation-remains-read-only-and-allow-lis
+PASS: Subbundle completed: sb040-add-api-compatibility-tests-for-core-descriptor-families-and-driver-co
+PASS: Subbundle completed: sb041-add-migration-compatibility-docs-for-v1-0-contracts-and-alpha-verifier
+PASS: Subbundle completed: sb042-gate-n-compatibility-snapshots-and-docs-match-production-api
+PASS: Subbundle completed: sb043-expand-transcript-runtime-office-business-artifact-corpora-with-realis
+PASS: Subbundle completed: sb044-add-red-team-tests-for-fake-proof-non-empty-diagnostics-status-only-re
+PASS: Subbundle completed: sb045-gate-o-semantic-adequacy-and-fake-proof-resistance-across-all-read-onl
+PASS: Subbundle completed: sb046-update-runtime-host-approval-matrix-registry-selector-di-manager-sched
+PASS: Subbundle completed: sb047-define-exact-future-production-runtime-prerequisites-audit-persistence
+PASS: Subbundle completed: sb048-gate-p-docs-cannot-imply-approved-runtime-host-or-execution-capable-dr
+PASS: Subbundle completed: sb049-add-package-readme-samples-for-all-alpha-verifier-packages-using-suppl
+PASS: Subbundle completed: sb050-run-solution-build-full-unit-focused-unit-integration-and-source-scans
+PASS: Subbundle completed: sb051-gate-q-package-source-validation-and-dependency-scans-pass
+PASS: Subbundle completed: sb052-ensure-subbundle-manifests-include-changed-file-hashes-semantic-adequa
+PASS: Subbundle completed: sb053-run-prepared-completed-validators-proof-index-scan-and-red-team-fake-p
+PASS: Subbundle completed: sb054-gate-r-bundle-closure-passes-with-no-collapsed-rows-and-no-report-only
+PASS: Subbundle completed: sb055-refresh-stable-process-core-roadmap-with-remaining-non-core-runtime-si
+PASS: Subbundle completed: sb056-refresh-domain-driver-roadmap-transcript-runtimeevidence-artifact-offi
+PASS: Subbundle completed: sb057-gate-s-roadmap-denies-premature-runtime-host-and-lists-explicit-approv
+PASS: Subbundle completed: sb058-decide-whether-next-bundle-may-introduce-production-verification-host-
+PASS: Subbundle completed: sb059-prepare-next-backlog-candidates-and-reopen-triggers-from-validation-re
+PASS: Subbundle completed: sb060-gate-t-final-closure-handoff-and-zip-generation
+PASS: Critical SB003 manifest exists.
+PASS: Critical SB003 semantic invariants exist.
+PASS: Critical SB006 manifest exists.
+PASS: Critical SB006 semantic invariants exist.
+PASS: Critical SB009 manifest exists.
+PASS: Critical SB009 semantic invariants exist.
+PASS: Critical SB012 manifest exists.
+PASS: Critical SB012 semantic invariants exist.
+PASS: Critical SB015 manifest exists.
+PASS: Critical SB015 semantic invariants exist.
+PASS: Critical SB018 manifest exists.
+PASS: Critical SB018 semantic invariants exist.
+PASS: Critical SB021 manifest exists.
+PASS: Critical SB021 semantic invariants exist.
+PASS: Critical SB024 manifest exists.
+PASS: Critical SB024 semantic invariants exist.
+PASS: Critical SB027 manifest exists.
+PASS: Critical SB027 semantic invariants exist.
+PASS: Critical SB030 manifest exists.
+PASS: Critical SB030 semantic invariants exist.
+PASS: Critical SB033 manifest exists.
+PASS: Critical SB033 semantic invariants exist.
+PASS: Critical SB036 manifest exists.
+PASS: Critical SB036 semantic invariants exist.
+PASS: Critical SB039 manifest exists.
+PASS: Critical SB039 semantic invariants exist.
+PASS: Critical SB042 manifest exists.
+PASS: Critical SB042 semantic invariants exist.
+PASS: Critical SB045 manifest exists.
+PASS: Critical SB045 semantic invariants exist.
+PASS: Critical SB048 manifest exists.
+PASS: Critical SB048 semantic invariants exist.
+PASS: Critical SB051 manifest exists.
+PASS: Critical SB051 semantic invariants exist.
+PASS: Critical SB054 manifest exists.
+PASS: Critical SB054 semantic invariants exist.
+PASS: Critical SB057 manifest exists.
+PASS: Critical SB057 semantic invariants exist.
+PASS: Critical SB060 manifest exists.
+PASS: Critical SB060 semantic invariants exist.
+PASS: No UI or media files changed in the current diff.
+PASS: Driver package source has no runtime host, DI, EF, HTTP, file/directory, process, endpoint, or hosted-service tokens.
+PASS: No high-confidence secret patterns found in Gate T final scan targets.
+PASS: No stub markers found in Gate T final scan targets.
+RESULT: PASSED

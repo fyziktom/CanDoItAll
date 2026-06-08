@@ -34,6 +34,7 @@ internal sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapter
         var requestedOperations = ProcessReadOnlyVerificationOperationPolicy.Normalize(
             payload.RequestedOperations,
             ProcessReadOnlyVerificationOperationPolicy.RuntimeEvidenceDefaults);
+        var suppliedContent = CreateSuppliedContent(payload, evidenceReferences);
         var verificationRequest = new ProcessDriverVerificationRequest(
             payload.PermissionMode,
             payload.Scope,
@@ -43,6 +44,7 @@ internal sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapter
             ProcessDriverContractVersion.Current);
         var request = new RuntimeEvidenceConsistencyVerificationRequest(
             verificationRequest,
+            suppliedContent,
             payload.ExecutionEvidence,
             payload.FinalizerEvidence,
             payload.RetryDiagnostic,
@@ -54,6 +56,35 @@ internal sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapter
         return ProcessRuntimeEvidenceVerificationObservationMapper.Create(
             payload,
             verifyRuntimeEvidence(request));
+    }
+
+    private static ProcessDriverSuppliedEvidenceContent CreateSuppliedContent(
+        ProcessRuntimeEvidenceVerificationReadOnlyEvidencePayload payload,
+        IReadOnlyList<ProcessDriverEvidenceReference> evidenceReferences)
+    {
+        var material = CreateDescriptorPayloadMaterial(payload);
+        var evidenceReference = evidenceReferences.FirstOrDefault() ?? new ProcessDriverEvidenceReference(
+            ProcessDriverEvidenceReferenceKind.CoreDescriptor,
+            "bundle://runtime-evidence/supplied-descriptor-payload",
+            ProcessDriverEvidencePolicy.ComputeSha256(material),
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+
+        return ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
+            evidenceReference,
+            material);
+    }
+
+    private static string CreateDescriptorPayloadMaterial(
+        ProcessRuntimeEvidenceVerificationReadOnlyEvidencePayload payload)
+    {
+        return string.Join(
+            "|",
+            payload.ExecutionEvidence?.Run.ExecutionRunId,
+            payload.FinalizerEvidence?.Intent.ProcessRunId,
+            payload.RetryDiagnostic?.AttemptNumber,
+            payload.NoProgressDiagnostic?.Fingerprint,
+            payload.ProviderRepairDiagnostic?.FailureSummary,
+            payload.ProjectionSourceOrder.Count);
     }
 }
 

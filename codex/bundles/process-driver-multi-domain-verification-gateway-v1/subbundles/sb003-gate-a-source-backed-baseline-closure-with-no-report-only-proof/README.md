@@ -1,7 +1,10 @@
 # SB003 — Gate A: source-backed baseline closure with no report-only proof.
 
 ## Status
-Prepared.
+- Status: `Completed`
+- Entry gate: `Passed`
+- Closure gate: `Passed`
+- Completed: `2026-06-08`
 
 ## Objective
 Gate A: source-backed baseline closure with no report-only proof.
@@ -30,7 +33,7 @@ Gate A: source-backed baseline closure with no report-only proof.
 - Updated proof artifacts under `proof/SB003/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,24 +62,27 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
-- [ ] Critical proof manifest and semantic invariants complete.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
+- [x] Critical proof manifest and semantic invariants complete.
 
 ## Proof Required
-- Build/focused test transcript.
-- Source scan transcript.
-- Anti-stub audit.
-- proof/SB003/manifest.md and proof/SB003/semantic-invariants.md.
+- Build/focused test transcript: `bundle://proof/SB001/transcripts/solution-build-no-restore.txt` and `bundle://proof/SB001/transcripts/focused-baseline-unit-tests.txt`.
+- Source scan transcript: `bundle://proof/SB001/transcripts/source-scan-and-anti-stub-audit.txt`.
+- Anti-stub audit: `bundle://proof/SB001/transcripts/source-scan-and-anti-stub-audit.txt`.
+- Critical proof manifest: `bundle://proof/SB003/manifest.md`.
+- Semantic invariant contract: `bundle://proof/SB003/semantic-invariants.md`.
+- Adversarial negative proof: `bundle://proof/SB003/transcripts/red-team-report-only-proof-rejection.txt`.
+- Semantic positive proof: `bundle://proof/SB003/transcripts/gate-a-proof-index.txt`.
 
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
+- Critical foundation: downstream phases must not start until this gate passes all semantic adequacy checks.
 
 ## Suggested Agent Prompt
 Implement SB003: Gate A: source-backed baseline closure with no report-only proof.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

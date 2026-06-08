@@ -1,7 +1,7 @@
 # SB013 — Split runtime evidence verifier into policy, descriptor normalizer, contradiction rules and audit mapper.
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Split runtime evidence verifier into policy, descriptor normalizer, contradiction rules and audit mapper.
@@ -30,7 +30,7 @@ Split runtime evidence verifier into policy, descriptor normalizer, contradictio
 - Updated proof artifacts under `proof/SB013/` if this is a critical gate.
 
 ## Dependency Impact
-Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
+- Downstream phases assume this subbundle preserved read-only driver semantics, Core dependency cleanliness, and no runtime host/registry/selector behavior.
 
 ## Validation Depth
 - Build and relevant focused tests.
@@ -59,11 +59,11 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Do not add UI/mobile screenshots.
 
 ## Acceptance Checklist
-- [ ] Objective implemented.
-- [ ] Tests added/updated.
-- [ ] No forbidden dependency/runtime tokens.
-- [ ] No UI/media drift.
-- [ ] Existing behavior preserved.
+- [x] Objective implemented.
+- [x] Tests added/updated.
+- [x] No forbidden dependency/runtime tokens.
+- [x] No UI/media drift.
+- [x] Existing behavior preserved.
 
 
 ## Proof Required
@@ -72,11 +72,16 @@ Downstream phases assume this subbundle preserved read-only driver semantics, Co
 - Anti-stub audit.
 - Subbundle row in execution report.
 
+## Closure Proof
+- Focused runtime evidence tests passed: `bundle://proof/SB013/transcripts/focused-runtime-evidence-after-split.txt`.
+- Source/no-drift/anti-stub audit passed: `bundle://proof/SB013/transcripts/runtime-evidence-split-source-scan-and-anti-stub-audit.txt`.
+- Proof manifest: `bundle://proof/SB013/manifest.md`.
+
 ## Browser Validation Logging
-N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
+- N/A — runtime/service/Core/driver work only. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Noncritical: downstream work may continue only if focused proof is green.
+- Noncritical: downstream work may continue only if focused proof is green.
 
 ## Suggested Agent Prompt
 Implement SB013: Split runtime evidence verifier into policy, descriptor normalizer, contradiction rules and audit mapper.. Preserve all hard constraints from bundle://requirements/02-hard-constraints.md and close proof in reviews/01-execution-report.md.

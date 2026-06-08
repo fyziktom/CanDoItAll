@@ -1,6 +1,4 @@
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
-using System.Text;
 using CanDoItAll.Processes.Drivers.Abstractions.Audit;
 using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
@@ -11,6 +9,76 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessDriverTranscriptVerificationAlphaTests
 {
+    [Fact]
+    public void Process_driver_transcript_alpha_SB010_INV_001_internals_are_split_without_runtime_or_io_surface()
+    {
+        var root = FindRepositoryRoot();
+        var source = ReadProjectSource(root);
+
+        Assert.Contains("internal readonly record struct TranscriptDiagnosticRule", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class TranscriptDiagnosticRules", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class TranscriptDiagnosticRuleEvaluator", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class TranscriptVerificationEvidencePolicy", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class TranscriptVerificationRedaction", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class TranscriptVerificationRequestPolicy", source, StringComparison.Ordinal);
+        Assert.Contains("internal static class TranscriptVerificationAuditFactBuilder", source, StringComparison.Ordinal);
+        AssertNoForbiddenAlphaPackageTokens(source);
+    }
+
+    [Fact]
+    public void Process_driver_transcript_alpha_SB011_INV_001_malicious_corpus_is_supplied_text_only_redacted_and_readonly()
+    {
+        var verifier = new TranscriptVerificationAlphaVerifier();
+        var corpus = new[]
+        {
+            ("malicious-prompt-path-secret-transcript.txt", ProcessDriverTranscriptLanguage.DotNet),
+            ("malicious-mixed-dotnet-rust-transcript.txt", ProcessDriverTranscriptLanguage.DotNet),
+            ("malicious-mixed-dotnet-rust-transcript.txt", ProcessDriverTranscriptLanguage.Rust),
+            ("malicious-oversized-transcript.txt", ProcessDriverTranscriptLanguage.DotNet)
+        };
+
+        foreach (var (fileName, language) in corpus)
+        {
+            var transcript = ReadRepositoryFile(
+                "tests",
+                "CanDoItAll.Tests.Unit",
+                "TestData",
+                "ProcessDriverContractTranscripts",
+                fileName);
+            var result = verifier.Verify(CreateRequest(transcript, language));
+
+            Assert.True(result.Accepted);
+            Assert.Equal(ProcessDriverDenialReason.None, result.DenialReason);
+            ProcessDriverVerificationTestHarness.AssertNoMutation(result);
+            Assert.NotEmpty(result.Diagnostics);
+            ProcessDriverVerificationTestHarness.AssertRedaction(result, ProcessDriverRedactionStatus.Redacted);
+            Assert.All(result.Diagnostics, AssertDiagnosticDoesNotLeakMaliciousText);
+            ProcessDriverVerificationTestHarness.AssertDiagnosticsAndAuditDoNotContain(
+                result,
+                "fixture-password",
+                "@example.invalid",
+                "C:\\Users");
+            Assert.All(result.AuditFacts, fact =>
+            {
+                Assert.Equal(ProcessDriverAuditFactKind.DiagnosticReturned, fact.Kind);
+                Assert.DoesNotContain("fixture-password", fact.DiagnosticSummary, StringComparison.Ordinal);
+                Assert.DoesNotContain("@example.invalid", fact.DiagnosticSummary, StringComparison.Ordinal);
+                Assert.DoesNotContain("C:\\Users", fact.DiagnosticSummary, StringComparison.Ordinal);
+            });
+        }
+
+        var oversized = ReadRepositoryFile(
+            "tests",
+            "CanDoItAll.Tests.Unit",
+            "TestData",
+            "ProcessDriverContractTranscripts",
+            "malicious-oversized-transcript.txt");
+        var redactedOversized = ProcessDriverRedactionPolicy.Redact(oversized);
+
+        Assert.True(oversized.Length > ProcessDriverRedactionPolicy.DefaultMaxRedactedTextLength);
+        Assert.True(redactedOversized.WasTruncated);
+    }
+
     [Fact]
     public void Process_driver_transcript_alpha_SB012_INV_001_dotnet_semantic_diagnostics_are_readonly_redacted_and_audited()
     {
@@ -31,15 +99,14 @@ token=sk-live-secret lucy@example.com
         Assert.Equal(ProcessDriverDenialReason.None, result.DenialReason);
         Assert.True(result.NoMutationPerformed);
         Assert.Equal(ProcessDriverContractVersion.Current, result.ContractVersion);
-        Assert.NotEmpty(result.AuditFacts);
-        Assert.All(result.AuditFacts, fact =>
-        {
-            Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, fact.PermissionMode);
-            Assert.Equal(ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification, fact.Scope.Kind);
-            Assert.Matches("^[A-F0-9]{64}$", fact.OutputHash);
-            Assert.DoesNotContain("sk-live-secret", fact.DiagnosticSummary, StringComparison.Ordinal);
-            Assert.DoesNotContain("lucy@example.com", fact.DiagnosticSummary, StringComparison.Ordinal);
-        });
+        ProcessDriverVerificationTestHarness.AssertReadonlyAuditFacts(
+            result,
+            ProcessDriverPermissionMode.VerificationOnly,
+            ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification);
+        ProcessDriverVerificationTestHarness.AssertDiagnosticsAndAuditDoNotContain(
+            result,
+            "sk-live-secret",
+            "lucy@example.com");
 
         var categories = result.Diagnostics.Select(diagnostic => diagnostic.Category).ToHashSet();
         Assert.Contains(ProcessDriverDiagnosticCategory.BuildWarning, categories);
@@ -57,8 +124,11 @@ token=sk-live-secret lucy@example.com
             Assert.DoesNotContain("lucy@example.com", diagnostic.Message, StringComparison.Ordinal);
         });
         Assert.Equal(ProcessDriverRedactionStatus.Redacted, result.Redaction.Status);
-        Assert.Contains(ProcessDriverRedactionKind.Secret, result.Redaction.AppliedKinds);
-        Assert.Contains(ProcessDriverRedactionKind.EmailAddress, result.Redaction.AppliedKinds);
+        ProcessDriverVerificationTestHarness.AssertRedaction(
+            result,
+            ProcessDriverRedactionStatus.Redacted,
+            ProcessDriverRedactionKind.Secret,
+            ProcessDriverRedactionKind.EmailAddress);
     }
 
     [Fact]
@@ -92,57 +162,149 @@ password=hunter2 rust.user@example.com
             Assert.DoesNotContain("hunter2", diagnostic.Message, StringComparison.Ordinal);
             Assert.DoesNotContain("rust.user@example.com", diagnostic.Message, StringComparison.Ordinal);
         });
-        Assert.Contains(result.AuditFacts, fact => fact.Redaction.Status == ProcessDriverRedactionStatus.Redacted);
+        ProcessDriverVerificationTestHarness.AssertDiagnosticsAndAuditDoNotContain(
+            result,
+            "hunter2",
+            "rust.user@example.com");
+        ProcessDriverVerificationTestHarness.AssertRedaction(
+            result,
+            ProcessDriverRedactionStatus.Redacted,
+            ProcessDriverRedactionKind.Secret,
+            ProcessDriverRedactionKind.EmailAddress);
     }
 
     [Fact]
     public void Process_driver_transcript_alpha_SB018_INV_001_permission_denials_and_response_mapping_reject_side_effects()
     {
         var verifier = new TranscriptVerificationAlphaVerifier();
-        var sideEffectOperations = new[]
-        {
-            ProcessDriverOperation.MutateProcessState,
-            ProcessDriverOperation.ExecuteCommand,
-            ProcessDriverOperation.RestorePackage,
-            ProcessDriverOperation.WriteArtifact,
-            ProcessDriverOperation.WriteWorkspaceStorage,
-            ProcessDriverOperation.CallOfficeGraph,
-            ProcessDriverOperation.MutateEmailCategory,
-            ProcessDriverOperation.CreateTask,
-            ProcessDriverOperation.MutateBusinessRecord,
-            ProcessDriverOperation.ApplyTransition,
-            ProcessDriverOperation.ClaimDispatch,
-            ProcessDriverOperation.ApplyFinalizer,
-            ProcessDriverOperation.ScheduleRetry
-        };
 
-        foreach (var operation in sideEffectOperations)
+        foreach (var operation in ProcessDriverVerificationTestHarness.SideEffectOperations)
         {
             var result = verifier.Verify(CreateRequest(
                 "Build succeeded.",
                 ProcessDriverTranscriptLanguage.DotNet,
                 requestedOperations: [operation]));
 
-            Assert.False(result.Accepted);
-            Assert.True(result.NoMutationPerformed);
-            Assert.NotEqual(ProcessDriverDenialReason.None, result.DenialReason);
-            Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.MutationAttemptDenied);
-            Assert.Contains(result.AuditFacts, fact => fact.RequestedOperation == operation && fact.DenialReason == result.DenialReason);
+            ProcessDriverVerificationTestHarness.AssertSideEffectDenied(result, operation);
         }
 
         var officeScopeResult = verifier.Verify(CreateRequest(
             "Build succeeded.",
             ProcessDriverTranscriptLanguage.DotNet,
-            scope: new ProcessDriverCapabilityScope(
+            scope: ProcessDriverVerificationTestHarness.CreateReadonlyScope(
                 ProcessDriverCapabilityScopeKind.OfficeEvidenceRead,
-                ProcessDriverPermissionMode.VerificationOnly,
-                AllowsProcessMutation: false,
-                AllowsExternalCalls: false,
-                AllowsWorkspaceWrites: false,
-                AllowsStorageWrites: false)));
+                ProcessDriverPermissionMode.VerificationOnly)));
 
         Assert.False(officeScopeResult.Accepted);
         Assert.Equal(ProcessDriverDenialReason.CapabilityScopeDenied, officeScopeResult.DenialReason);
+    }
+
+    [Fact]
+    public void Process_driver_transcript_alpha_SB023_INV_001_supplied_content_policy_rejects_untrusted_mismatched_oversized_and_invalid_content_type()
+    {
+        const string transcript = "Build succeeded.";
+        var verifier = new TranscriptVerificationAlphaVerifier();
+        var wrongContentType = verifier.Verify(CreateRequest(
+            transcript,
+            ProcessDriverTranscriptLanguage.DotNet,
+            suppliedContentFactory: (reference, text) => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.JsonContentType,
+                text.Length,
+                ProcessDriverEvidencePolicy.ComputeSha256(text))));
+        var untrustedEnvelopeUri = verifier.Verify(CreateRequest(
+            transcript,
+            ProcessDriverTranscriptLanguage.DotNet,
+            suppliedContentFactory: (reference, text) => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+                reference with { Uri = "file://C:/Users/lucys/secrets/transcript.txt" },
+                ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType,
+                text.Length,
+                ProcessDriverEvidencePolicy.ComputeSha256(text))));
+        var mismatchedEnvelopeHash = verifier.Verify(CreateRequest(
+            transcript,
+            ProcessDriverTranscriptLanguage.DotNet,
+            suppliedContentFactory: (reference, text) => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType,
+                text.Length,
+                ProcessDriverEvidencePolicy.ComputeSha256("different supplied content"))));
+        var oversizedEnvelope = verifier.Verify(CreateRequest(
+            transcript,
+            ProcessDriverTranscriptLanguage.DotNet,
+            suppliedContentFactory: (reference, text) => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType,
+                ProcessDriverSuppliedEvidenceContentRules.MaxSuppliedEvidenceContentBytes + 1,
+                ProcessDriverEvidencePolicy.ComputeSha256(text))));
+
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            wrongContentType,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.InsufficientProof);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            untrustedEnvelopeUri,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.TranscriptUntrusted);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            mismatchedEnvelopeHash,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.EvidenceHashMismatch);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            oversizedEnvelope,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.InsufficientProof);
+        Assert.All(untrustedEnvelopeUri.Diagnostics, diagnostic =>
+            Assert.DoesNotContain("C:/Users", diagnostic.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Process_driver_transcript_alpha_SB024_INV_003_evidence_boundary_rejects_missing_supplied_content_envelope_without_parsing()
+    {
+        const string transcript = "Build succeeded.";
+        var verifier = new TranscriptVerificationAlphaVerifier();
+        var result = verifier.Verify(CreateRequest(
+            transcript,
+            ProcessDriverTranscriptLanguage.DotNet,
+            suppliedContentFactory: (reference, text) => new ProcessDriverSuppliedEvidenceContent(
+                ProcessDriverSuppliedEvidenceContentKind.TranscriptText,
+                reference,
+                ProcessDriverSuppliedEvidenceContentRules.PlainTextContentType,
+                SizeBytes: 0,
+                ContentHash: ProcessDriverEvidencePolicy.ComputeSha256(text))));
+
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            result,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.InsufficientProof);
+        Assert.DoesNotContain(result.Diagnostics, diagnostic =>
+            diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
+        Assert.All(result.Diagnostics, diagnostic =>
+            Assert.DoesNotContain(transcript, diagnostic.Message, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Process_driver_transcript_alpha_SB025_INV_001_audit_facts_include_caller_lane_operation_evidence_denial_and_output_hash()
+    {
+        var verifier = new TranscriptVerificationAlphaVerifier();
+        var result = verifier.Verify(CreateRequest(
+            "Build succeeded.",
+            ProcessDriverTranscriptLanguage.DotNet));
+
+        Assert.True(result.Accepted);
+        ProcessDriverVerificationTestHarness.AssertNormalizedAuditFacts(
+            result,
+            "manager:readonly",
+            ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification,
+            ProcessDriverVerificationTestHarness.TranscriptReadonlyOperations,
+            ProcessDriverDenialReason.None);
+        Assert.All(result.AuditFacts, fact =>
+            Assert.Contains(
+                fact.EvidenceReferences,
+                evidenceReference => evidenceReference.Kind == ProcessDriverEvidenceReferenceKind.CommandTranscript));
     }
 
     [Fact]
@@ -295,59 +457,65 @@ password=hunter2 rust.user@example.com
         string? transcriptHash = null,
         string evidenceHash = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
         string? transcriptUri = null,
-        string? evidenceUri = null)
+        string? evidenceUri = null,
+        Func<ProcessDriverEvidenceReference, string, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
-        var contentHash = ComputeSha256(transcriptText);
+        var contentHash = ProcessDriverEvidencePolicy.ComputeSha256(transcriptText);
         var resolvedTranscriptUri = transcriptUri ?? $"bundle://proof/SB012/transcripts/{language.ToString().ToLowerInvariant()}-transcript.txt";
-        var evidenceReference = new ProcessDriverEvidenceReference(
+        var transcriptReference = new ProcessDriverTranscriptReference(
+            resolvedTranscriptUri,
+            transcriptHash ?? contentHash,
+            language,
+            language == ProcessDriverTranscriptLanguage.DotNet ? "dotnet" : "cargo",
+            language == ProcessDriverTranscriptLanguage.DotNet ? "net10.0" : "rust-stable");
+        var transcriptEvidence = ProcessDriverEvidencePolicy.CreateTranscriptEvidenceReference(
+            transcriptReference,
+            transcriptText);
+        var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
             evidenceUri ?? resolvedTranscriptUri,
-            evidenceHash,
-            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
-        var verificationRequest = new ProcessDriverVerificationRequest(
+            transcriptText,
+            ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+            evidenceHash);
+        var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
             permissionMode,
-            scope ?? CreateDotNetRustScope(),
+            scope ?? ProcessDriverVerificationTestHarness.CreateReadonlyScope(
+                ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification,
+                ProcessDriverPermissionMode.VerificationOnly),
             [evidenceReference],
-            requestedOperations ?? [ProcessDriverOperation.InspectExistingEvidence, ProcessDriverOperation.ReturnDiagnostics],
-            "manager:readonly",
-            ProcessDriverContractVersion.Current);
+            requestedOperations ?? ProcessDriverVerificationTestHarness.TranscriptReadonlyOperations,
+            "manager:readonly");
+        var suppliedContent = suppliedContentFactory?.Invoke(transcriptEvidence, transcriptText) ??
+            ProcessDriverSuppliedEvidenceContentRules.CreateTranscriptText(
+                transcriptEvidence,
+                transcriptText);
 
         return new TranscriptVerificationAlphaRequest(
             verificationRequest,
-            new ProcessDriverTranscriptReference(
-                resolvedTranscriptUri,
-                transcriptHash ?? contentHash,
-                language,
-                language == ProcessDriverTranscriptLanguage.DotNet ? "dotnet" : "cargo",
-                language == ProcessDriverTranscriptLanguage.DotNet ? "net10.0" : "rust-stable"),
+            transcriptReference,
+            suppliedContent,
             transcriptText,
             DateTimeOffset.Parse("2026-06-07T21:00:00Z"));
     }
 
     private static void AssertUntrustedEvidenceDenied(ProcessDriverVerificationResponse result)
     {
-        Assert.False(result.Accepted);
-        Assert.True(result.NoMutationPerformed);
-        Assert.Equal(ProcessDriverDenialReason.MissingEvidence, result.DenialReason);
-        Assert.Contains(result.Diagnostics, diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.TranscriptUntrusted);
+        ProcessDriverVerificationTestHarness.AssertMutationFreeDenial(
+            result,
+            ProcessDriverDenialReason.MissingEvidence,
+            ProcessDriverDiagnosticCategory.TranscriptUntrusted);
         Assert.All(result.AuditFacts, fact =>
             Assert.Equal(ProcessDriverAuditFactKind.OperationDenied, fact.Kind));
     }
 
-    private static ProcessDriverCapabilityScope CreateDotNetRustScope()
+    private static void AssertDiagnosticDoesNotLeakMaliciousText(ProcessDriverDiagnostic diagnostic)
     {
-        return new ProcessDriverCapabilityScope(
-            ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification,
-            ProcessDriverPermissionMode.VerificationOnly,
-            AllowsProcessMutation: false,
-            AllowsExternalCalls: false,
-            AllowsWorkspaceWrites: false,
-            AllowsStorageWrites: false);
-    }
-
-    private static string ComputeSha256(string value)
-    {
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
+        Assert.DoesNotContain("IGNORE ALL PREVIOUS INSTRUCTIONS", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("fixture-password", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("@example.invalid", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("C:\\Users", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("../../../../production", diagnostic.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("file:///C:/repositories", diagnostic.Message, StringComparison.Ordinal);
     }
 
     private static string ReadProjectSource(string repositoryRoot)

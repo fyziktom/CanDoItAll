@@ -1,0 +1,22 @@
+﻿SB027 Gate I red-team audit/redaction shallow-proof rejection
+UTC: 2026-06-08T16:38:33Z
+
+Shallow implementation under test:
+- Claims closure from accepted responses only.
+- Checks NoMutationPerformed but skips denied response audit facts, redaction descriptor, diagnostic non-leak assertions, and bounded audit summaries.
+
+PASS required anti-shallow token present: acceptedTranscript
+PASS required anti-shallow token present: deniedTranscript
+PASS required anti-shallow token present: acceptedRuntime
+PASS required anti-shallow token present: deniedRuntime
+PASS required anti-shallow token present: AssertGatewayResponseEnvelope
+PASS required anti-shallow token present: AssertReadonlyAuditFacts
+PASS required anti-shallow token present: AssertNormalizedAuditFacts
+PASS required anti-shallow token present: AssertRedaction
+PASS required anti-shallow token present: AssertDiagnosticsAndAuditDoNotContain
+PASS required anti-shallow token present: ProcessDriverRedactionStatus.Redacted
+PASS required anti-shallow token present: DiagnosticSummary.Length <= ProcessDriverRedactionPolicy.DefaultMaxAuditSummaryLength
+PASS focused transcript proves the expected 40-test pass.
+PASS source scan proves no runtime-host/side-effect drift and passed.
+
+RESULT: PASSED - shallow audit/redaction/no-mutation closure is rejected.

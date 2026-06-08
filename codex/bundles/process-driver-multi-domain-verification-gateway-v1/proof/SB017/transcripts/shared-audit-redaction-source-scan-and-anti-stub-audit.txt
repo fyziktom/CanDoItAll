@@ -1,0 +1,11 @@
+Command: SB017 shared audit/redaction/no-mutation source scan and anti-stub audit
+Working directory: C:\repositories\CanDoItAll
+Run label: SB017 source audit 2026-06-08
+--- output ---
+PASS: Harness exposes no-mutation, readonly audit fact, redaction, and diagnostic/audit leakage assertions.
+PASS: Harness tests cover SB017 assertion contracts.
+PASS: Transcript and runtime evidence verifier tests consume shared audit/redaction/no-mutation assertions.
+PASS: Harness source contains no runtime host, DI, process, HTTP, file, directory, DbContext, registry, selector, manager command, or MapProcessDriver surface.
+PASS: No UI/media targets are in the SB017 target set.
+PASS: No secret-like patterns found in SB017 target set.
+Exit code: 0

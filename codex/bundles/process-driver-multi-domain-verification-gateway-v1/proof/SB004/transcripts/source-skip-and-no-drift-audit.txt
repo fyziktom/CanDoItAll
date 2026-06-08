@@ -1,0 +1,49 @@
+Command: SB004 source/skip/no-drift audit
+Working directory: C:\repositories\CanDoItAll
+Run label: SB004 source and quarantine audit 2026-06-08
+--- quarantine marker count ---
+627:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+644:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+1096:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+1149:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+1218:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+2154:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+2798:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+2895:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+2944:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+2997:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+3056:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+4773:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+4845:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+4945:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5046:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5105:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5163:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5217:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5279:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5321:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+5362:    [Fact(Skip = HistoricalBundleFixtureQuarantineReason)]
+Skip marker count: 21
+Skip marker rg exit code: 0
+--- current bundle replacement guard ---
+32:    public void Process_driver_multi_domain_gate_a_owns_current_bundle_fixture_and_rejects_report_only_closure()
+37:            "process-driver-multi-domain-verification-gateway-v1",
+42:            "process-driver-multi-domain-verification-gateway-v1",
+48:            "process-driver-multi-domain-verification-gateway-v1",
+55:            "process-driver-multi-domain-verification-gateway-v1",
+67:        Assert.Contains("SB003_INV_001", semanticInvariants, StringComparison.Ordinal);
+4774:    public void Process_core_contract_candidate_gate_a_SB003_INV_001_keeps_bundle_rows_and_production_guardrails()
+Replacement guard rg exit code: 0
+--- production source diff ---
+No production source files changed under repo://src.
+git diff src exit code: 0
+--- test source diff ---
+tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs', LF will be replaced by CRLF the next time Git touches it
+git diff tests exit code: 0
+--- UI/media drift in src/tests ---
+No UI/media files changed.
+git diff UI/media exit code: 0
+--- secret-shaped text scan in edited test file ---
+Secret-pattern rg exit code: 1 (1 means no matches)
+Exit code: 0
