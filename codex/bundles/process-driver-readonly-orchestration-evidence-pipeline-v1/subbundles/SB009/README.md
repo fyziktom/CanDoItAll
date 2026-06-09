@@ -1,8 +1,7 @@
 # SB009 - Gate C adapter decomposition closure
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance split process-domain adapter file and narrow adapter responsibilities by completing: Gate C adapter decomposition closure.
 
@@ -24,13 +23,13 @@ Advance split process-domain adapter file and narrow adapter responsibilities by
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P03 - Split process-domain adapter file and narrow adapter responsibilities. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P03 - Split process-domain adapter file and narrow adapter responsibilities. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
+- Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,30 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Create `proof/SB009/manifest.md` and `proof/SB009/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+- Create `proof/SB009/manifest.md` and `proof/SB009/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-SB009 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+- SB009 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
 
+## Closure Proof
+- Entry gate: Passed after SB007 and SB008 closure.
+- Failing-first transcript: `bundle://proof/SB009/transcripts/build-adapter-split.txt`
+- Critical manifest: `bundle://proof/SB009/manifest.md`
+- Semantic invariant contract: `bundle://proof/SB009/semantic-invariants.md`
+- Full unit transcript: `bundle://proof/SB009/transcripts/full-unit-p03.txt`
+- Closure gate: Passed; P04 may start from decomposed adapter files.
 ## Suggested Agent Prompt
 Implement SB009 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+
+

@@ -22,6 +22,6 @@ internal static class ProcessTranscriptVerificationObservationMapper
             response.AuditFacts,
             response.ContractVersion,
             payload.RequestedAt,
-            payload.RequestedAt);
+            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
     }
 }

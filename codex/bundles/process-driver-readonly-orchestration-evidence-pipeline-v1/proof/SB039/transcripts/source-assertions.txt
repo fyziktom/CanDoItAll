@@ -1,0 +1,10 @@
+Command: P13 shared multi-domain harness source assertions
+ExitCode: 0
+StartedAtUtc: 2026-06-09T01:56:30.0000000Z
+FinishedAtUtc: 2026-06-09T01:56:30.0000000Z
+
+Source assertion: repo://tests/CanDoItAll.Tests.Integration/ProcessReadOnlyVerificationMultiDomainHarness.cs runs the production ProcessReadOnlyVerificationBatchOrchestrator, not a fake orchestrator or manually seeded aggregate.
+Source assertion: repo://tests/CanDoItAll.Tests.Integration/ProcessReadOnlyVerificationMultiDomainHarness.cs defines ProcessReadOnlyVerificationLaneProducerConsumer with Type-valued ProducerType and ConsumerType fields, avoiding stringly typed producer/consumer identifiers.
+Source assertion: repo://tests/CanDoItAll.Tests.Integration/ProcessReadOnlyVerificationMultiDomainHarness.cs covers the five current lanes: transcript, runtime facts, artifact evidence, Office evidence, and business analysis.
+Source assertion: repo://tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs includes Process_readonly_verification_multi_domain_harness_SB037_SB038_INV_001_proves_current_lane_producers_and_orchestrator_consumer, which exercises all five supplied payload lanes through the reusable harness.
+Source assertion: bundle://proof/SB039/transcripts/p13-source-scans.txt proves harness usage, typed producer/consumer matrix presence, no runtime host, no DI, no file/network/storage/workspace APIs, no object/dynamic dispatch, no direct process-module verifier construction, no stubs, no Core reverse dependency, and no UI/media drift.

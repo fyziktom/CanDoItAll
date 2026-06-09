@@ -120,7 +120,14 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
             "Dispatch");
         var allowedDriverConsumerFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "ProcessDomainEvidenceReadOnlyAdapters.cs",
+            "ProcessArtifactEvidenceReadOnlyAdapter.cs",
+            "ProcessBusinessAnalysisReadOnlyAdapter.cs",
+            "ProcessDriverObservationAggregationReadOnlyAdapter.cs",
+            "ProcessOfficeEvidenceReadOnlyAdapter.cs",
+            "ProcessReadOnlyVerificationAggregateObservation.cs",
+            "ProcessReadOnlyVerificationBatchOrchestrator.cs",
+            "ProcessReadOnlyVerificationPayloadBuilder.cs",
+            "ProcessReadOnlyVerificationRequestFactory.cs",
             "ProcessReadOnlyVerificationOperationPolicy.cs",
             "ProcessRuntimeEvidenceVerificationObservationMapper.cs",
             "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
@@ -128,11 +135,17 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
             "ProcessTranscriptVerificationPreflightPolicy.cs",
             "ProcessTranscriptVerificationReadOnlyAdapter.cs"
         };
-        var unapprovedDriverConsumers = Directory
+        var actualDriverConsumerFiles = Directory
             .EnumerateFiles(dispatchRoot, "*.cs", SearchOption.TopDirectoryOnly)
             .Where(path => File.ReadAllText(path).Contains("CanDoItAll.Processes.Drivers.", StringComparison.Ordinal))
             .Select(Path.GetFileName)
             .OfType<string>()
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var allowedDriverConsumerFileNames = allowedDriverConsumerFiles
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var unapprovedDriverConsumers = actualDriverConsumerFiles
             .Where(fileName => !allowedDriverConsumerFiles.Contains(fileName))
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -146,7 +159,17 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         Assert.Contains("CanDoItAll.Processes.Drivers.OfficeEvidence.csproj", moduleProject, StringComparison.Ordinal);
         Assert.Contains("CanDoItAll.Processes.Drivers.BusinessAnalysis.csproj", moduleProject, StringComparison.Ordinal);
         Assert.Contains("CanDoItAll.Processes.Drivers.ObservationAggregation.csproj", moduleProject, StringComparison.Ordinal);
+        Assert.Contains("CanDoItAll.Processes.Drivers.VerificationGateway.csproj", moduleProject, StringComparison.Ordinal);
+        Assert.Equal(allowedDriverConsumerFileNames, actualDriverConsumerFiles);
+        Assert.DoesNotContain("ProcessDomainEvidenceReadOnlyAdapters.cs", actualDriverConsumerFiles);
         Assert.Empty(unapprovedDriverConsumers);
+        Assert.DoesNotContain("new TranscriptVerificationAlphaVerifier", combinedAllowedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new RuntimeEvidenceConsistencyAlphaVerifier", combinedAllowedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ArtifactEvidenceAlphaVerifier", combinedAllowedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new OfficeEvidenceAlphaVerifier", combinedAllowedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new BusinessAnalysisAlphaVerifier", combinedAllowedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ProcessDriverObservationAggregator", combinedAllowedSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverVerificationGateway.CreateDefault()", combinedAllowedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IServiceCollection", combinedAllowedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AddScoped", combinedAllowedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AddSingleton", combinedAllowedSource, StringComparison.Ordinal);

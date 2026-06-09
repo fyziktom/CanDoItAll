@@ -1,0 +1,37 @@
+Source assertions for P15/SB043-SB045
+Gateway README anchors:
+13:- `CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchAggregationRequest`
+32:## Source-Backed Batch Sample
+38:var request = new ProcessDriverVerificationBatchRequest(
+44:    aggregation: new ProcessDriverVerificationBatchAggregationRequest(
+48:var response = gateway.VerifyBatch(request);
+57:`ProcessDriverVerificationBatchAggregationRequest` aggregates already-produced verification responses through the existing observation aggregator. It must not register services, resolve runtime drivers, persist observations, schedule work, trigger manager commands, call connectors, read files, write workspace or storage state, or mutate process state.
+Processes README migration anchors:
+88:## Process Driver Read-Only Verification Migration
+90:The current process-module integration path is `ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)`. It composes the focused read-only adapters directly and returns typed observation lists plus an aggregate observation when at least one lane produced a response.
+92:Use `ProcessReadOnlyVerificationPayloadBuilder` to build lane payloads from already-loaded, caller-supplied facts:
+94:- `CreateTranscriptPayload` feeds `ProcessTranscriptVerificationReadOnlyAdapter`.
+95:- `CreateRuntimeEvidencePayload` feeds `ProcessRuntimeEvidenceVerificationReadOnlyAdapter`.
+96:- `CreateArtifactEvidencePayload` feeds `ProcessArtifactEvidenceReadOnlyAdapter`.
+97:- `CreateOfficeEvidencePayload` feeds `ProcessOfficeEvidenceReadOnlyAdapter`.
+98:- `CreateBusinessAnalysisPayload` feeds `ProcessBusinessAnalysisReadOnlyAdapter`.
+100:Migration from lane-by-lane adapter calls should keep request construction typed: create the relevant lane payloads, pass them into `ProcessReadOnlyVerificationBatchPayload`, then call `ProcessReadOnlyVerificationBatchOrchestrator.Verify`. Consume the returned lane observation lists, `Responses`, and `AggregateObservation` as diagnostic read-only evidence only.
+Observation aggregation README anchor:
+17:var aggregate = new ProcessDriverObservationAggregator().Aggregate(request);
+Unit guard anchors:
+16:    public void Process_driver_package_readmes_SB049_INV_001_all_alpha_samples_use_supplied_inmemory_payloads_only()
+59:            Assert.NotNull(expectation.VerifierType.GetMethod("Verify", [expectation.RequestType]));
+74:        Assert.NotNull(typeof(ProcessDriverObservationAggregator).GetMethod(
+96:    public void Process_driver_package_readmes_SB043_SB044_INV_001_gateway_and_process_migration_docs_match_current_batch_orchestration_source()
+99:        var processesReadme = ReadRepositoryFile("src", "CanDoItAll.Modules.Processes", "README.md");
+100:        var orchestratorSource = ReadRepositoryFile(
+106:        var payloadBuilderSource = ReadRepositoryFile(
+117:        Assert.NotNull(typeof(ProcessDriverVerificationGateway).GetMethod(
+154:        AssertNoProcessDriverRuntimeApprovalDocs(processesReadme);
+190:    private static string ReadRepositoryFile(
+196:    private static void AssertNoProcessDriverRuntimeApprovalDocs(
+Changed-file SHA256 hashes:
+40CBA8C150CE5BC3EE784BB887C4786CE3A251D9428E6387D6F8FAB74CAD6204  src\CanDoItAll.Processes.Drivers.ObservationAggregation\README.md
+D4135E9031F4D25EBA566BDAB140D1DCA79D8F6D91A288D5BFE9E57E76267502  src\CanDoItAll.Processes.Drivers.VerificationGateway\README.md
+D12DC9D4A4BED96F70E48AAD3229C0145E1A649644382008D3CB5B69A1658149  src\CanDoItAll.Modules.Processes\README.md
+395FAFDCCA568FB81EE3FE89807636530343CEF164C4668F5E05EFD5720C216C  tests\CanDoItAll.Tests.Unit\ProcessDriverPackageReadmeSamplesTests.cs

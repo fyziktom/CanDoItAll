@@ -97,4 +97,77 @@ public sealed class ProcessDriverVerificationGateway
 
         return observationAggregator.Aggregate(request);
     }
+
+    public ProcessDriverVerificationBatchResponse VerifyBatch(ProcessDriverVerificationBatchRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var transcriptResponses = VerifyTranscriptBatch(request.TranscriptRequests);
+        var runtimeEvidenceResponses = VerifyRuntimeEvidenceBatch(request.RuntimeEvidenceRequests);
+        var artifactEvidenceResponses = VerifyArtifactEvidenceBatch(request.ArtifactEvidenceRequests);
+        var officeEvidenceResponses = VerifyOfficeEvidenceBatch(request.OfficeEvidenceRequests);
+        var businessAnalysisResponses = VerifyBusinessAnalysisBatch(request.BusinessAnalysisRequests);
+        var allResponses = transcriptResponses
+            .Concat(runtimeEvidenceResponses)
+            .Concat(artifactEvidenceResponses)
+            .Concat(officeEvidenceResponses)
+            .Concat(businessAnalysisResponses)
+            .ToArray();
+        var aggregate = request.Aggregation is null
+            ? null
+            : CreateBatchAggregate(request.Aggregation, allResponses);
+
+        return new ProcessDriverVerificationBatchResponse(
+            transcriptResponses,
+            runtimeEvidenceResponses,
+            artifactEvidenceResponses,
+            officeEvidenceResponses,
+            businessAnalysisResponses,
+            aggregate);
+    }
+
+    private ProcessDriverObservationAggregate CreateBatchAggregate(
+        ProcessDriverVerificationBatchAggregationRequest request,
+        IReadOnlyList<ProcessDriverVerificationResponse> responses)
+    {
+        if (responses.Count == 0)
+        {
+            throw new InvalidOperationException("Batch aggregation requires at least one verification response.");
+        }
+
+        return AggregateObservations(new ProcessDriverObservationAggregationRequest(
+            responses,
+            request.RequestedAt,
+            request.CallerContext));
+    }
+
+    private IReadOnlyList<ProcessDriverVerificationResponse> VerifyTranscriptBatch(
+        IReadOnlyList<TranscriptVerificationAlphaRequest> requests)
+    {
+        return Array.AsReadOnly(requests.Select(VerifyTranscript).ToArray());
+    }
+
+    private IReadOnlyList<ProcessDriverVerificationResponse> VerifyRuntimeEvidenceBatch(
+        IReadOnlyList<RuntimeEvidenceConsistencyVerificationRequest> requests)
+    {
+        return Array.AsReadOnly(requests.Select(VerifyRuntimeEvidence).ToArray());
+    }
+
+    private IReadOnlyList<ProcessDriverVerificationResponse> VerifyArtifactEvidenceBatch(
+        IReadOnlyList<ArtifactEvidenceVerificationRequest> requests)
+    {
+        return Array.AsReadOnly(requests.Select(VerifyArtifactEvidence).ToArray());
+    }
+
+    private IReadOnlyList<ProcessDriverVerificationResponse> VerifyOfficeEvidenceBatch(
+        IReadOnlyList<OfficeEvidenceVerificationRequest> requests)
+    {
+        return Array.AsReadOnly(requests.Select(VerifyOfficeEvidence).ToArray());
+    }
+
+    private IReadOnlyList<ProcessDriverVerificationResponse> VerifyBusinessAnalysisBatch(
+        IReadOnlyList<BusinessAnalysisVerificationRequest> requests)
+    {
+        return Array.AsReadOnly(requests.Select(VerifyBusinessAnalysis).ToArray());
+    }
 }

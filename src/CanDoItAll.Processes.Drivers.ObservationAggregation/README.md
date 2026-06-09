@@ -14,7 +14,7 @@ var request = new ProcessDriverObservationAggregationRequest(
     [transcriptResponse, runtimeResponse, officeResponse],
     DateTimeOffset.UtcNow);
 
-var aggregate = ProcessDriverObservationAggregator.Aggregate(request);
+var aggregate = new ProcessDriverObservationAggregator().Aggregate(request);
 ```
 
 The caller must pass response objects that were already produced by read-only verifiers. This package never runs drivers, discovers packages, registers services, persists observations, schedules work, or calls external systems.

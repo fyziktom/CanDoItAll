@@ -1,0 +1,51 @@
+Command: P11 source assertions and changed-file hashes
+ExitCode: 0
+StartedAtUtc: 2026-06-09T01:21:12.3266759Z
+FinishedAtUtc: 2026-06-09T01:21:12.3333477Z
+
+## Changed-file hashes
+891BFFEAC821A28196E9BBAE8BCAB925A0FFB3CD3BA9CBA7A1FAE10898309572  repo://src/CanDoItAll.Processes.Drivers.VerificationGateway/README.md
+DC94B4CE9D0117F3F38B0D0698725724FB4C2340BE35438240A80307246BBA4C  repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractApiVerificationBoundaryTests.cs
+
+## P11 contract test anchors
+860:    public void Process_driver_contract_api_SB031_INV_001_gateway_v1_public_api_snapshot_freezes_typed_batch_surface()
+871:            "69fd070de1004e6b01f71ae2251d1d3f63b7b2f306d4b165cf3329822f6ad62c",
+876:                "CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchRequest",
+877:                "CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchResponse",
+892:            ReadDeclaredPublicMethodNames(typeof(ProcessDriverVerificationGateway)));
+895:            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationGateway)));
+898:            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationBatchAggregationRequest)));
+908:            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationBatchRequest)));
+919:            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationBatchResponse)));
+923:    public void Process_driver_contract_api_SB032_INV_001_gateway_batch_migration_guard_is_documented_and_runtime_free()
+934:            "Surface hash: `69fd070de1004e6b01f71ae2251d1d3f63b7b2f306d4b165cf3329822f6ad62c`",
+938:        Assert.Contains("It accepts only `ProcessDriverVerificationBatchRequest`", readme, StringComparison.Ordinal);
+942:        Assert.Contains("`ProcessDriverVerificationBatchResponse.AllResponses` is a read-only concatenation", readme, StringComparison.Ordinal);
+1231:    private static IReadOnlyList<string> ReadDeclaredPublicMethodNames(Type type)
+1241:    private static IReadOnlyList<string> ReadDeclaredPublicPropertyNames(Type type)
+
+## Gateway README API snapshot and migration anchors
+5:## v1 Public API Snapshot
+8:- Driver abstraction contract source: `ProcessDriverContractVersion.Current` remains `1.10.0`.
+9:- Public type count: `4`.
+10:- Surface hash: `69fd070de1004e6b01f71ae2251d1d3f63b7b2f306d4b165cf3329822f6ad62c`.
+14:- `CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchRequest`
+32:## Batch Migration Guard
+34:`VerifyBatch` is an additive v1.x convenience over the typed lane methods. It accepts only `ProcessDriverVerificationBatchRequest`, which carries typed request lists for transcript, runtime evidence, artifact evidence, Office evidence, and business analysis. It does not replace the lane-specific methods and does not introduce `Verify(object)`, lane-name dispatch, dynamic lookup, or driver discovery.
+38:`ProcessDriverVerificationBatchResponse.AllResponses` is a read-only concatenation of the typed response lists. Consumers that migrate from direct alpha verifier calls should keep request construction unchanged and treat batch aggregation as diagnostic evidence only.
+
+## Gateway production typed batch anchors
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:11:public sealed record ProcessDriverVerificationBatchAggregationRequest(
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:15:public sealed record ProcessDriverVerificationBatchRequest
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:17:    public ProcessDriverVerificationBatchRequest(
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:23:        ProcessDriverVerificationBatchAggregationRequest? aggregation = null)
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:43:    public ProcessDriverVerificationBatchAggregationRequest? Aggregation { get; }
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:51:public sealed record ProcessDriverVerificationBatchResponse
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:53:    public ProcessDriverVerificationBatchResponse(
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:67:        AllResponses = CreateReadonlyList(
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationBatch.cs:85:    public IReadOnlyList<ProcessDriverVerificationResponse> AllResponses { get; }
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:101:    public ProcessDriverVerificationBatchResponse VerifyBatch(ProcessDriverVerificationBatchRequest request)
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:118:            : CreateBatchAggregate(request.Aggregation, allResponses);
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:120:        return new ProcessDriverVerificationBatchResponse(
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:129:    private ProcessDriverObservationAggregate CreateBatchAggregate(
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:130:        ProcessDriverVerificationBatchAggregationRequest request,

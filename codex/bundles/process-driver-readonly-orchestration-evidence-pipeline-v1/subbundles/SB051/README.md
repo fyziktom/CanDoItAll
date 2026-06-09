@@ -1,8 +1,7 @@
 # SB051 - Gate Q final validation closure
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance final red-team, fake-proof resistance, and completed validator by completing: Gate Q final validation closure.
 
@@ -24,13 +23,13 @@ Advance final red-team, fake-proof resistance, and completed validator by comple
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P17 - Final red-team, fake-proof resistance, and completed validator. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P17 - Final red-team, fake-proof resistance, and completed validator. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
+- Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,34 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Create `proof/SB051/manifest.md` and `proof/SB051/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+- Create `proof/SB051/manifest.md` and `proof/SB051/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+
+## Closure Proof
+- Critical P17 proof manifest: `bundle://proof/SB051/manifest.md`.
+- Semantic invariants: `bundle://proof/SB051/semantic-invariants.md`.
+- Build proof: `bundle://proof/SB051/transcripts/build-final-validation.txt`.
+- Full unit proof: `bundle://proof/SB051/transcripts/full-unit-p17.txt`.
+- Focused driver unit proof: `bundle://proof/SB051/transcripts/focused-p17-driver-unit-matrix.txt`.
+- Focused process adapter integration proof: `bundle://proof/SB051/transcripts/focused-p17-process-adapter-integration-matrix.txt`.
+- Red-team trap scan proof: `bundle://proof/SB051/transcripts/p17-red-team-trap-scans.txt`.
+- Completed validator preflight proof: `bundle://proof/SB051/transcripts/completed-validator-preflight-expected-pending.txt`.
+- Prepared validator proof: `bundle://proof/SB051/transcripts/prepared-validator-after-p17.txt`.
+- Source assertions: `bundle://proof/SB051/transcripts/source-assertions.txt`.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-SB051 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+- SB051 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
 
 ## Suggested Agent Prompt
 Implement SB051 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+

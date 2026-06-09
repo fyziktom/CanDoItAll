@@ -1,0 +1,11 @@
+Bundle validation failed:
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB052\README.md: final closure requires status `Completed` or `Blocked`, found `Prepared`
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB053\README.md: final closure requires status `Completed` or `Blocked`, found `Prepared`
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB054\README.md: final closure requires status `Completed` or `Blocked`, found `Prepared`
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: subbundle gate result cannot remain pending: SB052 | Pending | Pending | Pending | Pending | Decide next candidate: controlled read-only runtime integration vs more drivers.
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: subbundle gate result cannot remain pending: SB053 | Pending | Pending | Pending | Pending | Update stable Core/domain-driver roadmap and reopen triggers.
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: subbundle gate result cannot remain pending: SB054 | Pending | Pending | Pending | Pending | Critical gate; Gate R handoff and zip generation closure.
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: raw note cannot remain pending at final closure: Move faster with bigger coherent phases | Pending | Pending
+- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: raw note cannot remain pending at final closure: Prepare bundle zip | Pending | Pending
+Completed validator preflight exit code: 1
+PASS: completed validator correctly rejects pending SB052-SB054 before final handoff closure.

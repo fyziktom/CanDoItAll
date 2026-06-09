@@ -1,0 +1,47 @@
+SCAN: red-team review rejects target traps
+11:| Report-only closure | Rejected | Critical manifests and semantic invariants exist through SB048; P17 adds fresh build/full/focused transcripts under `bundle://proof/SB051/transcripts/`. |
+12:| Happy-path-only proof | Rejected | Focused driver unit matrix and process adapter integration matrix run alongside red-team source scans; malicious payload and denial coverage remain source-backed by prior manifests. |
+13:| Status-only rows | Rejected | Execution report rows must be backed by transcript paths and validator output; completed-stage preflight rejects pending rows before final handoff closure. |
+14:| Runtime-host drift | Rejected | Runtime host, registry, selector, DI, manager, scheduler, workflow, service-host, and container-resolution tokens remain denied by source scans. |
+16:| Prose-only samples | Rejected | README samples are bound to real verifier/request/gateway types and current process orchestrator source by `ProcessDriverPackageReadmeSamplesTests`. |
+17:| Unbacked API claims | Rejected | Gateway public surface, contract version, typed batch shape, runtime-denial matrix, and process Core consumer map are guarded by unit/integration tests. |
+PASS: expected match found
+SCAN: completed validator preflight rejects pending final handoff
+5:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB052\README.md: final closure requires status `Completed` or `Blocked`, found `Prepared`
+6:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB053\README.md: final closure requires status `Completed` or `Blocked`, found `Prepared`
+7:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB054\README.md: final closure requires status `Completed` or `Blocked`, found `Prepared`
+11:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: subbundle gate result cannot remain pending: SB052 | Pending | Pending | Pending | Pending | Decide next candidate: controlled read-only runtime integration vs more drivers.
+12:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: subbundle gate result cannot remain pending: SB053 | Pending | Pending | Pending | Pending | Update stable Core/domain-driver roadmap and reopen triggers.
+13:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: subbundle gate result cannot remain pending: SB054 | Pending | Pending | Pending | Pending | Critical gate; Gate R handoff and zip generation closure.
+17:PASS: completed validator correctly rejects pending SB052-SB054 before final handoff closure.
+PASS: expected match found
+SCAN: execution report row count
+Subbundle rows: 54
+PASS: all 54 subbundle rows are present
+SCAN: critical manifest coverage through SB048
+PASS: SB003 manifest and semantic invariants present
+PASS: SB006 manifest and semantic invariants present
+PASS: SB009 manifest and semantic invariants present
+PASS: SB010 manifest and semantic invariants present
+PASS: SB012 manifest and semantic invariants present
+PASS: SB015 manifest and semantic invariants present
+PASS: SB018 manifest and semantic invariants present
+PASS: SB021 manifest and semantic invariants present
+PASS: SB024 manifest and semantic invariants present
+PASS: SB027 manifest and semantic invariants present
+PASS: SB030 manifest and semantic invariants present
+PASS: SB033 manifest and semantic invariants present
+PASS: SB036 manifest and semantic invariants present
+PASS: SB039 manifest and semantic invariants present
+PASS: SB042 manifest and semantic invariants present
+PASS: SB045 manifest and semantic invariants present
+PASS: SB048 manifest and semantic invariants present
+SCAN: runtime host implementation hooks in scoped read-only pipeline source
+PASS: no matches
+SCAN: direct file, network, storage, workspace, process mutation APIs in implementation/gateway/read-only process source
+PASS: no matches
+SCAN: anti-stub audit for P17 red-team targets
+PASS: no matches
+SCAN: UI/media drift
+PASS: no UI/media drift
+P17 red-team trap scans passed.

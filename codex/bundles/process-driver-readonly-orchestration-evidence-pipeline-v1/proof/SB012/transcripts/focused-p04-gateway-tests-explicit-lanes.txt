@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter FullyQualifiedName~ProcessDriverVerificationGatewayTests
+ExitCode: 0
+StartedAtUtc: 2026-06-08T23:30:22.4480074Z
+FinishedAtUtc: 2026-06-08T23:30:25.9271134Z
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     5, Přeskočeno:     0, Celkem:     5, Doba trvání: 206 ms - CanDoItAll.Tests.Unit.dll (net10.0)

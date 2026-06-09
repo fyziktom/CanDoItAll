@@ -1,5 +1,9 @@
 # Phase Plan
 
+## Execution Order
+- Execute subbundles in numeric order from SB001 through SB054.
+- Treat each every-third subbundle listed under Critical Subbundles as a hard phase gate before downstream work proceeds.
+- Repair and rerun the prepared-stage validator if implementation reality changes scope, proof, or dependency assumptions.
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -86,3 +90,4 @@ gantt
 - **SB048**: Gate P release-candidate closure (P16)
 - **SB051**: Gate Q final validation closure (P17)
 - **SB054**: Gate R handoff and zip generation closure (P18)
+

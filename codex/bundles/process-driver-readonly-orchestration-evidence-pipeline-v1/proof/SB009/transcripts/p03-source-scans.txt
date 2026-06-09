@@ -1,0 +1,79 @@
+Command: P03 adapter decomposition source scans
+ExitCode: 0
+StartedAtUtc: 2026-06-08T23:08:30.2021884Z
+
+## Split file inventory
+Command: Get-ChildItem focused read-only adapter files
+ExitCode: 0
+ProcessArtifactEvidenceReadOnlyAdapter.cs
+ProcessBusinessAnalysisReadOnlyAdapter.cs
+ProcessDriverObservationAggregationReadOnlyAdapter.cs
+ProcessOfficeEvidenceReadOnlyAdapter.cs
+ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs
+ProcessTranscriptVerificationReadOnlyAdapter.cs
+
+
+## Retained source-reference marker line count
+Command: Measure-Object ProcessDomainEvidenceReadOnlyAdapters.cs
+ExitCode: 0
+
+Lines Words Characters Property
+----- ----- ---------- --------
+    2                  
+
+
+
+## Shared utility usage scan
+Command: rg -n 'ProcessReadOnlyVerificationRequestFactory|ProcessReadOnlyObservationClock' <targets>
+ExitCode: 0
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRuntimeEvidenceVerificationObservationMapper.cs:25:            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationObservationMapper.cs:25:            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs:39:        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationRequestFactory.cs:7:internal static class ProcessReadOnlyVerificationRequestFactory
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:49:        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyObservationClock.cs:3:internal static class ProcessReadOnlyObservationClock
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:60:            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:33:        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:69:            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessOfficeEvidenceReadOnlyAdapter.cs:33:        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessOfficeEvidenceReadOnlyAdapter.cs:69:            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceReadOnlyAdapter.cs:34:        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceReadOnlyAdapter.cs:75:            ProcessReadOnlyObservationClock.ObservedAt(payload.RequestedAt));
+
+
+## Direct alpha construction denial scan
+Command: rg -n 'new (TranscriptVerificationAlphaVerifier|RuntimeEvidenceConsistencyAlphaVerifier|ArtifactEvidenceAlphaVerifier|OfficeEvidenceAlphaVerifier|BusinessAnalysisAlphaVerifier|ProcessDriverObservationAggregator)' <targets>
+ExitCode: 1
+
+
+## Generic runtime dispatch denial scan
+Command: rg -n 'Verify\\s*\\(\\s*object|ProcessDriverRegistry|IProcessDriverRegistry|RuntimeHost|GetRequiredService|IServiceCollection|AddScoped|AddSingleton|ProcessDriverRuntimeSelector|ProcessDriverManagerCommand' <targets>
+ExitCode: 1
+
+
+## Core reverse dependency scan
+Command: rg -n 'CanDoItAll\\.Processes\\.Drivers' src\\CanDoItAll.Processes.Core
+ExitCode: 1
+
+
+## Anti-stub production scan
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented' <targets>
+ExitCode: 1
+
+
+## UI media drift scan
+Command: git diff --name-only -- src tests | rg -n '(\\.razor$|\\.css$|wwwroot/|\\.(png|jpg|jpeg|gif|svg|webp)$)'
+ExitCode: 1
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDomainEvidenceReadOnlyAdapters.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationObservationMapper.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationObservationMapper.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationReadOnlyAdapter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverObservationAggregationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs', LF will be replaced by CRLF the next time Git touches it
+
+

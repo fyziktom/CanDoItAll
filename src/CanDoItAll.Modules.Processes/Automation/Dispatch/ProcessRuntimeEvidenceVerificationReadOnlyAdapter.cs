@@ -7,6 +7,7 @@ using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
 using CanDoItAll.Processes.Drivers.RuntimeEvidence;
+using CanDoItAll.Processes.Drivers.VerificationGateway;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -15,7 +16,7 @@ internal sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapter
     private readonly Func<RuntimeEvidenceConsistencyVerificationRequest, ProcessDriverVerificationResponse> verifyRuntimeEvidence;
 
     public ProcessRuntimeEvidenceVerificationReadOnlyAdapter()
-        : this(request => new RuntimeEvidenceConsistencyAlphaVerifier().Verify(request))
+        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyRuntimeEvidence)
     {
     }
 
@@ -35,13 +36,12 @@ internal sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapter
             payload.RequestedOperations,
             ProcessReadOnlyVerificationOperationPolicy.RuntimeEvidenceDefaults);
         var suppliedContent = CreateSuppliedContent(payload, evidenceReferences);
-        var verificationRequest = new ProcessDriverVerificationRequest(
+        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
             payload.PermissionMode,
             payload.Scope,
             evidenceReferences,
             requestedOperations,
-            payload.CallerContext.Trim(),
-            ProcessDriverContractVersion.Current);
+            payload.CallerContext);
         var request = new RuntimeEvidenceConsistencyVerificationRequest(
             verificationRequest,
             suppliedContent,

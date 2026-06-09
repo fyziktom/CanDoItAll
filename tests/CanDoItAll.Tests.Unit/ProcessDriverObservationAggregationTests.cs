@@ -492,8 +492,11 @@ public sealed class ProcessDriverObservationAggregationTests
     {
         return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            "ProcessDriverVerificationBatch.cs",
             "ProcessDriverVerificationGateway.cs",
-            "ProcessDomainEvidenceReadOnlyAdapters.cs"
+            "ProcessDomainEvidenceReadOnlyAdapters.cs",
+            "ProcessDriverObservationAggregationReadOnlyAdapter.cs",
+            "ProcessReadOnlyVerificationAggregateObservation.cs"
         };
     }
 
@@ -519,11 +522,12 @@ public sealed class ProcessDriverObservationAggregationTests
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch",
-            "ProcessDomainEvidenceReadOnlyAdapters.cs"));
+            "ProcessDriverObservationAggregationReadOnlyAdapter.cs"));
 
         Assert.Contains("ProcessDriverObservationAggregator", gatewaySource, StringComparison.Ordinal);
         Assert.Contains("ProcessDriverObservationAggregationRequest", gatewaySource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDriverObservationAggregator", adapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverVerificationGateway.CreateDefault().AggregateObservations", adapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new ProcessDriverObservationAggregator", adapterSource, StringComparison.Ordinal);
         Assert.Contains("ProcessDriverObservationAggregationRequest", adapterSource, StringComparison.Ordinal);
     }
 

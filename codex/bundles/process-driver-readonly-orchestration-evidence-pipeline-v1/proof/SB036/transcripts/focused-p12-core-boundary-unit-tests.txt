@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests.Process_driver_readonly_orchestration_SB034_SB035_INV_001_refreshes_core_consumer_map_and_rejects_global_using_drift|FullyQualifiedName~ProcessDriverContractPrerequisitesVerificationTests.Process_driver_prerequisites_SB024_INV_001_keep_core_descriptor_consumers_allowlisted"
+ExitCode: 0
+StartedAtUtc: 2026-06-09T01:35:11.9746292Z
+FinishedAtUtc: 2026-06-09T01:35:18.5997056Z
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 3 s - CanDoItAll.Tests.Unit.dll (net10.0)

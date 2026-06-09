@@ -3,6 +3,7 @@ using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
 using CanDoItAll.Processes.Drivers.TranscriptVerification;
+using CanDoItAll.Processes.Drivers.VerificationGateway;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -11,7 +12,7 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
     private readonly Func<TranscriptVerificationAlphaRequest, ProcessDriverVerificationResponse> verifyTranscript;
 
     public ProcessTranscriptVerificationReadOnlyAdapter()
-        : this(request => new TranscriptVerificationAlphaVerifier().Verify(request))
+        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyTranscript)
     {
     }
 
@@ -45,13 +46,12 @@ internal sealed class ProcessTranscriptVerificationReadOnlyAdapter
             return ProcessTranscriptVerificationObservationMapper.Create(payload, preflightDenial.Response);
         }
 
-        var verificationRequest = new ProcessDriverVerificationRequest(
+        var verificationRequest = ProcessReadOnlyVerificationRequestFactory.Create(
             payload.PermissionMode,
             payload.Scope,
             evidenceReferences,
             requestedOperations,
-            payload.CallerContext.Trim(),
-            ProcessDriverContractVersion.Current);
+            payload.CallerContext);
         var request = new TranscriptVerificationAlphaRequest(
             verificationRequest,
             payload.TranscriptReference,

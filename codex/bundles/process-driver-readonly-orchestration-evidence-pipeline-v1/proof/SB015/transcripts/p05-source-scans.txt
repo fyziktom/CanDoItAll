@@ -1,0 +1,81 @@
+Command: P05 process read-only batch orchestration source scans
+ExitCode: 0
+StartedAtUtc: 2026-06-08T23:55:15.5703814Z
+FinishedAtUtc: 2026-06-08T23:55:16.1362386Z
+
+## Process batch orchestrator presence
+Command: rg -n 'ProcessReadOnlyVerificationBatchOrchestrator|ProcessReadOnlyVerificationBatchPayload|ProcessReadOnlyVerificationBatchObservation|AggregateObservation' <targets>
+ExitCode: 0
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:128:            "ProcessReadOnlyVerificationBatchOrchestrator.cs",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:158:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:159:        var payload = new ProcessReadOnlyVerificationBatchPayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:190:            observation.AggregateObservation);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:5:internal sealed class ProcessReadOnlyVerificationBatchOrchestrator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:14:    public ProcessReadOnlyVerificationBatchOrchestrator()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:25:    internal ProcessReadOnlyVerificationBatchOrchestrator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:41:    public ProcessReadOnlyVerificationBatchObservation Verify(ProcessReadOnlyVerificationBatchPayload payload)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:70:        return new ProcessReadOnlyVerificationBatchObservation(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:234:internal sealed record ProcessReadOnlyVerificationBatchPayload
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:236:    public ProcessReadOnlyVerificationBatchPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:287:internal sealed record ProcessReadOnlyVerificationBatchObservation
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:289:    public ProcessReadOnlyVerificationBatchObservation(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:312:        AggregateObservation = aggregateObservation;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:335:    public ProcessDriverObservationAggregationReadOnlyObservation? AggregateObservation { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:14:        : this(ProcessDriverVerificationGateway.CreateDefault().AggregateObservations)
+
+## Gateway delegate construction path presence
+Command: rg -n 'ProcessDriverVerificationGateway\.CreateDefault\(\)\.(VerifyTranscript|VerifyRuntimeEvidence|VerifyArtifactEvidence|VerifyOfficeEvidence|VerifyBusinessAnalysis|AggregateObservations)' <process targets>
+ExitCode: 0
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:14:        : this(ProcessDriverVerificationGateway.CreateDefault().AggregateObservations)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceReadOnlyAdapter.cs:16:        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyArtifactEvidence)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessOfficeEvidenceReadOnlyAdapter.cs:15:        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyOfficeEvidence)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:15:        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyBusinessAnalysis)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs:19:        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyRuntimeEvidence)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessTranscriptVerificationReadOnlyAdapter.cs:15:        : this(ProcessDriverVerificationGateway.CreateDefault().VerifyTranscript)
+
+## Allowed process driver consumer allow-list
+Command: rg -n 'ProcessReadOnlyVerificationBatchOrchestrator.cs' tests\\CanDoItAll.Tests.Integration\\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs
+ExitCode: 0
+128:            "ProcessReadOnlyVerificationBatchOrchestrator.cs",
+
+## Direct verifier construction denial scan
+Command: rg -n 'new (TranscriptVerificationAlphaVerifier|RuntimeEvidenceConsistencyAlphaVerifier|ArtifactEvidenceAlphaVerifier|OfficeEvidenceAlphaVerifier|BusinessAnalysisAlphaVerifier|ProcessDriverObservationAggregator)' <process targets>
+ExitCode: 1
+
+## Runtime host and DI denial scan
+Command: rg -n 'IProcessDriverRegistry|ProcessDriverRuntimeSelector|ProcessDriverManagerCommand|ProcessDriverHost|ProcessDriverProvider|IServiceCollection|AddScoped|AddSingleton|GetRequiredService|IHostedService|BackgroundService' <process targets>
+ExitCode: 1
+
+## Object and dynamic dispatch denial scan
+Command: rg -n 'Verify\\s*\\(\\s*object|object\\s+[A-Za-z]|Func<object|dynamic|Dictionary<.*ProcessDriver' <process targets>
+ExitCode: 1
+
+## Side-effect API denial scan
+Command: rg -n 'Process\\.Start|File\\.|Directory\\.|HttpClient|DbContext|SaveChanges|SaveChangesAsync|ExecuteSql|WriteAll|ReadAll|OpenRead|CreateDirectory' <process targets>
+ExitCode: 1
+
+## Anti-stub production scan
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented' <targets>
+ExitCode: 1
+
+## Core reverse dependency scan
+Command: rg -n 'CanDoItAll\\.Processes\\.Drivers' src\\CanDoItAll.Processes.Core
+ExitCode: 1
+
+## UI media drift scan
+Command: git diff --name-only -- src tests | rg -n '(\\.razor$|\\.css$|wwwroot/|\\.(png|jpg|jpeg|gif|svg|webp)$)'
+ExitCode: 1
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDomainEvidenceReadOnlyAdapters.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationObservationMapper.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationObservationMapper.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationReadOnlyAdapter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Processes.Drivers.VerificationGateway/ProcessDriverVerificationGateway.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverObservationAggregationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverVerificationGatewayTests.cs', LF will be replaced by CRLF the next time Git touches it

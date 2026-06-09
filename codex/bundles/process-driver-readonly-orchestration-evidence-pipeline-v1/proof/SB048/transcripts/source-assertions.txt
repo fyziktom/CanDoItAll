@@ -1,0 +1,45 @@
+Source assertions for P16/SB046-SB048
+Release-candidate test result anchors:
+61:Vytváření sestavení bylo úspěšně dokončeno.
+62:    0 upozornění
+63:    Počet chyb: 0
+4:Úspěšné!    - Neúspěšné:     0, Úspěšné:  1129, Přeskočeno:     0, Celkem:  1129, Doba trvání: 3 m 58 s - CanDoItAll.Tests.Unit.dll (net10.0)
+4:Úspěšné!    - Neúspěšné:     0, Úspěšné:   101, Přeskočeno:     0, Celkem:   101, Doba trvání: 20 s - CanDoItAll.Tests.Unit.dll (net10.0)
+4:Úspěšné!    - Neúspěšné:     0, Úspěšné:    13, Přeskočeno:     0, Celkem:    13, Doba trvání: 247 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+Dependency/source scan anchors:
+1:SCAN: driver packages have no direct PackageReference
+14:SCAN: Process Core has no driver package reference
+18:SCAN: runtime host implementation hooks in scoped read-only pipeline source
+28:P16 source and dependency scans passed.
+8:PACKAGE SCAN: src\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj
+11:Projekt CanDoItAll.Processes.Drivers.TranscriptVerification má následující odkazy na balíčky.
+13:REFERENCE SCAN: src\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj
+25:..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj
+35:..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj
+64:PACKAGE SCAN: src\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj
+67:Projekt CanDoItAll.Processes.Drivers.VerificationGateway má následující odkazy na balíčky.
+69:REFERENCE SCAN: src\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj
+78:..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj
+79:PACKAGE SCAN: src\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj
+82:Projekt CanDoItAll.Processes.Core má následující odkazy na balíčky.
+84:REFERENCE SCAN: src\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj
+121:..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj
+122:..\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj
+123:..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj
+Manifest anchors:
+4:- Critical P16 gate for the release-candidate smoke matrix.
+24:- Prepared validator after P16 bundle updates: bundle://proof/SB048/transcripts/prepared-validator-after-p16.txt
+25:- Source assertions and final proof/status hashes: bundle://proof/SB048/transcripts/source-assertions.txt
+37:- Full unit suite passed with 1129 tests and 0 skipped.
+41:- Dependency graph proof shows Gateway references the five domain driver packages plus observation aggregation, Processes references the explicit verification gateway, and Process Core has no driver package reference.
+47:| Release-candidate build | Solution build | Bundle release gate | current repo source -> solution build -> zero warning/error transcript | build transcript |
+48:| Full unit suite | Unit test project | Bundle release gate | current build outputs -> full unit run -> 1129 pass / 0 skip proof | full unit transcript |
+Final P16 proof/status SHA256 hashes:
+ED2C2BA6030520DD1D2CC3FB8C7169C4F8E772D40F26CC5DA7141E321E831ED9  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB046\README.md
+94CB273C0231D2F6DBF4A53D06D563A5B86B37B23155EF2BD9A358B3ABA02BFC  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB047\README.md
+537B75D3F96FE6488CDCAED6CB3484D19AD1BB0A800CDE729010FC8584918A4A  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB048\README.md
+03F3F1EDCD25AAB5646F0C083D583029E4F161F04714B9099F0F3B5F57126C76  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB048\manifest.md
+1BE9838E3642983E6CE954D1C53580DAEAC03494384E727224FF45FC1C94C763  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB048\semantic-invariants.md
+43EA71783FD3C4230D27536BEFD088E4D4681C77B65C47D63E461AA149072922  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\INDEX.md
+988BEDC695725A6E7AF9B385133831D2DA1520D59EA58B01566AEA0988B8E165  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\README.md
+88758107394C4EB584E1FD42DE966B565C9F61428DF16EF122F66C74DB28C4CF  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md

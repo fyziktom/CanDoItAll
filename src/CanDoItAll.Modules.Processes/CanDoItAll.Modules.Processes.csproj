@@ -38,6 +38,7 @@
     <ProjectReference Include="..\CanDoItAll.Processes.Drivers.OfficeEvidence\CanDoItAll.Processes.Drivers.OfficeEvidence.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Drivers.RuntimeEvidence\CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
+    <ProjectReference Include="..\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj" />
     <ProjectReference Include="..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj" />
     <ProjectReference Include="..\CanDoItAll.SharedKernel\CanDoItAll.SharedKernel.csproj" />

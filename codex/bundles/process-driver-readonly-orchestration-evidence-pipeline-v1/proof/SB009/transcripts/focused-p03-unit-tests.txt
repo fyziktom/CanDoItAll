@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --filter "FullyQualifiedName~ProcessDriverObservationAggregationTests|FullyQualifiedName~ProcessAgentExecutionBoundaryArchitectureTests|FullyQualifiedName~ProcessDriverContractPrerequisitesVerificationTests"
+ExitCode: 0
+StartedAtUtc: 2026-06-08T23:07:45.3830760Z
+
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:    99, Přeskočeno:     0, Celkem:    99, Doba trvání: 16 s - CanDoItAll.Tests.Unit.dll (net10.0)
+

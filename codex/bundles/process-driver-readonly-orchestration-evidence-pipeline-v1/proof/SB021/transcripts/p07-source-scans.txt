@@ -1,0 +1,111 @@
+Command: P07 process aggregate observation snapshot source scans
+ExitCode: 0
+StartedAtUtc: 2026-06-09T00:18:32.3050441Z
+FinishedAtUtc: 2026-06-09T00:18:32.8800476Z
+
+## Process aggregate envelope presence
+Command: rg -n 'ProcessReadOnlyVerificationAggregateObservation|ProcessReadOnlyVerificationAggregateObservationMapper|AggregateObservation' <targets>
+ExitCode: 0
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:499:            "ProcessReadOnlyVerificationAggregateObservation.cs"
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:529:        Assert.Contains("ProcessDriverVerificationGateway.CreateDefault().AggregateObservations", adapterSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:128:            "ProcessReadOnlyVerificationAggregateObservation.cs",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:189:        var aggregate = Assert.IsType<ProcessReadOnlyVerificationAggregateObservation>(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:190:            observation.AggregateObservation);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:14:        : this(ProcessDriverVerificationGateway.CreateDefault().AggregateObservations)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:63:            : ProcessReadOnlyVerificationAggregateObservationMapper.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:301:        ProcessReadOnlyVerificationAggregateObservation? aggregateObservation,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:314:        AggregateObservation = aggregateObservation;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:337:    public ProcessReadOnlyVerificationAggregateObservation? AggregateObservation { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:8:internal static class ProcessReadOnlyVerificationAggregateObservationMapper
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:10:    public static ProcessReadOnlyVerificationAggregateObservation Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:17:        return new ProcessReadOnlyVerificationAggregateObservation(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:38:internal sealed record ProcessReadOnlyVerificationAggregateObservation
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:40:    public ProcessReadOnlyVerificationAggregateObservation(
+
+## Process aggregate mapping presence
+Command: rg -n 'ProcessReadOnlyVerificationAggregateObservationMapper\.Create|aggregationAdapter\.Aggregate|LaneSummaries|AllResponsesMutationFree|AggregationMutationFree' <process targets>
+ExitCode: 0
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:63:            : ProcessReadOnlyVerificationAggregateObservationMapper.Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:65:                aggregationAdapter.Aggregate(new ProcessDriverObservationAggregationReadOnlyPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:53:            aggregate.AggregationMutationFree,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:54:            aggregate.AllResponsesMutationFree,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:55:            aggregate.LaneSummaries,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:80:    bool AggregationMutationFree,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:81:    bool AllResponsesMutationFree,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDriverObservationAggregationReadOnlyAdapter.cs:82:    IReadOnlyList<ProcessDriverObservationLaneSummary> LaneSummaries,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:27:            aggregateObservation.AggregationMutationFree,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:28:            aggregateObservation.AllResponsesMutationFree,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:29:            aggregateObservation.LaneSummaries,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:68:        AggregationMutationFree = aggregationMutationFree;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:69:        AllResponsesMutationFree = allResponsesMutationFree;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:70:        LaneSummaries = CreateReadonlyList(laneSummaries);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:96:    public bool AggregationMutationFree { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:98:    public bool AllResponsesMutationFree { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:100:    public IReadOnlyList<ProcessDriverObservationLaneSummary> LaneSummaries { get; }
+
+## Lower-level aggregate leak denial scan
+Command: rg -n 'ProcessDriverObservationAggregationReadOnlyObservation\? AggregateObservation' src\\CanDoItAll.Modules.Processes\\Automation\\Dispatch\\ProcessReadOnlyVerificationBatchOrchestrator.cs
+ExitCode: 1
+
+## Aggregation consumer allow-list presence
+Command: rg -n 'ProcessReadOnlyVerificationAggregateObservation.cs' tests\\CanDoItAll.Tests.Unit\\ProcessDriverObservationAggregationTests.cs tests\\CanDoItAll.Tests.Integration\\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs
+ExitCode: 0
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:128:            "ProcessReadOnlyVerificationAggregateObservation.cs",
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:499:            "ProcessReadOnlyVerificationAggregateObservation.cs"
+
+## Readonly snapshot construction scan
+Command: rg -n 'Array\.AsReadOnly|AssertReadOnlyList' <targets>
+ExitCode: 0
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:222:        AssertReadOnlyList(result.LaneSummaries, result.LaneSummaries[0]);
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:223:        AssertReadOnlyList(
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:226:        AssertReadOnlyList(result.EvidenceReferences, result.EvidenceReferences[0]);
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:227:        AssertReadOnlyList(result.Redaction.AppliedKinds, ProcessDriverRedactionKind.Secret);
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:298:        Assert.Contains("Array.AsReadOnly", packageSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:428:    private static void AssertReadOnlyList<T>(IReadOnlyList<T> values, T sample)
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:216:        AssertReadOnlyList(observation.Responses, observation.Responses[0]);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:217:        AssertReadOnlyList(observation.TranscriptObservations, observation.TranscriptObservations[0]);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:218:        AssertReadOnlyList(aggregate.LaneSummaries, aggregate.LaneSummaries[0]);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:580:    private static void AssertReadOnlyList<T>(IReadOnlyList<T> values, T sample)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationAggregateObservation.cs:114:        return Array.AsReadOnly(values.ToArray());
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:107:        return Array.AsReadOnly(responses.ToArray());
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:232:        return Array.AsReadOnly(values.ToArray());
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:285:        return Array.AsReadOnly((values ?? []).ToArray());
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:347:        return Array.AsReadOnly(values.ToArray());
+
+## Runtime host and DI denial scan
+Command: rg -n 'IProcessDriverRegistry|ProcessDriverRuntimeSelector|ProcessDriverManagerCommand|ProcessDriverHost|ProcessDriverProvider|IServiceCollection|AddScoped|AddSingleton|GetRequiredService|IHostedService|BackgroundService' <process targets>
+ExitCode: 1
+
+## File storage and network API denial scan
+Command: rg -n 'File\.|Directory\.|Path\.|HttpClient|DbContext|SaveChanges|SaveChangesAsync|ExecuteSql|WriteAll|ReadAll|OpenRead|CreateDirectory|IStorageService|IWorkspace' <process targets>
+ExitCode: 1
+
+## Object and dynamic dispatch denial scan
+Command: rg -n 'Verify\\s*\\(\\s*object|object\\s+[A-Za-z]|Func<object|dynamic|Dictionary<.*ProcessDriver' <process targets>
+ExitCode: 1
+
+## Anti-stub production scan
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented' <process targets>
+ExitCode: 1
+
+## Core reverse dependency scan
+Command: rg -n 'CanDoItAll\\.Processes\\.Drivers' src\\CanDoItAll.Processes.Core
+ExitCode: 1
+
+## UI media drift scan
+Command: git diff --name-only -- src tests | rg -n '(\\.razor$|\\.css$|wwwroot/|\\.(png|jpg|jpeg|gif|svg|webp)$)'
+ExitCode: 1
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDomainEvidenceReadOnlyAdapters.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationObservationMapper.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationObservationMapper.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessTranscriptVerificationReadOnlyAdapter.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/CanDoItAll.Processes.Drivers.VerificationGateway/ProcessDriverVerificationGateway.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverObservationAggregationTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'tests/CanDoItAll.Tests.Unit/ProcessDriverVerificationGatewayTests.cs', LF will be replaced by CRLF the next time Git touches it

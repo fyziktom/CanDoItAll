@@ -1,8 +1,7 @@
 # SB010 - Add explicit typed batch request/response to VerificationGateway
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance explicit multi-domain batch gateway without runtime host by completing: Add explicit typed batch request/response to VerificationGateway.
 
@@ -24,13 +23,13 @@ Advance explicit multi-domain batch gateway without runtime host by completing: 
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P04 - Explicit multi-domain batch gateway without runtime host. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P04 - Explicit multi-domain batch gateway without runtime host. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
+- Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,30 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Create `proof/SB010/manifest.md` and `proof/SB010/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+- Create `proof/SB010/manifest.md` and `proof/SB010/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-SB010 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+- SB010 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+
+## Closure Proof
+- Added `ProcessDriverVerificationBatchRequest`, `ProcessDriverVerificationBatchResponse`, and `ProcessDriverVerificationBatchAggregationRequest` in `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway/ProcessDriverVerificationBatch.cs`.
+- Build proof: `bundle://proof/SB012/transcripts/build-typed-batch-gateway-explicit-lanes.txt`.
+- Focused test proof: `bundle://proof/SB012/transcripts/focused-p04-gateway-tests-explicit-lanes.txt`.
+- Full unit proof: `bundle://proof/SB012/transcripts/full-unit-p04-explicit-lanes-rerun.txt`.
+- Source scan proof: `bundle://proof/SB012/transcripts/p04-source-scans-explicit-lanes.txt`.
+- Critical manifest: `bundle://proof/SB010/manifest.md`.
 
 ## Suggested Agent Prompt
 Implement SB010 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+

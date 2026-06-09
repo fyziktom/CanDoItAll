@@ -1,8 +1,7 @@
 # SB017 - Add artifact/office/business payload builders from in-memory facts
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance process evidence payload builders from already-resolved facts only by completing: Add artifact/office/business payload builders from in-memory facts.
 
@@ -24,13 +23,13 @@ Advance process evidence payload builders from already-resolved facts only by co
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P06 - Process evidence payload builders from already-resolved facts only. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P06 - Process evidence payload builders from already-resolved facts only. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Focused tests plus nearest critical gate coverage. Include local source assertions and no-side-effect scans.
+- Focused tests plus nearest critical gate coverage. Include local source assertions and no-side-effect scans.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,31 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Record source assertions and focused transcript paths; nearest critical gate may carry full manifest closure.
+- Record source assertions and focused transcript paths; nearest critical gate may carry full manifest closure.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Proceed only if local proof is sufficient and no downstream dependency is weakened.
+- Proceed only if local proof is sufficient and no downstream dependency is weakened.
+
+## Closure Proof
+- Added artifact, Office, and business-analysis payload builders through `ProcessReadOnlyVerificationPayloadBuilder`.
+- Builders construct supplied-content envelopes and evidence references from already resolved in-memory facts.
+- Build proof: `bundle://proof/SB018/transcripts/build-payload-builders.txt`.
+- Focused integration proof: `bundle://proof/SB018/transcripts/focused-p06-integration-tests.txt`.
+- Full unit proof: `bundle://proof/SB018/transcripts/full-unit-p06.txt`.
+- Source scan proof: `bundle://proof/SB018/transcripts/p06-source-scans-fixed.txt`.
+- Nearest critical gate proof: `bundle://proof/SB018/manifest.md`.
 
 ## Suggested Agent Prompt
 Implement SB017 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+

@@ -1,8 +1,7 @@
 # SB026 - Add artifact satisfaction contradiction matrix from Core descriptors
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance artifact and validation integration rehearsal by completing: Add artifact satisfaction contradiction matrix from Core descriptors.
 
@@ -24,13 +23,13 @@ Advance artifact and validation integration rehearsal by completing: Add artifac
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P09 - Artifact and validation integration rehearsal. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P09 - Artifact and validation integration rehearsal. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Focused tests plus nearest critical gate coverage. Include local source assertions and no-side-effect scans.
+- Focused tests plus nearest critical gate coverage. Include local source assertions and no-side-effect scans.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,30 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Record source assertions and focused transcript paths; nearest critical gate may carry full manifest closure.
+- Record source assertions and focused transcript paths; nearest critical gate may carry full manifest closure.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-Proceed only if local proof is sufficient and no downstream dependency is weakened.
+- Proceed only if local proof is sufficient and no downstream dependency is weakened.
+
+## Closure Proof
+- Artifact satisfaction contradiction matrix proof: `bundle://proof/SB027/transcripts/source-assertions.txt`.
+- Focused artifact unit proof: `bundle://proof/SB027/transcripts/focused-p09-artifact-unit-tests.txt`.
+- Focused process integration proof: `bundle://proof/SB027/transcripts/focused-p09-artifact-integration-tests.txt`.
+- Full unit proof: `bundle://proof/SB027/transcripts/full-unit-p09.txt`.
+- Source scan proof: `bundle://proof/SB027/transcripts/p09-source-scans.txt`.
+- Critical P09 manifest carrying nearest gate closure: `bundle://proof/SB027/manifest.md`.
 
 ## Suggested Agent Prompt
 Implement SB026 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+

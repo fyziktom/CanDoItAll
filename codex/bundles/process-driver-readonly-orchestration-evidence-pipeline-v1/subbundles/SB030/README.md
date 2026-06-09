@@ -1,8 +1,7 @@
 # SB030 - Gate J Office/business no-external-call closure
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance office and business analysis read-only process rehearsal by completing: Gate J Office/business no-external-call closure.
 
@@ -24,13 +23,13 @@ Advance office and business analysis read-only process rehearsal by completing: 
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P10 - Office and business analysis read-only process rehearsal. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P10 - Office and business analysis read-only process rehearsal. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
+- Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,34 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Create `proof/SB030/manifest.md` and `proof/SB030/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+- Create `proof/SB030/manifest.md` and `proof/SB030/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+
+## Closure Proof
+- Critical P10 proof manifest: `bundle://proof/SB030/manifest.md`.
+- Semantic invariants: `bundle://proof/SB030/semantic-invariants.md`.
+- Build proof: `bundle://proof/SB030/transcripts/build-office-business-rehearsal.txt`.
+- Focused Office/business unit proof: `bundle://proof/SB030/transcripts/focused-p10-office-business-unit-tests.txt`.
+- Focused Office/business process integration proof: `bundle://proof/SB030/transcripts/focused-p10-office-business-integration-tests.txt`.
+- Full process-domain integration proof: `bundle://proof/SB030/transcripts/focused-p10-process-domain-integration-tests.txt`.
+- Full unit proof: `bundle://proof/SB030/transcripts/full-unit-p10.txt`.
+- Source scan proof: `bundle://proof/SB030/transcripts/p10-source-scans.txt`.
+- Source assertions: `bundle://proof/SB030/transcripts/source-assertions.txt`.
+- Prepared validator proof: `bundle://proof/SB030/transcripts/prepared-validator-after-p10.txt`.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-SB030 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+- SB030 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
 
 ## Suggested Agent Prompt
 Implement SB030 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+

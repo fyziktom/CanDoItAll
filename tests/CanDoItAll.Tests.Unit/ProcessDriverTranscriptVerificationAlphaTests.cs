@@ -404,11 +404,12 @@ password=hunter2 rust.user@example.com
         Assert.DoesNotContain("AddScoped", source, StringComparison.Ordinal);
         Assert.DoesNotContain("AddSingleton", source, StringComparison.Ordinal);
         Assert.Contains(
-            @"<ProjectReference Include=""..\CanDoItAll.Processes.Drivers.TranscriptVerification\CanDoItAll.Processes.Drivers.TranscriptVerification.csproj"" />",
+            @"<ProjectReference Include=""..\CanDoItAll.Processes.Drivers.VerificationGateway\CanDoItAll.Processes.Drivers.VerificationGateway.csproj"" />",
             modulesProcessesProject,
             StringComparison.Ordinal);
         Assert.Contains("ProcessTranscriptVerificationReadOnlyAdapter", processAdapterSource, StringComparison.Ordinal);
-        Assert.Contains("TranscriptVerificationAlphaVerifier", processAdapterSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverVerificationGateway.CreateDefault().VerifyTranscript", processAdapterSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("new TranscriptVerificationAlphaVerifier", processAdapterSource, StringComparison.Ordinal);
         Assert.DoesNotContain("IServiceCollection", modulesProcessesProject + processAdapterSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AddScoped", modulesProcessesProject + processAdapterSource, StringComparison.Ordinal);
         Assert.DoesNotContain("AddSingleton", modulesProcessesProject + processAdapterSource, StringComparison.Ordinal);

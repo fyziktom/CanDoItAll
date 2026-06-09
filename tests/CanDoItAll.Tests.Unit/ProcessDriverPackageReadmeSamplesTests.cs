@@ -1,4 +1,12 @@
 using System.Runtime.CompilerServices;
+using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
+using CanDoItAll.Processes.Drivers.ArtifactEvidence;
+using CanDoItAll.Processes.Drivers.BusinessAnalysis;
+using CanDoItAll.Processes.Drivers.ObservationAggregation;
+using CanDoItAll.Processes.Drivers.OfficeEvidence;
+using CanDoItAll.Processes.Drivers.RuntimeEvidence;
+using CanDoItAll.Processes.Drivers.TranscriptVerification;
+using CanDoItAll.Processes.Drivers.VerificationGateway;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -11,24 +19,29 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
         {
             new PackageReadmeExpectation(
                 "CanDoItAll.Processes.Drivers.TranscriptVerification",
-                "TranscriptVerificationAlphaVerifier",
-                "ProcessDriverSuppliedEvidenceContentRules.CreateTranscriptText"),
+                typeof(TranscriptVerificationAlphaVerifier),
+                typeof(TranscriptVerificationAlphaRequest),
+                nameof(ProcessDriverSuppliedEvidenceContentRules.CreateTranscriptText)),
             new PackageReadmeExpectation(
                 "CanDoItAll.Processes.Drivers.RuntimeEvidence",
-                "RuntimeEvidenceConsistencyAlphaVerifier",
-                "ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload"),
+                typeof(RuntimeEvidenceConsistencyAlphaVerifier),
+                typeof(RuntimeEvidenceConsistencyVerificationRequest),
+                nameof(ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload)),
             new PackageReadmeExpectation(
                 "CanDoItAll.Processes.Drivers.OfficeEvidence",
-                "OfficeEvidenceAlphaVerifier",
-                "ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload"),
+                typeof(OfficeEvidenceAlphaVerifier),
+                typeof(OfficeEvidenceVerificationRequest),
+                nameof(ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload)),
             new PackageReadmeExpectation(
                 "CanDoItAll.Processes.Drivers.BusinessAnalysis",
-                "BusinessAnalysisAlphaVerifier",
-                "ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload"),
+                typeof(BusinessAnalysisAlphaVerifier),
+                typeof(BusinessAnalysisVerificationRequest),
+                nameof(ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload)),
             new PackageReadmeExpectation(
                 "CanDoItAll.Processes.Drivers.ArtifactEvidence",
-                "ArtifactEvidenceAlphaVerifier",
-                "ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload")
+                typeof(ArtifactEvidenceAlphaVerifier),
+                typeof(ArtifactEvidenceVerificationRequest),
+                nameof(ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload))
         };
 
         foreach (var expectation in expectations)
@@ -39,9 +52,11 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
             Assert.True(
                 readme.Contains("in-memory", StringComparison.OrdinalIgnoreCase) ||
                 readme.Contains("in memory", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(expectation.VerifierTypeName, readme, StringComparison.Ordinal);
-            Assert.Contains(expectation.SuppliedContentFactory, readme, StringComparison.Ordinal);
+            Assert.Contains(expectation.VerifierType.Name, readme, StringComparison.Ordinal);
+            Assert.Contains(expectation.RequestType.Name, readme, StringComparison.Ordinal);
+            Assert.Contains($"ProcessDriverSuppliedEvidenceContentRules.{expectation.SuppliedContentFactory}", readme, StringComparison.Ordinal);
             Assert.Contains("Verify(request)", readme, StringComparison.Ordinal);
+            Assert.NotNull(expectation.VerifierType.GetMethod("Verify", [expectation.RequestType]));
             AssertNoRuntimeOrExternalAccessSamples(readme);
         }
     }
@@ -54,8 +69,11 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
         Assert.Contains("Observation Aggregation Alpha", readme, StringComparison.Ordinal);
         Assert.Contains("already-produced verification responses", readme, StringComparison.Ordinal);
         Assert.Contains("ProcessDriverObservationAggregationRequest", readme, StringComparison.Ordinal);
-        Assert.Contains("ProcessDriverObservationAggregator.Aggregate(request)", readme, StringComparison.Ordinal);
+        Assert.Contains("new ProcessDriverObservationAggregator().Aggregate(request)", readme, StringComparison.Ordinal);
         Assert.Contains("never runs drivers", readme, StringComparison.Ordinal);
+        Assert.NotNull(typeof(ProcessDriverObservationAggregator).GetMethod(
+            nameof(ProcessDriverObservationAggregator.Aggregate),
+            [typeof(ProcessDriverObservationAggregationRequest)]));
         AssertNoRuntimeOrExternalAccessSamples(readme);
     }
 
@@ -72,6 +90,68 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
         Assert.Contains("Readiness Matrix", readme, StringComparison.Ordinal);
         Assert.Contains("Do not introduce lane-name lookup", readme, StringComparison.Ordinal);
         AssertNoRuntimeOrExternalAccessSamples(readme);
+    }
+
+    [Fact]
+    public void Process_driver_package_readmes_SB043_SB044_INV_001_gateway_and_process_migration_docs_match_current_batch_orchestration_source()
+    {
+        var gatewayReadme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");
+        var processesReadme = ReadRepositoryFile("src", "CanDoItAll.Modules.Processes", "README.md");
+        var orchestratorSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessReadOnlyVerificationBatchOrchestrator.cs");
+        var payloadBuilderSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessReadOnlyVerificationPayloadBuilder.cs");
+
+        Assert.Contains("Source-Backed Batch Sample", gatewayReadme, StringComparison.Ordinal);
+        Assert.Contains("new ProcessDriverVerificationBatchRequest(", gatewayReadme, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverVerificationBatchAggregationRequest", gatewayReadme, StringComparison.Ordinal);
+        Assert.Contains("gateway.VerifyBatch(request)", gatewayReadme, StringComparison.Ordinal);
+        Assert.NotNull(typeof(ProcessDriverVerificationGateway).GetMethod(
+            nameof(ProcessDriverVerificationGateway.VerifyBatch),
+            [typeof(ProcessDriverVerificationBatchRequest)]));
+
+        Assert.Contains("Process Driver Read-Only Verification Migration", processesReadme, StringComparison.Ordinal);
+        Assert.Contains("ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)", processesReadme, StringComparison.Ordinal);
+        Assert.Contains("public ProcessReadOnlyVerificationBatchObservation Verify(ProcessReadOnlyVerificationBatchPayload payload)", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessReadOnlyVerificationBatchPayload", orchestratorSource, StringComparison.Ordinal);
+
+        foreach (var payloadBuilderMethod in new[]
+        {
+            "CreateTranscriptPayload",
+            "CreateRuntimeEvidencePayload",
+            "CreateArtifactEvidencePayload",
+            "CreateOfficeEvidencePayload",
+            "CreateBusinessAnalysisPayload"
+        })
+        {
+            Assert.Contains(payloadBuilderMethod, processesReadme, StringComparison.Ordinal);
+            Assert.Contains($"public static ", payloadBuilderSource, StringComparison.Ordinal);
+            Assert.Contains(payloadBuilderMethod, payloadBuilderSource, StringComparison.Ordinal);
+        }
+
+        foreach (var adapterTypeName in new[]
+        {
+            "ProcessTranscriptVerificationReadOnlyAdapter",
+            "ProcessRuntimeEvidenceVerificationReadOnlyAdapter",
+            "ProcessArtifactEvidenceReadOnlyAdapter",
+            "ProcessOfficeEvidenceReadOnlyAdapter",
+            "ProcessBusinessAnalysisReadOnlyAdapter"
+        })
+        {
+            Assert.Contains(adapterTypeName, processesReadme, StringComparison.Ordinal);
+            Assert.Contains(adapterTypeName, orchestratorSource, StringComparison.Ordinal);
+        }
+
+        AssertNoRuntimeOrExternalAccessSamples(gatewayReadme);
+        AssertNoProcessDriverRuntimeApprovalDocs(processesReadme);
     }
 
     private static void AssertNoRuntimeOrExternalAccessSamples(
@@ -107,6 +187,34 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
             "README.md"));
     }
 
+    private static string ReadRepositoryFile(
+        params string[] pathParts)
+    {
+        return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));
+    }
+
+    private static void AssertNoProcessDriverRuntimeApprovalDocs(
+        string readme)
+    {
+        foreach (var forbiddenClaim in new[]
+        {
+            "runtime host approval: granted",
+            "runtime host is approved",
+            "driver registry is approved",
+            "runtime selector is approved",
+            "dependency-injection registration is approved",
+            "manager command is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved",
+            "workspace write allowed",
+            "storage write allowed",
+            "process mutation allowed"
+        })
+        {
+            Assert.DoesNotContain(forbiddenClaim, readme, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     private static string FindRepositoryRoot(
         [CallerFilePath] string sourceFilePath = "")
     {
@@ -134,6 +242,7 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
 
     private sealed record PackageReadmeExpectation(
         string PackageName,
-        string VerifierTypeName,
+        Type VerifierType,
+        Type RequestType,
         string SuppliedContentFactory);
 }

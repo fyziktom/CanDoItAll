@@ -1,0 +1,32 @@
+Source assertions for P17/SB049-SB051
+Validation result anchors:
+61:Vytváření sestavení bylo úspěšně dokončeno.
+62:    0 upozornění
+63:    Počet chyb: 0
+4:Úspěšné!    - Neúspěšné:     0, Úspěšné:  1129, Přeskočeno:     0, Celkem:  1129, Doba trvání: 4 m 7 s - CanDoItAll.Tests.Unit.dll (net10.0)
+4:Úspěšné!    - Neúspěšné:     0, Úspěšné:   101, Přeskočeno:     0, Celkem:   101, Doba trvání: 18 s - CanDoItAll.Tests.Unit.dll (net10.0)
+4:Úspěšné!    - Neúspěšné:     0, Úspěšné:    13, Přeskočeno:     0, Celkem:    13, Doba trvání: 433 ms - CanDoItAll.Tests.Integration.dll (net10.0)
+Red-team trap anchors:
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\02-final-red-team-review.md:11:| Report-only closure | Rejected | Critical manifests and semantic invariants exist through SB048; P17 adds fresh build/full/focused transcripts under `bundle://proof/SB051/transcripts/`. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\02-final-red-team-review.md:12:| Happy-path-only proof | Rejected | Focused driver unit matrix and process adapter integration matrix run alongside red-team source scans; malicious payload and denial coverage remain source-backed by prior manifests. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\02-final-red-team-review.md:13:| Status-only rows | Rejected | Execution report rows must be backed by transcript paths and validator output; completed-stage preflight rejects pending rows before final handoff closure. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\02-final-red-team-review.md:14:| Runtime-host drift | Rejected | Runtime host, registry, selector, DI, manager, scheduler, workflow, service-host, and container-resolution tokens remain denied by source scans. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\transcripts\p17-red-team-trap-scans.txt:2:11:| Report-only closure | Rejected | Critical manifests and semantic invariants exist through SB048; P17 adds fresh build/full/focused transcripts under `bundle://proof/SB051/transcripts/`. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\transcripts\p17-red-team-trap-scans.txt:3:12:| Happy-path-only proof | Rejected | Focused driver unit matrix and process adapter integration matrix run alongside red-team source scans; malicious payload and denial coverage remain source-backed by prior manifests. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\transcripts\p17-red-team-trap-scans.txt:4:13:| Status-only rows | Rejected | Execution report rows must be backed by transcript paths and validator output; completed-stage preflight rejects pending rows before final handoff closure. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\transcripts\p17-red-team-trap-scans.txt:5:14:| Runtime-host drift | Rejected | Runtime host, registry, selector, DI, manager, scheduler, workflow, service-host, and container-resolution tokens remain denied by source scans. |
+codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\transcripts\p17-red-team-trap-scans.txt:47:P17 red-team trap scans passed.
+8:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: raw note cannot remain pending at final closure: Move faster with bigger coherent phases | Pending | Pending
+9:- C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md: raw note cannot remain pending at final closure: Prepare bundle zip | Pending | Pending
+11:PASS: completed validator correctly rejects pending SB052-SB054 before final handoff closure.
+1:Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1
+Final P17 proof/status SHA256 hashes:
+A81301886C0B0857137E324A3836DE52086EB77D858B77F6210ECA66C179BDCF  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\02-final-red-team-review.md
+A0B59401619B866A629511E3365992024D484B58A5EA9F90374218771E1DF77E  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB049\README.md
+44A09BF2C3E5872A443A864F9365AA68E378B9F527FD8EA73EF657F4D97D4D2C  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB050\README.md
+DBD2EAE37349C634CA8D45C6F264E82C03AE249535722038E0CA686AB6B22851  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\subbundles\SB051\README.md
+B400EC3902695EDFBF7789130C2B42F4F9D2B2B6D2583558D17B85A999AE0B07  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\manifest.md
+E1A57D4A362BB0B9CBE5C4CE5E3EF1B2771DC8056578123F884B70B3EBC98250  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\SB051\semantic-invariants.md
+C491DB70FAB5DBAC208E60F99EB838055F0B491B3288E024D6B31C20C31BA880  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\proof\INDEX.md
+2762867F50DC85D8DFA4704454991C329CE3F2F5C1A8A163ED91897E468678DA  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\README.md
+88A566960242C388174571D6F37E7C7FDA543592E0999BBB219D5A1A04E85D4F  codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1\reviews\01-execution-report.md

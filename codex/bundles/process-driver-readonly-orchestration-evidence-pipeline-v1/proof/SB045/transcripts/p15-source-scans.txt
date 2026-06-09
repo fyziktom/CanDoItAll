@@ -1,0 +1,35 @@
+SCAN: gateway source-backed batch sample
+32:## Source-Backed Batch Sample
+38:var request = new ProcessDriverVerificationBatchRequest(
+48:var response = gateway.VerifyBatch(request);
+PASS: expected match found
+SCAN: process orchestrator migration docs
+88:## Process Driver Read-Only Verification Migration
+90:The current process-module integration path is `ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)`. It composes the focused read-only adapters directly and returns typed observation lists plus an aggregate observation when at least one lane produced a response.
+92:Use `ProcessReadOnlyVerificationPayloadBuilder` to build lane payloads from already-loaded, caller-supplied facts:
+PASS: expected match found
+SCAN: current README sample tests
+59:            Assert.NotNull(expectation.VerifierType.GetMethod("Verify", [expectation.RequestType]));
+74:        Assert.NotNull(typeof(ProcessDriverObservationAggregator).GetMethod(
+96:    public void Process_driver_package_readmes_SB043_SB044_INV_001_gateway_and_process_migration_docs_match_current_batch_orchestration_source()
+117:        Assert.NotNull(typeof(ProcessDriverVerificationGateway).GetMethod(
+122:        Assert.Contains("ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)", processesReadme, StringComparison.Ordinal);
+PASS: expected match found
+SCAN: observation aggregation instance sample
+17:var aggregate = new ProcessDriverObservationAggregator().Aggregate(request);
+PASS: expected match found
+SCAN: stale static observation aggregation sample
+PASS: no matches
+SCAN: forbidden runtime approval claims in docs
+PASS: no matches
+SCAN: runtime host implementation hooks in scoped read-only pipeline source
+PASS: no matches
+SCAN: sample docs avoid executable IO/network/service-registration code
+PASS: no matches
+SCAN: Process Core reverse dependency on driver packages
+PASS: no matches
+SCAN: anti-stub audit for changed files
+PASS: no matches
+SCAN: UI/media drift
+PASS: no UI/media drift
+P15 source scans passed.

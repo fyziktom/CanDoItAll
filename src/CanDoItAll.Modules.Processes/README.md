@@ -85,6 +85,22 @@ Avoid introducing interfaces for trivial one-implementation helpers. Add an abst
 - Project-structure projection should expose navigable run/product folders without mirroring every artifact subdirectory.
 - Live-run profiles must not seed transitions or artifacts that a real runtime path should produce.
 
+## Process Driver Read-Only Verification Migration
+
+The current process-module integration path is `ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)`. It composes the focused read-only adapters directly and returns typed observation lists plus an aggregate observation when at least one lane produced a response.
+
+Use `ProcessReadOnlyVerificationPayloadBuilder` to build lane payloads from already-loaded, caller-supplied facts:
+
+- `CreateTranscriptPayload` feeds `ProcessTranscriptVerificationReadOnlyAdapter`.
+- `CreateRuntimeEvidencePayload` feeds `ProcessRuntimeEvidenceVerificationReadOnlyAdapter`.
+- `CreateArtifactEvidencePayload` feeds `ProcessArtifactEvidenceReadOnlyAdapter`.
+- `CreateOfficeEvidencePayload` feeds `ProcessOfficeEvidenceReadOnlyAdapter`.
+- `CreateBusinessAnalysisPayload` feeds `ProcessBusinessAnalysisReadOnlyAdapter`.
+
+Migration from lane-by-lane adapter calls should keep request construction typed: create the relevant lane payloads, pass them into `ProcessReadOnlyVerificationBatchPayload`, then call `ProcessReadOnlyVerificationBatchOrchestrator.Verify`. Consume the returned lane observation lists, `Responses`, and `AggregateObservation` as diagnostic read-only evidence only.
+
+Do not add a generic runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, file/network access, storage/workspace write, or process mutation while migrating to the batch orchestrator.
+
 ## Operator Troubleshooting Map
 
 Use current-run readbacks before changing state. Start with run detail and narrow to step-scoped routes only after identifying the failing step or artifact expectation.

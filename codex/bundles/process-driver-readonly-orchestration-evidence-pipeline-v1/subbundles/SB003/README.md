@@ -1,8 +1,7 @@
 # SB003 - Gate A baseline closure
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance crash recovery, live-source reconciliation, and proof debt freeze by completing: Gate A baseline closure.
 
@@ -24,13 +23,13 @@ Advance crash recovery, live-source reconciliation, and proof debt freeze by com
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P01 - Crash recovery, live-source reconciliation, and proof debt freeze. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P01 - Crash recovery, live-source reconciliation, and proof debt freeze. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
+- Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,29 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Create `proof/SB003/manifest.md` and `proof/SB003/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+- Create `proof/SB003/manifest.md` and `proof/SB003/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-SB003 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+- SB003 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
 
+## Closure Proof
+- Entry gate: Passed after SB001 and SB002 closure.
+- Critical manifest: `bundle://proof/SB003/manifest.md`
+- Semantic invariant contract: `bundle://proof/SB003/semantic-invariants.md`
+- Source assertion transcript: `bundle://proof/SB003/transcripts/source-assertions.txt`
+- Closure gate: Passed; P02 may start with the direct process adapter verifier construction gap explicitly owned by downstream subbundles.
 ## Suggested Agent Prompt
 Implement SB003 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+
+

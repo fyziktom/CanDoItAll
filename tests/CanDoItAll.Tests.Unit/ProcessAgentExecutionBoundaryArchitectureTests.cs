@@ -4224,6 +4224,49 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
+    public void Process_driver_readonly_orchestration_SB034_SB035_INV_001_refreshes_core_consumer_map_and_rejects_global_using_drift()
+    {
+        var root = FindRepositoryRoot();
+        var dispatchDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch");
+        var map = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "architecture",
+            "05-process-module-core-descriptor-consumer-map.md");
+        var actualCoreConsumerFiles = ReadDispatchProcessCoreConsumerFiles(dispatchDirectory);
+        var allowedCoreConsumerFiles = CreateAllowedDispatchProcessCoreConsumerFiles()
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var coreSource = ReadNarrowProcessCoreSource(root);
+        var coreProject = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Core",
+            "CanDoItAll.Processes.Core.csproj");
+
+        Assert.Equal(allowedCoreConsumerFiles, actualCoreConsumerFiles);
+        Assert.Equal(25, actualCoreConsumerFiles.Count);
+        Assert.DoesNotContain("ProcessDomainEvidenceReadOnlyAdapters.cs", actualCoreConsumerFiles);
+        Assert.Contains("Core consumer count: `25`", map, StringComparison.Ordinal);
+        Assert.Contains("Global using policy: no production `global using CanDoItAll.Processes.Core`", map, StringComparison.Ordinal);
+        Assert.Contains("Core must not reference any `CanDoItAll.Processes.Drivers.*` namespace or project.", map, StringComparison.Ordinal);
+
+        foreach (var fileName in actualCoreConsumerFiles)
+        {
+            Assert.Contains($"| `{fileName}` |", map, StringComparison.Ordinal);
+        }
+
+        Assert.Empty(ReadForbiddenProductionProcessGlobalUsingFiles(root));
+        Assert.DoesNotContain("CanDoItAll.Processes.Drivers", coreProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Drivers", coreSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_core_pre_extraction_consolidation_SB005_INV_001_confines_route_adapters_to_application_edges()
     {
         var dispatchDirectory = Path.Combine(
@@ -4433,12 +4476,52 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
                 .Select(File.ReadAllText));
     }
 
+    private static IReadOnlyList<string> ReadDispatchProcessCoreConsumerFiles(string dispatchDirectory)
+    {
+        return Directory
+            .EnumerateFiles(dispatchDirectory, "*.cs")
+            .Where(path => File.ReadAllText(path).Contains("CanDoItAll.Processes.Core", StringComparison.Ordinal))
+            .Select(Path.GetFileName)
+            .OfType<string>()
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadForbiddenProductionProcessGlobalUsingFiles(string repositoryRoot)
+    {
+        var forbiddenGlobalUsingTokens = new[]
+        {
+            "global using CanDoItAll.Processes.Core",
+            "global using CanDoItAll.Processes.Drivers",
+            "<Using Include=\"CanDoItAll.Processes.Core",
+            "<Using Include=\"CanDoItAll.Processes.Drivers"
+        };
+
+        return Directory
+            .EnumerateFiles(Path.Combine(repositoryRoot, "src"), "*.*", SearchOption.AllDirectories)
+            .Where(path =>
+                path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".props", StringComparison.OrdinalIgnoreCase) ||
+                path.EndsWith(".targets", StringComparison.OrdinalIgnoreCase))
+            .Where(path =>
+            {
+                var source = File.ReadAllText(path);
+
+                return forbiddenGlobalUsingTokens.Any(token => source.Contains(token, StringComparison.Ordinal));
+            })
+            .Select(path => Path.GetRelativePath(repositoryRoot, path))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     private static HashSet<string> CreateAllowedDispatchProcessCoreConsumerFiles()
     {
         return new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "ProcessArtifactExpectationMatcher.cs",
             "ProcessArtifactExpectationSatisfactionAdapter.cs",
+            "ProcessArtifactEvidenceReadOnlyAdapter.cs",
             "ProcessArtifactProjectionEvidenceDescriptorAdapter.cs",
             "ProcessArtifactRecordedSatisfactionRules.cs",
             "ProcessArtifactValidationDescriptorAdapter.cs",
@@ -4452,9 +4535,9 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "ProcessDispatchRouteModelAdapters.cs",
             "ProcessDispatchRunClosureGuardService.cs",
             "ProcessDispatchStartTransitionPlanner.cs",
-            "ProcessDomainEvidenceReadOnlyAdapters.cs",
             "ProcessExecutionEvidenceDescriptorAdapter.cs",
             "ProcessFinalizerEvidenceDescriptorAdapter.cs",
+            "ProcessReadOnlyVerificationPayloadBuilder.cs",
             "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
             "ProcessRetryDiagnosticDescriptorAdapter.cs",
             "ProcessRunAutomationDispatchService.Concurrency.cs",

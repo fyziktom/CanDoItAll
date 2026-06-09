@@ -174,6 +174,80 @@ internal static class ProcessDriverVerificationTestHarness
         });
     }
 
+    public static void AssertSealedReadonlyResponse(
+        ProcessDriverVerificationResponse response,
+        bool expectedAccepted,
+        ProcessDriverDenialReason expectedDenialReason,
+        string expectedCallerContext,
+        ProcessDriverPermissionMode expectedPermissionMode,
+        ProcessDriverCapabilityScopeKind expectedLane,
+        IReadOnlyList<ProcessDriverOperation> expectedOperations,
+        ProcessDriverRedactionStatus? expectedRedactionStatus = null,
+        params string[] forbiddenFragments)
+    {
+        Assert.Equal(expectedAccepted, response.Accepted);
+        Assert.Equal(expectedDenialReason, response.DenialReason);
+        Assert.Equal(ProcessDriverContractVersion.Current, response.ContractVersion);
+        Assert.NotEmpty(response.Diagnostics);
+        Assert.NotEmpty(response.EvidenceReferences);
+        Assert.All(response.EvidenceReferences, evidenceReference =>
+            Assert.Matches("^[A-F0-9]{64}$", evidenceReference.ContentHash));
+        Assert.Matches("^[A-F0-9]{64}$", response.Redaction.RedactedTextHash);
+        if (expectedRedactionStatus.HasValue)
+        {
+            Assert.Equal(expectedRedactionStatus.Value, response.Redaction.Status);
+        }
+
+        if (response.Redaction.Status == ProcessDriverRedactionStatus.None)
+        {
+            Assert.Empty(response.Redaction.AppliedKinds);
+        }
+        else
+        {
+            Assert.NotEmpty(response.Redaction.AppliedKinds);
+        }
+
+        AssertReadonlyAuditFacts(response, expectedPermissionMode, expectedLane);
+        AssertNormalizedAuditFacts(
+            response,
+            expectedCallerContext,
+            expectedLane,
+            expectedOperations,
+            expectedDenialReason);
+        Assert.All(response.AuditFacts, fact =>
+        {
+            Assert.False(fact.Scope.AllowsProcessMutation);
+            Assert.False(fact.Scope.AllowsExternalCalls);
+            Assert.False(fact.Scope.AllowsWorkspaceWrites);
+            Assert.False(fact.Scope.AllowsStorageWrites);
+            Assert.Equal(response.Redaction.RedactedTextHash, fact.Redaction.RedactedTextHash);
+        });
+        AssertDiagnosticsAndAuditDoNotContain(response, forbiddenFragments);
+    }
+
+    public static void AssertEvidenceHashMismatchDenied(
+        ProcessDriverVerificationResponse response,
+        string expectedCallerContext,
+        ProcessDriverPermissionMode expectedPermissionMode,
+        ProcessDriverCapabilityScopeKind expectedLane,
+        IReadOnlyList<ProcessDriverOperation> expectedOperations,
+        params string[] forbiddenFragments)
+    {
+        AssertSealedReadonlyResponse(
+            response,
+            expectedAccepted: false,
+            ProcessDriverDenialReason.MissingEvidence,
+            expectedCallerContext,
+            expectedPermissionMode,
+            expectedLane,
+            expectedOperations,
+            expectedRedactionStatus: null,
+            forbiddenFragments: forbiddenFragments);
+        Assert.Contains(
+            response.Diagnostics,
+            diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.EvidenceHashMismatch);
+    }
+
     public static void AssertRedaction(
         ProcessDriverVerificationResponse response,
         ProcessDriverRedactionStatus expectedStatus,

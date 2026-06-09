@@ -8,6 +8,7 @@ using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
 using CanDoItAll.Processes.Drivers.Abstractions.Gateway;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
+using CanDoItAll.Processes.Drivers.VerificationGateway;
 
 namespace CanDoItAll.Tests.Unit;
 
@@ -856,6 +857,107 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
+    public void Process_driver_contract_api_SB031_INV_001_gateway_v1_public_api_snapshot_freezes_typed_batch_surface()
+    {
+        var publicTypeNames = ReadPublicTypeNames(typeof(ProcessDriverVerificationGateway).Assembly)
+            .Where(typeName => typeName.StartsWith(
+                "CanDoItAll.Processes.Drivers.VerificationGateway.",
+                StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), ProcessDriverContractVersion.Current);
+        Assert.Equal(4, publicTypeNames.Length);
+        Assert.Equal(
+            "69fd070de1004e6b01f71ae2251d1d3f63b7b2f306d4b165cf3329822f6ad62c",
+            ComputePublicApiSurfaceHash(publicTypeNames));
+        Assert.Equal(
+            [
+                "CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchAggregationRequest",
+                "CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchRequest",
+                "CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationBatchResponse",
+                "CanDoItAll.Processes.Drivers.VerificationGateway.ProcessDriverVerificationGateway"
+            ],
+            publicTypeNames);
+        Assert.Equal(
+            [
+                "AggregateObservations",
+                "CreateDefault",
+                "VerifyArtifactEvidence",
+                "VerifyBatch",
+                "VerifyBusinessAnalysis",
+                "VerifyOfficeEvidence",
+                "VerifyRuntimeEvidence",
+                "VerifyTranscript"
+            ],
+            ReadDeclaredPublicMethodNames(typeof(ProcessDriverVerificationGateway)));
+        Assert.Equal(
+            ["ImplementedLanes"],
+            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationGateway)));
+        Assert.Equal(
+            ["CallerContext", "RequestedAt"],
+            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationBatchAggregationRequest)));
+        Assert.Equal(
+            [
+                "Aggregation",
+                "ArtifactEvidenceRequests",
+                "BusinessAnalysisRequests",
+                "OfficeEvidenceRequests",
+                "RuntimeEvidenceRequests",
+                "TranscriptRequests"
+            ],
+            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationBatchRequest)));
+        Assert.Equal(
+            [
+                "Aggregate",
+                "AllResponses",
+                "ArtifactEvidenceResponses",
+                "BusinessAnalysisResponses",
+                "OfficeEvidenceResponses",
+                "RuntimeEvidenceResponses",
+                "TranscriptResponses"
+            ],
+            ReadDeclaredPublicPropertyNames(typeof(ProcessDriverVerificationBatchResponse)));
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB032_INV_001_gateway_batch_migration_guard_is_documented_and_runtime_free()
+    {
+        var readme = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Drivers.VerificationGateway",
+            "README.md");
+
+        Assert.Contains("Contract line: `v1.x verification-only alpha`", readme, StringComparison.Ordinal);
+        Assert.Contains("`ProcessDriverContractVersion.Current` remains `1.10.0`", readme, StringComparison.Ordinal);
+        Assert.Contains("Public type count: `4`", readme, StringComparison.Ordinal);
+        Assert.Contains(
+            "Surface hash: `69fd070de1004e6b01f71ae2251d1d3f63b7b2f306d4b165cf3329822f6ad62c`",
+            readme,
+            StringComparison.Ordinal);
+        Assert.Contains("`VerifyBatch` is an additive v1.x convenience over the typed lane methods.", readme, StringComparison.Ordinal);
+        Assert.Contains("It accepts only `ProcessDriverVerificationBatchRequest`", readme, StringComparison.Ordinal);
+        Assert.Contains("It does not replace the lane-specific methods", readme, StringComparison.Ordinal);
+        Assert.Contains("does not introduce `Verify(object)`", readme, StringComparison.Ordinal);
+        Assert.Contains("driver discovery", readme, StringComparison.Ordinal);
+        Assert.Contains("`ProcessDriverVerificationBatchResponse.AllResponses` is a read-only concatenation", readme, StringComparison.Ordinal);
+        Assert.Contains("treat batch aggregation as diagnostic evidence only", readme, StringComparison.Ordinal);
+
+        foreach (var deniedRuntimeClaim in new[]
+        {
+            "runtime host approval: granted",
+            "runtime host is approved",
+            "DI registration is approved",
+            "scheduler is approved",
+            "manager command is approved",
+            "workspace write allowed",
+            "storage write allowed"
+        })
+        {
+            Assert.DoesNotContain(deniedRuntimeClaim, readme, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void Process_driver_contract_api_SB022_INV_001_supplied_evidence_content_envelope_is_typed_hashable_and_payload_only()
     {
         const string transcriptText = "Build succeeded.";
@@ -1000,6 +1102,155 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.DoesNotContain(publicTypes, type => type.Name.Contains("Registry", StringComparison.Ordinal));
     }
 
+    [Fact]
+    public void Process_driver_contract_api_SB040_SB042_INV_001_current_bundle_runtime_host_matrix_keeps_runtime_surfaces_unapproved()
+    {
+        var decision = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "architecture",
+            "04-runtime-host-decision.md");
+
+        Assert.Contains("Current decision: all runtime-host surfaces are `Not approved`.", decision, StringComparison.Ordinal);
+        Assert.Contains("Contract line: `v1.x verification-only alpha`.", decision, StringComparison.Ordinal);
+        Assert.Contains("ExecutionCapableFuture` remains a denied marker", decision, StringComparison.Ordinal);
+        Assert.Contains("Future Approval Prerequisites", decision, StringComparison.Ordinal);
+        Assert.Contains("Every prerequisite in this section is `Not satisfied`.", decision, StringComparison.Ordinal);
+
+        foreach (var surface in new[]
+        {
+            "Runtime host",
+            "Driver registry",
+            "Runtime selector",
+            "Dependency injection registration",
+            "Manager command",
+            "Scheduler hook",
+            "Workflow hook",
+            "Execution-capable drivers",
+            "File/network/storage/workspace mutation"
+        })
+        {
+            Assert.Contains($"| {surface} | `Not approved` |", decision, StringComparison.Ordinal);
+        }
+
+        foreach (var prerequisite in new[]
+        {
+            "Audit persistence",
+            "Runtime lifecycle ownership",
+            "Authorization and approval",
+            "Sandbox and allow-list policy",
+            "Failure semantics",
+            "Compatibility governance",
+            "Red-team negative proof"
+        })
+        {
+            Assert.Contains($"| {prerequisite} | `Not satisfied` |", decision, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenApprovalClaim in new[]
+        {
+            "Current decision: approved",
+            "runtime host is approved",
+            "registry is approved",
+            "selector is approved",
+            "DI registration is approved",
+            "manager command is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved",
+            "execution-capable drivers are approved",
+            "ExecutionCapableFuture is permission"
+        })
+        {
+            Assert.DoesNotContain(forbiddenApprovalClaim, decision, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB041_SB042_INV_001_current_readonly_pipeline_source_rejects_runtime_host_hooks()
+    {
+        var root = FindRepositoryRoot();
+        var sourceText = ReadReadonlyDriverPipelineSource(root);
+        var gatewayReadme = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Drivers.VerificationGateway",
+            "README.md");
+
+        Assert.Contains("ExecutionCapableFuture = 3", sourceText, StringComparison.Ordinal);
+        Assert.Contains("No runtime host, dynamic registry, selector, dependency-injection registration", gatewayReadme, StringComparison.Ordinal);
+        Assert.Contains("manager command, scheduler hook, workflow hook", gatewayReadme, StringComparison.Ordinal);
+        AssertNoForbiddenRuntimeHostHookTokens(sourceText);
+
+        foreach (var forbiddenReadmeApprovalClaim in new[]
+        {
+            "runtime host approval: granted",
+            "runtime host is approved",
+            "dynamic registry is approved",
+            "dependency-injection registration is approved",
+            "manager command is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved",
+            "ExecutionCapableFuture is permission"
+        })
+        {
+            Assert.DoesNotContain(forbiddenReadmeApprovalClaim, gatewayReadme, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB052_SB053_INV_001_current_bundle_roadmap_keeps_runtime_integration_blocked()
+    {
+        var root = FindRepositoryRoot();
+        var decision = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "architecture",
+            "06-next-roadmap-decision.md");
+        var roadmap = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "architecture",
+            "07-stable-core-domain-driver-roadmap-and-reopen-triggers.md");
+        var runtimeDecision = ReadRepositoryFile(
+            "codex",
+            "bundles",
+            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "architecture",
+            "04-runtime-host-decision.md");
+        var sourceText = ReadReadonlyDriverPipelineSource(root);
+
+        Assert.Contains("Next candidate decision: `Continue read-only domain-driver expansion and manager-visible projection planning`", decision, StringComparison.Ordinal);
+        Assert.Contains("Controlled read-only runtime integration: `Blocked`", decision, StringComparison.Ordinal);
+        Assert.Contains("Runtime host status: `Not approved`", decision, StringComparison.Ordinal);
+        Assert.Contains("Prerequisite status: `Not satisfied`", decision, StringComparison.Ordinal);
+        Assert.Contains("Current decision: all runtime-host surfaces are `Not approved`.", runtimeDecision, StringComparison.Ordinal);
+        Assert.Contains("Keep `CanDoItAll.Processes.Core` deterministic and driver-free.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Any `CanDoItAll.Processes.Core` reference to `CanDoItAll.Processes.Drivers`.", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Any `Verify(object)`", roadmap, StringComparison.Ordinal);
+        Assert.Contains("Any completed validator failure", roadmap, StringComparison.Ordinal);
+
+        foreach (var forbiddenRoadmapClaim in new[]
+        {
+            "Controlled read-only runtime integration: `Ready`",
+            "Runtime host status: `Approved`",
+            "Prerequisite status: `Satisfied`",
+            "generic runtime host is next",
+            "driver registry is approved",
+            "service registration is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved",
+            "ExecutionCapableFuture is permission"
+        })
+        {
+            Assert.DoesNotContain(forbiddenRoadmapClaim, decision, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(forbiddenRoadmapClaim, roadmap, StringComparison.OrdinalIgnoreCase);
+        }
+
+        AssertNoForbiddenRuntimeHostHookTokens(sourceText);
+    }
+
     private static ProcessDriverCapabilityScope[] CreateReadonlyScopes()
     {
         return
@@ -1126,6 +1377,25 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
             .ToArray();
     }
 
+    private static IReadOnlyList<string> ReadDeclaredPublicMethodNames(Type type)
+    {
+        return type
+            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(method => !method.IsSpecialName)
+            .Select(method => method.Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static IReadOnlyList<string> ReadDeclaredPublicPropertyNames(Type type)
+    {
+        return type
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Select(property => property.Name)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+    }
+
     private static void AssertDocumentedPublicSurface(
         string snapshot,
         Assembly assembly,
@@ -1166,6 +1436,63 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
                 .Select(File.ReadAllText));
     }
 
+    private static string ReadReadonlyDriverPipelineSource(string repositoryRoot)
+    {
+        var sourceFiles = EnumerateReadonlyDriverPipelineSourceTargets()
+            .Select(pathParts => Path.Combine([repositoryRoot, .. pathParts]))
+            .SelectMany(ReadSourceFiles)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+
+        return string.Join(Environment.NewLine, sourceFiles.Select(File.ReadAllText));
+    }
+
+    private static IEnumerable<string> ReadSourceFiles(string path)
+    {
+        if (Directory.Exists(path))
+        {
+            return Directory
+                .EnumerateFiles(path, "*.cs", SearchOption.AllDirectories)
+                .Concat(Directory.EnumerateFiles(path, "*.csproj", SearchOption.TopDirectoryOnly));
+        }
+
+        if (File.Exists(path))
+        {
+            return [path];
+        }
+
+        throw new FileNotFoundException("Expected runtime-host denial source target was not found.", path);
+    }
+
+    private static IReadOnlyList<string[]> EnumerateReadonlyDriverPipelineSourceTargets()
+    {
+        return
+        [
+            ["src", "CanDoItAll.Processes.Drivers.Abstractions"],
+            ["src", "CanDoItAll.Processes.Drivers.ArtifactEvidence"],
+            ["src", "CanDoItAll.Processes.Drivers.BusinessAnalysis"],
+            ["src", "CanDoItAll.Processes.Drivers.ObservationAggregation"],
+            ["src", "CanDoItAll.Processes.Drivers.OfficeEvidence"],
+            ["src", "CanDoItAll.Processes.Drivers.RuntimeEvidence"],
+            ["src", "CanDoItAll.Processes.Drivers.TranscriptVerification"],
+            ["src", "CanDoItAll.Processes.Drivers.VerificationGateway"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessArtifactEvidenceReadOnlyAdapter.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessBusinessAnalysisReadOnlyAdapter.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessDriverObservationAggregationReadOnlyAdapter.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessOfficeEvidenceReadOnlyAdapter.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessReadOnlyVerificationAggregateObservation.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessReadOnlyVerificationBatchOrchestrator.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessReadOnlyVerificationOperationPolicy.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessReadOnlyVerificationPayloadBuilder.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessReadOnlyVerificationRequestFactory.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessRuntimeEvidenceVerificationObservationMapper.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessTranscriptVerificationObservationMapper.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessTranscriptVerificationPreflightPolicy.cs"],
+            ["src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessTranscriptVerificationReadOnlyAdapter.cs"]
+        ];
+    }
+
     private static string ReadFileNames(string repositoryRoot, params string[] pathParts)
     {
         return string.Join(
@@ -1193,6 +1520,45 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
             "MapProcessDriver",
             "IServiceCollection",
             "ServiceCollection"
+        };
+
+        foreach (var forbiddenToken in forbiddenTokens)
+        {
+            Assert.DoesNotContain(forbiddenToken, sourceText, StringComparison.Ordinal);
+        }
+    }
+
+    private static void AssertNoForbiddenRuntimeHostHookTokens(string sourceText)
+    {
+        var forbiddenTokens = new[]
+        {
+            "IProcessDriver",
+            "IProcessDriverRegistry",
+            "ProcessDriverRegistry",
+            "IProcessDriverSelector",
+            "ProcessDriverRuntimeSelector",
+            "IProcessDriverRuntime",
+            "ProcessDriverRuntime",
+            "IProcessDriverHost",
+            "ProcessDriverHost",
+            "IProcessDriverPack",
+            "ProcessDriverPack",
+            "ProcessDriverProvider",
+            "ProcessDriverManagerCommand",
+            "ProcessDriverServiceCollectionExtensions",
+            "AddProcessDriver",
+            "MapProcessDriver",
+            "IServiceCollection",
+            "ServiceCollection",
+            "AddScoped",
+            "AddSingleton",
+            "GetRequiredService",
+            "IHostedService",
+            "BackgroundService",
+            "IScheduler",
+            "IWorkflow",
+            "SchedulerHook",
+            "WorkflowHook"
         };
 
         foreach (var forbiddenToken in forbiddenTokens)

@@ -1,0 +1,84 @@
+Command: P10 Office/business process rehearsal source scans
+ExitCode: 0
+StartedAtUtc: 2026-06-09T01:07:56.0773807Z
+FinishedAtUtc: 2026-06-09T01:07:56.8379044Z
+
+## P10 process batch Office/business rehearsal presence
+Command: rg -n 'SB030_INV_001|SB030_INV_002|OfficeBatchEvidencePayload|officeEvidencePayloads|businessAnalysisPayloads|CallOfficeGraph|MutateBusinessRecord' tests\\CanDoItAll.Tests.Integration\\ProcessDomainEvidenceReadOnlyAdapterTests.cs
+ExitCode: 0
+22:    private const string OfficeBatchEvidencePayload = """{"items":[{"kind":"email","id":"message-1"},{"kind":"document","id":"document-1"}]}""";
+93:            requestedOperations: [ProcessDriverOperation.CallOfficeGraph]));
+95:            requestedOperations: [ProcessDriverOperation.MutateBusinessRecord]));
+170:            officeEvidencePayloads: [CreateOfficePayload()],
+171:            businessAnalysisPayloads: [CreateBusinessPayload()]);
+327:    public void Process_readonly_verification_batch_orchestrator_SB030_INV_001_feeds_supplied_office_and_business_evidence_without_external_sources()
+335:            officeEvidencePayloads:
+339:                    evidencePayload: OfficeBatchEvidencePayload,
+342:            businessAnalysisPayloads:
+379:        Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(OfficeBatchEvidencePayload), officeEvidence.ContentHash);
+431:    public void Process_readonly_verification_batch_orchestrator_SB030_INV_002_denies_office_and_business_external_calls_without_mutation()
+439:            officeEvidencePayloads:
+442:                    requestedOperations: [ProcessDriverOperation.CallOfficeGraph],
+444:                    evidencePayload: OfficeBatchEvidencePayload,
+447:            businessAnalysisPayloads:
+450:                    requestedOperations: [ProcessDriverOperation.CallOfficeGraph],
+454:                    requestedOperations: [ProcessDriverOperation.MutateBusinessRecord],
+496:            ProcessDriverOperation.CallOfficeGraph,
+510:            ProcessDriverOperation.CallOfficeGraph,
+524:            ProcessDriverOperation.MutateBusinessRecord,
+
+## Typed process payload builders retain Office/business evidence envelopes
+Command: rg -n 'CreateOfficeEvidencePayload|CreateBusinessAnalysisPayload|OfficeReadonlyArtifact|BusinessReadonlyArtifact|OfficeEvidencePayload|BusinessAnalysisPayload' src\\CanDoItAll.Modules.Processes\\Automation\\Dispatch\\ProcessReadOnlyVerificationPayloadBuilder.cs
+ExitCode: 0
+140:    public static ProcessOfficeEvidenceReadOnlyPayload CreateOfficeEvidencePayload(
+141:        ProcessOfficeEvidencePayloadFacts facts)
+148:            ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
+166:            ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(
+173:    public static ProcessBusinessAnalysisReadOnlyPayload CreateBusinessAnalysisPayload(
+174:        ProcessBusinessAnalysisPayloadFacts facts)
+181:            ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
+199:            ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(
+327:internal sealed record ProcessOfficeEvidencePayloadFacts(
+334:internal sealed record ProcessBusinessAnalysisPayloadFacts(
+
+## Batch orchestrator keeps typed Office/business adapters
+Command: rg -n 'ProcessOfficeEvidenceReadOnlyAdapter|ProcessBusinessAnalysisReadOnlyAdapter|AddOfficeEvidenceResponses|AddBusinessAnalysisResponses' src\\CanDoItAll.Modules.Processes\\Automation\\Dispatch\\ProcessReadOnlyVerificationBatchOrchestrator.cs
+ExitCode: 0
+10:    private readonly ProcessOfficeEvidenceReadOnlyAdapter officeEvidenceAdapter;
+11:    private readonly ProcessBusinessAnalysisReadOnlyAdapter businessAnalysisAdapter;
+19:            new ProcessOfficeEvidenceReadOnlyAdapter(),
+20:            new ProcessBusinessAnalysisReadOnlyAdapter(),
+29:        ProcessOfficeEvidenceReadOnlyAdapter officeEvidenceAdapter,
+30:        ProcessBusinessAnalysisReadOnlyAdapter businessAnalysisAdapter,
+104:        AddOfficeEvidenceResponses(responses, officeEvidenceObservations);
+105:        AddBusinessAnalysisResponses(responses, businessAnalysisObservations);
+140:    private static void AddOfficeEvidenceResponses(
+150:    private static void AddBusinessAnalysisResponses(
+
+## Runtime host and DI denial scan
+Command: rg -n -g '*.cs' 'IProcessDriverRegistry|ProcessDriverRuntimeSelector|ProcessDriverManagerCommand|ProcessDriverHost|ProcessDriverProvider|IServiceCollection|AddScoped|AddSingleton|GetRequiredService|IHostedService|BackgroundService' <process targets>
+ExitCode: 1
+
+## File storage and network API denial scan
+Command: rg -n -g '*.cs' 'File\\.|Directory\\.|HttpClient|DbContext|SaveChanges|SaveChangesAsync|ExecuteSql|WriteAll|ReadAll|OpenRead|CreateDirectory|IStorageService|IWorkspace|WorkspaceFile|StoragePath' <process targets>
+ExitCode: 1
+
+## Object and dynamic dispatch denial scan
+Command: rg -n -g '*.cs' 'Verify\\s*\\(\\s*object|object\\s+[A-Za-z]|Func<object|dynamic|Dictionary<.*ProcessDriver' <process targets>
+ExitCode: 1
+
+## Anti-stub production scan
+Command: rg -n -g '*.cs' 'TODO|NotImplementedException|throw new NotImplemented' <process targets>
+ExitCode: 1
+
+## Anti-stub P10 integration scan
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented|Skip\\s*=' <test targets>
+ExitCode: 1
+
+## Core reverse dependency scan
+Command: rg -n -g '*.cs' 'CanDoItAll\\.Processes\\.Drivers' src\\CanDoItAll.Processes.Core
+ExitCode: 1
+
+## UI media drift scan
+Command: git diff --name-only -- src tests 2>$null | rg -n '(\\.razor$|\\.css$|wwwroot/|\\.(png|jpg|jpeg|gif|svg|webp)$)'
+ExitCode: 1

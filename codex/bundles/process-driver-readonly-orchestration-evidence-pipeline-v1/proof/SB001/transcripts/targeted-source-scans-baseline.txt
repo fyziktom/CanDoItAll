@@ -1,0 +1,93 @@
+Command: targeted source scan bundle SB001 baseline
+ExitCode: 0
+StartedAtUtc: 2026-06-08T22:44:52.7132457Z
+Target paths:
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ArtifactEvidence
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.BusinessAnalysis
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ObservationAggregation
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.OfficeEvidence
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.TranscriptVerification
+- C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.VerificationGateway
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDomainEvidenceReadOnlyAdapters.cs
+
+## Core reverse dependency scan
+Command: rg -n 'CanDoItAll\\.Processes\\.Drivers' src\\CanDoItAll.Processes.Core
+ExitCode: 1
+
+
+## Gateway generic dispatch denial scan
+Command: rg -n 'Verify\\s*\\(\\s*object|ProcessDriverRegistry|IProcessDriverRegistry|RuntimeHost|GetRequiredService|IServiceCollection|AddScoped|AddSingleton' <target paths>
+ExitCode: 1
+
+
+## Mutation and host operation denial scan
+Command: rg -n 'Process\\.Start|File\\.|Directory\\.|HttpClient|DbContext|SaveChanges|Claim|Transition|Finalizer|Retry|Scheduler|Workflow' <target paths>
+ExitCode: 0
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:17:        AddExecutionFinalizerContradictions(request, primaryEvidence, diagnostics);
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:18:        AddRetryContradictions(request, primaryEvidence, diagnostics);
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:26:    private static void AddExecutionFinalizerContradictions(
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:59:            request.FinalizerEvidence is not null &&
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:61:            request.FinalizerEvidence.Result.HasResult &&
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:62:            request.FinalizerEvidence.Result.CompletionStatus is not ProcessStepRunStatus.Completed)
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:66:                ProcessDriverDiagnosticCategory.FinalizerContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:71:        if (request.FinalizerEvidence is { Result: { HasResult: true, StepRunConcurrencyToken: null } })
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:75:                ProcessDriverDiagnosticCategory.FinalizerContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:76:                "Finalizer evidence reports a result without a step-run concurrency token.",
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:80:        if (request.FinalizerEvidence is { Intent.CompletionStatus: var intentStatus, Result.CompletionStatus: { } resultStatus } &&
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:85:                ProcessDriverDiagnosticCategory.FinalizerContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:86:                "Finalizer intent completion status differs from finalizer result completion status.",
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:90:        if (request.FinalizerEvidence is { Result: { ShouldApplyTransition: true, HasResult: false } })
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:94:                ProcessDriverDiagnosticCategory.FinalizerContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:95:                "Finalizer evidence says a transition should be applied but no finalizer result exists.",
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:100:    private static void AddRetryContradictions(
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:105:        if (request.RetryDiagnostic is { ShouldRetry: false, HasUnresolvedCriticalToolFailures: true })
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:109:                ProcessDriverDiagnosticCategory.RetryContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:110:                "Retry diagnostics report no retry while unresolved critical tool failures remain.",
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:114:        if (request.RetryDiagnostic is { ShouldRetry: true } retry &&
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:119:                ProcessDriverDiagnosticCategory.RetryContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:120:                "Retry diagnostics request another attempt after the maximum execution attempts have been reached.",
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:124:        if (request.RetryDiagnostic is { ShouldRetry: true, PrimaryFailureKind: ProcessRetryDiagnosticFailureKind.None })
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:128:                ProcessDriverDiagnosticCategory.RetryContradiction,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceContradictionRules.cs:129:                "Retry diagnostics request retry without a primary failure kind.",
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceConsistencyVerificationRequest.cs:14:    ProcessFinalizerEvidenceDescriptor? FinalizerEvidence,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceConsistencyVerificationRequest.cs:15:    ProcessRetryDiagnosticDescriptor? RetryDiagnostic,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\RuntimeEvidenceConsistencyVerificationRequest.cs:16:    ProcessNoProgressRetryDiagnosticDescriptor? NoProgressDiagnostic,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverDiagnostic.cs:45:    RetryContradiction = 26,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverDiagnostic.cs:46:    FinalizerContradiction = 27,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Evidence\ProcessDriverEvidenceReference.cs:23:    FinalizerEvidence = 2,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Evidence\ProcessDriverEvidenceReference.cs:24:    RetryDiagnostics = 3,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperation.cs:18:    ApplyTransition = 109,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperation.cs:19:    ClaimDispatch = 110,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperation.cs:20:    ApplyFinalizer = 111,
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperation.cs:21:    ScheduleRetry = 112
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperationRules.cs:26:            ProcessDriverOperation.ApplyTransition or
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperationRules.cs:27:            ProcessDriverOperation.ClaimDispatch or
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperationRules.cs:28:            ProcessDriverOperation.ApplyFinalizer or
+C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperationRules.cs:29:            ProcessDriverOperation.ScheduleRetry;
+
+
+## Anti-stub production scan
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented|return null;' <target paths>
+ExitCode: 1
+
+
+## Current direct verifier construction inventory
+Command: rg -n 'new (ArtifactEvidenceAlphaVerifier|OfficeEvidenceAlphaVerifier|BusinessAnalysisAlphaVerifier|ProcessDriverObservationAggregator)' ProcessDomainEvidenceReadOnlyAdapters.cs ProcessDriverVerificationGateway.cs
+ExitCode: 0
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:53:            new ArtifactEvidenceAlphaVerifier(),
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:54:            new OfficeEvidenceAlphaVerifier(),
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:55:            new BusinessAnalysisAlphaVerifier(),
+src\CanDoItAll.Processes.Drivers.VerificationGateway\ProcessDriverVerificationGateway.cs:56:            new ProcessDriverObservationAggregator());
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDomainEvidenceReadOnlyAdapters.cs:18:        : this(request => new ArtifactEvidenceAlphaVerifier().Verify(request))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDomainEvidenceReadOnlyAdapters.cs:71:        : this(request => new OfficeEvidenceAlphaVerifier().Verify(request))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDomainEvidenceReadOnlyAdapters.cs:111:        : this(request => new BusinessAnalysisAlphaVerifier().Verify(request))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDomainEvidenceReadOnlyAdapters.cs:151:        : this(request => new ProcessDriverObservationAggregator().Aggregate(request))
+
+
+## UI media drift scan
+Command: git diff --name-only -- src tests | rg -n '(\\.razor$|\\.css$|wwwroot/|\\.(png|jpg|jpeg|gif|svg|webp)$)'
+ExitCode: 1
+
+

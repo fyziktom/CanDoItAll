@@ -1,0 +1,13 @@
+Command: P12 Core/driver boundary source assertions
+ExitCode: 0
+StartedAtUtc: 2026-06-09T01:44:30.0000000Z
+FinishedAtUtc: 2026-06-09T01:44:30.0000000Z
+
+Source assertion: repo://codex/bundles/process-driver-readonly-orchestration-evidence-pipeline-v1/architecture/05-process-module-core-descriptor-consumer-map.md documents exactly 25 process-module Core consumers under Automation/Dispatch.
+Source assertion: repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs includes Process_driver_readonly_orchestration_SB034_SB035_INV_001_refreshes_core_consumer_map_and_rejects_global_using_drift, which compares the source-derived Core consumer list to the allow-list and the architecture map.
+Source assertion: repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs rejects production global usings for CanDoItAll.Processes.Core and CanDoItAll.Processes.Drivers namespaces.
+Source assertion: repo://tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs rejects Core references to CanDoItAll.Processes.Drivers namespaces or projects.
+Source assertion: repo://tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs no longer allow-lists ProcessDomainEvidenceReadOnlyAdapters.cs as a Core consumer.
+Source assertion: repo://tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs now compares the exact source-derived driver consumer set to the approved list and rejects ProcessDomainEvidenceReadOnlyAdapters.cs drift.
+Source assertion: repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDomainEvidenceReadOnlyAdapters.cs remains a two-line source-reference marker and has no Core or driver namespace consumption.
+Source assertion: bundle://proof/SB036/transcripts/p12-source-scans.txt proves no runtime host, DI, file/network/storage/workspace, object/dynamic dispatch, direct process-module verifier construction, stubs, Core reverse dependency, global using drift, or UI/media drift in the scoped P12 targets.

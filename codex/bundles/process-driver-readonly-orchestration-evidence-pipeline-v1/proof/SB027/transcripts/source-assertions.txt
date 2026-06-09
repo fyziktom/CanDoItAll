@@ -1,0 +1,13 @@
+Command: SB027 source assertion synthesis from P09 build, tests, and source scans
+ExitCode: 0
+Invariant ID: SB027-ARTIFACT-PROJECTION-VALIDATION-SATISFACTION-PARITY
+Source assertion: repo://tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs adds `Process_readonly_verification_batch_orchestrator_SB027_INV_002_feeds_artifact_projection_validation_and_satisfaction_descriptors_without_mutation`.
+Source assertion: The P09 integration test sends supplied artifact projection lineage, projection source order, validation requirements, expected artifact snapshots, and artifact record snapshots through `ProcessReadOnlyVerificationBatchOrchestrator`.
+Source assertion: The same integration test asserts `ProjectionOrderDrift`, `ArtifactLineageMissing`, `ArtifactTrustSensitivityMismatch`, and `ArtifactSatisfactionInconsistent` diagnostics survive the process artifact observation and aggregate lane summary.
+Source assertion: The same integration test uses explicit Core aliases for artifact expectation and record snapshots to avoid accidentally binding process-module snapshot types.
+Source assertion: Existing production artifact driver rules in repo://src/CanDoItAll.Processes.Drivers.ArtifactEvidence/ArtifactEvidenceDiagnosticRules.cs continue to use `ProcessArtifactExpectationMatcher.DiagnoseStrongExpectedArtifactMatch` and `ProcessArtifactExpectationSatisfactionRules.Diagnose`.
+Source assertion: Existing process payload builder in repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessReadOnlyVerificationPayloadBuilder.cs carries expected artifacts and artifact records into `ProcessArtifactEvidenceReadOnlyPayload`.
+Failing-first proof: No deliberate P09 production failure was produced. The scoped implementation was an integration rehearsal over existing production descriptor flow; semantic negative proof is carried by the new contradiction matrix assertions and source scans.
+Semantic positive proof: bundle://proof/SB027/transcripts/build-artifact-validation-rehearsal.txt, bundle://proof/SB027/transcripts/focused-p09-artifact-unit-tests.txt, bundle://proof/SB027/transcripts/focused-p09-artifact-integration-tests.txt, and bundle://proof/SB027/transcripts/full-unit-p09.txt all have ExitCode: 0.
+Adversarial negative proof: bundle://proof/SB027/transcripts/p09-source-scans.txt rejects runtime host/DI/manager tokens, file/storage/network APIs, object/dynamic dispatch, Core reverse dependencies, UI/media drift, and stubs.
+Anti-stub audit: bundle://proof/SB027/transcripts/p09-source-scans.txt has no TODO, NotImplemented, throw-new-NotImplemented, or Skip marker in the P09 integration target and no stub marker in the scoped production target surface.

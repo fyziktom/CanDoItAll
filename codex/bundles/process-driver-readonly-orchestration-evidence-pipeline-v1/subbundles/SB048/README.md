@@ -1,8 +1,7 @@
 # SB048 - Gate P release-candidate closure
 
 ## Status
-Prepared.
-
+- Completed
 ## Objective
 Advance release candidate smoke matrix by completing: Gate P release-candidate closure.
 
@@ -24,13 +23,13 @@ Advance release candidate smoke matrix by completing: Gate P release-candidate c
 - repo://tests/CanDoItAll.Tests.Integration
 
 ## Scope
-Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
+- Keep the change read-only and deterministic. Preserve current behavior while improving structure, tests, or docs.
 
 ## Dependency Impact
-This subbundle is part of P16 - Release candidate smoke matrix. Downstream work is invalid if its closure proof is weak or report-only.
+- This subbundle is part of P16 - Release candidate smoke matrix. Downstream work is invalid if its closure proof is weak or report-only.
 
 ## Validation Depth
-Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
+- Critical semantic adequacy gate with build, full/focused tests, source scans, anti-stub audit, changed-file hashes, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the exact source references.
@@ -49,21 +48,34 @@ No runtime host, registry, selector, DI registration, manager command, scheduler
 - Do not silently skip tests or collapse report rows.
 
 ## Acceptance Checklist
-- [ ] Build passes with zero warnings/errors.
-- [ ] Full unit suite passes or any skip/debt is explicitly owned and justified.
-- [ ] Focused tests for this subbundle pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] Critical proof manifest exists when required.
+- [x] Build passes with zero warnings/errors.
+- [x] Full unit suite passes or any skip/debt is explicitly owned and justified.
+- [x] Focused tests for this subbundle pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] Critical proof manifest exists when required.
 
 ## Proof Required
-Create `proof/SB048/manifest.md` and `proof/SB048/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+- Create `proof/SB048/manifest.md` and `proof/SB048/semantic-invariants.md` with artifact-backed transcripts, shallow-pass trap, adversarial negative proof, semantic positive proof, and production behavior artifact matrix if new records/signals are introduced.
+
+## Closure Proof
+- Critical P16 proof manifest: `bundle://proof/SB048/manifest.md`.
+- Semantic invariants: `bundle://proof/SB048/semantic-invariants.md`.
+- Build proof: `bundle://proof/SB048/transcripts/build-release-candidate.txt`.
+- Full unit proof: `bundle://proof/SB048/transcripts/full-unit-p16.txt`.
+- Focused driver unit proof: `bundle://proof/SB048/transcripts/focused-p16-driver-unit-matrix.txt`.
+- Focused process adapter integration proof: `bundle://proof/SB048/transcripts/focused-p16-process-adapter-integration-matrix.txt`.
+- Package/reference scans: `bundle://proof/SB048/transcripts/p16-package-and-reference-scans.txt`.
+- Source/dependency scans: `bundle://proof/SB048/transcripts/p16-source-and-dependency-scans-fixed.txt`.
+- Prepared validator proof: `bundle://proof/SB048/transcripts/prepared-validator-after-p16.txt`.
+- Source assertions: `bundle://proof/SB048/transcripts/source-assertions.txt`.
 
 ## Browser Validation Logging
-N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
+- N/A runtime/service/Core/driver work. If UI/media files change unexpectedly, fail and re-scope.
 
 ## Progression Gate
-SB048 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
+- SB048 is a critical gate. Do not proceed until all proof artifacts pass and are referenced from reviews/01-execution-report.md.
 
 ## Suggested Agent Prompt
 Implement SB048 carefully using source-backed proof. Do not trust existing reports without opening current branch code.
+

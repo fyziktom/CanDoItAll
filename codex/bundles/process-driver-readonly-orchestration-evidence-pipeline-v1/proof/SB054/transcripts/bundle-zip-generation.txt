@@ -1,0 +1,13 @@
+Command: Compress-Archive -Path codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1 -DestinationPath codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1.zip -CompressionLevel Optimal
+
+FullName : C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1.zip
+Length   : 383548
+
+
+
+Algorithm : SHA256
+Hash      : B994A7419399C3BE3FCAB94D51E407AABDF674218140DBFAF21CB7434A3F03DD
+Path      : C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1.zip
+
+
+Exit code: 0
