@@ -1,0 +1,97 @@
+SB037 scheduler/planner/workflow process-trigger source inventory
+Generated on 2026-06-09 from current source.
+
+Scheduler planner target launcher and trigger handler:
+39:public interface ISchedulerTargetLauncher
+171:        var firstProcess = targets.FirstOrDefault(item => item.Kind == SchedulerPlanTargetKind.Process);
+176:            TargetKind = firstTarget?.Kind ?? SchedulerPlanTargetKind.Process,
+295:                SchedulerPlanTargetKind.Process,
+833:public sealed class SchedulerTargetLauncher(
+836:    IWorkflowRuntimeManager workflowRuntimeManager) : ISchedulerTargetLauncher
+852:            SchedulerPlanTargetKind.Process => await LaunchProcessAsync(plan, firedAtUtc, cancellationToken),
+863:        var result = await processesService.StartRunFromTriggerAsync(
+870:                TriggerSourceKind = ProcessRunTriggerSourceKind.SchedulerPlan,
+885:            SchedulerPlanTargetKind.Process,
+1110:public sealed class SchedulerPlannerTriggerFireHandler(
+1112:    ISchedulerTargetLauncher targetLauncher,
+1114:    ILogger<SchedulerPlannerTriggerFireHandler> logger) : AutomationMessageHandler<AutomationTriggerFireRequest>
+
+Process manual/API/launch-plan/subprocess start surfaces:
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:19:    public Task<Result<Guid>> ExecuteLaunchPlanAsync(
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:23:        if (request.LaunchPlanId == Guid.Empty)
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:30:        return StartRunAsync(
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:31:            new ProcessRunStartRequest
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:33:                LaunchPlanId = request.LaunchPlanId
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:10:    Guid? ParentRunId,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:11:    Guid? ParentStepRunId,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:44:    public Guid? LaunchPlanId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:754:public sealed class ProcessRunStartRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:768:    public Guid? LaunchPlanId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:770:    public Guid? ParentRunId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:772:    public Guid? ParentStepRunId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:777:public enum ProcessRunTriggerSourceKind
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:784:public sealed class ProcessRunTriggerStartRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:798:    public ProcessRunTriggerSourceKind TriggerSourceKind { get; set; } = ProcessRunTriggerSourceKind.Manual;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:846:    public Guid LaunchPlanId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:855:    public Guid LaunchPlanId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:864:    public Guid LaunchPlanId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:875:    public Guid LaunchPlanId { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:28:    public async Task<Result<Guid>> StartRunAsync(ProcessRunStartRequest request, CancellationToken cancellationToken = default)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:30:        if (request.ProcessDefinitionId == Guid.Empty && !request.LaunchPlanId.HasValue)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:67:                ParentRunId = context.ParentRun?.Id,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:68:                ParentStepRunId = context.ParentStepRun?.Id,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:266:        ProcessRunStartRequest request,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:282:        if (request.LaunchPlanId.HasValue)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:285:                .SingleOrDefaultAsync(item => item.Id == request.LaunchPlanId.Value, cancellationToken);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:321:                .Where(item => item.LaunchPlanId == launchPlan.Id)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:551:        ProcessRunStartRequest request,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:555:        var hasParentRun = request.ParentRunId.HasValue && request.ParentRunId.Value != Guid.Empty;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:556:        var hasParentStepRun = request.ParentStepRunId.HasValue && request.ParentStepRunId.Value != Guid.Empty;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:570:        if (request.LaunchPlanId.HasValue)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:580:            .SingleOrDefaultAsync(item => item.Id == request.ParentRunId!.Value, cancellationToken);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:605:            .SingleOrDefaultAsync(item => item.Id == request.ParentStepRunId!.Value, cancellationToken);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:644:            .Where(item => item.ParentStepRunId == parentStepRun.Id)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:692:            if (!currentRun.ParentRunId.HasValue)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:699:                .SingleOrDefaultAsync(item => item.Id == currentRun.ParentRunId.Value, cancellationToken);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:753:            .Where(item => item.ParentStepRunId == parentStepRun.Id)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:764:        var startResult = await StartRunAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:765:            new ProcessRunStartRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:772:                ParentRunId = parentRun.Id,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:773:                ParentStepRunId = parentStepRun.Id
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:780:                .Where(item => item.ParentStepRunId == parentStepRun.Id)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:7:    public Task<Result<Guid>> StartRunFromTriggerAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:8:        ProcessRunTriggerStartRequest request,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:19:        return StartRunAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:20:            new ProcessRunStartRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:33:    private static IReadOnlyList<Error> ValidateTriggerStartRequest(ProcessRunTriggerStartRequest request)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:36:        if (!Enum.IsDefined(typeof(ProcessRunTriggerSourceKind), request.TriggerSourceKind))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:61:    private static bool RequiresTriggerSourceId(ProcessRunTriggerSourceKind triggerSourceKind)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:63:        return triggerSourceKind is ProcessRunTriggerSourceKind.SchedulerPlan
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:64:            or ProcessRunTriggerSourceKind.WorkflowRun;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:67:    private static string BuildTriggerStartReason(ProcessRunTriggerStartRequest request)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:76:    private static string BuildTriggerSourceSummary(ProcessRunTriggerStartRequest request)
+src\CanDoItAll.Web\Api\ProcessesApi.cs:199:                ProcessRunStartRequest request,
+src\CanDoItAll.Web\Api\ProcessesApi.cs:202:            ApiEndpointResults.FromResult(await processesService.StartRunAsync(request, cancellationToken)))
+src\CanDoItAll.Web\Api\ProcessesApi.cs:203:            .WithName("StartProcessRun");
+src\CanDoItAll.Web\Api\ProcessesApi.cs:488:                    LaunchPlanId = request.LaunchPlanId,
+src\CanDoItAll.Web\Api\ProcessesApi.cs:659:            ApiEndpointResults.FromResult(await processesService.ExecuteLaunchPlanAsync(request, cancellationToken)))
+src\CanDoItAll.Web\Api\ProcessesApi.cs:1429:    public Guid? LaunchPlanId { get; set; }
+
+Workflow assignment coordinator stays inside process dispatch and starts workflow assignments, not process runs:
+11:internal sealed class ProcessWorkflowRunCoordinator(
+17:    ILogger<ProcessWorkflowRunCoordinator> logger)
+89:        var run = await workflowProcessExecutorBridge.StartForProcessAssignmentAsync(
+120:                ProcessRuntimeEventTypes.WorkflowRunStarted,
+
+Scheduler target registration uses the scheduler planner launcher, not driver registration:
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModuleServiceCollectionExtensions.cs:8:    public static IServiceCollection AddSchedulerPlannerModule(this IServiceCollection services)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModuleServiceCollectionExtensions.cs:13:        services.AddScoped<ISchedulerTargetLauncher, SchedulerTargetLauncher>();
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModuleServiceCollectionExtensions.cs:15:        services.AddScoped<IAutomationMessageHandler, SchedulerPlannerTriggerFireHandler>();
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:7:using CanDoItAll.AgentFramework.Rag.Driver.Models;
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:9:using CanDoItAll.AgentFramework.SemanticCompletion.Driver.Embeddings;
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:73:        services.AddConfiguredQdrantRagDriver(configuration);
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:75:        services.AddSchedulerPlannerModule();
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:82:    private static IServiceCollection AddConfiguredQdrantRagDriver(
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:120:            options.TargetProviderName = RagDriverProviderNames.Qdrant;
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:125:        services.AddQdrantRagDriver(
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:907:    IDatabaseDriverRegistry driverRegistry,

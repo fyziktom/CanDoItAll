@@ -1,0 +1,119 @@
+SB029 source assertions - business-analysis runtime artifact/evidence/status
+
+Deterministic business-plan run assertions:
+23:            definitionName: "Business plan product evidence validation");
+33:        var productArtifact = Assert.Single(productReview.ArtifactExpectations, artifact => artifact.Title == "Product evidence assessment");
+39:    public async Task Business_plan_process_runs_with_business_artifacts_evidence_and_statuses()
+55:        var definition = envelope.Definition ?? throw new InvalidOperationException("Business plan process definition was not projected.");
+81:        await CompleteBusinessPlanRunAsync(
+88:        await AssertBusinessPlanRunCompletedAsync(
+151:            await CompleteBusinessPlanRunAsync(
+158:            await AssertBusinessPlanRunCompletedAsync(
+175:            Name = "Business plan PostgreSQL validation project",
+185:    private static async Task CompleteBusinessPlanRunAsync(
+208:    private static async Task AssertBusinessPlanRunCompletedAsync(
+225:            artifact => artifact.Title == "Product evidence assessment" &&
+229:            artifact => artifact.Title == "Financial model and sensitivity note" &&
+233:            artifact => artifact.Title == "Go-to-market and experiment plan" &&
+237:            artifact => artifact.Title == "Integrated business plan review" &&
+241:            assignment => assignment.RoleDisplayName == "Business strategist" &&
+245:            assignment => assignment.RoleDisplayName == "Financial strategist" &&
+249:            assignment => assignment.RoleDisplayName == "Marketing specialist" &&
+252:        var businessPlanArtifact = Assert.Single(runDetails.Artifacts, artifact => artifact.Title == "Business plan");
+256:        var businessPlanContent = await ReadWorkspaceArtifactAsync(application, businessPlanArtifact.ManagedStoragePath);
+258:        Assert.Contains("Evidence summary: The artifact records a concrete handoff", businessPlanContent, StringComparison.Ordinal);
+259:        Assert.Contains("Outcome: Required artifact contract is satisfied", businessPlanContent, StringComparison.Ordinal);
+365:            Evidence summary: The artifact records a concrete handoff for the current process run, including the reviewed business-plan material, accountable step, and downstream reuse boundary.
+366:            Outcome: Required artifact contract is satisfied for persistence and runtime completion validation.
+382:    private static async Task<string> ReadWorkspaceArtifactAsync(
+397:            "Product evidence assessment" => ProcessArtifactKind.Evidence,
+398:            "Business plan" => ProcessArtifactKind.Deliverable,
+399:            "Financial model and sensitivity note" => ProcessArtifactKind.Dataset,
+400:            "Go-to-market and experiment plan" => ProcessArtifactKind.Deliverable,
+401:            "Integrated business plan review" => ProcessArtifactKind.Decision,
+
+Read-only BusinessAnalysis evidence adapter/orchestrator assertions:
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:11:    private readonly ProcessBusinessAnalysisReadOnlyAdapter businessAnalysisAdapter;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:20:            new ProcessBusinessAnalysisReadOnlyAdapter(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:30:        ProcessBusinessAnalysisReadOnlyAdapter businessAnalysisAdapter,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:92:        IReadOnlyList<ProcessBusinessAnalysisReadOnlyObservation> businessAnalysisObservations)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:152:        IReadOnlyList<ProcessBusinessAnalysisReadOnlyObservation> observations)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:169:            observation.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:183:            observation.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:197:            observation.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:211:            observation.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:217:        ProcessBusinessAnalysisReadOnlyObservation observation)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:225:            observation.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:247:        IReadOnlyList<ProcessBusinessAnalysisReadOnlyPayload>? businessAnalysisPayloads = null)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:281:    public IReadOnlyList<ProcessBusinessAnalysisReadOnlyPayload> BusinessAnalysisPayloads { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:299:        IReadOnlyList<ProcessBusinessAnalysisReadOnlyObservation> businessAnalysisObservations,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:333:    public IReadOnlyList<ProcessBusinessAnalysisReadOnlyObservation> BusinessAnalysisObservations { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:10:internal sealed class ProcessBusinessAnalysisReadOnlyAdapter
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:14:    public ProcessBusinessAnalysisReadOnlyAdapter()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:19:    internal ProcessBusinessAnalysisReadOnlyAdapter(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:25:    public ProcessBusinessAnalysisReadOnlyObservation Verify(ProcessBusinessAnalysisReadOnlyPayload payload)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:51:    public static ProcessBusinessAnalysisReadOnlyObservation Create(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:52:        ProcessBusinessAnalysisReadOnlyPayload payload,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:55:        return new ProcessBusinessAnalysisReadOnlyObservation(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:59:            ProcessBusinessAnalysisSourceLane.BusinessAnalysisRead,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:65:            response.NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:73:internal sealed record ProcessBusinessAnalysisReadOnlyPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:86:internal sealed record ProcessBusinessAnalysisReadOnlyObservation(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:96:    bool NoMutationPerformed,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBusinessAnalysisReadOnlyAdapter.cs:104:    BusinessAnalysisRead = 1
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:35:        Assert.True(observation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:68:        Assert.True(mutationObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:74:        Assert.True(untrustedObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:88:        var businessAdapter = new ProcessBusinessAnalysisReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:93:            requestedOperations: [ProcessDriverOperation.CallOfficeGraph]));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:95:            requestedOperations: [ProcessDriverOperation.MutateBusinessRecord]));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:100:        Assert.True(officeObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:102:        Assert.Equal(ProcessBusinessAnalysisSourceLane.BusinessAnalysisRead, businessObservation.SourceLane);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:103:        Assert.Equal(ProcessDriverCapabilityScopeKind.BusinessAnalysisRead, businessObservation.AuditFacts[0].Lane);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:104:        Assert.True(businessObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:108:        Assert.True(officeGraphAttempt.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:115:        Assert.True(businessMutationAttempt.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:132:                CreateVerificationResponse(ProcessDriverCapabilityScopeKind.BusinessAnalysisRead, accepted: false)
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:155:            summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:188:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:218:            summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:256:            entry.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead &&
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:257:            entry.ProducerType == typeof(ProcessBusinessAnalysisReadOnlyAdapter));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:329:        Assert.True(artifactObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:365:    public void Process_readonly_verification_batch_orchestrator_SB030_INV_001_feeds_supplied_office_and_business_evidence_without_external_sources()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:397:            summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:408:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:428:        Assert.Equal(ProcessBusinessAnalysisSourceLane.BusinessAnalysisRead, businessObservation.SourceLane);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:429:        Assert.Equal(ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact, businessEvidence.Kind);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:438:            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:458:                Assert.False(fact.Scope.AllowsExternalCalls);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:459:                Assert.False(fact.Scope.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:460:                Assert.False(fact.Scope.AllowsWorkspaceWrites);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:461:                Assert.False(fact.Scope.AllowsStorageWrites);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:469:    public void Process_readonly_verification_batch_orchestrator_SB030_INV_002_denies_office_and_business_external_calls_without_mutation()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:480:                    requestedOperations: [ProcessDriverOperation.CallOfficeGraph],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:488:                    requestedOperations: [ProcessDriverOperation.CallOfficeGraph],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:492:                    requestedOperations: [ProcessDriverOperation.MutateBusinessRecord],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:512:            summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:518:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:530:        Assert.True(officeDenied.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:534:            ProcessDriverOperation.CallOfficeGraph,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:544:        Assert.True(businessExternalDenied.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:547:            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:548:            ProcessDriverOperation.CallOfficeGraph,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:558:        Assert.True(businessMutationDenied.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:561:            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:562:            ProcessDriverOperation.MutateBusinessRecord,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:698:    private static ProcessBusinessAnalysisReadOnlyPayload CreateBusinessPayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:737:            NoMutationPerformed: true,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:908:            ProcessDriverCapabilityScopeKind.BusinessAnalysisRead => CreateEvidenceReference(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:909:                ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:929:            Assert.True(fact.Scope is { AllowsProcessMutation: false, AllowsExternalCalls: false });
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:948:            Assert.False(fact.Scope.AllowsExternalCalls);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:949:            Assert.False(fact.Scope.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:950:            Assert.False(fact.Scope.AllowsWorkspaceWrites);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:951:            Assert.False(fact.Scope.AllowsStorageWrites);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:979:            AllowsProcessMutation: false,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:980:            AllowsExternalCalls: false,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:981:            AllowsWorkspaceWrites: false,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:982:            AllowsStorageWrites: false);

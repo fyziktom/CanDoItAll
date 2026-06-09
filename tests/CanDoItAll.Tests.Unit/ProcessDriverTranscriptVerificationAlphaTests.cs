@@ -347,11 +347,19 @@ password=hunter2 rust.user@example.com
             "Build succeeded. token=sk-remote-secret",
             ProcessDriverTranscriptLanguage.DotNet,
             evidenceUri: "https://example.invalid/transcript.txt"));
+        var transientBundleEvidenceUri = $"repo://{string.Join('/', "codex", "bundles")}/retired/proof.txt";
+        var transientBundleEvidenceResult = verifier.Verify(CreateRequest(
+            "Build succeeded.",
+            ProcessDriverTranscriptLanguage.DotNet,
+            evidenceUri: transientBundleEvidenceUri));
 
         AssertUntrustedEvidenceDenied(localTranscriptResult);
         AssertUntrustedEvidenceDenied(remoteEvidenceResult);
+        AssertUntrustedEvidenceDenied(transientBundleEvidenceResult);
         Assert.All(
-            localTranscriptResult.Diagnostics.Concat(remoteEvidenceResult.Diagnostics),
+            localTranscriptResult.Diagnostics
+                .Concat(remoteEvidenceResult.Diagnostics)
+                .Concat(transientBundleEvidenceResult.Diagnostics),
             diagnostic =>
             {
                 Assert.DoesNotContain("sk-local-secret", diagnostic.Message, StringComparison.Ordinal);
@@ -425,16 +433,10 @@ password=hunter2 rust.user@example.com
             "src",
             "CanDoItAll.Processes.Drivers.TranscriptVerification",
             "README.md");
-        var runtimeDeferral = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-runtime-evidence-verifier-integration-hardening-v1",
+        var runtimeDeferral = ReadProcessDriverRuntimeEvidenceFixtureFile(
             "architecture",
             "06-runtime-host-deferral.md");
-        var domainRoadmap = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-runtime-evidence-verifier-integration-hardening-v1",
+        var domainRoadmap = ReadProcessDriverRuntimeEvidenceFixtureFile(
             "architecture",
             "05-driver-domain-roadmap.md");
         var docs = string.Join(Environment.NewLine, packageReadme, runtimeDeferral, domainRoadmap);
@@ -588,6 +590,21 @@ password=hunter2 rust.user@example.com
         }
     }
 
+    private static string ReadProcessDriverRuntimeEvidenceFixtureFile(params string[] pathParts)
+    {
+        var stablePathParts = new List<string>
+        {
+            "tests",
+            "CanDoItAll.Tests.Unit",
+            "TestData",
+            "Architecture",
+            "ProcessDriverRuntimeEvidenceVerifierIntegrationHardening"
+        };
+        stablePathParts.AddRange(pathParts);
+
+        return ReadRepositoryFile(stablePathParts.ToArray());
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return System.IO.File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));
@@ -617,3 +634,4 @@ password=hunter2 rust.user@example.com
         throw new InvalidOperationException("Could not locate repository root.");
     }
 }
+

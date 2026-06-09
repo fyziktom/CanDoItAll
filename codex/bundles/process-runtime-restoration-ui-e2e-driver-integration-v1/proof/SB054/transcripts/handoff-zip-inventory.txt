@@ -1,0 +1,9 @@
+Command: create final handoff zip excluding zip files and the active inventory transcript
+Bundle root: C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1
+Zip path: C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB054\process-runtime-restoration-ui-e2e-driver-integration-v1-final-handoff.zip
+File count: 239
+
+FullName      : C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB054\process-runtime-restoration-ui-e2e-driver-integration-v1-final-handoff.zip
+Length        : 395547
+LastWriteTime : 09.06.2026 12:05:39
+

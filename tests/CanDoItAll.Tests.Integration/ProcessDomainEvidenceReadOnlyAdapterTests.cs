@@ -588,6 +588,100 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public void Process_manager_readonly_projection_SB031_INV_001_projects_supplied_observations_as_diagnostics_without_mutation()
+    {
+        var observation = CreateManagerProjectionSourceObservation();
+
+        var projection = ProcessManagerReadOnlyVerificationProjectionMapper.Project(
+            new ProcessManagerReadOnlyVerificationProjectionRequest(
+                observation,
+                ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+                "process-manager",
+                RequestedAt));
+
+        Assert.True(projection.IsAttached);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, projection.Mode);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionSource.SuppliedEvidenceOnly, projection.Source);
+        Assert.True(projection.NoMutationPerformed);
+        Assert.False(projection.AllowsProcessMutation);
+        Assert.False(projection.AllowsTransitionMutation);
+        Assert.False(projection.AllowsFinalizerMutation);
+        Assert.Null(projection.EvidenceEnvelope);
+        Assert.NotEmpty(projection.Diagnostics);
+        Assert.Contains(
+            projection.Diagnostics,
+            diagnostic => diagnostic.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead &&
+                diagnostic.Category == ProcessDriverDiagnosticCategory.NoIssueDetected);
+        Assert.All(projection.Diagnostics, diagnostic =>
+        {
+            Assert.Equal(ProcessDriverContractVersion.Current, diagnostic.ContractVersion);
+            Assert.NotEmpty(diagnostic.EvidenceReferences);
+            Assert.All(
+                diagnostic.EvidenceReferences,
+                evidenceReference => Assert.StartsWith("bundle://", evidenceReference.Uri, StringComparison.Ordinal));
+        });
+    }
+
+    [Fact]
+    public void Process_manager_readonly_projection_SB032_INV_001_attaches_evidence_envelope_only_when_requested()
+    {
+        var observation = CreateManagerProjectionSourceObservation();
+
+        var noneProjection = ProcessManagerReadOnlyVerificationProjectionMapper.Project(
+            new ProcessManagerReadOnlyVerificationProjectionRequest(
+                observation,
+                ProcessManagerReadOnlyVerificationProjectionMode.None,
+                string.Empty,
+                RequestedAt));
+        var envelopeProjection = ProcessManagerReadOnlyVerificationProjectionMapper.Project(
+            new ProcessManagerReadOnlyVerificationProjectionRequest(
+                observation,
+                ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope,
+                "process-manager",
+                RequestedAt));
+
+        Assert.False(noneProjection.IsAttached);
+        Assert.Empty(noneProjection.Diagnostics);
+        Assert.Null(noneProjection.EvidenceEnvelope);
+        Assert.True(noneProjection.NoMutationPerformed);
+        Assert.False(noneProjection.AllowsProcessMutation);
+        Assert.False(noneProjection.AllowsTransitionMutation);
+        Assert.False(noneProjection.AllowsFinalizerMutation);
+
+        Assert.True(envelopeProjection.IsAttached);
+        Assert.Empty(envelopeProjection.Diagnostics);
+        Assert.NotNull(envelopeProjection.EvidenceEnvelope);
+        var envelope = envelopeProjection.EvidenceEnvelope!;
+        Assert.Equal(observation.ResponseCount, envelope.ResponseCount);
+        Assert.Equal(observation.ResponseCount, envelope.AcceptedCount);
+        Assert.Equal(0, envelope.DeniedCount);
+        Assert.True(envelope.AggregationMutationFree);
+        Assert.True(envelope.AllResponsesMutationFree);
+        Assert.Contains(
+            envelope.LaneSummaries,
+            summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
+        Assert.All(
+            envelope.EvidenceReferences,
+            evidenceReference => Assert.StartsWith("bundle://", evidenceReference.Uri, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Process_manager_readonly_projection_SB033_INV_001_rejects_unnamed_attached_manager_request()
+    {
+        var observation = CreateManagerProjectionSourceObservation();
+
+        var exception = Assert.Throws<ArgumentException>(() =>
+            ProcessManagerReadOnlyVerificationProjectionMapper.Project(
+                new ProcessManagerReadOnlyVerificationProjectionRequest(
+                    observation,
+                    ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope,
+                    string.Empty,
+                    RequestedAt)));
+
+        Assert.Contains("requesting manager identity", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_readonly_payload_builders_SB018_INV_001_create_hash_content_type_and_size_contracts_from_memory()
     {
         var transcriptPayload = CreateTranscriptPayload();
@@ -618,10 +712,74 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             BusinessAnalysisPayload);
     }
 
-    private static ProcessTranscriptVerificationReadOnlyEvidencePayload CreateTranscriptPayload()
+    [Fact]
+    public void Process_readonly_verification_cross_lane_SB035_INV_001_preserves_no_mutation_audit_redaction_and_evidence_hashes()
     {
-        const string transcriptText = "Build succeeded.";
+        const string sensitiveTranscript = """
+            Build succeeded.
+            token=sk-test-secret process.owner@example.com
+            """;
+        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-consumer:cross-lane-readonly",
+            RequestedAt,
+            transcriptPayloads: [CreateTranscriptPayload(sensitiveTranscript)],
+            runtimeEvidencePayloads: [CreateRuntimePayload()],
+            artifactEvidencePayloads: [CreateArtifactPayload()],
+            officeEvidencePayloads: [CreateOfficePayload(evidenceUri: "bundle://proof/SB035/office-evidence.json")],
+            businessAnalysisPayloads: [CreateBusinessPayload(evidenceUri: "bundle://proof/SB035/business-analysis.json")]);
 
+        var observation = orchestrator.Verify(payload);
+        var aggregate = Assert.IsType<ProcessReadOnlyVerificationAggregateObservation>(
+            observation.AggregateObservation);
+
+        Assert.Equal(5, observation.ResponseCount);
+        Assert.Equal(5, aggregate.ResponseCount);
+        Assert.Equal(5, aggregate.AcceptedCount);
+        Assert.Equal(0, aggregate.DeniedCount);
+        Assert.True(aggregate.AggregationMutationFree);
+        Assert.True(aggregate.AllResponsesMutationFree);
+        Assert.True(ProcessDriverEvidencePolicy.IsSha256(aggregate.Redaction.RedactedTextHash));
+        Assert.Contains(
+            observation.Responses,
+            response => response.Redaction.Status == ProcessDriverRedactionStatus.Redacted);
+        Assert.All(observation.Responses, response =>
+        {
+            Assert.True(response.NoMutationPerformed);
+            Assert.Equal(ProcessDriverContractVersion.Current, response.ContractVersion);
+            Assert.NotEmpty(response.Diagnostics);
+            Assert.NotEmpty(response.EvidenceReferences);
+            Assert.NotEmpty(response.AuditFacts);
+            Assert.True(ProcessDriverEvidencePolicy.IsSha256(response.Redaction.RedactedTextHash));
+            Assert.All(
+                response.Diagnostics,
+                diagnostic =>
+                {
+                    Assert.DoesNotContain("sk-test-secret", diagnostic.Message, StringComparison.Ordinal);
+                    Assert.DoesNotContain("process.owner@example.com", diagnostic.Message, StringComparison.Ordinal);
+                });
+            Assert.All(
+                response.EvidenceReferences,
+                evidenceReference => Assert.True(ProcessDriverEvidencePolicy.IsSha256(evidenceReference.ContentHash)));
+            Assert.All(response.AuditFacts, fact =>
+            {
+                Assert.False(fact.Scope.AllowsExternalCalls);
+                Assert.False(fact.Scope.AllowsProcessMutation);
+                Assert.False(fact.Scope.AllowsWorkspaceWrites);
+                Assert.False(fact.Scope.AllowsStorageWrites);
+                Assert.NotEmpty(fact.EvidenceReferences);
+                Assert.True(ProcessDriverEvidencePolicy.IsSha256(fact.OutputHash));
+                Assert.DoesNotContain("sk-test-secret", fact.DiagnosticSummary, StringComparison.Ordinal);
+                Assert.DoesNotContain("process.owner@example.com", fact.DiagnosticSummary, StringComparison.Ordinal);
+            });
+        });
+    }
+
+    private static ProcessTranscriptVerificationReadOnlyEvidencePayload CreateTranscriptPayload(
+        string transcriptText = "Build succeeded.")
+    {
         return ProcessReadOnlyVerificationPayloadBuilder.CreateTranscriptPayload(
             new ProcessTranscriptVerificationPayloadFacts(
                 CreateIdentity("process-consumer:transcript-readonly"),
@@ -708,6 +866,25 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
                 evidencePayload,
                 items ?? [CreateBusinessDeliverable(), CreateBusinessSupportingEvidence()],
                 requestedOperations));
+    }
+
+    private static ProcessReadOnlyVerificationBatchObservation CreateManagerProjectionSourceObservation()
+    {
+        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:read-only-verification",
+            RequestedAt,
+            artifactEvidencePayloads: [CreateArtifactPayload()],
+            businessAnalysisPayloads:
+            [
+                CreateBusinessPayload(
+                    evidenceUri: "bundle://proof/SB033/business-analysis-manager-diagnostic.json",
+                    items: [CreateBusinessDeliverable(), CreateBusinessSupportingEvidence()])
+            ]);
+
+        return orchestrator.Verify(payload);
     }
 
     private static ProcessDriverVerificationResponse CreateVerificationResponse(

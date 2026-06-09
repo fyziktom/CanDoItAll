@@ -1,0 +1,31 @@
+SB027 anti-stub assertions: .NET scenario proof uses real process runtime, outbox dispatch, workspace files, and deterministic direct-agent execution
+PASS P09 scenario scope contains 'CreateEnabledApplicationAsync' -> line 370
+PASS P09 scenario scope contains 'scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>()' -> line 372
+PASS P09 scenario scope contains 'scope.ServiceProvider.GetRequiredService<ProcessesService>()' -> line 376
+PASS P09 scenario scope contains 'scope.ServiceProvider.GetRequiredService<ProcessOutboxService>()' -> line 377
+PASS P09 scenario scope contains 'scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()' -> line 379
+PASS P09 scenario scope contains 'ProcessMockThreeAgentArtifactHandoffFixture.Create' -> line 393
+PASS P09 scenario scope contains 'CreateLaunchPlanAsync' -> line 400
+PASS P09 scenario scope contains 'ExecuteLaunchPlanAsync' -> line 423
+PASS P09 scenario scope contains 'DrainProcessOutboxUntilRunSettledAsync' -> line 431
+PASS P09 scenario scope contains 'ProcessRunStatus.Completed' -> line 441
+PASS P09 scenario scope contains 'ProcessStepRunStatus.Completed' -> line 451
+PASS P09 scenario scope contains 'ListRunArtifactRecordsAsync' -> line 453
+PASS P09 scenario scope contains 'AssertManagedArtifactsContain' -> line 468
+PASS P09 scenario scope contains 'ReadTextFile' -> line 486
+PASS P09 scenario scope contains 'ValidationEngine.cs' -> line 475
+PASS P09 scenario scope contains 'ListExecutionRunsAsync' -> line 511
+PASS P09 scenario scope contains 'AgentWorkspaceToolProfileKind.SoftwareDevelopment' -> line 523
+PASS P09 scenario scope contains 'AgentWorkspaceToolProfileKind.QualityValidation' -> line 525
+PASS P09 scenario scope does not contain forbidden signal 'codex\\bundles'
+PASS P09 scenario scope does not contain forbidden signal 'codex/bundles'
+PASS P09 scenario scope does not contain forbidden signal 'Thread.Sleep'
+PASS P09 scenario scope does not contain forbidden signal 'WebApplicationFactory'
+PASS P09 scenario scope does not contain forbidden signal 'TestServer'
+PASS P09 scenario scope does not contain forbidden signal '.UpdateAsync('
+PASS P09 scenario scope does not contain forbidden signal 'ExecuteSqlRaw'
+PASS P09 scenario scope does not contain forbidden signal 'FromSqlRaw'
+PASS .NET dispatch guard test exists 'ResolveCompletionStatus_blocks_completed_dotnet_web_implementation_without_runtime_startup_proof' -> line 14579
+PASS .NET dispatch guard test exists 'ResolveCompletionStatus_accepts_dotnet_web_implementation_with_runtime_startup_proof_after_mutation' -> line 14757
+PASS .NET dispatch guard test exists 'ResolveCompletionStatus_accepts_retry_artifacts_after_validation_without_new_product_mutation' -> line 14939
+PASS .NET dispatch guard test exists 'ResolveMissingConcreteImplementationProofSummary_allows_dotnet_validation_after_source_mutation' -> line 15422

@@ -1,0 +1,18 @@
+Command: git branch/log plus HEAD bundle-path dependency inventory for SB003
+ExitCode: 0
+Output:
+SB003_INV_001 PASS: source-backed current-state scan used current branch, HEAD, and C# source/test grep results.
+Branch:
+maf-processes-refactor
+HEAD:
+4769eeb1d (HEAD -> maf-processes-refactor) added bundle
+Bundle path dependencies in HEAD:
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:4558:            ":(exclude)codex/bundles");
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:4566:            ":(exclude)codex/bundles");
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:4584:            "codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1");
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessAgentExecutionBoundaryArchitectureTests.cs:4593:            "codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1");
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs:791:            $":(exclude)codex/bundles/{BundleName}");
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessDriverContractPrerequisitesVerificationTests.cs:799:            $":(exclude)codex/bundles/{BundleName}");
+HEAD:tests/CanDoItAll.Tests.Unit/ProcessDriverFakeProofResistanceTests.cs:8:    private const string BundlePath = "codex/bundles/process-driver-multi-domain-verification-gateway-v1";
+Current working tree bundle-path source scan result: see bundle://proof/SB006/transcripts/passing-working-tree-bundle-path-scan.txt
+

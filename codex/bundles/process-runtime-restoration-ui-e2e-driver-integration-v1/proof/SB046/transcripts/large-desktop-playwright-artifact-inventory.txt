@@ -1,0 +1,9 @@
+Command: Get-ChildItem -Path output\playwright\process-start-smoke -File | Select-Object Name, Length, LastWriteTime
+
+Name                                        Length LastWriteTime
+----                                        ------ -------------
+01-template-selected-large-desktop.png      260479 09.06.2026 11:41:56
+02-launch-plan-created-large-desktop.png    122302 09.06.2026 11:42:01
+02-runs-tab-before-launch-large-desktop.png  71512 09.06.2026 11:41:58
+03-run-selected-large-desktop.png            29410 09.06.2026 11:42:05
+

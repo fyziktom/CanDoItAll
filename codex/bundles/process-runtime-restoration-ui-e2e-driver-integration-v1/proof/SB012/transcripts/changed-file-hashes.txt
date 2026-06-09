@@ -1,0 +1,12 @@
+SHA256 D2E7F856872C20626E5FA14692D52B3A9CD364740C4FC2F09933F88B818DA935 C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs
+SHA256 9F1EC9CE8AC645909E10A87381A4CC51D235DDCD6599AA46F10E91861390BFA2 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB010\README.md
+SHA256 332EA55699F4510F479E0BEABAEB14E35560E61179E5243622716613E2DDA48C C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB011\README.md
+SHA256 14C6029D7524DB389685CA914343BBDF082A077E5B51F2A54677C2C730D0B1D9 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB012\README.md
+SHA256 DADFC1B3A757D37AB413CDAA1E6F0C789DBC15899BE0CB23F107AC889EF22B36 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\reviews\01-execution-report.md
+SHA256 7189F82EF6B71D598666896CBCD44872060854666D7F6300EFF662D56C0C1349 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB010\transcripts\process-ui-route-template-inventory.txt
+SHA256 402682911DC5A566FC993687B16F301352E2A8D3A9E9CDB73DC25F66D1D1EE38 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB011\transcripts\template-catalog-test-source-assertions.txt
+SHA256 7B8A050B980A5F1052EBA357F035CE05E1755C6A826C89D14DECEAF7995A5E77 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB012\transcripts\focused-template-catalog-visibility-test.txt
+SHA256 4183BEBA5DE42D6D97A105C9C6315949F977EED68B1F69D8301434AD6D68F04B C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB012\transcripts\anti-stub-audit-template-catalog-test.txt
+SHA256 F499C033E8AB546A575EE1253C0C73CA08737E4B1BF558877673CE9890010AFF C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB012\transcripts\forbidden-drift-scan.txt
+SHA256 4BDECC7E95BDDAAA0706936EF07D7914AA5A88926CAA1AC3E9C6B391545309DC C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB012\manifest.md
+SHA256 BA8252B151DF1F986CEDBB82E979CCDA716567241444B64525418BBCF92F23D3 C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB012\semantic-invariants.md

@@ -1,0 +1,60 @@
+SB034 source assertions - read-only orchestration split and lane-specific builders/adapters
+
+Read-only orchestration files:
+ProcessReadOnlyVerificationAggregateObservation.cs 4079 bytes
+ProcessReadOnlyVerificationBatchModels.cs 5158 bytes
+ProcessReadOnlyVerificationBatchOrchestrator.cs 10278 bytes
+ProcessReadOnlyVerificationOperationPolicy.cs 1657 bytes
+ProcessReadOnlyVerificationPayloadBuilder.cs 14987 bytes
+ProcessReadOnlyVerificationRequestFactory.cs 879 bytes
+
+Batch model split:
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:41:    public ProcessReadOnlyVerificationBatchObservation Verify(ProcessReadOnlyVerificationBatchPayload payload)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:72:        return new ProcessReadOnlyVerificationBatchObservation(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchModels.cs:5:internal sealed record ProcessReadOnlyVerificationBatchPayload
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchModels.cs:7:    public ProcessReadOnlyVerificationBatchPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchModels.cs:58:internal sealed record ProcessReadOnlyVerificationBatchObservation
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchModels.cs:60:    public ProcessReadOnlyVerificationBatchObservation(
+
+Lane-specific builder/adapters:
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:7:    private readonly ProcessTranscriptVerificationReadOnlyAdapter transcriptAdapter;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:8:    private readonly ProcessRuntimeEvidenceVerificationReadOnlyAdapter runtimeEvidenceAdapter;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:9:    private readonly ProcessArtifactEvidenceReadOnlyAdapter artifactEvidenceAdapter;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:10:    private readonly ProcessOfficeEvidenceReadOnlyAdapter officeEvidenceAdapter;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:11:    private readonly ProcessBusinessAnalysisReadOnlyAdapter businessAnalysisAdapter;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:16:            new ProcessTranscriptVerificationReadOnlyAdapter(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:17:            new ProcessRuntimeEvidenceVerificationReadOnlyAdapter(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:18:            new ProcessArtifactEvidenceReadOnlyAdapter(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:19:            new ProcessOfficeEvidenceReadOnlyAdapter(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:20:            new ProcessBusinessAnalysisReadOnlyAdapter(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:26:        ProcessTranscriptVerificationReadOnlyAdapter transcriptAdapter,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:27:        ProcessRuntimeEvidenceVerificationReadOnlyAdapter runtimeEvidenceAdapter,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:28:        ProcessArtifactEvidenceReadOnlyAdapter artifactEvidenceAdapter,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:29:        ProcessOfficeEvidenceReadOnlyAdapter officeEvidenceAdapter,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:30:        ProcessBusinessAnalysisReadOnlyAdapter businessAnalysisAdapter,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:28:        var adapter = new ProcessArtifactEvidenceReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:60:        var adapter = new ProcessArtifactEvidenceReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:87:        var officeAdapter = new ProcessOfficeEvidenceReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:88:        var businessAdapter = new ProcessBusinessAnalysisReadOnlyAdapter();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:167:            transcriptPayloads: [CreateTranscriptPayload()],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:233:            transcriptPayloads: [CreateTranscriptPayload()],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:245:            entry.ProducerType == typeof(ProcessTranscriptVerificationReadOnlyAdapter));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:248:            entry.ProducerType == typeof(ProcessRuntimeEvidenceVerificationReadOnlyAdapter));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:251:            entry.ProducerType == typeof(ProcessArtifactEvidenceReadOnlyAdapter));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:254:            entry.ProducerType == typeof(ProcessOfficeEvidenceReadOnlyAdapter));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:257:            entry.ProducerType == typeof(ProcessBusinessAnalysisReadOnlyAdapter));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:687:        var transcriptPayload = CreateTranscriptPayload();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:728:            transcriptPayloads: [CreateTranscriptPayload(sensitiveTranscript)],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:780:    private static ProcessTranscriptVerificationReadOnlyEvidencePayload CreateTranscriptPayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:783:        return ProcessReadOnlyVerificationPayloadBuilder.CreateTranscriptPayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:802:        return ProcessReadOnlyVerificationPayloadBuilder.CreateRuntimeEvidencePayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:825:        return ProcessReadOnlyVerificationPayloadBuilder.CreateArtifactEvidencePayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:847:        return ProcessReadOnlyVerificationPayloadBuilder.CreateOfficeEvidencePayload(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:862:        return ProcessReadOnlyVerificationPayloadBuilder.CreateBusinessAnalysisPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:16:    public static ProcessTranscriptVerificationReadOnlyEvidencePayload CreateTranscriptPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:54:    public static ProcessRuntimeEvidenceVerificationReadOnlyEvidencePayload CreateRuntimeEvidencePayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:96:    public static ProcessArtifactEvidenceReadOnlyPayload CreateArtifactEvidencePayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:140:    public static ProcessOfficeEvidenceReadOnlyPayload CreateOfficeEvidencePayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:166:            ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:173:    public static ProcessBusinessAnalysisReadOnlyPayload CreateBusinessAnalysisPayload(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:199:            ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(

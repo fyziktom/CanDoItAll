@@ -774,6 +774,38 @@ public sealed class ProcessRunStartRequest
     public ProcessDefinitionLintMode LintMode { get; set; } = ProcessDefinitionLintMode.Advisory;
 }
 
+public enum ProcessRunTriggerSourceKind
+{
+    Manual,
+    SchedulerPlan,
+    WorkflowRun
+}
+
+public sealed class ProcessRunTriggerStartRequest
+{
+    public Guid ProcessDefinitionId { get; set; }
+
+    public Guid? ProjectId { get; set; }
+
+    public string RunName { get; set; } = string.Empty;
+
+    public ProcessOperatingMode OperatingMode { get; set; } = ProcessOperatingMode.AssistedExecution;
+
+    public string TriggerReason { get; set; } = string.Empty;
+
+    public ProcessProjectStructureContext? ProjectStructureContext { get; set; }
+
+    public ProcessRunTriggerSourceKind TriggerSourceKind { get; set; } = ProcessRunTriggerSourceKind.Manual;
+
+    public Guid? TriggerSourceId { get; set; }
+
+    public string TriggerSourceName { get; set; } = string.Empty;
+
+    public string RequestedBy { get; set; } = "process-workspace";
+
+    public ProcessDefinitionLintMode LintMode { get; set; } = ProcessDefinitionLintMode.Advisory;
+}
+
 public sealed class ProcessRunStopRequest
 {
     public Guid ProcessRunId { get; set; }

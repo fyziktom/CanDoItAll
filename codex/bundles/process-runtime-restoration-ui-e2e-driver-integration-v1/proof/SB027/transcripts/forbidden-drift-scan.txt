@@ -1,0 +1,3 @@
+SB027 forbidden drift scan: no production source changes were introduced by .NET scenario proof closure
+PASS git diff --name-only -- src returned no files
+PASS rg codex bundle-path scan found no source/test code hits

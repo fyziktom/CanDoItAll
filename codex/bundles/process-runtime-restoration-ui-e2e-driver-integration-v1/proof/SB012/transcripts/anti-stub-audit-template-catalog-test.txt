@@ -1,0 +1,20 @@
+PASS: test constructs a real WebApplication builder -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:146
+PASS: test builds the real web app pipeline -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:169
+PASS: test maps production CanDoItAll API routes -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:186
+PASS: test maps production project-structure API routes -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:185
+PASS: test maps production Razor component app -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:187
+PASS: test includes production module assemblies -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:188
+PASS: test starts the host over HTTP -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:197
+PASS: test sends HTTP requests to the started server -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:198
+PASS: test fails if required template visibility is duplicate or missing -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:65
+PASS: test rejects shallow envelope responses without projected process steps -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:77
+PASS: forbidden anti-stub pattern absent -> new Mock<
+PASS: forbidden anti-stub pattern absent -> Mock.Of<
+PASS: forbidden anti-stub pattern absent -> Substitute.For<
+PASS: forbidden anti-stub pattern absent -> UseTestServer
+PASS: forbidden anti-stub pattern absent -> TestServer
+PASS: forbidden anti-stub pattern absent -> return Results.Ok(new ProcessTemplateCatalogItem
+PASS: forbidden anti-stub pattern absent -> sourceTemplateKey
+PASS: forbidden anti-stub pattern absent -> codex\bundles
+PASS: forbidden anti-stub pattern absent -> process-runtime-restoration-ui-e2e-driver-integration-v1
+PASS: SB012 anti-stub audit confirms the catalog visibility test uses the started production pipeline and exact template assertions.

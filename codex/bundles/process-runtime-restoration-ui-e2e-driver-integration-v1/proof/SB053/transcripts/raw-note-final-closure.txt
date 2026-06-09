@@ -1,0 +1,13 @@
+Command: SB053 raw-note final closure audit
+Raw note RN-001 present: True
+Raw note RN-002 present: True
+Raw note RN-003 present: True
+Raw note RN-004 present: True
+Raw note RN-005 present: True
+Raw note RN-006 present: True
+Raw note RN-007 present: True
+Raw note RN-008 present: True
+Raw note RN-009 present: True
+Raw-note pending/partial hit count: 0
+All explicit SB rows non-pending/non-failed: True
+PASS: RN-001 through RN-009 have final non-pending closure and all explicit subbundle rows are passed.

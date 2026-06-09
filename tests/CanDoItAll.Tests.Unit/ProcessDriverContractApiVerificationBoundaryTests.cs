@@ -17,10 +17,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_core_public_api_SB007_INV_001_snapshot_matches_owner_classification_and_descriptor_surface()
     {
-        var snapshot = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var snapshot = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "06-core-public-api-owner-classification.md");
 
@@ -41,10 +38,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB008_INV_001_versioning_snapshot_matches_runtime_free_surface()
     {
-        var snapshot = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var snapshot = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "07-driver-abstraction-api-versioning-snapshot.md");
         var publicTypes = typeof(ProcessDriverPermissionMode).Assembly.GetExportedTypes();
@@ -335,10 +329,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB040_INV_002_contract_version_history_documents_every_public_descriptor_family_change()
     {
-        var snapshot = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var snapshot = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "07-driver-abstraction-api-versioning-snapshot.md");
         var version = ProcessDriverContractVersion.Current;
@@ -376,10 +367,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB041_INV_001_v1_migration_docs_match_current_contract_and_alpha_verifier_behavior()
     {
-        var migrationDoc = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var migrationDoc = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "09-v1-contract-migration-compatibility.md");
         var version = ProcessDriverContractVersion.Current;
@@ -428,16 +416,10 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB046_INV_001_runtime_host_approval_matrix_keeps_runtime_surfaces_unapproved()
     {
-        var matrix = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var matrix = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "10-runtime-host-approval-matrix.md");
-        var migrationDoc = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var migrationDoc = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "09-v1-contract-migration-compatibility.md");
         var contractSource = ReadContractSource(FindRepositoryRoot());
@@ -491,16 +473,10 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB047_INV_001_future_runtime_prerequisites_are_exact_and_unsatisfied()
     {
-        var prerequisites = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var prerequisites = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "11-future-production-runtime-prerequisites.md");
-        var matrix = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var matrix = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "10-runtime-host-approval-matrix.md");
 
@@ -553,16 +529,10 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB057_INV_001_roadmaps_deny_runtime_host_and_list_approval_gates()
     {
-        var coreRoadmap = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var coreRoadmap = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "12-stable-process-core-roadmap.md");
-        var domainRoadmap = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var domainRoadmap = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "13-domain-driver-roadmap.md");
 
@@ -625,22 +595,13 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB058_INV_001_next_bundle_keeps_production_host_registration_not_ready()
     {
-        var decision = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var decision = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "14-next-bundle-runtime-host-decision.md");
-        var approvalMatrix = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var approvalMatrix = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "10-runtime-host-approval-matrix.md");
-        var prerequisites = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var prerequisites = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "11-future-production-runtime-prerequisites.md");
 
@@ -698,16 +659,10 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB059_INV_001_backlog_candidates_keep_runtime_host_and_execution_blocked()
     {
-        var backlog = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var backlog = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "15-next-backlog-candidates-and-reopen-triggers.md");
-        var decision = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var decision = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "14-next-bundle-runtime-host-decision.md");
 
@@ -798,10 +753,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     public void Process_driver_contract_api_SB019_INV_001_gateway_allow_list_is_explicit_typed_and_runtime_free()
     {
         var root = FindRepositoryRoot();
-        var design = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var design = ReadProcessDriverMultiDomainFixtureFile(
             "architecture",
             "08-explicit-verification-gateway-design.md");
         var contractSource = ReadContractSource(root);
@@ -1105,10 +1057,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     [Fact]
     public void Process_driver_contract_api_SB040_SB042_INV_001_current_bundle_runtime_host_matrix_keeps_runtime_surfaces_unapproved()
     {
-        var decision = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-readonly-release-candidate-stabilization-v1",
+        var decision = ReadProcessDriverReadonlyReleaseCandidateFixtureFile(
             "architecture",
             "04-runtime-host-decision.md");
 
@@ -1201,22 +1150,13 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     public void Process_driver_contract_api_SB052_SB053_INV_001_current_bundle_roadmap_keeps_runtime_integration_blocked()
     {
         var root = FindRepositoryRoot();
-        var decision = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-readonly-release-candidate-stabilization-v1",
+        var decision = ReadProcessDriverReadonlyReleaseCandidateFixtureFile(
             "architecture",
             "06-next-roadmap-decision.md");
-        var roadmap = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-readonly-release-candidate-stabilization-v1",
+        var roadmap = ReadProcessDriverReadonlyReleaseCandidateFixtureFile(
             "architecture",
             "07-stable-core-domain-driver-roadmap-and-reopen-triggers.md");
-        var runtimeDecision = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-readonly-release-candidate-stabilization-v1",
+        var runtimeDecision = ReadProcessDriverReadonlyReleaseCandidateFixtureFile(
             "architecture",
             "04-runtime-host-decision.md");
         var sourceText = ReadReadonlyDriverPipelineSource(root);
@@ -1567,6 +1507,33 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         }
     }
 
+    private static string ReadProcessDriverMultiDomainFixtureFile(params string[] pathParts)
+    {
+        return ReadStableArchitectureFixtureFile("ProcessDriverMultiDomainVerificationGateway", pathParts);
+    }
+
+    private static string ReadProcessDriverReadonlyReleaseCandidateFixtureFile(params string[] pathParts)
+    {
+        return ReadStableArchitectureFixtureFile("ProcessDriverReadonlyReleaseCandidateStabilization", pathParts);
+    }
+
+    private static string ReadStableArchitectureFixtureFile(
+        string fixtureDirectory,
+        params string[] pathParts)
+    {
+        var stablePathParts = new List<string>
+        {
+            "tests",
+            "CanDoItAll.Tests.Unit",
+            "TestData",
+            "Architecture",
+            fixtureDirectory
+        };
+        stablePathParts.AddRange(pathParts);
+
+        return ReadRepositoryFile(stablePathParts.ToArray());
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));
@@ -1596,3 +1563,5 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         throw new InvalidOperationException("Could not locate the repository root.");
     }
 }
+
+

@@ -9,8 +9,6 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessDriverContractPrerequisitesVerificationTests
 {
-    private const string BundleName = "process-driver-runtime-evidence-verifier-integration-hardening-v1";
-
     [Fact]
     public void Process_driver_prerequisites_SB003_INV_001_preserve_baseline_branch_and_no_runtime_guardrails()
     {
@@ -18,7 +16,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
         var branchName = RunGit(root, "branch", "--show-current").Single();
         var executionReport = ReadBundleFile("reviews", "01-execution-report.md");
         var productionSource = ReadProductionSourceText(root);
-        var changedFilesOutsideBundle = ReadGitChangedFilesOutsideCurrentBundle(root);
+        var changedFilesOutsideBundle = ReadGitChangedFilesOutsideTransientBundles(root);
 
         Assert.Equal("maf-processes-refactor", branchName);
         Assert.Contains("| SB045 |", executionReport, StringComparison.Ordinal);
@@ -780,15 +778,16 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
         };
     }
 
-    private static IReadOnlyList<string> ReadGitChangedFilesOutsideCurrentBundle(string repositoryRoot)
+    private static IReadOnlyList<string> ReadGitChangedFilesOutsideTransientBundles(string repositoryRoot)
     {
+        var transientBundleRootPath = string.Join('/', "codex", "bundles");
         var tracked = RunGit(
             repositoryRoot,
             "diff",
             "--name-only",
             "--",
             ".",
-            $":(exclude)codex/bundles/{BundleName}");
+            $":(exclude){transientBundleRootPath}");
         var untracked = RunGit(
             repositoryRoot,
             "ls-files",
@@ -796,7 +795,7 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
             "--exclude-standard",
             "--",
             ".",
-            $":(exclude)codex/bundles/{BundleName}");
+            $":(exclude){transientBundleRootPath}");
 
         return tracked
             .Concat(untracked)
@@ -879,7 +878,16 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
 
     private static string ReadBundleFile(params string[] pathParts)
     {
-        return File.ReadAllText(Path.Combine([FindRepositoryRoot(), "codex", "bundles", BundleName, .. pathParts]));
+        return File.ReadAllText(Path.Combine(
+            [
+                FindRepositoryRoot(),
+                "tests",
+                "CanDoItAll.Tests.Unit",
+                "TestData",
+                "Architecture",
+                "ProcessDriverRuntimeEvidenceVerifierIntegrationHardening",
+                .. pathParts
+            ]));
     }
 
     private static string ExtractMarkdownSection(string content, string heading)

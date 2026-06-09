@@ -1,0 +1,17 @@
+SB016 source assertions: run persistence method only
+Method range: 155-256
+PASS required 'ProcessProjectStructureContext' -> line 170
+PASS required 'ProjectStructureContext = projectStructureContext' -> line 183
+PASS required 'ProcessProjectStructureContextFormatter.TryParse' -> line 213
+PASS required 'ListRunsAsync(saveResult.Value, projectId)' -> line 188
+PASS required 'GetRunDetailsAsync(runResult.Value)' -> line 195
+PASS required 'dbContext.Set<ProcessRun>()' -> line 202
+PASS required 'dbContext.Set<ProcessStepRun>()' -> line 219
+PASS required 'dbContext.Set<ProcessWorkBrief>()' -> line 231
+PASS required 'dbContext.Set<ProcessJournalEntry>()' -> line 243
+PASS required 'dbContext.Set<ProcessOutboxRecord>()' -> line 249
+PASS required 'ProcessStepRunStatus.Ready' -> line 197
+PASS required 'ProcessStepRunStatus.Pending' -> line 198
+PASS required 'StartRunCommandKey' -> line 253
+PASS required 'AutomationDispatchCommandKey' -> line 254
+PASS absent 'codex\\bundles' in method

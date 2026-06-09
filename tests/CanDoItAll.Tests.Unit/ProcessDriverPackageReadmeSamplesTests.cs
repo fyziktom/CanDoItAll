@@ -103,6 +103,12 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
             "Automation",
             "Dispatch",
             "ProcessReadOnlyVerificationBatchOrchestrator.cs");
+        var batchModelsSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessReadOnlyVerificationBatchModels.cs");
         var payloadBuilderSource = ReadRepositoryFile(
             "src",
             "CanDoItAll.Modules.Processes",
@@ -121,7 +127,8 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
         Assert.Contains("Process Driver Read-Only Verification Migration", processesReadme, StringComparison.Ordinal);
         Assert.Contains("ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)", processesReadme, StringComparison.Ordinal);
         Assert.Contains("public ProcessReadOnlyVerificationBatchObservation Verify(ProcessReadOnlyVerificationBatchPayload payload)", orchestratorSource, StringComparison.Ordinal);
-        Assert.Contains("internal sealed record ProcessReadOnlyVerificationBatchPayload", orchestratorSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessReadOnlyVerificationBatchPayload", batchModelsSource, StringComparison.Ordinal);
+        Assert.Contains("internal sealed record ProcessReadOnlyVerificationBatchObservation", batchModelsSource, StringComparison.Ordinal);
 
         foreach (var payloadBuilderMethod in new[]
         {

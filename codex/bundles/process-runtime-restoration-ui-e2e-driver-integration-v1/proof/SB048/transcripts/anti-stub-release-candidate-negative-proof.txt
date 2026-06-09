@@ -1,0 +1,6 @@
+Command: PowerShell synthetic negative proof for SB048 release-candidate gate scans
+PASS synthetic transient bundle path would be rejected.
+PASS synthetic process-driver runtime host/DI drift would be rejected.
+PASS synthetic Core driver/domain dependency would be rejected.
+PASS synthetic concrete driver side-effect call would be rejected.
+PASS synthetic unexpected UI/media source drift would be rejected.

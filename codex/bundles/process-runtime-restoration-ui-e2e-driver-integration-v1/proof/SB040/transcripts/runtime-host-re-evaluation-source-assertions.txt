@@ -1,0 +1,10 @@
+Command: PowerShell source assertion for SB040 runtime-host re-evaluation decision
+PASS README contains: ## Runtime Host Roadmap Decision
+PASS README contains: Current status: `Not approved`.
+PASS README contains: source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts
+PASS README contains: does not approve a generic process-driver runtime host
+PASS README contains: Processes may call typed read-only verification adapters over already-loaded caller-supplied facts.
+PASS README contains: Manager-visible diagnostics may project those read-only observations without process mutation.
+PASS README contains: Scheduler and workflow-origin process starts must use typed process services, not driver hooks.
+PASS architecture guard exists in stable unit test source.
+SB040 result: runtime-host re-evaluation remains Not approved after source-backed process-runtime proof.

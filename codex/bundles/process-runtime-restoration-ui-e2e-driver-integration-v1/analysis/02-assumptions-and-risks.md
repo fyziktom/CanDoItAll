@@ -9,6 +9,8 @@
 
 ## Critical Path Risks
 
+- Review the enumerated critical path risks before each critical gate and reopen affected subbundles when any risk materializes.
+
 1. Removing bundle-path tests can accidentally weaken architecture coverage.
 2. UI process launch may reveal broken dependency injection, missing seed data, or broken route/component wiring.
 3. Process template UI may work while dispatch/finalizer/artifact paths are broken.
@@ -34,3 +36,4 @@
 - Dispatch creates a run but never advances state.
 - Process Core references driver abstractions, modules, infrastructure, UI, workspace, storage, EF, or AgentFramework.
 - Runtime host, registry, selector, DI hook, manager command, scheduler/workflow hook, shell/Graph/file/storage/process mutation appears without explicit approved scope.
+

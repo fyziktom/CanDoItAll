@@ -1,0 +1,13 @@
+Startup/composition inventory for SB007
+SB007_INV_001 PASS src\CanDoItAll.Web\Program.cs:62 - Web Program registers runtime modules with the app content root.
+SB007_INV_002 PASS src\CanDoItAll.Web\Program.cs:61 - Web Program registers runtime database switching/bootstrap services.
+SB007_INV_003 PASS src\CanDoItAll.Web\Program.cs:63 - Web Program registers API services before mapping endpoints.
+SB007_INV_004 PASS src\CanDoItAll.Web\Program.cs:904 - Web Program maps project-structure process launch API entry points.
+SB007_INV_005 PASS src\CanDoItAll.Web\Program.cs:905 - Web Program maps process API routes.
+SB007_INV_006 PASS src\CanDoItAll.Web\Program.cs:917 - Web Program bootstraps the selected runtime database during startup.
+SB007_INV_007 PASS src\CanDoItAll.Composition\ModuleAssemblies.cs:36 - Shared composition assembly catalog includes the Processes module.
+SB007_INV_008 PASS src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:67 - Runtime module registration explicitly calls AddProcessesModule.
+SB007_INV_009 PASS src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:41 - Process runtime service is registered in DI.
+SB007_INV_010 PASS src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:70 - Process template catalog service is registered in DI.
+SB007_INV_011 PASS src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:45 - Process dispatch service is registered in DI.
+SB007_INV_012 PASS tests\CanDoItAll.Tests.Support\TestApplicationBootstrap.cs:72 - Shared test bootstrap uses the same runtime-module composition entry point.

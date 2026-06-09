@@ -5,7 +5,7 @@ namespace CanDoItAll.Tests.Unit;
 
 public sealed class ProcessDriverFakeProofResistanceTests
 {
-    private const string BundlePath = "codex/bundles/process-driver-multi-domain-verification-gateway-v1";
+    private const string StableProofFixturePath = "tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway";
     private const string CorpusPath = "tests/CanDoItAll.Tests.Unit/TestData/ProcessDriverMultiDomainCorpus";
     private const string SecretPattern = @"sk-[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{30,}|github_pat_[A-Za-z0-9_]{20,}|AccountKey=[A-Za-z0-9+/]{60,}={0,2}";
 
@@ -86,16 +86,16 @@ public sealed class ProcessDriverFakeProofResistanceTests
 
     private static FakeProofEvidence LoadActualSb043Evidence()
     {
-        var report = ReadRepositoryFile(BundlePath, "reviews", "01-execution-report.md");
-        var manifest = ReadRepositoryFile(BundlePath, "proof", "SB043", "manifest.md");
+        var report = ReadRepositoryFile(StableProofFixturePath, "reviews", "01-execution-report.md");
+        var manifest = ReadRepositoryFile(StableProofFixturePath, "proof", "SB043", "manifest.md");
         var focusedTranscript = ReadRepositoryFile(
-            BundlePath,
+            StableProofFixturePath,
             "proof",
             "SB043",
             "transcripts",
             "focused-multi-domain-corpus-tests.txt");
         var sourceScan = ReadRepositoryFile(
-            BundlePath,
+            StableProofFixturePath,
             "proof",
             "SB043",
             "transcripts",

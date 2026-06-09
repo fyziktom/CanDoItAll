@@ -1,0 +1,5 @@
+Semantic positive source audit for SB009
+SB009_INV_001 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:32 - Positive proof requires a live /health HTTP response from the started host.
+SB009_INV_004 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:37 - Positive proof requires process template catalog visibility through the HTTP API.
+SB009_INV_005 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:44 - Positive proof requires process runtime service resolution from DI.
+SB009_INV_006 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:46 - Positive proof requires process dispatch service resolution from DI.

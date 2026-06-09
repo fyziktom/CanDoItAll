@@ -1,0 +1,29 @@
+SB015 anti-stub and no-small-viewport audit
+PASS required 'fixture.Browser.NewContextAsync' -> line 14
+PASS required 'fixture.BaseUrl' -> line 23
+PASS required 'page.GotoAsync' -> line 24
+PASS required 'ClickAsync' -> line 31
+PASS required 'FillAsync' -> line 36
+PASS required 'HttpClient' -> line 168
+PASS required 'ReadFromJsonAsync' -> line 267
+PASS required 'PostAsync' -> line 273
+PASS required 'PostAsJsonAsync' -> line 278
+PASS required 'AssertApiSuccessAsync' -> line 266
+PASS required '#blazor-error-ui' -> line 165
+PASS absent 'Mock'
+PASS absent 'Moq'
+PASS absent 'Substitute'
+PASS absent 'TestServer'
+PASS absent 'WebApplicationFactory'
+PASS absent 'Fake'
+PASS absent 'Stub'
+PASS absent 'codex\\bundles'
+PASS absent 'Thread.Sleep'
+PASS absent 'Width = 1440'
+PASS absent 'Width = 1366'
+PASS absent 'Width = 1280'
+PASS absent 'Width = 1024'
+PASS absent 'Width = 768'
+PASS absent 'mobile'
+PASS absent 'small-screen'
+PASS absent 'medium-screen'

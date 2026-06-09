@@ -1,0 +1,8 @@
+5A7D037D25BE0D6DD101C78A22A5F0B94AFB0E8461C5A3E28A13FAFF6808389E  tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs
+19E9441F0986476D149318D4953CFFB5B076CDE93F1F3F113749ABB07FB981AD  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB007\transcripts\startup-composition-inventory.txt
+3F34C560B831A160CEBCC741305D7E22A29AA66267602785B6696312F2D855A0  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB009\transcripts\focused-app-startup-smoke-test.txt
+A339A5C519BF6AAAE5F16CF57C2250BE506C8F81D28402A5B463B2111D586129  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB009\transcripts\web-project-build.txt
+1CE10FA368F4B043571F1072DB0CDA1075C7904F4BA56C31F3EA84DA3A403799  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB009\transcripts\startup-smoke-source-assertions.txt
+003B384D0C6E39F5D4A04B75318FD66077AC9F613C7A92BEE4609108E022D596  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB009\transcripts\forbidden-drift-scan.txt
+F620A98FD94CAEBA52961E882AE1A3E62D422E3C33B03527AAC5DC7DC9ECA73D  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB009\transcripts\anti-stub-audit-startup-test.txt
+15DCB957634A6F1E47110AD9A7CA564683560798DD472DF8D399FF7E0368A142  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB009\transcripts\semantic-positive-source-audit.txt

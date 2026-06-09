@@ -1,0 +1,23 @@
+PASS: catalog/UI visibility integration test exists -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:58
+PASS: test requires software-delivery template and path -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:30
+PASS: test requires blazor-app-delivery template and path -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:31
+PASS: test requires business-plan-development template and path -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:32
+PASS: test exercises process template catalog API -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:42
+PASS: test exercises template detail API -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:70
+PASS: test exercises typed projected envelope API -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:74
+PASS: test checks stable projection source format -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:76
+PASS: test exercises mermaid template API -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:82
+PASS: test exercises baseline scenario API -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:87
+PASS: test exercises live-run profile API -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:93
+PASS: test requires fresh UI-driven Blazor live-run profile -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:96
+PASS: test verifies profile fresh-run policy -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:98
+PASS: test verifies process workspace shell navigation route -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:100
+PASS: test verifies live process shell navigation route -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:101
+PASS: test verifies UI template library service visibility -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:104
+PASS: test verifies process template library category -> tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:105
+PASS: forbidden pattern absent -> codex\bundles
+PASS: forbidden pattern absent -> process-runtime-restoration-ui-e2e-driver-integration-v1
+PASS: forbidden pattern absent -> Skip =
+PASS: forbidden pattern absent -> NotImplementedException
+PASS: forbidden pattern absent -> Task.CompletedTask
+PASS: SB011 integration test source assertions prove required templates are visible to API and UI launch surfaces.

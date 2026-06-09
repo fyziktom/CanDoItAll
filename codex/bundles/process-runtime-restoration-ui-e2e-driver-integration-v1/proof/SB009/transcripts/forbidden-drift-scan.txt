@@ -1,0 +1,1 @@
+SB009_INV_002 PASS forbidden drift scan found no transient bundle path or generic driver runtime-host registration in startup/composition touched surface.

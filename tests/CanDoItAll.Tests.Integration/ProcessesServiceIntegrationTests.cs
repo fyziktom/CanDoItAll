@@ -18,6 +18,9 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessesServiceIntegrationTests
 {
+    private const string StartRunCommandKey = "start-run";
+    private const string AutomationDispatchCommandKey = "dispatch-run-automation";
+    private const string RunCreatedEventType = "run-created";
     private static readonly JsonSerializerOptions StringEnumJsonOptions = CreateStringEnumJsonOptions();
 
     [Fact]
@@ -146,6 +149,263 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(assignments.Select(item => item.Id), runDetails.Assignments.Select(item => item.Id));
         Assert.Equal(workBriefs.Select(item => item.Id), runDetails.WorkBriefs.Select(item => item.Id));
         Assert.Equal(conformance.Select(item => item.Id), runDetails.ConformanceObservations.Select(item => item.Id));
+    }
+
+    [Fact]
+    public async Task StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB018 run persistence project");
+        var managerRoleId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, managerRoleId);
+        var saveResult = await processesService.SaveAsync(definition);
+
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var projectStructureContext = new ProcessProjectStructureContext {
+            ProjectId = projectId,
+            NodeId = "process-node-sb018",
+            NodeTitle = "Start process from project structure",
+            ParentNodeId = "work-item-sb018",
+            ParentNodeTitle = "Customer onboarding work item"
+        };
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "SB018 persisted run proof",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "SB018 verifies durable project-structure process-start input.",
+            ProjectStructureContext = projectStructureContext
+        });
+
+        AssertSuccess(runResult);
+
+        var projectedRuns = await processesService.ListRunsAsync(saveResult.Value, projectId);
+        var projectedRun = Assert.Single(projectedRuns, item => item.Id == runResult.Value);
+        Assert.Equal(projectId, projectedRun.ProjectId);
+        Assert.Equal(ProcessRunStatus.Active, projectedRun.Status);
+        Assert.Equal(2, projectedRun.TotalStepCount);
+        Assert.Equal(0, projectedRun.CompletedStepCount);
+
+        var runDetails = await processesService.GetRunDetailsAsync(runResult.Value);
+        Assert.Equal(2, runDetails.StepRuns.Count);
+        Assert.Equal(ProcessStepRunStatus.Ready, runDetails.StepRuns[0].Status);
+        Assert.Equal(ProcessStepRunStatus.Pending, runDetails.StepRuns[1].Status);
+        Assert.Equal(2, runDetails.WorkBriefs.Count);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == runResult.Value);
+        Assert.Equal(saveResult.Value, persistedRun.ProcessDefinitionId);
+        Assert.Equal(projectId, persistedRun.ProjectId);
+        Assert.Equal(persistedRun.Id, persistedRun.RootRunId);
+        Assert.Equal(0, persistedRun.HierarchyDepth);
+        Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
+        Assert.NotNull(persistedRun.StartedAtUtc);
+        Assert.Contains("SB018 verifies durable project-structure process-start input.", persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Contains("Customer onboarding work item (work-item-sb018)", persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.True(ProcessProjectStructureContextFormatter.TryParse(persistedRun.TriggerReason, out var persistedContext));
+        Assert.NotNull(persistedContext);
+        Assert.Equal(projectStructureContext.ProjectId, persistedContext!.ProjectId);
+        Assert.Equal(projectStructureContext.NodeId, persistedContext.NodeId);
+        Assert.Equal(projectStructureContext.ParentNodeId, persistedContext.ParentNodeId);
+
+        var persistedStepRuns = await dbContext.Set<ProcessStepRun>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .OrderBy(item => item.Sequence)
+            .ToListAsync();
+        Assert.Equal(2, persistedStepRuns.Count);
+        Assert.Equal(definition.Steps[0].Id, persistedStepRuns[0].StepDefinitionId);
+        Assert.NotEqual(Guid.Empty, persistedStepRuns[1].StepDefinitionId);
+        Assert.Equal("Review delivery readiness", persistedStepRuns[1].Title);
+        Assert.Equal(ProcessStepRunStatus.Ready, persistedStepRuns[0].Status);
+        Assert.Equal(ProcessStepRunStatus.Pending, persistedStepRuns[1].Status);
+
+        var persistedWorkBriefs = await dbContext.Set<ProcessWorkBrief>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+        Assert.Equal(2, persistedWorkBriefs.Count);
+        Assert.All(
+            persistedWorkBriefs,
+            brief => {
+                Assert.Contains("Customer onboarding work item (work-item-sb018)", brief.WorkBriefText, StringComparison.Ordinal);
+                Assert.Contains(projectId.ToString("D"), brief.WorkBriefText, StringComparison.Ordinal);
+            });
+
+        var journalEntries = await dbContext.Set<ProcessJournalEntry>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+        Assert.Contains(journalEntries, item => item.EventType == RunCreatedEventType && item.Description.Contains("version", StringComparison.OrdinalIgnoreCase));
+
+        var outboxRecords = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+        Assert.Contains(outboxRecords, item => item.CommandKey == StartRunCommandKey);
+        Assert.Contains(outboxRecords, item => item.CommandKey == AutomationDispatchCommandKey);
+    }
+
+    [Fact]
+    public async Task StartRunFromTriggerAsync_SB038_INV_001_starts_workflow_origin_process_without_runtime_driver_hook()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB038 workflow trigger project");
+        var definition = BuildDefinitionEditor(projectId, Guid.NewGuid());
+        var saveResult = await processesService.SaveAsync(definition);
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var workflowRunId = Guid.Parse("03800000-0000-0000-0000-000000000001");
+        var runResult = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+        {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "SB038 workflow-origin manual process start",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "SB038 validates a workflow-origin process start without introducing a workflow executor hook.",
+            TriggerSourceKind = ProcessRunTriggerSourceKind.WorkflowRun,
+            TriggerSourceId = workflowRunId,
+            TriggerSourceName = "SB038 workflow trigger proof",
+            RequestedBy = "integration-tests"
+        });
+
+        AssertSuccess(runResult);
+
+        var details = await processesService.GetRunDetailsAsync(runResult.Value);
+        Assert.Equal(2, details.StepRuns.Count);
+        Assert.Empty(details.WorkflowRuns);
+        Assert.Empty(details.ExecutionRuns);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var persistedRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == runResult.Value);
+        var outboxRecords = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+        var workflowLinks = await dbContext.Set<ProcessWorkflowRunLink>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == runResult.Value)
+            .ToListAsync();
+
+        Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
+        Assert.Contains("WorkflowRun", persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Contains(workflowRunId.ToString("D"), persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Contains("Requested by integration-tests", persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.DoesNotContain("driver", persistedRun.TriggerReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(outboxRecords, item => item.CommandKey == StartRunCommandKey);
+        Assert.Contains(outboxRecords, item => item.CommandKey == AutomationDispatchCommandKey);
+        Assert.Empty(workflowLinks);
+    }
+
+    [Fact]
+    public async Task StartRunFromTriggerAsync_SB038_INV_002_rejects_workflow_trigger_without_source_identity()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var result = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+        {
+            ProcessDefinitionId = Guid.NewGuid(),
+            TriggerSourceKind = ProcessRunTriggerSourceKind.WorkflowRun,
+            RequestedBy = string.Empty
+        });
+
+        AssertFailureCode(result, "processes.run.trigger-source-id-required");
+        AssertFailureCode(result, "processes.run.trigger-requested-by-required");
+    }
+
+    [Fact]
+    public async Task StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts() {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var partyDirectoryService = scope.ServiceProvider.GetRequiredService<PartyDirectoryService>();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var bridge = scope.ServiceProvider.GetRequiredService<IProjectPartyIntegrationBridge>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+
+        var missingDefinitionResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
+            ProcessDefinitionId = Guid.NewGuid(),
+            RunName = "SB018 missing definition proof",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Missing definitions must not create runs."
+        });
+        AssertFailureCode(missingDefinitionResult, "processes.run.published-version-required");
+
+        var projectId = await CreateProjectAsync(projectsService, "SB018 start guard project");
+        var managerRoleId = Guid.NewGuid();
+        var definition = BuildDefinitionEditor(projectId, managerRoleId);
+        var saveResult = await processesService.SaveAsync(definition);
+        AssertSuccess(saveResult);
+
+        var unpublishedRunResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            RunName = "SB018 unpublished definition proof",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Unpublished definitions must not create runs."
+        });
+        AssertFailureCode(unpublishedRunResult, "processes.run.published-version-required");
+
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "SB018 Launch Manager");
+        AssertSuccess(await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest {
+            ProjectId = projectId,
+            PartyId = managerPartyId,
+            Role = ProjectPartyAssignmentRole.Manager,
+            IsPrimary = true,
+            Source = "sb018-integration-test"
+        }));
+
+        var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest {
+            ProcessDefinitionId = saveResult.Value,
+            ProjectId = projectId,
+            LaunchName = "SB018 duplicate launch guard",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "SB018 verifies launch execution guardrails.",
+            RequestedBy = "sb018-integration-test"
+        });
+        AssertSuccess(launchResult);
+
+        var notReadyExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
+            LaunchPlanId = launchResult.Value
+        });
+        AssertFailureCode(notReadyExecution, "processes.run.launch-plan-not-ready");
+
+        AssertSuccess(await processesService.SubmitLaunchPlanForApprovalAsync(launchResult.Value, "sb018-integration-test"));
+        AssertSuccess(await processesService.DecideLaunchPlanApprovalAsync(new ProcessLaunchApprovalDecisionRequest {
+            LaunchPlanId = launchResult.Value,
+            Status = ProcessLaunchApprovalStatus.Approved,
+            ResolutionSummary = "SB018 approved the launch plan for duplicate execution guard proof.",
+            DecidedBy = "sb018-integration-test"
+        }));
+        AssertSuccess(await processesService.ProvisionLaunchPlanAsync(launchResult.Value, "sb018-integration-test"));
+
+        var firstExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
+            LaunchPlanId = launchResult.Value
+        });
+        AssertSuccess(firstExecution);
+
+        var duplicateExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
+            LaunchPlanId = launchResult.Value
+        });
+        AssertFailureCode(duplicateExecution, "processes.run.launch-plan-already-executed");
     }
 
     [Fact]
@@ -5206,6 +5466,16 @@ public sealed class ProcessesServiceIntegrationTests
     private static void AssertSuccess<T>(Result<T> result)
     {
         Assert.True(result.IsSuccess, FormatErrors(result.Errors));
+    }
+
+    private static void AssertFailureCode(Result result, string expectedCode) {
+        Assert.True(result.IsFailure, "Expected the operation to fail.");
+        Assert.Contains(result.Errors, error => error.Code == expectedCode);
+    }
+
+    private static void AssertFailureCode<T>(Result<T> result, string expectedCode) {
+        Assert.True(result.IsFailure, "Expected the operation to fail.");
+        Assert.Contains(result.Errors, error => error.Code == expectedCode);
     }
 
     private static string FormatErrors(IEnumerable<Error> errors)

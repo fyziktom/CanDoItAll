@@ -464,6 +464,32 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
             artifactRecords,
             artifact => string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.QaApproval, StringComparison.Ordinal));
 
+        var fileService = new WorkspaceFileService(workspaceFactory.GetWorkspaceRoot(), workspaceFactory.GetOrganizationScope());
+        AssertManagedArtifactsContain(
+            fileService,
+            artifactRecords,
+            artifact =>
+                string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.ImplementationChangeSet, StringComparison.Ordinal) &&
+                artifact.ManagedStoragePath.EndsWith("/03-implementation-change-set.md", StringComparison.OrdinalIgnoreCase),
+            "Touched Surface Inventory",
+            "ValidationEngine.cs",
+            "deterministic process mock validation");
+        AssertManagedArtifactsContain(
+            fileService,
+            artifactRecords,
+            artifact =>
+                string.Equals(artifact.Title, ProcessMockThreeAgentArtifactHandoffFixture.ArtifactTitles.MigrationRolloutChecklist, StringComparison.Ordinal) &&
+                artifact.ManagedStoragePath.EndsWith("/03-migration-rollout-preparation-checklist.md", StringComparison.OrdinalIgnoreCase),
+            "No data migration required",
+            "Operational Preconditions",
+            "Rollback Steps");
+        var validationEngine = fileService.ReadTextFile(
+            $"{ProcessMockAgentCatalog.OutputRoot}/{ResolveProcessMockRunKey(runId)}/MockApp/ValidationEngine.cs",
+            8000);
+        Assert.True(validationEngine.Succeeded, validationEngine.Message);
+        Assert.Contains("namespace MockApp", validationEngine.Content, StringComparison.Ordinal);
+        Assert.Contains("public sealed class ValidationEngine", validationEngine.Content, StringComparison.Ordinal);
+
         var reviewStep = Assert.Single(
             stepRuns,
             stepRun => stepRun.StepDefinitionId == fixture.StepId(ProcessMockThreeAgentArtifactHandoffFixture.StepKeys.Review));
@@ -600,6 +626,55 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         Assert.Contains(
             detail.Artifacts,
             artifact => artifact.RelativePath.EndsWith("/03-migration-rollout-preparation-checklist.md", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static void AssertManagedArtifactsContain(
+        WorkspaceFileService fileService,
+        IEnumerable<ProcessArtifactRecord> artifactRecords,
+        Func<ProcessArtifactRecord, bool> predicate,
+        params string[] expectedSignals)
+    {
+        var managedStoragePaths = artifactRecords
+            .Where(predicate)
+            .Select(artifact => artifact.ManagedStoragePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        Assert.NotEmpty(managedStoragePaths);
+        Assert.Contains(
+            managedStoragePaths,
+            path => ManagedArtifactContains(fileService, path, expectedSignals));
+    }
+
+    private static void AssertManagedArtifactContains(
+        WorkspaceFileService fileService,
+        string managedStoragePath,
+        params string[] expectedSignals)
+    {
+        Assert.False(string.IsNullOrWhiteSpace(managedStoragePath));
+        Assert.True(ManagedArtifactContains(fileService, managedStoragePath, expectedSignals));
+    }
+
+    private static bool ManagedArtifactContains(
+        WorkspaceFileService fileService,
+        string managedStoragePath,
+        params string[] expectedSignals)
+    {
+        var artifact = fileService.ReadTextFile(managedStoragePath, 8000);
+        if (!artifact.Succeeded)
+        {
+            return false;
+        }
+
+        return expectedSignals.All(expectedSignal => artifact.Content.Contains(expectedSignal, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string ResolveProcessMockRunKey(Guid processRunId)
+    {
+        var normalized = new string(processRunId.ToString("N").Where(char.IsLetterOrDigit).ToArray()).ToLowerInvariant();
+        return normalized.Length <= 16
+            ? normalized
+            : normalized[..16];
     }
 
     private static Task<TestApplication> CreateEnabledApplicationAsync()

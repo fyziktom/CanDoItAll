@@ -40,30 +40,153 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
+    public void Scheduler_and_workflow_trigger_start_paths_use_process_service_without_driver_runtime_hooks()
+    {
+        var processTriggerSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Runtime",
+            "ProcessesService.Runtime.TriggerStart.cs");
+        var schedulerSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.SchedulerPlanner",
+            "SchedulerPlannerService.cs");
+        var forbiddenProcessTriggerTokens = new[]
+        {
+            "IProcessDriverPack",
+            "ProcessDriverRegistry",
+            "ProcessDriverHost",
+            "ProcessDriverSelector",
+            "IWorkflowRuntimeManager workflowRuntimeManager",
+            "WorkflowRuntimeManager",
+            "ISchedulerFactory",
+            "Quartz.IScheduler",
+            "ProcessManagerDirectiveRequest"
+        };
+        var forbiddenSchedulerProcessLaunchTokens = new[]
+        {
+            "IProcessDriverPack",
+            "ProcessDriverRegistry",
+            "ProcessDriverHost",
+            "ProcessDriverSelector",
+            "ProcessManagerDirectiveRequest"
+        };
+
+        Assert.Contains("StartRunFromTriggerAsync", processTriggerSource, StringComparison.Ordinal);
+        Assert.Contains("StartRunAsync(", processTriggerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunTriggerSourceKind.SchedulerPlan", schedulerSource, StringComparison.Ordinal);
+        Assert.Contains("ProcessRunTriggerSourceKind.WorkflowRun", processTriggerSource, StringComparison.Ordinal);
+
+        foreach (var forbiddenToken in forbiddenProcessTriggerTokens)
+        {
+            Assert.DoesNotContain(forbiddenToken, processTriggerSource, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenToken in forbiddenSchedulerProcessLaunchTokens)
+        {
+            Assert.DoesNotContain(forbiddenToken, schedulerSource, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Process_driver_runtime_host_roadmap_remains_not_approved_until_future_gate_is_source_backed()
+    {
+        var root = FindRepositoryRoot();
+        var processesReadme = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "README.md");
+        var roadmapSection = ExtractMarkdownSection(
+            processesReadme,
+            "## Runtime Host Roadmap Decision");
+        var boundarySource = ReadProductionSourceTextFromDirectories(
+            CreateProcessDriverRuntimeRoadmapScanDirectories(root));
+        var driverPackageSource = ReadProductionSourceTextFromDirectories(
+            CreateProcessDriverPackageDirectories(root));
+        var compositionSource = ReadProductionSourceTextFromDirectories(
+            [Path.Combine(root, "src", "CanDoItAll.Composition")]);
+        var webSource = ReadProductionSourceTextFromDirectories(
+            [Path.Combine(root, "src", "CanDoItAll.Web")]);
+        var requiredApprovalGateTokens = new[]
+        {
+            "runtime lifecycle owner",
+            "immutable audit persistence",
+            "sandbox and allow-list policy",
+            "approval and authorization",
+            "driver contract versioning",
+            "public API snapshots",
+            "red-team proof",
+            "implicit DI registration",
+            "fallback runtime selection",
+            "undocumented manager/scheduler/workflow entry points"
+        };
+        var forbiddenProcessDriverRuntimeTokens = new[]
+        {
+            "IProcessDriverPack",
+            "ProcessDriverPack",
+            "IProcessDriverHost",
+            "ProcessDriverHost",
+            "ProcessDriverRuntimeHost",
+            "GenericProcessDriverHost",
+            "IProcessDriverRegistry",
+            "ProcessDriverRegistry",
+            "IProcessDriverSelector",
+            "ProcessDriverSelector",
+            "ProcessDriverRuntimeSelector",
+            "ProcessDriverManagerCommand",
+            "ProcessDriverServiceCollectionExtensions",
+            "AddProcessDriver",
+            "MapProcessDriver"
+        };
+        var forbiddenDriverPackageRuntimeTokens = new[]
+        {
+            "IServiceCollection",
+            "ServiceCollectionExtensions",
+            "AddScoped",
+            "AddSingleton",
+            "AddHostedService",
+            "IHostedService",
+            "BackgroundService",
+            "MapProcessDriver"
+        };
+
+        Assert.Contains("Current status: `Not approved`.", roadmapSection, StringComparison.Ordinal);
+        Assert.Contains("That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.", roadmapSection, StringComparison.Ordinal);
+        Assert.Contains("Future approval gate:", roadmapSection, StringComparison.Ordinal);
+        Assert.Contains("Denied until that future gate passes:", roadmapSection, StringComparison.Ordinal);
+
+        foreach (var requiredApprovalGateToken in requiredApprovalGateTokens)
+        {
+            Assert.Contains(requiredApprovalGateToken, roadmapSection, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenProcessDriverRuntimeToken in forbiddenProcessDriverRuntimeTokens)
+        {
+            Assert.DoesNotContain(forbiddenProcessDriverRuntimeToken, boundarySource, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenDriverPackageRuntimeToken in forbiddenDriverPackageRuntimeTokens)
+        {
+            Assert.DoesNotContain(forbiddenDriverPackageRuntimeToken, driverPackageSource, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("ProcessDriver", compositionSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDriver", webSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Process_driver_multi_domain_gate_a_owns_current_bundle_fixture_and_rejects_report_only_closure()
     {
-        var readme = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var readme = ReadProcessDriverMultiDomainFixtureFile(
             "README.md");
-        var executionReport = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var executionReport = ReadProcessDriverMultiDomainFixtureFile(
             "reviews",
             "01-execution-report.md");
-        var manifest = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var manifest = ReadProcessDriverMultiDomainFixtureFile(
             "proof",
             "SB003",
             "manifest.md");
-        var semanticInvariants = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-multi-domain-verification-gateway-v1",
+        var semanticInvariants = ReadProcessDriverMultiDomainFixtureFile(
             "proof",
             "SB003",
             "semantic-invariants.md");
@@ -137,6 +260,83 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         {
             Assert.DoesNotContain(forbiddenCoreToken, coreSource, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void Process_core_genericity_gate_o_rejects_domain_specific_domain_leakage()
+    {
+        var root = FindRepositoryRoot();
+        var coreRoot = Path.Combine(root, "src", "CanDoItAll.Processes.Core");
+        var coreProject = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Core",
+            "CanDoItAll.Processes.Core.csproj");
+        var coreSourcePaths = Directory
+            .EnumerateFiles(coreRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(static path => !IsBuildOutputPath(path))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var coreSource = string.Join(
+            Environment.NewLine,
+            coreSourcePaths.Select(File.ReadAllText));
+        var coreSourceFiles = coreSourcePaths
+            .Select(path => Path.GetRelativePath(coreRoot, path))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var requiredGenericEvidenceTokens = new[]
+        {
+            "ProcessCoreArtifactKind.Transcript",
+            "ProcessCoreArtifactKind.Dataset",
+            "ProcessCoreArtifactExpectationMode.RuntimeProof",
+            "ProcessCoreArtifactProjectionSourceKind.ProviderNativeBrowser",
+            "ProcessCoreFinalizerBlockCauseKind",
+            "ProcessExecutionEvidenceDescriptor"
+        };
+        var forbiddenDomainLeakageTokens = new[]
+        {
+            "DotNetRust",
+            ".NET",
+            "dotnet",
+            "SoftwareDevelopment",
+            "software-only",
+            "OfficeEvidence",
+            "Office365",
+            "Graph",
+            "Gmail",
+            "BusinessAnalysis",
+            "BusinessPlan",
+            "business-analysis",
+            "CrmHr",
+            "CRM",
+            "CanDoItAll.Processes.Drivers",
+            "CanDoItAll.Modules",
+            "CanDoItAll.Infrastructure",
+            "CanDoItAll.AgentFramework",
+            "IStorageDriverRegistry",
+            "IWorkspace",
+            "WorkspacePathResolver",
+            "AppDbContext",
+            "DbContext",
+            "IServiceProvider",
+            "IServiceScopeFactory"
+        };
+
+        foreach (var requiredGenericEvidenceToken in requiredGenericEvidenceTokens)
+        {
+            Assert.Contains(requiredGenericEvidenceToken, coreSource, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenDomainLeakageToken in forbiddenDomainLeakageTokens)
+        {
+            Assert.DoesNotContain(forbiddenDomainLeakageToken, coreSource, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(coreSourceFiles, file =>
+                file.Contains(forbiddenDomainLeakageToken, StringComparison.OrdinalIgnoreCase));
+        }
+
+        Assert.Contains(@"<ProjectReference Include=""..\CanDoItAll.Processes.Contracts\CanDoItAll.Processes.Contracts.csproj"" />", coreProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("<PackageReference", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CanDoItAll.Processes.Drivers", coreProject, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CanDoItAll.Modules", coreProject, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -779,12 +979,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     [Fact]
     public void Bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
     {
-        var proofRoot = Path.Combine(
-            FindRepositoryRoot(),
-            "codex",
-            "bundles",
-            "process-dispatch-execution-snapshot-boundary-v1",
-            "proof");
+        var proofRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
         var forbiddenPathTokens = new[]
         {
             "mobile",
@@ -810,12 +1005,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     [Fact]
     public void Artifact_boundary_bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
     {
-        var proofRoot = Path.Combine(
-            FindRepositoryRoot(),
-            "codex",
-            "bundles",
-            "process-dispatch-artifact-boundary-foundation-v1",
-            "proof");
+        var proofRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
         var forbiddenPathTokens = new[]
         {
             "mobile",
@@ -1038,12 +1228,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     [Fact]
     public void Tool_validation_boundary_bundle_proof_paths_do_not_contain_mobile_or_small_screen_artifacts()
     {
-        var proofRoot = Path.Combine(
-            FindRepositoryRoot(),
-            "codex",
-            "bundles",
-            "process-dispatch-tool-validation-recovery-boundary-v1",
-            "proof");
+        var proofRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
         var forbiddenPathTokens = new[]
         {
             "mobile",
@@ -1086,12 +1271,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "tests",
             "CanDoItAll.Tests.Integration",
             "ProcessRunAutomationDispatchServiceTests.cs");
-        var proofRoot = Path.Combine(
-            root,
-            "codex",
-            "bundles",
-            "process-dispatch-claim-route-boundary-v1",
-            "proof");
+        var proofRoot = CreateStableArchitectureFixtureRoot(root);
         var forbiddenPathTokens = new[]
         {
             "mobile",
@@ -1343,12 +1523,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchGuardLease.cs")),
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessDispatchLeaseHeartbeat.cs")),
             File.ReadAllText(Path.Combine(dispatchDirectory, "ProcessAutomationExecutionRunSelection.cs")));
-        var proofRoot = Path.Combine(
-            root,
-            "codex",
-            "bundles",
-            "process-dispatch-claim-route-boundary-v1",
-            "proof");
+        var proofRoot = CreateStableArchitectureFixtureRoot(root);
         var forbiddenPathTokens = new[]
         {
             "mobile",
@@ -4173,11 +4348,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch");
-        var bundleRoot = Path.Combine(
-            root,
-            "codex",
-            "bundles",
-            "process-dispatch-execution-retry-provider-boundary-v1");
+        var bundleRoot = CreateStableArchitectureFixtureRoot(root);
         var productionProjectNames = Directory
             .EnumerateFiles(Path.Combine(root, "src"), "*.csproj", SearchOption.AllDirectories)
             .Select(Path.GetFileNameWithoutExtension)
@@ -4190,8 +4361,8 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
                 .EnumerateFiles(dispatchDirectory, "*.cs")
                 .Order(StringComparer.Ordinal)
                 .Select(File.ReadAllText));
-        var proofPaths = Directory.Exists(Path.Combine(bundleRoot, "proof"))
-            ? Directory.EnumerateFiles(Path.Combine(bundleRoot, "proof"), "*", SearchOption.AllDirectories)
+        var proofPaths = Directory.Exists(bundleRoot)
+            ? Directory.EnumerateFiles(bundleRoot, "*", SearchOption.AllDirectories)
             : [];
         var forbiddenProofPathTokens = new[]
         {
@@ -4233,10 +4404,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch");
-        var map = ReadRepositoryFile(
-            "codex",
-            "bundles",
-            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+        var map = ReadProcessDriverReadonlyOrchestrationFixtureFile(
             "architecture",
             "05-process-module-core-descriptor-consumer-map.md");
         var actualCoreConsumerFiles = ReadDispatchProcessCoreConsumerFiles(dispatchDirectory);
@@ -4306,6 +4474,43 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         Assert.DoesNotContain("IProcessDriverPack", routeFacingSource + allowedApplicationEdgeSource, StringComparison.Ordinal);
     }
 
+    private static string ReadProcessDriverMultiDomainFixtureFile(params string[] pathParts)
+    {
+        return ReadStableArchitectureFixtureFile("ProcessDriverMultiDomainVerificationGateway", pathParts);
+    }
+
+    private static string ReadProcessDriverReadonlyOrchestrationFixtureFile(params string[] pathParts)
+    {
+        return ReadStableArchitectureFixtureFile("ProcessDriverReadonlyOrchestrationEvidencePipeline", pathParts);
+    }
+
+    private static string ReadStableArchitectureFixtureFile(
+        string fixtureDirectory,
+        params string[] pathParts)
+    {
+        var stablePathParts = new List<string>
+        {
+            "tests",
+            "CanDoItAll.Tests.Unit",
+            "TestData",
+            "Architecture",
+            fixtureDirectory
+        };
+        stablePathParts.AddRange(pathParts);
+
+        return ReadRepositoryFile(stablePathParts.ToArray());
+    }
+
+    private static string CreateStableArchitectureFixtureRoot(string repositoryRoot)
+    {
+        return Path.Combine(
+            repositoryRoot,
+            "tests",
+            "CanDoItAll.Tests.Unit",
+            "TestData",
+            "Architecture");
+    }
+
     private static string ReadRepositoryFile(params string[] pathParts)
     {
         return File.ReadAllText(Path.Combine([FindRepositoryRoot(), .. pathParts]));
@@ -4325,6 +4530,72 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
                     path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase))
                 .Order(StringComparer.Ordinal)
                 .Select(File.ReadAllText));
+    }
+
+    private static string ReadProductionSourceTextFromDirectories(IEnumerable<string> sourceDirectories)
+    {
+        return string.Join(
+            Environment.NewLine,
+            sourceDirectories
+                .SelectMany(directory => Directory.Exists(directory)
+                    ? Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+                    : Enumerable.Empty<string>())
+                .Where(IsProductionSourceFile)
+                .Where(static path => !IsBuildOutputPath(path))
+                .Order(StringComparer.Ordinal)
+                .Select(File.ReadAllText));
+    }
+
+    private static IReadOnlyList<string> CreateProcessDriverRuntimeRoadmapScanDirectories(string repositoryRoot)
+    {
+        return
+        [
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Modules.Processes"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Core"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.Abstractions"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.ArtifactEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.BusinessAnalysis"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.ObservationAggregation"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.OfficeEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.RuntimeEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.TranscriptVerification"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.VerificationGateway"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Web"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Composition")
+        ];
+    }
+
+    private static IReadOnlyList<string> CreateProcessDriverPackageDirectories(string repositoryRoot)
+    {
+        return
+        [
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.Abstractions"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.ArtifactEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.BusinessAnalysis"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.ObservationAggregation"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.OfficeEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.RuntimeEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.TranscriptVerification"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.VerificationGateway")
+        ];
+    }
+
+    private static bool IsProductionSourceFile(string path)
+    {
+        return path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".props", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".targets", StringComparison.OrdinalIgnoreCase) ||
+            path.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsBuildOutputPath(string path)
+    {
+        return path
+            .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            .Any(static part =>
+                string.Equals(part, "bin", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(part, "obj", StringComparison.OrdinalIgnoreCase));
     }
 
     private static IReadOnlyList<string> ReadProcessCorePublicApiSurface()
@@ -4547,58 +4818,6 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         };
     }
 
-    private static IReadOnlyList<string> ReadGitChangedFilesOutsideBundle(string repositoryRoot)
-    {
-        var tracked = RunGit(
-            repositoryRoot,
-            "diff",
-            "--name-only",
-            "--",
-            ".",
-            ":(exclude)codex/bundles");
-        var untracked = RunGit(
-            repositoryRoot,
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            "--",
-            ".",
-            ":(exclude)codex/bundles");
-
-        return tracked
-            .Concat(untracked)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
-    private static IReadOnlyList<string> ReadGitChangedFilesForCurrentProcessCoreStabilizationBundle(string repositoryRoot)
-    {
-        var tracked = RunGit(
-            repositoryRoot,
-            "diff",
-            "--name-only",
-            "--",
-            "src",
-            "tests",
-            "codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1");
-        var untracked = RunGit(
-            repositoryRoot,
-            "ls-files",
-            "--others",
-            "--exclude-standard",
-            "--",
-            "src",
-            "tests",
-            "codex/bundles/process-core-stabilization-diagnostics-driver-roadmap-v1");
-
-        return tracked
-            .Concat(untracked)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-    }
-
     private static IReadOnlyList<string> RunGit(string repositoryRoot, params string[] arguments)
     {
         using var process = new Process
@@ -4712,3 +4931,5 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         throw new InvalidOperationException("Could not locate the repository root.");
     }
 }
+
+

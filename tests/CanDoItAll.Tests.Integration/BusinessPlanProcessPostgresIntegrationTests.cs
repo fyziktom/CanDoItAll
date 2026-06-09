@@ -36,6 +36,64 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     }
 
     [Fact]
+    public async Task Business_plan_process_runs_with_business_artifacts_evidence_and_statuses()
+    {
+        const string validationLabel = "Business-analysis scenario validation";
+        const string managedArtifactRoot = "artifacts/business/analysis-validation";
+
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var projectId = await CreateProjectAsync(projectsService);
+        var envelope = projectionService.GetProjectedEnvelope(
+            "business-plan-development",
+            projectId,
+            validationLabel);
+        var definition = envelope.Definition ?? throw new InvalidOperationException("Business plan process definition was not projected.");
+
+        Assert.DoesNotContain(definition.Steps, step => step.AllowedOperations.Contains(ProcessStepOperation.MutateProductTarget));
+        Assert.All(definition.Steps, step =>
+        {
+            Assert.DoesNotContain("software", step.Title, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("developer", step.Title, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(".net", step.Title, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("blazor", step.Title, StringComparison.OrdinalIgnoreCase);
+        });
+
+        var importResult = await processesService.ImportAsync(envelope);
+        Assert.True(importResult.IsSuccess, string.Join(" | ", importResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(importResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+        {
+            ProcessDefinitionId = importResult.Value,
+            ProjectId = projectId,
+            RunName = $"{validationLabel} run",
+            OperatingMode = ProcessOperatingMode.AssistedExecution,
+            TriggerReason = "Validate a non-software business-analysis process scenario."
+        });
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        await CompleteBusinessPlanRunAsync(
+            application,
+            processesService,
+            runResult.Value,
+            validationLabel,
+            managedArtifactRoot);
+
+        await AssertBusinessPlanRunCompletedAsync(
+            application,
+            processesService,
+            runResult.Value,
+            validationLabel,
+            managedArtifactRoot);
+    }
+
+    [Fact]
     public async Task Business_plan_process_projects_and_runs_on_postgresql()
     {
         var availability = await PostgresTestAvailability.EnsureAvailableAsync(RepositoryRoot);
@@ -87,29 +145,22 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             });
             Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
 
-            await CompleteStepAsync(application, processesService, runResult.Value, "strategy-intake");
-            await CompleteStepAsync(application, processesService, runResult.Value, "product-evidence-review");
-            await CompleteStepAsync(application, processesService, runResult.Value, "business-plan-draft");
-            await CompleteStepAsync(application, processesService, runResult.Value, "financial-modeling");
-            await CompleteStepAsync(application, processesService, runResult.Value, "marketing-plan");
-            await CompleteStepAsync(application, processesService, runResult.Value, "integrated-review", "approved");
-            await CompleteStepAsync(application, processesService, runResult.Value, "approved-execution-handoff");
+            const string validationLabel = "PostgreSQL business-plan validation";
+            const string managedArtifactRoot = "artifacts/business/postgres-validation";
 
-            var runDetails = await processesService.GetRunDetailsAsync(runResult.Value);
-            Assert.All(
-                runDetails.StepRuns.Where(step => step.Title != "Capture blocked-plan corrections"),
-                step => Assert.Equal(ProcessStepRunStatus.Completed, step.Status));
-            Assert.Equal(
-                ProcessStepRunStatus.Skipped,
-                Assert.Single(runDetails.StepRuns, step => step.Title == "Capture blocked-plan corrections").Status);
-            Assert.Equal(6, runDetails.Artifacts.Count);
-            Assert.Contains(runDetails.Artifacts, artifact => artifact.Title == "Product evidence assessment");
-            Assert.Contains(runDetails.Artifacts, artifact => artifact.Title == "Financial model and sensitivity note");
-            Assert.Contains(runDetails.Artifacts, artifact => artifact.Title == "Go-to-market and experiment plan");
-            Assert.Contains(
-                runDetails.Assignments,
-                assignment => assignment.RoleDisplayName == "Business strategist" &&
-                    assignment.ExecutorKind == "AI agent");
+            await CompleteBusinessPlanRunAsync(
+                application,
+                processesService,
+                runResult.Value,
+                validationLabel,
+                managedArtifactRoot);
+
+            await AssertBusinessPlanRunCompletedAsync(
+                application,
+                processesService,
+                runResult.Value,
+                validationLabel,
+                managedArtifactRoot);
         }
         finally
         {
@@ -131,11 +182,90 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
         return result.Value;
     }
 
+    private static async Task CompleteBusinessPlanRunAsync(
+        TestApplication application,
+        ProcessesService processesService,
+        Guid runId,
+        string validationLabel,
+        string managedArtifactRoot)
+    {
+        await CompleteStepAsync(application, processesService, runId, "strategy-intake", validationLabel, managedArtifactRoot);
+        await CompleteStepAsync(application, processesService, runId, "product-evidence-review", validationLabel, managedArtifactRoot);
+        await CompleteStepAsync(application, processesService, runId, "business-plan-draft", validationLabel, managedArtifactRoot);
+        await CompleteStepAsync(application, processesService, runId, "financial-modeling", validationLabel, managedArtifactRoot);
+        await CompleteStepAsync(application, processesService, runId, "marketing-plan", validationLabel, managedArtifactRoot);
+        await CompleteStepAsync(
+            application,
+            processesService,
+            runId,
+            "integrated-review",
+            validationLabel,
+            managedArtifactRoot,
+            selectedBranchOutcomeKey: "approved");
+        await CompleteStepAsync(application, processesService, runId, "approved-execution-handoff", validationLabel, managedArtifactRoot);
+    }
+
+    private static async Task AssertBusinessPlanRunCompletedAsync(
+        TestApplication application,
+        ProcessesService processesService,
+        Guid runId,
+        string validationLabel,
+        string managedArtifactRoot)
+    {
+        var runDetails = await processesService.GetRunDetailsAsync(runId);
+        Assert.All(
+            runDetails.StepRuns.Where(step => step.Title != "Capture blocked-plan corrections"),
+            step => Assert.Equal(ProcessStepRunStatus.Completed, step.Status));
+        Assert.Equal(
+            ProcessStepRunStatus.Skipped,
+            Assert.Single(runDetails.StepRuns, step => step.Title == "Capture blocked-plan corrections").Status);
+        Assert.Equal(6, runDetails.Artifacts.Count);
+        Assert.Contains(
+            runDetails.Artifacts,
+            artifact => artifact.Title == "Product evidence assessment" &&
+                artifact.ArtifactKind == ProcessArtifactKind.Evidence);
+        Assert.Contains(
+            runDetails.Artifacts,
+            artifact => artifact.Title == "Financial model and sensitivity note" &&
+                artifact.ArtifactKind == ProcessArtifactKind.Dataset);
+        Assert.Contains(
+            runDetails.Artifacts,
+            artifact => artifact.Title == "Go-to-market and experiment plan" &&
+                artifact.ArtifactKind == ProcessArtifactKind.Deliverable);
+        Assert.Contains(
+            runDetails.Artifacts,
+            artifact => artifact.Title == "Integrated business plan review" &&
+                artifact.TrustStatus == ProcessArtifactTrustStatus.Approved);
+        Assert.Contains(
+            runDetails.Assignments,
+            assignment => assignment.RoleDisplayName == "Business strategist" &&
+                assignment.ExecutorKind == "AI agent");
+        Assert.Contains(
+            runDetails.Assignments,
+            assignment => assignment.RoleDisplayName == "Financial strategist" &&
+                assignment.ExecutorKind == "AI agent");
+        Assert.Contains(
+            runDetails.Assignments,
+            assignment => assignment.RoleDisplayName == "Marketing specialist" &&
+                assignment.ExecutorKind == "AI agent");
+
+        var businessPlanArtifact = Assert.Single(runDetails.Artifacts, artifact => artifact.Title == "Business plan");
+        Assert.Equal(ProcessArtifactKind.Deliverable, businessPlanArtifact.ArtifactKind);
+        Assert.Equal($"{managedArtifactRoot}/business-plan-draft.md", businessPlanArtifact.ManagedStoragePath);
+
+        var businessPlanContent = await ReadWorkspaceArtifactAsync(application, businessPlanArtifact.ManagedStoragePath);
+        Assert.Contains(validationLabel, businessPlanContent, StringComparison.Ordinal);
+        Assert.Contains("Evidence summary: The artifact records a concrete handoff", businessPlanContent, StringComparison.Ordinal);
+        Assert.Contains("Outcome: Required artifact contract is satisfied", businessPlanContent, StringComparison.Ordinal);
+    }
+
     private static async Task CompleteStepAsync(
         TestApplication application,
         ProcessesService processesService,
         Guid runId,
         string stepKey,
+        string validationLabel,
+        string managedArtifactRoot,
         string? selectedBranchOutcomeKey = null)
     {
         var runDetails = await processesService.GetRunDetailsAsync(runId);
@@ -147,7 +277,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             {
                 StepRunId = step.Id,
                 TargetStatus = ProcessStepRunStatus.InProgress,
-                Reason = "PostgreSQL business-plan validation started this step.",
+                Reason = $"{validationLabel} started this step.",
                 DecidedBy = "integration-test",
                 SuppressAutomationDispatch = true
             });
@@ -158,11 +288,11 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
 
         foreach (var artifactOutput in step.ArtifactOutputs)
         {
-            var managedStoragePath = $"artifacts/business/postgres-validation/{stepKey}.md";
+            var managedStoragePath = $"{managedArtifactRoot}/{stepKey}.md";
             await WriteWorkspaceArtifactAsync(
                 application,
                 managedStoragePath,
-                BuildManagedArtifactContent(step, stepKey, artifactOutput.Title));
+                BuildManagedArtifactContent(step, stepKey, artifactOutput.Title, validationLabel));
 
             var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
             {
@@ -175,7 +305,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
                 SensitivityLevel = stepKey == "financial-modeling" || stepKey == "integrated-review"
                     ? ProcessSensitivityLevel.Confidential
                     : ProcessSensitivityLevel.Internal,
-                ProvenanceSummary = $"Recorded by PostgreSQL integration validation for {stepKey}.",
+                ProvenanceSummary = $"Recorded by {validationLabel} for {stepKey}.",
                 AllowedFutureUsageSummary = "Reusable by downstream business-plan validation steps.",
                 ReviewSummary = "Atomic validation artifact recorded to satisfy the required handoff.",
                 ManagedStoragePath = managedStoragePath
@@ -197,7 +327,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             StepRunId = step.Id,
             TargetStatus = ProcessStepRunStatus.Completed,
             SelectedBranchOutcomeId = selectedBranchOutcomeId,
-            Reason = "PostgreSQL business-plan validation completed this step with required artifacts.",
+            Reason = $"{validationLabel} completed this step with required artifacts.",
             DecidedBy = "integration-test",
             SuppressAutomationDispatch = true
         });
@@ -223,14 +353,15 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     private static string BuildManagedArtifactContent(
         ProcessStepRunViewModel step,
         string stepKey,
-        string artifactTitle)
+        string artifactTitle,
+        string validationLabel)
     {
         return $"""
             # {artifactTitle}
 
             Step key: {stepKey}
             Step title: {step.Title}
-            Validation source: PostgreSQL business-plan integration test.
+            Validation source: {validationLabel}.
             Evidence summary: The artifact records a concrete handoff for the current process run, including the reviewed business-plan material, accountable step, and downstream reuse boundary.
             Outcome: Required artifact contract is satisfied for persistence and runtime completion validation.
             """;
@@ -246,6 +377,16 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             relativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         await File.WriteAllTextAsync(fullPath, content);
+    }
+
+    private static async Task<string> ReadWorkspaceArtifactAsync(
+        TestApplication application,
+        string relativePath)
+    {
+        var fullPath = Path.Combine(
+            application.ActiveProfile.WorkspaceRootPath,
+            relativePath.Replace('/', Path.DirectorySeparatorChar));
+        return await File.ReadAllTextAsync(fullPath);
     }
 
     private static ProcessArtifactKind ResolveArtifactKind(ProcessStepRunViewModel step, string title)

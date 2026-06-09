@@ -1,0 +1,15 @@
+SB023 source assertions: focused workflow-backed role and direct-agent route runtime tests
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'DispatchAsync_runs_workflow_assignment_and_projects_process_link' for focused workflow-backed process dispatch test exists -> line 51
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'IWorkflowCatalogService' for test uses workflow catalog service -> line 17
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'IWorkflowComponentLibraryService' for test builds workflow components through real service -> line 18
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'IProcessRunAutomationDispatchService' for test dispatches through process runtime dispatch service -> line 58
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'BuildWorkflowProcessDefinition' for test creates workflow-backed process role definition -> line 24
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'ProcessExecutorKindNames.Workflow' for test asserts workflow executor assignment -> line 44
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'WorkflowRunState.Completed' for test asserts workflow runtime completion -> line 81
+PASS tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs contains 'workflow-run:' for test asserts workflow evidence is projected as process artifact reference -> line 84
+PASS tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs contains 'Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch' for focused deterministic direct-agent dispatch test exists -> line 163
+PASS tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs contains 'ProcessMockAgentCatalogService' for direct-agent test seeds deterministic process mock role agents -> line 24
+PASS tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs contains 'ProcessMockAgentCatalog.ProcessSourceKind' for direct-agent test asserts process mock execution source kind -> line 342
+PASS tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs contains 'ListExecutionRunsAsync' for direct-agent test asserts backing MAF execution runs -> line 341
+PASS tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs contains 'ExecutionState.Completed' for direct-agent test asserts MAF execution completion -> line 356
+PASS tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs contains 'RunOutcome.Succeeded' for direct-agent test asserts successful MAF execution outcome -> line 357

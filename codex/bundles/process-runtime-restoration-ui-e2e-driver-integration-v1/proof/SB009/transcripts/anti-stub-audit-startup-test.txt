@@ -1,0 +1,1 @@
+SB009_INV_003 PASS anti-stub audit found no placeholder assertions, skipped tests, TODOs, or stubbed startup behavior in ApplicationStartupIntegrationTests.cs.

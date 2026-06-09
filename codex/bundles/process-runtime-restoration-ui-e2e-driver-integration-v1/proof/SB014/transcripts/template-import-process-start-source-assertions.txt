@@ -1,0 +1,21 @@
+SB014 source assertions: template selection, import, launch plan, and UI-triggered run creation proof
+PASS required 'processes-template-library-dialog' -> line 33
+PASS required 'Business plan development' -> line 36
+PASS required 'processes-template-library-item-business-plan-development' -> line 37
+PASS required 'processes-template-library-add-button' -> line 47
+PASS required 'WaitForDefinitionAsync' -> line 48
+PASS required '/api/processes/definitions/{definition.Id:D}/publish' -> line 61
+PASS required 'processes-launch-name-input' -> line 86
+PASS required 'processes-create-launch-plan-button' -> line 87
+PASS required 'Launch plan created.' -> line 88
+PASS required '/api/processes/launch-plans/{launchPlan.Id:D}/hr-match' -> line 100
+PASS required '/api/processes/launch-plans/{launchPlan.Id:D}/submit-approval' -> line 101
+PASS required 'ProcessLaunchApprovalDecisionRequest' -> line 105
+PASS required '/api/processes/launch-plans/{launchPlan.Id:D}/provision' -> line 111
+PASS required 'ProcessLaunchPlanStatus.Ready' -> line 116
+PASS required 'processes-launch-execute-button' -> line 132
+PASS required 'Launch plan executed into a process run.' -> line 134
+PASS required 'WaitForRunAsync' -> line 136
+PASS required 'processes-run-history-item-{run.Id:D}' -> line 145
+PASS required 'processes-selected-run-summary' -> line 157
+PASS absent 'codex\\bundles'

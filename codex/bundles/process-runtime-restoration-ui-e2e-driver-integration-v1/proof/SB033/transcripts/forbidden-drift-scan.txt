@@ -1,0 +1,9 @@
+SB033 forbidden drift / anti-stub scan
+Pattern: RuntimeHost|runtime host|driver registry|runtime selector|IHostedService|AddHostedService|AddSingleton<.*Driver|AddScoped<.*Driver|manager command may invoke drivers|scheduler hook may invoke drivers|workflow hook may invoke drivers|MutateProcess|TransitionStepAsync|RecordArtifactAsync|SaveChanges|dbContext\.Set<ProcessConformanceObservation>|workspace_write|storage write|codex[\\/]+bundles|process-runtime-restoration-ui-e2e-driver-integration-v1|NotImplementedException|TODO|HACK|stubbed|fake pass|Thread.Sleep
+Scope:
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDomainEvidenceReadOnlyAdapters.cs
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs
+
+No matches in scoped files.

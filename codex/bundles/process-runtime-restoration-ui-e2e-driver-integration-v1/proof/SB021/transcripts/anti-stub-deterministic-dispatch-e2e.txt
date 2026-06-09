@@ -1,0 +1,20 @@
+SB021 anti-stub assertions: deterministic dispatch E2E uses real app services and outbox, with no test-driver runtime mutation
+PASS E2E scope contains required signal 'CreateEnabledApplicationAsync' -> line 164
+PASS E2E scope contains required signal 'application.Services.CreateAsyncScope' -> line 165
+PASS E2E scope contains required signal 'scope.ServiceProvider.GetRequiredService<ProcessesService>()' -> line 170
+PASS E2E scope contains required signal 'scope.ServiceProvider.GetRequiredService<ProcessOutboxService>()' -> line 171
+PASS E2E scope contains required signal 'scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>()' -> line 173
+PASS E2E scope contains required signal 'ProcessMockAgentCatalogService' -> line 166
+PASS E2E scope contains required signal 'ExecuteLaunchPlanAsync' -> line 231
+PASS E2E scope contains required signal 'DrainProcessOutboxUntilRunSettledAsync' -> line 239
+PASS E2E scope contains required signal 'outboxService.ProcessPendingAsync' -> line 712
+PASS E2E scope contains required signal 'ProcessRunStatus.Completed' -> line 249
+PASS E2E scope contains required signal 'ProcessOutboxRecordStatus.Completed' -> line 364
+PASS E2E scope does not contain forbidden signal 'codex\\bundles'
+PASS E2E scope does not contain forbidden signal 'codex/bundles'
+PASS E2E scope does not contain forbidden signal 'Thread.Sleep'
+PASS E2E scope does not contain forbidden signal 'WebApplicationFactory'
+PASS E2E scope does not contain forbidden signal 'TestServer'
+PASS E2E scope does not contain forbidden signal '.UpdateAsync('
+PASS E2E scope does not contain forbidden signal 'ExecuteSqlRaw'
+PASS E2E scope does not contain forbidden signal 'FromSqlRaw'

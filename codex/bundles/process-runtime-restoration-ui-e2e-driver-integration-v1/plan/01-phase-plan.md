@@ -1,5 +1,10 @@
 # Phase Plan
 
+## Execution Order
+
+- Execute subbundles in numeric order from SB001 through SB054 unless a prerequisite gate fails and reopens earlier work.
+- Critical gates occur every third subbundle and must pass before dependent phases continue.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -43,7 +48,26 @@ graph TD
 
 ## Critical Subbundles
 
-Critical gates are every third subbundle: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054.
+Critical gates are every third subbundle:
+
+- SB003
+- SB006
+- SB009
+- SB012
+- SB015
+- SB018
+- SB021
+- SB024
+- SB027
+- SB030
+- SB033
+- SB036
+- SB039
+- SB042
+- SB045
+- SB048
+- SB051
+- SB054
 
 ## Phase Gates
 
@@ -154,4 +178,5 @@ Critical gates are every third subbundle: SB003, SB006, SB009, SB012, SB015, SB0
 - SB052 Run red-team fake-proof audit: reject report-only, table-only, non-empty-output-only, happy-path-only closure.
 - SB053 Run prepared/completed validators and record raw-note closure.
 - SB054 Gate R: final handoff zip, proof index, and reopen triggers completed.
+
 

@@ -1,0 +1,14 @@
+Command: SB051 docs/source unsupported-runtime-host scan
+DOC Processes README says runtime host is not approved: True
+DOC Processes README says generic host is not approved: True
+DOC Processes README keeps denied-until list: True
+DOC Processes README keeps supported launch section: True
+DOC Processes README warns starts stay process-service centered: True
+SOURCE Processes API still maps direct start: True
+SOURCE Processes API still maps launch execution: True
+SOURCE Project structure still maps process node start: True
+SOURCE Trigger start service still exists: True
+SOURCE Runtime-host architecture guard still exists: True
+SOURCE Core genericity architecture guard still exists: True
+Unsupported capability claim hit count: 0
+PASS: SB051 docs match supported source paths and do not imply unsupported process-driver runtime host capabilities.

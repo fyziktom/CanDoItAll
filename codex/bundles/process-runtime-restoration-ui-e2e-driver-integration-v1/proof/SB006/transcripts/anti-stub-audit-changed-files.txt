@@ -1,0 +1,5 @@
+Command: scan changed production/test C# files for executable TODO, NotImplementedException, and throw new Exception stubs
+ExitCode: 0
+Output:
+SB006_INV_001 PASS: anti-stub audit found no executable forbidden stub markers in changed C# files.
+

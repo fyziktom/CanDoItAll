@@ -860,13 +860,17 @@ public sealed class SchedulerTargetLauncher(
         DateTimeOffset firedAtUtc,
         CancellationToken cancellationToken)
     {
-        var result = await processesService.StartRunAsync(
-            new ProcessRunStartRequest
+        var result = await processesService.StartRunFromTriggerAsync(
+            new ProcessRunTriggerStartRequest
             {
                 ProcessDefinitionId = plan.TargetId,
                 RunName = $"{plan.Name} / {firedAtUtc:yyyy-MM-dd HH:mm} UTC",
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = $"Started by scheduler plan '{plan.Name}' ({plan.Id:D})."
+                TriggerReason = $"Started by scheduler plan '{plan.Name}' ({plan.Id:D}) at {firedAtUtc:O}.",
+                TriggerSourceKind = ProcessRunTriggerSourceKind.SchedulerPlan,
+                TriggerSourceId = plan.Id,
+                TriggerSourceName = plan.Name,
+                RequestedBy = SchedulerPlannerConstants.AutomationOwnerKey
             },
             cancellationToken);
         if (result.IsFailure || result.Value == Guid.Empty)

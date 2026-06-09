@@ -574,9 +574,16 @@ public sealed class SchedulerPlannerIntegrationTests
 
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var processRun = await dbContext.Set<ProcessRun>().SingleAsync(item => item.Id == result.TargetRunId);
+        var workflowLinks = await dbContext.Set<ProcessWorkflowRunLink>()
+            .AsNoTracking()
+            .Where(item => item.ProcessRunId == processRun.Id)
+            .ToListAsync();
         Assert.Equal(SchedulerPlanTargetKind.Process, result.TargetKind);
         Assert.Contains("Real process launch proof", processRun.Name, StringComparison.Ordinal);
         Assert.Contains("scheduler plan", processRun.TriggerReason, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("SchedulerPlan", processRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Contains("Requested by scheduler-planner", processRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Empty(workflowLinks);
     }
 
     [Fact]

@@ -1,0 +1,5 @@
+SB018 forbidden drift scan
+PASS no production source files changed under repo://src for SB018.
+PASS integration test proof source changed:
+tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs
+PASS no runtime host/registry/selector/DI/manager/scheduler/workflow hook or driver mutation implementation was introduced by this gate because production source diff is empty.

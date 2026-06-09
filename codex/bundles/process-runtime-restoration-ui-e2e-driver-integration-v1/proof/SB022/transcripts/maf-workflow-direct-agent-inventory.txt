@@ -1,0 +1,16 @@
+SB022 inventory: current MAF workflow/direct-agent executor integration and deterministic provider options
+PASS src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs contains 'TryAddSingleton<MafAgentRuntime>' for MAF runtime is registered through AgentFramework hosting -> line 54
+PASS src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs contains 'TryAddSingleton<IAgentRuntime>' for IAgentRuntime resolves to MAF runtime by default -> line 55
+PASS src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs contains 'AddBuiltInWorkflowExecutors' for workflow executor catalog is available in composition -> line 61
+PASS src\CanDoItAll.AgentFramework.Hosting\AgentFrameworkServiceCollectionExtensions.cs contains 'IWorkflowProcessExecutorBridge' for workflow process executor bridge is registered -> line 94
+PASS src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs contains 'AddScoped<ProcessWorkflowRunCoordinator>' for process module registers workflow run coordinator -> line 43
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs contains 'ProcessDispatchWorkflowRouteService' for claimed dispatch pipeline includes workflow route service -> line 37
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs contains 'ProcessDispatchDirectAgentRouteService' for claimed dispatch pipeline includes direct-agent route service -> line 38
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs contains 'WorkflowRouteHandler' for workflow route handler is in the dispatch pipeline -> line 187
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs contains 'DirectAgentExecutionRouteHandler' for direct-agent execution handler is in the dispatch pipeline -> line 215
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs contains 'IWorkflowProcessExecutorBridge workflowProcessExecutorBridge' for process workflow coordinator depends on workflow execution bridge -> line 14
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs contains 'StartForProcessAssignmentAsync' for workflow coordinator starts workflow runs for process assignments -> line 89
+PASS src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs contains 'ProcessWorkflowRunLink' for workflow run links are persisted into process runtime -> line 42
+PASS src\CanDoItAll.Modules.AgentFramework\Workspace\AgentFrameworkWorkspaceFactory.cs contains 'ProcessMockAgentRuntime' for deterministic process mock runtime can back direct-agent execution -> line 63
+PASS src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentSupport.cs contains 'ProcessMockAgentOptions' for process mock provider has explicit configuration options -> line 6
+PASS src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentCatalogService.cs contains 'EnsureCatalogAsync' for process mock catalog can seed deterministic role agents -> line 19

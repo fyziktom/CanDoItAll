@@ -1,0 +1,15 @@
+SB015 changed-file hashes (SHA256)
+2F6BEF11F4BB247E4E2FF6677294A3B6CAFE4925C4684394F7541AD0FAF1C95F  tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs
+955737A99CCF581AE0D1063348DB9BCEAA8F2F00550D6795EE5F3F6E3618BC9B  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB013\README.md
+CB2F8D9BE551BDA12A9BC1C5C2573717FE2F78ACAF8D2ADBC5E063F2652EE1DF  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB014\README.md
+F92A1547CC02D691AF95129CBD9D3319C7985327A6E55BD3B96B4B6F262697BB  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB015\README.md
+A8D3954120138113E7A597021596239CEC711673E99809F4861A4C1B5EED66D0  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB013\transcripts\large-screen-process-route-source-assertions.txt
+9ED49BBCEDEF7A56B49226A2A25971525851628CD22C4FA74803A68FC95C9C2B  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB014\transcripts\template-import-process-start-source-assertions.txt
+F0CB7DC3F2904C0728E93209A360D5F811E278E5D206BA1F1E1DB5F80AEC880D  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\manifest.md
+3A251AE7C8B70FC00A13BA270D4EC4D9BAB6FC67E44BB7DC6970329DE19AEC8A  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\semantic-invariants.md
+E9439028EE02798DD6F7C18AA9971285BFAE44115C8CCA0B236E98686A0F8F44  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\transcripts\focused-large-screen-process-start-playwright.txt
+B7EA768710BBFC40081BDF52AA32914796D2F85BB760F09239258CCBEB45E4CF  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\transcripts\anti-stub-no-small-viewport-scan.txt
+45A07657475CFDF6605984EA47F687DA57A7AB9D02DB93191C01A78FCB8A0ECF  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\transcripts\large-desktop-screenshot-inventory.txt
+DAB3202B5A08C389C0F32A95F1F08768CA76087B952FB80578104C6DF3E71701  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\transcripts\forbidden-drift-scan.txt
+241DD411D4272C91EB3810FD05FE965B3E707F778670FDE97F4D21CE734736CC  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB015\transcripts\prepared-validator-after-sb015.txt
+DEC241D81197BCFB035DE2CCA6AB30024AD59552F553063BD96E1410CA85F43D  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\reviews\01-execution-report.md

@@ -496,6 +496,7 @@ public sealed class ProcessDriverObservationAggregationTests
             "ProcessDriverVerificationGateway.cs",
             "ProcessDomainEvidenceReadOnlyAdapters.cs",
             "ProcessDriverObservationAggregationReadOnlyAdapter.cs",
+            "ProcessManagerReadOnlyVerificationProjection.cs",
             "ProcessReadOnlyVerificationAggregateObservation.cs"
         };
     }

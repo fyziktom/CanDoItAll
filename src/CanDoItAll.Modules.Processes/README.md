@@ -85,6 +85,32 @@ Avoid introducing interfaces for trivial one-implementation helpers. Add an abst
 - Project-structure projection should expose navigable run/product folders without mirroring every artifact subdirectory.
 - Live-run profiles must not seed transitions or artifacts that a real runtime path should produce.
 
+## Supported Process Launch Surfaces
+
+Supported UI routes:
+
+- `/processes` opens the global process workspace.
+- `/projects/{projectId}/processes` opens the process workspace scoped to a project.
+- `/processes/live` and `/projects/{projectId}/processes/live` open the live process dashboard.
+
+Supported HTTP API launch paths are under `/api/processes`:
+
+- `POST /runs/start` starts a published definition directly through `ProcessesService.StartRunAsync`.
+- `POST /launch-plans` creates a launch plan through `ProcessesService.CreateLaunchPlanAsync`.
+- `POST /launch-plans/{launchPlanId}/hr-match`, `POST /launch-plans/{launchPlanId}/submit-approval`, `POST /launch-plans/approval-decisions`, and `POST /launch-plans/{launchPlanId}/provision` prepare a launch plan for execution.
+- `POST /launch-plans/execute` executes a ready launch plan through `ProcessesService.ExecuteLaunchPlanAsync`, which delegates to the normal run-start path.
+- `GET /templates`, `GET /templates/{processKey}/detail`, and `POST /templates/{processKey}/import` expose the supported template library and import path.
+
+Supported project-structure launch path:
+
+- `POST /api/project-structure/projects/{projectId}/nodes/{nodeId}/process/start` starts a linked process node through `ProjectStructureAgentService.StartProcessNodeAsync` and the process bridge. Use this when the launch must preserve project-structure context.
+
+Supported service-level trigger path:
+
+- Scheduler and workflow-origin starts use `ProcessesService.StartRunFromTriggerAsync(ProcessRunTriggerStartRequest)`, which validates `ProcessRunTriggerSourceKind`, requires source identity for scheduler/workflow triggers, and delegates to `StartRunAsync`.
+
+Current support is intentionally process-service centered. Do not route UI, API, project-structure, scheduler, workflow, manager, or agent-tool starts through a process-driver runtime host, driver registry, runtime selector, or driver dependency-injection registration.
+
 ## Process Driver Read-Only Verification Migration
 
 The current process-module integration path is `ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)`. It composes the focused read-only adapters directly and returns typed observation lists plus an aggregate observation when at least one lane produced a response.
@@ -100,6 +126,51 @@ Use `ProcessReadOnlyVerificationPayloadBuilder` to build lane payloads from alre
 Migration from lane-by-lane adapter calls should keep request construction typed: create the relevant lane payloads, pass them into `ProcessReadOnlyVerificationBatchPayload`, then call `ProcessReadOnlyVerificationBatchOrchestrator.Verify`. Consume the returned lane observation lists, `Responses`, and `AggregateObservation` as diagnostic read-only evidence only.
 
 Do not add a generic runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, file/network access, storage/workspace write, or process mutation while migrating to the batch orchestrator.
+
+## Runtime Host Roadmap Decision
+
+Current status: `Not approved`.
+
+The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
+
+Approved current shape:
+
+- Processes may call typed read-only verification adapters over already-loaded caller-supplied facts.
+- Manager-visible diagnostics may project those read-only observations without process mutation.
+- Scheduler and workflow-origin process starts must use typed process services, not driver hooks.
+
+Future approval gate:
+
+- Define a runtime lifecycle owner, startup/shutdown behavior, cancellation model, retry ownership, failure handoff, and observability contract.
+- Define immutable audit persistence for each request, denial, approval, output hash, and redaction descriptor.
+- Define sandbox and allow-list policy for command execution, package restore, file access, workspace/storage writes, network/HTTP calls, Office/Graph calls, CRM calls, provider repair, finalizer application, transition application, claim mutation, retry scheduling, and process mutation.
+- Define approval and authorization with recorded enablement, revocation, dry-run behavior, emergency stop, and predictable failure behavior.
+- Update driver contract versioning, public API snapshots, migration docs, focused tests, source scans, and critical proof manifests in the same approval bundle.
+- Include red-team proof that rejects report-only approval, non-empty diagnostics as approval, implicit DI registration, fallback runtime selection, fixture-only success, and undocumented manager/scheduler/workflow entry points.
+
+Denied until that future gate passes:
+
+- Generic process-driver runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, endpoint mapping, workspace/storage writes, external calls, process mutation, or execution-capable drivers.
+
+## Driver/Core/Runtime Roadmap Matrix
+
+Ready now:
+
+- Process Core remains generic and dependency-light. Domain-specific evidence verification belongs in process-module read-only adapters and `CanDoItAll.Processes.Drivers.*` packages.
+- Read-only verification adapters may inspect already-loaded facts and return diagnostics, observations, redaction descriptors, evidence references, and aggregate summaries.
+- The process module may project read-only verification diagnostics into manager-visible observations without applying transitions, claims, finalizers, retries, workspace writes, external calls, or process mutations.
+- UI, API, project-structure, scheduler, workflow-origin, and agent-tool starts must enter through `ProcessesService` or the existing project-structure bridge.
+
+Blocked now:
+
+- A generic process-driver runtime host is not approved.
+- Driver runtime discovery, registry lookup, selector fallback, driver DI registration, manager commands, scheduler hooks, workflow hooks, endpoint mappings, shell execution, package restore, Office/Graph calls, CRM writes, workspace/storage writes, transition mutation, claim mutation, finalizer mutation, and retry scheduling remain blocked.
+- A non-empty diagnostic result, a green test fixture, or a report-only note is not approval to execute driver side effects.
+
+Future gate:
+
+- Approve runtime ownership, audit persistence, sandbox and allow-list policy, authorization, emergency-stop behavior, compatibility/versioning, source scans, API snapshots, migration docs, focused tests, and red-team proof in the same bundle before enabling execution-capable process drivers.
+- Update this README, process API/operator docs, source guards, critical manifests, and validation transcripts in the approval bundle.
 
 ## Operator Troubleshooting Map
 

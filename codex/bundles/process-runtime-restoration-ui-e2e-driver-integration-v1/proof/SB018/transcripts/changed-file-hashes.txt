@@ -1,0 +1,14 @@
+SB018 changed-file hashes (SHA256)
+067E8D7A1670B9FBADFB38065F5B56F8599EB2A539C0A5D6DE935A0A2B40D5CF  tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
+C01D0A22FF2D9405601E94A3784CCDEE30141D8B705B809A928E62F951F2A0AD  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB016\README.md
+6BDF89260FCE35961663ACD663CF0F21B0D2ECAC14ED27B5314CFD38F79B2CE2  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB017\README.md
+2C0FC1D3F4EC617C2ED6920E98434F64246FF41EF684A03B6FD8AFAA98D7DFAC  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\subbundles\SB018\README.md
+FD0329D633EAD49709A4182A188BF741813601FB8C3A470C3C246A078D892263  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB016\transcripts\process-run-persistence-source-assertions.txt
+22BB5E8437AB376DFB3676EB1B039605EEACC770BF9AE5EC9189549B2EDFDE2E  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB017\transcripts\process-run-start-guard-source-assertions.txt
+E091525D46CA05F560877E93A4F6F32AD1339AB25B93BDC0146D91AE0CEBF04D  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB018\manifest.md
+4B06EF9A82D6C0967938F76021E5447A8712DBD31211108BEFD2D7797EFFC554  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB018\semantic-invariants.md
+A6EF5B34F4E980893E0E93A8C0F5DD919912F3DC03B7635A33C72BCC50F80583  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB018\transcripts\focused-process-run-creation-persistence-tests.txt
+E8041700837D5AC674604EC0AC8A6D9F45B9E9501B881FCE09DA31979A55428D  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB018\transcripts\anti-stub-process-run-creation-tests.txt
+0DCCDE0CC2E80B1B0486E2708B58109A006812A7EC09830C2F2A02A0FBBF644E  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB018\transcripts\forbidden-drift-scan.txt
+241DD411D4272C91EB3810FD05FE965B3E707F778670FDE97F4D21CE734736CC  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\proof\SB018\transcripts\prepared-validator-after-sb018.txt
+81B79D4323F03B0BD31B475C125371B12F1FA3F870CF9D1242F6D1C6A3FC1D59  codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1\reviews\01-execution-report.md

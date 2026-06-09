@@ -1,0 +1,7 @@
+Source assertions for SB008 deterministic app-start smoke test
+SB008_INV_001 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:28 - The deterministic app-start smoke test exists.
+SB008_INV_002 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:82 - The smoke host enables service-provider validation.
+SB008_INV_003 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:123 - The smoke host bootstraps the test schema before startup.
+SB008_INV_004 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:117 - The smoke host maps the same process API route group used by the web app.
+SB008_INV_005 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:118 - The smoke host maps the Blazor app root with module assemblies.
+SB008_INV_006 PASS tests\CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:46 - The smoke test verifies process dispatch service resolution.
