@@ -1,0 +1,8 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-e2e-openai-hardening-v1\proof\SB009\test-results\SB009-global-ui-real-run.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 11 s - CanDoItAll.Tests.Playwright.dll (net10.0)
+
+Command: dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-build --filter FullyQualifiedName~Process_start_SB015_INV_001_large_screen_imports_template_and_executes_ready_launch_from_ui --logger "trx;LogFileName=SB009-global-ui-real-run.trx" --results-directory "C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-e2e-openai-hardening-v1\proof\SB009\test-results"
+ExitCode: 0

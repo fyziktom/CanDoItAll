@@ -1,3 +1,16 @@
 @page "/processes"
 
-<ProcessWorkspace />
+<ProcessWorkspace ProcessIdQuery="@ProcessIdQuery"
+                  RunIdQuery="@RunIdQuery"
+                  LaunchPlanIdQuery="@LaunchPlanIdQuery" />
+
+@code {
+    [SupplyParameterFromQuery(Name = "processId")]
+    public Guid? ProcessIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "runId")]
+    public Guid? RunIdQuery { get; set; }
+
+    [SupplyParameterFromQuery(Name = "launchPlanId")]
+    public Guid? LaunchPlanIdQuery { get; set; }
+}

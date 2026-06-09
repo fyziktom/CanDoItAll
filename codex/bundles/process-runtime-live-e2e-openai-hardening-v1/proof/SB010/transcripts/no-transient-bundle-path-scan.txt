@@ -1,0 +1,4 @@
+SB010 no transient bundle path scan
+Generated: 2026-06-09T13:54:53.2710257-04:00
+Command: rg -n "codex[\\/]+bundles|process-runtime-live-e2e-openai-hardening-v1|process-runtime-restoration-ui-e2e-driver-integration-v1" src tests
+PASS: no transient bundle path references found in src or tests.

@@ -1,0 +1,32 @@
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4479:        return ReadStableArchitectureFixtureFile("ProcessDriverMultiDomainVerificationGateway", pathParts);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4484:        return ReadStableArchitectureFixtureFile("ProcessDriverReadonlyOrchestrationEvidencePipeline", pathParts);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4487:    private static string ReadStableArchitectureFixtureFile(
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1512:        return ReadStableArchitectureFixtureFile("ProcessDriverMultiDomainVerificationGateway", pathParts);
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1517:        return ReadStableArchitectureFixtureFile("ProcessDriverReadonlyReleaseCandidateStabilization", pathParts);
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1520:    private static string ReadStableArchitectureFixtureFile(
+tests/CanDoItAll.Tests.Unit\ProcessDriverFakeProofResistanceTests.cs:8:    private const string StableProofFixturePath = "tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway";
+tests/CanDoItAll.Tests.Unit\ProcessDriverFakeProofResistanceTests.cs:89:        var report = ReadRepositoryFile(StableProofFixturePath, "reviews", "01-execution-report.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverFakeProofResistanceTests.cs:90:        var manifest = ReadRepositoryFile(StableProofFixturePath, "proof", "SB043", "manifest.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverFakeProofResistanceTests.cs:92:            StableProofFixturePath,
+tests/CanDoItAll.Tests.Unit\ProcessDriverFakeProofResistanceTests.cs:98:            StableProofFixturePath,
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:17:        var executionReport = ReadBundleFile("reviews", "01-execution-report.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:35:        var governanceDoc = ReadBundleFile("requirements", "02-hard-constraints.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:192:        var rehearsalDoc = ReadBundleFile("architecture", "03-runtime-evidence-consistency-verifier.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:302:        var decisionDoc = ReadBundleFile("architecture", "06-runtime-host-deferral.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:322:        var targetSolution = ReadBundleFile("architecture", "01-target-solution.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:323:        var governanceDoc = ReadBundleFile("requirements", "02-hard-constraints.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:324:        var roadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-domain-drivers.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:338:        var laneRoadmap = ReadBundleFile("architecture", "05-driver-domain-roadmap.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:339:        var longRangeRoadmap = ReadBundleFile("analysis", "03-roadmap-to-stable-core-and-domain-drivers.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:340:        var decisionTemplate = ReadBundleFile("architecture", "06-runtime-host-deferral.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:357:        var executionReport = ReadBundleFile("reviews", "01-execution-report.md");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:879:    private static string ReadBundleFile(params string[] pathParts)
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:888:                "ProcessDriverRuntimeEvidenceVerifierIntegrationHardening",
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:436:        var runtimeDeferral = ReadProcessDriverRuntimeEvidenceFixtureFile(
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:439:        var domainRoadmap = ReadProcessDriverRuntimeEvidenceFixtureFile(
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:593:    private static string ReadProcessDriverRuntimeEvidenceFixtureFile(params string[] pathParts)
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:601:            "ProcessDriverRuntimeEvidenceVerifierIntegrationHardening"
+
+Command: rg -n 'ProcessDriverRuntimeEvidenceVerifierIntegrationHardening|ProcessDriverMultiDomainVerificationGateway|ReadStableArchitectureFixtureFile|ReadBundleFile\(|ReadProcessDriverRuntimeEvidenceFixtureFile\(|StableProofFixturePath' tests/CanDoItAll.Tests.Unit -g *.cs
+RawRgExitCode: 0
+ExitCode: 0

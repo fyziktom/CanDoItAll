@@ -1,0 +1,9 @@
+Red-team seeded-baseline rejection
+RequiredTokens: Guid.NewGuid, processes-launch-execute-button, Launch plan executed into a process run., WaitForRunAsync, /api/processes/runs?definitionId=, Assert.Contains(launchName, run.TotalStepCount.ToString()
+FakeProofPath: C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-e2e-openai-hardening-v1\proof\SB009\red-team\seeded-baseline-only-proof.txt
+FakeMissingCount: 7
+FakeMissingTokens: Guid.NewGuid, processes-launch-execute-button, Launch plan executed into a process run., WaitForRunAsync, /api/processes/runs?definitionId=, Assert.Contains(launchName, run.TotalStepCount.ToString()
+RealSourceMissingCount: 0
+RealSourceMissingTokens: 
+Result: rejected seeded-baseline/report-only proof and accepted the real UI/API readback proof.
+ExitCode: 0

@@ -5,8 +5,8 @@ namespace CanDoItAll.Modules.Processes;
 
 public partial class ProcessWorkspace
 {
-    [SupplyParameterFromQuery(Name = "launchPlanId")]
-    private Guid? LaunchPlanIdQuery { get; set; }
+    [Parameter]
+    public Guid? LaunchPlanIdQuery { get; set; }
 
     private IReadOnlyList<ProcessLaunchPlanListItem> launchPlans = [];
     private IReadOnlyList<AgentTeamDefinition> agentTeams = [];

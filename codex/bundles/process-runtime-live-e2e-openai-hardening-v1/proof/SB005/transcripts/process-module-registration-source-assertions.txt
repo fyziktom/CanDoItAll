@@ -1,0 +1,26 @@
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:152:    public void AddProcessesModule_SB05_INV_004_registers_process_owned_execution_client()
+tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs:156:        services.AddProcessesModule(new ConfigurationBuilder().Build());
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:14:    public void ProcessRuntimeOptions_DefaultsToConcurrentPostgreSqlOutboxWorkers()
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:16:        var options = new ProcessRuntimeOptions();
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:18:        Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxWorkerMaxConcurrency);
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:19:        Assert.Equal(ProcessRuntimeOptions.DefaultOutboxWorkerConcurrency, options.OutboxBatchMaxParallelism);
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:23:        Assert.True(ProcessRuntimeOptions.MaximumOutboxWorkerConcurrency >= options.OutboxWorkerMaxConcurrency);
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:14:    public static IServiceCollection AddProcessesModule(this IServiceCollection services, IConfiguration configuration)
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:21:            .GetSection(ProcessRuntimeOptions.SectionName)
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:22:            .Get<ProcessRuntimeOptions>() ?? new ProcessRuntimeOptions();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:26:        services.AddOptions<ProcessRuntimeOptions>()
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:27:            .BindConfiguration(ProcessRuntimeOptions.SectionName)
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:38:            .ValidateOnStart();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:41:        services.AddScoped<ProcessesService>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:42:        services.AddScoped<ProcessOutboxService>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:44:        services.AddScoped<IProcessAutomationExecutionClient, ProcessAutomationExecutionClient>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:45:        services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:47:        services.AddScoped<IProcessRuntimeReadQueryService, ProcessRuntimeReadQueryService>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:75:        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAgentRuntimeToolProvider, ProcessAgentRuntimeToolProvider>());
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:83:            services.AddHostedService<ProcessCatalogWarmupWorker>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:86:                services.AddHostedService<ProcessRunRecoveryWorker>();
+src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs:89:            services.AddHostedService<ProcessOutboxDrainWorker>();
+
+Command: rg -n 'AddProcessesModule|AddScoped<ProcessesService>|AddScoped<ProcessOutboxService>|AddScoped<IProcessAutomationExecutionClient|AddScoped<IProcessRunAutomationDispatchService|AddScoped<IProcessRuntimeReadQueryService|TryAddEnumerable\(ServiceDescriptor\.Scoped<IAgentRuntimeToolProvider, ProcessAgentRuntimeToolProvider>|AddHostedService<ProcessCatalogWarmupWorker>|AddHostedService<ProcessRunRecoveryWorker>|AddHostedService<ProcessOutboxDrainWorker>|ProcessRuntimeOptions|ValidateOnStart' src/CanDoItAll.Modules.Processes/Services/ProcessesModuleServiceCollectionExtensions.cs tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessAutomationExecutionClientTests.cs tests/CanDoItAll.Tests.Integration/ProcessRuntimeToolProviderCompositionIntegrationTests.cs tests/CanDoItAll.Tests.Unit/ProcessAgentRuntimeToolProviderTests.cs
+RawRgExitCode: 0
+ExitCode: 0

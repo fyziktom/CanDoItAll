@@ -10,9 +10,9 @@
 ## Changed File Hashes
 | File | SHA-256 |
 | --- | --- |
-| `repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb003-gate-a-source-backed-baseline-closure-with-no-report-only-proof/README.md` | `0cd2ec86c2fb69f37481c40c8201fcaefb15bf52e699179600f109744440fde9` |
-| `repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/reviews/01-execution-report.md` | `1cb51a6e994d7d31bdda4aff9e58b5e804666baf84387f0047565dd7c2e3dbaf` |
-| `repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/proof/SB003/semantic-invariants.md` | `58b37387cc5e8bc637f10ba19c3ae528c731ceb8792cc3fd5ac54f11dd09cba1` |
+| `bundle://subbundles/sb003-gate-a-source-backed-baseline-closure-with-no-report-only-proof/README.md` | `0cd2ec86c2fb69f37481c40c8201fcaefb15bf52e699179600f109744440fde9` |
+| `bundle://reviews/01-execution-report.md` | `1cb51a6e994d7d31bdda4aff9e58b5e804666baf84387f0047565dd7c2e3dbaf` |
+| `bundle://proof/SB003/semantic-invariants.md` | `58b37387cc5e8bc637f10ba19c3ae528c731ceb8792cc3fd5ac54f11dd09cba1` |
 
 ## Source Baseline Hashes
 | File | SHA-256 |

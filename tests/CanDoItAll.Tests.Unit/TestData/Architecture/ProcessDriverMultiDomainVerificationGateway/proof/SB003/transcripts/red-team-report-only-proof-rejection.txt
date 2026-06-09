@@ -5,9 +5,9 @@ Invariant ID: SB003_INV_001
 --- fake proof under test ---
 SB003 passed because the execution report says it passed.
 --- required artifact paths absent from fake proof ---
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\source-scan-and-anti-stub-audit.txt
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\solution-build-no-restore.txt
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\focused-baseline-unit-tests.txt
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB002\test-debt-inventory.md
+bundle://proof/SB001\transcripts\source-scan-and-anti-stub-audit.txt
+bundle://proof/SB001\transcripts\solution-build-no-restore.txt
+bundle://proof/SB001\transcripts\focused-baseline-unit-tests.txt
+bundle://proof/SB002\test-debt-inventory.md
 Result: rejected report-only proof as expected.
 Exit code: 1

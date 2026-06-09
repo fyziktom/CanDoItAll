@@ -2,7 +2,7 @@
 
 ## Working Assumptions
 - The active checkout is on `maf-processes-refactor`; execution must verify against the current live source before trusting previous status rows.
-- Prior bundle artifacts referenced by the architect are not present under `repo://codex/bundles/` in this checkout; SB001-SB003 must treat that as a re-entry risk and use current source, tests, scans, and fresh proof as the authority.
+- Prior bundle artifacts referenced by the architect are not present under `bundle://` in this checkout; SB001-SB003 must treat that as a re-entry risk and use current source, tests, scans, and fresh proof as the authority.
 - No production runtime host, registry, selector, DI registration, manager command, scheduler hook, workflow hook, file/network read, storage write, or process mutation is approved in this bundle.
 
 ## Critical Path Risks

@@ -23,9 +23,9 @@
 | `repo://tests/CanDoItAll.Tests.Unit/TestData/ProcessDriverMultiDomainCorpus/business/business-negative-unsupported-assumption.md` | `ea502b0b4f194965a56fd7c0a5088249414285048367cf2a7fa88673e706f9aa` |
 | `repo://tests/CanDoItAll.Tests.Unit/TestData/ProcessDriverMultiDomainCorpus/artifact/artifact-positive-release-notes.json` | `9cdac5e19031e8dc1ba8620abc83f617bf771b02192f25a9b8e3cc48e2348798` |
 | `repo://tests/CanDoItAll.Tests.Unit/TestData/ProcessDriverMultiDomainCorpus/artifact/artifact-negative-projection-drift.json` | `62ebd4e313634bb0f6d57812b8cec164ffc6f0b68429e81f8ac22a22c6640d5a` |
-| `repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/subbundles/sb043-expand-transcript-runtime-office-business-artifact-corpora-with-realis/README.md` | `a055e697fb26c5e0213472590f7999a85481a196b123ec74371e57d2984d9beb` |
-| `repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/README.md` | `1b1f96919c639167c5639767296efa70829bb94b69e3afe102d3ba9349c308b8` |
-| `repo://codex/bundles/process-driver-multi-domain-verification-gateway-v1/reviews/01-execution-report.md` | `36a68b4090058743e76ca083f241c166425d16f2d3e701094e48b6d9b9b881fc` |
+| `bundle://subbundles/sb043-expand-transcript-runtime-office-business-artifact-corpora-with-realis/README.md` | `a055e697fb26c5e0213472590f7999a85481a196b123ec74371e57d2984d9beb` |
+| `bundle://README.md` | `1b1f96919c639167c5639767296efa70829bb94b69e3afe102d3ba9349c308b8` |
+| `bundle://reviews/01-execution-report.md` | `36a68b4090058743e76ca083f241c166425d16f2d3e701094e48b6d9b9b881fc` |
 
 ## Command Transcripts
 - Focused multi-domain corpus tests: `bundle://proof/SB043/transcripts/focused-multi-domain-corpus-tests.txt`

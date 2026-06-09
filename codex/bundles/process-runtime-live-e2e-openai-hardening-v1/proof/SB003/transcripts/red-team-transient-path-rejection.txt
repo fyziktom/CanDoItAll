@@ -1,0 +1,6 @@
+1:This red-team fixture deliberately contains codex\bundles\process-runtime-live-e2e-openai-hardening-v1 to prove the scan catches transient paths.
+
+Command: rg -n 'codex[\\/]bundles|process-runtime-live-e2e-openai-hardening-v1|process-runtime-restoration-ui-e2e-driver-integration-v1' bundle://proof/SB003/red-team/transient-path-fixture.txt
+RawRgExitCode: 0
+ExitCode: 0 (expected detection of adversarial transient path fixture).
+Result: rejected transient bundle-path fixture as expected.

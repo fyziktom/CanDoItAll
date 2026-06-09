@@ -1115,7 +1115,7 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                     Status = run.Run.Status.ToString(),
                     Notes = BuildProcessRunNotes(run.Run, stats),
                     Binding = ProjectStructureProjectionBindingFactory.Create(
-                        $"/projects/{context.ProjectId}/processes?runId={run.Run.Id}",
+                        $"/projects/{context.ProjectId}/processes?processId={run.Run.ProcessDefinitionId}&runId={run.Run.Id}",
                         "process-run",
                         run.Run.Id),
                     ParentNodeKey = runParentNodeKey,
@@ -1160,7 +1160,7 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                         Notes = BuildProcessRunOutputFolderNotes(outputFolder.Folder),
                         MetadataJson = ProjectObjectMetadataSerializer.Serialize(metadata),
                         Binding = new ProjectNodeBindingState(
-                            $"/projects/{context.ProjectId}/processes?runId={run.Run.Id}",
+                            $"/projects/{context.ProjectId}/processes?processId={run.Run.ProcessDefinitionId}&runId={run.Run.Id}",
                             "process-run-output-folder",
                             run.Run.Id,
                             outputFolder.Folder.DirectoryPath,

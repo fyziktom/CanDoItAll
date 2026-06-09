@@ -1,0 +1,88 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="988433b2-efac-4120-9649-81a9478630aa" name="lucys@LUCYSPOWER 2026-06-09 13:18:46" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-06-09T13:18:46.8094331-04:00" queuing="2026-06-09T13:18:46.8094334-04:00" start="2026-06-09T13:18:44.6698885-04:00" finish="2026-06-09T13:18:46.8403543-04:00" />
+  <TestSettings name="default" id="f120f774-2c24-480d-9786-214e2b83c960">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-06-09_13_18_46" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="f86e8a4c-eccd-467f-9370-e9a83b78ba43" testId="a35fdf84-2efa-507b-5bb0-fcc9c863ecac" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_unknown_purpose_exposes_no_process_tools" computerName="LUCYSPOWER" duration="00:00:00.0006401" startTime="2026-06-09T13:18:46.7474674-04:00" endTime="2026-06-09T13:18:46.7475106-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f86e8a4c-eccd-467f-9370-e9a83b78ba43" />
+    <UnitTestResult executionId="72fbaeec-0a9e-459d-9f45-bb1592f254c0" testId="83a8cc1f-2e0e-6d84-b173-1080a80dae3d" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: AutoApprovedNonInteractive)" computerName="LUCYSPOWER" duration="00:00:00.0001180" startTime="2026-06-09T13:18:46.7226633-04:00" endTime="2026-06-09T13:18:46.7226944-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="72fbaeec-0a9e-459d-9f45-bb1592f254c0" />
+    <UnitTestResult executionId="10515eea-e1fd-4418-805d-2d31749a3133" testId="ed2d5376-6563-3960-7cfe-338529849c04" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: AutoApprovedNonInteractive)" computerName="LUCYSPOWER" duration="00:00:00.0009783" startTime="2026-06-09T13:18:46.7233224-04:00" endTime="2026-06-09T13:18:46.7233529-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="10515eea-e1fd-4418-805d-2d31749a3133" />
+    <UnitTestResult executionId="a23507b5-df10-4001-befe-cc650bc37038" testId="9e0e549e-ca70-9c05-6cbc-9626b9ed4404" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: A2AEndpoint)" computerName="LUCYSPOWER" duration="00:00:00.0000753" startTime="2026-06-09T13:18:46.7235404-04:00" endTime="2026-06-09T13:18:46.7235633-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a23507b5-df10-4001-befe-cc650bc37038" />
+    <UnitTestResult executionId="5eea972d-6cec-437e-bb59-1e6b2c28ffff" testId="82fea57c-e2ee-a1e0-a1ac-b026add5c7e9" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: GovernedProcessAutomation)" computerName="LUCYSPOWER" duration="00:00:00.0003676" startTime="2026-06-09T13:18:46.7234129-04:00" endTime="2026-06-09T13:18:46.7234380-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5eea972d-6cec-437e-bb59-1e6b2c28ffff" />
+    <UnitTestResult executionId="8330edfd-0904-4c06-9e9a-8ba5bdb2a963" testId="6c056be9-81ff-d02d-f730-63baf4db5494" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: InteractiveChat)" computerName="LUCYSPOWER" duration="00:00:00.0000682" startTime="2026-06-09T13:18:46.7234796-04:00" endTime="2026-06-09T13:18:46.7235028-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8330edfd-0904-4c06-9e9a-8ba5bdb2a963" />
+    <UnitTestResult executionId="cecec2e7-9dc3-40e5-960e-1a9be0b4d694" testId="00bb5a1b-393e-a0ec-6c35-7153a68ca756" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_no_process_read_access_exposes_no_process_tools" computerName="LUCYSPOWER" duration="00:00:00.0010628" startTime="2026-06-09T13:18:46.7236365-04:00" endTime="2026-06-09T13:18:46.7236601-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="cecec2e7-9dc3-40e5-960e-1a9be0b4d694" />
+    <UnitTestResult executionId="1459c571-b473-4740-b133-023ecf54957c" testId="a66687a4-af98-06d9-b359-54e27d509d5e" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: GovernedProcessAutomation)" computerName="LUCYSPOWER" duration="00:00:00.3428007" startTime="2026-06-09T13:18:46.3640801-04:00" endTime="2026-06-09T13:18:46.7135440-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1459c571-b473-4740-b133-023ecf54957c" />
+    <UnitTestResult executionId="1df1e85a-bdef-41b3-b973-310cab172b12" testId="7b7cc84b-4472-a1ee-a5b8-b8096083a184" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: InteractiveChat)" computerName="LUCYSPOWER" duration="00:00:00.0002552" startTime="2026-06-09T13:18:46.7224634-04:00" endTime="2026-06-09T13:18:46.7225062-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="1df1e85a-bdef-41b3-b973-310cab172b12" />
+    <UnitTestResult executionId="238b0129-79ad-4283-ba32-db9ee9f3c2b9" testId="d5cfb858-fcec-948f-cedf-1e8524256774" testName="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: A2AEndpoint)" computerName="LUCYSPOWER" duration="00:00:00.0012909" startTime="2026-06-09T13:18:46.7218374-04:00" endTime="2026-06-09T13:18:46.7219138-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="238b0129-79ad-4283-ba32-db9ee9f3c2b9" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: GovernedProcessAutomation)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="a66687a4-af98-06d9-b359-54e27d509d5e">
+      <Execution id="1459c571-b473-4740-b133-023ecf54957c" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: A2AEndpoint)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="9e0e549e-ca70-9c05-6cbc-9626b9ed4404">
+      <Execution id="a23507b5-df10-4001-befe-cc650bc37038" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: InteractiveChat)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="7b7cc84b-4472-a1ee-a5b8-b8096083a184">
+      <Execution id="1df1e85a-bdef-41b3-b973-310cab172b12" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: InteractiveChat)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="6c056be9-81ff-d02d-f730-63baf4db5494">
+      <Execution id="8330edfd-0904-4c06-9e9a-8ba5bdb2a963" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: AutoApprovedNonInteractive)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="ed2d5376-6563-3960-7cfe-338529849c04">
+      <Execution id="10515eea-e1fd-4418-805d-2d31749a3133" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: AutoApprovedNonInteractive)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="83a8cc1f-2e0e-6d84-b173-1080a80dae3d">
+      <Execution id="72fbaeec-0a9e-459d-9f45-bb1592f254c0" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access(purpose: GovernedProcessAutomation)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="82fea57c-e2ee-a1e0-a1ac-b026add5c7e9">
+      <Execution id="5eea972d-6cec-437e-bb59-1e6b2c28ffff" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_exposes_read_tools_without_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access(purpose: A2AEndpoint)" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="d5cfb858-fcec-948f-cedf-1e8524256774">
+      <Execution id="238b0129-79ad-4283-ba32-db9ee9f3c2b9" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_purpose_matrix_preserves_mutation_tools_with_explicit_write_access" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_no_process_read_access_exposes_no_process_tools" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="00bb5a1b-393e-a0ec-6c35-7153a68ca756">
+      <Execution id="cecec2e7-9dc3-40e5-960e-1a9be0b4d694" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_no_process_read_access_exposes_no_process_tools" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests.ProcessAgentRuntimeToolProvider_unknown_purpose_exposes_no_process_tools" storage="c:\repositories\candoitall\tests\candoitall.tests.unit\bin\debug\net10.0\candoitall.tests.unit.dll" id="a35fdf84-2efa-507b-5bb0-fcc9c863ecac">
+      <Execution id="f86e8a4c-eccd-467f-9370-e9a83b78ba43" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Unit.ProcessAgentRuntimeToolProviderTests" name="ProcessAgentRuntimeToolProvider_unknown_purpose_exposes_no_process_tools" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a35fdf84-2efa-507b-5bb0-fcc9c863ecac" executionId="f86e8a4c-eccd-467f-9370-e9a83b78ba43" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="83a8cc1f-2e0e-6d84-b173-1080a80dae3d" executionId="72fbaeec-0a9e-459d-9f45-bb1592f254c0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="ed2d5376-6563-3960-7cfe-338529849c04" executionId="10515eea-e1fd-4418-805d-2d31749a3133" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="9e0e549e-ca70-9c05-6cbc-9626b9ed4404" executionId="a23507b5-df10-4001-befe-cc650bc37038" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="82fea57c-e2ee-a1e0-a1ac-b026add5c7e9" executionId="5eea972d-6cec-437e-bb59-1e6b2c28ffff" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6c056be9-81ff-d02d-f730-63baf4db5494" executionId="8330edfd-0904-4c06-9e9a-8ba5bdb2a963" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="00bb5a1b-393e-a0ec-6c35-7153a68ca756" executionId="cecec2e7-9dc3-40e5-960e-1a9be0b4d694" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a66687a4-af98-06d9-b359-54e27d509d5e" executionId="1459c571-b473-4740-b133-023ecf54957c" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="7b7cc84b-4472-a1ee-a5b8-b8096083a184" executionId="1df1e85a-bdef-41b3-b973-310cab172b12" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="d5cfb858-fcec-948f-cedf-1e8524256774" executionId="238b0129-79ad-4283-ba32-db9ee9f3c2b9" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="10" executed="10" passed="10" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)&#xD;
+[xUnit.net 00:00:00.33]   Discovering: CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:00.47]   Discovered:  CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:00.50]   Starting:    CanDoItAll.Tests.Unit&#xD;
+[xUnit.net 00:00:00.91]   Finished:    CanDoItAll.Tests.Unit&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

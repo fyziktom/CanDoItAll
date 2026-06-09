@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="f6923330-f329-4ecc-9bdc-ec559efd5e07" name="lucys@LUCYSPOWER 2026-06-09 13:17:37" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-06-09T13:17:37.0598167-04:00" queuing="2026-06-09T13:17:37.0598172-04:00" start="2026-06-09T13:17:34.3538653-04:00" finish="2026-06-09T13:17:55.4840308-04:00" />
+  <TestSettings name="default" id="26f5eeb0-39d6-48d4-a01c-8fb35bc34ee9">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-06-09_13_17_37" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="8405628a-c806-4681-b8d4-33e9a69dcada" testId="f9fd1240-ca34-a010-4bc1-f0679d084368" testName="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled" computerName="LUCYSPOWER" duration="00:00:00.0111667" startTime="2026-06-09T13:17:37.3176527-04:00" endTime="2026-06-09T13:17:37.3285182-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="8405628a-c806-4681-b8d4-33e9a69dcada" />
+    <UnitTestResult executionId="4df129cf-18c6-4fa3-83f8-fd3b10652b9f" testId="41d01a06-ef9a-3201-79e8-e0077598d8ed" testName="CanDoItAll.Tests.Integration.ProcessRuntimeToolProviderCompositionIntegrationTests.ProcessRuntimeProvider_app_composition_preserves_process_tool_exact_name_parity" computerName="LUCYSPOWER" duration="00:00:11.7093597" startTime="2026-06-09T13:17:43.6719162-04:00" endTime="2026-06-09T13:17:55.3811767-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4df129cf-18c6-4fa3-83f8-fd3b10652b9f" />
+    <UnitTestResult executionId="65b4a1fc-ddc9-4f1e-87f6-94e5a58ad090" testId="6d37d105-fdd7-3ee3-a70e-33c863a13f8d" testName="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.ProcessRuntimeOptions_DefaultsToConcurrentPostgreSqlOutboxWorkers" computerName="LUCYSPOWER" duration="00:00:00.0032593" startTime="2026-06-09T13:17:37.3088296-04:00" endTime="2026-06-09T13:17:37.3102579-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="65b4a1fc-ddc9-4f1e-87f6-94e5a58ad090" />
+    <UnitTestResult executionId="df98e6ba-bd7d-43de-b491-e87744a585a0" testId="86a4a4b2-7d08-66fd-8eb9-3d22bc755e7e" testName="CanDoItAll.Tests.Integration.ApplicationStartupIntegrationTests.Web_app_startup_SB009_INV_001_starts_current_composition_with_process_module_registered" computerName="LUCYSPOWER" duration="00:00:06.3316897" startTime="2026-06-09T13:17:37.3334054-04:00" endTime="2026-06-09T13:17:43.6682824-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="df98e6ba-bd7d-43de-b491-e87744a585a0" />
+    <UnitTestResult executionId="a59c27ee-e1f0-49bd-a2d5-30dd51803d99" testId="54344f07-1862-c9aa-3942-baf3cd67ce40" testName="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_RegistersNonRecoveringBackgroundWorkers_ForSourceWatchLane" computerName="LUCYSPOWER" duration="00:00:01.2384134" startTime="2026-06-09T13:17:36.0821263-04:00" endTime="2026-06-09T13:17:37.3069741-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a59c27ee-e1f0-49bd-a2d5-30dd51803d99" />
+    <UnitTestResult executionId="2c4c373f-8078-4f69-90e4-40c5fd8f409f" testId="70b41bde-b8c7-a921-b163-ff6d0064af14" testName="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_SuppressesBackgroundWorkers_ForPublishedActiveLane" computerName="LUCYSPOWER" duration="00:00:00.0042107" startTime="2026-06-09T13:17:37.3289475-04:00" endTime="2026-06-09T13:17:37.3328433-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="2c4c373f-8078-4f69-90e4-40c5fd8f409f" />
+    <UnitTestResult executionId="b6910f9c-4917-49eb-a341-4b4e1c4bcf95" testId="330d9bef-4950-c233-fc25-e305101c885e" testName="CanDoItAll.Tests.Integration.ProcessAutomationExecutionClientTests.AddProcessesModule_SB05_INV_004_registers_process_owned_execution_client" computerName="LUCYSPOWER" duration="00:00:00.0999338" startTime="2026-06-09T13:17:35.9585906-04:00" endTime="2026-06-09T13:17:36.0656181-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b6910f9c-4917-49eb-a341-4b4e1c4bcf95" />
+    <UnitTestResult executionId="73645e54-b1f1-4c5e-9b1e-01bfc371c22d" testId="a45de855-e389-8a3e-c4d2-be21791ecdd5" testName="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_UsesPrefixedEnvironmentProjectionKey" computerName="LUCYSPOWER" duration="00:00:00.0068320" startTime="2026-06-09T13:17:37.3104623-04:00" endTime="2026-06-09T13:17:37.3172259-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="73645e54-b1f1-4c5e-9b1e-01bfc371c22d" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_RegistersNonRecoveringBackgroundWorkers_ForSourceWatchLane" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="54344f07-1862-c9aa-3942-baf3cd67ce40">
+      <Execution id="a59c27ee-e1f0-49bd-a2d5-30dd51803d99" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests" name="AddCanDoItAllRuntimeModules_RegistersNonRecoveringBackgroundWorkers_ForSourceWatchLane" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="f9fd1240-ca34-a010-4bc1-f0679d084368">
+      <Execution id="8405628a-c806-4681-b8d4-33e9a69dcada" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests" name="AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessRuntimeToolProviderCompositionIntegrationTests.ProcessRuntimeProvider_app_composition_preserves_process_tool_exact_name_parity" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="41d01a06-ef9a-3201-79e8-e0077598d8ed">
+      <Execution id="4df129cf-18c6-4fa3-83f8-fd3b10652b9f" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessRuntimeToolProviderCompositionIntegrationTests" name="ProcessRuntimeProvider_app_composition_preserves_process_tool_exact_name_parity" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_UsesPrefixedEnvironmentProjectionKey" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="a45de855-e389-8a3e-c4d2-be21791ecdd5">
+      <Execution id="73645e54-b1f1-4c5e-9b1e-01bfc371c22d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests" name="AddCanDoItAllRuntimeModules_UsesPrefixedEnvironmentProjectionKey" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_SuppressesBackgroundWorkers_ForPublishedActiveLane" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="70b41bde-b8c7-a921-b163-ff6d0064af14">
+      <Execution id="2c4c373f-8078-4f69-90e4-40c5fd8f409f" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests" name="AddCanDoItAllRuntimeModules_SuppressesBackgroundWorkers_ForPublishedActiveLane" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests.ProcessRuntimeOptions_DefaultsToConcurrentPostgreSqlOutboxWorkers" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="6d37d105-fdd7-3ee3-a70e-33c863a13f8d">
+      <Execution id="65b4a1fc-ddc9-4f1e-87f6-94e5a58ad090" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.RuntimeHostedWorkerPolicyIntegrationTests" name="ProcessRuntimeOptions_DefaultsToConcurrentPostgreSqlOutboxWorkers" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessAutomationExecutionClientTests.AddProcessesModule_SB05_INV_004_registers_process_owned_execution_client" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="330d9bef-4950-c233-fc25-e305101c885e">
+      <Execution id="b6910f9c-4917-49eb-a341-4b4e1c4bcf95" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessAutomationExecutionClientTests" name="AddProcessesModule_SB05_INV_004_registers_process_owned_execution_client" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.ApplicationStartupIntegrationTests.Web_app_startup_SB009_INV_001_starts_current_composition_with_process_module_registered" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="86a4a4b2-7d08-66fd-8eb9-3d22bc755e7e">
+      <Execution id="df98e6ba-bd7d-43de-b491-e87744a585a0" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ApplicationStartupIntegrationTests" name="Web_app_startup_SB009_INV_001_starts_current_composition_with_process_module_registered" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="f9fd1240-ca34-a010-4bc1-f0679d084368" executionId="8405628a-c806-4681-b8d4-33e9a69dcada" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="41d01a06-ef9a-3201-79e8-e0077598d8ed" executionId="4df129cf-18c6-4fa3-83f8-fd3b10652b9f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="6d37d105-fdd7-3ee3-a70e-33c863a13f8d" executionId="65b4a1fc-ddc9-4f1e-87f6-94e5a58ad090" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="86a4a4b2-7d08-66fd-8eb9-3d22bc755e7e" executionId="df98e6ba-bd7d-43de-b491-e87744a585a0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="54344f07-1862-c9aa-3942-baf3cd67ce40" executionId="a59c27ee-e1f0-49bd-a2d5-30dd51803d99" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="70b41bde-b8c7-a921-b163-ff6d0064af14" executionId="2c4c373f-8078-4f69-90e4-40c5fd8f409f" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="330d9bef-4950-c233-fc25-e305101c885e" executionId="b6910f9c-4917-49eb-a341-4b4e1c4bcf95" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="a45de855-e389-8a3e-c4d2-be21791ecdd5" executionId="73645e54-b1f1-4c5e-9b1e-01bfc371c22d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="8" executed="8" passed="8" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)&#xD;
+[xUnit.net 00:00:00.38]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.57]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:00.59]   Starting:    CanDoItAll.Tests.Integration&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.DatabaseProfileControlPlaneService[0]&#xD;
+      Resolved database profile Configured in-memory override (717a263c-c205-bf1f-bf91-ab5c630e4298) via ExplicitOverride. Provider=InMemory. Fingerprint=inmemory:startup-smoke-d4d4127eb3674a81aeb9d3773f20641d. RuntimeLocked=True.&#xD;
+info: CanDoItAll.Infrastructure.ControlPlane.CanonicalRuntimeDatabase[0]&#xD;
+      Initialized canonical runtime database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 (Configured in-memory override). Provider=InMemory. Fingerprint=inmemory:startup-smoke-d4d4127eb3674a81aeb9d3773f20641d. Generation=0.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 is ready.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring runtime database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 (Configured in-memory override) is ready. Provider=InMemory, Source=InMemory.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Ensuring non-relational database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 is created.&#xD;
+info: CanDoItAll.Composition.AppDatabaseBootstrapper[0]&#xD;
+      Non-relational database profile 717a263c-c205-bf1f-bf91-ab5c630e4298 is ready.&#xD;
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[58]&#xD;
+      Creating key {63ba6a5f-514e-4eb4-8f97-d947e9e1057c} with creation date 2026-06-09 17:17:40Z, activation date 2026-06-09 17:17:40Z, and expiration date 2026-09-07 17:17:40Z.&#xD;
+warn: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[35]&#xD;
+      No XML encryptor configured. Key {63ba6a5f-514e-4eb4-8f97-d947e9e1057c} may be persisted to storage in unencrypted form.&#xD;
+info: Microsoft.AspNetCore.DataProtection.Repositories.FileSystemXmlRepository[39]&#xD;
+      Writing data to file 'C:\Users\lucys\AppData\Local\Temp\candoitall-startup-smoke\da59fda7b2184762bc3791a38824c4c7\control-plane\dataprotection-keys\key-63ba6a5f-514e-4eb4-8f97-d947e9e1057c.xml'.&#xD;
+info: Microsoft.Hosting.Lifetime[14]&#xD;
+      Now listening on: http://127.0.0.1:60769&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application started. Press Ctrl+C to shut down.&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Hosting environment: Development&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Content root path: C:\Users\lucys\AppData\Local\Temp\candoitall-startup-smoke\da59fda7b2184762bc3791a38824c4c7&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:60769/health - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'Health checks'&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'Health checks'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:60769/health - 200 - text/plain 803.3660ms&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[1]&#xD;
+      Request starting HTTP/1.1 GET http://127.0.0.1:60769/api/processes/templates - - -&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]&#xD;
+      Executing endpoint 'HTTP: GET /api/processes/templates'&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[1]&#xD;
+      Setting HTTP status code 200.&#xD;
+info: Microsoft.AspNetCore.Http.Result.OkObjectResult[3]&#xD;
+      Writing value of type 'List`1' as Json.&#xD;
+info: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]&#xD;
+      Executed endpoint 'HTTP: GET /api/processes/templates'&#xD;
+info: Microsoft.AspNetCore.Hosting.Diagnostics[2]&#xD;
+      Request finished HTTP/1.1 GET http://127.0.0.1:60769/api/processes/templates - 200 - application/json;+charset=utf-8 182.5180ms&#xD;
+info: Microsoft.Hosting.Lifetime[0]&#xD;
+      Application is shutting down...&#xD;
+[xUnit.net 00:00:20.04]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

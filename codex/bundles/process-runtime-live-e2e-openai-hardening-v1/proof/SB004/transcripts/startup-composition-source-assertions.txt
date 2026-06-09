@@ -1,0 +1,33 @@
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:27:    public void AddCanDoItAllRuntimeModules_SuppressesBackgroundWorkers_ForPublishedActiveLane()
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:31:        services.AddCanDoItAllRuntimeModules(BuildConfiguration("PublishedActive"));
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:41:    public void AddCanDoItAllRuntimeModules_RegistersNonRecoveringBackgroundWorkers_ForSourceWatchLane()
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:45:        services.AddCanDoItAllRuntimeModules(BuildConfiguration("SourceWatch"));
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:55:    public void AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled()
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:59:        services.AddCanDoItAllRuntimeModules(BuildConfiguration(
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:71:    public void AddCanDoItAllRuntimeModules_UsesPrefixedEnvironmentProjectionKey()
+tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs:75:        services.AddCanDoItAllRuntimeModules(new ConfigurationBuilder()
+tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs:177:            app.MapCanDoItAllManagedFiles();
+tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs:185:            app.MapProjectStructureAgentApi();
+tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs:186:            app.MapCanDoItAllApi();
+tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs:188:                .AddAdditionalAssemblies(CanDoItAll.Web.Composition.ModuleAssemblies.All)
+tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs:190:            app.MapHealthChecks("/health");
+src/CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:48:    public static IServiceCollection AddCanDoItAllRuntimeModules(
+src/CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:67:        services.AddProcessesModule(configuration);
+src/CanDoItAll.Composition\ModuleAssemblies.cs:36:        typeof(ProcessesModuleAssemblyMarker).Assembly,
+src/CanDoItAll.Web\Infrastructure\ManagedFilesEndpointRoutes.cs:13:    public static IEndpointRouteBuilder MapCanDoItAllManagedFiles(this IEndpointRouteBuilder endpoints)
+src/CanDoItAll.Web\ProjectStructureAgentApi.cs:14:    public static IEndpointRouteBuilder MapProjectStructureAgentApi(this IEndpointRouteBuilder endpoints)
+src/CanDoItAll.Web\Program.cs:62:builder.Services.AddCanDoItAllRuntimeModules(builder.Configuration, builder.Environment.ContentRootPath);
+src/CanDoItAll.Web\Program.cs:96:app.MapCanDoItAllManagedFiles();
+src/CanDoItAll.Web\Program.cs:904:app.MapProjectStructureAgentApi();
+src/CanDoItAll.Web\Program.cs:905:app.MapCanDoItAllApi();
+src/CanDoItAll.Web\Program.cs:907:    .AddAdditionalAssemblies(CanDoItAll.Web.Composition.ModuleAssemblies.All)
+src/CanDoItAll.Web\Program.cs:909:app.MapHealthChecks("/health");
+src/CanDoItAll.Web\Api\ProcessesApi.cs:10:    public static RouteGroupBuilder MapProcessesApi(this RouteGroupBuilder group)
+src/CanDoItAll.Web\Api\ApiEndpointRouteBuilderExtensions.cs:8:    public static IEndpointRouteBuilder MapCanDoItAllApi(this IEndpointRouteBuilder endpoints)
+src/CanDoItAll.Web\Api\ApiEndpointRouteBuilderExtensions.cs:45:        group.MapProcessesApi();
+src/CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:14:    public static IServiceCollection AddProcessesModule(this IServiceCollection services, IConfiguration configuration)
+src/CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:172:public static class ProcessesModuleAssemblyMarker
+
+Command: rg -n 'AddCanDoItAllRuntimeModules|AddProcessesModule|ProcessesModuleAssemblyMarker|MapCanDoItAllApi|MapProcessesApi|MapCanDoItAllManagedFiles|MapHealthChecks\("/health"|MapProjectStructureAgentApi|AddAdditionalAssemblies' src/CanDoItAll.Web src/CanDoItAll.Composition src/CanDoItAll.Infrastructure src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration/ApplicationStartupIntegrationTests.cs tests/CanDoItAll.Tests.Integration/RuntimeHostedWorkerPolicyIntegrationTests.cs
+RawRgExitCode: 0
+ExitCode: 0

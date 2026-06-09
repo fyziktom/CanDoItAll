@@ -127,7 +127,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.Equal($"project:{projectId}", definitionNode.ParentId);
         Assert.Equal(definitionNode.Id, runNode.ParentId);
         Assert.Equal($"/projects/{projectId}/processes?processId={definitionResult.Value}", definitionNode.Route);
-        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", runNode.Route);
+        Assert.Equal($"/projects/{projectId}/processes?processId={definitionResult.Value}&runId={runResult.Value}", runNode.Route);
         Assert.Contains(surface.Links, link =>
             string.Equals(link.SourceId, BuildProjectRootNodeKey(projectId), StringComparison.Ordinal) &&
             string.Equals(link.TargetId, definitionNode.Id, StringComparison.Ordinal) &&
@@ -140,7 +140,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         var artifact = await commandService.ExecuteNodeCommandAsync(projectId, runNode.Id, ProjectStructureCommandKind.Open);
 
         Assert.NotNull(artifact);
-        Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", artifact!.Route);
+        Assert.Equal($"/projects/{projectId}/processes?processId={definitionResult.Value}&runId={runResult.Value}", artifact!.Route);
         Assert.Equal(WorkbenchTabKinds.Processes, artifact.TabKind);
     }
 
@@ -338,7 +338,7 @@ public sealed class ProjectWorkbenchServiceIntegrationTests
         Assert.All(outputNodes, outputNode =>
         {
             Assert.Equal("Stored", outputNode.Status);
-            Assert.Equal($"/projects/{projectId}/processes?runId={runResult.Value}", outputNode.Route);
+            Assert.Equal($"/projects/{projectId}/processes?processId={definitionResult.Value}&runId={runResult.Value}", outputNode.Route);
             Assert.Contains(surface.Links, link =>
                 string.Equals(link.SourceId, BuildProcessRunNodeKey(runResult.Value), StringComparison.Ordinal) &&
                 string.Equals(link.TargetId, outputNode.Id, StringComparison.Ordinal) &&

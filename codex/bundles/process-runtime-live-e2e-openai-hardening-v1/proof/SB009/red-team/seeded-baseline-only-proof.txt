@@ -1,0 +1,3 @@
+Claim: Global process UI launch is proven by a seeded baseline live-run profile.
+Evidence: Template catalog has sample live-run profile rows and a screenshot of an old run.
+Missing: unique launch name, UI execute click, API run readback, selected-run summary match.

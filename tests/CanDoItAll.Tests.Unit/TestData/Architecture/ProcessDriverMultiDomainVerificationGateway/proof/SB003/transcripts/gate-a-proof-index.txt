@@ -3,15 +3,15 @@ Working directory: C:\repositories\CanDoItAll
 Run label: SB003 semantic positive proof 2026-06-08
 Invariant ID: SB003_INV_001
 --- artifact existence checks ---
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\manifest.md => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\source-reconciliation.txt => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\source-scan-and-anti-stub-audit.txt => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\solution-build-no-restore.txt => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB001\transcripts\focused-baseline-unit-tests.txt => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB002\manifest.md => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB002\test-debt-inventory.md => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB002\transcripts\unit-tests-excluding-known-debt.txt => True
-codex\bundles\process-driver-multi-domain-verification-gateway-v1\proof\SB002\transcripts\secret-scan-after-proof-redaction.txt => True
+bundle://proof/SB001\manifest.md => True
+bundle://proof/SB001\transcripts\source-reconciliation.txt => True
+bundle://proof/SB001\transcripts\source-scan-and-anti-stub-audit.txt => True
+bundle://proof/SB001\transcripts\solution-build-no-restore.txt => True
+bundle://proof/SB001\transcripts\focused-baseline-unit-tests.txt => True
+bundle://proof/SB002\manifest.md => True
+bundle://proof/SB002\test-debt-inventory.md => True
+bundle://proof/SB002\transcripts\unit-tests-excluding-known-debt.txt => True
+bundle://proof/SB002\transcripts\secret-scan-after-proof-redaction.txt => True
 --- baseline conclusions ---
 Solution build passed with 0 warnings and 0 errors in bundle://proof/SB001/transcripts/solution-build-no-restore.txt.
 Focused baseline unit tests passed 15/15 in bundle://proof/SB001/transcripts/focused-baseline-unit-tests.txt.

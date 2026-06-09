@@ -68,8 +68,8 @@
 | --- | --- | --- |
 | Review real code after crash | Solved | SB003 gate row; bundle://proof/SB003/manifest.md; bundle://proof/SB002/transcripts/process-driver-contract-prerequisites-after-runtime-evidence-refactor.txt |
 | Move toward stable Core with domain drivers | Solved | SB018/SB021/SB033 gate rows; repo://src/CanDoItAll.Processes.Drivers.RuntimeEvidence/RuntimeEvidenceConsistencyAlphaVerifier.cs; bundle://proof/SB045/transcripts/source-boundary-and-anti-stub-audit-after-uri-policy.txt |
-| More complex multi-area phases | Solved | repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/plan/01-phase-plan.md; SB003-SB045 gate rows |
-| Prepare bundle zip | Solved | repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1.zip; bundle://proof/SB045/transcripts/bundle-zip-generation-after-path-fix.txt |
+| More complex multi-area phases | Solved | bundle://plan/01-phase-plan.md; SB003-SB045 gate rows |
+| Prepare bundle zip | Solved | bundle://bundle.zip; bundle://proof/SB045/transcripts/bundle-zip-generation-after-path-fix.txt |
 
 ## SB003 Semantic Adequacy Evidence
 - Raw note owned: Verify after Codex crash from real code
@@ -154,7 +154,7 @@
 ## SB027 Semantic Adequacy Evidence
 - Raw note owned: Prepare Office/business lanes with denial-first read-only contracts
 - Shipped behavior: Non-.NET/Rust read-only lanes are denied by the adapter while future domain lanes remain documentation-only.
-- Source proof: repo://tests/CanDoItAll.Tests.Integration/ProcessTranscriptVerificationReadOnlyAdapterTests.cs and repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/05-driver-domain-roadmap.md; manifest bundle://proof/SB027/manifest.md; invariant contract bundle://proof/SB027/semantic-invariants.md
+- Source proof: repo://tests/CanDoItAll.Tests.Integration/ProcessTranscriptVerificationReadOnlyAdapterTests.cs and bundle://architecture/05-driver-domain-roadmap.md; manifest bundle://proof/SB027/manifest.md; invariant contract bundle://proof/SB027/semantic-invariants.md
 - Test proof: bundle://proof/SB024/transcripts/process-transcript-readonly-adapter-integration-tests.txt; closure index bundle://proof/SB027/transcripts/closure-proof-index.txt
 - Shallow-pass trap: A table-only or status-only implementation could pass without enforcing hashes, URI allowlists, no mutation, redaction, or package boundaries.
 - Adversarial negative proof: N/A process non-production domain-lane closure
@@ -174,7 +174,7 @@
 ## SB033 Semantic Adequacy Evidence
 - Raw note owned: Prepare runtime host roadmap without implementation
 - Shipped behavior: Runtime host, registry, selector, DI registration, and manager command remain absent from production source and deferred in roadmap docs.
-- Source proof: repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/06-runtime-host-deferral.md and repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/05-driver-domain-roadmap.md; manifest bundle://proof/SB033/manifest.md; invariant contract bundle://proof/SB033/semantic-invariants.md
+- Source proof: bundle://architecture/06-runtime-host-deferral.md and bundle://architecture/05-driver-domain-roadmap.md; manifest bundle://proof/SB033/manifest.md; invariant contract bundle://proof/SB033/semantic-invariants.md
 - Test proof: bundle://proof/SB024/transcripts/focused-transcript-tests-after-shared-uri-policy-overload.txt; closure index bundle://proof/SB033/transcripts/closure-proof-index.txt
 - Shallow-pass trap: A table-only or status-only implementation could pass without enforcing hashes, URI allowlists, no mutation, redaction, or package boundaries.
 - Adversarial negative proof: N/A process non-production documentation closure
@@ -204,7 +204,7 @@
 ## SB042 Semantic Adequacy Evidence
 - Raw note owned: Make the next bundles clear before runtime host appears
 - Shipped behavior: Roadmap and runtime-host deferral docs remain current, and tests assert no runtime host implementation or service registration text drift.
-- Source proof: repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/analysis/03-roadmap-to-stable-core-and-domain-drivers.md and repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/architecture/06-runtime-host-deferral.md; manifest bundle://proof/SB042/manifest.md; invariant contract bundle://proof/SB042/semantic-invariants.md
+- Source proof: bundle://analysis/03-roadmap-to-stable-core-and-domain-drivers.md and bundle://architecture/06-runtime-host-deferral.md; manifest bundle://proof/SB042/manifest.md; invariant contract bundle://proof/SB042/semantic-invariants.md
 - Test proof: bundle://proof/SB024/transcripts/focused-transcript-tests-after-shared-uri-policy-overload.txt; closure index bundle://proof/SB042/transcripts/closure-proof-index.txt
 - Shallow-pass trap: A table-only or status-only implementation could pass without enforcing hashes, URI allowlists, no mutation, redaction, or package boundaries.
 - Adversarial negative proof: N/A process non-production roadmap closure
@@ -214,7 +214,7 @@
 ## SB045 Semantic Adequacy Evidence
 - Raw note owned: Close with build, tests, source scans, validators, and handoff proof
 - Shipped behavior: Solution build, focused unit/integration suites, filtered broad unit suite, source audit, and validator proof are captured; full unit failure is documented as unrelated stale fixtures plus one host timing test.
-- Source proof: repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/reviews/01-execution-report.md; manifest bundle://proof/SB045/manifest.md; invariant contract bundle://proof/SB045/semantic-invariants.md
+- Source proof: bundle://reviews/01-execution-report.md; manifest bundle://proof/SB045/manifest.md; invariant contract bundle://proof/SB045/semantic-invariants.md
 - Test proof: bundle://proof/SB045/transcripts/unit-tests-excluding-known-unrelated-stale-fixtures.txt; closure index bundle://proof/SB045/transcripts/closure-proof-index.txt
 - Shallow-pass trap: A table-only or status-only implementation could pass without enforcing hashes, URI allowlists, no mutation, redaction, or package boundaries.
 - Adversarial negative proof: bundle://proof/SB045/transcripts/full-unit-tests-no-restore.txt

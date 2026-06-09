@@ -102,11 +102,11 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     [Parameter]
     public Guid? ProjectId { get; set; }
 
-    [SupplyParameterFromQuery(Name = "processId")]
-    private Guid? ProcessIdQuery { get; set; }
+    [Parameter]
+    public Guid? ProcessIdQuery { get; set; }
 
-    [SupplyParameterFromQuery(Name = "runId")]
-    private Guid? RunIdQuery { get; set; }
+    [Parameter]
+    public Guid? RunIdQuery { get; set; }
 
     private IReadOnlyList<ProcessDefinitionListItem> definitions = [];
     private IReadOnlyList<ProcessRunListItem> runs = [];

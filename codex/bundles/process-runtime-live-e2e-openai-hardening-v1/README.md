@@ -3,6 +3,14 @@
 ## Status
 Prepared for Codex implementation.
 
+## Validation Summary
+- Bundle preparation status: `Prepared`
+- Bundle readiness gate: `Passed prepared-stage validator after structural repair`
+- Execution status: `In progress`
+- Subbundle gate review: `SB001-SB012 passed; SB013 pending`
+- Final closure gate: `Pending execution`
+- Browser validation analytics: `SB007-SB012 process UI/API proofs passed; remaining routes pending`
+
 ## Purpose
 Restore and prove the process runtime from the user-facing perspective: start the app, select/start processes from UI/project structure/API/scheduler/workflow-origin paths, dispatch and finalize runs, prove deterministic and optional live OpenAI scenarios, and keep Process Core generic while domain drivers remain read-only diagnostics.
 

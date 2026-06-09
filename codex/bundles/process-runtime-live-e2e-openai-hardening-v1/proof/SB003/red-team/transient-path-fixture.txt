@@ -1,0 +1,1 @@
+This red-team fixture deliberately contains codex\bundles\process-runtime-live-e2e-openai-hardening-v1 to prove the scan catches transient paths.

@@ -84,6 +84,26 @@ public sealed class ProcessDriverFakeProofResistanceTests
         Assert.Empty(issues);
     }
 
+    [Fact]
+    public void Process_driver_fake_proof_SB003_INV_004_stable_architecture_fixtures_do_not_embed_transient_bundle_paths()
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var fixtureRoots = new[]
+        {
+            StableProofFixturePath,
+            "tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverRuntimeEvidenceVerifierIntegrationHardening"
+        };
+        var forbiddenPattern = CreateTransientBundlePathPattern();
+        var matches = fixtureRoots
+            .Select(root => Path.Combine(repositoryRoot, root))
+            .SelectMany(root => Directory
+                .EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                .SelectMany(file => FindTransientBundlePathMatches(root, file, forbiddenPattern)))
+            .ToArray();
+
+        Assert.Empty(matches);
+    }
+
     private static FakeProofEvidence LoadActualSb043Evidence()
     {
         var report = ReadRepositoryFile(StableProofFixturePath, "reviews", "01-execution-report.md");
@@ -217,6 +237,29 @@ public sealed class ProcessDriverFakeProofResistanceTests
         params string[] expectedFragments)
     {
         return expectedFragments.All(fragment => value.Contains(fragment, StringComparison.Ordinal));
+    }
+
+    private static IEnumerable<string> FindTransientBundlePathMatches(
+        string fixtureRoot,
+        string file,
+        Regex forbiddenPattern)
+    {
+        var content = File.ReadAllText(file);
+
+        return forbiddenPattern
+            .Matches(content)
+            .Select(match => $"{Path.GetRelativePath(fixtureRoot, file)}: {match.Value}");
+    }
+
+    private static Regex CreateTransientBundlePathPattern()
+    {
+        var transientBundlePath = string.Join("[/\\\\]", ["codex", "bundles"]);
+        var currentBundleName = string.Join("-", ["process", "runtime", "live", "e2e", "openai", "hardening", "v1"]);
+        var previousBundleName = string.Join("-", ["process", "runtime", "restoration", "ui", "e2e", "driver", "integration", "v1"]);
+
+        return new Regex(
+            $"{transientBundlePath}|{Regex.Escape(currentBundleName)}|{Regex.Escape(previousBundleName)}",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
     }
 
     private static IReadOnlyList<string> ExpectedFixturePaths()

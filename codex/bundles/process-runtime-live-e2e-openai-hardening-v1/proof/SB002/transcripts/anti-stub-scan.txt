@@ -1,0 +1,4 @@
+
+Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented' src/CanDoItAll.Modules.Processes src/CanDoItAll.Web/Api/ProcessesApi.cs src/CanDoItAll.Web/ProjectStructureAgentApi.cs src/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs
+RawRgExitCode: 1
+ExitCode: 0 (rg exit 1 means no matches for this anti-stub scan).

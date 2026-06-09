@@ -6,9 +6,12 @@ using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
 using CanDoItAll.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -135,6 +138,236 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "projects.create" && entry.Succeeded);
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "structure.node-create" && entry.Succeeded);
         Assert.Contains(analytics.Entries, entry => entry.OperationName == "structure.read" && entry.Succeeded);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_start_process_node_SB011_INV_001_creates_project_scoped_launch_plan_with_bridge_context()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                $"SB011 project {suffix}",
+                "Project-structure process start proof",
+                "Verify the process start endpoint preserves selected node context.",
+                "Execution",
+                ProjectStatus.Active));
+        var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            host.Client,
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                project.Id.ToString(),
+                "SB011 project-structure process start",
+                15));
+        var workNode = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.WorkItem,
+                $"SB011 customer onboarding {suffix}",
+                "Process start target",
+                "Selected project-structure work item used as process launch context.",
+                $"project:{project.Id:D}",
+                360,
+                260,
+                null,
+                null,
+                "task",
+                null,
+                null,
+                lease.LeaseToken));
+        var processDefinitionId = await SaveAndPublishSb011ProcessDefinitionAsync(host, project.Id, suffix);
+
+        var linked = await PostAndReadAsync<ProjectStructureLinkChangeResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes/{workNode.Id}/process-definition",
+            new ProjectStructureProcessDefinitionLinkInput(processDefinitionId, lease.LeaseToken));
+        Assert.True(linked.Changed);
+        Assert.Equal(workNode.Id, linked.Link.SourceId);
+        Assert.Equal($"process-definition:{processDefinitionId:D}", linked.Link.TargetId);
+        Assert.Equal(ProjectObjectLinkKind.Uses, linked.Link.Kind);
+
+        var started = await PostAndReadAsync<ProjectStructureProcessNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes/{workNode.Id}/process/start",
+            new ProjectStructureProcessNodeStartInput(
+                processDefinitionId,
+                RunHrMatch: false,
+                Execute: false,
+                IncludeLaunchPlan: true,
+                RequestedBy: "sb011-integration",
+                LeaseToken: lease.LeaseToken));
+        Assert.Equal(project.Id, started.ProjectId);
+        Assert.Equal(workNode.Id, started.NodeId);
+        Assert.Equal(processDefinitionId, started.ProcessDefinitionId);
+        Assert.Equal("launch-plan-ready", started.Stage);
+        Assert.Null(started.RunId);
+        Assert.Equal($"/projects/{project.Id:D}/processes?processId={processDefinitionId:D}&launchPlanId={started.LaunchPlanId:D}", started.Route);
+        Assert.NotNull(started.LaunchPlan);
+        Assert.Equal(project.Id, started.LaunchPlan!.ProjectId);
+        Assert.Equal(started.LaunchPlanId, started.LaunchPlan.Id);
+        Assert.Contains("Started from project structure API.", started.LaunchPlan.TriggerReason, StringComparison.Ordinal);
+        Assert.True(ProcessProjectStructureContextFormatter.TryParse(started.LaunchPlan.TriggerReason, out var returnedContext));
+        Assert.NotNull(returnedContext);
+        Assert.Equal(project.Id, returnedContext!.ProjectId);
+        Assert.Equal($"process-definition:{processDefinitionId:D}", returnedContext.NodeId);
+        Assert.Equal(workNode.Id, returnedContext.ParentNodeId);
+        Assert.Equal(workNode.Title, returnedContext.ParentNodeTitle);
+
+        var readback = await GetAndReadAsync<ProcessLaunchPlanDetails>(
+            host.Client,
+            $"/api/processes/launch-plans/{started.LaunchPlanId:D}");
+        Assert.Equal(started.LaunchPlanId, readback.Id);
+        Assert.Equal(project.Id, readback.ProjectId);
+        Assert.True(ProcessProjectStructureContextFormatter.TryParse(readback.TriggerReason, out var persistedContext));
+        Assert.NotNull(persistedContext);
+        Assert.Equal(workNode.Id, persistedContext!.ParentNodeId);
+    }
+
+    [Fact]
+    public async Task ProjectStructureAgentApi_execute_process_node_SB012_INV_001_preserves_run_context_and_projects_output_folder()
+    {
+        await using var host = await ProjectStructureAgentApiTestHost.CreateAsync();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var project = await PostAndReadAsync<ProjectSummary>(
+            host.Client,
+            "/api/project-structure/projects",
+            new ProjectStructureProjectSaveRequest(
+                $"SB012 project {suffix}",
+                "Project-structure run context proof",
+                "Verify executed process starts preserve project/node context and expose run output.",
+                "Execution",
+                ProjectStatus.Active));
+        var lease = await PostAndReadAsync<ProjectStructureLeaseSnapshot>(
+            host.Client,
+            "/api/project-structure/leases/acquire",
+            new ProjectStructureLeaseAcquireRequest(
+                ProjectStructureLeaseScopeKind.Project,
+                project.Id.ToString(),
+                "SB012 project-structure process execution",
+                15));
+        var workNode = await PostAndReadAsync<ProjectStructureNodeSummary>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes",
+            new ProjectStructureNodeCreateInput(
+                ProjectObjectType.WorkItem,
+                $"SB012 launch closure {suffix}",
+                "Process execution target",
+                "Selected project-structure work item used as process run context.",
+                $"project:{project.Id:D}",
+                360,
+                260,
+                null,
+                null,
+                "task",
+                null,
+                null,
+                lease.LeaseToken));
+        var processDefinitionId = await SaveAndPublishSb012ProcessDefinitionAsync(host, project.Id, suffix);
+
+        var linked = await PostAndReadAsync<ProjectStructureLinkChangeResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes/{workNode.Id}/process-definition",
+            new ProjectStructureProcessDefinitionLinkInput(processDefinitionId, lease.LeaseToken));
+        Assert.True(linked.Changed);
+
+        var started = await PostAndReadAsync<ProjectStructureProcessNodeStartResult>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/nodes/{workNode.Id}/process/start",
+            new ProjectStructureProcessNodeStartInput(
+                processDefinitionId,
+                RunHrMatch: false,
+                Execute: true,
+                IncludeLaunchPlan: true,
+                RequestedBy: "sb012-integration",
+                LeaseToken: lease.LeaseToken));
+
+        Assert.Equal(project.Id, started.ProjectId);
+        Assert.Equal(workNode.Id, started.NodeId);
+        Assert.Equal(processDefinitionId, started.ProcessDefinitionId);
+        Assert.Equal("run-started", started.Stage);
+        Assert.NotNull(started.RunId);
+        Assert.Empty(started.Warnings);
+        Assert.Equal(
+            $"/projects/{project.Id:D}/processes?processId={processDefinitionId:D}&runId={started.RunId:D}",
+            started.Route);
+        Assert.NotNull(started.LaunchPlan);
+        Assert.Equal(project.Id, started.LaunchPlan!.ProjectId);
+
+        var runId = started.RunId!.Value;
+        var runOutputPath = $"output/scopes/project/{project.Id:D}/process-runs/{runId:D}/SB012RunOutput/closure-proof.md";
+        await RecordSb012RunOutputArtifactAsync(host, runId, runOutputPath);
+
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var run = await processesService.GetRunAsync(runId);
+        var details = await processesService.GetRunDetailsAsync(runId);
+        var persistedRun = await scope.ServiceProvider.GetRequiredService<AppDbContext>().Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleAsync(item => item.Id == runId);
+
+        Assert.NotNull(run);
+        Assert.Equal(project.Id, run!.ProjectId);
+        Assert.Equal(processDefinitionId, run.ProcessDefinitionId);
+        Assert.True(ProcessProjectStructureContextFormatter.TryParse(persistedRun.TriggerReason, out var runContext));
+        Assert.NotNull(runContext);
+        Assert.Equal(project.Id, runContext!.ProjectId);
+        Assert.Equal($"process-definition:{processDefinitionId:D}", runContext.NodeId);
+        Assert.Equal(workNode.Id, runContext.ParentNodeId);
+        Assert.Equal(workNode.Title, runContext.ParentNodeTitle);
+        Assert.Contains(details.WorkBriefs, brief =>
+            brief.WorkBriefText.Contains(workNode.Title, StringComparison.Ordinal) &&
+            brief.WorkBriefText.Contains(workNode.Id, StringComparison.Ordinal) &&
+            brief.WorkBriefText.Contains(project.Id.ToString("D"), StringComparison.Ordinal));
+        Assert.Contains(details.Artifacts, artifact =>
+            artifact.ManagedStoragePath == runOutputPath &&
+            artifact.ArtifactKind == ProcessArtifactKind.Deliverable);
+        var observation = await scope.ServiceProvider.GetRequiredService<IProcessObservationService>().GetDashboardSnapshotAsync(
+            new ProcessObservationDashboardQuery(
+                project.Id,
+                [processDefinitionId],
+                processDefinitionId,
+                IncludeRuns: true,
+                IncludeActiveRunSummaries: true,
+                ForceRefresh: true));
+        var observedRun = Assert.Single(observation.Runs, candidate => candidate.Id == runId);
+        Assert.Equal(project.Id, observedRun.ProjectId);
+        Assert.Equal(processDefinitionId, observedRun.ProcessDefinitionId);
+
+        var readback = await PostAndReadAsync<ProjectStructureReadResponse>(
+            host.Client,
+            $"/api/project-structure/projects/{project.Id:D}/structure/read",
+            new ProjectStructureReadRequest(
+                IncludeLinks: true,
+                IncludeAssets: true,
+                IncludeNotes: true,
+                IncludeMetadata: true));
+        var processRunNodeKey = $"process-run:{runId:D}";
+        var runNode = Assert.Single(readback.Nodes, node => node.Id == processRunNodeKey);
+        var outputNode = Assert.Single(readback.Nodes, node =>
+            string.Equals(node.ParentId, processRunNodeKey, StringComparison.Ordinal) &&
+            node.ArtifactKind == "process-run-output-folder" &&
+            node.Route == $"/projects/{project.Id:D}/processes?processId={processDefinitionId:D}&runId={runId:D}");
+
+        Assert.Equal(ProjectObjectType.ProcessRun, runNode.ObjectType);
+        Assert.Equal($"/projects/{project.Id:D}/processes?processId={processDefinitionId:D}&runId={runId:D}", runNode.Route);
+        Assert.Contains("SB012RunOutput", outputNode.Title, StringComparison.Ordinal);
+        Assert.Contains("Process run product output folder", outputNode.MetadataJson, StringComparison.Ordinal);
+        Assert.Contains(
+            readback.Links,
+            link => link.SourceId == workNode.Id &&
+                    link.TargetId == processRunNodeKey &&
+                    link.Kind == ProjectObjectLinkKind.Uses);
+        Assert.Contains(
+            readback.Links,
+            link => link.SourceId == processRunNodeKey &&
+                    link.TargetId == outputNode.Id &&
+                    link.Kind == ProjectObjectLinkKind.Contains);
     }
 
     [Fact]
@@ -1005,6 +1238,176 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Contains(readback.Links, link => link.SourceId == child.Id && link.TargetId == parent.Id && link.Kind == ProjectObjectLinkKind.DependsOn);
         Assert.Equal("command-evidence.txt", asset.MediaOriginalFileName);
         Assert.Equal("asset payload", Encoding.UTF8.GetString(Convert.FromBase64String(content.Base64Data)));
+    }
+
+    private static async Task<Guid> SaveAndPublishSb011ProcessDefinitionAsync(
+        ProjectStructureAgentApiTestHost host,
+        Guid projectId,
+        string suffix)
+    {
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var saveResult = await processesService.SaveAsync(BuildSb011ProcessDefinition(projectId, suffix));
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+        return saveResult.Value;
+    }
+
+    private static ProcessDefinitionEditorModel BuildSb011ProcessDefinition(Guid projectId, string suffix)
+    {
+        var ownerRoleId = Guid.NewGuid();
+        var intakeStepId = Guid.NewGuid();
+        return new ProcessDefinitionEditorModel {
+            ProjectId = projectId,
+            Name = $"SB011 linked process {suffix}",
+            Summary = "Project-structure node start proof process.",
+            ValueStatement = "Preserve selected project-structure node context through launch planning.",
+            CustomerName = "Project structure API validation",
+            OwnerName = "Process runtime validation",
+            InterfaceContractSummary = "Accept a selected project-structure work item and create a durable launch plan.",
+            GovernanceNotes = "The start API must not lose project or selected-node context.",
+            ChangeSummary = "Initial SB011 process-start proof definition.",
+            GovernancePolicySummary = "Launch plans must preserve bridge context for downstream grounding.",
+            ConstitutionRuleSummary = "Project-structure context remains serialized and parseable.",
+            OperatingModeSummary = "Assisted execution from project-structure API.",
+            SimulationReadinessSummary = "Safe deterministic integration proof.",
+            Roles =
+            [
+                new ProcessRoleEditorModel {
+                    Id = ownerRoleId,
+                    Key = "delivery-owner",
+                    DisplayName = "Delivery owner",
+                    Purpose = "Own the project-structure initiated process.",
+                    StaffingIntent = "Resolve from project delivery ownership when available.",
+                    PreferredExecutorKind = "person",
+                    IsRequired = true,
+                    AllowsFallback = true,
+                    SnapshotSummary = "Delivery owner role for SB011."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel {
+                    Id = intakeStepId,
+                    Key = "capture-context",
+                    Title = "Capture selected project context",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Selected project-structure work item.",
+                    OutputContractSummary = "Context-aware launch intake.",
+                    EvidenceContractSummary = "Launch plan contains serialized project-structure context.",
+                    DecisionRightsSummary = "Delivery owner confirms context before execution.",
+                    ExceptionPolicySummary = "Block when selected-node context is missing.",
+                    TargetLeadHours = 2,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = ownerRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Responsible,
+                            IsRequired = true,
+                            RebindPolicySummary = "Rebind to available project delivery owner."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static async Task<Guid> SaveAndPublishSb012ProcessDefinitionAsync(
+        ProjectStructureAgentApiTestHost host,
+        Guid projectId,
+        string suffix)
+    {
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var saveResult = await processesService.SaveAsync(BuildSb012ProcessDefinition(projectId, suffix));
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+        return saveResult.Value;
+    }
+
+    private static ProcessDefinitionEditorModel BuildSb012ProcessDefinition(Guid projectId, string suffix)
+    {
+        var closureRoleId = Guid.NewGuid();
+        var closureStepId = Guid.NewGuid();
+        return new ProcessDefinitionEditorModel {
+            ProjectId = projectId,
+            Name = $"SB012 executable linked process {suffix}",
+            Summary = "Project-structure execution proof process.",
+            ValueStatement = "Preserve selected project-structure node context through run creation.",
+            CustomerName = "Project structure API validation",
+            OwnerName = "Process runtime validation",
+            InterfaceContractSummary = "Accept a selected project-structure work item and start an executable run.",
+            GovernanceNotes = "The start API must preserve project, process definition, selected node, and parent node context.",
+            ChangeSummary = "Initial SB012 process-run closure proof definition.",
+            GovernancePolicySummary = "Executed runs must retain bridge context for downstream grounding and output projection.",
+            ConstitutionRuleSummary = "Project-structure context remains serialized, parseable, and visible in work briefs.",
+            OperatingModeSummary = "Assisted execution from project-structure API.",
+            SimulationReadinessSummary = "Safe deterministic integration proof.",
+            Roles =
+            [
+                new ProcessRoleEditorModel {
+                    Id = closureRoleId,
+                    Key = "closure-observer",
+                    DisplayName = "Closure observer",
+                    Purpose = "Observe the project-structure initiated process.",
+                    StaffingIntent = "Optional proof role so execution has no required staffing gap.",
+                    PreferredExecutorKind = "person",
+                    IsRequired = false,
+                    AllowsFallback = false,
+                    SnapshotSummary = "Optional observer role for SB012."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel {
+                    Id = closureStepId,
+                    Key = "preserve-run-context",
+                    Title = "Preserve selected project run context",
+                    StepKind = ProcessStepKind.Start,
+                    InputContractSummary = "Selected project-structure work item and linked process definition.",
+                    OutputContractSummary = "Run is started with parseable project-structure context.",
+                    EvidenceContractSummary = "Run details and work brief contain selected project/node metadata.",
+                    DecisionRightsSummary = "Optional observer validates the context before output projection.",
+                    ExceptionPolicySummary = "Block when selected-node context is missing.",
+                    TargetLeadHours = 1,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel {
+                            Id = Guid.NewGuid(),
+                            RoleRequirementId = closureRoleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Reviewer,
+                            IsRequired = false,
+                            RebindPolicySummary = "Do not block execution on this optional proof role."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private static async Task RecordSb012RunOutputArtifactAsync(
+        ProjectStructureAgentApiTestHost host,
+        Guid runId,
+        string managedStoragePath)
+    {
+        await using var scope = host.App.Services.CreateAsyncScope();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+        {
+            ProcessRunId = runId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "SB012 closure proof",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            ProvenanceSummary = "Recorded by the SB012 project-structure run closure proof.",
+            AllowedFutureUsageSummary = "May be used to validate run-output projection.",
+            ReviewSummary = "Process run output folder should surface in project structure.",
+            ManagedStoragePath = managedStoragePath
+        });
+        Assert.True(artifactResult.IsSuccess, string.Join(" | ", artifactResult.Errors.Select(error => error.Message)));
     }
 
     private static async Task<T> PostAndReadAsync<T>(HttpClient client, string path, object request)

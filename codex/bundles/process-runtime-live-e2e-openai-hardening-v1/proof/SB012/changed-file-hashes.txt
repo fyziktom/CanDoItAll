@@ -1,0 +1,13 @@
+
+Path                                                                                 SHA256
+----                                                                                 ------
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Launch.cs               0AA3B29DC9E0C272B577FEAE73C51BA770358D90B47BD2018367DB6F29567E4C
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.cs                1372D4AED806C00E8EFD55D3AF4C8981229132B9C602188464E70B1A7CCB1577
+src\CanDoItAll.Modules.Processes\Pages\ProcessesPage.razor                           46028716F9B68AB8EACAB31D2EB5E59B809D6B7E80421D8B3623A542914E9FCA
+src\CanDoItAll.Modules.Processes\Pages\ProjectProcessesPage.razor                    8D71F848C8734A709AD653D1C3F11FCF971CA375E9C17D3AC9425725F48605F5
+src\CanDoItAll.Modules.Workbench\ProjectStructure\ProjectStructureAssemblyService.cs C60460E2CDEC5CD7675392D285165082B0E7280963C7EA3315240AC04DB1626E
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs       D4D9865A959A49607D48E3A16671A58DAA6F6EEDF222C2E2566DD115D6D3D2BC
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs        2DFF4B7702CCD24329075D7271B1EA5E1B6372C69D76B1B0A6C06BE3C8323C61
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureProcesses.cs         ED674AA153C96C72918416E33EC0B3D4F4B6DADC291354253F68E808921F74B6
+
+

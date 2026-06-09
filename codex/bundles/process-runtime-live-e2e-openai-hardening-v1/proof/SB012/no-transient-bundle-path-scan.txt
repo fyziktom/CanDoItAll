@@ -1,0 +1,3 @@
+SB012 no transient bundle path scan
+> rg -n "codex[\\/]bundles|process-runtime-live-e2e-openai-hardening-v1|process-runtime-restoration-ui-e2e-driver-integration-v1" src tests
+NO MATCHES

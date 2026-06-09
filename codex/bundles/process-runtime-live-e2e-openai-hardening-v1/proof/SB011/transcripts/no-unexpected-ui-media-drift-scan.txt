@@ -1,0 +1,18 @@
+SB011 no unexpected UI/media drift scan
+Generated: 2026-06-09T14:05:03.9878854-04:00
+Changed and untracked source/test files:
+- tests/CanDoItAll.Tests.Integration/ProjectStructureAgentApiIntegrationTests.cs
+- tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectScopedProcessLaunch.cs
+- tests/CanDoItAll.Tests.Unit/ProcessDriverFakeProofResistanceTests.cs
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway/proof/SB003/manifest.md
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway/proof/SB003/semantic-invariants.md
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway/proof/SB003/transcripts/completed-validator-early-sb003-smoke.txt
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway/proof/SB003/transcripts/gate-a-proof-index.txt
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway/proof/SB003/transcripts/red-team-report-only-proof-rejection.txt
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway/proof/SB043/manifest.md
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverRuntimeEvidenceVerifierIntegrationHardening/analysis/02-assumptions-and-risks.md
+- tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverRuntimeEvidenceVerifierIntegrationHardening/reviews/01-execution-report.md
+
+UI/media changed source/test files:
+- none
+PASS: SB011 changed integration/API test source only; no production UI/media files changed.
