@@ -1,5 +1,10 @@
 # Phase Plan
 
+## Execution Order
+- Execute phases P01 through P20 sequentially.
+- Run each subbundle entry gate before implementation and closure gate after proof.
+- Do not start a dependent phase until the prior critical gate is completed or explicitly blocked.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -46,7 +51,7 @@ graph TD
 ```
 
 ## Critical Subbundles
-Critical gates are every third subbundle: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060.
+- Critical gates are every third subbundle: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060.
 
 ## Phase Gates
 Each gate must provide:

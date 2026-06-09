@@ -1,7 +1,7 @@
 # SB056 - Prepared/completed validators and proof index
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Prepared/completed validators and proof index.
@@ -27,10 +27,10 @@ Prepared/completed validators and proof index.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Focused implementation proof plus downstream critical gate validation.
+- Focused implementation proof plus downstream critical gate validation.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -67,10 +67,10 @@ Focused implementation proof plus downstream critical gate validation.
 
 
 ## Browser Validation Logging
-N/A unless this subbundle changes browser-visible behavior.
+- N/A unless this subbundle changes browser-visible behavior.
 
 ## Progression Gate
-Must pass before the next subbundle starts.
+- Must pass before the next subbundle starts.
 
 ## Suggested Agent Prompt
 Implement SB056: Prepared/completed validators and proof index. Preserve all hard constraints and produce source-backed proof.

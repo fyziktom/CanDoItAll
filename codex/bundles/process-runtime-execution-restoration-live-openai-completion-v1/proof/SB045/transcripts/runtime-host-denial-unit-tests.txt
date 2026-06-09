@@ -1,0 +1,13 @@
+# SB045 Runtime Host Denial Unit Test Transcript
+
+## Command
+`dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --filter "FullyQualifiedName~Scheduler_and_workflow_trigger_start_paths_use_process_service_without_driver_runtime_hooks|FullyQualifiedName~Process_driver_runtime_host_roadmap_remains_not_approved_until_future_gate_is_source_backed|FullyQualifiedName~Process_driver_contract_api_SB046_INV_001_runtime_host_approval_matrix_keeps_runtime_surfaces_unapproved|FullyQualifiedName~Process_driver_contract_api_SB057_INV_001_roadmaps_deny_runtime_host_and_list_approval_gates|FullyQualifiedName~Process_driver_contract_api_SB059_INV_001_backlog_candidates_keep_runtime_host_and_execution_blocked|FullyQualifiedName~Process_driver_contract_api_SB040_SB042_INV_001_current_bundle_runtime_host_matrix_keeps_runtime_surfaces_unapproved|FullyQualifiedName~Process_driver_contract_api_SB041_SB042_INV_001_current_readonly_pipeline_source_rejects_runtime_host_hooks|FullyQualifiedName~Process_driver_contract_api_SB052_SB053_INV_001_current_bundle_roadmap_keeps_runtime_integration_blocked" --logger "trx;LogFileName=SB045-runtime-host-denial-unit.trx" --results-directory codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB045`
+
+## Result
+- Exit code: `0`
+- Failed: `0`
+- Passed: `8`
+- Skipped: `0`
+- Total: `8`
+- Duration: `2 s`
+- TRX: `bundle://proof/SB045/SB045-runtime-host-denial-unit.trx`

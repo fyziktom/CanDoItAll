@@ -6,6 +6,145 @@ namespace CanDoItAll.Tests.Playwright;
 
 public sealed partial class AppSmokeTests {
     [Fact]
+    public async Task Process_run_detail_recovery_SB030_large_screen_displays_blocked_recovery_and_artifact_readback() {
+        var repoRoot = GetRepoRoot();
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-run-detail-recovery-sb030");
+        ResetDirectory(artifactsDir);
+
+        await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions {
+            IgnoreHTTPSErrors = true,
+            ViewportSize = new ViewportSize {
+                Width = 1900,
+                Height = 1200
+            }
+        });
+
+        var page = await context.NewPageAsync();
+        using var apiClient = CreateProcessApiClient(fixture.BaseUrl);
+        var definitionId = await PostJsonAndReadApiAsync<Guid>(
+            apiClient,
+            "/api/processes/definitions",
+            BuildSb030RunDetailDefinition());
+        await PostApiAsync(apiClient, $"/api/processes/definitions/{definitionId:D}/publish");
+
+        var runName = $"SB030 blocked run detail {Guid.NewGuid():N}";
+        var runId = await PostJsonAndReadApiAsync<Guid>(
+            apiClient,
+            "/api/processes/runs/start",
+            new ProcessRunStartRequest {
+                ProcessDefinitionId = definitionId,
+                RunName = runName,
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "SB030 Playwright run-detail recovery proof."
+            });
+        var stepRun = Assert.Single(await ReadRequiredJsonAsync<IReadOnlyList<ProcessStepRunViewModel>>(
+            apiClient,
+            $"/api/processes/runs/{runId:D}/steps"));
+        var artifactExpectation = Assert.Single(stepRun.ArtifactExpectations);
+
+        await PostJsonApiAsync(
+            apiClient,
+            $"/api/processes/runs/{runId:D}/steps/{stepRun.Id:D}/transition",
+            new {
+                TargetStatus = ProcessStepRunStatus.Blocked,
+                Reason = "Required runtime evidence artifact was not produced for the selected run.",
+                BlockCause = ProcessStepBlockCause.OwnOutput,
+                DecidedBy = "sb030-playwright",
+                SuppressAutomationDispatch = true
+            });
+        var artifactId = await PostJsonAndReadApiAsync<Guid>(
+            apiClient,
+            $"/api/processes/runs/{runId:D}/steps/{stepRun.Id:D}/artifacts",
+            new {
+                ArtifactExpectationId = artifactExpectation.ArtifactExpectationId,
+                ArtifactKind = ProcessArtifactKind.Evidence,
+                Title = "SB030 blocked recovery evidence",
+                TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+                SensitivityLevel = ProcessSensitivityLevel.Internal,
+                ProvenanceSummary = "Created by SB030 Playwright run-detail recovery proof.",
+                AllowedFutureUsageSummary = "Regression validation for run detail recovery UI.",
+                ReviewSummary = "Artifact readback should remain visible in the run evidence ledger.",
+                ManagedStoragePath = $"artifacts/playwright/sb030/{runId:D}/blocked-recovery-evidence.md",
+                ExternalReferenceKey = $"sb030-run-detail-recovery:{runId:D}"
+            });
+
+        var apiDetail = await ReadRequiredJsonAsync<ProcessRunDetailApiProof>(
+            apiClient,
+            $"/api/processes/runs/{runId:D}?includeWorkBriefs=false&includeExecutionRuns=false&includeDirectMessages=false");
+        Assert.NotNull(apiDetail.Run);
+        Assert.NotNull(apiDetail.Health);
+        Assert.Equal(ProcessRunStatus.Blocked, apiDetail.Run!.Status);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, apiDetail.Health!.RecommendedAction);
+        var apiStep = Assert.Single(apiDetail.StepRuns);
+        Assert.Equal(ProcessStepRunStatus.Blocked, apiStep.Status);
+        Assert.Equal(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, apiStep.BlockReasonCode);
+        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, apiStep.NextRecoveryAction);
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, apiStep.RecoveryOptions);
+        Assert.Contains(apiDetail.Artifacts, artifact => artifact.Id == artifactId);
+
+        var response = await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={definitionId:D}&runId={runId:D}");
+        Assert.NotNull(response);
+        Assert.True(response!.Ok, $"Expected /processes run detail route to return 2xx, got {(int)response.Status}.");
+
+        await DismissStartupModalIfPresentAsync(page, timeoutMs: 15_000);
+        await page.GetByTestId("processes-workspace-shell").WaitForAsync();
+        await page.GetByRole(AriaRole.Tab, new() {
+            Name = "Runs",
+            Exact = true
+        }).ClickAsync();
+        await page.GetByTestId("processes-runs-tab-shell").WaitForAsync();
+        await page.GetByTestId("processes-selected-run-summary").WaitForAsync();
+        await WaitForBodyTextAsync(page, runName, 30_000);
+        var selectedRunSummary = await page.GetByTestId("processes-selected-run-summary").InnerTextAsync();
+        Assert.Contains(runName, selectedRunSummary, StringComparison.Ordinal);
+        Assert.Contains("Blocked", selectedRunSummary, StringComparison.Ordinal);
+        Assert.Contains("recommended: Recover artifacts only", selectedRunSummary, StringComparison.Ordinal);
+        await page.GetByTestId("processes-selected-run-summary").ScreenshotAsync(new() {
+            Path = Path.Combine(artifactsDir, "01-selected-run-summary-large-desktop.png")
+        });
+
+        await page.GetByTestId($"processes-run-history-item-{runId:D}").ClickAsync();
+        var runStepsDialog = page.GetByTestId("processes-run-steps-dialog");
+        await runStepsDialog.GetByTestId("processes-run-steps-dialog-step-list").WaitForAsync();
+        var recoveryDiagnostics = runStepsDialog.GetByTestId("processes-step-recovery-diagnostics");
+        await recoveryDiagnostics.WaitForAsync();
+        Assert.Equal(
+            ProcessStepBlockReasonCode.ArtifactContractUnsatisfied.ToString(),
+            await recoveryDiagnostics.GetAttributeAsync("data-block-reason-code"));
+        var recoveryOptions = await recoveryDiagnostics.GetAttributeAsync("data-recovery-options") ?? string.Empty;
+        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly.ToString(), recoveryOptions, StringComparison.Ordinal);
+        var recoveryText = await recoveryDiagnostics.InnerTextAsync();
+        Assert.Contains("recommended: Recover artifacts only", recoveryText, StringComparison.Ordinal);
+        Assert.Contains("Recover artifacts only", recoveryText, StringComparison.Ordinal);
+        await runStepsDialog.ScreenshotAsync(new() {
+            Path = Path.Combine(artifactsDir, "02-step-recovery-diagnostics-large-desktop.png")
+        });
+
+        await runStepsDialog.GetByRole(AriaRole.Button, new() {
+            Name = "Close",
+            Exact = true
+        }).ClickAsync();
+        await runStepsDialog.WaitForAsync(new() {
+            State = WaitForSelectorState.Detached
+        });
+        await page.GetByTestId("processes-runs-tabs").GetByRole(AriaRole.Tab, new() {
+            Name = "Evidence",
+            Exact = true
+        }).ClickAsync();
+        var artifactLedger = page.GetByTestId("processes-artifact-obligation-ledger");
+        await artifactLedger.WaitForAsync();
+        var artifactLedgerText = await artifactLedger.InnerTextAsync();
+        Assert.Contains("SB030 blocked recovery evidence", artifactLedgerText, StringComparison.Ordinal);
+        Assert.Contains("Satisfied", artifactLedgerText, StringComparison.Ordinal);
+        Assert.Contains($"Artifact record: {artifactId:D}", artifactLedgerText, StringComparison.Ordinal);
+        await artifactLedger.ScreenshotAsync(new() {
+            Path = Path.Combine(artifactsDir, "03-artifact-ledger-large-desktop.png")
+        });
+
+        Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
+    }
+
+    [Fact]
     public async Task Process_start_SB015_INV_001_large_screen_imports_template_and_executes_ready_launch_from_ui() {
         var repoRoot = GetRepoRoot();
         var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-start-smoke");
@@ -279,6 +418,14 @@ public sealed partial class AppSmokeTests {
         await AssertApiSuccessAsync(response);
     }
 
+    private static async Task<T> PostJsonAndReadApiAsync<T>(HttpClient client, string requestUri, object payload) {
+        using var response = await client.PostAsJsonAsync(requestUri, payload);
+        await AssertApiSuccessAsync(response);
+        var value = await response.Content.ReadFromJsonAsync<T>();
+        Assert.NotNull(value);
+        return value;
+    }
+
     private static async Task AssertApiSuccessAsync(HttpResponseMessage response) {
         if (response.IsSuccessStatusCode) {
             return;
@@ -286,5 +433,93 @@ public sealed partial class AppSmokeTests {
 
         var body = await response.Content.ReadAsStringAsync();
         Assert.True(response.IsSuccessStatusCode, $"{(int)response.StatusCode} {body}");
+    }
+
+    private static ProcessDefinitionEditorModel BuildSb030RunDetailDefinition() {
+        var roleId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        return new ProcessDefinitionEditorModel {
+            Name = "SB030 run detail recovery proof",
+            Summary = "Browser-visible run detail proof for blocked recovery and artifacts.",
+            ValueStatement = "Expose durable blocked-step recovery and artifact evidence in the process run UI.",
+            CustomerName = "Process runtime validation",
+            OwnerName = "Playwright",
+            InterfaceContractSummary = "The run detail route must display typed step status, recovery options, and artifact ledger readback.",
+            GovernanceNotes = "Created only by local Playwright validation.",
+            ChangeSummary = "Initial SB030 proof definition.",
+            GovernancePolicySummary = "Use public process API routes and the large-desktop browser surface.",
+            ConstitutionRuleSummary = "Do not replace runtime state with report-only proof.",
+            OperatingModeSummary = "Assisted execution.",
+            SimulationReadinessSummary = "Safe deterministic browser proof.",
+            Roles =
+            [
+                new ProcessRoleEditorModel {
+                    Id = roleId,
+                    Key = "runtime-reviewer",
+                    DisplayName = "Runtime reviewer",
+                    Purpose = "Review blocked recovery evidence.",
+                    StaffingIntent = "Deterministic local role for browser proof.",
+                    PreferredExecutorKind = "person",
+                    IsRequired = false,
+                    AllowsFallback = false,
+                    SnapshotSummary = "SB030 runtime reviewer."
+                }
+            ],
+            Steps =
+            [
+                new ProcessStepEditorModel {
+                    Id = stepId,
+                    Key = "capture-recovery-evidence",
+                    Title = "Capture blocked recovery evidence",
+                    StepKind = ProcessStepKind.Work,
+                    AllowedOperations =
+                    [
+                        ProcessStepOperation.ReadProcessContext,
+                        ProcessStepOperation.WriteManagedProcessArtifacts,
+                        ProcessStepOperation.CaptureRuntimeProof,
+                        ProcessStepOperation.RecoverArtifactsOnly
+                    ],
+                    OperationTargetScope = ProcessStepTargetScope.ManagedProcessArtifactsOnly,
+                    InputContractSummary = "The selected process run is loaded from durable storage.",
+                    OutputContractSummary = "Blocked recovery evidence remains attached to the selected step run.",
+                    EvidenceContractSummary = "The UI must render blocked state, recovery options, and artifact ledger readback.",
+                    DecisionRightsSummary = "The local Playwright test controls the transition and artifact record.",
+                    ExceptionPolicySummary = "Block if runtime evidence is absent.",
+                    TargetLeadHours = 1,
+                    RoleAssignments =
+                    [
+                        new ProcessStepRoleRequirementEditorModel {
+                            RoleRequirementId = roleId,
+                            ResponsibilityKind = ProcessResponsibilityKind.Reviewer,
+                            IsRequired = false,
+                            RebindPolicySummary = "Keep local browser proof deterministic."
+                        }
+                    ],
+                    ArtifactExpectations =
+                    [
+                        new ProcessArtifactExpectationEditorModel {
+                            Id = Guid.NewGuid(),
+                            ArtifactKind = ProcessArtifactKind.Evidence,
+                            Title = "SB030 blocked recovery evidence",
+                            IsRequired = true,
+                            TrustRequirement = ProcessArtifactTrustRequirement.ReviewRequired,
+                            SensitivityLevel = ProcessSensitivityLevel.Internal,
+                            AllowedFutureUsageSummary = "Regression validation for run detail recovery UI.",
+                            ValidationRequirementSummary = "Must be visible in the run evidence ledger with a durable artifact record id."
+                        }
+                    ]
+                }
+            ]
+        };
+    }
+
+    private sealed class ProcessRunDetailApiProof {
+        public ProcessRunListItem? Run { get; set; }
+
+        public List<ProcessStepRunViewModel> StepRuns { get; set; } = [];
+
+        public List<ProcessArtifactViewModel> Artifacts { get; set; } = [];
+
+        public ProcessRunHealthSummaryViewModel? Health { get; set; }
     }
 }

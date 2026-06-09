@@ -1,0 +1,10 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests.DispatchAsync_runs_workflow_assignment_and_projects_process_link|FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests.DispatchAsync_maps_human_input_workflow_to_waiting_approval|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests.Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests.Process_mock_three_agent_artifact_handoff_completes_required_outputs_without_full_delivery_process|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.ProcessDispatchCandidateFactory_CreateDirectAgentCandidate_preserves_binding_recovery_and_cooperation_facts|FullyQualifiedName~ProcessRunAutomationDispatchServiceTests.DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer" --logger "trx;LogFileName=SB015-maf-direct-agent-execution.trx" --results-directory "codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB015\test-results"
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant ID: SB015_INV_001
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB015\test-results\SB015-maf-direct-agent-execution.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     6, Přeskočeno:     0, Celkem:     6, Doba trvání: 59 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0

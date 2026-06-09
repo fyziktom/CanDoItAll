@@ -1,0 +1,48 @@
+# SB033 Project-Structure Run Output Test Transcript
+
+## Command
+`dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~Project_structure_process_run_output_SB012_INV_002_opens_project_processes_from_output_folder_node" --logger "trx;LogFileName=SB033-project-structure-run-output.trx" --results-directory codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB033`
+
+## Result
+- Exit code: 0
+- Test assembly: `CanDoItAll.Tests.Playwright.dll`
+- Passed: 1
+- Failed: 0
+- Skipped: 0
+- Duration reported by test runner: 15 seconds
+- TRX: `bundle://proof/SB033/SB033-project-structure-run-output.trx`
+
+## Covered Test
+- `CanDoItAll.Tests.Playwright.AppSmokeTests.Project_structure_process_run_output_SB012_INV_002_opens_project_processes_from_output_folder_node`
+
+## Browser Proof Summary
+- Browser: Chromium through the existing Playwright fixture.
+- App host: real `CanDoItAll.Web` launched by `PlaywrightAppFixture` with an isolated PostgreSQL test profile.
+- Viewport: `1900x1200`.
+- Routes:
+  - `/projects/{projectId}/structure`
+  - `/projects/{projectId}/processes?processId={definitionId}&runId={runId}`
+- Actions:
+  - Created a real project and project-structure work item.
+  - Created and published a real process definition.
+  - Linked the process definition to the project node.
+  - Started the process from the project-structure node.
+  - Recorded a deliverable artifact with a scoped managed storage path under `output/scopes/project/{projectId}/process-runs/{runId}/SB012BrowserOutput/index.html`.
+  - Verified projected output node and opened the process workspace through the node quick action.
+
+## Assertions
+- Project-structure process start returned `Stage == "run-started"` and a non-null run id.
+- Process run list contains the run and preserves the project id.
+- Project-structure canvas contains a projected output node with parent `process-run:{runId}`.
+- Projected output node id starts with `process-run-output:`.
+- Primary quick action contains `Open`.
+- Run popup URL matches `/projects/{projectId}/processes?processId={definitionId}&runId={runId}`.
+- Run popup contains `processes-run-history-item-{runId}`.
+- Selected run summary contains the originating project work item title.
+- No Blazor error UI is visible in either page.
+
+## Screenshot Artifacts
+- `bundle://proof/SB033/screenshots/01-structure-run-output-node-large-desktop.png`
+- `bundle://proof/SB033/screenshots/02-run-output-quick-actions-large-desktop.png`
+- `bundle://proof/SB033/screenshots/03-run-output-process-workspace-before-history-wait-large-desktop.png`
+- `bundle://proof/SB033/screenshots/03-run-output-process-workspace-large-desktop.png`

@@ -1,0 +1,297 @@
+Command: rg -n "WorkflowBackedRole|DirectAgent|CreateDirectAgentCandidate|ProcessDispatchDirectAgent|ProcessMockAgentCatalog|ProviderName|AgentProcessCooperationMode|ProcessWorkspaceToolProfile|DispatchAsync_runs_workflow_assignment|Process_mock_workflow_process_completes|Process_mock_three_agent_artifact_handoff|DispatchSource_routes_direct_and_workflow" src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Integration -g "*.cs"
+WorkingDirectory: C:\repositories\CanDoItAll
+Output:
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:774:            ProviderName: "OpenAI default",
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionCapabilityFilteringIntegrationTests.cs:347:            ProviderName: "test",
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRecoveryIntegrationTests.cs:68:                ProviderName: "OpenAI",
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRecoveryIntegrationTests.cs:191:                ProviderName: "OpenAI",
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:95:                    ProviderName: "OpenAI chat completions",
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:135:                            RuntimeToolProviderName = "Provider-native MCP"
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:155:        Assert.Equal("Provider-native MCP", screenshotReceipt.RuntimeToolProviderName);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:166:                Assert.Equal("Provider-native MCP", receipt.RuntimeToolProviderName);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:181:                Assert.Equal("Provider-native MCP", receipt.RuntimeToolProviderName);
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:217:                    ProviderName: "OpenAI chat completions",
+tests\CanDoItAll.Tests.Integration\AgentFrameworkWorkspaceExecutionEvidenceIntegrationTests.cs:311:                ProviderName: "OpenAI default",
+tests\CanDoItAll.Tests.Integration\AiAgentProfileIntegrationTests.cs:253:        Assert.Equal(provider.Name, rosterItem.ProviderName);
+tests\CanDoItAll.Tests.Integration\AiAgentProfileIntegrationTests.cs:667:        Assert.Equal("OpenAI default", summary.Value.ProviderName);
+tests\CanDoItAll.Tests.Integration\CognitiveMemoryConsolidationPersistenceModelTests.cs:218:                TargetProviderName = "fake-rag",
+src\CanDoItAll.Modules.Processes\Automation\Recovery\AgentRecoveryModels.cs:149:    string ProviderName,
+tests\CanDoItAll.Tests.Integration\CognitiveMemoryTaxonomyPersistenceModelTests.cs:232:            TargetProviderName = "fake-rag",
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEditorModels.cs:36:    string ProviderName,
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:1235:                AgentProcessCooperationMode.ProcessArtifactHandoff,
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:1384:                AgentProcessCooperationMode.ProcessArtifactHandoff,
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:2180:            ProviderName: provider.Name,
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.CandidateDiscovery.cs:254:                        : $"{aiResource.ProviderName} / {aiResource.DefaultModel}",
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Planning.cs:367:        if (!string.IsNullOrWhiteSpace(aiResource.ProviderName))
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Planning.cs:369:            parts.Add(aiResource.ProviderName.Trim());
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:202:            detail.Run.ProviderName,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:391:            executionRun.ProviderName,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:412:            ProviderName: string.Empty,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:434:            ProviderName: string.Empty,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:455:            ProviderName: string.Empty,
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:96:               !string.IsNullOrWhiteSpace(aiResource!.ProviderName);
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:183:               !string.IsNullOrWhiteSpace(fact.ProviderName) ||
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:203:            fact.ProviderName,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:18:    private const string NpgsqlProviderName = "Npgsql.EntityFrameworkCore.PostgreSQL";
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:141:        if (!string.Equals(dbContext.Database.ProviderName, NpgsqlProviderName, StringComparison.Ordinal))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:440:        if (!string.Equals(dbContext.Database.ProviderName, NpgsqlProviderName, StringComparison.Ordinal))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:1023:                item.ProviderName,
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Staffing.cs:602:                    aiFact.ProviderName,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:470:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:1496:            AvailabilitySummary = string.IsNullOrWhiteSpace(aiResource.ProviderName)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:1498:                : $"{aiResource.ProviderName} / {aiResource.DefaultModel}",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAssignedAgentProviderRepairCoordinator.cs:62:                    "Failed to switch technical agent {TechnicalAgentId} to fallback provider '{ProviderName}' while recovering process run {RunId}, step {StepRunId}.",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationReceiptObservationHelper.cs:29:                receipt.RuntimeToolProviderName.Trim()))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationReceiptObservationHelper.cs:33:                 !string.IsNullOrWhiteSpace(metadata.RuntimeToolProviderName)))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationReceiptObservationHelper.cs:39:                    metadata.RuntimeToolProviderName),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationReceiptObservationHelper.cs:54:    string RuntimeToolProviderName);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:237:            run.ProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:318:            metric.ProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:362:            RuntimeToolProviderName = receipt.RuntimeToolProviderName
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:371:            observation.ProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:488:            exception.ProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:503:            exception.ProviderName,
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:1015:            return $"{observation.ProviderName}|{observation.Model}|{observation.ProviderResponseId}|{observation.SourcePhase}";
+tests\CanDoItAll.Tests.Integration\ProcessAutomationReceiptObservationHelperTests.cs:49:                RuntimeToolProviderName = "Workspace Write"
+tests\CanDoItAll.Tests.Integration\ProcessAutomationReceiptObservationHelperTests.cs:54:                RuntimeToolProviderName = "Workspace Read"
+tests\CanDoItAll.Tests.Integration\ProcessAutomationReceiptObservationHelperTests.cs:63:        Assert.Equal("Workspace Write", item.RuntimeToolProviderName);
+tests\CanDoItAll.Tests.Integration\ProcessAutomationReceiptObservationHelperTests.cs:88:                ProviderName: "OpenAI",
+tests\CanDoItAll.Tests.Integration\ProcessAutomationExecutionClientTests.cs:110:        Assert.Equal("OpenAI", exception.ProviderName);
+tests\CanDoItAll.Tests.Integration\ProcessAutomationExecutionClientTests.cs:356:                RuntimeToolProviderName = "Workspace write"
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOperatorControlPlane.cs:127:    string ProviderName,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOperatorControlPlane.cs:757:            ProviderName: string.Empty,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:522:    string ProviderName,
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:28:        var directAgentContextIndex = FindRequired(source, "ProcessDispatchFinalizerContextFactory.ForDirectAgent", artifactProjectionIndex);
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:30:        var directAgentFactoryIndex = FindRequired(finalizerContextFactorySource, "ForDirectAgent");
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1241:            ArtifactValidationExecutorKind = ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1203:                ProcessCoreFinalizerKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessLaunchPlanningIntegrationTests.cs:847:        Assert.False(string.IsNullOrWhiteSpace(provisionedWorkspace.ProviderName));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs:20:    ProcessDispatchDirectAgentCandidateFacts? DirectAgentFacts = null);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs:22:internal sealed record ProcessDispatchDirectAgentCandidateFacts(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs:67:    public static ProcessDispatchCandidateAssemblyContext WithDirectAgentFacts(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs:69:        ProcessDispatchDirectAgentCandidateFacts directAgentFacts)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs:83:            DirectAgentFacts = directAgentFacts
+tests\CanDoItAll.Tests.Integration\ProcessMockThreeAgentArtifactHandoffFixture.cs:237:            RoleTemplateSourceKey = ProcessMockAgentCatalog.CreateRoleTag(roleKey),
+tests\CanDoItAll.Tests.Integration\ProcessMockThreeAgentArtifactHandoffFixture.cs:238:            RoleTemplateSnapshotName = ProcessMockAgentCatalog.AgentTag,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:24:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:35:        Assert.DoesNotContain(providers, ProcessMockAgentCatalog.IsProcessMockProvider);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:38:            agent => agent.Tags.Contains(ProcessMockAgentCatalog.AgentTag, StringComparer.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:46:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:51:        Assert.Equal(ProcessMockAgentCatalog.Roles.Count, context.AgentIdsByRoleKey.Count);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:57:            ProcessMockAgentCatalog.IsProcessMockProvider);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:60:        Assert.Equal(ProcessMockAgentCatalog.Model, provider.DefaultModel);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:63:        foreach (var role in ProcessMockAgentCatalog.Roles)
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:65:            var roleTag = ProcessMockAgentCatalog.CreateRoleTag(role.RoleKey);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:72:            Assert.Contains(agent.Tags, item => string.Equals(item, ProcessMockAgentCatalog.AgentTag, StringComparison.OrdinalIgnoreCase));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:77:        var partyIds = ProcessMockAgentCatalog.Roles.Select(item => item.PartyId).ToList();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:85:        Assert.Equal(ProcessMockAgentCatalog.Roles.Count, staffingFacts.Count);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:86:        foreach (var role in ProcessMockAgentCatalog.Roles)
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:90:            var roleTag = ProcessMockAgentCatalog.CreateRoleTag(role.RoleKey);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:94:            Assert.Equal(ProcessMockAgentCatalog.ProviderName, fact.ProviderName);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:95:            Assert.Equal(ProcessMockAgentCatalog.Model, fact.DefaultModel);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:105:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:133:        Assert.Equal(ProcessMockAgentCatalog.Roles.Count, details!.Roles.Count);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:136:        var staffingFacts = await technicalAgentBridge.GetStaffingFactsAsync(ProcessMockAgentCatalog.Roles.Select(role => role.PartyId).ToList());
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:138:        foreach (var catalogRole in ProcessMockAgentCatalog.Roles)
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:144:            var roleTag = ProcessMockAgentCatalog.CreateRoleTag(catalogRole.RoleKey);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:154:            Assert.Equal(ProcessMockAgentCatalog.ProviderName, fact.ProviderName);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:155:            Assert.Equal(ProcessMockAgentCatalog.Model, fact.DefaultModel);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:157:            Assert.Contains(ProcessMockAgentCatalog.ProviderName, selectedCandidate.AvailabilitySummary, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:158:            Assert.Contains(ProcessMockAgentCatalog.Model, selectedCandidate.AvailabilitySummary, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:163:    public async Task Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch() {
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:166:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:207:        Assert.Equal(ProcessMockAgentCatalog.Roles.Count, launchDetails!.Roles.Count);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:211:            var catalogRole = Assert.Single(ProcessMockAgentCatalog.Roles, item => string.Equals(item.RoleKey, role.RoleKey, StringComparison.Ordinal));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:342:                SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:350:            Assert.Equal(ProcessMockAgentCatalog.ProcessSourceKind, executionRun.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:354:            Assert.Equal(ProcessMockAgentCatalog.ProviderName, executionRun.ProviderName);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:355:            Assert.Equal(ProcessMockAgentCatalog.Model, executionRun.Model);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:368:    public async Task Process_mock_three_agent_artifact_handoff_completes_required_outputs_without_full_delivery_process()
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:372:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:487:            $"{ProcessMockAgentCatalog.OutputRoot}/{ResolveProcessMockRunKey(runId)}/MockApp/ValidationEngine.cs",
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:512:            SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:522:        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, ExecutionInvocationMetadata.ResolveProcessCooperationMode(implementationExecutionRun));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:523:        Assert.Equal(AgentWorkspaceToolProfileKind.SoftwareDevelopment, ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(implementationExecutionRun));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:524:        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, ExecutionInvocationMetadata.ResolveProcessCooperationMode(reviewExecutionRun));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:525:        Assert.Equal(AgentWorkspaceToolProfileKind.QualityValidation, ExecutionInvocationMetadata.ResolveProcessWorkspaceToolProfile(reviewExecutionRun));
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:534:            AgentProcessCooperationMode.ProcessArtifactHandoff,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:544:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:559:        Assert.Contains(ProcessMockAgentCatalog.BranchRepairsRequired, qaRejection.ResponseText, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:585:        Assert.Contains(ProcessMockAgentCatalog.BranchApproved, qaApproval.ResponseText, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:598:        var catalogService = scope.ServiceProvider.GetRequiredService<ProcessMockAgentCatalogService>();
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:771:        var roleTag = ProcessMockAgentCatalog.CreateRoleTag(roleKey);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:865:            ProcessMockAgentCatalog.Roles,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:912:        AgentProcessCooperationMode expectedMode,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:1055:                .Append(executionRun.ProviderName)
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:1075:            SourceKind: ProcessMockAgentCatalog.ProcessSourceKind,
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:320:                ProcessCoreFinalizerKind.DirectAgent,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateFactory.cs:19:                AgentProcessCooperationMode.ProcessArtifactHandoff,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateFactory.cs:35:                AgentProcessCooperationMode.ProcessArtifactHandoff,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateFactory.cs:40:    public static DispatchCandidate CreateDirectAgentCandidate(ProcessDispatchCandidateAssemblyContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateFactory.cs:44:        var facts = context.DirectAgentFacts
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowRepairDefinitionTestFixture.cs:23:        public const string RepairsRequired = ProcessMockAgentCatalog.BranchRepairsRequired;
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowRepairDefinitionTestFixture.cs:24:        public const string Approved = ProcessMockAgentCatalog.BranchApproved;
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowRepairDefinitionTestFixture.cs:431:            RoleTemplateSourceKey = ProcessMockAgentCatalog.CreateRoleTag(roleKey),
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowRepairDefinitionTestFixture.cs:432:            RoleTemplateSnapshotName = ProcessMockAgentCatalog.AgentTag,
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:51:    public async Task DispatchAsync_runs_workflow_assignment_and_projects_process_link()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationService.cs:59:        var directAgentCandidateAssembler = new ProcessDispatchDirectAgentCandidateAssembler(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:35:    public static AgentProcessCooperationMode ResolveCooperationMode(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:42:            return AgentProcessCooperationMode.Hybrid;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:47:            return AgentProcessCooperationMode.MafLocalHandoff;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:52:            return AgentProcessCooperationMode.A2ARemoteHandoff;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:56:            ? AgentProcessCooperationMode.ProcessArtifactHandoff
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:57:            : AgentProcessCooperationMode.SingleAgent;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCooperationMetadataResolver.cs:142:        AgentProcessCooperationMode cooperationMode,
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchProjectionMaintenanceIntegrationTests.cs:130:                lastProviderName = "Offline provider"
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentCandidateAssembler.cs:13:internal sealed class ProcessDispatchDirectAgentCandidateAssembler(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentCandidateAssembler.cs:121:        var directAgentContext = ProcessDispatchCandidateAssemblyContextFactory.WithDirectAgentFacts(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentCandidateAssembler.cs:123:            new ProcessDispatchDirectAgentCandidateFacts(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentCandidateAssembler.cs:137:        return ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(directAgentContext);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:875:        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, candidate.CooperationMetadata.CooperationMode);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:892:        Assert.Equal(AgentProcessCooperationMode.ProcessArtifactHandoff, candidate.CooperationMetadata.CooperationMode);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:898:    public void ProcessDispatchCandidateFactory_CreateDirectAgentCandidate_preserves_binding_recovery_and_cooperation_facts()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:904:            AgentProcessCooperationMode.Hybrid,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:907:        var context = ProcessDispatchCandidateAssemblyContextFactory.WithDirectAgentFacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:909:            new ProcessDispatchDirectAgentCandidateFacts(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:916:        var candidate = ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(context);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:927:    public void ProcessDispatchCandidateFactory_CreateDirectAgentCandidate_requires_resolved_direct_agent_facts()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:932:            ProcessDispatchCandidateFactory.CreateDirectAgentCandidate(context));
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:1639:            ProcessDispatchRouteStage.DirectAgentExecution,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:3112:            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessWorkspaceToolProfileMetadataKey).GetString());
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:3932:                AgentProcessCooperationMode.ProcessArtifactHandoff,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:6436:            document.RootElement.GetProperty(ExecutionInvocationMetadata.ProcessWorkspaceToolProfileMetadataKey).GetString());
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16670:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16706:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16729:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16788:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16809:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16844:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16879:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16914:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16949:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16984:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17019:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17082:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17131:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17181:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17233:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17286:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17342:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17407:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17468:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17514:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17562:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17610:    public void DispatchSource_routes_direct_and_workflow_completion_through_process_owned_finalizer()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17638:        Assert.Contains("ProcessStepCompletionExecutorKind.DirectAgent", combinedSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17639:        Assert.Contains("ProcessStepCompletionExecutorKind.WorkflowBackedRole", combinedSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17722:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17739:        await finalizerApplicationService.FinalizeDirectAgentCompletionAsync(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17740:            new ProcessDispatchDirectAgentFinalizerInput(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17760:                Assert.Equal(ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole, context.ExecutorKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17794:                Assert.Equal(ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent, context.ExecutorKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18048:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18121:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18133:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18211:                ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19814:                (ProcessMockAgentCatalog.BranchRepairsRequired, "Repairs required", "Route the implementation through defect repair."),
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19815:                (ProcessMockAgentCatalog.BranchApproved, "Approved", "Route directly to release notes when no repair is required.")
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19823:            ProcessMockAgentCatalog.BranchRepairsRequired,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19828:            branchOutcomeKey: ProcessMockAgentCatalog.BranchRepairsRequired);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19835:        Assert.Equal(ResolveBranchOutcomeId(candidate, ProcessMockAgentCatalog.BranchRepairsRequired), selectedBranchOutcomeId);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19850:            [(ProcessMockAgentCatalog.BranchApproved, "Approved", "Route repaired implementation to release notes.")],
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19857:            ProcessMockAgentCatalog.BranchApproved,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19862:            branchOutcomeKey: ProcessMockAgentCatalog.BranchApproved);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:19869:        Assert.Equal(ResolveBranchOutcomeId(candidate, ProcessMockAgentCatalog.BranchApproved), selectedBranchOutcomeId);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:20775:            ProviderName: "Provider A",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:20799:            ProviderName: "Provider A",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21495:                           AgentProcessCooperationMode.ProcessArtifactHandoff,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21591:                ProcessMockAgentCatalog.ProcessSourceKind,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21600:                ProcessMockAgentCatalog.ProviderName,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21601:                ProcessMockAgentCatalog.Model,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentExecutionModels.cs:3:internal sealed record ProcessDispatchDirectAgentExecutionInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentExecutionAdapter.cs:3:internal sealed class ProcessDispatchDirectAgentExecutionAdapter(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentExecutionAdapter.cs:7:        ProcessDispatchDirectAgentExecutionInput input,
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:851:                lastProviderName = "Offline provider"
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:903:        Assert.Equal("Offline provider", normalizedMetadata.Transcript.LastProviderName);
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:919:        Assert.Equal("Offline provider", persistedMetadata.Transcript.LastProviderName);
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:1662:                LastProviderName = "Local llama",
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:1691:        Assert.Equal("Local llama", parsedMetadata.Transcript.LastProviderName);
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:1701:        Assert.Equal("Local llama", persistedMetadata.Transcript.LastProviderName);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs:3:internal delegate Task<ProcessRouteExecutionOutcome> ProcessDirectAgentExecutionRunner(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs:4:    ProcessDispatchDirectAgentExecutionInput input,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs:7:internal sealed class ProcessDispatchDirectAgentRuntimeService(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs:8:    ProcessDirectAgentExecutionRunner executeUntilSettledAsync)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchDirectAgentRuntimeService.cs:11:        ProcessDispatchDirectAgentExecutionInput input,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:45:    public async Task FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:46:        ProcessDispatchDirectAgentFinalizerInput input,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:54:            ProcessDispatchFinalizerContextFactory.ForDirectAgent(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerApplicationService.cs:15:    public Task FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerApplicationService.cs:16:        ProcessDispatchDirectAgentFinalizerInput input,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerApplicationService.cs:18:        => finalizerAdapter.FinalizeDirectAgentCompletionAsync(input, cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerInputs.cs:11:internal sealed record ProcessDispatchDirectAgentFinalizerIntent(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerInputs.cs:62:internal sealed record ProcessDispatchDirectAgentFinalizerInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerInputs.cs:64:    ProcessDispatchDirectAgentFinalizerIntent Intent,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerInputs.cs:67:    public ProcessDispatchDirectAgentFinalizerInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerInputs.cs:75:            new ProcessDispatchDirectAgentFinalizerIntent(executionOutcome, trigger, renewLeaseAsync),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchHydratedCandidateAssembler.cs:9:    ProcessDispatchDirectAgentCandidateAssembler directAgentCandidateAssembler)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteExecutionModels.cs:89:    public ProcessRouteExecutionOutcome? DirectAgentExecutionOutcome { get; private set; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteExecutionModels.cs:105:    public void SetDirectAgentExecutionOutcome(ProcessRouteExecutionOutcome executionOutcome)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteExecutionModels.cs:107:        DirectAgentExecutionOutcome = executionOutcome;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteExecutionModels.cs:110:    public ProcessRouteExecutionOutcome GetRequiredDirectAgentExecutionOutcome(ProcessDispatchRouteStage stage)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteExecutionModels.cs:112:        return DirectAgentExecutionOutcome ??
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlerFactory.cs:17:        IProcessDispatchDirectAgentRouteFacet directAgentFacet,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlerFactory.cs:30:                new DirectAgentExecutionRouteHandler(directAgentFacet),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteFacets.cs:86:internal interface IProcessDispatchDirectAgentRouteFacet
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteFacets.cs:89:        ProcessDispatchDirectAgentExecutionInput input,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteFacets.cs:108:    Task FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:215:internal sealed class DirectAgentExecutionRouteHandler(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:216:    IProcessDispatchDirectAgentRouteFacet directAgentFacet) : IProcessDispatchRouteHandler
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:218:    public ProcessDispatchRouteStage Stage => ProcessDispatchRouteStage.DirectAgentExecution;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:223:            new ProcessDispatchDirectAgentExecutionInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:229:        context.SetDirectAgentExecutionOutcome(executionOutcome);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:243:        var executionOutcome = context.GetRequiredDirectAgentExecutionOutcome(Stage);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:274:        _ = context.GetRequiredDirectAgentExecutionOutcome(Stage);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:299:        var executionOutcome = context.GetRequiredDirectAgentExecutionOutcome(Stage);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:300:        await finalizerFacet.FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:241:internal sealed class ProcessDispatchDirectAgentRouteService(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:242:    ProcessDispatchDirectAgentRuntimeService directAgentRuntimeService) : IProcessDispatchDirectAgentRouteFacet
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:245:        ProcessDispatchDirectAgentExecutionInput input,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:284:    public async Task FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:292:        await finalizerApplicationService.FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:293:            new ProcessDispatchDirectAgentFinalizerInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessFinalizerEvidenceDescriptorAdapter.cs:64:            ModuleFinalizerKind.DirectAgent => CoreFinalizerKind.DirectAgent,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessFinalizerEvidenceDescriptorAdapter.cs:65:            ModuleFinalizerKind.WorkflowBackedRole => CoreFinalizerKind.WorkflowBackedRole,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:29:                    "Skipping fallback provider '{ProviderName}' because its health probe exceeded {TimeoutSeconds} seconds.",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:38:                    "Fallback provider probe for '{ProviderName}' failed while evaluating process execution recovery.",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderHealthProbeCoordinator.cs:46:                    "Skipping fallback provider '{ProviderName}' because its health probe failed: {Summary}",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRecoveryDirectiveBuilder.cs:29:            .Append(repairOutcome.FailedProviderName)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRecoveryDirectiveBuilder.cs:31:            .Append(repairOutcome.FallbackProviderName)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:28:        var failedProviderName = providers.FirstOrDefault(item => item.Id == failedProviderId)?.Name;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderRepairCoordinator.cs:56:            failedProviderName ?? detail.Run.ProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRetryDiagnosticDescriptorAdapter.cs:64:                failedProviderName: string.Empty,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRetryDiagnosticDescriptorAdapter.cs:65:                fallbackProviderName: string.Empty,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRetryDiagnosticDescriptorAdapter.cs:71:                providerRepair.FailedProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRetryDiagnosticDescriptorAdapter.cs:72:                providerRepair.FallbackProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:122:            return $"{observation.ProviderName}|{observation.Model}|{observation.ProviderResponseId}|{observation.SourcePhase}";
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:155:            string.Equals(candidate.Name, observation.ProviderName, StringComparison.OrdinalIgnoreCase));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Costing.cs:189:            string.Equals(candidate.Name, metric.ProviderName, StringComparison.OrdinalIgnoreCase));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Cooperation.cs:44:    private static AgentProcessCooperationMode ResolveCooperationMode(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.FinalizerContextFactory.cs:29:    public static ProcessRunAutomationDispatchService.ProcessStepCompletionFinalizerContext ForDirectAgent(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.FinalizerContextFactory.cs:36:            ExecutorKind: ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.FinalizerContextFactory.cs:56:            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.WorkflowBackedRole,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:272:                    "Recovered provider failure for process run {RunId}, step {StepRunId} by switching {AffectedAgentCount} assigned internal agent(s) from '{FailedProviderName}' to '{FallbackProviderName}' ({FallbackModel}). Failure summary: {FailureSummary}",
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:276:                    providerRepair.FailedProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Execution.cs:277:                    providerRepair.FallbackProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Models.cs:117:        string FailedProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Models.cs:118:        string FallbackProviderName,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:14:        var directAgentRuntimeService = CreateDirectAgentRuntimeService();
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:38:            new ProcessDispatchDirectAgentRouteService(directAgentRuntimeService),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:52:    private ProcessDispatchDirectAgentRuntimeService CreateDirectAgentRuntimeService()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:54:        var executionAdapter = new ProcessDispatchDirectAgentExecutionAdapter(ExecuteUntilSettledAsync);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:56:        return new ProcessDispatchDirectAgentRuntimeService(executionAdapter.ExecuteUntilSettledAsync);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:122:    internal async Task FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:130:        await CreateFinalizerAdapter().FinalizeDirectAgentCompletionAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:131:            new ProcessDispatchDirectAgentFinalizerInput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs:9:        DirectAgent,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.Types.cs:10:        WorkflowBackedRole,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs:32:                context.ExecutorKind == ProcessStepCompletionExecutorKind.WorkflowBackedRole

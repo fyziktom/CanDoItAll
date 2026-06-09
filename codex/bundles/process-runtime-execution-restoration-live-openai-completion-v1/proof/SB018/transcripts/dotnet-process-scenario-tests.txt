@@ -1,0 +1,10 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests.Process_mock_runtime_runs_deterministic_mock_rejection_repair_and_approval|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests.Process_mock_developer_single_agent_writes_change_set_and_db_free_rollout_artifacts|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests.Process_mock_three_agent_artifact_handoff_completes_required_outputs_without_full_delivery_process|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests.Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch" --logger "trx;LogFileName=SB018-dotnet-process-scenario.trx" --results-directory "codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB018\test-results"
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant ID: SB018_INV_001
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB018\test-results\SB018-dotnet-process-scenario.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     4, Přeskočeno:     0, Celkem:     4, Doba trvání: 55 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0

@@ -1,0 +1,8 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage prepared --repo-root C:\repositories\CanDoItAll codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant ID: SB003_INV_001
+
+Output:
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1
+
+ExitCode: 0

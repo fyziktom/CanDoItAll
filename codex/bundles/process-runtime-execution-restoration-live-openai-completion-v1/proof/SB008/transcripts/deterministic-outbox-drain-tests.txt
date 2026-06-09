@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessOutboxIntegrationTests.StartRunAsync_enqueues_automation_dispatch_for_durable_processing|FullyQualifiedName~ProcessOutboxIntegrationTests.Duplicate_automation_dispatch_enqueue_reuses_existing_pending_command|FullyQualifiedName~ProcessOutboxIntegrationTests.Parallel_ProcessPendingAsync_calls_do_not_dispatch_same_automation_record_twice|FullyQualifiedName~ProcessOutboxIntegrationTests.Automation_dispatch_lease_prevents_parallel_reclaim_during_long_agent_work|FullyQualifiedName~ProcessOutboxIntegrationTests.Automation_dispatch_stale_worker_cannot_finalize_after_lease_is_stolen|FullyQualifiedName~RuntimeHostedWorkerPolicyIntegrationTests.ProcessRuntimeOptions_DefaultsToConcurrentPostgreSqlOutboxWorkers|FullyQualifiedName~RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_RegistersNonRecoveringBackgroundWorkers_ForSourceWatchLane|FullyQualifiedName~RuntimeHostedWorkerPolicyIntegrationTests.AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled" --logger "trx;LogFileName=SB009-dispatch-claim-worker.trx" --results-directory "codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB009\test-results"
+WorkingDirectory: C:\repositories\CanDoItAll
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB009\test-results\SB009-dispatch-claim-worker.trx
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     8, Přeskočeno:     0, Celkem:     8, Doba trvání: 43 s - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0

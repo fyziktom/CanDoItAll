@@ -1,7 +1,7 @@
 # SB020 - Opt-in live provider process smoke
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Opt-in live provider process smoke.
@@ -20,7 +20,7 @@ Opt-in live provider process smoke.
 - `repo://src/CanDoItAll.Modules.Processes`
 - `repo://tests/CanDoItAll.Tests.Integration`
 - `repo://tests/CanDoItAll.Tests.Playwright`
-- `repo://templates/openai-live-smoke-proof-template.md`
+- `bundle://templates/openai-live-smoke-proof-template.md`
 
 ## Deliverables
 - Source changes or source-backed proof for this subbundle objective.
@@ -28,10 +28,10 @@ Opt-in live provider process smoke.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Focused implementation proof plus downstream critical gate validation.
+- Focused implementation proof plus downstream critical gate validation.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -53,11 +53,11 @@ Focused implementation proof plus downstream critical gate validation.
 - Do not replace runtime proof with docs-only proof.
 
 ## Acceptance Checklist
-- [ ] Objective closed.
-- [ ] Tests pass.
-- [ ] Source scan passes.
-- [ ] No forbidden runtime host or driver mutation surface.
-- [ ] Execution report updated.
+- [x] Objective closed.
+- [x] Tests pass.
+- [x] Source scan passes.
+- [x] No forbidden runtime host or driver mutation surface.
+- [x] Execution report updated.
 
 
 ## Proof Required
@@ -68,10 +68,10 @@ Focused implementation proof plus downstream critical gate validation.
 
 
 ## Browser Validation Logging
-N/A unless this subbundle changes browser-visible behavior.
+- N/A unless this subbundle changes browser-visible behavior.
 
 ## Progression Gate
-Must pass before the next subbundle starts.
+- Must pass before the next subbundle starts.
 
 ## Suggested Agent Prompt
 Implement SB020: Opt-in live provider process smoke. Preserve all hard constraints and produce source-backed proof.

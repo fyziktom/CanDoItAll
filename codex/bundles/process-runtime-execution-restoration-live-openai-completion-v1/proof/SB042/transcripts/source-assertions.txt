@@ -1,0 +1,18 @@
+# SB042 Source Assertions
+
+## Commands
+`Get-Content src\CanDoItAll.Processes.Core\CanDoItAll.Processes.Core.csproj`
+
+`rg -n "<ProjectReference|CanDoItAll\.Processes\.Drivers|ProcessDriverVerificationGateway|IProcessDriverRegistry|ProcessDriverRuntimeSelector|ProcessDriverHost|AddScoped|AddSingleton|IServiceCollection|allowedDriverConsumerFiles|Assert\.Equal\(allowedDriverConsumerFileNames" src\CanDoItAll.Modules.Processes\CanDoItAll.Modules.Processes.csproj src\CanDoItAll.Modules.Processes\Automation\Dispatch tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs -g "*.cs" -g "*.csproj"`
+
+## Key Matches
+- `src/CanDoItAll.Processes.Core/CanDoItAll.Processes.Core.csproj` references only `CanDoItAll.Processes.Contracts`.
+- `src/CanDoItAll.Modules.Processes/CanDoItAll.Modules.Processes.csproj:34-41` references the approved process driver packages and Core/Contracts.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:121` defines the explicit `allowedDriverConsumerFiles` set.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:142` discovers actual process-module files importing `CanDoItAll.Processes.Drivers.`.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:165` asserts the expected allowlist equals the actual driver-consuming file set.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:174` requires allowed source to use `ProcessDriverVerificationGateway.CreateDefault()`.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:175-181` rejects DI registration, registry, selector, manager command, and driver host surface.
+
+## Source Interpretation
+The Core/domain boundary is enforced in two layers: Core remains independent of runtime/module/driver dependencies, and the process module can consume driver packages only through audited read-only adapter files with no runtime host/registry/DI registration surface.

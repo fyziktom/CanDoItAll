@@ -1,0 +1,7 @@
+Command: SB057 semantic invariant readback
+
+Invariant ID: SB055_INV_001
+Invariant ID: SB056_INV_001
+Invariant ID: SB057_INV_001
+
+Result: passed. SB057 semantic invariants are readable for final validation closure.

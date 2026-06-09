@@ -1,0 +1,69 @@
+Command: rg -n "StartRunFromTriggerAsync|ProcessRunTriggerStartRequest|ProcessRunTriggerSourceKind|TriggerSourceId|Target_launcher_starts_real_process_run|Target_launcher_starts_real_workflow_run|SB038_INV_001|SB038_INV_002|SchedulerPlanTargetKind.Process|SchedulerPlanTargetKind.Workflow|Requested by scheduler-planner" src\CanDoItAll.Modules.Processes src\CanDoItAll.Modules.SchedulerPlanner tests\CanDoItAll.Tests.Integration -g "*.cs"
+WorkingDirectory: C:\repositories\CanDoItAll
+Output:
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerModels.cs:237:    public SchedulerPlanTargetKind TargetKind { get; set; } = SchedulerPlanTargetKind.Process;
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:171:        var firstProcess = targets.FirstOrDefault(item => item.Kind == SchedulerPlanTargetKind.Process);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:176:            TargetKind = firstTarget?.Kind ?? SchedulerPlanTargetKind.Process,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:225:        plan.TargetVersionId = editor.TargetKind == SchedulerPlanTargetKind.Workflow
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:295:                SchedulerPlanTargetKind.Process,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:304:                SchedulerPlanTargetKind.Workflow,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:326:            (targetKind != SchedulerPlanTargetKind.Workflow ||
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:343:        if (editor.TargetKind != SchedulerPlanTargetKind.Workflow)
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:852:            SchedulerPlanTargetKind.Process => await LaunchProcessAsync(plan, firedAtUtc, cancellationToken),
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:853:            SchedulerPlanTargetKind.Workflow => await LaunchWorkflowAsync(plan, cancellationToken),
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:863:        var result = await processesService.StartRunFromTriggerAsync(
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:864:            new ProcessRunTriggerStartRequest
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:870:                TriggerSourceKind = ProcessRunTriggerSourceKind.SchedulerPlan,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:871:                TriggerSourceId = plan.Id,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:885:            SchedulerPlanTargetKind.Process,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:924:                SchedulerPlanTargetKind.Workflow,
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:943:                SchedulerPlanTargetKind.Workflow);
+src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:951:            SchedulerPlanTargetKind.Workflow,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:7:    public Task<Result<Guid>> StartRunFromTriggerAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:8:        ProcessRunTriggerStartRequest request,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:33:    private static IReadOnlyList<Error> ValidateTriggerStartRequest(ProcessRunTriggerStartRequest request)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:36:        if (!Enum.IsDefined(typeof(ProcessRunTriggerSourceKind), request.TriggerSourceKind))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:50:        if (RequiresTriggerSourceId(request.TriggerSourceKind) &&
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:51:            (!request.TriggerSourceId.HasValue || request.TriggerSourceId.Value == Guid.Empty))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:61:    private static bool RequiresTriggerSourceId(ProcessRunTriggerSourceKind triggerSourceKind)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:63:        return triggerSourceKind is ProcessRunTriggerSourceKind.SchedulerPlan
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:64:            or ProcessRunTriggerSourceKind.WorkflowRun;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:67:    private static string BuildTriggerStartReason(ProcessRunTriggerStartRequest request)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:76:    private static string BuildTriggerSourceSummary(ProcessRunTriggerStartRequest request)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:82:        return request.TriggerSourceId.HasValue && request.TriggerSourceId.Value != Guid.Empty
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:83:            ? $"{request.TriggerSourceKind}{sourceName} ({request.TriggerSourceId.Value:D})"
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:777:public enum ProcessRunTriggerSourceKind
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:784:public sealed class ProcessRunTriggerStartRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:798:    public ProcessRunTriggerSourceKind TriggerSourceKind { get; set; } = ProcessRunTriggerSourceKind.Manual;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:800:    public Guid? TriggerSourceId { get; set; }
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:225:    public void Process_readonly_verification_multi_domain_harness_SB037_SB038_INV_001_proves_current_lane_producers_and_orchestrator_consumer()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:258:    public async Task StartRunFromTriggerAsync_SB038_INV_001_starts_workflow_origin_process_without_runtime_driver_hook()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:273:        var runResult = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:280:            TriggerSourceKind = ProcessRunTriggerSourceKind.WorkflowRun,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:281:            TriggerSourceId = workflowRunId,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:317:    public async Task StartRunFromTriggerAsync_SB038_INV_002_rejects_workflow_trigger_without_source_identity()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:323:        var result = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:326:            TriggerSourceKind = ProcessRunTriggerSourceKind.WorkflowRun,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:38:            TargetKind = SchedulerPlanTargetKind.Process,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:54:            item.EventType == nameof(SchedulerPlanTargetKind.Process) &&
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:83:                TargetKind = SchedulerPlanTargetKind.Process,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:131:            TargetKind = SchedulerPlanTargetKind.Process,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:184:            SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:210:            TargetKind = SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:270:            SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:296:            TargetKind = SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:373:            TargetKind = SchedulerPlanTargetKind.Process,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:443:            TargetKind = SchedulerPlanTargetKind.Process,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:512:            TargetKind = SchedulerPlanTargetKind.Process,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:559:    public async Task Target_launcher_starts_real_process_run()
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:572:            CreatePlan(SchedulerPlanTargetKind.Process, targetId, null, "Real process launch proof"),
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:581:        Assert.Equal(SchedulerPlanTargetKind.Process, result.TargetKind);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:585:        Assert.Contains("Requested by scheduler-planner", processRun.TriggerReason, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:590:    public async Task Target_launcher_starts_real_workflow_run()
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:604:                SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:612:        Assert.Equal(SchedulerPlanTargetKind.Workflow, result.TargetKind);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:629:            SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:645:        Assert.Equal(SchedulerPlanTargetKind.Workflow, result.TargetKind);
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:666:            SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:774:            TargetKind = SchedulerPlanTargetKind.Workflow,
+tests\CanDoItAll.Tests.Integration\SchedulerPlannerIntegrationTests.cs:810:            TargetKind = SchedulerPlanTargetKind.Workflow,

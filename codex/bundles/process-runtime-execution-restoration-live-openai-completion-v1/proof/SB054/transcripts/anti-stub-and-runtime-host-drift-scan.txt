@@ -1,0 +1,13 @@
+Command:
+rg -n "IProcessRuntimeDriver|ProcessRuntimeDriver|RuntimeDriverHost|ProcessRuntimeDriverHost|execution-capable driver|driver runtime hook|driver mutation|AddHostedService<.*RuntimeDriver|AddHostedService<.*DriverHost|ProcessDriverRuntimeHost" src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Integration tests\CanDoItAll.Tests.Playwright -g "*.cs" -g "*.razor" -g "*.md"
+
+Exit code: 0
+Classification: expected documentation-only denial matches in `src/CanDoItAll.Modules.Processes/README.md`.
+
+Matches:
+- `src/CanDoItAll.Modules.Processes/README.md:142` states source scans found no runtime host/driver mutation surface.
+- `src/CanDoItAll.Modules.Processes/README.md:161` lists execution-capable drivers as denied until a future gate.
+- `src/CanDoItAll.Modules.Processes/README.md:200` introduces open blockers before execution-capable drivers.
+- `src/CanDoItAll.Modules.Processes/README.md:205` requires future approval proof for execution-capable drivers.
+
+Result: no production runtime host implementation, hook, registration, or mutation surface was found; the only matches are blocker/denial documentation.

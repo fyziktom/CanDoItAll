@@ -1,0 +1,19 @@
+# SB033 Source Assertions
+
+## Command
+`rg -n "Project_structure_process_run_output_SB012_INV_002_opens_project_processes_from_output_folder_node|process-run-output|SB012BrowserOutput|ManagedStoragePath|processes-run-history-item|processes-selected-run-summary|ProjectStructureProcessNodeStartResult" tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureProcesses.cs`
+
+## Matches
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:17` defines the focused browser proof test.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:69` starts the process from a project-structure node and reads `ProjectStructureProcessNodeStartResult`.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:88` builds the scoped managed output path under `output/scopes/project/{projectId}/process-runs/{runId}/SB012BrowserOutput/index.html`.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:102` sends the managed storage path in the artifact record request.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:132` waits for the projected output node containing `SB012BrowserOutput`.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:134` asserts the projected output node id starts with `process-run-output:`.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:162` waits for the opened run history item.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:174` waits for the selected run summary.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:178` asserts selected run summary includes the source work item title.
+- `tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectStructureProcesses.cs:434` filters canvas nodes by `process-run-output:`.
+
+## Source Interpretation
+The proof covers the real public project-structure/process APIs and browser route. It does not use report-only status, driver runtime hooks, or direct database seeding for the asserted behavior.

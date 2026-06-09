@@ -1,0 +1,16 @@
+# SB045 Hosted Worker Policy Test Transcript
+
+## Command
+`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~RuntimeHostedWorkerPolicyIntegrationTests" --logger "trx;LogFileName=SB045-hosted-worker-policy.trx" --results-directory codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB045`
+
+## Result
+- Exit code: `0`
+- Failed: `0`
+- Passed: `5`
+- Skipped: `0`
+- Total: `5`
+- Duration: `600 ms`
+- TRX: `bundle://proof/SB045/SB045-hosted-worker-policy.trx`
+
+## Interpretation
+Normal process hosted workers remain lane-gated by runtime policy. This is not a process driver runtime host approval.

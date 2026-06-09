@@ -1,7 +1,7 @@
 # SB054 - Gate R: docs/source parity
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Gate R: docs/source parity.
@@ -27,10 +27,10 @@ Gate R: docs/source parity.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Critical foundation gate with semantic adequacy proof, manifests, changed-file hashes, transcripts, positive and negative proof.
+- Critical foundation gate with semantic adequacy proof, manifests, changed-file hashes, transcripts, positive and negative proof.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -52,12 +52,12 @@ Critical foundation gate with semantic adequacy proof, manifests, changed-file h
 - Do not replace runtime proof with docs-only proof.
 
 ## Acceptance Checklist
-- [ ] Objective closed.
-- [ ] Tests pass.
-- [ ] Source scan passes.
-- [ ] No forbidden runtime host or driver mutation surface.
-- [ ] Execution report updated.
-- [ ] Critical manifest and semantic invariants completed.
+- [x] Objective closed.
+- [x] Tests pass.
+- [x] Source scan passes.
+- [x] No forbidden runtime host or driver mutation surface.
+- [x] Execution report updated.
+- [x] Critical manifest and semantic invariants completed.
 
 ## Proof Required
 - Build/test transcript paths.
@@ -67,10 +67,10 @@ Critical foundation gate with semantic adequacy proof, manifests, changed-file h
 - Semantic adequacy gate: shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit and raw-note closure.
 
 ## Browser Validation Logging
-N/A unless this subbundle changes browser-visible behavior.
+- N/A unless this subbundle changes browser-visible behavior.
 
 ## Progression Gate
-Must pass before the next phase may start.
+- Must pass before the next phase may start.
 
 ## Suggested Agent Prompt
 Implement SB054: Gate R: docs/source parity. Preserve all hard constraints and produce source-backed proof.

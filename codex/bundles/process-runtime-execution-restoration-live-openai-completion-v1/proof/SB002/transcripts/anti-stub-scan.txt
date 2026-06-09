@@ -1,0 +1,48 @@
+Command: rg -n "IProcessDriverRegistry|ProcessDriverRuntimeHost|ProcessDriverRegistry|ProcessDriverSelector|IProcessDriverSelector|Add.*Process.*Driver.*Runtime|process-driver runtime host|generic process-driver runtime host|NotImplementedException|throw new NotImplemented" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Unit tests/CanDoItAll.Tests.Integration -g "*.cs" -g "*.razor" -g "*.md"
+
+Output:
+src/CanDoItAll.Modules.Processes\README.md:112:Current support is intentionally process-service centered. Do not route UI, API, project-structure, scheduler, workflow, manager, or agent-tool starts through a process-driver runtime host, driver registry, runtime selector, or driver dependency-injection registration.
+src/CanDoItAll.Modules.Processes\README.md:134:The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
+src/CanDoItAll.Modules.Processes\README.md:153:- Generic process-driver runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, endpoint mapping, workspace/storage writes, external calls, process mutation, or execution-capable drivers.
+src/CanDoItAll.Modules.Processes\README.md:166:- A generic process-driver runtime host is not approved.
+tests/CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:176:        Assert.DoesNotContain("IProcessDriverRegistry", combinedAllowedSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverOfficeEvidenceAlphaTests.cs:167:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:165:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverMultiDomainCorpusTests.cs:810:            "IProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverMultiDomainCorpusTests.cs:811:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverVerificationGatewayTests.cs:748:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:57:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:59:            "ProcessDriverSelector",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:69:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:71:            "ProcessDriverSelector",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:129:            "ProcessDriverRuntimeHost",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:131:            "IProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:132:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:133:            "IProcessDriverSelector",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:134:            "ProcessDriverSelector",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:154:        Assert.Contains("That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.", roadmapSection, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:241:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1552:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1611:        Assert.DoesNotContain("ProcessDriverRegistry", combinedBoundarySource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2154:        Assert.DoesNotContain("IProcessDriverRegistry", combinedSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2821:        Assert.DoesNotContain("NotImplementedException", extractedSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2879:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4385:        Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4387:        Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:542:            "IProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:543:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverRuntimeEvidenceConsistencyAlphaTests.cs:347:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:369:        Assert.DoesNotContain("NotImplementedException", productionSource, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:737:            "IProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:738:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverPackageReadmeSamplesTests.cs:176:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1302:            categories.Add(ProcessDriverDiagnosticCategory.RuntimeProofGap);
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1451:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1476:            "IProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1477:            "ProcessDriverRegistry",
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1478:            "IProcessDriverSelector",
+tests/CanDoItAll.Tests.Unit\ProcessDriverArtifactEvidenceAlphaTests.cs:315:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\ProcessDriverBusinessAnalysisAlphaTests.cs:193:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests/CanDoItAll.Tests.Unit\TestData\Architecture\ProcessDriverMultiDomainVerificationGateway\reviews\01-execution-report.md:32:| SB020 | Passed | Passed | Checked | Passed | Added `CanDoItAll.Processes.Drivers.VerificationGateway` with explicit constructor/default factory and explicit `VerifyTranscript`/`VerifyRuntimeEvidence` methods for the two implemented lanes only. Focused gateway tests passed 2/2; source scan proves no generic dispatch, object payload, DI, registry, selector, runtime host, or manager surface. Proof: `bundle://proof/SB020/manifest.md`. |
+
+ExitCode: 0

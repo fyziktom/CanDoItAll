@@ -1,0 +1,11 @@
+# SB036 No Transient Bundle Path Scan
+
+## Command
+`rg -n "codex[/\\]bundles|C:\\repositories\\CanDoItAll\\codex|process-runtime-execution-restoration-live-openai-completion-v1" src tests -g "*.cs" -g "*.razor"`
+
+## Result
+- Exit code: `1`
+- Matches: none
+
+## Interpretation
+No C# or Razor source under `src` or `tests` references the active bundle path, the absolute local Codex bundle folder, or `codex/bundles`.

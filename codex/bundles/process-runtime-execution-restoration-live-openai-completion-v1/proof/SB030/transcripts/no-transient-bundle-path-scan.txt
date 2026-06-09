@@ -1,0 +1,11 @@
+# SB030 No Transient Bundle-Path Scan
+
+## Command
+`rg -n "codex[/\\]bundles|C:\\repositories\\CanDoItAll\\codex|process-runtime-execution-restoration-live-openai-completion-v1" src tests\CanDoItAll.Tests.Playwright -g "*.cs" -g "*.razor"`
+
+## Result
+- Exit code: 1
+- Meaning: no matches.
+
+## Conclusion
+No `src` or Playwright source file references the active bundle path, `codex/bundles`, or the absolute bundle directory. The new proof test writes screenshots under `output/playwright/process-run-detail-recovery-sb030` and the bundle workflow copies those artifacts into `proof/SB030/screenshots` outside product runtime code.

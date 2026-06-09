@@ -1,0 +1,6 @@
+Command:
+rg -n "codex[/\\]bundles|C:\\repositories\\CanDoItAll\\codex|process-runtime-execution-restoration-live-openai-completion-v1" src tests -g "*.cs" -g "*.razor"
+
+
+Exit code: 1
+Result: no matches. Final handoff did not introduce transient bundle-path references in source or tests.

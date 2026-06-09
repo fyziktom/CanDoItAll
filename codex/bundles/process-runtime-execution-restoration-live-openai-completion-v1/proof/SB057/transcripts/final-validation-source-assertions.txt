@@ -1,0 +1,17 @@
+Command: Gate S source-backed final validation assertions
+
+Gate Q manifest exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB051\manifest.md
+Gate R manifest exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB054\manifest.md
+Release-candidate build transcript exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB049\transcripts\release-candidate-solution-build.txt
+Full unit transcript exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB049\transcripts\release-candidate-full-unit-tests.txt
+Focused integration transcript exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB049\transcripts\release-candidate-focused-integration-tests.txt
+Large desktop Playwright transcript exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB050\transcripts\large-desktop-playwright-matrix.txt
+Docs/source parity transcript exists: exists=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB054\transcripts\docs-source-parity-assertions.txt
+Restoration ledger exists: exists=True path=docs\process-runtime-restoration-ledger.md
+
+Report has Gate Q solved row: matched=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\reviews\01-execution-report.md
+Report has Gate R solved row: matched=True path=codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\reviews\01-execution-report.md
+Ledger blocks execution-capable drivers: matched=True path=docs\process-runtime-restoration-ledger.md
+Processes README denies generic runtime host: matched=True path=src\CanDoItAll.Modules.Processes\README.md
+
+Result: passed. Gate S final validation is anchored to current release-candidate proof, docs/source parity proof, and explicit runtime-host denial.

@@ -1,0 +1,20 @@
+# SB036 Source Assertions
+
+## Command
+`rg -n "ProcessManagerReadOnlyVerificationProjection|ProcessReadOnlyVerificationBatchModels|allowedDriverConsumerFiles|Assert\.Equal\(allowedDriverConsumerFileNames|Process_manager_readonly_projection|Process_runtime_evidence_readonly_adapter_SB030_INV_003" tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchModels.cs`
+
+## Matches
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerReadOnlyVerificationProjection.cs:9` defines the mapper.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerReadOnlyVerificationProjection.cs:34` projects from `SuppliedEvidenceOnly`.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerReadOnlyVerificationProjection.cs:36` attaches diagnostics only in diagnostics mode.
+- `src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerReadOnlyVerificationProjection.cs:39` attaches the evidence envelope only in evidence-envelope mode.
+- `tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs:591` proves diagnostics projection without mutation.
+- `tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs:626` proves evidence envelope attachment only when requested.
+- `tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs:669` proves attached manager projection rejects missing manager identity.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:108` defines the strict driver-consumer allowlist test.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:126` includes `ProcessManagerReadOnlyVerificationProjection.cs` in the audited allowlist.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:129` includes `ProcessReadOnlyVerificationBatchModels.cs` in the audited allowlist.
+- `tests/CanDoItAll.Tests.Integration/ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:165` asserts the allowed file list equals actual driver-consuming files.
+
+## Source Interpretation
+Manager diagnostics are typed and read-only. The allowlist test now fails on any unapproved process-module file that imports process driver packages while allowing the two current manager read-only projection/model files explicitly.

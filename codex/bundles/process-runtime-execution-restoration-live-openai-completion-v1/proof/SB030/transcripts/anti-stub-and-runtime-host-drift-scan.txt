@@ -1,0 +1,11 @@
+# SB030 Anti-Stub And Runtime-Host Drift Scan
+
+## Command
+`rg -n "IProcessRuntimeDriver|ProcessRuntimeDriver|RuntimeDriverHost|ProcessRuntimeDriverHost|execution-capable driver|driver runtime hook|driver mutation|AddHostedService<.*RuntimeDriver|AddHostedService<.*DriverHost|ProcessDriverRuntimeHost" src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Playwright -g "*.cs" -g "*.razor"`
+
+## Result
+- Exit code: 1
+- Meaning: no matches.
+
+## Conclusion
+SB030 introduced no process runtime driver host, execution-capable driver, driver mutation surface, registry/selector runtime path, or hosted driver service. The only source change is a Playwright proof test that uses public process API routes and browser-visible UI readback.

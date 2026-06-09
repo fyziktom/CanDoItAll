@@ -1,0 +1,7 @@
+Command: rg -n "codex[/\\]bundles|process-runtime-live-e2e-openai-hardening-v1|process-runtime-execution-restoration-live-openai-completion-v1" src tests
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant ID: SB006_INV_001
+
+Output:
+
+ExitCode: 1

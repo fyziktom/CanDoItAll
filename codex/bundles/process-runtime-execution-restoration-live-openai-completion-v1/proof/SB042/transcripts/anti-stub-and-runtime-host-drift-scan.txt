@@ -1,0 +1,11 @@
+# SB042 Anti-Stub And Runtime Host Drift Scan
+
+## Command
+`rg -n "IProcessRuntimeDriver|ProcessRuntimeDriver|RuntimeDriverHost|ProcessRuntimeDriverHost|execution-capable driver|driver runtime hook|driver mutation|AddHostedService<.*RuntimeDriver|AddHostedService<.*DriverHost|ProcessDriverRuntimeHost" src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Integration -g "*.cs" -g "*.razor"`
+
+## Result
+- Exit code: `1`
+- Matches: none
+
+## Interpretation
+No scoped source or integration test file contains the forbidden runtime driver host, driver hook, or execution-capable process runtime driver surface for the Core/domain boundary gate.

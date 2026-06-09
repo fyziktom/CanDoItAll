@@ -1,0 +1,39 @@
+Command: rg -n "Process_mock_runtime_runs_deterministic_mock_rejection_repair_and_approval|Process_mock_developer_single_agent_writes_change_set_and_db_free_rollout_artifacts|Process_mock_three_agent_artifact_handoff|Process_mock_workflow_process_completes|MockApp/ValidationEngine.cs|ValidationEngine|Implementation change set|Migration and rollout preparation checklist|throw new ArgumentException|No data migration required" tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs src\CanDoItAll.Modules.Processes -g "*.cs"
+WorkingDirectory: C:\repositories\CanDoItAll
+Output:
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:163:    public async Task Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch() {
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:368:    public async Task Process_mock_three_agent_artifact_handoff_completes_required_outputs_without_full_delivery_process()
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:475:            "ValidationEngine.cs",
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:483:            "No data migration required",
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:487:            $"{ProcessMockAgentCatalog.OutputRoot}/{ResolveProcessMockRunKey(runId)}/MockApp/ValidationEngine.cs",
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:491:        Assert.Contains("public sealed class ValidationEngine", validationEngine.Content, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:540:    public async Task Process_mock_runtime_runs_deterministic_mock_rejection_repair_and_approval()
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:577:        var repairedEngine = fileService.ReadTextFile("output/process-mock/mockrun001/MockApp/ValidationEngine.cs", 8000);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:579:        Assert.Contains("throw new ArgumentException", repairedEngine.Content, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:594:    public async Task Process_mock_developer_single_agent_writes_change_set_and_db_free_rollout_artifacts()
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:613:                - Implementation change set
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:614:                - Migration and rollout preparation checklist
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:618:        Assert.Contains("## Implementation change set", implementation.ResponseText, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:619:        Assert.Contains("## Migration and rollout preparation checklist", implementation.ResponseText, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:620:        Assert.Contains("No data migration required", implementation.ResponseText, StringComparison.OrdinalIgnoreCase);
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:112:            throw new ArgumentException("Run id is required.", nameof(query));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:158:            throw new ArgumentException("Run id is required.", nameof(query));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:163:            throw new ArgumentException("Step run id is required.", nameof(query));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:187:            throw new ArgumentException("Run id is required.", nameof(query));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:240:            throw new ArgumentException("Dialog descriptor must include a process run id.", nameof(query));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:259:                    throw new ArgumentException("Stage detail dialogs must include a step run id.", nameof(query));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:165:            throw new ArgumentException("Process automation execution requires a technical agent id.", nameof(request));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:170:            throw new ArgumentException("Process automation execution requires a prompt.", nameof(request));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs:374:            throw new ArgumentException("Process run id is required.", nameof(query));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessManagerChatService.cs:379:            throw new ArgumentException("Process definition id is required.", nameof(query));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateAssemblyContext.cs:76:            throw new ArgumentException("Direct-agent candidate requires a technical agent id.", nameof(directAgentFacts));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchGuardLease.cs:29:            throw new ArgumentException("Step run id is required.", nameof(stepRunId));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchPreExecutionGuardHandler.cs:79:            throw new ArgumentException("Missing upstream artifact block transition requires at least one missing input.", nameof(plan));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchLeaseHeartbeat.cs:42:            throw new ArgumentException("Step run id is required.", nameof(stepRunId));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:152:            ?? throw new ArgumentException("A materialization target is required to build a rerun request.", nameof(facts));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMissingUpstreamArtifactMaterialization.cs:167:            ?? throw new ArgumentException("A materialization target is required to build a rerun directive.", nameof(facts));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:25:            throw new ArgumentException("Attached manager verification projections require a requesting manager identity.", nameof(request));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchModels.cs:20:            throw new ArgumentException("Caller context is required.", nameof(callerContext));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:264:            throw new ArgumentException("A non-empty value is required.", parameterName);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:274:            throw new ArgumentException("Supplied evidence content is required.", parameterName);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionPrompt.cs:756:            builder.AppendLine("- The migration/rollout checklist is required even when the implemented app has no database or persistent data. If no data migration is needed, say `No data migration required` and still name data changes, operational preconditions, validation evidence, and rollback steps.");

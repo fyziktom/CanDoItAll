@@ -1,7 +1,7 @@
 # SB033 - Gate K: project-structure E2E
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Gate K: project-structure E2E.
@@ -27,10 +27,10 @@ Gate K: project-structure E2E.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Critical foundation gate with semantic adequacy proof, manifests, changed-file hashes, transcripts, positive and negative proof.
+- Critical foundation gate with semantic adequacy proof, manifests, changed-file hashes, transcripts, positive and negative proof.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -52,12 +52,20 @@ Critical foundation gate with semantic adequacy proof, manifests, changed-file h
 - Do not replace runtime proof with docs-only proof.
 
 ## Acceptance Checklist
-- [ ] Objective closed.
-- [ ] Tests pass.
-- [ ] Source scan passes.
-- [ ] No forbidden runtime host or driver mutation surface.
-- [ ] Execution report updated.
-- [ ] Critical manifest and semantic invariants completed.
+- [x] Objective closed.
+- [x] Tests pass.
+- [x] Source scan passes.
+- [x] No forbidden runtime host or driver mutation surface.
+- [x] Execution report updated.
+- [x] Critical manifest and semantic invariants completed.
+
+## Completion Evidence
+- Critical manifest: `bundle://proof/SB033/manifest.md`
+- Semantic invariants: `bundle://proof/SB033/semantic-invariants.md`
+- Test transcript: `bundle://proof/SB033/transcripts/project-structure-run-output-test.txt`
+- TRX: `bundle://proof/SB033/SB033-project-structure-run-output.trx`
+- Screenshots: `bundle://proof/SB033/screenshots/01-structure-run-output-node-large-desktop.png`, `bundle://proof/SB033/screenshots/02-run-output-quick-actions-large-desktop.png`, `bundle://proof/SB033/screenshots/03-run-output-process-workspace-before-history-wait-large-desktop.png`, `bundle://proof/SB033/screenshots/03-run-output-process-workspace-large-desktop.png`
+- Red-team negative proof: `bundle://proof/SB033/red-team/shallow-projection-proof-rejected.md`
 
 ## Proof Required
 - Build/test transcript paths.
@@ -67,10 +75,10 @@ Critical foundation gate with semantic adequacy proof, manifests, changed-file h
 - Semantic adequacy gate: shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit and raw-note closure.
 
 ## Browser Validation Logging
-N/A unless this subbundle changes browser-visible behavior.
+- N/A unless this subbundle changes browser-visible behavior.
 
 ## Progression Gate
-Must pass before the next phase may start.
+- Must pass before the next phase may start.
 
 ## Suggested Agent Prompt
 Implement SB033: Gate K: project-structure E2E. Preserve all hard constraints and produce source-backed proof.

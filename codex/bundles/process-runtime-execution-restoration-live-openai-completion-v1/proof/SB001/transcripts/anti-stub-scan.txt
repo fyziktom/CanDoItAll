@@ -1,0 +1,13 @@
+Command: rg -n "IProcessDriverRegistry|ProcessDriverRuntimeHost|ProcessDriverRegistry|ProcessDriverSelector|IProcessDriverSelector|Add.*Process.*Driver.*Runtime|process-driver runtime host|generic process-driver runtime host|NotImplementedException|throw new NotImplemented|TODO" src/CanDoItAll.Modules.Processes tests/CanDoItAll.Tests.Integration tests/CanDoItAll.Tests.Playwright -g "*.cs" -g "*.razor" -g "*.md"
+
+Output:
+tests/CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:176:        Assert.DoesNotContain("IProcessDriverRegistry", combinedAllowedSource, StringComparison.Ordinal);
+src/CanDoItAll.Modules.Processes\README.md:112:Current support is intentionally process-service centered. Do not route UI, API, project-structure, scheduler, workflow, manager, or agent-tool starts through a process-driver runtime host, driver registry, runtime selector, or driver dependency-injection registration.
+src/CanDoItAll.Modules.Processes\README.md:134:The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
+src/CanDoItAll.Modules.Processes\README.md:153:- Generic process-driver runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, endpoint mapping, workspace/storage writes, external calls, process mutation, or execution-capable drivers.
+src/CanDoItAll.Modules.Processes\README.md:166:- A generic process-driver runtime host is not approved.
+tests/CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16893:            "Operations TODO register",
+tests/CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16895:            "Create a TODO register with owners, dates, and follow-up actions.");
+tests/CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16905:            ReviewSummary = "TODO register with concrete owners and dates.",
+
+ExitCode: 0

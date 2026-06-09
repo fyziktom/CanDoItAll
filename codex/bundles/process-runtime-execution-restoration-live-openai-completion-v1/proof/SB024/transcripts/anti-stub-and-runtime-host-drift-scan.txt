@@ -1,0 +1,127 @@
+Command: rg -n "ProcessDriverRuntimeHost|IProcessDriverRuntimeHost|ProcessDriverRegistry|ProcessDriverSelector|NotImplementedException|TODO|throw new NotSupportedException" src\CanDoItAll.Modules.Processes tests -g "*.cs"
+Expected: no production execution-capable process-driver runtime host/registry/selector or placeholder implementation. Matches, if any, must be docs/negative tests/non-runtime guard code.
+Output:
+tests\CanDoItAll.Tests.Integration\AgentFrameworkExecutionRunTrackingIntegrationTests.cs:944:            throw new NotSupportedException("Pending approval continuation is not used by this regression test.");
+tests\CanDoItAll.Tests.Unit\AgentContextContributionTests.cs:724:            => throw new NotSupportedException("Unit tests only read cognitive memory automation settings.");
+tests\CanDoItAll.Tests.Integration\CognitiveMemoryTaxonomyPersistenceModelTests.cs:334:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\CognitiveMemoryTaxonomyPersistenceModelTests.cs:339:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Support\TestApplicationBootstrap.cs:113:            throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+tests\CanDoItAll.Tests.Support\TestApplicationBootstrap.cs:118:            throw new NotSupportedException($"JavaScript interop '{identifier}' is not available in this test harness.");
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryOperationalServicesTests.cs:934:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryAdvancedServicesTests.cs:3315:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\AgentVoiceTests.cs:609:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\AgentVoiceTests.cs:614:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\AgentVoiceTests.cs:619:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\AgentVoiceTests.cs:627:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:137:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:142:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:147:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:152:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:157:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ImageGenerationAgentRuntimeToolProviderTests.cs:165:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\DefaultStorageRoutingServiceTests.cs:186:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\DefaultStorageRoutingServiceTests.cs:189:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\DefaultStorageRoutingServiceTests.cs:195:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\MafAgentRuntimeTests.cs:2212:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:313:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\CognitiveMemoryTaxonomyTests.cs:318:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\ProcessDriverVerificationGatewayTests.cs:748:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1451:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1476:            "IProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1477:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1478:            "IProcessDriverSelector",
+tests\CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:542:            "IProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:543:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverBusinessAnalysisAlphaTests.cs:193:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverRuntimeEvidenceConsistencyAlphaTests.cs:347:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverArtifactEvidenceAlphaTests.cs:315:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverPackageReadmeSamplesTests.cs:176:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverOfficeEvidenceAlphaTests.cs:167:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\PluginCatalogIntegrationTests.cs:1747:                _ => throw new NotSupportedException($"Unsupported workflow executor proxy member '{targetMethod?.Name}'.")
+tests\CanDoItAll.Tests.Unit\ProcessDriverObservationAggregationTests.cs:165:        Assert.DoesNotContain("ProcessDriverRegistry", source, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:57:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:59:            "ProcessDriverSelector",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:69:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:71:            "ProcessDriverSelector",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:129:            "ProcessDriverRuntimeHost",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:131:            "IProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:132:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:133:            "IProcessDriverSelector",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:134:            "ProcessDriverSelector",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:241:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1185:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1551:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1552:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1611:        Assert.DoesNotContain("ProcessDriverRegistry", combinedBoundarySource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2154:        Assert.DoesNotContain("IProcessDriverRegistry", combinedSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2820:        Assert.DoesNotContain("TODO", extractedSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2821:        Assert.DoesNotContain("NotImplementedException", extractedSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2878:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2879:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4385:        Assert.DoesNotContain("IProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:4387:        Assert.DoesNotContain("ProcessDriverRegistry", dispatchSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverMultiDomainCorpusTests.cs:810:            "IProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverMultiDomainCorpusTests.cs:811:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:368:        Assert.DoesNotMatch(@"(?im)^\s*//\s*TODO\b|TODO\s*:", productionSource);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:369:        Assert.DoesNotContain("NotImplementedException", productionSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:737:            "IProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:738:            "ProcessDriverRegistry",
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:124:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:127:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:130:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:133:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:136:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:162:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:168:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:174:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageAccessServiceTests.cs:180:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProcessAutomationExecutionClientTests.cs:457:                _ => throw new NotSupportedException($"Unexpected workspace service call: {targetMethod.Name}.")
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:585:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:592:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:599:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowCatalogTests.cs:607:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:176:        Assert.DoesNotContain("IProcessDriverRegistry", combinedAllowedSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16893:            "Operations TODO register",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16895:            "Create a TODO register with owners, dates, and follow-up actions.");
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16905:            ReviewSummary = "TODO register with concrete owners and dates.",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21925:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21930:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21940:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:21994:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:22011:            throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1965:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1971:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1976:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:1982:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2004:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2009:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2014:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\WorkflowExecutorTests.cs:2020:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:137:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:140:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:143:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:146:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:149:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:152:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:155:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:181:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:187:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:193:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StorageTransferPipelineTests.cs:199:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:101:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:104:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:107:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:113:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:162:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:196:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Unit\StoragePlacementServiceTests.cs:202:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1866:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1872:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1877:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1883:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1914:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1919:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1924:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1930:            => throw new NotSupportedException();
+tests\CanDoItAll.Tests.Components\CognitiveMemoryPageTests.cs:923:            => throw new NotSupportedException();
+ExitCode: 0

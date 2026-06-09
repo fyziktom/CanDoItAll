@@ -1,0 +1,23 @@
+Command: critical subbundle status/manifest/semantic proof index for completed gates through SB054
+Status parser: accepts either '- Completed' bullet or bare 'Completed.' line under ## Status.
+
+SB003|statusCompleted=True|manifest=True|semantic=True
+SB006|statusCompleted=True|manifest=True|semantic=True
+SB009|statusCompleted=True|manifest=True|semantic=True
+SB012|statusCompleted=True|manifest=True|semantic=True
+SB015|statusCompleted=True|manifest=True|semantic=True
+SB018|statusCompleted=True|manifest=True|semantic=True
+SB021|statusCompleted=True|manifest=True|semantic=True
+SB024|statusCompleted=True|manifest=True|semantic=True
+SB027|statusCompleted=True|manifest=True|semantic=True
+SB030|statusCompleted=True|manifest=True|semantic=True
+SB033|statusCompleted=True|manifest=True|semantic=True
+SB036|statusCompleted=True|manifest=True|semantic=True
+SB039|statusCompleted=True|manifest=True|semantic=True
+SB042|statusCompleted=True|manifest=True|semantic=True
+SB045|statusCompleted=True|manifest=True|semantic=True
+SB048|statusCompleted=True|manifest=True|semantic=True
+SB051|statusCompleted=True|manifest=True|semantic=True
+SB054|statusCompleted=True|manifest=True|semantic=True
+
+Result: passed. All completed critical gates through SB054 have completed status, manifest, and semantic invariant proof.

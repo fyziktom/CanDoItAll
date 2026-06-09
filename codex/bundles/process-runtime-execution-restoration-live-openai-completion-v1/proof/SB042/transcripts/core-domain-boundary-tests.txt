@@ -1,0 +1,17 @@
+# SB042 Core Domain Boundary Test Transcript
+
+## Command
+`dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests|FullyQualifiedName~ProcessDomainEvidenceReadOnlyAdapterTests" --logger "trx;LogFileName=SB042-core-domain-boundary.trx" --results-directory codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB042`
+
+## Result
+- Exit code: `0`
+- Failed: `0`
+- Passed: `17`
+- Skipped: `0`
+- Total: `17`
+- Duration: `288 ms`
+- TRX: `bundle://proof/SB042/SB042-core-domain-boundary.trx`
+
+## Covered Test Classes
+- `ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests`
+- `ProcessDomainEvidenceReadOnlyAdapterTests`

@@ -1,0 +1,4 @@
+Command: rg -n "codex[/\\]bundles|process-runtime-execution-restoration-live-openai-completion-v1|process-runtime-live-e2e-openai-hardening-v1" src tests
+Expected: no matches in src/tests. rg exit code 1 means no matches.
+Output:
+ExitCode: 1

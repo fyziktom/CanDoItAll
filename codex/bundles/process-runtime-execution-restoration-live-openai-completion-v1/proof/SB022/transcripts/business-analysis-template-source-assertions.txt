@@ -1,0 +1,53 @@
+Command: rg -n "Business_plan_template_includes_atomic_product_evidence_review|Business_plan_process_runs_with_business_artifacts_evidence_and_statuses|business-plan-development|Product evidence assessment|Financial model and sensitivity note|Go-to-market and experiment plan|Integrated business plan review|Business strategist|Financial strategist|Marketing specialist|MutateProductTarget|Business plan" tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs src\CanDoItAll.Modules.Processes -g "*.cs"
+WorkingDirectory: C:\repositories\CanDoItAll
+Output:
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:15:    public async Task Business_plan_template_includes_atomic_product_evidence_review()
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:22:            "business-plan-development",
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:23:            definitionName: "Business plan product evidence validation");
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:33:        var productArtifact = Assert.Single(productReview.ArtifactExpectations, artifact => artifact.Title == "Product evidence assessment");
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:39:    public async Task Business_plan_process_runs_with_business_artifacts_evidence_and_statuses()
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:52:            "business-plan-development",
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:55:        var definition = envelope.Definition ?? throw new InvalidOperationException("Business plan process definition was not projected.");
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:57:        Assert.DoesNotContain(definition.Steps, step => step.AllowedOperations.Contains(ProcessStepOperation.MutateProductTarget));
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:130:                "business-plan-development",
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:175:            Name = "Business plan PostgreSQL validation project",
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:225:            artifact => artifact.Title == "Product evidence assessment" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:229:            artifact => artifact.Title == "Financial model and sensitivity note" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:233:            artifact => artifact.Title == "Go-to-market and experiment plan" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:237:            artifact => artifact.Title == "Integrated business plan review" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:241:            assignment => assignment.RoleDisplayName == "Business strategist" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:245:            assignment => assignment.RoleDisplayName == "Financial strategist" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:249:            assignment => assignment.RoleDisplayName == "Marketing specialist" &&
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:252:        var businessPlanArtifact = Assert.Single(runDetails.Artifacts, artifact => artifact.Title == "Business plan");
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:397:            "Product evidence assessment" => ProcessArtifactKind.Evidence,
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:398:            "Business plan" => ProcessArtifactKind.Deliverable,
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:399:            "Financial model and sensitivity note" => ProcessArtifactKind.Dataset,
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:400:            "Go-to-market and experiment plan" => ProcessArtifactKind.Deliverable,
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:401:            "Integrated business plan review" => ProcessArtifactKind.Decision,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:145:        if (operations.Contains(ProcessStepOperation.MutateProductTarget))
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:162:            !operations.Contains(ProcessStepOperation.MutateProductTarget))
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:181:                operations.Add(ProcessStepOperation.MutateProductTarget);
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:221:        if (operations.Contains(ProcessStepOperation.MutateProductTarget) &&
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:229:                $"Operation {ProcessStepOperation.MutateProductTarget} requires a mutable product target scope, not {targetScope}."));
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:249:            operations.Contains(ProcessStepOperation.MutateProductTarget))
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:253:                $"Operation {ProcessStepOperation.RecoverArtifactsOnly} cannot be combined with {ProcessStepOperation.MutateProductTarget}."));
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:108:                "Move product mutation into a separate Work step, or state an explicit operation contract such as allowed operation MutateProductTarget and target scope ExternalProductTargetMutable.");
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionLinter.cs:168:            "Add explicit allowed operations and target scope in the step notes or contract, for example WriteManagedProcessArtifact for report-only work or MutateProductTarget with a grounded mutable product target.");
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:47:    MutateProductTarget,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:8:    bool CanMutateProductTarget,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:15:        new(ProcessStepOperation.ReadProcessContext, null, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:16:        new(ProcessStepOperation.ReadProjectStructure, ProcessStepTargetScope.ExternalProductTargetReadOnly, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:17:        new(ProcessStepOperation.ReadUpstreamArtifacts, null, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:18:        new(ProcessStepOperation.WriteManagedProcessArtifacts, ProcessStepTargetScope.ManagedProcessArtifactsOnly, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:19:        new(ProcessStepOperation.WriteExternalArtifactDestination, ProcessStepTargetScope.ExternalArtifactDestination, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:20:        new(ProcessStepOperation.MutateProductTarget, ProcessStepTargetScope.ExternalProductTargetMutable, CanMutateProductTarget: true, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:21:        new(ProcessStepOperation.RunValidation, null, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:22:        new(ProcessStepOperation.LaunchRuntime, null, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:23:        new(ProcessStepOperation.CaptureRuntimeProof, null, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:24:        new(ProcessStepOperation.ExecuteExternalAction, ProcessStepTargetScope.ExternalActionControlled, CanMutateProductTarget: false, CanExecuteExternalAction: true),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:25:        new(ProcessStepOperation.RecoverArtifactsOnly, ProcessStepTargetScope.ManagedProcessArtifactsOnly, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:26:        new(ProcessStepOperation.EscalateOrDecide, null, CanMutateProductTarget: false, CanExecuteExternalAction: false)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:26:            AllowedOperations.Contains(ProcessStepOperation.MutateProductTarget) ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:421:            operations.Add(ProcessStepOperation.MutateProductTarget);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:497:        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.MutateProductTarget, "mutateproducttarget", "mutate product target", "product mutation");
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionSnapshotMetadata.cs:44:            .Any(item => string.Equals(item, "MutateProductTarget", StringComparison.OrdinalIgnoreCase)))

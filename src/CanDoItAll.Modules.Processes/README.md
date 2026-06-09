@@ -133,6 +133,14 @@ Current status: `Not approved`.
 
 The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
 
+Release-candidate validation as of 2026-06-09:
+
+- `dotnet build CanDoItAll.slnx --configuration Debug` passed with 0 warnings and 0 errors.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build` passed with 1,134 tests.
+- A focused process integration matrix passed with 199 tests across run lifecycle, outbox dispatch, workflow/direct-agent execution, deterministic process scenarios, trigger-origin starts, read-only diagnostics, boundary guards, hosted-worker policy, and failure observability.
+- A focused Playwright matrix passed at 1900x1200 for global process start, blocked run recovery readback, and project-structure output navigation.
+- Source scans found no active bundle-path leakage and no process driver runtime host, registry, selector, manager command, endpoint mapping, scheduler hook, workflow hook, or driver mutation surface.
+
 Approved current shape:
 
 - Processes may call typed read-only verification adapters over already-loaded caller-supplied facts.
@@ -184,6 +192,17 @@ Use current-run readbacks before changing state. Start with run detail and narro
 | Project-structure output is too noisy or points to stale receipts | Inspect Workbench projection through `ProjectStructureProcessRunFolderProjectionPolicy`. | Project current-run managed roots and generated or external-delivery output roots; ignore wrong-run, dated receipt, traversal, absolute, and unanchored paths. |
 | A live UI-driven run looks seeded | Read the selected `ProcessTemplateLiveRunProfile` or `ProcessTemplateLiveRunProfileSummary.FreshRunPolicy`. | Reject baseline transitions/artifacts as live proof. Require current-run evidence checks before validation and project-structure writeback. |
 | Process tools are absent from an AgentFramework run | Inspect runtime DI for `IAgentRuntimeToolProvider`, confirm `ProcessAgentRuntimeToolProvider` is registered, check MAF progress for the provider key/display name and expected 23-tool attachment, and inspect receipt or trace `RuntimeToolProviderKey` when available. | Fix module/provider registration or agent process access metadata. Do not add a direct MAF reference to Processes. |
+
+## Migration Notes And Open Blockers
+
+Current migrations should use the process-owned service and read-only verification shape described above. Do not migrate callers to a process-driver runtime host.
+
+Open blockers before execution-capable drivers can be considered:
+
+- Runtime ownership, cancellation, retry ownership, failure handoff, and observability are not approved for driver-hosted execution.
+- Sandbox and allow-list policy are not defined for shell commands, package restore, file/network access, Office/Graph/CRM calls, workspace/storage writes, finalizer application, transition mutation, claim mutation, or retry scheduling.
+- Authorization, approval, revocation, emergency stop, dry-run behavior, audit persistence, and redaction evidence are not defined for driver-side mutation.
+- Public API/versioning, migration documentation, source guards, focused tests, and red-team proof for execution-capable drivers must be delivered in a future approval bundle.
 
 For API or agent-driven operation, prefer the HTTP `/api/processes` routes and the `candoitall-api-processes` skill. The old Processes MCP server is not the current control plane.
 

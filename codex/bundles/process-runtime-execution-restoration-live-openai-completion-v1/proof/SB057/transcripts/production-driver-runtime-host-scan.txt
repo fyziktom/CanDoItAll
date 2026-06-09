@@ -1,0 +1,6 @@
+Command:
+rg -n "IProcessDriverHost|ProcessDriverHost|ProcessDriverRuntimeHost|GenericProcessDriverHost|IProcessDriverRegistry|ProcessDriverRegistry|ProcessDriverRuntimeSelector|ProcessDriverManagerCommand|ProcessDriverServiceCollectionExtensions|AddProcessDriver|MapProcessDriver" src\CanDoItAll.Modules.Processes src\CanDoItAll.Processes.Drivers.Abstractions src\CanDoItAll.Processes.Drivers.ArtifactEvidence src\CanDoItAll.Processes.Drivers.BusinessAnalysis src\CanDoItAll.Processes.Drivers.OfficeEvidence src\CanDoItAll.Processes.Drivers.RuntimeEvidence src\CanDoItAll.Processes.Drivers.TranscriptVerification src\CanDoItAll.Processes.Drivers.VerificationGateway src\CanDoItAll.Processes.Drivers.ObservationAggregation src\CanDoItAll.Composition src\CanDoItAll.Web -g "*.cs" -g "*.csproj"
+
+
+Exit code: 1
+Result: no matches. Production source remains free of a process driver runtime host, registry, selector, manager command, or route registration surface.

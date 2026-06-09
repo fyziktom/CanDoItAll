@@ -1,7 +1,7 @@
 # SB030 - Gate J: run detail/recovery large desktop proof
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Gate J: run detail/recovery large desktop proof.
@@ -27,10 +27,10 @@ Gate J: run detail/recovery large desktop proof.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Critical foundation gate with semantic adequacy proof, manifests, changed-file hashes, transcripts, positive and negative proof.
+- Critical foundation gate with semantic adequacy proof, manifests, changed-file hashes, transcripts, positive and negative proof.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -52,12 +52,20 @@ Critical foundation gate with semantic adequacy proof, manifests, changed-file h
 - Do not replace runtime proof with docs-only proof.
 
 ## Acceptance Checklist
-- [ ] Objective closed.
-- [ ] Tests pass.
-- [ ] Source scan passes.
-- [ ] No forbidden runtime host or driver mutation surface.
-- [ ] Execution report updated.
-- [ ] Critical manifest and semantic invariants completed.
+- [x] Objective closed.
+- [x] Tests pass.
+- [x] Source scan passes.
+- [x] No forbidden runtime host or driver mutation surface.
+- [x] Execution report updated.
+- [x] Critical manifest and semantic invariants completed.
+
+## Completion Evidence
+- Critical manifest: `bundle://proof/SB030/manifest.md`
+- Semantic invariants: `bundle://proof/SB030/semantic-invariants.md`
+- Test transcript: `bundle://proof/SB030/transcripts/run-detail-recovery-ui-test.txt`
+- TRX: `bundle://proof/SB030/SB030-run-detail-recovery-ui.trx`
+- Browser screenshots: `bundle://proof/SB030/screenshots/01-selected-run-summary-large-desktop.png`, `bundle://proof/SB030/screenshots/02-step-recovery-diagnostics-large-desktop.png`, `bundle://proof/SB030/screenshots/03-artifact-ledger-large-desktop.png`
+- Red-team negative proof: `bundle://proof/SB030/red-team/shallow-ui-only-proof-rejected.md`
 
 ## Proof Required
 - Build/test transcript paths.
@@ -67,10 +75,10 @@ Critical foundation gate with semantic adequacy proof, manifests, changed-file h
 - Semantic adequacy gate: shallow-pass trap, adversarial negative proof, semantic positive proof, anti-stub audit and raw-note closure.
 
 ## Browser Validation Logging
-Large desktop Playwright proof required. Record route, viewport, actions, assertions and screenshot paths.
+- Large desktop Playwright proof required. Record route, viewport, actions, assertions and screenshot paths.
 
 ## Progression Gate
-Must pass before the next phase may start.
+- Must pass before the next phase may start.
 
 ## Suggested Agent Prompt
 Implement SB030: Gate J: run detail/recovery large desktop proof. Preserve all hard constraints and produce source-backed proof.

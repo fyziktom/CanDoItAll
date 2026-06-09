@@ -1,0 +1,178 @@
+docs\process-agent-operator-runbook.md:17:As of 2026-06-09, process-owned runtime paths have source-backed release-candidate proof for global UI launch, project-scoped launch, project-structure process start/output navigation, durable run lifecycle, outbox dispatch/finalization, artifact readback, deterministic software and business-analysis processes, scheduler/workflow-origin starts, read-only manager diagnostics, failure triage, and operator health readback.
+docs\process-agent-operator-runbook.md:19:The generic process-driver runtime host remains not approved. Operators should not use driver packages, driver registries, runtime selectors, manager commands, scheduler hooks, workflow hooks, or driver dependency-injection registration to start or mutate process runs.
+docs\process-agent-operator-runbook.md:48:- `RecoverArtifactsOnly` means the current step owns missing or invalid required output. Record or repair the current-run artifact instead of changing status text.
+docs\process-agent-operator-runbook.md:49:- `WaitForArtifactMaterialization` means an upstream step must produce required input. Do not force-complete the blocked step until the upstream artifact exists.
+docs\process-agent-operator-runbook.md:88:dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Release --filter "FullyQualifiedName~ProcessRuntimeOperatorReadModelTests"
+docs\process-agent-operator-runbook.md:98:dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessOutboxIntegrationTests|FullyQualifiedName~ProcessWorkflowExecutorIntegrationTests|FullyQualifiedName~ProcessMockAgentRuntimeIntegrationTests|FullyQualifiedName~SchedulerPlannerIntegrationTests|FullyQualifiedName~ProcessRuntimeOperatorReadModelTests"
+docs\process-agent-operator-runbook.md:99:dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --no-build --filter "FullyQualifiedName~Process_start_SB015_INV_001_large_screen_imports_template_and_executes_ready_launch_from_ui|FullyQualifiedName~Process_run_detail_recovery_SB030_large_screen_displays_blocked_recovery_and_artifact_readback|FullyQualifiedName~Project_structure_process_run_output_SB012_INV_002_opens_project_processes_from_output_folder_node"
+docs\process-runtime-restoration-ledger.md:5:As of 2026-06-09, the process-owned runtime restoration release candidate is source-backed for current UI, API, project-structure, scheduler, workflow-origin, operator readback, and deterministic execution paths.
+docs\process-runtime-restoration-ledger.md:12:- Scheduler and workflow-origin starts through `ProcessesService.StartRunFromTriggerAsync`.
+docs\process-runtime-restoration-ledger.md:23:- Full unit tests passed with 1,134 tests.
+docs\process-runtime-restoration-ledger.md:24:- Focused process integration matrix passed with 199 tests.
+docs\process-runtime-restoration-ledger.md:25:- Focused large-desktop Playwright matrix passed with 3 tests at 1900x1200 and 11 screenshot artifacts.
+docs\process-runtime-restoration-ledger.md:30:Use process-owned services, HTTP APIs, project-structure bridge routes, and typed read-only verification adapters. Do not migrate runtime launch, dispatch, finalization, recovery, manager operations, scheduler starts, workflow starts, or operator actions to a process-driver runtime host.
+docs\process-runtime-restoration-ledger.md:32:Read-only verification migration may use `ProcessReadOnlyVerificationBatchOrchestrator` with caller-supplied facts. It must stay diagnostic-only and must not mutate transitions, claims, finalizers, retries, artifacts, workspace files, storage, or external systems.
+docs\process-runtime-restoration-ledger.md:36:- Generic process-driver runtime host is not approved.
+src\CanDoItAll.Modules.Processes\README.md:53:- **Run lifecycle and transitions**: `ProcessesService.Runtime.*`, `ProcessRuntimeProgressionPlanner`, `ProcessStepTransitionGuard`, and `ProcessStepRunBlockState` own run start, step transitions, stop/rerun, dependency compatibility, and block-state classification.
+src\CanDoItAll.Modules.Processes\README.md:110:- Scheduler and workflow-origin starts use `ProcessesService.StartRunFromTriggerAsync(ProcessRunTriggerStartRequest)`, which validates `ProcessRunTriggerSourceKind`, requires source identity for scheduler/workflow triggers, and delegates to `StartRunAsync`.
+src\CanDoItAll.Modules.Processes\README.md:112:Current support is intentionally process-service centered. Do not route UI, API, project-structure, scheduler, workflow, manager, or agent-tool starts through a process-driver runtime host, driver registry, runtime selector, or driver dependency-injection registration.
+src\CanDoItAll.Modules.Processes\README.md:116:The current process-module integration path is `ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)`. It composes the focused read-only adapters directly and returns typed observation lists plus an aggregate observation when at least one lane produced a response.
+src\CanDoItAll.Modules.Processes\README.md:126:Migration from lane-by-lane adapter calls should keep request construction typed: create the relevant lane payloads, pass them into `ProcessReadOnlyVerificationBatchPayload`, then call `ProcessReadOnlyVerificationBatchOrchestrator.Verify`. Consume the returned lane observation lists, `Responses`, and `AggregateObservation` as diagnostic read-only evidence only.
+src\CanDoItAll.Modules.Processes\README.md:134:The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
+src\CanDoItAll.Modules.Processes\README.md:136:Release-candidate validation as of 2026-06-09:
+src\CanDoItAll.Modules.Processes\README.md:139:- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build` passed with 1,134 tests.
+src\CanDoItAll.Modules.Processes\README.md:140:- A focused process integration matrix passed with 199 tests across run lifecycle, outbox dispatch, workflow/direct-agent execution, deterministic process scenarios, trigger-origin starts, read-only diagnostics, boundary guards, hosted-worker policy, and failure observability.
+src\CanDoItAll.Modules.Processes\README.md:141:- A focused Playwright matrix passed at 1900x1200 for global process start, blocked run recovery readback, and project-structure output navigation.
+src\CanDoItAll.Modules.Processes\README.md:161:- Generic process-driver runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, endpoint mapping, workspace/storage writes, external calls, process mutation, or execution-capable drivers.
+src\CanDoItAll.Modules.Processes\README.md:174:- A generic process-driver runtime host is not approved.
+src\CanDoItAll.Modules.Processes\README.md:198:Current migrations should use the process-owned service and read-only verification shape described above. Do not migrate callers to a process-driver runtime host.
+src\CanDoItAll.Modules.Processes\README.md:202:- Runtime ownership, cancellation, retry ownership, failure handoff, and observability are not approved for driver-hosted execution.
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureProcesses.cs:17:    public async Task Project_structure_process_run_output_SB012_INV_002_opens_project_processes_from_output_folder_node()
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:239:            Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, listedStep.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:240:            Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, listedStep.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:263:        Assert.Equal((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, stepPayload.GetProperty("nextRecoveryAction").GetInt32());
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:265:            (int)ProcessStepRecoveryOption.RecoverArtifactsOnly,
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:268:            (int)ProcessStepRecoveryOption.WaitForArtifactMaterialization,
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:282:        Assert.Equal((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, healthPayload.GetProperty("recommendedAction").GetInt32());
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:340:        Assert.Equal((int)ProcessStepRecoveryOption.WaitForArtifactMaterialization, stepPayload.GetProperty("nextRecoveryAction").GetInt32());
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:341:        Assert.Contains((int)ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:342:        Assert.Contains((int)ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:345:        Assert.Equal((int)ProcessStepRecoveryOption.WaitForArtifactMaterialization, healthPayload.GetProperty("recommendedAction").GetInt32());
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs:77:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, apiDetail.Health!.RecommendedAction);
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs:81:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, apiStep.NextRecoveryAction);
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs:82:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, apiStep.RecoveryOptions);
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs:115:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly.ToString(), recoveryOptions, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs:148:    public async Task Process_start_SB015_INV_001_large_screen_imports_template_and_executes_ready_launch_from_ui() {
+tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs:480:                        ProcessStepOperation.RecoverArtifactsOnly
+src\CanDoItAll.Modules.Processes\Definitions\ProcessContractCatalog.cs:25:        new(ProcessStepOperation.RecoverArtifactsOnly, ProcessStepTargetScope.ManagedProcessArtifactsOnly, CanMutateProductTarget: false, CanExecuteExternalAction: false),
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:52:    RecoverArtifactsOnly,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:94:    WaitForArtifactMaterialization,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessDefinitionEnums.cs:95:    RecoverArtifactsOnly,
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:248:        if (operations.Contains(ProcessStepOperation.RecoverArtifactsOnly) &&
+src\CanDoItAll.Modules.Processes\Definitions\ProcessStepOperationContractState.cs:253:                $"Operation {ProcessStepOperation.RecoverArtifactsOnly} cannot be combined with {ProcessStepOperation.MutateProductTarget}."));
+src\CanDoItAll.Modules.Processes\Runtime\ProcessBlockStateClassifier.cs:115:                ProcessStepRecoveryOption.WaitForArtifactMaterialization,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessBlockStateClassifier.cs:116:                ProcessStepRecoveryOption.RecoverArtifactsOnly,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessBlockStateClassifier.cs:131:                ProcessStepRecoveryOption.RecoverArtifactsOnly,
+src\CanDoItAll.Modules.Processes\README.md:53:- **Run lifecycle and transitions**: `ProcessesService.Runtime.*`, `ProcessRuntimeProgressionPlanner`, `ProcessStepTransitionGuard`, and `ProcessStepRunBlockState` own run start, step transitions, stop/rerun, dependency compatibility, and block-state classification.
+src\CanDoItAll.Modules.Processes\README.md:110:- Scheduler and workflow-origin starts use `ProcessesService.StartRunFromTriggerAsync(ProcessRunTriggerStartRequest)`, which validates `ProcessRunTriggerSourceKind`, requires source identity for scheduler/workflow triggers, and delegates to `StartRunAsync`.
+src\CanDoItAll.Modules.Processes\README.md:112:Current support is intentionally process-service centered. Do not route UI, API, project-structure, scheduler, workflow, manager, or agent-tool starts through a process-driver runtime host, driver registry, runtime selector, or driver dependency-injection registration.
+src\CanDoItAll.Modules.Processes\README.md:116:The current process-module integration path is `ProcessReadOnlyVerificationBatchOrchestrator.Verify(ProcessReadOnlyVerificationBatchPayload)`. It composes the focused read-only adapters directly and returns typed observation lists plus an aggregate observation when at least one lane produced a response.
+src\CanDoItAll.Modules.Processes\README.md:126:Migration from lane-by-lane adapter calls should keep request construction typed: create the relevant lane payloads, pass them into `ProcessReadOnlyVerificationBatchPayload`, then call `ProcessReadOnlyVerificationBatchOrchestrator.Verify`. Consume the returned lane observation lists, `Responses`, and `AggregateObservation` as diagnostic read-only evidence only.
+src\CanDoItAll.Modules.Processes\README.md:134:The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
+src\CanDoItAll.Modules.Processes\README.md:136:Release-candidate validation as of 2026-06-09:
+src\CanDoItAll.Modules.Processes\README.md:139:- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build` passed with 1,134 tests.
+src\CanDoItAll.Modules.Processes\README.md:140:- A focused process integration matrix passed with 199 tests across run lifecycle, outbox dispatch, workflow/direct-agent execution, deterministic process scenarios, trigger-origin starts, read-only diagnostics, boundary guards, hosted-worker policy, and failure observability.
+src\CanDoItAll.Modules.Processes\README.md:141:- A focused Playwright matrix passed at 1900x1200 for global process start, blocked run recovery readback, and project-structure output navigation.
+src\CanDoItAll.Modules.Processes\README.md:161:- Generic process-driver runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, endpoint mapping, workspace/storage writes, external calls, process mutation, or execution-capable drivers.
+src\CanDoItAll.Modules.Processes\README.md:174:- A generic process-driver runtime host is not approved.
+src\CanDoItAll.Modules.Processes\README.md:198:Current migrations should use the process-owned service and read-only verification shape described above. Do not migrate callers to a process-driver runtime host.
+src\CanDoItAll.Modules.Processes\README.md:202:- Runtime ownership, cancellation, retry ownership, failure handoff, and observability are not approved for driver-hosted execution.
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:724:            ProcessStepRunBlockState.Clear(stepRun);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:744:            recoveryRoutingDecision = ProcessStepRunBlockState.Apply(stepRun, trimmedReason, request.BlockCause);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:757:            recoveryRoutingDecision = ProcessStepRunBlockState.Apply(stepRun, trimmedReason, request.BlockCause);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:763:            ProcessStepRunBlockState.Clear(stepRun);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:565:            .Where(ProcessStepRunBlockState.IsMissingUpstreamArtifactBlock)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:847:            ProcessStepRecoveryOption.WaitForArtifactMaterialization => "Wait for artifact materialization",
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:848:            ProcessStepRecoveryOption.RecoverArtifactsOnly => "Recover artifacts only",
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:7:    public Task<Result<Guid>> StartRunFromTriggerAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:22:        var recoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(stepRun);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:351:                        RecoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(item),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRecoveryRouter.cs:30:internal static class ProcessRecoveryRouter
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRecoveryRouter.cs:101:            ProcessStepBlockReasonCode.MissingUpstreamArtifact => ProcessStepRecoveryOption.WaitForArtifactMaterialization,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRecoveryRouter.cs:102:            ProcessStepBlockReasonCode.ArtifactContractUnsatisfied => ProcessStepRecoveryOption.RecoverArtifactsOnly,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRecoveryRouter.cs:154:            ProcessStepRecoveryOption.WaitForArtifactMaterialization or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRecoveryRouter.cs:155:            ProcessStepRecoveryOption.RecoverArtifactsOnly => ProcessRecoveryClassification.MissingArtifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:61:        var hash = ProcessRecoveryRouter.BuildEvidenceFingerprint(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:135:                ProcessStepRunBlockState.ResolveRecoveryOptions(item).Count == 0)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeProgressionPlanner.cs:138:        ProcessStepRunBlockState.Clear(stepRun);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessStepRunBlockState.cs:6:internal static class ProcessStepRunBlockState
+src\CanDoItAll.Modules.Processes\Runtime\ProcessStepRunBlockState.cs:27:        var routingDecision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessStepRunBlockState.cs:33:            ProcessRecoveryRouter.BuildEvidenceFingerprint(code, blockCause, reason),
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:161:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:259:            Assert.Equal(typeof(ProcessReadOnlyVerificationBatchOrchestrator), entry.ConsumerType));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:265:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:367:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:471:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:722:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:873:        var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:258:    public async Task StartRunFromTriggerAsync_SB038_INV_001_starts_workflow_origin_process_without_runtime_driver_hook()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:273:        var runResult = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:317:    public async Task StartRunFromTriggerAsync_SB038_INV_002_rejects_workflow_trigger_without_source_identity()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:323:        var result = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2277:            downstream.RecoveryOptionsJson = "[\"WaitForArtifactMaterialization\"]";
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2513:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2514:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2564:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2565:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2585:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2586:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.Health.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2587:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2588:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputStep.Health.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2589:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, ownOutputStep.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2600:        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2601:        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.Health.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2602:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2603:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamStep.Health.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2604:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, upstreamStep.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2696:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, persistedStep.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2697:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, routedStep.Health.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2698:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, routedStep.Health.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2699:        Assert.Contains("RecoverArtifactsOnly", routingEvent.ReplayContextJson, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:14:            typeof(ProcessReadOnlyVerificationBatchOrchestrator)),
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:18:            typeof(ProcessReadOnlyVerificationBatchOrchestrator)),
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:22:            typeof(ProcessReadOnlyVerificationBatchOrchestrator)),
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:26:            typeof(ProcessReadOnlyVerificationBatchOrchestrator)),
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:30:            typeof(ProcessReadOnlyVerificationBatchOrchestrator))
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:33:    private readonly ProcessReadOnlyVerificationBatchOrchestrator orchestrator = new();
+tests\CanDoItAll.Tests.Integration\ProcessReadOnlyVerificationMultiDomainHarness.cs:69:            Assert.Equal(typeof(ProcessReadOnlyVerificationBatchOrchestrator), matrix.ConsumerType);
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:12:public sealed class ProcessRuntimeOperatorReadModelTests {
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:130:            "ProcessReadOnlyVerificationBatchOrchestrator.cs",
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:251:    [InlineData(ProcessStepBlockReasonCode.MissingUpstreamArtifact, ProcessStepBlockCause.UpstreamInput, ProcessStepRecoveryOption.WaitForArtifactMaterialization)]
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:252:    [InlineData(ProcessStepBlockReasonCode.ArtifactContractUnsatisfied, ProcessStepBlockCause.OwnOutput, ProcessStepRecoveryOption.RecoverArtifactsOnly)]
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:256:    public void ProcessRecoveryRouter_SB10_INV_001_selects_deterministic_next_action(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:261:        var decision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:265:            ProcessStepRunBlockState.ResolveRecoveryOptions(blockReasonCode),
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:276:    public void ProcessRecoveryRouter_SB10_INV_002_escalates_repeated_no_progress_without_new_evidence()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:283:        var decision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:287:            ProcessStepRunBlockState.ResolveRecoveryOptions(ProcessStepBlockReasonCode.NoProgress),
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:306:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, classification.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:307:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, classification.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:320:        ProcessStepRunBlockState.Apply(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:344:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, health.NextRecoveryAction);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:345:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, health.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18148:        var ownOutputRoute = ProcessRecoveryRouter.Route(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18153:                [ProcessStepRecoveryOption.RecoverArtifactsOnly, ProcessStepRecoveryOption.HumanEscalation],
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18157:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputRoute.NextAction);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18159:        var upstreamRoute = ProcessRecoveryRouter.Route(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18164:                [ProcessStepRecoveryOption.WaitForArtifactMaterialization, ProcessStepRecoveryOption.RecoverArtifactsOnly],
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18168:        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamRoute.NextAction);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18223:    public void ProcessStepRunBlockState_SB05_INV_001_maps_own_missing_required_artifact_to_artifact_contract_recovery()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18227:        ProcessStepRunBlockState.Apply(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18231:        var recoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(stepRun);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18234:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18235:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18239:    public void ProcessStepRunBlockState_SB05_INV_002_maps_upstream_missing_artifact_to_materialization_recovery()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18243:        ProcessStepRunBlockState.Apply(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18247:        var recoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(stepRun);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18250:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18251:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, recoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18255:    public void ProcessStepRunBlockState_SB05_INV_003_does_not_infer_own_required_artifact_as_upstream()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18257:        var code = ProcessStepRunBlockState.InferBlockReasonCode("missing required artifact: Delivery readiness evidence");
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18271:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, classification.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18272:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, classification.RecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18276:    public void ProcessStepRunBlockState_SB12_INV_001_uses_legacy_text_inference_only_when_block_cause_is_absent()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18279:        var ownOutputDecision = ProcessStepRunBlockState.Apply(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18282:        var ownOutputRecoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(ownOutputStep);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18286:        Assert.Equal(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputDecision.NextAction);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18287:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, ownOutputRecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18288:        Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, ownOutputRecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18291:        var upstreamDecision = ProcessStepRunBlockState.Apply(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18294:        var upstreamRecoveryOptions = ProcessStepRunBlockState.ResolveRecoveryOptions(upstreamStep);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18298:        Assert.Equal(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamDecision.NextAction);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18299:        Assert.Contains(ProcessStepRecoveryOption.WaitForArtifactMaterialization, upstreamRecoveryOptions);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18300:        Assert.Contains(ProcessStepRecoveryOption.RecoverArtifactsOnly, upstreamRecoveryOptions);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:5:internal sealed class ProcessReadOnlyVerificationBatchOrchestrator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:14:    public ProcessReadOnlyVerificationBatchOrchestrator()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationBatchOrchestrator.cs:25:    internal ProcessReadOnlyVerificationBatchOrchestrator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:502:        AddExplicitOperationIfMentioned(contractText, operations, ProcessStepOperation.RecoverArtifactsOnly, "recoverartifactsonly", "recover artifacts only");
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ExecutionMetadata.cs:588:        if (operationContract.AllowedOperations.Contains(ProcessStepOperation.RecoverArtifactsOnly))

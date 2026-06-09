@@ -1,0 +1,22 @@
+Command: source assertions for stable architecture fixtures and process source/test references
+
+Output:
+8:    private const string StableProofFixturePath = "tests/CanDoItAll.Tests.Unit/TestData/Architecture/ProcessDriverMultiDomainVerificationGateway";
+88:    public void Process_driver_fake_proof_SB003_INV_004_stable_architecture_fixtures_do_not_embed_transient_bundle_paths()
+93:            StableProofFixturePath,
+96:        var forbiddenPattern = CreateTransientBundlePathPattern();
+101:                .SelectMany(file => FindTransientBundlePathMatches(root, file, forbiddenPattern)))
+109:        var report = ReadRepositoryFile(StableProofFixturePath, "reviews", "01-execution-report.md");
+110:        var manifest = ReadRepositoryFile(StableProofFixturePath, "proof", "SB043", "manifest.md");
+112:            StableProofFixturePath,
+118:            StableProofFixturePath,
+242:    private static IEnumerable<string> FindTransientBundlePathMatches(
+254:    private static Regex CreateTransientBundlePathPattern()
+
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:8:public sealed class ProcessAgentExecutionBoundaryArchitectureTests
+tests/CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:34:            "ProcessAgentExecutionBoundaryArchitectureTests.cs");
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:15:public sealed class ProcessDriverContractApiVerificationBoundaryTests
+tests/CanDoItAll.Tests.Unit\ProcessDriverContractPrerequisitesVerificationTests.cs:10:public sealed class ProcessDriverContractPrerequisitesVerificationTests
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:10:public sealed class ProcessDriverTranscriptVerificationAlphaTests
+tests/CanDoItAll.Tests.Unit\ProcessDriverTranscriptVerificationAlphaTests.cs:88:Failed CanDoItAll.Tests.Unit.ProcessDriverTranscriptVerificationAlphaTests
+ExitCode: 0

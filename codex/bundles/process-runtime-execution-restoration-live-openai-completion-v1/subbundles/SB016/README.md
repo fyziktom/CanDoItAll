@@ -1,7 +1,7 @@
 # SB016 - Deterministic .NET create scenario setup
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Deterministic .NET create scenario setup.
@@ -27,10 +27,10 @@ Deterministic .NET create scenario setup.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Focused implementation proof plus downstream critical gate validation.
+- Focused implementation proof plus downstream critical gate validation.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -52,11 +52,11 @@ Focused implementation proof plus downstream critical gate validation.
 - Do not replace runtime proof with docs-only proof.
 
 ## Acceptance Checklist
-- [ ] Objective closed.
-- [ ] Tests pass.
-- [ ] Source scan passes.
-- [ ] No forbidden runtime host or driver mutation surface.
-- [ ] Execution report updated.
+- [x] Objective closed.
+- [x] Tests pass.
+- [x] Source scan passes.
+- [x] No forbidden runtime host or driver mutation surface.
+- [x] Execution report updated.
 
 
 ## Proof Required
@@ -67,10 +67,10 @@ Focused implementation proof plus downstream critical gate validation.
 
 
 ## Browser Validation Logging
-N/A unless this subbundle changes browser-visible behavior.
+- N/A unless this subbundle changes browser-visible behavior.
 
 ## Progression Gate
-Must pass before the next subbundle starts.
+- Must pass before the next subbundle starts.
 
 ## Suggested Agent Prompt
 Implement SB016: Deterministic .NET create scenario setup. Preserve all hard constraints and produce source-backed proof.

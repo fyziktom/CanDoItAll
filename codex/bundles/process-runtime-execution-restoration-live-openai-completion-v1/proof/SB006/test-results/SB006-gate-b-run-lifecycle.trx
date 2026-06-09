@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="0b80a217-4d1e-42a7-9583-fd738edaa323" name="lucys@LUCYSPOWER 2026-06-09 17:33:35" runUser="LUCYSPOWER\lucys" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-06-09T17:33:35.5813660-04:00" queuing="2026-06-09T17:33:35.5813664-04:00" start="2026-06-09T17:33:13.8400914-04:00" finish="2026-06-09T17:33:43.3405309-04:00" />
+  <TestSettings name="default" id="d0022631-fb1a-4ab7-9b14-6a2c08f6664c">
+    <Deployment runDeploymentRoot="lucys_LUCYSPOWER_2026-06-09_17_33_35" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="a6b697da-c5ff-49f8-83cf-c40308c17884" testId="8e9edb84-d982-fb09-1139-d2cfde5b5e12" testName="CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts" computerName="LUCYSPOWER" duration="00:00:07.6960089" startTime="2026-06-09T17:33:35.5529304-04:00" endTime="2026-06-09T17:33:43.2354915-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="a6b697da-c5ff-49f8-83cf-c40308c17884" />
+    <UnitTestResult executionId="77fe842a-1289-4bee-940a-c2dc67eecc3d" testId="afc404db-3893-ea58-4219-85d7befb9bb3" testName="CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox" computerName="LUCYSPOWER" duration="00:00:15.7205983" startTime="2026-06-09T17:33:19.8278366-04:00" endTime="2026-06-09T17:33:35.5370648-04:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="77fe842a-1289-4bee-940a-c2dc67eecc3d" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="afc404db-3893-ea58-4219-85d7befb9bb3">
+      <Execution id="77fe842a-1289-4bee-940a-c2dc67eecc3d" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests" name="StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox" />
+    </UnitTest>
+    <UnitTest name="CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests.StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts" storage="c:\repositories\candoitall\tests\candoitall.tests.integration\bin\debug\net10.0\candoitall.tests.integration.dll" id="8e9edb84-d982-fb09-1139-d2cfde5b5e12">
+      <Execution id="a6b697da-c5ff-49f8-83cf-c40308c17884" />
+      <TestMethod codeBase="C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="CanDoItAll.Tests.Integration.ProcessesServiceIntegrationTests" name="StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="8e9edb84-d982-fb09-1139-d2cfde5b5e12" executionId="a6b697da-c5ff-49f8-83cf-c40308c17884" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="afc404db-3893-ea58-4219-85d7befb9bb3" executionId="77fe842a-1289-4bee-940a-c2dc67eecc3d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Výsledky neuvedené v seznamu" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="Všechny načtené výsledky" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="2" executed="2" passed="2" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)&#xD;
+[xUnit.net 00:00:01.90]   Discovering: CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:02.11]   Discovered:  CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:02.14]   Starting:    CanDoItAll.Tests.Integration&#xD;
+[xUnit.net 00:00:25.59]   Finished:    CanDoItAll.Tests.Integration&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

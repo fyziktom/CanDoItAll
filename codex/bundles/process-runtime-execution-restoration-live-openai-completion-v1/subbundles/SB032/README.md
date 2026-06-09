@@ -1,7 +1,7 @@
 # SB032 - Project-structure generated/managed output artifact proof
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Project-structure generated/managed output artifact proof.
@@ -27,10 +27,10 @@ Project-structure generated/managed output artifact proof.
 - Updated execution report row.
 
 ## Dependency Impact
-If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
+- If this subbundle is wrong, downstream phases may claim runtime restoration without actual process execution proof.
 
 ## Validation Depth
-Focused implementation proof plus downstream critical gate validation.
+- Focused implementation proof plus downstream critical gate validation.
 
 ## Implementation Steps
 1. Re-read exact sources before editing.
@@ -52,11 +52,18 @@ Focused implementation proof plus downstream critical gate validation.
 - Do not replace runtime proof with docs-only proof.
 
 ## Acceptance Checklist
-- [ ] Objective closed.
-- [ ] Tests pass.
-- [ ] Source scan passes.
-- [ ] No forbidden runtime host or driver mutation surface.
-- [ ] Execution report updated.
+- [x] Objective closed.
+- [x] Tests pass.
+- [x] Source scan passes.
+- [x] No forbidden runtime host or driver mutation surface.
+- [x] Execution report updated.
+
+## Completion Evidence
+- Proof: `bundle://proof/SB032/project-structure-managed-output-artifact-proof.md`
+- Test transcript: `bundle://proof/SB033/transcripts/project-structure-run-output-test.txt`
+- Managed output path shape: `output/scopes/project/{projectId}/process-runs/{runId}/SB012BrowserOutput/index.html`
+- Screenshots: `bundle://proof/SB033/screenshots/01-structure-run-output-node-large-desktop.png`, `bundle://proof/SB033/screenshots/02-run-output-quick-actions-large-desktop.png`, `bundle://proof/SB033/screenshots/03-run-output-process-workspace-large-desktop.png`
+- Source scans: `bundle://proof/SB033/transcripts/no-transient-bundle-path-scan.txt`, `bundle://proof/SB033/transcripts/anti-stub-and-runtime-host-drift-scan.txt`
 
 
 ## Proof Required
@@ -67,10 +74,10 @@ Focused implementation proof plus downstream critical gate validation.
 
 
 ## Browser Validation Logging
-N/A unless this subbundle changes browser-visible behavior.
+- N/A unless this subbundle changes browser-visible behavior.
 
 ## Progression Gate
-Must pass before the next subbundle starts.
+- Must pass before the next subbundle starts.
 
 ## Suggested Agent Prompt
 Implement SB032: Project-structure generated/managed output artifact proof. Preserve all hard constraints and produce source-backed proof.

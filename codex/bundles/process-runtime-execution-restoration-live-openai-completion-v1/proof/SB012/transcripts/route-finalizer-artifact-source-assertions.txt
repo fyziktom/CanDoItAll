@@ -1,0 +1,636 @@
+Command: rg -n "RunClaimedDispatchAsync|TryClaimStepDispatchAsync|ProcessDispatchFinalizer|ProcessArtifactRecord|ProcessArtifactProjection|ListRunArtifactRecordsAsync|Process_run_detail_api_includes_workflow_run_links|Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch|Process_mock_three_agent_artifact_handoff" src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Integration -g "*.cs"
+WorkingDirectory: C:\repositories\CanDoItAll
+Output:
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.cs:117:                (ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default) => ProcessesArtifactRecordAsync(accessState, request, cancellationToken),
+src\CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Runs.cs:142:        ProcessArtifactRecordRequest request,
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:103:            var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:215:                ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:217:                    SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+tests\CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:233:            var persistedArtifact = await dbContext.Set<ProcessArtifactRecord>().SingleAsync(item => item.ProcessRunId == seededRunId);
+tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:297:            var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\IProcessArtifactProjectionSourceCoordinator.cs:3:internal interface IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\IProcessArtifactProjectionSourceCoordinator.cs:5:    Task ProjectAsync(ProcessArtifactProjectionContext context);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceReadOnlyAdapter.cs:89:    IReadOnlyList<ProcessArtifactProjectionLineageDescriptor> ProjectionLineage,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceReadOnlyAdapter.cs:90:    IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor> ProjectionSourceOrder,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactEvidenceReadOnlyAdapter.cs:94:    IReadOnlyList<global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot> ArtifactRecords,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactExpectationResolver.cs:76:        var displayName = ProcessArtifactProjectionPlanner.BuildArtifactTitle(artifact);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactExpectationSatisfactionAdapter.cs:6:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:27:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:53:        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:54:        if (lineage is not null && (lineage.SourceKind != ProcessArtifactProjectionSourceKind.Unknown || IsManagerRecoveryLineage(lineage)))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:63:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:118:        ProcessArtifactProjectionLineage lineage,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:155:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:298:    private static bool IsManagerRecoveryLineage(ProcessArtifactProjectionLineage lineage)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactLineageValidator.cs:304:        ProcessArtifactProjectionLineage lineage,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionCandidateState.cs:5:internal static class ProcessArtifactProjectionCandidateState
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionCandidateState.cs:10:        Result<ProcessArtifactProjectionWriteResult> writeResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionCandidateState.cs:22:        Result<ProcessArtifactProjectionWriteResult> writeResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionCandidateState.cs:51:        Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionContext.cs:6:internal sealed record ProcessArtifactProjectionContext(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionContext.cs:13:    ProcessArtifactProjectionWriteCoordinator WriteCoordinator,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionContext.cs:14:    ProcessArtifactProjectionRecordOnlyCoordinator RecordOnlyCoordinator,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:3:internal static class ProcessArtifactProjectionEvidenceDescriptorAdapter
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:5:    public static global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionLineageDescriptor DescribeLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:6:        ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:8:        return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:10:                ProcessCoreArtifactModelAdapters.ToCoreProjectionSourceKind(lineage?.SourceKind ?? ProcessArtifactProjectionSourceKind.Unknown),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:25:    public static IReadOnlyList<global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionSourceOrderDescriptor> DescribeProjectionSourceOrder(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:26:        IReadOnlyList<ProcessArtifactProjectionSourceKind> sourceKinds)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:31:            .Select(sourceKind => global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:37:        IReadOnlyList<ProcessArtifactProjectionSourceKind> sourceKinds)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:44:        if (!global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionEvidenceDescriptorAdapter.cs:57:        return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules
+src\CanDoItAll.Modules.Processes\Development\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs:182:            new ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:13:internal static class ProcessArtifactProjectionFacetFactory
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:15:    public static ProcessArtifactProjectionFacetSet Create(ProcessProjectionClaimGuardHandler ensureClaimHeldAsync)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:20:        return new ProcessArtifactProjectionFacetSet(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:789:            _ => ProcessArtifactProjectionPlanner.BuildArtifactTitle(artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:927:    public ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:928:        ProcessArtifactProjectionSourceKind sourceKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:934:        return ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:948:        Result<ProcessArtifactProjectionWriteResult> writeResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:951:        return ProcessArtifactProjectionCandidateState.TryApplyExpectedWriteOutcome(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:960:        Result<ProcessArtifactProjectionWriteResult> writeResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:964:        return ProcessArtifactProjectionCandidateState.TryApplyWriteOutcome(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:974:        Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs:977:        return ProcessArtifactProjectionCandidateState.TryApplyExpectedRecordOnlyOutcome(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs:8:internal sealed record ProcessArtifactProjectionFacetSet(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs:227:    ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs:228:        ProcessArtifactProjectionSourceKind sourceKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs:240:        Result<ProcessArtifactProjectionWriteResult> writeResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs:245:        Result<ProcessArtifactProjectionWriteResult> writeResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacets.cs:252:        Result<ProcessArtifactProjectionRecordOnlyResult> recordResult,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionLineageBuilder.cs:16:internal static class ProcessArtifactProjectionLineageBuilder
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionLineageBuilder.cs:44:    public static ProcessArtifactProjectionLineage BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionLineageBuilder.cs:45:        ProcessArtifactProjectionSourceKind sourceKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionLineageBuilder.cs:53:        var lineage = new ProcessArtifactProjectionLineage
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionLineageBuilder.cs:64:        var descriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeLineage(lineage);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:3:internal sealed class ProcessArtifactProjectionOrchestrator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:5:    private readonly IReadOnlyList<IProcessArtifactProjectionSourceCoordinator> sourceCoordinators;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:7:    private ProcessArtifactProjectionOrchestrator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:8:        IReadOnlyList<IProcessArtifactProjectionSourceCoordinator> sourceCoordinators)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:13:    public static ProcessArtifactProjectionOrchestrator CreateDefault(ProcessArtifactProjectionFacetSet facets)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:24:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:25:            ProcessArtifactProjectionSourceKind.ProcessMock,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:26:            ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:27:            ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:28:            ProcessArtifactProjectionSourceKind.AssistantResponse,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:29:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:30:            ProcessArtifactProjectionSourceKind.CompletedDecision
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:32:        ProcessArtifactProjectionEvidenceDescriptorAdapter.VerifyProjectionSourceOrder(projectionSourceOrder);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:34:        return new ProcessArtifactProjectionOrchestrator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:35:            new IProcessArtifactProjectionSourceCoordinator[]
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionOrchestrator.cs:82:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:6:internal sealed record ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:7:    ProcessArtifactProjectionSourceKind SourceKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:18:    ProcessArtifactProjectionLineage ProjectionLineage);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:20:internal static class ProcessArtifactProjectionPlanner
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:22:    public static ProcessArtifactProjectionPlan PlanExecutionArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:36:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:37:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:39:            ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:50:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:56:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionPlanner.cs:57:                ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:637:            new ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:42:        return ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:48:    public static ProcessArtifactProjectionPlan Plan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:60:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:61:            ProcessArtifactProjectionSourceKind.ProcessMock,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:67:            ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:70:            ProcessArtifactProjectionSourceAdapterDefaults.ResolveAllowedFutureUsage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:74:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:75:                ProcessArtifactProjectionSourceKind.ProcessMock,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:84:        => ProcessArtifactProjectionPlanner.BuildProcessMockArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:101:        return ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:107:    public static ProcessArtifactProjectionPlan Plan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:119:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:120:            ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:126:            ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:128:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:132:            ProcessArtifactProjectionSourceAdapterDefaults.ResolveAllowedFutureUsage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:138:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:139:                ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:148:        => ProcessArtifactProjectionPlanner.BuildWorkspaceWrittenArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:165:        return ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:171:    public static ProcessArtifactProjectionPlan Plan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:183:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:184:            ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:190:            ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:192:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:196:            ProcessArtifactProjectionSourceAdapterDefaults.ResolveAllowedFutureUsage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:200:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:201:                ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:210:        => ProcessArtifactProjectionPlanner.BuildExistingManagedArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:225:        return ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:231:    public static ProcessArtifactProjectionPlan Plan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:243:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:244:            ProcessArtifactProjectionSourceKind.AssistantResponse,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:250:            ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:252:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:256:            ProcessArtifactProjectionSourceAdapterDefaults.ResolveAllowedFutureUsage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:260:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:261:                ProcessArtifactProjectionSourceKind.AssistantResponse,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:268:        => ProcessArtifactProjectionPlanner.BuildResponseTextArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:282:        return ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:288:    public static ProcessArtifactProjectionPlan PlanExpectedOutput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:300:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:301:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:307:            ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(expectedArtifact, completionStatus),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:309:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:315:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:316:                ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:322:    public static ProcessArtifactProjectionPlan PlanDiscoveredOutput(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:335:        return new ProcessArtifactProjectionPlan(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:336:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:344:                : ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(matchedExpectation, completionStatus),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:346:            ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:355:            ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:356:                ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:363:        => ProcessArtifactProjectionPlanner.BuildProviderNativeBrowserArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionSourceAdapters.cs:368:internal static class ProcessArtifactProjectionSourceAdapterDefaults
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:6:internal sealed record ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:10:    ProcessArtifactProjectionPlan ProjectionPlan,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:17:internal sealed record ProcessArtifactProjectionWriteResult(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:23:internal sealed record ProcessArtifactProjectionRecordOnlyRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:35:    ProcessArtifactProjectionLineage ProjectionLineage);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:37:internal sealed record ProcessArtifactProjectionRecordOnlyResult(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:42:internal sealed class ProcessArtifactProjectionWriteCoordinator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:44:    Func<ProcessArtifactRecordRequest, CancellationToken, Task<Result<Guid>>> recordArtifactAsync)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:46:    public async Task<Result<ProcessArtifactProjectionWriteResult>> WriteAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:47:        ProcessArtifactProjectionWriteRequest request,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:65:            new ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:84:            ? Result<ProcessArtifactProjectionWriteResult>.Success(new ProcessArtifactProjectionWriteResult(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:89:            : Result<ProcessArtifactProjectionWriteResult>.Failure(recordResult.Errors);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:93:internal sealed class ProcessArtifactProjectionRecordOnlyCoordinator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:94:    Func<ProcessArtifactRecordRequest, CancellationToken, Task<Result<Guid>>> recordArtifactAsync)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:96:    public async Task<Result<ProcessArtifactProjectionRecordOnlyResult>> RecordAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:97:        ProcessArtifactProjectionRecordOnlyRequest request,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:103:            new ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:121:            ? Result<ProcessArtifactProjectionRecordOnlyResult>.Success(new ProcessArtifactProjectionRecordOnlyResult(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionWriteCoordinator.cs:125:            : Result<ProcessArtifactProjectionRecordOnlyResult>.Failure(recordResult.Errors);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactRecordedSatisfactionRules.cs:5:internal static class ProcessArtifactRecordedSatisfactionRules
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactRecordedSatisfactionRules.cs:12:        return global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordedSatisfactionRules.HasRecordedExpectedArtifact(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:7:public sealed class ProcessArtifactProjectionWriteCoordinatorTests
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:13:        ProcessArtifactRecordRequest? capturedRecord = null;
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:15:        var coordinator = new ProcessArtifactProjectionWriteCoordinator(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:28:            new ProcessArtifactProjectionWriteRequest(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:58:        var coordinator = new ProcessArtifactProjectionWriteCoordinator(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:63:            new ProcessArtifactProjectionWriteRequest(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:84:    private static ProcessArtifactProjectionPlan CreatePlan(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:89:        return new ProcessArtifactProjectionPlan(
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:90:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:101:            new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessArtifactProjectionWriteCoordinatorTests.cs:103:                SourceKind = ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:312:public sealed class ProcessArtifactRecord {
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:194:internal sealed class ProcessArtifactRecordConfiguration : IEntityTypeConfiguration<ProcessArtifactRecord>
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:196:    public void Configure(EntityTypeBuilder<ProcessArtifactRecord> builder)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactValidationDescriptorAdapter.cs:16:        ProcessArtifactProjectionSourceKind sourceKind)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactValidationDescriptorAdapter.cs:18:        var descriptor = global::CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules
+src\CanDoItAll.Modules.Processes\Services\ProcessesService.Reads.cs:75:        var items = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessDeletionIntegrationTests.cs:77:        Assert.False(await verificationContext.Set<ProcessArtifactRecord>().AnyAsync(item => runIds.Contains(item.ProcessRunId)));
+src\CanDoItAll.Modules.Processes\Services\ProcessesService.Publication.cs:187:            await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCompletedDecisionArtifactCoordinator.cs:9:internal sealed class ProcessCompletedDecisionArtifactCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCompletedDecisionArtifactCoordinator.cs:28:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCompletedDecisionArtifactCoordinator.cs:53:                new ProcessArtifactProjectionRecordOnlyRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCompletedDecisionArtifactCoordinator.cs:72:                        ProcessArtifactProjectionSourceKind.CompletedDecision,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:3:public enum ProcessArtifactProjectionSourceKind
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:19:public sealed class ProcessArtifactProjectionLineage
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:21:    public ProcessArtifactProjectionSourceKind SourceKind { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:48:internal static class ProcessArtifactProjectionLineageJson
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:50:    public static string Serialize(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:53:    public static string SerializeNormalized(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:56:    public static ProcessArtifactProjectionLineage? Normalize(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:59:    public static string ComputeIdentityHash(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactProjectionLineage.cs:62:    public static ProcessArtifactProjectionLineage? Deserialize(string? value)
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:9:        var claimIndex = FindRequired(source, "TryClaimStepDispatchAsync", headerLoadIndex);
+tests\CanDoItAll.Tests.Integration\ProcessDatabaseRedTeamSourceInvariantTests.cs:28:        var directAgentContextIndex = FindRequired(source, "ProcessDispatchFinalizerContextFactory.ForDirectAgent", artifactProjectionIndex);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:39:    public static ProcessArtifactRecordSnapshot ToCoreArtifactRecordSnapshot(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:40:        ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:44:        return new ProcessArtifactRecordSnapshot(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:73:        ProcessArtifactProjectionSourceKind sourceKind)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:77:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact => ProcessCoreArtifactProjectionSourceKind.AgentExecutionArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:78:            ProcessArtifactProjectionSourceKind.WorkspaceWrite => ProcessCoreArtifactProjectionSourceKind.FileWrite,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:79:            ProcessArtifactProjectionSourceKind.ExistingManagedFile => ProcessCoreArtifactProjectionSourceKind.ExistingManagedFile,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:80:            ProcessArtifactProjectionSourceKind.AssistantResponse => ProcessCoreArtifactProjectionSourceKind.AssistantResponse,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:81:            ProcessArtifactProjectionSourceKind.WorkflowRun => ProcessCoreArtifactProjectionSourceKind.WorkflowRun,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:82:            ProcessArtifactProjectionSourceKind.WorkflowArtifact => ProcessCoreArtifactProjectionSourceKind.WorkflowArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:83:            ProcessArtifactProjectionSourceKind.SubprocessArtifact => ProcessCoreArtifactProjectionSourceKind.SubprocessArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:84:            ProcessArtifactProjectionSourceKind.CompletedDecision => ProcessCoreArtifactProjectionSourceKind.CompletedDecision,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:85:            ProcessArtifactProjectionSourceKind.ProcessMock => ProcessCoreArtifactProjectionSourceKind.ProcessMock,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:86:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser => ProcessCoreArtifactProjectionSourceKind.ProviderNativeBrowser,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCoreArtifactModelAdapters.cs:87:            ProcessArtifactProjectionSourceKind.Manual => ProcessCoreArtifactProjectionSourceKind.Manual,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:12:    public static string SerializeProjectionLineage(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:23:    public static string SerializeNormalizedProjectionLineage(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:30:    public static ProcessArtifactProjectionLineage? NormalizeProjectionLineage(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:41:    public static string ComputeProjectionIdentityHash(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:75:    public static ProcessArtifactProjectionLineage? DeserializeProjectionLineage(string? value)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:79:            : JsonSerializer.Deserialize<ProcessArtifactProjectionLineage>(value, SerializerOptions);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:82:    private static bool IsEmpty(ProcessArtifactProjectionLineage lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessArtifactIdentityService.cs:84:        return lineage.SourceKind == ProcessArtifactProjectionSourceKind.Unknown &&
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:14:using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:289:                        ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.CompletedDecision),
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:290:                        ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite),
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:291:                        ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite)
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:818:        IReadOnlyList<ProcessArtifactProjectionLineageDescriptor>? projectionLineage = null,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:819:        IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? projectionSourceOrder = null,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:833:                projectionSourceOrder ?? [ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite)],
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:944:    private static ProcessArtifactProjectionLineageDescriptor CreateArtifactProjectionLineage()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:946:        return ProcessArtifactProjectionEvidenceDescriptorRules.DescribeLineage(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:223:    public async Task<Result<Guid>> RecordArtifactAsync(ProcessArtifactRecordRequest request, CancellationToken cancellationToken = default)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:312:            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:331:            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:348:        var artifact = new ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:366:        await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:487:            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:506:            var existingArtifact = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:527:        ProcessArtifactRecord existingArtifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:543:        ProcessArtifactRecord materializedArtifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:599:        var artifacts = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:676:        IReadOnlyList<ProcessArtifactRecord> artifacts)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:710:    private static ProcessArtifactProjectionLineage? CloneProjectionLineage(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:714:            : new ProcessArtifactProjectionLineage
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:732:    private static bool ShouldComputeManagedArtifactContentHash(ProcessArtifactProjectionLineage? lineage)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:737:                   ProcessArtifactProjectionSourceKind.AgentExecutionArtifact or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:738:                   ProcessArtifactProjectionSourceKind.WorkspaceWrite or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:739:                   ProcessArtifactProjectionSourceKind.ExistingManagedFile or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Operations.cs:740:                   ProcessArtifactProjectionSourceKind.ProviderNativeBrowser;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Rerun.cs:60:            var stepArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Rerun.cs:231:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Rerun.cs:364:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchArtifactInputAssembler.cs:13:        IReadOnlyList<ProcessArtifactRecord> existingArtifacts)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchArtifactInputAssembler.cs:71:        ProcessArtifactRecord artifact,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:116:        var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:666:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:694:        var persistedArtifact = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:765:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:870:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:997:            var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1105:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1119:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1121:                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1211:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1225:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1227:                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1326:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1340:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1342:                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1525:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1632:        var recordedArtifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1659:        var persistedArtifact = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1692:        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1708:        var artifact = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1747:        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1764:        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1783:        var matchingArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1827:        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1844:        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1863:        var persistedArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1904:        var lineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1906:            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1912:        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1925:        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1933:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1935:                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1946:        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1999:        var lineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2001:            SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2007:        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2021:        var wrongScopeResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2030:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2046:        var scopedExternalReferenceResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2059:        var wrongExternalReferenceScopeResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2076:        var persistedArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2125:        var firstRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2133:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2135:                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2144:        var duplicateRecordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2152:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2154:                SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2165:        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2208:        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2216:            ProjectionLineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2218:                SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2229:        var persistedArtifact = Assert.Single(await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2232:        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(persistedArtifact.ProjectionLineageJson);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2287:        var recordResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2313:        var recordedArtifact = await assertionContext.Set<ProcessArtifactRecord>().SingleAsync(item => item.Id == recordResult.Value);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:5385:        AssertSuccess(await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:163:    public async Task Process_mock_workflow_process_completes_end_to_end_through_durable_outbox_dispatch() {
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:289:        var artifactRecords = await ListRunArtifactRecordsAsync(dbContextFactory, runId);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:368:    public async Task Process_mock_three_agent_artifact_handoff_completes_required_outputs_without_full_delivery_process()
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:453:        var artifactRecords = await ListRunArtifactRecordsAsync(dbContextFactory, runId);
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:633:        IEnumerable<ProcessArtifactRecord> artifactRecords,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:634:        Func<ProcessArtifactRecord, bool> predicate,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:839:        IReadOnlyList<ProcessArtifactRecord> artifactRecords,
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:974:    private static async Task<IReadOnlyList<ProcessArtifactRecord>> ListRunArtifactRecordsAsync(
+tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:978:        var records = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:322:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts = (await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:400:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:453:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:494:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:513:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:516:        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:533:    private static bool IsDirectExecutionLineage(ProcessArtifactProjectionSourceKind sourceKind)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:536:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:537:            ProcessArtifactProjectionSourceKind.WorkspaceWrite or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:538:            ProcessArtifactProjectionSourceKind.ExistingManagedFile or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:539:            ProcessArtifactProjectionSourceKind.AssistantResponse or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:540:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:839:        IReadOnlyList<ProcessArtifactRecord> StepArtifacts);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:167:        var artifactRecordsByStepRunId = (await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:427:        var artifactRecords = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:87:        var items = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:324:        IReadOnlyDictionary<Guid, List<ProcessArtifactRecord>> artifactRecordsByStepRunId,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:356:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:395:                sourceKind is ProcessArtifactExpectationSourceKind.AgentExecutionArtifact or ProcessArtifactExpectationSourceKind.ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:447:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:470:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:522:    internal static ProcessArtifactRecord? ResolveBestArtifactForExpectation(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:524:        IReadOnlyList<ProcessArtifactRecord> stepArtifacts)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:536:        ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:563:    private static int ResolveArtifactSourcePriority(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:567:            ProcessArtifactExpectationSourceKind.ProcessArtifactRecord => 0,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:673:            ? ProcessArtifactExpectationSourceKind.ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:674:            : ProcessArtifactExpectationSourceKind.ProcessArtifactRecord;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:678:        ProcessArtifactRecord artifact,
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:45:                ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.CompletedDecision),
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:46:                ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite)
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:188:        IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? projectionSourceOrder = null,
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests.cs:230:        IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor> projectionSourceOrder)
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:168:            await dbContext.Set<ProcessArtifactRecord>().AddAsync(
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:169:                new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:217:        Assert.Equal(artifactId, obligation.ProcessArtifactRecordId);
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:263:            await dbContext.Set<ProcessArtifactRecord>().AddAsync(
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:264:                new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:316:        Assert.Equal(artifactId, obligation.ProcessArtifactRecordId);
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:421:            new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:587:                Array.Empty<ProcessArtifactRecord>(),
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:692:            var lineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:693:                new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:695:                    SourceKind = ProcessArtifactProjectionSourceKind.Manual,
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:705:            await dbContext.Set<ProcessArtifactRecord>().AddRangeAsync(
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:706:                new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:719:                new ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationLoader.cs:13:    IReadOnlyList<ProcessArtifactRecord> ExistingArtifacts,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchCandidateHydrationLoader.cs:82:        var existingArtifacts = (await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:25:using CoreArtifactProjectionEvidenceDescriptorRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEvidenceDescriptorRules;
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:26:using CoreArtifactProjectionEligibilityRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactProjectionEligibilityRules;
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:28:using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:29:using CoreArtifactRecordedSatisfactionRules = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordedSatisfactionRules;
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:534:        var subprocessArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:674:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:675:            ProcessArtifactProjectionSourceKind.ProcessMock,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:676:            ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:677:            ProcessArtifactProjectionSourceKind.ExistingManagedFile,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:678:            ProcessArtifactProjectionSourceKind.AssistantResponse,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:679:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:680:            ProcessArtifactProjectionSourceKind.CompletedDecision
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:682:        var orderDescriptors = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProjectionSourceOrder(sourceOrder);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:689:        var lineage = ProcessArtifactProjectionLineageBuilder.BuildLineage(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:690:            ProcessArtifactProjectionSourceKind.ProviderNativeBrowser,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:695:        var lineageDescriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeLineage(lineage);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:696:        var browserDescriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProviderNativeBrowserEvidence(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:7458:        var staleArtifact = CreateProcessArtifactRecord(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:7474:        var wrongRootArtifact = CreateProcessArtifactRecord(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:7490:        var currentArtifact = CreateProcessArtifactRecord(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:11279:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15850:    public void ProcessArtifactProjectionLineageBuilder_SB05_INV_001_hashes_recovery_key_and_records_lineage()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15862:        var compactKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15866:        var lineage = ProcessArtifactProjectionLineageBuilder.BuildLineage(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15867:            ProcessArtifactProjectionSourceKind.AgentExecutionArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15872:        var provenance = ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:15879:        Assert.Equal(ProcessArtifactProjectionSourceKind.AgentExecutionArtifact, lineage.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16009:    public void ProcessArtifactProjectionPlanner_SB07_INV_001_plans_execution_artifact_without_storage_side_effects()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16028:        var plan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16037:        Assert.Equal(ProcessArtifactProjectionSourceKind.AgentExecutionArtifact, plan.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16050:    public void ProcessArtifactProjectionPlanner_SB09_INV_001_normalizes_projection_adapter_keys()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16058:            ProcessArtifactProjectionPlanner.BuildWorkspaceWrittenArtifactExternalReferenceKey(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16064:            ProcessArtifactProjectionPlanner.BuildExistingManagedArtifactExternalReferenceKey(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16070:            ProcessArtifactProjectionPlanner.BuildResponseTextArtifactExternalReferenceKey(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16075:            ProcessArtifactProjectionPlanner.BuildProcessMockArtifactExternalReferenceKey(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16082:    public void ProcessArtifactProjectionSourceAdapters_SB05_SB08_preserve_key_and_lineage_parity()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16154:        Assert.Equal(ProcessArtifactProjectionSourceKind.ProcessMock, processMockPlan.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16155:        Assert.Equal(ProcessArtifactProjectionSourceKind.WorkspaceWrite, workspacePlan.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16156:        Assert.Equal(ProcessArtifactProjectionSourceKind.ExistingManagedFile, existingPlan.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16157:        Assert.Equal(ProcessArtifactProjectionSourceKind.AssistantResponse, responsePlan.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16158:        Assert.Equal(ProcessArtifactProjectionSourceKind.ProviderNativeBrowser, browserPlan.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16347:        var wrongTitleArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16357:        var mappedArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16388:        var wrongTitleArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16398:        var secondArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16430:        var childArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16652:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16688:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16741:        var lineage = new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16743:            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16770:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16827:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16861:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16896:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16931:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:16966:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17001:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17051:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17113:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17161:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17213:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17266:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17322:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17378:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17387:                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17388:                    new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17390:                        SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17441:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17450:                ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17451:                    new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17453:                        SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17496:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17534:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17543:            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17544:                new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17546:                    SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17584:        var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17647:    public async Task ProcessDispatchFinalizerAdapter_SB009_INV_001_preserves_route_dto_context_parity_and_apply_conditions()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17697:        var adapter = new ProcessDispatchFinalizerAdapter(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17712:        var finalizerApplicationService = new ProcessDispatchFinalizerApplicationService(adapter);
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17865:    public async Task ProcessDispatchFinalizerAdapter_SB011_INV_001_rejects_dispatch_claim_not_created_by_route_adapter()
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:17883:        var adapter = new ProcessDispatchFinalizerAdapter(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18029:        var workflowArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18060:        var subprocessArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18092:        var managerArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18101:            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18102:                new ProcessArtifactProjectionLineage
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18104:                    SourceKind = ProcessArtifactProjectionSourceKind.WorkspaceWrite,
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:18191:            var artifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:20869:    private static ProcessArtifactRecord CreateProcessArtifactRecord(
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:20875:        return new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRunAutomationDispatchServiceTests.cs:20893:        IReadOnlyList<ProcessArtifactRecord> existingArtifacts)
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeReadQueryServiceTests.cs:19:        var concreteSummary = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeReadQueryServiceTests.cs:31:        var browserSnapshot = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessRuntimeReadQueryServiceTests.cs:43:        var unrelatedAgentArtifact = new ProcessArtifactRecord
+tests\CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:159:        var projectedSubprocessArtifact = await dbContext.Set<ProcessArtifactRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:747:            var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:118:    public async Task Process_run_detail_api_includes_workflow_run_links()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:50:                    FilterByProcessRunId(dbContext.Set<ProcessArtifactRecord>().AsNoTracking(), request.ProcessRunId),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:571:    private static MemorySourceItem MapArtifact(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:953:    private static MemorySourceStorageReference? ResolveStorageReference(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:9:internal sealed class ProcessDispatchFinalizerAdapter(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:22:            ProcessDispatchFinalizerContextFactory.ForWorkflow(candidate, input.WorkflowOutcome),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:36:            ProcessDispatchFinalizerContextFactory.ForManagerArtifactRecovery(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:54:            ProcessDispatchFinalizerContextFactory.ForDirectAgent(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerAdapter.cs:72:            ProcessDispatchFinalizerContextFactory.ForSubprocess(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:9:    IReadOnlyList<ProcessArtifactRecord> ArtifactRecords,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:90:        IReadOnlyList<ProcessArtifactRecord> artifactRecords,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:152:        IReadOnlyList<ProcessArtifactRecord> artifactRecords,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:236:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:271:    private static string ResolveProjectionIdentity(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:280:            var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchFinalizerApplicationService.cs:3:internal sealed class ProcessDispatchFinalizerApplicationService(ProcessDispatchFinalizerAdapter finalizerAdapter)
+tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs:1398:        var artifactResult = await processesService.RecordArtifactAsync(new ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:123:    ProcessArtifactRecord,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:166:    Guid? ProcessArtifactRecordId,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:947:public sealed class ProcessArtifactRecordRequest
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:973:    public ProcessArtifactProjectionLineage? ProjectionLineage { get; set; }
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:235:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:247:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:259:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:271:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:283:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:295:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:307:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:595:        Assert.True((await processes.RecordArtifactAsync(new ProcessArtifactRecordRequest
+tests\CanDoItAll.Tests.Integration\RuntimeEvidenceSourceIntegrationTests.cs:219:        dbContext.Set<ProcessArtifactRecord>().Add(new ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteFacets.cs:106:internal interface IProcessDispatchFinalizerRouteFacet
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlerFactory.cs:19:        IProcessDispatchFinalizerRouteFacet finalizerFacet)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteHandlers.cs:293:    IProcessDispatchFinalizerRouteFacet finalizerFacet) : IProcessDispatchRouteHandler
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:131:    ProcessDispatchFinalizerApplicationService finalizerApplicationService) : IProcessDispatchRecoveryRouteFacet
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:210:    ProcessDispatchFinalizerApplicationService finalizerApplicationService,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:281:internal sealed class ProcessDispatchFinalizerRouteService(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchRouteServices.cs:282:    ProcessDispatchFinalizerApplicationService finalizerApplicationService) : IProcessDispatchFinalizerRouteFacet
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDispatchSubprocessRuntimeService.cs:10:    ProcessDispatchFinalizerApplicationService finalizerApplicationService,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionArtifactProjectionCoordinator.cs:9:internal sealed class ProcessExecutionArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionArtifactProjectionCoordinator.cs:34:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionArtifactProjectionCoordinator.cs:50:            var sourceExternalReferenceKey = ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionArtifactProjectionCoordinator.cs:51:            var externalReferenceKey = ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionArtifactProjectionCoordinator.cs:92:            var projectionPlan = ProcessArtifactProjectionPlanner.PlanExecutionArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExecutionArtifactProjectionCoordinator.cs:102:                new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExistingManagedArtifactProjectionCoordinator.cs:9:internal sealed class ProcessExistingManagedArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExistingManagedArtifactProjectionCoordinator.cs:31:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExistingManagedArtifactProjectionCoordinator.cs:70:        ProcessArtifactProjectionContext context,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExistingManagedArtifactProjectionCoordinator.cs:94:        ProcessArtifactProjectionContext context,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessExistingManagedArtifactProjectionCoordinator.cs:166:            new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMockArtifactProjectionCoordinator.cs:9:internal sealed class ProcessMockArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMockArtifactProjectionCoordinator.cs:31:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessMockArtifactProjectionCoordinator.cs:103:                new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs:9:internal sealed class ProcessProviderNativeBrowserArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs:34:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs:53:        ProcessArtifactProjectionContext context,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs:149:                    new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs:188:        ProcessArtifactProjectionContext context,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserArtifactProjectionCoordinator.cs:283:                        new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserOutputFacts.cs:51:        var descriptor = ProcessArtifactProjectionEvidenceDescriptorAdapter.DescribeProviderNativeBrowserEvidence(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:10:using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:212:        IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor> projectionSourceOrder)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:310:    IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? ProjectionSourceOrder,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:319:    IReadOnlyList<ProcessArtifactProjectionLineageDescriptor>? ProjectionLineage,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationPayloadBuilder.cs:320:    IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? ProjectionSourceOrder,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessResponseTextArtifactProjectionCoordinator.cs:9:internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessResponseTextArtifactProjectionCoordinator.cs:37:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessResponseTextArtifactProjectionCoordinator.cs:141:                    new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:22:        var writeCoordinator = new ProcessArtifactProjectionWriteCoordinator(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:25:        var recordOnlyCoordinator = new ProcessArtifactProjectionRecordOnlyCoordinator(RecordArtifactAsync);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:26:        var facets = ProcessArtifactProjectionFacetFactory.Create((claim, token) =>
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:28:        var context = new ProcessArtifactProjectionContext(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjection.cs:43:        await ProcessArtifactProjectionOrchestrator.CreateDefault(facets).ProjectAsync(context);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs:281:        ProcessArtifactRecordRequest request,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs:293:        => ProcessArtifactProjectionLineageBuilder.ApplyRecoveryLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs:298:    internal static ProcessArtifactProjectionLineage BuildArtifactProjectionLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs:299:        ProcessArtifactProjectionSourceKind sourceKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs:304:        => ProcessArtifactProjectionLineageBuilder.BuildLineage(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactProjectionUtilities.cs:315:        => ProcessArtifactProjectionLineageBuilder.BuildProvenance(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:242:        return ProcessArtifactRecordedSatisfactionRules.HasRecordedExpectedArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:880:        => ProcessArtifactProjectionPlanner.BuildArtifactTitle(artifact);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:883:        => ProcessArtifactProjectionPlanner.BuildExecutionArtifactExternalReferenceKey(artifact.Id);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:891:        => ProcessArtifactProjectionPlanner.BuildProviderNativeBrowserArtifactExternalReferenceKey(executionRunId, relativePath);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:897:        => ProcessArtifactProjectionPlanner.BuildProcessMockArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1036:        IReadOnlyList<ProcessArtifactRecord> existingArtifacts)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1047:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1209:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1975:        => ProcessArtifactProjectionPlanner.BuildResponseTextArtifactExternalReferenceKey(executionRunId, relativePath);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1981:        => ProcessArtifactProjectionPlanner.BuildWorkspaceWrittenArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:1990:        => ProcessArtifactProjectionPlanner.BuildExistingManagedArtifactExternalReferenceKey(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:2048:        => ProcessArtifactProjectionPlanner.ResolveProjectedArtifactTrustStatus(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ClaimLifecycle.cs:48:    private async Task<ProcessStepDispatchClaim?> TryClaimStepDispatchAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:11:            IReadOnlyList<ProcessArtifactRecord> artifacts,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactValidator.cs:83:            ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:59:                var dispatchClaim = await TryClaimStepDispatchAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Dispatch.cs:73:                var dispatchResult = await RunClaimedDispatchAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.FinalizerContextFactory.cs:3:internal static class ProcessDispatchFinalizerContextFactory
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteExecution.cs:8:    private async Task<ProcessClaimedDispatchResult> RunClaimedDispatchAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:40:            new ProcessDispatchFinalizerRouteService(finalizerApplicationService));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:78:    private ProcessDispatchFinalizerAdapter CreateFinalizerAdapter()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:81:    private ProcessDispatchFinalizerApplicationService CreateFinalizerApplicationService(ProcessDispatchFinalizerAdapter finalizerAdapter)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.RouteHandlers.cs:86:        ProcessDispatchFinalizerApplicationService finalizerApplicationService)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:235:        IReadOnlyList<ProcessArtifactRecord> artifacts,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:590:        ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:619:        ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:634:    private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:636:        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:733:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:742:    private static ProcessArtifactProducerKind ResolveArtifactProducerKind(ProcessArtifactProjectionSourceKind sourceKind)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:747:    private static bool IsManagerRecoveryLineage(ProcessArtifactProjectionLineage lineage)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:754:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:863:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:942:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:982:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1050:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1079:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1091:        var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1220:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs:1254:        ProcessArtifactRecord? artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs:17:        var artifacts = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs:138:    private static bool IsWrongRootArtifact(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.RuntimeInvariantAudit.cs:145:    private static bool RequiresProjectionLineage(ProcessArtifactRecord artifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs:13:        var artifacts = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs:66:    private static Guid? ResolveWorkflowRunIdForStep(IReadOnlyList<ProcessArtifactRecord> artifacts)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs:70:            var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs:98:    private static Guid? ResolveSubprocessRunIdForStep(IReadOnlyList<ProcessArtifactRecord> artifacts)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.StepCompletionFinalizer.ValidationOrchestration.cs:102:            var lineage = ProcessArtifactProjectionLineageJson.Deserialize(artifact.ProjectionLineageJson);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs:105:    IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor> ProjectionSourceOrder,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessArtifactSourceResolver.cs:5:    public static ProcessArtifactRecord? ResolveSourceArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessArtifactSourceResolver.cs:6:        IReadOnlyList<ProcessArtifactRecord> childArtifacts,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessArtifactSourceResolver.cs:23:        IReadOnlyList<ProcessArtifactRecord> childArtifacts,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPersistenceService.cs:37:        var parentArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPersistenceService.cs:55:        var childArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:17:    ProcessArtifactProjectionLineage ProjectionLineage,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:26:        ProcessArtifactRecord sourceArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:35:        var projectionLineage = ProcessArtifactProjectionLineageJson.Normalize(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:36:            new ProcessArtifactProjectionLineage
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:38:                SourceKind = ProcessArtifactProjectionSourceKind.SubprocessArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:61:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:93:        ProcessArtifactRecord artifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:101:        ProcessArtifactRecord sourceArtifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:111:        ProcessArtifactRecord sourceArtifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:118:        ProcessArtifactRecord sourceArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionPlanBuilder.cs:140:        ProcessArtifactRecord sourceArtifact)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionWriterCoordinator.cs:40:        var artifact = new ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionWriterCoordinator.cs:54:            ProjectionLineageJson = ProcessArtifactProjectionLineageJson.SerializeNormalized(plan.ProjectionLineage),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessSubprocessProjectionWriterCoordinator.cs:58:        await dbContext.Set<ProcessArtifactRecord>().AddAsync(artifact, cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:301:        var existingExternalReferenceKeys = await dbContext.Set<ProcessArtifactRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:309:            await dbContext.Set<ProcessArtifactRecord>().AddAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:310:                new ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:323:                    ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:324:                        new ProcessArtifactProjectionLineage
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:326:                            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowRun,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:379:            await dbContext.Set<ProcessArtifactRecord>().AddAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:380:                new ProcessArtifactRecord
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:400:                    ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:401:                        new ProcessArtifactProjectionLineage
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkflowRunCoordinator.cs:403:                            SourceKind = ProcessArtifactProjectionSourceKind.WorkflowArtifact,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs:9:internal sealed class ProcessWorkspaceWrittenArtifactProjectionCoordinator : IProcessArtifactProjectionSourceCoordinator
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs:37:    public async Task ProjectAsync(ProcessArtifactProjectionContext context)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessWorkspaceWrittenArtifactProjectionCoordinator.cs:156:                new ProcessArtifactProjectionWriteRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:124:    public static ProcessArtifactRecord? ResolveSubprocessSourceArtifact(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\WorkflowSubprocessArtifactMapper.cs:125:        IReadOnlyList<ProcessArtifactRecord> childArtifacts,

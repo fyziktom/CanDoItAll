@@ -1,0 +1,5 @@
+Command:
+rg -n "codex[/\\]bundles|process-runtime-execution-restoration-live-openai-completion-v1" src\CanDoItAll.Modules.Processes\README.md docs\process-agent-operator-runbook.md docs\process-runtime-restoration-ledger.md
+
+Exit code: 1
+Result: no matches. The new process docs do not contain transient bundle paths.

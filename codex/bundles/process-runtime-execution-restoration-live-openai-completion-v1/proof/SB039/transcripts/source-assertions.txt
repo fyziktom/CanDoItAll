@@ -1,0 +1,24 @@
+# SB039 Source Assertions
+
+## Command
+`rg -n "ProjectStructureAgentApi_start_process_node_SB011_INV_001|ProjectStructureAgentApi_execute_process_node_SB012_INV_001|StartRunAsync_SB018_INV_001|StartRunAsync_SB018_INV_002|CreateLaunchPlanAsync_infers_project_structure_context_from_single_process_link|CreateLaunchPlanAsync_reuses_open_project_structure_launch_plan_for_same_context|Launch_plan_reads_project_generated_run_failure_as_effective_status|ExecuteLaunchPlanAsync\(|StartRunAsync\(|BuildLaunchRoute|ProcessRunStartRequest|LaunchPlanId|IncludeLaunchPlan" tests\CanDoItAll.Tests.Integration\ProjectStructureAgentApiIntegrationTests.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs tests\CanDoItAll.Tests.Integration\ProcessLaunchPlanningIntegrationTests.cs tests\CanDoItAll.Tests.Integration\ProcessLaunchPlanDisplayProjectionIntegrationTests.cs src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Launch.cs -g "*.cs"`
+
+## Key Matches
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs:28` defines `StartRunAsync(ProcessRunStartRequest)`.
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs:30` requires a process definition or launch plan id.
+- `src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs:282` loads launch-plan context when `LaunchPlanId` is supplied.
+- `src/CanDoItAll.Modules.Processes/Launch/ProcessesService.Launch.cs:19` defines `ExecuteLaunchPlanAsync`.
+- `src/CanDoItAll.Modules.Processes/Launch/ProcessesService.Launch.cs:30` delegates launch execution to `StartRunAsync` with `LaunchPlanId`.
+- `src/CanDoItAll.Modules.Processes/Launch/ProcessesService.Launch.cs:258` builds project/global launch routes with `launchPlanId`.
+- `src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Launch.cs:9` accepts `LaunchPlanIdQuery`.
+- `src/CanDoItAll.Modules.Processes/Components/ProcessWorkspace.Launch.cs:226` executes selected launch plans through the typed service request.
+- `tests/CanDoItAll.Tests.Integration/ProjectStructureAgentApiIntegrationTests.cs:144` proves project-structure API launch-plan creation.
+- `tests/CanDoItAll.Tests.Integration/ProjectStructureAgentApiIntegrationTests.cs:232` proves project-structure API execution and run context.
+- `tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:155` proves direct run-start persistence and outbox.
+- `tests/CanDoItAll.Tests.Integration/ProcessesServiceIntegrationTests.cs:335` proves invalid/not-ready/duplicate launch execution guards.
+- `tests/CanDoItAll.Tests.Integration/ProcessLaunchPlanningIntegrationTests.cs:1512` proves project-structure context inference from a single process link.
+- `tests/CanDoItAll.Tests.Integration/ProcessLaunchPlanningIntegrationTests.cs:1566` proves open launch-plan reuse for the same project-structure context.
+- `tests/CanDoItAll.Tests.Integration/ProcessLaunchPlanDisplayProjectionIntegrationTests.cs:11` proves launch-plan readback reflects generated run failure.
+
+## Source Interpretation
+Launch compatibility is implemented through typed service calls and route/query ids, not stringly driver hooks. Launch-plan execution funnels into `StartRunAsync`, while project-structure API routes preserve project/node context and route identity.

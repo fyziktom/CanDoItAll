@@ -1,0 +1,199 @@
+Command: source assertions for prior report boundary and current typed process-service runtime surfaces
+WorkingDirectory: C:\repositories\CanDoItAll
+Invariant ID: SB003_INV_001
+
+Output:
+4:In progress. SB001-SB012 completed after structural repair; SB013 is next.
+21:| SB012 | Pass | Pass | SB013 run lifecycle creation may proceed | Proceed to SB013 | Critical Gate D passed. Project-structure executed run context is persisted and source-asserted, projected process-run/output-folder routes include `processId` and `runId`, Blazor page query binding selects the target run, and large-desktop browser proof opens the output folder quick action into the selected project-scoped run. Proof: `bundle://proof/SB012/manifest.md`. |
+22:| SB013 | Pending | Pending | Pending | Pending | Run lifecycle creation. |
+23:| SB014 | Pending | Pending | Pending | Pending | Dispatch/finalizer flow. |
+24:| SB015 | Pending | Pending | Pending | Pending | Critical gate E. |
+25:| SB016 | Pending | Pending | Pending | Pending | MAF workflow route. |
+26:| SB017 | Pending | Pending | Pending | Pending | Direct-agent route. |
+27:| SB018 | Pending | Pending | Pending | Pending | Critical gate F. |
+28:| SB019 | Pending | Pending | Pending | Pending | Deterministic .NET scenario setup. |
+29:| SB020 | Pending | Pending | Pending | Pending | Deterministic .NET artifact proof. |
+30:| SB021 | Pending | Pending | Pending | Pending | Critical gate G. |
+31:| SB022 | Pending | Pending | Pending | Pending | Live OpenAI guard setup. |
+32:| SB023 | Pending | Pending | Pending | Pending | Live OpenAI smoke or explicit skip. |
+33:| SB024 | Pending | Pending | Pending | Pending | Critical gate H. |
+34:| SB025 | Pending | Pending | Pending | Pending | Business-analysis scenario setup. |
+35:| SB026 | Pending | Pending | Pending | Pending | Business-analysis artifact proof. |
+36:| SB027 | Pending | Pending | Pending | Pending | Critical gate I. |
+37:| SB028 | Pending | Pending | Pending | Pending | Scheduler-origin start. |
+38:| SB029 | Pending | Pending | Pending | Pending | Workflow-origin start. |
+39:| SB030 | Pending | Pending | Pending | Pending | Critical gate J. |
+40:| SB031 | Pending | Pending | Pending | Pending | Read-only driver diagnostics. |
+41:| SB032 | Pending | Pending | Pending | Pending | Manager diagnostics projection. |
+42:| SB033 | Pending | Pending | Pending | Pending | Critical gate K. |
+43:| SB034 | Pending | Pending | Pending | Pending | Run detail UI. |
+44:| SB035 | Pending | Pending | Pending | Pending | Artifact navigation and recovery. |
+45:| SB036 | Pending | Pending | Pending | Pending | Critical gate L. |
+46:| SB037 | Pending | Pending | Pending | Pending | Runtime-host source-backed decision. |
+47:| SB038 | Pending | Pending | Pending | Pending | Runtime-host rejection tests. |
+48:| SB039 | Pending | Pending | Pending | Pending | Critical gate M. |
+49:| SB040 | Pending | Pending | Pending | Pending | Generic Process Core audit. |
+50:| SB041 | Pending | Pending | Pending | Pending | Generic Core regression guard. |
+51:| SB042 | Pending | Pending | Pending | Pending | Critical gate N. |
+52:| SB043 | Pending | Pending | Pending | Pending | Release-candidate matrix setup. |
+53:| SB044 | Pending | Pending | Pending | Pending | Release-candidate smoke execution. |
+54:| SB045 | Pending | Pending | Pending | Pending | Critical gate O. |
+55:| SB046 | Pending | Pending | Pending | Pending | Final red-team setup. |
+56:| SB047 | Pending | Pending | Pending | Pending | Final validators and zip handoff. |
+57:| SB048 | Pending | Pending | Pending | Pending | Critical gate P. |
+69:| SB034 | Run detail/artifacts/recovery | Large desktop only | Pending | Pending | Pending |
+70:| SB035 | Run detail/artifacts/recovery | Large desktop only | Pending | Pending | Pending |
+71:| SB036 | Run detail/artifacts/recovery | Large desktop only | Pending | Pending | Pending |
+74:Pending execution. Browser, host, command, and proof-manifest analytics must be reviewed after each relevant subbundle instead of only at final closure.
+80:| Verify real code on pushed branch, not only prior bundle claims. | In progress | SB001-SB012 use source assertions, focused tests, API readback, and browser proof instead of report-only claims. Latest proof: `bundle://proof/SB012/manifest.md`. |
+82:| Restore process launch from UI/project structure/API/scheduler/workflow-origin paths. | In progress | Global `/processes` route and current-run launch execution are browser/API-readback proven in SB007-SB009. Project-scoped `/projects/{projectId}/processes` definition and launch-plan context is proven in SB010. Project-structure node process start API and executed run/output-folder closure are proven in SB011-SB012. API run lifecycle, scheduler, and workflow-origin proofs remain pending. |
+84:| Prove .NET app create/modify process behavior. | Pending | Pending. |
+85:| Prove business-analysis process behavior. | Pending | Pending. |
+86:| Use OpenAI credits for guarded live proof when opt-in configuration is present. | Pending | Pending. |
+87:| Clarify runtime host/registry/selector/DI/manager/scheduler/workflow hook status. | Pending | Pending. |
+88:| Prepare detailed bundle and handoff artifact. | Pending | Pending. |
+
+tests/CanDoItAll.Tests.Integration\ApplicationStartupIntegrationTests.cs:54:        Assert.NotNull(serviceProvider.GetRequiredService<IProcessRunAutomationDispatchService>());
+tests/CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:91:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:176:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ApiIntegrationTests.cs:301:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:71:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs:138:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+src/CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs:863:        var result = await processesService.StartRunFromTriggerAsync(
+src/CanDoItAll.Modules.Processes\AgentTools\ProcessAgentRuntimeToolProvider.Runs.cs:106:        return EnsureSuccess(await processesService.StartRunAsync(request, cancellationToken));
+src/CanDoItAll.Modules.Processes\Development\ProcessDevelopmentSeedService.cs:136:            var runResult = await processesService.StartRunAsync(
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:266:public sealed class ProcessRunRecoveryWorker(
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:269:    ILogger<ProcessRunRecoveryWorker> logger) : BackgroundService
+src/CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:302:                    "ProcessRunRecoveryWorker iteration failed. The worker will retry after {FailureBackoff}.",
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Launch.cs:218:    private async Task ExecuteLaunchPlanAsync()
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.Launch.cs:226:        var result = await ProcessesService.ExecuteLaunchPlanAsync(
+src/CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:19:    public Task<Result<Guid>> ExecuteLaunchPlanAsync(
+src/CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.cs:30:        return StartRunAsync(
+src/CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:45:        services.AddScoped<IProcessRunAutomationDispatchService, ProcessRunAutomationDispatchService>();
+src/CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:86:                services.AddHostedService<ProcessRunRecoveryWorker>();
+src/CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:89:            services.AddHostedService<ProcessOutboxDrainWorker>();
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:8:    private async Task StartRunAsync()
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:16:        var result = await ProcessesService.StartRunAsync(
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:371:        public Task StartRunAsync()
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:373:            return workspace.StartRunAsync();
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:421:        public Task ExecuteLaunchPlanAsync()
+src/CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:423:            return workspace.ExecuteLaunchPlanAsync();
+tests/CanDoItAll.Tests.Integration\ProcessActiveRunSummaryPerformanceTests.cs:50:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:27:    public async Task StartRunAsync_prefills_project_role_binding_and_persists_runtime_signals()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:55:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:155:    public async Task StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox() {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:177:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:258:    public async Task StartRunFromTriggerAsync_SB038_INV_001_starts_workflow_origin_process_without_runtime_driver_hook()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:273:        var runResult = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:317:    public async Task StartRunFromTriggerAsync_SB038_INV_002_rejects_workflow_trigger_without_source_identity()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:323:        var result = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:335:    public async Task StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts() {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:343:        var missingDefinitionResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:357:        var unpublishedRunResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:386:        var notReadyExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:400:        var firstExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:405:        var duplicateExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:412:    public async Task StartRunAsync_uses_completed_historical_actual_cost_for_estimate()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:539:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:615:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:728:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:830:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:939:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1064:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1170:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1280:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1395:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1491:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1592:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1680:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1734:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1809:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1890:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1982:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2107:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2189:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2341:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2432:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2482:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2533:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2618:            var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2662:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3131:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3421:    public async Task StartRunAsync_SB10_INV_001_applies_strict_lint_for_delegated_published_definitions()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3445:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3461:    public async Task StartRunAsync_SB01_INV_001_applies_strict_lint_for_governed_live_runtime()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3478:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3590:    public async Task StartRunAsync_rejects_published_dependency_cycle_when_storage_is_invalid()
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3611:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3642:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3727:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3823:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3971:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:4028:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:4354:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:4495:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:4991:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:6486:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:6565:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessLaunchPlanDisplayProjectionIntegrationTests.cs:57:        var executeResult = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest
+tests/CanDoItAll.Tests.Integration\ProcessLaunchPlanningIntegrationTests.cs:697:    public async Task StartRunAsync_direct_assisted_start_uses_ai_directory_for_agent_capable_roles()
+tests/CanDoItAll.Tests.Integration\ProcessLaunchPlanningIntegrationTests.cs:719:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessLaunchPlanningIntegrationTests.cs:1293:    public async Task StartRunAsync_direct_static_client_web_context_prefers_javascript_developer_for_implementation_role()
+tests/CanDoItAll.Tests.Integration\ProcessLaunchPlanningIntegrationTests.cs:1324:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:231:        var executeResult = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest
+tests/CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs:423:        var executeResult = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:28:    public async Task<Result<Guid>> StartRunAsync(ProcessRunStartRequest request, CancellationToken cancellationToken = default)
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:764:        var startResult = await StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:118:    public async Task StartRunAsync_remains_successful_when_activity_dispatch_requires_retry()
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:134:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:194:    public async Task StartRunAsync_enqueues_automation_dispatch_for_durable_processing()
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:209:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:251:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:307:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:350:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:392:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:452:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:518:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:724:        var result = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:1104:                        collection.RemoveAll<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:1106:                        collection.AddScoped<IProcessRunAutomationDispatchService>(serviceProvider => serviceProvider.GetRequiredService<TrackingAutomationDispatchService>());
+tests/CanDoItAll.Tests.Integration\ProcessOutboxIntegrationTests.cs:1226:    private sealed class TrackingAutomationDispatchService : IProcessRunAutomationDispatchService
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:7:    public Task<Result<Guid>> StartRunFromTriggerAsync(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs:19:        return StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:799:        var runResult = await processesService.StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessRuntimeOperatorReadModelTests.cs:844:        var runResult = await processesService.StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessSchemaIntegrationTests.cs:76:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessSchemaIntegrationTests.cs:117:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessSchemaIntegrationTests.cs:156:        var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProcessSchemaIntegrationTests.cs:445:        Assert.True((await processesService.StartRunAsync(new ProcessRunStartRequest
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:114:    IProcessRunAutomationDispatchService automationDispatchService,
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1215:public sealed class ProcessOutboxDrainWorker(
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1220:    ILogger<ProcessOutboxDrainWorker> logger) : BackgroundService
+src/CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1287:                "ProcessOutboxDrainWorker iteration failed. The worker will retry after {FailureBackoff}.",
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:22:        var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:43:        var runResult = await processesService.StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:196:        var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:217:        var runResult = await processesService.StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:260:        var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:271:        var runResult = await processesService.StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessSubprocessIntegrationTests.cs:638:        var runResult = await processesService.StartRunAsync(
+tests/CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:58:        var dispatch = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:94:        var dispatch = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:128:            var dispatch = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+tests/CanDoItAll.Tests.Integration\ProcessWorkflowExecutorIntegrationTests.cs:221:        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:33:        Assert.DoesNotContain(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessOutboxDrainWorker)));
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:34:        Assert.DoesNotContain(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessRunRecoveryWorker)));
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:47:        Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessOutboxDrainWorker)));
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:48:        Assert.DoesNotContain(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessRunRecoveryWorker)));
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:55:    public void AddCanDoItAllRuntimeModules_RegistersProcessRunRecoveryWorker_WhenStartupRecoveryIsEnabled()
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:66:        Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessOutboxDrainWorker)));
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:67:        Assert.Contains(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessRunRecoveryWorker)));
+tests/CanDoItAll.Tests.Integration\RuntimeHostedWorkerPolicyIntegrationTests.cs:82:        Assert.DoesNotContain(services, descriptor => MatchesHostedService(descriptor, nameof(ProcessOutboxDrainWorker)));
+tests/CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:110:        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:171:        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:213:        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\ProjectWorkbenchServiceIntegrationTests.cs:487:        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+tests/CanDoItAll.Tests.Integration\RuntimeEvidenceSourceIntegrationTests.cs:173:        var runResult = await processes.StartRunAsync(new ProcessRunStartRequest
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:23:public interface IProcessRunAutomationDispatchService
+src/CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs:46:    ILogger<ProcessRunAutomationDispatchService> logger) : IProcessRunAutomationDispatchService
+ExitCode: 0

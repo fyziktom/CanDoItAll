@@ -1,0 +1,6 @@
+Command:
+rg -n "codex[/\\]bundles|C:\\repositories\\CanDoItAll\\codex|process-runtime-execution-restoration-live-openai-completion-v1" src tests -g "*.cs" -g "*.razor"
+
+
+Exit code: 1
+Result: no matches. No active source or test file references the transient bundle path.

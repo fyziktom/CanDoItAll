@@ -1,0 +1,3 @@
+Red-team case: Gate I must not claim trigger-origin support from manual StartRunAsync calls.
+Required proof includes SchedulerTargetLauncher calling StartRunFromTriggerAsync with SchedulerPlan origin, workflow-origin StartRunFromTriggerAsync with WorkflowRun identity, empty workflow links/execution runs for workflow-origin process start, and rejection when workflow trigger source identity is missing.
+Proof transcript: bundle://proof/SB027/transcripts/trigger-origin-process-starts-tests.txt.
