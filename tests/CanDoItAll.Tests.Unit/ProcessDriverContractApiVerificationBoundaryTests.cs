@@ -1108,7 +1108,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var decision = ReadRepositoryFile(
             "codex",
             "bundles",
-            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "process-driver-readonly-release-candidate-stabilization-v1",
             "architecture",
             "04-runtime-host-decision.md");
 
@@ -1204,19 +1204,19 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var decision = ReadRepositoryFile(
             "codex",
             "bundles",
-            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "process-driver-readonly-release-candidate-stabilization-v1",
             "architecture",
             "06-next-roadmap-decision.md");
         var roadmap = ReadRepositoryFile(
             "codex",
             "bundles",
-            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "process-driver-readonly-release-candidate-stabilization-v1",
             "architecture",
             "07-stable-core-domain-driver-roadmap-and-reopen-triggers.md");
         var runtimeDecision = ReadRepositoryFile(
             "codex",
             "bundles",
-            "process-driver-readonly-orchestration-evidence-pipeline-v1",
+            "process-driver-readonly-release-candidate-stabilization-v1",
             "architecture",
             "04-runtime-host-decision.md");
         var sourceText = ReadReadonlyDriverPipelineSource(root);

@@ -7,14 +7,14 @@
 - Browser validation remains N/A unless UI/media files change unexpectedly; unexpected UI/media drift must fail the bundle and trigger re-scope.
 
 ## Critical Path Risks
-1. Splitting adapters changes behavior or weakens no-mutation proof.
-2. A typed batch gateway slowly becomes generic runtime dispatch.
-3. Process-module project references to all driver packages become ungoverned coupling.
-4. Observation projection planning accidentally becomes persistence, UI, or manager-command implementation.
-5. Runtime-host roadmap prose accidentally approves implementation.
-6. Full-unit proof regresses into owned skips or stale architecture fixtures again.
-7. Evidence policy diverges across transcript/runtime/artifact/Office/business lanes.
-8. New proof is table-only and not source/test-backed.
+- Splitting adapters changes behavior or weakens no-mutation proof.
+- A typed batch gateway slowly becomes generic runtime dispatch.
+- Process-module project references to all driver packages become ungoverned coupling.
+- Observation projection planning accidentally becomes persistence, UI, or manager-command implementation.
+- Runtime-host roadmap prose accidentally approves implementation.
+- Full-unit proof regresses into owned skips or stale architecture fixtures again.
+- Evidence policy diverges across transcript/runtime/artifact/Office/business lanes.
+- New proof is table-only and not source/test-backed.
 
 ## Validation Risks
 - Build-only proof is insufficient.
@@ -29,3 +29,4 @@
 - Any process mutation, claim, transition, finalizer, retry, provider repair, shell execution, Office/Graph call, or business-record mutation.
 - Any full-unit failure or skipped test not explicitly owned with a current-source replacement.
 - Any critical manifest missing source assertions, command transcripts, changed-file hashes, semantic positive proof, adversarial negative proof, and anti-stub audit.
+

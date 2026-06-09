@@ -1,0 +1,3 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-readonly-release-candidate-stabilization-v1 --stage completed --repo-root C:\repositories\CanDoItAll
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-release-candidate-stabilization-v1
+Exit code: 0

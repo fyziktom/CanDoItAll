@@ -1,7 +1,8 @@
 # SB018 - Gate F: gateway cannot become runtime host
 
 ## Status
-Prepared for Codex implementation. Critical foundation.
+- Completed
+- Closure proof is recorded in undle://reviews/01-execution-report.md and the nearest critical proof manifest.
 
 ## Objective
 Gate F: gateway cannot become runtime host
@@ -29,11 +30,9 @@ Gate F: gateway cannot become runtime host
 - Updated execution report row.
 
 ## Dependency Impact
-Downstream phases rely on this subbundle for release-candidate stability of the read-only driver pipeline.
-
+- Downstream phases rely on this subbundle for release-candidate stability of the read-only driver pipeline.
 ## Validation Depth
-Critical Semantic Adequacy Gate. Requires build/focused tests/source scans, changed-file hashes, source assertions, anti-stub audit, adversarial negative proof, semantic positive proof, and production behavior artifact matrix.
-
+- Critical Semantic Adequacy Gate. Requires build/focused tests/source scans, changed-file hashes, source assertions, anti-stub audit, adversarial negative proof, semantic positive proof, and production behavior artifact matrix.
 ## Implementation Steps
 1. Re-read the exact source files before changing anything.
 2. Implement the smallest complete change for this objective.
@@ -52,13 +51,13 @@ No UI/mobile/small/medium/browser proof unless UI/media drift occurs unexpectedl
 - Do not close this subbundle with report-only proof.
 
 ## Acceptance Checklist
-- [ ] Behavior is source-backed, not report-only.
-- [ ] Focused tests pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] No stub/TODO/NotImplemented production markers.
-- [ ] Execution report row updated.
-- [ ] Critical manifest and semantic invariants completed.
+- [x] Behavior is source-backed, not report-only.
+- [x] Focused tests pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] No stub/TODO/NotImplemented production markers.
+- [x] Execution report row updated.
+- [x] Critical manifest and semantic invariants completed.
 
 ## Proof Required
 - `proof/SB018/manifest.md`
@@ -69,10 +68,10 @@ No UI/mobile/small/medium/browser proof unless UI/media drift occurs unexpectedl
 - Anti-stub scan output
 
 ## Browser Validation Logging
-N/A backend/runtime/Core/driver work. If UI/media files change, stop and re-scope.
-
+- N/A backend/runtime/Core/driver work. If UI/media files change, stop and re-scope.
 ## Progression Gate
-Do not continue to downstream phases until this critical gate has semantic adequacy proof and red-team rejection of shallow closure.
-
+- Do not continue to downstream phases until this critical gate has semantic adequacy proof and red-team rejection of shallow closure.
 ## Suggested Agent Prompt
 Implement `SB018 - Gate F: gateway cannot become runtime host` exactly as specified. Preserve the read-only driver boundary and record artifact-backed proof before marking the row complete.
+
+

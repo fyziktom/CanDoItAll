@@ -106,6 +106,4 @@ gantt
 - SB051: Gate Q: proof quality is artifact-backed
 - SB054: Gate R: final handoff zip and closure
 
-## Phase Gates
-
-Each critical gate requires build/focused tests/source scans and artifact-backed manifests. Gate P/Q/R require full smoke, red-team, prepared and completed validators.
+## Phase Gates`r`n`r`n- Each critical gate requires build/focused tests/source scans and artifact-backed manifests. Gate P/Q/R require full smoke, red-team, prepared and completed validators.

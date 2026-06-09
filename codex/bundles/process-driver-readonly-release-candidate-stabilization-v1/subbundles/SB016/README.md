@@ -1,7 +1,8 @@
 # SB016 - Strengthen explicit gateway lane surface and implemented-lane docs
 
 ## Status
-Prepared for Codex implementation. Standard phase work.
+- Completed
+- Closure proof is recorded in undle://reviews/01-execution-report.md and the nearest critical proof manifest.
 
 ## Objective
 Strengthen explicit gateway lane surface and implemented-lane docs
@@ -29,11 +30,9 @@ Strengthen explicit gateway lane surface and implemented-lane docs
 - Updated execution report row.
 
 ## Dependency Impact
-Downstream phases rely on this subbundle for release-candidate stability of the read-only driver pipeline.
-
+- Downstream phases rely on this subbundle for release-candidate stability of the read-only driver pipeline.
 ## Validation Depth
-Focused source-backed validation. Use nearest critical gate for broad closure.
-
+- Focused source-backed validation. Use nearest critical gate for broad closure.
 ## Implementation Steps
 1. Re-read the exact source files before changing anything.
 2. Implement the smallest complete change for this objective.
@@ -52,12 +51,12 @@ No UI/mobile/small/medium/browser proof unless UI/media drift occurs unexpectedl
 - Do not close this subbundle with report-only proof.
 
 ## Acceptance Checklist
-- [ ] Behavior is source-backed, not report-only.
-- [ ] Focused tests pass.
-- [ ] Source scans pass.
-- [ ] No UI/media drift.
-- [ ] No stub/TODO/NotImplemented production markers.
-- [ ] Execution report row updated.
+- [x] Behavior is source-backed, not report-only.
+- [x] Focused tests pass.
+- [x] Source scans pass.
+- [x] No UI/media drift.
+- [x] No stub/TODO/NotImplemented production markers.
+- [x] Execution report row updated.
 
 
 ## Proof Required
@@ -69,10 +68,10 @@ No UI/mobile/small/medium/browser proof unless UI/media drift occurs unexpectedl
 - Anti-stub scan output
 
 ## Browser Validation Logging
-N/A backend/runtime/Core/driver work. If UI/media files change, stop and re-scope.
-
+- N/A backend/runtime/Core/driver work. If UI/media files change, stop and re-scope.
 ## Progression Gate
-May continue after focused proof passes, but nearest critical gate must validate cumulative behavior.
-
+- May continue after focused proof passes, but nearest critical gate must validate cumulative behavior.
 ## Suggested Agent Prompt
 Implement `SB016 - Strengthen explicit gateway lane surface and implemented-lane docs` exactly as specified. Preserve the read-only driver boundary and record artifact-backed proof before marking the row complete.
+
+
