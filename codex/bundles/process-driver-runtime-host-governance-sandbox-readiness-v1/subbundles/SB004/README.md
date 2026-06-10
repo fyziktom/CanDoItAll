@@ -1,7 +1,7 @@
 # SB004 - Durable EF audit production default: inventory and source changes
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Advance `Durable EF audit production default` without weakening the restored process runtime, generic Process Core, or verification-only host boundary.
@@ -31,7 +31,7 @@ Advance `Durable EF audit production default` without weakening the restored pro
 - Updated docs/runbook only when the code behavior is source-backed.
 
 ## Dependency Impact
-This subbundle is part of P02. If it is wrong, all downstream subbundles in later phases must be reopened because runtime-host governance and safety assumptions may be invalid.
+- This subbundle is part of P02. If it is wrong, all downstream subbundles in later phases must be reopened because runtime-host governance and safety assumptions may be invalid.
 
 ## Validation Depth
 - Build or focused test proof as relevant.
@@ -70,10 +70,10 @@ Execution-capable driver runtime remains out of scope. Any needed execution-capa
 - Changed-file hashes.
 
 ## Browser Validation Logging
-N/A unless this subbundle changes operator UI/readback. If UI changes, use `/processes` or project-scoped run detail at 1900x1200 large desktop only and capture screenshots plus API readback.
+- N/A unless this subbundle changes operator UI/readback. If UI changes, use `/processes` or project-scoped run detail at 1900x1200 large desktop only and capture screenshots plus API readback.
 
 ## Progression Gate
-Proceed only after focused proof and source scans pass. If the subbundle changes a shared contract, rerun the nearest critical gate.
+- Proceed only after focused proof and source scans pass. If the subbundle changes a shared contract, rerun the nearest critical gate.
 
 ## Suggested Agent Prompt
 Implement SB004 for `Durable EF audit production default`. Use the exact source references above. Preserve generic Process Core and verification-only host constraints. Record source-backed proof before claiming completion.

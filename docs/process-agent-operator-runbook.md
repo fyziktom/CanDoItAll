@@ -52,6 +52,12 @@ Operator readback must preserve these fields:
 
 Treat `ProcessVerificationHostFailureCategory` and `ProcessVerificationHostDenialCode` as troubleshooting classification only. A non-empty diagnostic list, audit record, or denied readback is not approval to execute drivers, mutate process state, call external systems, write workspace/storage, or register drivers in dependency injection.
 
+Use `IProcessVerificationRuntimeHostStatusService.GetStatusAsync` or the manager facade status method when an operator needs host readiness. Status readback is limited to enabled/emergency-disabled state, lane registration and enablement, durable audit-store classification, and mutation-denial flags.
+
+Scheduler and workflow read-only verification jobs must run through `IProcessReadOnlyVerificationJobRunner.RunAsync`, which delegates to `IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync`. Do not call domain drivers, `ProcessReadOnlyVerificationBatchOrchestrator`, or runtime-host internals from scheduler/workflow modules.
+
+The future execution-capable driver sandbox contract is currently `ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun`. It is dry-run-only and has no allow-listed effectful surfaces. `ProcessExecutionCapableDriverFutureGate` must return blocked until a separate source-backed approval bundle proves lifecycle ownership, immutable audit, sandbox/allow-list policy, authorization/revocation, compatibility, malicious corpus, and red-team proof.
+
 ## Failure Triage
 
 Blocked and failed steps expose typed recovery state. Read `blockReasonCode`, `nextRecoveryAction`, `recoveryOptions`, run `health.recommendedAction`, invariant diagnostics, outbox health, escalations, and the attempt timeline before changing state.

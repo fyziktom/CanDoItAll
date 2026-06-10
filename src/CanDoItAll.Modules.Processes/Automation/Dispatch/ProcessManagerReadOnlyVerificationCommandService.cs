@@ -17,12 +17,15 @@ internal interface IProcessManagerReadOnlyVerificationFacade
     Task<ProcessManagerReadOnlyVerificationReadbackDto> VerifyForReadbackAsync(
         ProcessManagerReadOnlyVerificationReadbackRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ProcessVerificationRuntimeHostStatusDto> GetRuntimeHostStatusAsync(CancellationToken cancellationToken = default);
 }
 
 internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProcessManagerReadOnlyVerificationFacade
 {
     private readonly IProcessVerificationRuntimeHost host;
     private readonly IProcessVerificationAuditQueryService auditQueryService;
+    private readonly IProcessVerificationRuntimeHostStatusService? statusService;
 
     public ProcessManagerReadOnlyVerificationCommandService(
         IProcessVerificationRuntimeHost host,
@@ -30,6 +33,15 @@ internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProces
     {
         this.host = host ?? throw new ArgumentNullException(nameof(host));
         this.auditQueryService = auditQueryService ?? throw new ArgumentNullException(nameof(auditQueryService));
+    }
+
+    public ProcessManagerReadOnlyVerificationCommandService(
+        IProcessVerificationRuntimeHost host,
+        IProcessVerificationAuditQueryService auditQueryService,
+        IProcessVerificationRuntimeHostStatusService statusService)
+        : this(host, auditQueryService)
+    {
+        this.statusService = statusService ?? throw new ArgumentNullException(nameof(statusService));
     }
 
     public ProcessManagerReadOnlyVerificationCommandResult Run(ProcessManagerReadOnlyVerificationCommandRequest request)
@@ -124,6 +136,16 @@ internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProces
             request.VerificationRequest,
             verificationResult,
             auditReadback.Records);
+    }
+
+    public Task<ProcessVerificationRuntimeHostStatusDto> GetRuntimeHostStatusAsync(CancellationToken cancellationToken = default)
+    {
+        if (statusService is null)
+        {
+            throw new InvalidOperationException("Runtime host status readback requires IProcessVerificationRuntimeHostStatusService.");
+        }
+
+        return statusService.GetStatusAsync(cancellationToken);
     }
 }
 

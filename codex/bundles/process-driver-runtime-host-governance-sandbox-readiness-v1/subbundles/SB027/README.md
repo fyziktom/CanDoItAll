@@ -1,7 +1,7 @@
 # SB027 - Critical Gate P09: semantic closure for Live OpenAI process-run proof hardening
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Advance `Live OpenAI process-run proof hardening` without weakening the restored process runtime, generic Process Core, or verification-only host boundary.
@@ -31,7 +31,7 @@ Advance `Live OpenAI process-run proof hardening` without weakening the restored
 - Updated docs/runbook only when the code behavior is source-backed.
 
 ## Dependency Impact
-This subbundle is part of P09. If it is wrong, all downstream subbundles in later phases must be reopened because runtime-host governance and safety assumptions may be invalid.
+- This subbundle is part of P09. If it is wrong, all downstream subbundles in later phases must be reopened because runtime-host governance and safety assumptions may be invalid.
 
 ## Validation Depth
 - Build or focused test proof as relevant.
@@ -70,10 +70,10 @@ Execution-capable driver runtime remains out of scope. Any needed execution-capa
 - Changed-file hashes.
 
 ## Browser Validation Logging
-N/A unless this subbundle changes operator UI/readback. If UI changes, use `/processes` or project-scoped run detail at 1900x1200 large desktop only and capture screenshots plus API readback.
+- N/A unless this subbundle changes operator UI/readback. If UI changes, use `/processes` or project-scoped run detail at 1900x1200 large desktop only and capture screenshots plus API readback.
 
 ## Progression Gate
-Critical foundation gate. Later phases must not start until this gate has semantic positive proof, adversarial negative proof, anti-stub audit, raw-note closure, and production behavior artifact matrix.
+- Critical foundation gate. Later phases must not start until this gate has semantic positive proof, adversarial negative proof, anti-stub audit, raw-note closure, and production behavior artifact matrix.
 
 ## Suggested Agent Prompt
 Implement SB027 for `Live OpenAI process-run proof hardening`. Use the exact source references above. Preserve generic Process Core and verification-only host constraints. Record source-backed proof before claiming completion.

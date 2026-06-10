@@ -470,6 +470,64 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public async Task Process_verification_runtime_host_status_SB012_INV_001_reports_readiness_and_emergency_disable_without_execution_permission() {
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ISecretRedactor, SecretRedactor>();
+        services.AddPooledDbContextFactory<AppDbContext>(options =>
+            options.UseInMemoryDatabase($"process-verification-status-{Guid.NewGuid():N}"));
+        services.AddProcessVerificationRuntimeHost();
+        services.AddEfCoreProcessVerificationAuditStore();
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+        await using var scope = provider.CreateAsyncScope();
+        var statusService = scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHostStatusService>();
+
+        var status = await statusService.GetStatusAsync();
+
+        Assert.True(status.Enabled);
+        Assert.False(status.EmergencyDisabled);
+        Assert.Equal(ProcessVerificationRuntimeHostReadiness.Ready, status.Readiness);
+        Assert.Equal(ProcessVerificationAuditStoreKind.DurableEfCore, status.AuditStoreKind);
+        Assert.True(status.UsesDurableAuditStore);
+        Assert.True(status.NoMutationPerformed);
+        Assert.False(status.AllowsProcessMutation);
+        Assert.False(status.AllowsTransitionMutation);
+        Assert.False(status.AllowsFinalizerMutation);
+        Assert.Contains(status.Lanes, lane =>
+            lane.Lane == ProcessDriverVerificationGatewayLane.BusinessAnalysisRead &&
+            lane.Registered &&
+            lane.Enabled &&
+            lane.RequiredPermissionMode == ProcessDriverPermissionMode.VerificationOnly);
+
+        var disabledServices = new ServiceCollection();
+        disabledServices.AddProcessVerificationRuntimeHost();
+        disabledServices.AddInMemoryProcessVerificationAuditStoreForTests();
+        disabledServices.Configure<ProcessVerificationRuntimeHostOptions>(options => options.Enabled = false);
+
+        using var disabledProvider = disabledServices.BuildServiceProvider();
+        using var disabledScope = disabledProvider.CreateScope();
+        var disabledStatus = await disabledScope.ServiceProvider
+            .GetRequiredService<IProcessVerificationRuntimeHostStatusService>()
+            .GetStatusAsync();
+
+        Assert.False(disabledStatus.Enabled);
+        Assert.True(disabledStatus.EmergencyDisabled);
+        Assert.Equal(ProcessVerificationRuntimeHostReadiness.EmergencyDisabled, disabledStatus.Readiness);
+        Assert.Equal(ProcessVerificationAuditStoreKind.TestInMemory, disabledStatus.AuditStoreKind);
+        Assert.False(disabledStatus.UsesDurableAuditStore);
+        Assert.True(disabledStatus.NoMutationPerformed);
+        Assert.False(disabledStatus.AllowsProcessMutation);
+        Assert.False(disabledStatus.AllowsTransitionMutation);
+        Assert.False(disabledStatus.AllowsFinalizerMutation);
+    }
+
+    [Fact]
     public async Task Process_verification_runtime_host_SB046_INV_001_classifies_denials_with_reason_codes_audit_and_no_mutation_flags()
     {
         var request = CreateBusinessAnalysisHostRequest();
@@ -971,6 +1029,94 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
             "scheduler-verifier",
             RequestedAt));
+    }
+
+    [Fact]
+    public async Task Process_readonly_verification_job_runner_SB024_INV_001_executes_scheduler_and_workflow_jobs_through_manager_host_boundary() {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var runner = scope.ServiceProvider.GetRequiredService<IProcessReadOnlyVerificationJobRunner>();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "scheduler:runtime-host-boundary",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var job = new ProcessReadOnlyVerificationJob(
+            Guid.NewGuid(),
+            ProcessReadOnlyVerificationJobSourceKind.Scheduler,
+            "scheduler-plan:daily-review",
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "scheduler-verifier",
+            RequestedAt,
+            auditRecordLimit: 10);
+
+        var result = await runner.RunAsync(job);
+
+        Assert.Equal(job.Id, result.JobId);
+        Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Scheduler, result.SourceKind);
+        Assert.Equal("scheduler-plan:daily-review", result.SourceReference);
+        Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, result.Readback.Status);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, result.Readback.Lane);
+        Assert.NotEmpty(result.Readback.Diagnostics);
+        Assert.Contains(result.Readback.AuditRecords, record => record.Id == result.Readback.AuditRecordId);
+        Assert.True(result.NoMutationPerformed);
+        Assert.False(result.AllowsProcessMutation);
+        Assert.False(result.AllowsTransitionMutation);
+        Assert.False(result.AllowsFinalizerMutation);
+    }
+
+    [Fact]
+    public void Process_future_execution_sandbox_policy_SB039_INV_001_stays_dry_run_and_denies_all_effectful_surfaces_until_approved() {
+        var policy = ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun;
+
+        Assert.Equal(ProcessExecutionCapableDriverApprovalStatus.NotApproved, policy.ApprovalStatus);
+        Assert.True(policy.DryRunOnly);
+        Assert.True(policy.NoMutationPerformed);
+        Assert.False(policy.AllowsProcessMutation);
+        Assert.False(policy.AllowsTransitionMutation);
+        Assert.False(policy.AllowsFinalizerMutation);
+        Assert.Empty(policy.AllowListedSurfaces);
+
+        foreach (var surface in Enum.GetValues<ProcessExecutionCapableDriverSurface>()) {
+            Assert.False(policy.Allows(surface));
+        }
+    }
+
+    [Fact]
+    public void Process_execution_capable_future_gate_SB042_INV_001_requires_complete_source_backed_approval_before_any_execution_surface_is_allowed() {
+        var gate = new ProcessExecutionCapableDriverFutureGate();
+        var blockedPolicy = ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun;
+        var incompleteEvidence = ProcessExecutionCapableDriverApprovalEvidence.None;
+        var untrustedApprovedPolicy = new ProcessExecutionCapableDriverSandboxPolicy(
+            ProcessExecutionCapableDriverApprovalStatus.Approved,
+            DryRunOnly: false,
+            [
+                ProcessExecutionCapableDriverSurface.CommandExecution,
+                ProcessExecutionCapableDriverSurface.WorkspaceWrite
+            ]);
+
+        var blockedResult = gate.Evaluate(blockedPolicy, incompleteEvidence);
+        var untrustedResult = gate.Evaluate(untrustedApprovedPolicy, incompleteEvidence);
+
+        Assert.Equal(ProcessExecutionCapableDriverGateDecision.Blocked, blockedResult.Decision);
+        Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.SourceBackedApprovalBundle, blockedResult.MissingRequirements);
+        Assert.False(blockedResult.Allows(ProcessExecutionCapableDriverSurface.CommandExecution));
+        Assert.True(blockedResult.NoMutationPerformed);
+        Assert.False(blockedResult.AllowsProcessMutation);
+        Assert.False(blockedResult.AllowsTransitionMutation);
+        Assert.False(blockedResult.AllowsFinalizerMutation);
+
+        Assert.Equal(ProcessExecutionCapableDriverGateDecision.Blocked, untrustedResult.Decision);
+        Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.RedTeamProof, untrustedResult.MissingRequirements);
+        Assert.False(untrustedResult.Allows(ProcessExecutionCapableDriverSurface.CommandExecution));
+        Assert.False(untrustedResult.Allows(ProcessExecutionCapableDriverSurface.WorkspaceWrite));
     }
 
     [Fact]

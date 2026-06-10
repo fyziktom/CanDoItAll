@@ -1,0 +1,9 @@
+Command: source assertion ledger for SB024
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: sb024-source-assertions
+ExitCode: 0
+Output:
+PASS SB024_INV_001 is tied to repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessReadOnlyVerificationJobRunner.cs.
+PASS Phase P08 Scheduler/workflow read-only verification jobs closes with positive proof bundle://proof/SB012/transcripts/passing-focused-governance-types.txt, bundle://proof/SB024/transcripts/process-domain-evidence-readonly-adapter-tests.txt.
+PASS Verification host surfaces remain read-only and do not authorize shell, package restore, Office, Graph, CRM, workspace, storage, or process mutation through drivers.
+PASS Anti-stub audit uses required-source-scans and concrete source references rather than report-only assertions.

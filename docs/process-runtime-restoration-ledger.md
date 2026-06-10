@@ -35,6 +35,12 @@ Read-only verification migration may use `ProcessReadOnlyVerificationBatchOrches
 
 Manager/operator projection may use `IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync` to expose diagnostics, `auditRecords`, `observationHash`, `denialCategory`, `denialCode`, and mutation-denial flags. That projection is read-only troubleshooting evidence, not runtime-host approval.
 
+Runtime-host readiness readback may use `IProcessVerificationRuntimeHostStatusService.GetStatusAsync` or the manager facade status method. The status contract reports enabled/emergency-disabled state, lane registration, lane enablement, durable audit-store classification, and false mutation permission flags.
+
+Scheduler/workflow read-only verification jobs now have a process-owned runner: `IProcessReadOnlyVerificationJobRunner.RunAsync`. It executes through `IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync` and keeps scheduler/workflow modules away from domain driver packages and batch-orchestrator internals.
+
+Execution-capable future readiness remains blocked by `ProcessExecutionCapableDriverFutureGate` and `ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun`. The default policy is dry-run-only, has no allow-listed effectful surfaces, and cannot allow command execution, package restore, file access, workspace/storage writes, network/HTTP, Office/Graph, CRM, provider repair, finalizer application, transition mutation, claim mutation, retry scheduling, or process mutation.
+
 ## Open Blockers
 
 - Generic process-driver runtime host is not approved.

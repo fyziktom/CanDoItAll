@@ -1,0 +1,6 @@
+Command: python 'C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py' 'C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-host-governance-sandbox-readiness-v1' --stage prepared --repo-root 'C:\repositories\CanDoItAll'
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: prepared-validator-after-bundle-repair
+ExitCode: 0
+Output:
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-host-governance-sandbox-readiness-v1

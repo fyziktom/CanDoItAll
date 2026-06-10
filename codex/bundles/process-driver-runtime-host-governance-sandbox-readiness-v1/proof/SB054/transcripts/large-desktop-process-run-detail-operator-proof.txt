@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --configuration Debug --no-build --filter "FullyQualifiedName~Process_run_detail_recovery_SB030_large_screen_displays_blocked_recovery_and_artifact_readback"
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: large-desktop-process-run-detail-operator-proof
+ExitCode: 0
+Output:
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 9 s - CanDoItAll.Tests.Playwright.dll (net10.0)

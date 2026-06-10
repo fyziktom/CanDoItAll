@@ -127,6 +127,12 @@ Migration from lane-by-lane adapter calls should keep request construction typed
 
 For operator-facing verification diagnostics, use `IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync` over the same read-only payload shape. `ProcessManagerReadOnlyVerificationReadbackDto` is the current source-backed readback contract and must carry process-run id, step-run id, caller context, projection metadata, diagnostics, `auditRecords`, `observationHash`, `denialCategory`, `denialCode`, `denialMessage`, `noMutationPerformed = true`, and false mutation permission flags.
 
+For host readiness, use `IProcessVerificationRuntimeHostStatusService.GetStatusAsync` or the manager facade status readback. The status contract reports enabled/emergency-disabled state, lane registration, lane enablement, audit-store kind, durable-audit use, and false mutation permission flags. It is operator readback only; it does not approve an execution-capable runtime host.
+
+Scheduler/workflow read-only verification jobs use `IProcessReadOnlyVerificationJobRunner.RunAsync`. The runner converts `ProcessReadOnlyVerificationJob` into the manager readback request and executes through `IProcessManagerReadOnlyVerificationFacade`; scheduler and workflow modules must not call domain drivers or the batch orchestrator directly.
+
+Future execution-capable driver readiness is represented by `ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun` and `ProcessExecutionCapableDriverFutureGate`. The default policy is dry-run-only, has no allow-listed surfaces, and denies command execution, package restore, file access, workspace/storage writes, network/HTTP, Office/Graph, CRM, provider repair, finalizer application, transition mutation, claim mutation, retry scheduling, and process mutation until a separate source-backed approval bundle satisfies every typed gate requirement.
+
 `ProcessVerificationHostFailureCategory` and `ProcessVerificationHostDenialCode` are troubleshooting taxonomy. They do not approve execution-capable drivers, dependency-injection registration, scheduler/workflow hooks, manager commands, external calls, storage/workspace writes, finalizer application, transition application, claim mutation, retry scheduling, or process mutation.
 
 Do not add a generic runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, file/network access, storage/workspace write, or process mutation while migrating to the batch orchestrator.

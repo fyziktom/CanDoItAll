@@ -1,0 +1,10 @@
+Command: source-scan assertions embedded in transcript
+WorkingDirectory: C:\repositories\CanDoItAll
+RunLabel: required-source-scans
+ExitCode: 0
+Output:
+PASS Process Core has no reverse dependency on modules/infrastructure/runtime/driver host
+PASS Verification host and lane selector have no reflection or fallback discovery
+PASS Scheduler and workflow modules do not call verification drivers or runtime host internals directly
+PASS Production and tests do not couple to this active bundle path
+PASS Tracked source/docs/proof have no high-confidence OpenAI secret values
