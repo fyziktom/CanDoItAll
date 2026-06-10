@@ -1,0 +1,3 @@
+# Raw User Request
+
+Codex completed and pushed to `maf-processes-refactor`. Review the real code, not only the bundle report. Check the real test result and identify what must be fixed/improved to move toward generic process driver runtime host and the related postponed items. The latest bundle was intended to be more code-first, but still produced too few real code changes compared with bundle/proof changes. Codex can work longer with GPT-5.5 extra high. Subbundles should guide larger implementation areas, not atomic micro changes, and should prevent domain leakage, overlarge files, and architectural tangles. Prepare a detailed bundle as a zip.
