@@ -13157,6 +13157,8 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
 
                     b.HasIndex("ProcessRunId", "RecordedAtUtc");
 
+                    b.HasIndex("RecordedAtUtc");
+
                     b.HasIndex("StepRunId", "RecordedAtUtc");
 
                     b.ToTable("Processes_VerificationAuditRecords", (string)null);

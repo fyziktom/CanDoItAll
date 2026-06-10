@@ -116,7 +116,16 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<IProcessVerificationRuntimeHost, ProcessVerificationRuntimeHost>();
         services.TryAddScoped<IProcessVerificationRuntimeHostStatusService, ProcessVerificationRuntimeHostStatusService>();
         services.TryAddSingleton<ProcessExecutionCapableDriverFutureGate>();
-        services.TryAddScoped<IProcessDryRunExecutionHost, ProcessDryRunExecutionHost>();
+        services.TryAddSingleton<IProcessVerificationHostCapabilityProvider>(ProcessVerificationHostCapabilityCatalog.StaticProvider);
+        services.TryAddScoped<ProcessDryRunExecutionRequestNormalizer>();
+        services.TryAddScoped<ProcessDryRunExecutionCapabilityResolver>();
+        services.TryAddScoped<ProcessDryRunExecutionSandboxEvaluator>();
+        services.TryAddScoped<ProcessDryRunExecutionAuthorizationEvaluator>();
+        services.TryAddScoped<ProcessDryRunExecutionPlanBuilder>();
+        services.TryAddScoped<ProcessDryRunExecutionAuditMapper>();
+        services.TryAddScoped<ProcessDryRunExecutionPipeline>();
+        services.TryAddScoped<IProcessDryRunExecutionHost>(provider =>
+            new ProcessDryRunExecutionHost(provider.GetRequiredService<ProcessDryRunExecutionPipeline>()));
         services.TryAddScoped<ProcessManagerReadOnlyVerificationCommandService>();
         services.TryAddScoped<IProcessManagerReadOnlyVerificationFacade>(provider =>
             provider.GetRequiredService<ProcessManagerReadOnlyVerificationCommandService>());

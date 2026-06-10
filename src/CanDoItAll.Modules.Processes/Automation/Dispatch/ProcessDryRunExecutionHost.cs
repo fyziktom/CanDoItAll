@@ -1,5 +1,6 @@
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -10,9 +11,21 @@ internal interface IProcessDryRunExecutionHost
         CancellationToken cancellationToken = default);
 }
 
-internal sealed class ProcessDryRunExecutionHost(
-    ProcessExecutionCapableDriverFutureGate futureGate) : IProcessDryRunExecutionHost
+internal sealed class ProcessDryRunExecutionHost : IProcessDryRunExecutionHost
 {
+    [ActivatorUtilitiesConstructor]
+    public ProcessDryRunExecutionHost(ProcessDryRunExecutionPipeline pipeline)
+    {
+        this.pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+    }
+
+    public ProcessDryRunExecutionHost(ProcessExecutionCapableDriverFutureGate futureGate)
+        : this(ProcessDryRunExecutionPipeline.CreateDefault(futureGate))
+    {
+    }
+
+    private readonly ProcessDryRunExecutionPipeline pipeline;
+
     public Task<ProcessDryRunExecutionHostResult> EvaluateAsync(
         ProcessDryRunExecutionRequest request,
         CancellationToken cancellationToken = default)
@@ -20,49 +33,7 @@ internal sealed class ProcessDryRunExecutionHost(
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var requestedSurfaces = request.ResolveRequestedSurfaces();
-        var requestedSideEffectOperations = request.RequestedOperations
-            .Where(ProcessDriverOperationRules.IsSideEffectOperation)
-            .Distinct()
-            .ToArray();
-        var gateResult = futureGate.Evaluate(request.RequestedPolicy, request.ApprovalEvidence);
-        var deniedSurfaces = requestedSurfaces
-            .Where(surface => !gateResult.Allows(surface))
-            .Distinct()
-            .ToArray();
-        var deniedOperations = requestedSideEffectOperations
-            .Where(operation => ProcessExecutionCapableDriverSurfaceMatrix
-                .ResolveSurfacesForOperations([operation])
-                .Any(surface => deniedSurfaces.Contains(surface)))
-            .Distinct()
-            .ToArray();
-        var plan = ProcessDryRunExecutionPlan.Create(
-            request,
-            requestedSurfaces,
-            deniedSurfaces,
-            deniedOperations,
-            gateResult);
-        var decision = deniedSurfaces.Length == 0 && deniedOperations.Length == 0
-            ? ProcessDryRunExecutionHostDecision.DryRunPlanCreated
-            : ProcessDryRunExecutionHostDecision.Denied;
-
-        return Task.FromResult(new ProcessDryRunExecutionHostResult(
-            ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey,
-            request.RequestId,
-            request.ProcessRunId,
-            request.StepRunId,
-            request.RequestedBy,
-            request.RequestedAt,
-            decision,
-            gateResult,
-            plan,
-            deniedSurfaces,
-            deniedOperations,
-            request.ApprovalEvidence.EffectiveAuthorizationEvidence.MissingGaps(),
-            NoMutationPerformed: true,
-            AllowsProcessMutation: false,
-            AllowsTransitionMutation: false,
-            AllowsFinalizerMutation: false));
+        return Task.FromResult(pipeline.Evaluate(request, cancellationToken));
     }
 }
 

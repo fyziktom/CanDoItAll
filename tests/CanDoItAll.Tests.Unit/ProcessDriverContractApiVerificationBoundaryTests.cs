@@ -361,6 +361,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.True(safe.IsReadOnlySafe);
         Assert.Empty(safe.ValidateReadOnlySafety());
         Assert.Equal(ProcessRuntimeHostContractVersion.Current, safe.Version);
+        Assert.Equal(new ProcessRuntimeHostContractVersion(1, 2, 0), safe.Version);
 
         var unsafeSnapshot = safe with
         {
@@ -368,7 +369,14 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
             NoMutationPerformed = false,
             AllowsProcessMutation = true,
             AllowsTransitionMutation = true,
-            AllowsFinalizerMutation = true
+            AllowsFinalizerMutation = true,
+            SandboxDecision = new ProcessRuntimeHostSandboxDecision(
+                ProcessRuntimeHostSandboxDecisionKind.FutureExecutionPrerequisitesSatisfied,
+                executionAllowed: true,
+                dryRunOnly: false,
+                [ProcessRuntimeHostEffectSurface.LocalCommand],
+                [],
+                [])
         };
         var violations = unsafeSnapshot
             .ValidateReadOnlySafety()
@@ -381,6 +389,91 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.Contains(ProcessRuntimeHostContractViolationKind.ProcessMutationAllowed, violations);
         Assert.Contains(ProcessRuntimeHostContractViolationKind.TransitionMutationAllowed, violations);
         Assert.Contains(ProcessRuntimeHostContractViolationKind.FinalizerMutationAllowed, violations);
+        Assert.Contains(ProcessRuntimeHostContractViolationKind.SandboxExecutionAllowed, violations);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB002_INV_003_runtime_host_contract_carries_generic_identity_decision_audit_and_capability_refs()
+    {
+        var requestedAt = new DateTimeOffset(2026, 6, 10, 18, 20, 0, TimeSpan.Zero);
+        var identity = new ProcessRuntimeHostRequestIdentity(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            Guid.Parse("22222222-2222-2222-2222-222222222222"),
+            Guid.Parse("33333333-3333-3333-3333-333333333333"),
+            " operator@example.test ",
+            requestedAt);
+        var denial = new ProcessRuntimeHostDenial(
+            ProcessRuntimeHostDenialCategory.SideEffect,
+            "side-effect-denied",
+            "Execution-capable side effects are denied by the current runtime-host gate.",
+            [
+                ProcessRuntimeHostEffectSurface.LocalCommand,
+                ProcessRuntimeHostEffectSurface.WorkspaceStorage,
+                ProcessRuntimeHostEffectSurface.LocalCommand
+            ]);
+        var decision = new ProcessRuntimeHostSandboxDecision(
+            ProcessRuntimeHostSandboxDecisionKind.Denied,
+            executionAllowed: false,
+            dryRunOnly: true,
+            [
+                ProcessRuntimeHostEffectSurface.LocalCommand,
+                ProcessRuntimeHostEffectSurface.WorkspaceStorage
+            ],
+            [
+                ProcessRuntimeHostEffectSurface.LocalCommand,
+                ProcessRuntimeHostEffectSurface.WorkspaceStorage
+            ],
+            [denial]);
+        var audit = new ProcessRuntimeHostAuditReference(
+            "runtime-host-audit-001",
+            "bc6ac35cf00bd75cdcf5485b89caa95e88ac0e9d30e4eac017e2fa9b369a9397",
+            requestedAt);
+        var capability = new ProcessRuntimeHostCapabilityDescriptorReference(
+            "dry-run:execution-capable-future-gate",
+            ProcessRuntimeHostContractSurface.DryRunExecution,
+            ProcessRuntimeHostOperationCategory.DryRunPlanning);
+
+        var snapshot = ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.DryRunExecution) with
+        {
+            RequestIdentity = identity,
+            SandboxDecision = decision,
+            AuditReference = audit,
+            CapabilityDescriptor = capability
+        };
+
+        Assert.True(snapshot.IsReadOnlySafe);
+        Assert.Empty(snapshot.ValidateReadOnlySafety());
+        Assert.Equal("operator@example.test", snapshot.RequestIdentity?.RequestedBy);
+        Assert.Equal(2, denial.Surfaces.Count);
+        Assert.Equal(ProcessRuntimeHostSandboxDecisionKind.Denied, snapshot.SandboxDecision?.Kind);
+        Assert.False(snapshot.SandboxDecision?.ExecutionAllowed);
+        Assert.True(snapshot.SandboxDecision?.DryRunOnly);
+        Assert.Equal("runtime-host-audit-001", snapshot.AuditReference?.AuditId);
+        Assert.Equal(ProcessRuntimeHostOperationCategory.DryRunPlanning, snapshot.CapabilityDescriptor?.OperationCategory);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB002_INV_004_runtime_host_contract_rejects_invalid_identity_capability_and_domain_leakage()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Contracts",
+            "Runtime",
+            "ProcessRuntimeHostContractModels.cs");
+
+        Assert.Throws<ArgumentException>(() => new ProcessRuntimeHostRequestIdentity(
+            Guid.Empty,
+            Guid.NewGuid(),
+            null,
+            "operator",
+            DateTimeOffset.UtcNow));
+        Assert.Throws<ArgumentException>(() => new ProcessRuntimeHostCapabilityDescriptorReference(
+            " ",
+            ProcessRuntimeHostContractSurface.DryRunExecution,
+            ProcessRuntimeHostOperationCategory.DryRunPlanning));
+        Assert.DoesNotContain("Office", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("OpenAI", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("DotNet", source, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

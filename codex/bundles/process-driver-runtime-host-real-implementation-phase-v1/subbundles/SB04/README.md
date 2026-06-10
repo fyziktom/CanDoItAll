@@ -1,7 +1,7 @@
 # SB04: Durable audit and retention-ready readback
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Make audit production-grade enough for runtime-host governance.
@@ -28,7 +28,8 @@ Make audit production-grade enough for runtime-host governance.
 - Keep in-memory store only as explicit test override.
 
 ## Dependency Impact
-This subbundle is critical. Downstream work becomes untrustworthy if this subbundle is closed with report-only proof, source-light changes, or weak boundary tests.
+
+- This subbundle is critical. Downstream work becomes untrustworthy if this subbundle is closed with report-only proof, source-light changes, or weak boundary tests.
 
 ## Validation Depth
 - Focused unit/integration tests for the changed behavior.
@@ -68,10 +69,12 @@ Execution-capable side effects remain outside scope. The only permitted executio
 - Semantic positive proof and adversarial negative proof.
 
 ## Browser Validation Logging
-N/A unless Razor/UI routes/components are changed. If UI changes, use large desktop only and record route, viewport, Playwright actions, assertions, screenshot paths, and result.
+
+- N/A unless Razor/UI routes/components are changed. If UI changes, use large desktop only and record route, viewport, Playwright actions, assertions, screenshot paths, and result.
 
 ## Progression Gate
-Do not proceed to the next subbundle until this subbundle has real source/test changes, passing focused validation, and no architecture boundary regressions.
+
+- Do not proceed to the next subbundle until this subbundle has real source/test changes, passing focused validation, and no architecture boundary regressions.
 
 ## Suggested Agent Prompt
 Implement SB04 as a code-first production/test change. Keep proof concise. Preserve Process Core genericity, deny all execution-capable effects, and keep the runtime-host roadmap explicit.

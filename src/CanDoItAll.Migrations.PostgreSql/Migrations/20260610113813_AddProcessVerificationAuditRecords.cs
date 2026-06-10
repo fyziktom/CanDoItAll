@@ -44,6 +44,11 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                 column: "ObservationHash");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Processes_VerificationAuditRecords_RecordedAtUtc",
+                table: "Processes_VerificationAuditRecords",
+                column: "RecordedAtUtc");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Processes_VerificationAuditRecords_ProcessRunId_RecordedAtU~",
                 table: "Processes_VerificationAuditRecords",
                 columns: new[] { "ProcessRunId", "RecordedAtUtc" });

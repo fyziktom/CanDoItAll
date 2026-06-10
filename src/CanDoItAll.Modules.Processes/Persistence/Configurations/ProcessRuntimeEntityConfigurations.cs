@@ -488,6 +488,7 @@ internal sealed class ProcessVerificationAuditEntryConfiguration : IEntityTypeCo
         builder.Property(record => record.ObservationHash).HasMaxLength(64).IsRequired();
         builder.HasIndex(record => new { record.ProcessRunId, record.RecordedAtUtc });
         builder.HasIndex(record => new { record.StepRunId, record.RecordedAtUtc });
+        builder.HasIndex(record => record.RecordedAtUtc);
         builder.HasIndex(record => record.Lane);
         builder.HasIndex(record => record.ObservationHash);
     }
