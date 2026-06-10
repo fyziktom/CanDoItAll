@@ -488,8 +488,14 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         await using var scope = provider.CreateAsyncScope();
         var statusService = scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHostStatusService>();
 
-        var status = await statusService.GetStatusAsync();
+        var status = await statusService.GetStatusAsync(new ProcessVerificationRuntimeHostStatusRequest(
+            "corr-status-ready",
+            "operator-status-test",
+            RequestedAt));
 
+        Assert.Equal("corr-status-ready", status.CorrelationId);
+        Assert.Equal("operator-status-test", status.RequestedBy);
+        Assert.Equal(RequestedAt, status.RequestedAt);
         Assert.True(status.Enabled);
         Assert.False(status.EmergencyDisabled);
         Assert.Equal(ProcessVerificationRuntimeHostReadiness.Ready, status.Readiness);
@@ -504,6 +510,17 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             lane.Registered &&
             lane.Enabled &&
             lane.RequiredPermissionMode == ProcessDriverPermissionMode.VerificationOnly);
+
+        var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
+        var facadeStatus = await facade.GetRuntimeHostStatusAsync(new ProcessVerificationRuntimeHostStatusRequest(
+            "corr-manager-status",
+            "process-manager",
+            RequestedAt.AddSeconds(1)));
+
+        Assert.Equal("corr-manager-status", facadeStatus.CorrelationId);
+        Assert.Equal("process-manager", facadeStatus.RequestedBy);
+        Assert.Equal(RequestedAt.AddSeconds(1), facadeStatus.RequestedAt);
+        Assert.Equal(ProcessVerificationRuntimeHostReadiness.Ready, facadeStatus.Readiness);
 
         var disabledServices = new ServiceCollection();
         disabledServices.AddProcessVerificationRuntimeHost();
@@ -1120,6 +1137,167 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public void Process_execution_capable_surface_matrix_SB025_INV_001_models_every_effectful_surface_as_denied_by_default()
+    {
+        var expectedSurfaces = Enum
+            .GetValues<ProcessExecutionCapableDriverSurface>()
+            .Order()
+            .ToArray();
+        var actualSurfaces = ProcessExecutionCapableDriverSurfaceMatrix.DefaultDeniedRules
+            .Select(rule => rule.Surface)
+            .Order()
+            .ToArray();
+
+        Assert.Equal(expectedSurfaces, actualSurfaces);
+        Assert.All(
+            ProcessExecutionCapableDriverSurfaceMatrix.DefaultDeniedRules,
+            rule => Assert.True(rule.DeniedByDefault));
+        Assert.Contains(
+            ProcessExecutionCapableDriverSurfaceMatrix.DefaultDeniedRules,
+            rule => rule.Surface == ProcessExecutionCapableDriverSurface.CommandExecution &&
+                rule.DriverOperation == ProcessDriverOperation.ExecuteCommand);
+        Assert.Contains(
+            ProcessExecutionCapableDriverSurfaceMatrix.DefaultDeniedRules,
+            rule => rule.Surface == ProcessExecutionCapableDriverSurface.ProcessMutation &&
+                rule.DriverOperation == ProcessDriverOperation.MutateProcessState);
+
+        var resolvedSurfaces = ProcessExecutionCapableDriverSurfaceMatrix.ResolveSurfacesForOperations(
+            [
+                ProcessDriverOperation.ExecuteCommand,
+                ProcessDriverOperation.WriteWorkspaceStorage,
+                ProcessDriverOperation.ReturnDiagnostics
+            ]);
+
+        Assert.Contains(ProcessExecutionCapableDriverSurface.CommandExecution, resolvedSurfaces);
+        Assert.Contains(ProcessExecutionCapableDriverSurface.WorkspaceWrite, resolvedSurfaces);
+        Assert.Contains(ProcessExecutionCapableDriverSurface.StorageWrite, resolvedSurfaces);
+        Assert.DoesNotContain(ProcessExecutionCapableDriverSurface.OfficeGraphCall, resolvedSurfaces);
+    }
+
+    [Fact]
+    public async Task Process_dry_run_execution_host_SB024_INV_001_denies_effectful_requests_with_structured_plan_without_mutation()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var host = scope.ServiceProvider.GetRequiredService<IProcessDryRunExecutionHost>();
+        var request = new ProcessDryRunExecutionRequest(
+            Guid.Parse("aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa"),
+            ProcessRunId,
+            StepRunId,
+            "process-manager",
+            "dry-run command and workspace write preview",
+            [
+                ProcessExecutionCapableDriverSurface.CommandExecution,
+                ProcessExecutionCapableDriverSurface.WorkspaceWrite
+            ],
+            [
+                ProcessDriverOperation.ExecuteCommand,
+                ProcessDriverOperation.WriteWorkspaceStorage,
+                ProcessDriverOperation.ReturnDiagnostics
+            ],
+            ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun,
+            ProcessExecutionCapableDriverApprovalEvidence.None,
+            RequestedAt);
+
+        var result = await host.EvaluateAsync(request);
+
+        Assert.Equal(ProcessDryRunExecutionHostDecision.Denied, result.Decision);
+        Assert.Equal(ProcessExecutionCapableDriverGateDecision.Blocked, result.GateResult.Decision);
+        Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.SourceBackedApprovalBundle, result.GateResult.MissingRequirements);
+        Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.AuthorizationApprovalRevocation, result.GateResult.MissingRequirements);
+        Assert.Contains(ProcessExecutionCapableDriverSurface.CommandExecution, result.DeniedSurfaces);
+        Assert.Contains(ProcessExecutionCapableDriverSurface.WorkspaceWrite, result.DeniedSurfaces);
+        Assert.Contains(ProcessDriverOperation.ExecuteCommand, result.DeniedOperations);
+        Assert.Contains(ProcessDriverOperation.WriteWorkspaceStorage, result.DeniedOperations);
+        Assert.DoesNotContain(ProcessDriverOperation.ReturnDiagnostics, result.DeniedOperations);
+        Assert.Contains(ProcessExecutionCapableDriverAuthorizationGap.ApprovalGrantMissing, result.AuthorizationGaps);
+        Assert.Contains(ProcessExecutionCapableDriverAuthorizationGap.RevocationCheckMissing, result.AuthorizationGaps);
+        Assert.Contains(ProcessExecutionCapableDriverAuthorizationGap.EmergencyStopActiveOrUnknown, result.AuthorizationGaps);
+        Assert.Equal("Dry-run request denied; no production effects were executed.", result.Plan.Summary);
+        Assert.Contains(result.Plan.Steps, step => step.Kind == ProcessDryRunExecutionPlanStepKind.DenyProductionEffects);
+        Assert.True(result.NoMutationPerformed);
+        Assert.False(result.AllowsProcessMutation);
+        Assert.False(result.AllowsTransitionMutation);
+        Assert.False(result.AllowsFinalizerMutation);
+    }
+
+    [Fact]
+    public async Task Process_dry_run_execution_host_SB027_INV_001_requires_authorization_revocation_and_emergency_stop_evidence()
+    {
+        var host = new ProcessDryRunExecutionHost(new ProcessExecutionCapableDriverFutureGate());
+        var policy = new ProcessExecutionCapableDriverSandboxPolicy(
+            ProcessExecutionCapableDriverApprovalStatus.Approved,
+            DryRunOnly: false,
+            [ProcessExecutionCapableDriverSurface.CommandExecution]);
+        var evidence = new ProcessExecutionCapableDriverApprovalEvidence(
+            SourceBackedApprovalBundle: true,
+            LifecycleOwnership: true,
+            CancellationTimeoutFailureHandoff: true,
+            ImmutableAuditPersistence: true,
+            SandboxBoundary: true,
+            AuthorizationApprovalRevocation: true,
+            PublicApiCompatibility: true,
+            MaliciousCorpus: true,
+            RedTeamProof: true,
+            new ProcessExecutionCapableDriverAuthorizationEvidence(
+                ApprovalGrantPresent: true,
+                RevocationCheckPassed: true,
+                EmergencyStopClear: false));
+        var request = new ProcessDryRunExecutionRequest(
+            Guid.Parse("bbbbbbbb-1111-1111-1111-bbbbbbbbbbbb"),
+            ProcessRunId,
+            StepRunId,
+            "process-manager",
+            "dry-run command preview",
+            [ProcessExecutionCapableDriverSurface.CommandExecution],
+            [ProcessDriverOperation.ExecuteCommand],
+            policy,
+            evidence,
+            RequestedAt);
+
+        var blocked = await host.EvaluateAsync(request);
+
+        Assert.Equal(ProcessDryRunExecutionHostDecision.Denied, blocked.Decision);
+        Assert.Equal(ProcessExecutionCapableDriverGateDecision.Blocked, blocked.GateResult.Decision);
+        Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.AuthorizationApprovalRevocation, blocked.GateResult.MissingRequirements);
+        Assert.Contains(ProcessExecutionCapableDriverAuthorizationGap.EmergencyStopActiveOrUnknown, blocked.AuthorizationGaps);
+
+        var clearEvidence = evidence with
+        {
+            AuthorizationEvidence = new ProcessExecutionCapableDriverAuthorizationEvidence(
+                ApprovalGrantPresent: true,
+                RevocationCheckPassed: true,
+                EmergencyStopClear: true)
+        };
+        var clearRequest = new ProcessDryRunExecutionRequest(
+            request.RequestId,
+            request.ProcessRunId,
+            request.StepRunId,
+            request.RequestedBy,
+            request.Purpose,
+            request.RequestedSurfaces,
+            request.RequestedOperations,
+            request.RequestedPolicy,
+            clearEvidence,
+            request.RequestedAt);
+
+        var planned = await host.EvaluateAsync(clearRequest);
+
+        Assert.Equal(ProcessDryRunExecutionHostDecision.DryRunPlanCreated, planned.Decision);
+        Assert.Equal(ProcessExecutionCapableDriverGateDecision.ApprovedForFutureExecution, planned.GateResult.Decision);
+        Assert.Empty(planned.DeniedSurfaces);
+        Assert.Empty(planned.DeniedOperations);
+        Assert.Empty(planned.AuthorizationGaps);
+        Assert.True(planned.NoMutationPerformed);
+        Assert.False(planned.AllowsProcessMutation);
+        Assert.False(planned.AllowsTransitionMutation);
+        Assert.False(planned.AllowsFinalizerMutation);
+    }
+
+    [Fact]
     public void Scheduler_workflow_verification_readiness_SB032_INV_001_does_not_call_process_drivers_directly()
     {
         var forbiddenPatterns = new[]
@@ -1213,6 +1391,55 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public async Task Process_verification_audit_store_SB006_INV_003_persists_postgresql_audit_records_across_service_scopes()
+    {
+        await using var application = await TestApplication.CreateAsync();
+
+        ProcessVerificationAuditRecord writtenRecord;
+        await using (var writeScope = application.Services.CreateAsyncScope())
+        {
+            var host = writeScope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHost>();
+            var result = await host.VerifyAsync(new ProcessVerificationHostRequest(
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                new ProcessReadOnlyVerificationBatchPayload(
+                    ProcessRunId,
+                    StepRunId,
+                    "process-manager:postgresql-durable-audit",
+                    RequestedAt,
+                    businessAnalysisPayloads: [CreateBusinessPayload()]),
+                "process-manager postgresql-audit",
+                RequestedAt));
+
+            Assert.True(result.IsSuccess);
+            var response = result.Response ?? throw new InvalidOperationException("Expected PostgreSQL audit host response.");
+            writtenRecord = response.AuditRecord;
+            Assert.Matches("^[A-F0-9]{64}$", writtenRecord.ObservationHash);
+            Assert.True(writtenRecord.NoMutationPerformed);
+            Assert.False(writtenRecord.AllowsProcessMutation);
+            Assert.False(writtenRecord.AllowsTransitionMutation);
+            Assert.False(writtenRecord.AllowsFinalizerMutation);
+        }
+
+        await using (var readScope = application.Services.CreateAsyncScope())
+        {
+            var queryService = readScope.ServiceProvider.GetRequiredService<IProcessVerificationAuditQueryService>();
+            var persisted = await queryService.GetAsync(writtenRecord.Id);
+            var windowRecords = await queryService.ListAsync(new ProcessVerificationAuditQuery(
+                ProcessRunId,
+                StepRunId,
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                limit: 10,
+                recordedAtOrAfter: RequestedAt.AddMinutes(-1),
+                recordedBefore: RequestedAt.AddMinutes(1)));
+
+            Assert.NotNull(persisted);
+            Assert.Equal(writtenRecord.Id, persisted.Id);
+            Assert.Equal(writtenRecord.ObservationHash, persisted.ObservationHash);
+            Assert.Contains(windowRecords, record => record.Id == writtenRecord.Id);
+        }
+    }
+
+    [Fact]
     public async Task Process_verification_audit_store_SB023_INV_001_persists_redacted_hashes_and_supports_queries()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
@@ -1270,9 +1497,19 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
                 ProcessRunId,
                 StepRunId,
                 ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
-                limit: 10));
+                limit: 10,
+                recordedAtOrAfter: RequestedAt.AddMinutes(-1),
+                recordedBefore: RequestedAt.AddMinutes(1)));
+            var emptyWindowRecords = await queryService.ListAsync(new ProcessVerificationAuditQuery(
+                ProcessRunId,
+                StepRunId,
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                limit: 10,
+                recordedAtOrAfter: RequestedAt.AddMinutes(1),
+                recordedBefore: RequestedAt.AddMinutes(2)));
 
             var record = Assert.Single(runRecords);
+            Assert.Empty(emptyWindowRecords);
             Assert.NotNull(persisted);
             Assert.Equal(response.AuditRecord.Id, persisted.Id);
             Assert.Equal(response.AuditRecord.ObservationHash, persisted.ObservationHash);
@@ -1285,6 +1522,9 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         }
 
         Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessVerificationAuditQuery(limit: 0));
+        Assert.Throws<ArgumentException>(() => new ProcessVerificationAuditQuery(
+            recordedAtOrAfter: RequestedAt,
+            recordedBefore: RequestedAt));
     }
 
     [Fact]

@@ -122,20 +122,30 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         {
             "ProcessArtifactEvidenceReadOnlyAdapter.cs",
             "ProcessBusinessAnalysisReadOnlyAdapter.cs",
+            "ProcessDryRunExecutionHost.cs",
+            "ProcessExecutionCapableDriverFutureGate.cs",
             "ProcessDriverObservationAggregationReadOnlyAdapter.cs",
+            "ProcessManagerReadOnlyVerificationCommandService.cs",
             "ProcessManagerReadOnlyVerificationProjection.cs",
             "ProcessOfficeEvidenceReadOnlyAdapter.cs",
             "ProcessReadOnlyVerificationAggregateObservation.cs",
             "ProcessReadOnlyVerificationBatchModels.cs",
             "ProcessReadOnlyVerificationBatchOrchestrator.cs",
+            "ProcessReadOnlyVerificationJobModel.cs",
+            "ProcessReadOnlyVerificationOperationPolicy.cs",
             "ProcessReadOnlyVerificationPayloadBuilder.cs",
             "ProcessReadOnlyVerificationRequestFactory.cs",
-            "ProcessReadOnlyVerificationOperationPolicy.cs",
             "ProcessRuntimeEvidenceVerificationObservationMapper.cs",
             "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
             "ProcessTranscriptVerificationObservationMapper.cs",
             "ProcessTranscriptVerificationPreflightPolicy.cs",
-            "ProcessTranscriptVerificationReadOnlyAdapter.cs"
+            "ProcessTranscriptVerificationReadOnlyAdapter.cs",
+            "ProcessVerificationAuditStore.cs",
+            "ProcessVerificationLaneRegistry.cs",
+            "ProcessVerificationRuntimeHost.cs",
+            "ProcessVerificationRuntimeHostModels.cs",
+            "ProcessVerificationRuntimeHostOptions.cs",
+            "ProcessVerificationRuntimeHostStatus.cs"
         };
         var actualDriverConsumerFiles = Directory
             .EnumerateFiles(dispatchRoot, "*.cs", SearchOption.TopDirectoryOnly)

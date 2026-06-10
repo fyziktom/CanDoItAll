@@ -115,6 +115,8 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<ProcessVerificationLaneSelector>();
         services.TryAddScoped<IProcessVerificationRuntimeHost, ProcessVerificationRuntimeHost>();
         services.TryAddScoped<IProcessVerificationRuntimeHostStatusService, ProcessVerificationRuntimeHostStatusService>();
+        services.TryAddSingleton<ProcessExecutionCapableDriverFutureGate>();
+        services.TryAddScoped<IProcessDryRunExecutionHost, ProcessDryRunExecutionHost>();
         services.TryAddScoped<ProcessManagerReadOnlyVerificationCommandService>();
         services.TryAddScoped<IProcessManagerReadOnlyVerificationFacade>(provider =>
             provider.GetRequiredService<ProcessManagerReadOnlyVerificationCommandService>());

@@ -19,6 +19,10 @@ internal interface IProcessManagerReadOnlyVerificationFacade
         CancellationToken cancellationToken = default);
 
     Task<ProcessVerificationRuntimeHostStatusDto> GetRuntimeHostStatusAsync(CancellationToken cancellationToken = default);
+
+    Task<ProcessVerificationRuntimeHostStatusDto> GetRuntimeHostStatusAsync(
+        ProcessVerificationRuntimeHostStatusRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProcessManagerReadOnlyVerificationFacade
@@ -140,12 +144,24 @@ internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProces
 
     public Task<ProcessVerificationRuntimeHostStatusDto> GetRuntimeHostStatusAsync(CancellationToken cancellationToken = default)
     {
+        return GetRuntimeHostStatusAsync(
+            new ProcessVerificationRuntimeHostStatusRequest(
+                correlationId: string.Empty,
+                requestedBy: "process-manager",
+                requestedAt: DateTimeOffset.UtcNow),
+            cancellationToken);
+    }
+
+    public Task<ProcessVerificationRuntimeHostStatusDto> GetRuntimeHostStatusAsync(
+        ProcessVerificationRuntimeHostStatusRequest request,
+        CancellationToken cancellationToken = default)
+    {
         if (statusService is null)
         {
             throw new InvalidOperationException("Runtime host status readback requires IProcessVerificationRuntimeHostStatusService.");
         }
 
-        return statusService.GetStatusAsync(cancellationToken);
+        return statusService.GetStatusAsync(request, cancellationToken);
     }
 }
 

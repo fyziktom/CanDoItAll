@@ -1,5 +1,9 @@
 # Phase Plan
 
+## Execution Order
+- Execute subbundles sequentially from SB001 through SB030.
+- Stop at each critical gate before allowing dependent phases to proceed.
+- Reopen earlier phases if validation weakens a prerequisite.
 ## Subbundle Dependency Map
 
 ```mermaid

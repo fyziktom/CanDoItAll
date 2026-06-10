@@ -1,7 +1,7 @@
 # SB015 - Gate E: scheduler/workflow read-only job proof
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Critical proof that scheduler/workflow verification is real execution of read-only job, not readiness-only docs.
@@ -11,6 +11,7 @@ Critical proof that scheduler/workflow verification is real execution of read-on
 - Runtime-host roadmap: move toward generic process driver runtime host without approving execution-capable drivers prematurely.
 
 ## Prerequisites
+- Entry gate must confirm the listed prerequisite text against the dependency map before implementation.
 Previous critical gate must pass before this subbundle starts.
 
 ## Exact Source References
@@ -23,12 +24,15 @@ Previous critical gate must pass before this subbundle starts.
 - repo://tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs
 
 ## Deliverables / Scope
+- Deliver the source/test changes named by the objective without adding execution-capable driver behavior.
 Critical foundation.
 
 ## Dependency Impact
+- Downstream phases must rely only on source-backed proof from this subbundle.
 Downstream phases rely on this subbundle not weakening Process Core genericity, no-mutation guarantees, and exact lane selection.
 
 ## Validation Depth
+- Run the focused validation named in this section and record the transcript path.
 Focused integration + driver-hook denial scan.
 
 ## Implementation Steps
@@ -57,12 +61,15 @@ Execution-capable drivers remain out of scope. Do not implement effectful driver
 - [ ] Code-vs-bundle diff stats updated at the next critical gate.
 
 ## Proof Required
+- Record concise proof in `bundle://reviews/01-execution-report.md`; critical gates also require `bundle://proof/SBxx/manifest.md` and semantic invariants.
 Critical Semantic Adequacy Gate: include changed-file hashes, command transcript, source assertions, anti-stub audit, adversarial negative proof, semantic positive proof, and production behavior artifact matrix.
 
 ## Browser Validation Logging
+- Record N/A for backend-only work; if UI changes, add Playwright MCP route, viewport, screenshot, and result.
 N/A unless this subbundle changes UI-visible routes or components.
 
 ## Progression Gate
+- Proceed only when entry/closure gates are recorded and any critical gate proof exists.
 Critical gate. Downstream phases must stop until this gate passes.
 
 ## Suggested Agent Prompt

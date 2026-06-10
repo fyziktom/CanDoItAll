@@ -6,6 +6,10 @@ namespace CanDoItAll.Modules.Processes;
 
 internal interface IProcessVerificationRuntimeHostStatusService {
     Task<ProcessVerificationRuntimeHostStatusDto> GetStatusAsync(CancellationToken cancellationToken = default);
+
+    Task<ProcessVerificationRuntimeHostStatusDto> GetStatusAsync(
+        ProcessVerificationRuntimeHostStatusRequest request,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed class ProcessVerificationRuntimeHostStatusService(
@@ -13,6 +17,18 @@ internal sealed class ProcessVerificationRuntimeHostStatusService(
     ProcessVerificationLaneRegistry laneRegistry,
     IProcessVerificationAuditStore auditStore) : IProcessVerificationRuntimeHostStatusService {
     public Task<ProcessVerificationRuntimeHostStatusDto> GetStatusAsync(CancellationToken cancellationToken = default) {
+        return GetStatusAsync(
+            new ProcessVerificationRuntimeHostStatusRequest(
+                correlationId: string.Empty,
+                requestedBy: "system",
+                requestedAt: DateTimeOffset.UtcNow),
+            cancellationToken);
+    }
+
+    public Task<ProcessVerificationRuntimeHostStatusDto> GetStatusAsync(
+        ProcessVerificationRuntimeHostStatusRequest request,
+        CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
 
         var hostOptions = options.Value;
@@ -30,6 +46,9 @@ internal sealed class ProcessVerificationRuntimeHostStatusService(
         var readiness = ResolveReadiness(hostOptions, lanes, auditStoreKind);
 
         return Task.FromResult(new ProcessVerificationRuntimeHostStatusDto(
+            request.CorrelationId,
+            request.RequestedBy,
+            request.RequestedAt,
             hostOptions.Enabled,
             EmergencyDisabled: !hostOptions.Enabled,
             readiness,
@@ -71,6 +90,30 @@ internal sealed class ProcessVerificationRuntimeHostStatusService(
     }
 }
 
+internal sealed record ProcessVerificationRuntimeHostStatusRequest
+{
+    public ProcessVerificationRuntimeHostStatusRequest(
+        string? correlationId,
+        string requestedBy,
+        DateTimeOffset requestedAt)
+    {
+        if (string.IsNullOrWhiteSpace(requestedBy))
+        {
+            throw new ArgumentException("Runtime host status request requires a requester identity.", nameof(requestedBy));
+        }
+
+        CorrelationId = correlationId?.Trim() ?? string.Empty;
+        RequestedBy = requestedBy.Trim();
+        RequestedAt = requestedAt;
+    }
+
+    public string CorrelationId { get; }
+
+    public string RequestedBy { get; }
+
+    public DateTimeOffset RequestedAt { get; }
+}
+
 internal enum ProcessVerificationRuntimeHostReadiness {
     Ready = 1,
     EmergencyDisabled = 2,
@@ -85,6 +128,9 @@ internal enum ProcessVerificationAuditStoreKind {
 }
 
 internal sealed record ProcessVerificationRuntimeHostStatusDto(
+    string CorrelationId,
+    string RequestedBy,
+    DateTimeOffset RequestedAt,
     bool Enabled,
     bool EmergencyDisabled,
     ProcessVerificationRuntimeHostReadiness Readiness,

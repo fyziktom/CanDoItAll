@@ -31,7 +31,9 @@ internal sealed record ProcessVerificationAuditQuery
         Guid? processRunId = null,
         Guid? stepRunId = null,
         ProcessDriverVerificationGatewayLane? lane = null,
-        int limit = 100)
+        int limit = 100,
+        DateTimeOffset? recordedAtOrAfter = null,
+        DateTimeOffset? recordedBefore = null)
     {
         if (limit <= 0 || limit > MaximumLimit)
         {
@@ -41,10 +43,19 @@ internal sealed record ProcessVerificationAuditQuery
                 $"Audit query limit must be between 1 and {MaximumLimit}.");
         }
 
+        if (recordedAtOrAfter.HasValue &&
+            recordedBefore.HasValue &&
+            recordedAtOrAfter.Value >= recordedBefore.Value)
+        {
+            throw new ArgumentException("Audit query start time must be earlier than the exclusive end time.", nameof(recordedAtOrAfter));
+        }
+
         ProcessRunId = processRunId;
         StepRunId = stepRunId;
         Lane = lane;
         Limit = limit;
+        RecordedAtOrAfter = recordedAtOrAfter;
+        RecordedBefore = recordedBefore;
     }
 
     public Guid? ProcessRunId { get; }
@@ -54,6 +65,10 @@ internal sealed record ProcessVerificationAuditQuery
     public ProcessDriverVerificationGatewayLane? Lane { get; }
 
     public int Limit { get; }
+
+    public DateTimeOffset? RecordedAtOrAfter { get; }
+
+    public DateTimeOffset? RecordedBefore { get; }
 }
 
 internal sealed class InMemoryProcessVerificationAuditStore : IProcessVerificationAuditStore, IProcessVerificationAuditQueryService
@@ -109,6 +124,8 @@ internal sealed class InMemoryProcessVerificationAuditStore : IProcessVerificati
                 .Where(record => !query.ProcessRunId.HasValue || record.ProcessRunId == query.ProcessRunId.Value)
                 .Where(record => !query.StepRunId.HasValue || record.StepRunId == query.StepRunId.Value)
                 .Where(record => !query.Lane.HasValue || record.Lane == query.Lane.Value)
+                .Where(record => !query.RecordedAtOrAfter.HasValue || record.RecordedAt >= query.RecordedAtOrAfter.Value)
+                .Where(record => !query.RecordedBefore.HasValue || record.RecordedAt < query.RecordedBefore.Value)
                 .OrderByDescending(record => record.RecordedAt)
                 .Take(query.Limit)
                 .ToArray();
@@ -172,6 +189,16 @@ internal sealed class EfCoreProcessVerificationAuditStore(
         if (query.Lane.HasValue)
         {
             records = records.Where(record => record.Lane == query.Lane.Value);
+        }
+
+        if (query.RecordedAtOrAfter.HasValue)
+        {
+            records = records.Where(record => record.RecordedAtUtc >= query.RecordedAtOrAfter.Value);
+        }
+
+        if (query.RecordedBefore.HasValue)
+        {
+            records = records.Where(record => record.RecordedAtUtc < query.RecordedBefore.Value);
         }
 
         var entries = await records

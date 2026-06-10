@@ -1,7 +1,7 @@
 # SB028 - Domain driver pack topology and no-discovery proof
 
 ## Status
-Prepared.
+- Completed
 
 ## Objective
 Define explicit topology/manifest rules without loading manifests at runtime or reflection discovery.
@@ -11,6 +11,7 @@ Define explicit topology/manifest rules without loading manifests at runtime or 
 - Runtime-host roadmap: move toward generic process driver runtime host without approving execution-capable drivers prematurely.
 
 ## Prerequisites
+- Entry gate must confirm the listed prerequisite text against the dependency map before implementation.
 Previous critical gate must pass before this subbundle starts.
 
 ## Exact Source References
@@ -23,12 +24,15 @@ Previous critical gate must pass before this subbundle starts.
 - repo://tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs
 
 ## Deliverables / Scope
+- Deliver the source/test changes named by the objective without adding execution-capable driver behavior.
 Docs + tests + minimal code as needed.
 
 ## Dependency Impact
+- Downstream phases must rely only on source-backed proof from this subbundle.
 Downstream phases rely on this subbundle not weakening Process Core genericity, no-mutation guarantees, and exact lane selection.
 
 ## Validation Depth
+- Run the focused validation named in this section and record the transcript path.
 Unit guard tests.
 
 ## Implementation Steps
@@ -57,12 +61,15 @@ Execution-capable drivers remain out of scope. Do not implement effectful driver
 - [ ] Code-vs-bundle diff stats updated at the next critical gate.
 
 ## Proof Required
+- Record concise proof in `bundle://reviews/01-execution-report.md`; critical gates also require `bundle://proof/SBxx/manifest.md` and semantic invariants.
 Concise status row and link to the next critical gate proof. Do not create full manifest unless this subbundle unexpectedly changes a production signal.
 
 ## Browser Validation Logging
+- Record N/A for backend-only work; if UI changes, add Playwright MCP route, viewport, screenshot, and result.
 N/A unless this subbundle changes UI-visible routes or components.
 
 ## Progression Gate
+- Proceed only when entry/closure gates are recorded and any critical gate proof exists.
 May proceed after focused validation passes; critical proof is consolidated at the next gate.
 
 ## Suggested Agent Prompt
