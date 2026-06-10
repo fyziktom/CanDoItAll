@@ -54,9 +54,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
         services.AddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
         services.AddProcessVerificationRuntimeHost();
-        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditStore, EfCoreProcessVerificationAuditStore>());
-        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditQueryService>(provider =>
-            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
+        services.AddEfCoreProcessVerificationAuditStore();
         services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
@@ -115,13 +113,28 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddScoped<ProcessReadOnlyVerificationBatchOrchestrator>();
         services.TryAddSingleton<ProcessVerificationLaneRegistry>();
         services.TryAddSingleton<ProcessVerificationLaneSelector>();
-        services.TryAddSingleton<IProcessVerificationAuditStore, InMemoryProcessVerificationAuditStore>();
-        services.TryAddSingleton<IProcessVerificationAuditQueryService>(provider =>
-            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>());
         services.TryAddScoped<IProcessVerificationRuntimeHost, ProcessVerificationRuntimeHost>();
         services.TryAddScoped<ProcessManagerReadOnlyVerificationCommandService>();
         services.TryAddScoped<IProcessManagerReadOnlyVerificationFacade>(provider =>
             provider.GetRequiredService<ProcessManagerReadOnlyVerificationCommandService>());
+
+        return services;
+    }
+
+    internal static IServiceCollection AddEfCoreProcessVerificationAuditStore(this IServiceCollection services)
+    {
+        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditStore, EfCoreProcessVerificationAuditStore>());
+        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditQueryService>(provider =>
+            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
+
+        return services;
+    }
+
+    internal static IServiceCollection AddInMemoryProcessVerificationAuditStoreForTests(this IServiceCollection services)
+    {
+        services.Replace(ServiceDescriptor.Singleton<IProcessVerificationAuditStore, InMemoryProcessVerificationAuditStore>());
+        services.Replace(ServiceDescriptor.Singleton<IProcessVerificationAuditQueryService>(provider =>
+            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
 
         return services;
     }

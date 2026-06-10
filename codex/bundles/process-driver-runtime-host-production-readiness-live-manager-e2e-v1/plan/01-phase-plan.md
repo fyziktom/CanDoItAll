@@ -1,5 +1,9 @@
 # Phase Plan
 
+## Execution Order
+- Execute subbundles in numeric order from SB001 through SB060.
+- Stop at each third subbundle critical gate until semantic proof, transcript proof, source assertions, and anti-stub audit evidence are recorded.
+- Reopen earlier work when later validation weakens a prerequisite or critical foundation.
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -46,7 +50,7 @@ graph TD
 ```
 
 ## Critical Subbundles
-Critical gates: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060.
+- Critical gates: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060.
 
 Every critical gate must include semantic adequacy proof, changed-file hashes, command transcripts, source assertions, anti-stub audit, red-team negative proof, and raw-note closure.
 
@@ -74,3 +78,4 @@ Every critical gate must include semantic adequacy proof, changed-file hashes, c
 | P18 | Docs, runbook, and migration path | SB052–SB054 | SB054 |
 | P19 | Final red-team and fake-proof rejection | SB055–SB057 | SB057 |
 | P20 | Completed-stage validators and handoff | SB058–SB060 | SB060 |
+

@@ -1,0 +1,12 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-runtime-host-production-readiness-live-manager-e2e-v1 --stage completed --repo-root C:\repositories\CanDoItAll
+Working directory: 
+C:\repositories\CanDoItAll
+Started: 
+2026-06-10T11:15:01.9910920-04:00
+Ended: 
+2026-06-10T11:15:02.4688691-04:00
+ExitCode: 
+0
+
+Output:
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-host-production-readiness-live-manager-e2e-v1

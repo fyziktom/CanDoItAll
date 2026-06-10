@@ -15,7 +15,6 @@ using CanDoItAll.Processes.Drivers.BusinessAnalysis;
 using CanDoItAll.Processes.Drivers.OfficeEvidence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;
 using CoreArtifactExpectationSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSnapshot;
@@ -232,7 +231,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     [Fact]
     public async Task Process_verification_runtime_host_SB015_INV_002_selects_exact_lane_without_cross_lane_fallback()
     {
-        var host = new ProcessVerificationRuntimeHost();
+        var host = CreateHost(new ProcessVerificationRuntimeHostOptions());
         var payload = new ProcessReadOnlyVerificationBatchPayload(
             ProcessRunId,
             StepRunId,
@@ -345,7 +344,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     [Fact]
     public async Task Process_verification_runtime_host_SB018_INV_001_rejects_unsupported_or_empty_lane_without_fallback()
     {
-        var host = new ProcessVerificationRuntimeHost();
+        var host = CreateHost(new ProcessVerificationRuntimeHostOptions());
         var invalidLane = (ProcessDriverVerificationGatewayLane)999;
         var emptyArtifactPayload = new ProcessReadOnlyVerificationBatchPayload(
             ProcessRunId,
@@ -389,7 +388,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     [Fact]
     public async Task Process_verification_runtime_host_SB013_INV_001_honors_cancellation_before_verification()
     {
-        var host = new ProcessVerificationRuntimeHost();
+        var host = CreateHost(new ProcessVerificationRuntimeHostOptions());
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
 
@@ -412,6 +411,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
         services.Configure<ProcessVerificationRuntimeHostOptions>(options =>
         {
             options.MaxPayloadItemsPerLane = 0;
@@ -512,7 +512,10 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     [Fact]
     public void Process_manager_readonly_verification_command_SB024_INV_001_returns_diagnostics_and_audit_without_mutation()
     {
-        var command = new ProcessManagerReadOnlyVerificationCommandService(new ProcessVerificationRuntimeHost());
+        var auditStore = new InMemoryProcessVerificationAuditStore();
+        var command = new ProcessManagerReadOnlyVerificationCommandService(
+            CreateHost(new ProcessVerificationRuntimeHostOptions(), auditStore: auditStore),
+            auditStore);
         var payload = new ProcessReadOnlyVerificationBatchPayload(
             ProcessRunId,
             StepRunId,
@@ -545,6 +548,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -654,6 +658,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -764,6 +769,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -803,6 +809,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -993,6 +1000,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
+        services.AddInMemoryProcessVerificationAuditStoreForTests();
 
         using var provider = services.BuildServiceProvider();
         using var scope = provider.CreateScope();
@@ -1032,6 +1040,33 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public void Process_verification_runtime_host_SB006_INV_002_core_registration_requires_explicit_audit_store()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHost>());
+        Assert.Contains(nameof(IProcessVerificationAuditStore), exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_SB006_INV_001_process_module_uses_ef_audit_store_by_default()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var auditStore = scope.ServiceProvider.GetRequiredService<IProcessVerificationAuditStore>();
+        var auditQueryService = scope.ServiceProvider.GetRequiredService<IProcessVerificationAuditQueryService>();
+
+        Assert.IsType<EfCoreProcessVerificationAuditStore>(auditStore);
+        Assert.Same(auditStore, auditQueryService);
+    }
+
+    [Fact]
     public async Task Process_verification_audit_store_SB023_INV_001_persists_redacted_hashes_and_supports_queries()
     {
         AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
@@ -1042,9 +1077,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         services.AddPooledDbContextFactory<AppDbContext>(options =>
             options.UseInMemoryDatabase($"process-verification-audit-{Guid.NewGuid():N}"));
         services.AddProcessVerificationRuntimeHost();
-        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditStore, EfCoreProcessVerificationAuditStore>());
-        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditQueryService>(provider =>
-            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
+        services.AddEfCoreProcessVerificationAuditStore();
 
         await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
         {
@@ -1877,7 +1910,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
                 Enabled = false
             }).VerifyAsync(request),
             ProcessVerificationHostDenialCode.LaneDisabled => await CreateHost(CreateLaneDisabledOptions()).VerifyAsync(request),
-            ProcessVerificationHostDenialCode.UnsupportedLane => await new ProcessVerificationRuntimeHost().VerifyAsync(new ProcessVerificationHostRequest(
+            ProcessVerificationHostDenialCode.UnsupportedLane => await CreateHost(new ProcessVerificationRuntimeHostOptions()).VerifyAsync(new ProcessVerificationHostRequest(
                 (ProcessDriverVerificationGatewayLane)999,
                 request.Payload,
                 request.RequestedBy,
@@ -1885,7 +1918,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             ProcessVerificationHostDenialCode.MissingLaneRegistration => await CreateHost(
                 new ProcessVerificationRuntimeHostOptions(),
                 CreateRegistryExcluding(request.Lane)).VerifyAsync(request),
-            ProcessVerificationHostDenialCode.MissingLanePayload => await new ProcessVerificationRuntimeHost().VerifyAsync(new ProcessVerificationHostRequest(
+            ProcessVerificationHostDenialCode.MissingLanePayload => await CreateHost(new ProcessVerificationRuntimeHostOptions()).VerifyAsync(new ProcessVerificationHostRequest(
                 ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency,
                 new ProcessReadOnlyVerificationBatchPayload(
                     request.Payload.ProcessRunId,

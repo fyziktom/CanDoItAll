@@ -20,8 +20,10 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     private const string LiveModelVariable = "CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL";
     private const string LiveTimeoutSecondsVariable = "CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS";
     private const string LiveMaxTotalTokensVariable = "CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS";
-    private const int DefaultTimeoutSeconds = 180;
-    private const int DefaultMaxTotalTokens = 250_000;
+    private const int MinimumTimeoutSeconds = 30;
+    private const int MaximumTimeoutSeconds = 300;
+    private const int MinimumMaxTotalTokens = 10_000;
+    private const int MaximumMaxTotalTokens = 500_000;
 
     [Fact]
     [Trait("Category", "LiveProcessRun")]
@@ -32,13 +34,12 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
             return;
         }
 
+        var settings = ResolveLiveSettings();
+
         Assert.False(
             string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY")),
             "OPENAI_API_KEY must be set for live OpenAI process-run smoke validation; the value is never logged.");
 
-        var model = ResolveTextSetting(LiveModelVariable, ManagedSeedProviderFallbacks.OpenAiDefaultModel);
-        var timeoutSeconds = ResolveBoundedIntegerSetting(LiveTimeoutSecondsVariable, DefaultTimeoutSeconds, 30, 300);
-        var maxTotalTokens = ResolveBoundedIntegerSetting(LiveMaxTotalTokensVariable, DefaultMaxTotalTokens, 10_000, 500_000);
         var availability = await PostgresTestAvailability.EnsureAvailableAsync(RepositoryRoot);
         Assert.True(availability.IsAvailable, availability.Message);
         Assert.False(string.IsNullOrWhiteSpace(availability.ConnectionString));
@@ -51,17 +52,56 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
             var processSmoke = await RunLiveProcessSmokeAsync(
                 availability.ConnectionString!,
                 databaseName,
-                model,
-                timeoutSeconds,
-                maxTotalTokens);
+                settings.Model,
+                settings.TimeoutSeconds,
+                settings.MaxTotalTokens);
 
-            Assert.Equal(model, processSmoke.ExecutionModel);
-            Assert.InRange(processSmoke.TotalTokens, 1, maxTotalTokens);
+            Assert.Equal(settings.Model, processSmoke.ExecutionModel);
+            Assert.InRange(processSmoke.TotalTokens, 1, settings.MaxTotalTokens);
         }
         finally
         {
             await DropDatabaseAsync(availability.ConnectionString!, databaseName);
         }
+    }
+
+    [Fact]
+    public void Live_process_run_smoke_SB027_INV_001_requires_explicit_model_timeout_and_token_budget()
+    {
+        using var environment = new EnvironmentVariableScope(
+            (LiveModelVariable, null),
+            (LiveTimeoutSecondsVariable, "180"),
+            (LiveMaxTotalTokensVariable, "250000"));
+
+        var exception = Assert.Throws<InvalidOperationException>(ResolveLiveSettings);
+
+        Assert.Contains(LiveModelVariable, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("OPENAI_API_KEY", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Theory]
+    [InlineData(LiveTimeoutSecondsVariable, "29")]
+    [InlineData(LiveTimeoutSecondsVariable, "301")]
+    [InlineData(LiveTimeoutSecondsVariable, "not-an-integer")]
+    [InlineData(LiveMaxTotalTokensVariable, "9999")]
+    [InlineData(LiveMaxTotalTokensVariable, "500001")]
+    [InlineData(LiveMaxTotalTokensVariable, "not-an-integer")]
+    public void Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(
+        string environmentVariable,
+        string value)
+    {
+        using var environment = new EnvironmentVariableScope(
+            (LiveModelVariable, "live-model-for-bounds-validation"),
+            (LiveTimeoutSecondsVariable, "180"),
+            (LiveMaxTotalTokensVariable, "250000"),
+            (environmentVariable, value));
+
+        var exception = Assert.Throws<InvalidOperationException>(ResolveLiveSettings);
+
+        Assert.Contains(environmentVariable, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("OPENAI_API_KEY", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task<LiveProcessSmokeResult> RunLiveProcessSmokeAsync(
@@ -364,24 +404,42 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
             StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string ResolveTextSetting(string environmentVariable, string fallbackValue)
+    private static LiveProcessSmokeSettings ResolveLiveSettings()
     {
-        var value = Environment.GetEnvironmentVariable(environmentVariable);
-        return string.IsNullOrWhiteSpace(value)
-            ? fallbackValue
-            : value.Trim();
+        return new LiveProcessSmokeSettings(
+            ResolveRequiredTextSetting(LiveModelVariable),
+            ResolveRequiredBoundedIntegerSetting(
+                LiveTimeoutSecondsVariable,
+                MinimumTimeoutSeconds,
+                MaximumTimeoutSeconds),
+            ResolveRequiredBoundedIntegerSetting(
+                LiveMaxTotalTokensVariable,
+                MinimumMaxTotalTokens,
+                MaximumMaxTotalTokens));
     }
 
-    private static int ResolveBoundedIntegerSetting(
+    private static string ResolveRequiredTextSetting(string environmentVariable)
+    {
+        var value = Environment.GetEnvironmentVariable(environmentVariable);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException(
+                $"{environmentVariable} must be set explicitly for live OpenAI process-run smoke validation.");
+        }
+
+        return value.Trim();
+    }
+
+    private static int ResolveRequiredBoundedIntegerSetting(
         string environmentVariable,
-        int fallbackValue,
         int minimum,
         int maximum)
     {
         var value = Environment.GetEnvironmentVariable(environmentVariable);
         if (string.IsNullOrWhiteSpace(value))
         {
-            return fallbackValue;
+            throw new InvalidOperationException(
+                $"{environmentVariable} must be set explicitly for live OpenAI process-run smoke validation.");
         }
 
         if (!int.TryParse(value, out var parsed) ||
@@ -451,4 +509,38 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         Guid StepDefinitionId);
 
     private sealed record LiveProcessSmokeResult(string ExecutionModel, int TotalTokens);
+
+    private sealed record LiveProcessSmokeSettings(
+        string Model,
+        int TimeoutSeconds,
+        int MaxTotalTokens);
+
+    private sealed class EnvironmentVariableScope : IDisposable
+    {
+        private readonly Dictionary<string, string?> originalValues;
+
+        public EnvironmentVariableScope(params (string Name, string? Value)[] values)
+        {
+            originalValues = values
+                .Select(value => value.Name)
+                .Distinct(StringComparer.Ordinal)
+                .ToDictionary(
+                    name => name,
+                    Environment.GetEnvironmentVariable,
+                    StringComparer.Ordinal);
+
+            foreach (var (name, value) in values)
+            {
+                Environment.SetEnvironmentVariable(name, value);
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (var (name, value) in originalValues)
+            {
+                Environment.SetEnvironmentVariable(name, value);
+            }
+        }
+    }
 }

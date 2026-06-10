@@ -24,11 +24,6 @@ internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProces
     private readonly IProcessVerificationRuntimeHost host;
     private readonly IProcessVerificationAuditQueryService auditQueryService;
 
-    public ProcessManagerReadOnlyVerificationCommandService(IProcessVerificationRuntimeHost host)
-        : this(host, new InMemoryProcessVerificationAuditStore())
-    {
-    }
-
     public ProcessManagerReadOnlyVerificationCommandService(
         IProcessVerificationRuntimeHost host,
         IProcessVerificationAuditQueryService auditQueryService)

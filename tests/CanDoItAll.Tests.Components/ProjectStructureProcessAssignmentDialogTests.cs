@@ -30,7 +30,7 @@ public sealed class ProjectStructureProcessAssignmentDialogTests
             .Add(component => component.Dialog, state));
 
         Assert.NotNull(cut.Find("[data-testid='project-structure-process-assignment-dialog']"));
-        Assert.Contains("Assign AI agents to process roles", cut.Markup);
+        Assert.Contains("Assign roles for Delivery project", cut.Markup);
         Assert.Contains("1 of 2 roles assigned", cut.Markup);
         Assert.Contains("Process roles (2)", cut.Markup);
         Assert.Equal(

@@ -22,15 +22,6 @@ internal sealed class ProcessVerificationRuntimeHost : IProcessVerificationRunti
     private readonly IProcessVerificationAuditStore auditStore;
     private readonly ProcessVerificationRuntimeHostOptions options;
 
-    public ProcessVerificationRuntimeHost()
-        : this(
-            new ProcessReadOnlyVerificationBatchOrchestrator(),
-            new ProcessVerificationLaneSelector(new ProcessVerificationLaneRegistry()),
-            new InMemoryProcessVerificationAuditStore(),
-            Options.Create(new ProcessVerificationRuntimeHostOptions()))
-    {
-    }
-
     public ProcessVerificationRuntimeHost(
         ProcessReadOnlyVerificationBatchOrchestrator orchestrator,
         ProcessVerificationLaneSelector selector,

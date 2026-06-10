@@ -1,7 +1,8 @@
 # SB016 - Add/repair run-detail diagnostics panel for verification host readback
 
 ## Status
-Pending.
+- Status: Completed
+- Closure evidence: bundle://reviews/01-execution-report.md
 
 ## Objective
 Add/repair run-detail diagnostics panel for verification host readback
@@ -25,10 +26,10 @@ Add/repair run-detail diagnostics panel for verification host readback
 - Updated execution report row for this exact subbundle.
 
 ## Dependency Impact
-Downstream phases must not proceed if this subbundle weakens read-only verification boundaries, Process Core genericity, durable audit, or process runtime launch/execution proof.
+- Downstream phases must not proceed if this subbundle weakens read-only verification boundaries, Process Core genericity, durable audit, or process runtime launch/execution proof.
 
 ## Validation Depth
-Standard implementation proof plus nearest downstream critical gate coverage.
+- Standard implementation proof plus nearest downstream critical gate coverage.
 
 ## Implementation Steps
 1. Re-read the source references listed above.
@@ -48,11 +49,11 @@ Standard implementation proof plus nearest downstream critical gate coverage.
 - Do not report skipped live tests as live provider proof.
 
 ## Acceptance Checklist
-- [ ] Source compiles.
-- [ ] Focused tests pass.
-- [ ] Source scans pass for forbidden runtime authority and bundle-path coupling.
-- [ ] Execution report has an individual row for `SB016`.
-- [ ] Nearest downstream critical gate references this work.
+- [x] Source compiles.
+- [x] Focused tests pass.
+- [x] Source scans pass for forbidden runtime authority and bundle-path coupling.
+- [x] Execution report has an individual row for `SB016`.
+- [x] Nearest downstream critical gate references this work.
 
 ## Proof Required
 - Command transcript paths.
@@ -61,10 +62,12 @@ Standard implementation proof plus nearest downstream critical gate coverage.
 - Red-team negative proof for critical gate.
 
 ## Browser Validation Logging
-Large desktop proof required if this subbundle touches manager diagnostics/run detail/operator UI. Otherwise N/A.
+- Large desktop proof required if this subbundle touches manager diagnostics/run detail/operator UI. Otherwise N/A.
 
 ## Progression Gate
-Proceed only after this subbundle has source-backed proof and downstream dependency impact reviewed.
+- Proceed only after this subbundle has source-backed proof and downstream dependency impact reviewed.
 
 ## Suggested Agent Prompt
 Implement `SB016` for `process-driver-runtime-host-production-readiness-live-manager-e2e-v1`. Preserve read-only verification boundaries, use real source/tests, and do not collapse proof into report-only claims.
+
+

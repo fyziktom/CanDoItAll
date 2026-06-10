@@ -1,7 +1,8 @@
 # SB018 - Critical Gate F: manager diagnostics UI smoke with screenshots and API parity
 
 ## Status
-Pending.
+- Status: Completed
+- Closure evidence: bundle://reviews/01-execution-report.md
 
 ## Objective
 Critical Gate F: manager diagnostics UI smoke with screenshots and API parity
@@ -25,10 +26,10 @@ Critical Gate F: manager diagnostics UI smoke with screenshots and API parity
 - Updated execution report row for this exact subbundle.
 
 ## Dependency Impact
-Downstream phases must not proceed if this subbundle weakens read-only verification boundaries, Process Core genericity, durable audit, or process runtime launch/execution proof.
+- Downstream phases must not proceed if this subbundle weakens read-only verification boundaries, Process Core genericity, durable audit, or process runtime launch/execution proof.
 
 ## Validation Depth
-Critical foundation: requires Semantic Adequacy Gate, production behavior artifact matrix, changed-file hashes, command transcripts, source assertions, anti-stub audit, and red-team negative proof.
+- Critical foundation: requires Semantic Adequacy Gate, production behavior artifact matrix, changed-file hashes, command transcripts, source assertions, anti-stub audit, and red-team negative proof.
 
 ## Implementation Steps
 1. Re-read the source references listed above.
@@ -48,23 +49,26 @@ Critical foundation: requires Semantic Adequacy Gate, production behavior artifa
 - Do not report skipped live tests as live provider proof.
 
 ## Acceptance Checklist
-- [ ] Source compiles.
-- [ ] Focused tests pass.
-- [ ] Source scans pass for forbidden runtime authority and bundle-path coupling.
-- [ ] Execution report has an individual row for `SB018`.
-- [ ] Semantic Adequacy Gate proof exists for this critical gate.
+- [x] Source compiles.
+- [x] Focused tests pass.
+- [x] Source scans pass for forbidden runtime authority and bundle-path coupling.
+- [x] Execution report has an individual row for `SB018`.
+- [x] Semantic Adequacy Gate proof exists for this critical gate.
 
 ## Proof Required
+- Completed critical proof: bundle://proof/SB018/manifest.md and bundle://proof/SB018/semantic-invariants.md
 - Command transcript paths.
 - Source assertion transcript.
 - Anti-stub/runtime-authority scan.
 - Red-team negative proof for critical gate.
 
 ## Browser Validation Logging
-Large desktop proof required if this subbundle touches manager diagnostics/run detail/operator UI. Otherwise N/A.
+- Large desktop proof required if this subbundle touches manager diagnostics/run detail/operator UI. Otherwise N/A.
 
 ## Progression Gate
-Proceed only after this subbundle has source-backed proof and downstream dependency impact reviewed.
+- Proceed only after this subbundle has source-backed proof and downstream dependency impact reviewed.
 
 ## Suggested Agent Prompt
 Implement `SB018` for `process-driver-runtime-host-production-readiness-live-manager-e2e-v1`. Preserve read-only verification boundaries, use real source/tests, and do not collapse proof into report-only claims.
+
+

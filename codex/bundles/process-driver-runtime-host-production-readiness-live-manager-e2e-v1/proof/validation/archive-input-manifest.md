@@ -1,0 +1,8 @@
+# Archive Input Manifest
+
+- Bundle root: repo://codex/bundles/process-driver-runtime-host-production-readiness-live-manager-e2e-v1
+- Required canonical inputs, analysis, requirements, architecture, plan, traceability, prompts, subbundles, reviews, and proof folders are present before archive creation.
+- Critical proof directories: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060.
+- Validation transcripts: bundle://proof/validation/transcripts/solution-build-no-restore.txt; bundle://proof/validation/transcripts/focused-verification-host-and-live-smoke-tests.txt; bundle://proof/validation/transcripts/unit-tests-no-restore.txt; bundle://proof/validation/transcripts/process-component-tests-no-restore.txt; bundle://proof/validation/transcripts/playwright-process-run-detail-large-screen.txt; bundle://proof/validation/transcripts/source-assertions-and-anti-stub-scan.txt; bundle://proof/validation/transcripts/semantic-invariant-catalog-and-ui-artifact-scan.txt; bundle://proof/validation/transcripts/completed-validator.txt; bundle://proof/validation/transcripts/bundle-archive-created.txt.
+- Browser screenshots: bundle://proof/validation/screenshots/process-run-detail-recovery-sb030/01-selected-run-summary-large-desktop.png; bundle://proof/validation/screenshots/process-run-detail-recovery-sb030/02-step-recovery-diagnostics-large-desktop.png; bundle://proof/validation/screenshots/process-run-detail-recovery-sb030/03-artifact-ledger-large-desktop.png.
+- Archive target: repo://codex/bundles/process-driver-runtime-host-production-readiness-live-manager-e2e-v1.zip.
