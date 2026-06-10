@@ -1,0 +1,13 @@
+# Gate K Red-Team Rejection
+
+Rejected shallow proof cases:
+- Direct scheduler or workflow calls into CanDoItAll.Processes.Drivers.* or ProcessDriverVerificationGateway are not acceptable. SB032 source scan covers src/CanDoItAll.Modules.SchedulerPlanner and src/CanDoItAll.Modules.AgentFramework for gateway, runtime-host, orchestrator, and payload-builder shortcuts.
+- A read-only job model that only stores strings is not acceptable. SB031 uses ProcessDriverVerificationGatewayLane, ProcessReadOnlyVerificationBatchPayload, and ProcessManagerReadOnlyVerificationProjectionMode, and converts to ProcessManagerReadOnlyVerificationReadbackRequest through the manager facade request model.
+- Execution-capable jobs are rejected. ProcessReadOnlyVerificationJob exposes NoMutationPerformed=true and all process, transition, and finalizer mutation permissions as false.
+- Report-only readiness is rejected. Focused tests execute the job conversion and source-scan the scheduler/workflow modules for forbidden direct process-driver access.
+- Broad fallback/dispatch readiness is rejected. The job model keeps exact lane selection and uses the existing manager readback request path; it does not add dynamic/object payload dispatch.
+
+Accepted semantic proof:
+- Process_readonly_verification_job_SB031_INV_001_models_scheduler_and_workflow_jobs_as_manager_readback_requests_without_mutation proves scheduler and workflow job sources, typed lane/payload/projection fields, readback request conversion, mutation denial, and invalid source-kind rejection.
+- Scheduler_workflow_verification_readiness_SB032_INV_001_does_not_call_process_drivers_directly proves SchedulerPlanner and AgentFramework source trees do not bypass the Processes manager/readback boundary.
+- The 31-test focused ProcessDomainEvidenceReadOnlyAdapterTests run passed with zero skips.

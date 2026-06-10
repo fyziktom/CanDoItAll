@@ -1,0 +1,2 @@
+Command: rg -n "CanDoItAll\.Processes\.Drivers|ProcessDriverVerificationGateway|IProcessVerificationRuntimeHost|ProcessVerificationRuntimeHost|ProcessReadOnlyVerificationBatchOrchestrator|ProcessReadOnlyVerificationPayloadBuilder" src\CanDoItAll.Modules.Workbench src\CanDoItAll.Modules.Projects src\CanDoItAll.AppComponents tests\CanDoItAll.Tests.Components tests\CanDoItAll.Tests.Playwright
+Result: No project/workbench/UI direct process-driver or verification-host references found.

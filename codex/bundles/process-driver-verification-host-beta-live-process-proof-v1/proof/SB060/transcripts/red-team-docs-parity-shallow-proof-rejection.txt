@@ -1,0 +1,17 @@
+# SB060 Red-Team Docs Parity Shallow-Proof Rejection
+
+## Rejected Shallow Claims
+- Updating only the execution report is insufficient. Gate T changed repository docs and added a unit guard over the actual module README, operator runbook, and runtime ledger.
+- Mentioning manager diagnostics without fields is insufficient. The docs now require `ProcessManagerReadOnlyVerificationReadbackDto`, `auditRecords`, `observationHash`, `denialCategory`, `denialCode`, `denialMessage`, and mutation-denial flags.
+- A runtime-host roadmap that says `later` or `beta` without denial language is insufficient. The migration guide keeps `Current status: Not approved` and explicitly blocks runtime host, registry, selector, DI registration, manager commands, scheduler/workflow hooks, external calls, storage/workspace writes, and process mutation.
+- Live/fallback proof confusion is rejected. The ledger keeps live OpenAI smoke opt-in and says deterministic fake-provider tests must not be reported as live proof.
+- Browser screenshots are not claimed for Gate T because no UI route changed; source scan proves no UI or Playwright diffs.
+
+## Accepted Positive Proof
+- `bundle://proof/SB058/transcripts/process-docs-operator-readback-focused-tests.txt` passed the repository doc guard.
+- `bundle://proof/SB060/transcripts/gate-t-docs-parity-focused-tests.txt` passed the SB058/SB059 docs parity matrix 3/3.
+- `bundle://proof/SB058/transcripts/process-readme-runbook-docs-source-assertions.txt` and `bundle://proof/SB059/transcripts/driver-host-beta-migration-guide-source-assertions.txt` prove exact field and denial-language coverage.
+- `bundle://proof/SB060/transcripts/gate-t-docs-parity-source-scan.txt` proves no current bundle path leakage, no changed-doc bundle coupling, no runtime-host approval claims, and no UI drift.
+
+## Result
+Gate T rejects docs-only optimism and accepts only repository docs backed by focused tests, exact source assertions, denied-runtime language, source scans, and anti-stub proof.

@@ -1,0 +1,30 @@
+Command: rg -n "VerifyForReadbackAsync|ProcessManagerReadOnlyVerificationReadbackRequest|ProcessManagerReadOnlyVerificationReadbackDto|ProcessManagerReadOnlyVerificationDiagnosticReadbackDto|ProcessManagerReadOnlyVerificationAuditRecordDto|ProcessManagerReadOnlyVerificationReadbackMapper|Process_manager_verification_readback_SB028_INV_001" <readback source and tests>
+Working directory: C:\repositories\CanDoItAll
+Run label: SB028 manager verification readback DTO source assertions
+
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:613:    public async Task Process_manager_verification_readback_SB028_INV_001_exposes_diagnostics_dto_and_audit_records()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:634:        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:658:        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessManagerReadOnlyVerificationReadbackRequest(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:679:        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:17:    Task<ProcessManagerReadOnlyVerificationReadbackDto> VerifyForReadbackAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:18:        ProcessManagerReadOnlyVerificationReadbackRequest request,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:113:    public async Task<ProcessManagerReadOnlyVerificationReadbackDto> VerifyForReadbackAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:114:        ProcessManagerReadOnlyVerificationReadbackRequest request,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:128:        return ProcessManagerReadOnlyVerificationReadbackMapper.Project(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:213:internal sealed record ProcessManagerReadOnlyVerificationReadbackRequest
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:217:    public ProcessManagerReadOnlyVerificationReadbackRequest(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:316:internal sealed record ProcessManagerReadOnlyVerificationReadbackDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:328:    IReadOnlyList<ProcessManagerReadOnlyVerificationDiagnosticReadbackDto> Diagnostics,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:329:    IReadOnlyList<ProcessManagerReadOnlyVerificationAuditRecordDto> AuditRecords,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:339:internal sealed record ProcessManagerReadOnlyVerificationDiagnosticReadbackDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:347:internal sealed record ProcessManagerReadOnlyVerificationAuditRecordDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:360:internal static class ProcessManagerReadOnlyVerificationReadbackMapper
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:362:    public static ProcessManagerReadOnlyVerificationReadbackDto Project(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:381:    private static ProcessManagerReadOnlyVerificationReadbackDto FromResponse(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:387:        return new ProcessManagerReadOnlyVerificationReadbackDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:411:    private static ProcessManagerReadOnlyVerificationReadbackDto FromDenial(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:417:        return new ProcessManagerReadOnlyVerificationReadbackDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:441:    private static ProcessManagerReadOnlyVerificationDiagnosticReadbackDto ToDiagnosticDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:444:        return new ProcessManagerReadOnlyVerificationDiagnosticReadbackDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:453:    private static ProcessManagerReadOnlyVerificationAuditRecordDto ToAuditRecordDto(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:456:        return new ProcessManagerReadOnlyVerificationAuditRecordDto(

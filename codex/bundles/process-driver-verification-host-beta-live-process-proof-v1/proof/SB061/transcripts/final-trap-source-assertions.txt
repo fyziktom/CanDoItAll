@@ -1,0 +1,47 @@
+SB061 final trap source assertions
+Pattern: if (!IsLiveValidationEnabled())
+tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:30:        if (!IsLiveValidationEnabled())
+Pattern: CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION
+tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:18:    private const string LiveProcessRunValidationVariable = "CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION";
+Pattern: CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE
+tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:19:    private const string LiveOpenAiSmokeVariable = "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE";
+Pattern: OPENAI_API_KEY must be set for live OpenAI process-run smoke validation
+tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:37:            "OPENAI_API_KEY must be set for live OpenAI process-run smoke validation; the value is never logged.");
+Pattern: Guard status: every execution-capable driver prerequisite is `Not satisfied`.
+docs\process-runtime-restoration-ledger.md:47:Guard status: every execution-capable driver prerequisite is `Not satisfied`.
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1215:        Assert.Contains("Guard status: every execution-capable driver prerequisite is `Not satisfied`.", ledger, StringComparison.Ordinal);
+Pattern: The generic process-driver runtime host remains not approved
+docs\process-agent-operator-runbook.md:19:The generic process-driver runtime host remains not approved. Operators should not use driver packages, driver registries, runtime selectors, manager commands, scheduler hooks, workflow hooks, or driver dependency-injection registration to start or mutate process runs.
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:760:        Assert.Contains("The generic process-driver runtime host remains not approved", operatorRunbook, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1216:        Assert.Contains("The generic process-driver runtime host remains not approved", operatorRunbook, StringComparison.Ordinal);
+Pattern: Generic process-driver runtime host is not approved
+docs\process-runtime-restoration-ledger.md:40:- Generic process-driver runtime host is not approved.
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:761:        Assert.Contains("Generic process-driver runtime host is not approved", restorationLedger, StringComparison.Ordinal);
+Pattern: Process_driver_contract_api_SB043_SB044_INV_001
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1206:    public void Process_driver_contract_api_SB043_SB044_INV_001_future_execution_guards_remain_unsatisfied_and_source_rejects_premature_surfaces()
+Pattern: Process_driver_contract_api_SB058_SB059_INV_002
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:725:    public void Process_driver_contract_api_SB058_SB059_INV_002_process_docs_describe_operator_readback_without_runtime_approval()
+Forbidden approval/source claim scan
+docs\process-runtime-restoration-ledger.md:57:| Red-team negative proof | `Not satisfied` | Tests rejecting report-only approval, non-empty diagnostics as approval, implicit DI registration, fallback runtime selection, fixture-only success, and undocumented manager/scheduler/workflow entry points. |
+src\CanDoItAll.Modules.Processes\README.md:162:- Include red-team proof that rejects report-only approval, non-empty diagnostics as approval, implicit DI registration, fallback runtime selection, fixture-only success, and undocumented manager/scheduler/workflow entry points.
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:404:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:457:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:509:            "Red-team tests rejecting report-only approval"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:579:            "Runtime host status: `Approved`",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:582:            "ExecutionCapableFuture is permission",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:645:            "Production verification host registration decision: `Ready`",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:647:            "Runtime host status: `Approved`",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:652:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:765:            "Production verification host registration decision: `Ready`",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:766:            "Runtime host status: `Approved`",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:767:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:773:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:956:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1159:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1167:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1192:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1198:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1257:            "runtime host is approved",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1304:            "Runtime host status: `Approved`",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1311:            "ExecutionCapableFuture is permission"
+Classification: all matches are negative assertion literals in unit tests or red-team/future-proof requirement text that rejects approval. They are not active runtime-host approval claims and they do not classify skipped live tests as live-provider proof.

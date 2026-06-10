@@ -1,0 +1,15 @@
+Command: SB006 Gate B proof index for live-proof classification, manifest, report citation, and invariant binding check
+WorkingDirectory: repo://.
+Invariant IDs: SB006-INV-001
+
+PASS: bundle://proof/SB004/transcripts/specialist-agent-live-proof-classification.txt
+PASS: bundle://proof/SB005/transcripts/live-env-gate-source-assertions.txt
+PASS: bundle://proof/SB005/transcripts/live-specialist-smoke-two-flag-skip-test.txt
+PASS: bundle://proof/SB006/transcripts/live-proof-classification-source-scan.txt
+PASS: bundle://proof/SB006/transcripts/red-team-live-skip-as-process-run-rejection.txt
+PASS: bundle://proof/SB006/manifest.md
+PASS: bundle://proof/SB006/semantic-invariants.md
+PASS: reviews/01-execution-report.md cites SB006 manifest and semantic invariants
+
+PASS: Gate B has classification, two-flag env gate, skip-path test, source scan, red-team rejection, manifest, semantic invariants, and execution-report citations.
+ExitCode: 0

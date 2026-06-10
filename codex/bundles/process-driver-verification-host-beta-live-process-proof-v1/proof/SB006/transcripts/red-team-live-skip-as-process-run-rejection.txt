@@ -1,0 +1,6 @@
+Command: SB006 red-team reject live-skip or specialist-agent smoke as process-run proof
+WorkingDirectory: repo://.
+Invariant IDs: SB006-INV-001
+Input: Existing transcript passed LiveSpecialistAgentScenarioIntegrationTests and a skip-path test passes with live flags cleared.
+Result: rejected as live process-run proof because source has no ProcessesService, no ProcessRunAutomationDispatchService, no ProcessWorkflowRunCoordinator, and no process-run finalizer/artifact lineage assertion.
+ExitCode: 1

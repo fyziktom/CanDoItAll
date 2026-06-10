@@ -1,0 +1,37 @@
+Command: rg -n "Process_manager_verification_readback_api_smoke_SB029_INV_001|JsonSerializer.Serialize|JsonDocument.Parse|diagnostics|auditRecords|noMutationPerformed|allowsProcessMutation|allowsTransitionMutation|allowsFinalizerMutation" <api smoke test source>
+Working directory: C:\repositories\CanDoItAll
+Run label: SB029 manager diagnostics API-smoke source assertions
+
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:365:        IReadOnlyList<ProcessVerificationAuditRecord> auditRecords)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:369:        ArgumentNullException.ThrowIfNull(auditRecords);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:373:            return FromResponse(request, verificationResult, response, auditRecords);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:378:        return FromDenial(request, verificationResult, denial, auditRecords);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:385:        IReadOnlyList<ProcessVerificationAuditRecord> auditRecords)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:400:            auditRecords.Select(ToAuditRecordDto).ToArray(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:415:        IReadOnlyList<ProcessVerificationAuditRecord> auditRecords)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:430:            auditRecords.Select(ToAuditRecordDto).ToArray(),
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:473:    public void Process_manager_readonly_verification_command_SB024_INV_001_returns_diagnostics_and_audit_without_mutation()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:479:            "process-manager:diagnostics",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:515:            "process-manager:facade-diagnostics",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:613:    public async Task Process_manager_verification_readback_SB028_INV_001_exposes_diagnostics_dto_and_audit_records()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:624:            "process-manager:readback-diagnostics",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:642:        Assert.Equal("process-manager:readback-diagnostics", readback.CallerContext);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:664:    public async Task Process_manager_verification_readback_api_smoke_SB029_INV_001_serializes_diagnostics_projection_without_mutation_permissions()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:675:            "process-manager:api-smoke-diagnostics",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:686:        var json = System.Text.Json.JsonSerializer.Serialize(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:689:        using var document = System.Text.Json.JsonDocument.Parse(json);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:692:        Assert.True(root.TryGetProperty("diagnostics", out var diagnostics));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:693:        Assert.True(root.TryGetProperty("auditRecords", out var auditRecords));
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:694:        Assert.True(diagnostics.GetArrayLength() > 0);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:695:        Assert.True(auditRecords.GetArrayLength() > 0);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:696:        Assert.True(root.GetProperty("noMutationPerformed").GetBoolean());
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:697:        Assert.False(root.GetProperty("allowsProcessMutation").GetBoolean());
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:698:        Assert.False(root.GetProperty("allowsTransitionMutation").GetBoolean());
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:699:        Assert.False(root.GetProperty("allowsFinalizerMutation").GetBoolean());
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:716:            "process-manager:di-diagnostics",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:739:        var auditRecords = await auditStore.ListAsync();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:740:        Assert.Contains(auditRecords, record => record.Id == response.AuditRecord.Id);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:741:        Assert.Contains(auditRecords, record => record.Id == result.AuditRecord.Id);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1189:    public void Process_manager_readonly_projection_SB031_INV_001_projects_supplied_observations_as_diagnostics_without_mutation()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1817:        IReadOnlyList<ProcessDriverDiagnostic> diagnostics,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1821:        var diagnosticAndAuditText = diagnostics

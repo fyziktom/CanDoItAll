@@ -1,0 +1,2 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --stage prepared --repo-root . --bundle-root codex\bundles\process-driver-verification-host-beta-live-process-proof-v1 codex\bundles\process-driver-verification-host-beta-live-process-proof-v1
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1

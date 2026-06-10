@@ -69,5 +69,20 @@ Use `response.AllResponses` and `response.Aggregate` as diagnostic evidence only
 | Business analysis | Caller-supplied deliverable/evidence text | None | Verification-only alpha |
 | Observation aggregation | Already-produced verification responses | None | Read-only alpha |
 
+## Verification-Pack Manifest Contract
+
+The verification-pack manifest is a review artifact for packaging and compatibility only. It is not a runtime descriptor and must not be loaded by production code for registration or discovery.
+
+Required manifest fields:
+- `packId`: stable package identifier.
+- `contractVersion`: exact `ProcessDriverContractVersion.Current` value.
+- `lanes`: explicit `ProcessDriverVerificationGatewayLane` values with required `ProcessDriverCapabilityScopeKind` and `ProcessDriverPermissionMode.VerificationOnly`.
+- `artifacts`: source package, README, test transcript, and source-scan references.
+- `noRuntimeRegistration`: must be `true`.
+- `noSelfDiscovery`: must be `true`.
+- `noExecutionCapableDrivers`: must be `true`.
+
+The manifest must not contain type names used for reflection, assembly scanning, dependency-injection registration, scheduler or workflow hooks, manager commands, workspace or storage writes, external calls, or process mutation. Consumers must keep using typed gateway methods and explicit lane descriptors.
+
 ## Non-Goals
 - No runtime host, dynamic registry, selector, dependency-injection registration, manager command, scheduler hook, workflow hook, shell execution, connector call, workspace/storage write, persistence, transition/finalizer/retry behavior, or process mutation.

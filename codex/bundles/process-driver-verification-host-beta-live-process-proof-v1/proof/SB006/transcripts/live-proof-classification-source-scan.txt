@@ -1,0 +1,10 @@
+Command: SB006 live proof classification source scan for workspace-agent markers, process-run absence, two-flag opt-in, and secret non-printing
+WorkingDirectory: repo://.
+Invariant IDs: SB006-INV-001
+
+Workspace specialist-agent markers present: True
+Process-run dispatch markers absent from live specialist smoke: True
+Two live opt-in flags required: True
+No console/debug secret writing: True
+
+ExitCode: 0

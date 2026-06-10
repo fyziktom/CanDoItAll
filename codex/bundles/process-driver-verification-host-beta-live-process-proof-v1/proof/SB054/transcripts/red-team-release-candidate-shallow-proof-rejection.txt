@@ -1,0 +1,17 @@
+# Gate R Red-Team Rejection
+
+Rejected shallow closure patterns:
+- Release-candidate claim with no current solution build transcript.
+- Unit-only proof that omits focused integration coverage for verification host, manager readback, and security/redaction changes.
+- Deterministic fallback proof reported as live OpenAI proof.
+- Live proof claimed from skipped tests or workspace-only specialist-agent smoke instead of process-run dispatch.
+- Source scans that ignore transient bundle paths, generic process-driver runtime hooks, mutation permissions, or Process Core dependency drift.
+- Anti-stub closure that fails to classify intentional placeholder/fake-proof guard text.
+
+Required positive proof retained:
+- Full solution build passed with 0 warnings and 0 errors.
+- Full unit test project passed.
+- Focused ProcessDomainEvidenceReadOnlyAdapter integration matrix passed.
+- Deterministic fallback process matrix passed.
+- Live process-run OpenAI proof is referenced from SB008 with strict-skip and budget red-team controls; it is not rerun or reclassified.
+- Release-candidate source scans found no current bundle path leakage, generic driver-host hooks, mutation permission drift, or Process Core dependency drift.

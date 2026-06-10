@@ -10,10 +10,16 @@ public sealed class MigrationBootstrapIntegrationTests
 {
     private const string InitialPostgreSqlBaselineMigrationId = "20260528182412_InitialPostgreSqlBaseline";
     private const string WorkflowCheckpointsMigrationId = "20260529111314_AddWorkflowCheckpoints";
+    private const string SchedulerRunObservabilityMigrationId = "20260529220032_AddSchedulerRunObservability";
+    private const string DisableCognitiveMemoryByDefaultMigrationId = "20260603113251_DisableCognitiveMemoryByDefault";
+    private const string ProcessVerificationAuditRecordsMigrationId = "20260610113813_AddProcessVerificationAuditRecords";
     private static readonly string[] ExpectedPostgreSqlMigrations =
     [
         InitialPostgreSqlBaselineMigrationId,
-        WorkflowCheckpointsMigrationId
+        WorkflowCheckpointsMigrationId,
+        SchedulerRunObservabilityMigrationId,
+        DisableCognitiveMemoryByDefaultMigrationId,
+        ProcessVerificationAuditRecordsMigrationId
     ];
 
     [Fact]

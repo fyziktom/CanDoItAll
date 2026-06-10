@@ -1,0 +1,22 @@
+# Gate K Proof Index
+
+Scope:
+- SB031 Add read-only verification job model.
+- SB032 Prove scheduler/workflow do not call drivers directly.
+- SB033 Critical Gate K scheduler/workflow readiness.
+
+Proof artifacts:
+- bundle://proof/SB031/transcripts/read-only-verification-job-focused-tests.txt
+- bundle://proof/SB031/transcripts/read-only-verification-job-source-assertions.txt
+- bundle://proof/SB032/transcripts/scheduler-workflow-readiness-focused-tests.txt
+- bundle://proof/SB032/transcripts/scheduler-workflow-no-direct-driver-source-scan.txt
+- bundle://proof/SB033/transcripts/gate-k-focused-tests.txt
+- bundle://proof/SB033/transcripts/gate-k-source-diff-and-anti-stub-audit.txt
+- bundle://proof/SB033/transcripts/red-team-scheduler-workflow-readiness-shallow-proof-rejection.txt
+- bundle://proof/SB033/semantic-invariants.md
+
+Critical gate result:
+- Focused ProcessDomainEvidenceReadOnlyAdapterTests passed: 31 passed, 0 failed, 0 skipped.
+- Source scan found no forbidden direct process driver or verification host references in SchedulerPlanner or AgentFramework.
+- Anti-stub audit found no placeholder, default-return, unsupported-throw, or bundle-path coupling tokens in Gate K changed files.
+- Scheduler/workflow readiness remains read-only and manager-readback based.

@@ -1,0 +1,28 @@
+SB030 Gate J red-team manager diagnostics shallow-proof rejection
+Working directory: C:\repositories\CanDoItAll
+Run label: Gate J adversarial negative proof
+
+Invariant IDs:
+- SB030_INV_001: manager diagnostics readback must expose a typed DTO with diagnostics, audit records, lane/run/step identity, and mutation-denial flags.
+- SB030_INV_002: diagnostics readback must have an API-smoke proof that serializes diagnostics and auditRecords while preserving no-mutation permissions.
+- SB030_INV_003: readback must use the manager facade and durable audit query boundary rather than UI-only labels or direct process-state mutation paths.
+
+Rejected shallow proof:
+- A DTO type with no facade method and no tests is insufficient because no manager caller can prove the readback lifecycle.
+- A UI label or manually assembled diagnostics list is insufficient because it does not prove audit readback, lane identity, run identity, or mutation flags.
+- A JSON serialization test without assertions on diagnostics, auditRecords, and mutation permissions is insufficient as an API smoke.
+- A readback path that reaches into process runtime mutation services or skips the durable audit query boundary is insufficient.
+
+Adversarial negative proof used:
+- Process_manager_verification_readback_SB028_INV_001_exposes_diagnostics_dto_and_audit_records asserts DTO identity, diagnostics, audit record hash shape, audit record id linkage, projection source, and mutation-denial flags.
+- Process_manager_verification_readback_api_smoke_SB029_INV_001_serializes_diagnostics_projection_without_mutation_permissions serializes the DTO as web JSON and asserts diagnostics, auditRecords, noMutationPerformed, and false process/transition/finalizer mutation permissions.
+- gate-j-source-diff-and-anti-stub-audit.txt rejects placeholder/stub/fake matches and bundle-path drift in the manager diagnostics readback files.
+
+Positive semantic proof used:
+- manager-readback-focused-tests.txt shows the focused integration suite passed 29 tests with SB028 and SB029 invariants compiled and executed.
+- manager-readback-dto-source-assertions.txt ties VerifyForReadbackAsync, ReadbackRequest, ReadbackDto, DiagnosticReadbackDto, AuditRecordDto, and ReadbackMapper to production source.
+- manager-readback-api-smoke-source-assertions.txt ties the API-smoke JSON assertions to the test source and DTO source.
+
+Result:
+PASS. Gate J rejects DTO-only, UI-label-only, serialization-only, and mutation-permissive diagnostics readback proof. The manager diagnostics readback API returns typed diagnostics plus audit readback with no process mutation permissions.
+Exit code: 0

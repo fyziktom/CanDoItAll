@@ -38,6 +38,8 @@ public static class ProcessesModuleServiceCollectionExtensions
             .ValidateOnStart();
         services.AddOptions<ProcessObservationCacheOptions>()
             .BindConfiguration(ProcessObservationCacheOptions.SectionName);
+        services.AddOptions<ProcessVerificationRuntimeHostOptions>()
+            .BindConfiguration(ProcessVerificationRuntimeHostOptions.SectionName);
         services.AddScoped<ProcessesService>();
         services.AddScoped<ProcessOutboxService>();
         services.AddScoped<ProcessWorkflowRunCoordinator>();
@@ -52,6 +54,9 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
         services.AddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
         services.AddProcessVerificationRuntimeHost();
+        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditStore, EfCoreProcessVerificationAuditStore>());
+        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditQueryService>(provider =>
+            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
         services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
@@ -95,6 +100,12 @@ public static class ProcessesModuleServiceCollectionExtensions
 
     internal static IServiceCollection AddProcessVerificationRuntimeHost(this IServiceCollection services)
     {
+        services.AddOptions<ProcessVerificationRuntimeHostOptions>()
+            .ValidateDataAnnotations()
+            .Validate(
+                options => options.Lanes is not null,
+                "Processes:VerificationRuntimeHost:Lanes must be configured.")
+            .ValidateOnStart();
         services.TryAddScoped<ProcessTranscriptVerificationReadOnlyAdapter>();
         services.TryAddScoped<ProcessRuntimeEvidenceVerificationReadOnlyAdapter>();
         services.TryAddScoped<ProcessArtifactEvidenceReadOnlyAdapter>();
@@ -105,8 +116,12 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.TryAddSingleton<ProcessVerificationLaneRegistry>();
         services.TryAddSingleton<ProcessVerificationLaneSelector>();
         services.TryAddSingleton<IProcessVerificationAuditStore, InMemoryProcessVerificationAuditStore>();
+        services.TryAddSingleton<IProcessVerificationAuditQueryService>(provider =>
+            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>());
         services.TryAddScoped<IProcessVerificationRuntimeHost, ProcessVerificationRuntimeHost>();
         services.TryAddScoped<ProcessManagerReadOnlyVerificationCommandService>();
+        services.TryAddScoped<IProcessManagerReadOnlyVerificationFacade>(provider =>
+            provider.GetRequiredService<ProcessManagerReadOnlyVerificationCommandService>());
 
         return services;
     }

@@ -1,0 +1,14 @@
+# Gate Q Proof Index
+
+- SB049 malicious secret corpus focused tests: `bundle://proof/SB049/transcripts/malicious-secret-corpus-focused-tests.txt`.
+- SB049 source assertions: `bundle://proof/SB049/transcripts/malicious-secret-corpus-source-assertions.txt`.
+- SB050 audit/redaction/non-leak matrix focused tests: `bundle://proof/SB050/transcripts/audit-redaction-non-leak-matrix-focused-tests.txt`.
+- SB050 production secret-fragment source scan: `bundle://proof/SB050/transcripts/production-secret-fragment-source-scan.txt`.
+- SB051 security boundary source scan: `bundle://proof/SB051/transcripts/gate-q-security-boundary-source-scan.txt`.
+- SB051 anti-stub audit: `bundle://proof/SB051/transcripts/gate-q-security-anti-stub-audit.txt`.
+- SB051 red-team rejection: `bundle://proof/SB051/transcripts/red-team-security-redaction-shallow-proof-rejection.txt`.
+- SB051 focused test rollup: `bundle://proof/SB051/transcripts/gate-q-security-focused-tests.txt`.
+- SB051 semantic invariants: `bundle://proof/SB051/semantic-invariants.md`.
+- SB051 manifest: `bundle://proof/SB051/manifest.md`.
+
+Gate Q closes only if malicious corpus, audit persistence, manager readback, production source scans, and no-mutation boundaries are all source-backed.

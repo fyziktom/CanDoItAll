@@ -1,0 +1,8 @@
+Command: rg -n -i "TODO|TBD|stub|placeholder|fake|NotImplementedException|NotSupportedException|return default|throw new Exception|current-bundle|codex\\bundles|report-only pass|fixture-only pass" docs\process-runtime-restoration-ledger.md tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs src\CanDoItAll.Modules.Processes\README.md docs\process-agent-operator-runbook.md
+docs\process-runtime-restoration-ledger.md:39:- Live OpenAI smoke remains opt-in. Deterministic fake-provider and process-runtime tests must not be reported as live OpenAI proof.
+src\CanDoItAll.Modules.Processes\README.md:81:- Required artifacts cannot be treated as satisfied when validation reports missing, invalid, stale, wrong-producer, placeholder-only, unavailable, or hash-mismatched evidence.
+src\CanDoItAll.Modules.Processes\README.md:189:| Required output appears complete but the run is still blocked | Read run detail health, `invariantDiagnostics`, step `blockReasonCode`, `recoveryOptions`, and artifact status fields projected by `ProcessArtifactStatusProjectionService`. | Treat missing, invalid, stale, wrong-producer, placeholder-only, unavailable, or hash-mismatched records as unsatisfied. Record a new current-run artifact instead of editing status text. |
+Classification:
+- `fake-provider` appears only in live-proof policy text that forbids reporting deterministic provider tests as live OpenAI proof.
+- `placeholder-only` appears only as an artifact-status failure classification in process runtime docs.
+Result: No implementation placeholder, stub, default-return, unsupported-throw, transient bundle path, or report-only pass closure was found in Gate O execution-capable blocking paths.

@@ -1,0 +1,14 @@
+# Gate N Red-Team Rejection
+
+Rejected shallow proof cases:
+- A manifest doc that can be loaded by production code for registration or discovery is not acceptable.
+- A manifest doc without explicit noRuntimeRegistration, noSelfDiscovery, and noExecutionCapableDrivers markers is not acceptable.
+- A pack boundary that relies on reflection, assembly scanning, DI registration, manager commands, scheduler hooks, or workflow hooks is rejected.
+- Runtime approval through package README language is rejected; the gateway README must keep typed methods and explicit lane descriptors as the only consumer path.
+- Report-only closure is rejected; proof uses focused unit tests, README/source assertions, source scans, and anti-stub audit.
+
+Accepted semantic proof:
+- Verification-pack manifest README guard tests passed 3/3.
+- Manifest source assertions prove packId, contractVersion, lane, artifact, and no-runtime/no-discovery/no-execution markers are documented.
+- Source scan found no self-registration, DI registration, reflection discovery, runtime host, manager command, or registry tokens in driver package source files.
+- Anti-stub audit found no placeholders or current bundle path coupling in pack boundary paths.

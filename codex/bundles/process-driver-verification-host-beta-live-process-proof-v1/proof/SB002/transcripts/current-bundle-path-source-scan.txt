@@ -1,0 +1,9 @@
+Command: rg -n 'process-driver-verification-host-beta-live-process-proof-v1|process-runtime-live-openai-verification-host-alpha-v1|codex[\\/]bundles|codex\\\\bundles|codex/bundles' src tests -g '*.cs' -g '*.razor' -g '*.cshtml' -g '*.json' -g '*.ps1' -g '*.props' -g '*.targets'
+WorkingDirectory: repo://.
+Invariant IDs: SB002-INV-001
+Raw rg exit code: 1
+Expected no matches: True
+
+PASS: no transient filesystem bundle path or current/prior bundle name found in src/tests source files.
+
+ExitCode: 0

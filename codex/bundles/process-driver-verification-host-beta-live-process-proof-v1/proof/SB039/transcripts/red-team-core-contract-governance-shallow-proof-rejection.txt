@@ -1,0 +1,15 @@
+# Gate M Red-Team Rejection
+
+Rejected shallow proof cases:
+- Core dependency proof based only on project files is insufficient; SB037 also scans Core source for driver, module, EF, DI, HTTP, filesystem, verification-host, and gateway references.
+- API snapshot proof that ignores descriptor family ordinals is insufficient; SB037/SB038 tests assert ProcessDriverCoreDescriptorFamily ordinals and explicit gateway family mappings.
+- Contract governance proof that only reads documentation is insufficient; SB038 asserts ProcessDriverContractVersion.Current is 1.10.0 and gateway operations remain read-only verification operations.
+- Any gateway lane that uses execution-capable operations or treats ExecutionCapableFuture as approved is rejected.
+- Report-only closure is rejected; proof uses focused unit transcripts and source scans.
+
+Accepted semantic proof:
+- Core dependency/API focused tests passed 3/3.
+- Driver contract/version focused tests passed 2/2.
+- Core source scan found no forbidden driver/module/EF/DI/HTTP/filesystem/verification-host/gateway references.
+- Contract source assertions identify ProcessDriverContractVersion.Current, descriptor families, allowed lanes, VerificationOnly, ExecutionCapableFuture, and readonly operation rules.
+- Anti-stub audit found only negative test guards that reject TODO/NotImplemented drift.

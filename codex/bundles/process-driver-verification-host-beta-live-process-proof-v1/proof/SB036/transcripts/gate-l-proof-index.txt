@@ -1,0 +1,24 @@
+# Gate L Proof Index
+
+Scope:
+- SB034 Run lifecycle/outbox/finalizer regression.
+- SB035 Run project-structure/UI regression.
+- SB036 Critical Gate L process runtime matrix.
+
+Proof artifacts:
+- bundle://proof/SB034/transcripts/runtime-lifecycle-outbox-finalizer-regression.txt
+- bundle://proof/SB034/transcripts/runtime-lifecycle-outbox-finalizer-source-assertions.txt
+- bundle://proof/SB035/transcripts/project-structure-ui-regression.txt
+- bundle://proof/SB035/transcripts/project-structure-ui-source-assertions.txt
+- bundle://proof/SB036/transcripts/gate-l-runtime-lifecycle-tests.txt
+- bundle://proof/SB036/transcripts/gate-l-project-structure-ui-tests.txt
+- bundle://proof/SB036/transcripts/gate-l-runtime-boundary-source-scan.txt
+- bundle://proof/SB036/transcripts/gate-l-anti-stub-runtime-matrix-audit.txt
+- bundle://proof/SB036/transcripts/red-team-process-runtime-matrix-shallow-proof-rejection.txt
+- bundle://proof/SB036/semantic-invariants.md
+
+Critical gate result:
+- Process runtime integration subset passed: 4 passed, 0 failed, 0 skipped.
+- Project-structure/UI regression subset passed: 5 passed across integration/component projects, 0 failed, 0 skipped.
+- Source scan found no direct process-driver or verification-host references in project/workbench/UI surfaces.
+- Anti-stub audit passed after classifying allowed negative prompt guard strings.

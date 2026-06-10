@@ -1,0 +1,30 @@
+Gate F proof index
+
+- SB016/SB017 focused host options tests: PASSED
+  - Artifact: bundle://proof/SB016/transcripts/host-options-policy-focused-tests.txt
+  - Required marker: Úspěšné!    - Neúspěšné:     0, Úspěšné:    21
+  - SHA256: e3470d9ab849d1d31972446c92f40372f6d97144bdbb875f05e8456114a91074
+- SB016 options validation source assertions: PASSED
+  - Artifact: bundle://proof/SB016/transcripts/host-options-validation-source-assertions.txt
+  - Required marker: Result: PASSED - required source assertions found.
+  - SHA256: d7d896409648d0668509d0d8da808325a140626ad9f3a3ee2589c47cbd1a51cb
+- SB017 options policy source assertions: PASSED
+  - Artifact: bundle://proof/SB017/transcripts/host-options-policy-source-assertions.txt
+  - Required marker: Result: PASSED - required source assertions found.
+  - SHA256: 4e4424f7524bb987976abca205df224bf9de4bb537dcace0a06d325571480abc
+- SB018 source diff and anti-stub audit: PASSED
+  - Artifact: bundle://proof/SB018/transcripts/gate-f-source-diff-and-anti-stub-audit.txt
+  - Required marker: Result: PASSED - no forbidden matches.
+  - SHA256: c1d76304007f70d947d4f568a226f4a20916b9cad725699cef459103bfd6f22a
+- SB018 red-team shallow proof rejection: PASSED
+  - Artifact: bundle://proof/SB018/transcripts/red-team-options-policy-shallow-proof-rejection.txt
+  - Required marker: Result: PASSED. Gate F rejects documentation-only options, unchecked emergency disable, lane fallback, and unbounded supplied-content payloads.
+  - SHA256: 2bd59b10e68190b8e27e06e1045dabcced21b498fdeaa0b8b5366b18495cf554
+- SB018 manifest: PASSED
+  - Artifact: bundle://proof/SB018/manifest.md
+  - Required marker: ## Gate F Result
+  - SHA256: ddd5ceb3f9f724c8c878ebc6201a4c0603b0492446ca719e09710be800a67c5f
+- SB018 semantic invariants: PASSED
+  - Artifact: bundle://proof/SB018/semantic-invariants.md
+  - Required marker: Gate F is semantically adequate for P06.
+  - SHA256: fcc117b18599719dc62b85f72212d74a8f803adbad463e9e7f38d62824e9bece

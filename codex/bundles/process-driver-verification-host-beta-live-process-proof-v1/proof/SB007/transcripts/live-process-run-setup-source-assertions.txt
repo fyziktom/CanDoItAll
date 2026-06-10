@@ -1,0 +1,28 @@
+Command: source assertion scan for live process-run OpenAI smoke setup
+Scope: tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
+Secret policy: only checks OPENAI_API_KEY presence; no secret value printed.
+
+Required markers:
+- LiveProcessRunClass: present
+- ProcessRunEnvGate: present
+- OpenAiSharedEnvGate: present
+- SecretPresenceOnly: present
+- ProcessRunService: present
+- ProcessDispatcher: present
+- AssignmentResolution: present
+- ProcessStart: present
+- DispatchCall: present
+- ExecutionRunProcessQuery: present
+- ProcessRunIdAssertion: present
+- ProviderUsageAssertion: present
+- TokenBudgetEnv: present
+- TimeoutEnv: present
+
+Forbidden markers:
+- ConsoleWriteLine: absent
+- DebugWriteLine: absent
+- RawSecretInterpolation: absent
+- GenericDriverDispatch: absent
+
+Conclusion: setup is process-run grounded, opt-in gated, timeout/token bounded, and does not log raw secrets.
+ExitCode: 0

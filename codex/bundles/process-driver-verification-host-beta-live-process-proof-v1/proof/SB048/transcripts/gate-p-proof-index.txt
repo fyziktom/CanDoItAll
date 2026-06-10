@@ -1,0 +1,13 @@
+# Gate P Proof Index
+
+- SB046 host failure category focused tests: `bundle://proof/SB046/transcripts/host-failure-category-focused-tests.txt`.
+- SB046 source assertions: `bundle://proof/SB046/transcripts/host-failure-category-source-assertions.txt`.
+- SB047 operator troubleshooting/readback tests: `bundle://proof/SB047/transcripts/operator-troubleshooting-readback-focused-tests.txt`.
+- SB048 focused test rollup: `bundle://proof/SB048/transcripts/gate-p-observability-focused-tests.txt`.
+- SB048 boundary source scan: `bundle://proof/SB048/transcripts/gate-p-observability-boundary-source-scan.txt`.
+- SB048 anti-stub audit: `bundle://proof/SB048/transcripts/gate-p-observability-anti-stub-audit.txt`.
+- SB048 red-team rejection: `bundle://proof/SB048/transcripts/red-team-observability-shallow-proof-rejection.txt`.
+- SB048 semantic invariants: `bundle://proof/SB048/semantic-invariants.md`.
+- SB048 manifest: `bundle://proof/SB048/manifest.md`.
+
+Gate P closes only if observability proof is typed, source-backed, mutation-free, and manager-readable.

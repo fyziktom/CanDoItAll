@@ -1,0 +1,72 @@
+Command: rg -n "ProcessReadOnlyVerificationJob|ProcessReadOnlyVerificationJobSourceKind|ToManagerReadbackRequest|Process_readonly_verification_job_SB031_INV_001|NoMutationPerformed|AllowsProcessMutation" src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:43:        Assert.True(observation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:76:        Assert.True(mutationObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:82:        Assert.True(untrustedObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:108:        Assert.True(officeObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:112:        Assert.True(businessObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:116:        Assert.True(officeGraphAttempt.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:123:        Assert.True(businessMutationAttempt.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:196:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:258:        Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:259:        Assert.False(response.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:268:        Assert.True(response.AuditRecord.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:372:        Assert.True(invalidDenial.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:373:        Assert.False(invalidDenial.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:382:        Assert.True(emptyDenial.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:383:        Assert.False(emptyDenial.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:492:        Assert.True(result.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:493:        Assert.False(result.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:528:        Assert.True(result.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:529:        Assert.False(result.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:538:        Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:539:        Assert.False(response.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:551:        Assert.True(auditReadback.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:552:        Assert.False(auditReadback.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:605:        Assert.True(result.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:606:        Assert.False(result.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:652:        Assert.True(readback.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:653:        Assert.False(readback.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:703:    public void Process_readonly_verification_job_SB031_INV_001_models_scheduler_and_workflow_jobs_as_manager_readback_requests_without_mutation()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:711:        var schedulerJob = new ProcessReadOnlyVerificationJob(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:713:            ProcessReadOnlyVerificationJobSourceKind.Scheduler,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:721:        var workflowJob = new ProcessReadOnlyVerificationJob(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:723:            ProcessReadOnlyVerificationJobSourceKind.Workflow,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:731:        Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Scheduler, schedulerJob.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:733:        Assert.True(schedulerJob.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:734:        Assert.False(schedulerJob.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:738:        var readbackRequest = schedulerJob.ToManagerReadbackRequest();
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:745:        Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Workflow, workflowJob.SourceKind);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:747:        Assert.True(workflowJob.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:748:        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessReadOnlyVerificationJob(
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:750:            (ProcessReadOnlyVerificationJobSourceKind)999,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:816:        Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:817:        Assert.True(result.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:892:            Assert.True(record.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:893:            Assert.False(record.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1006:        Assert.True(artifactObservation.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1085:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1136:                Assert.False(fact.Scope.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1195:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1207:        Assert.True(officeDenied.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1221:        Assert.True(businessExternalDenied.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1235:        Assert.True(businessMutationDenied.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1282:        Assert.True(projection.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1283:        Assert.False(projection.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1323:        Assert.True(noneProjection.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1324:        Assert.False(noneProjection.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1427:            Assert.True(response.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1446:                Assert.False(fact.Scope.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1597:        Assert.True(denial.NoMutationPerformed);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1598:        Assert.False(denial.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1713:            NoMutationPerformed: true,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1905:            Assert.True(fact.Scope is { AllowsProcessMutation: false, AllowsExternalCalls: false });
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1925:            Assert.False(fact.Scope.AllowsProcessMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1955:            AllowsProcessMutation: false,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:5:internal enum ProcessReadOnlyVerificationJobSourceKind
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:11:internal sealed record ProcessReadOnlyVerificationJob
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:13:    public ProcessReadOnlyVerificationJob(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:15:        ProcessReadOnlyVerificationJobSourceKind sourceKind,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:71:    public ProcessReadOnlyVerificationJobSourceKind SourceKind { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:87:    public bool NoMutationPerformed => true;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:89:    public bool AllowsProcessMutation => false;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs:95:    public ProcessManagerReadOnlyVerificationReadbackRequest ToManagerReadbackRequest()

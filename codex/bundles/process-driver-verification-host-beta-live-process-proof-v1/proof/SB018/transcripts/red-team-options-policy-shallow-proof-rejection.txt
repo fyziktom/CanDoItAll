@@ -1,0 +1,16 @@
+Gate F red-team: options policy shallow proof rejection
+
+Rejected shallow-pass claims:
+- A documented option name without an options model and validation is insufficient for SB016.
+- A host-level option that is not checked before lane selection/orchestration is insufficient for emergency disable.
+- Lane disable switches are insufficient if they fall back to another lane or continue to orchestrate payloads.
+- Payload limits are insufficient if they only count total request objects and ignore supplied evidence content bytes for lanes that carry supplied content.
+- Options policy proof cannot rely on live OpenAI flags, skipped live tests, or bundle-path checks embedded in production code.
+
+Positive proof required and present:
+- Options model and validation source assertions: bundle://proof/SB016/transcripts/host-options-validation-source-assertions.txt.
+- Options policy source assertions: bundle://proof/SB017/transcripts/host-options-policy-source-assertions.txt.
+- Focused host options tests: bundle://proof/SB016/transcripts/host-options-policy-focused-tests.txt.
+- Gate F anti-stub audit: bundle://proof/SB018/transcripts/gate-f-source-diff-and-anti-stub-audit.txt.
+
+Result: PASSED. Gate F rejects documentation-only options, unchecked emergency disable, lane fallback, and unbounded supplied-content payloads.

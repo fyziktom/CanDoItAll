@@ -1,0 +1,13 @@
+# Gate O Proof Index
+
+- SB043 focused tests: `bundle://proof/SB043/transcripts/future-execution-gate-focused-tests.txt`.
+- SB043 source assertions: `bundle://proof/SB043/transcripts/future-execution-gate-source-assertions.txt`.
+- SB044 negative focused tests: `bundle://proof/SB044/transcripts/premature-execution-negative-tests.txt`.
+- SB044 production source scan: `bundle://proof/SB044/transcripts/premature-execution-source-scan.txt`.
+- SB045 focused test rollup: `bundle://proof/SB045/transcripts/gate-o-execution-capable-blocking-tests.txt`.
+- SB045 anti-stub audit: `bundle://proof/SB045/transcripts/gate-o-execution-capable-anti-stub-audit.txt`.
+- SB045 red-team rejection: `bundle://proof/SB045/transcripts/red-team-execution-capable-shallow-approval-rejection.txt`.
+- SB045 semantic invariants: `bundle://proof/SB045/semantic-invariants.md`.
+- SB045 manifest: `bundle://proof/SB045/manifest.md`.
+
+Gate O closes only if every proof item above is present and source-backed, and execution-capable drivers remain blocked.

@@ -1,0 +1,26 @@
+SB021 Gate G red-team selector hardening shallow-proof rejection
+Working directory: C:\repositories\CanDoItAll
+Run label: Gate G adversarial negative proof
+
+Invariant IDs:
+- SB021_INV_001: selector must expose an exact typed selection result and host must branch on that result.
+- SB021_INV_002: selector/host boundary must not use fallback, discovery, reflection, dynamic dispatch, or generic object payload routing.
+
+Rejected shallow proof:
+- A passing success-path lane test alone is insufficient because it does not distinguish unsupported enum values from defined-but-unregistered lanes.
+- A boolean TrySelect helper is insufficient for the beta API because the host has to infer failure semantics outside the selector result.
+- A source scan over the whole Dispatch folder is too noisy because unrelated runtime code legitimately contains fallback words; the hardened boundary is the selector plus verification host files.
+
+Adversarial negative proof used:
+- Process_verification_runtime_host_SB020_INV_001_denies_defined_but_unregistered_lane_without_fallback constructs a registry with BusinessAnalysisRead removed, sends a BusinessAnalysisRead request, and asserts MissingLaneRegistration with mutation-free denial audit.
+- Process_verification_lane_selector_SB020_INV_002_uses_explicit_registry_without_reflection_discovery_or_fallback reads the production selector and host files and rejects reflection, discovery, dynamic dispatch, fallback tokens, and legacy TrySelect.
+- no-fallback-discovery-reflection-source-assertions.txt independently scans the production selector/host boundary for the same forbidden tokens.
+
+Positive semantic proof used:
+- Process_verification_lane_selector_SB019_INV_001_returns_exact_selection_result covers Selected, UnsupportedLane, and MissingRegistration statuses from SelectExact.
+- selector-result-source-assertions.txt shows SelectExact, ProcessVerificationLaneSelectionResult, ProcessVerificationLaneSelectionStatus, and host branching on selection.Status in production source.
+- selector-hardening-focused-tests.txt shows the focused integration suite passed 24 tests with these invariants compiled and executed.
+
+Result:
+PASS. Gate G rejects the shallow selector proof and proves the production host uses a typed exact lane selection result without fallback/discovery/reflective selection behavior.
+Exit code: 0

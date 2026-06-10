@@ -1,0 +1,21 @@
+Command: SB005 live env gate source assertions for two-flag opt-in, secret presence-only check, and bounded timeout
+WorkingDirectory: repo://.
+Invariant IDs: SB005-INV-001 SB006-INV-001
+
+## Source markers
+private const string LiveValidationVariable = "CANDOITALL_RUN_LIVE_AGENT_VALIDATION";
+private const string LiveOpenAiSmokeVariable = "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE";
+if (!IsLiveValidationEnabled())
+Assert.False(string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
+using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(4));
+private static bool IsLiveValidationEnabled()
+return IsEnabled(LiveValidationVariable) &&
+IsEnabled(LiveOpenAiSmokeVariable);
+private static bool IsEnabled(string environmentVariable)
+
+Two live flags required: True
+Secret value not written by test source: True
+Bounded test cancellation timeout present: True
+Skip-path transcript exists: True
+
+ExitCode: 0

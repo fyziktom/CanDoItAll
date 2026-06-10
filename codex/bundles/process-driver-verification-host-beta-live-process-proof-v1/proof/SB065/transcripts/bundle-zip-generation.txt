@@ -1,0 +1,7 @@
+SB065 bundle zip generation
+Bundle root: C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1
+Archive path: C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1.zip
+Archive generated after completed-stage validator passed.
+Archive size bytes: 524319
+Archive SHA256: cf17590457e7eb8bfdda71572708b37bbe410f09d280e13b5a71a6845caa8804
+Result: zip generation completed.

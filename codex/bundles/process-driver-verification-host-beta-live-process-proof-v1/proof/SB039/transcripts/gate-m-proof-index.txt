@@ -1,0 +1,25 @@
+# Gate M Proof Index
+
+Scope:
+- SB037 Core dependency/API snapshot.
+- SB038 Driver contracts/version snapshots.
+- SB039 Critical Gate M Core/contract governance.
+
+Proof artifacts:
+- bundle://proof/SB037/transcripts/core-dependency-api-snapshot-tests.txt
+- bundle://proof/SB037/transcripts/core-dependency-source-scan.txt
+- bundle://proof/SB038/transcripts/driver-contract-version-snapshot-tests.txt
+- bundle://proof/SB038/transcripts/driver-contract-version-source-assertions.txt
+- bundle://proof/SB039/transcripts/gate-m-core-dependency-api-tests.txt
+- bundle://proof/SB039/transcripts/gate-m-driver-contract-version-tests.txt
+- bundle://proof/SB039/transcripts/gate-m-core-contract-boundary-source-scan.txt
+- bundle://proof/SB039/transcripts/gate-m-core-contract-anti-stub-audit.txt
+- bundle://proof/SB039/transcripts/red-team-core-contract-governance-shallow-proof-rejection.txt
+- bundle://proof/SB039/semantic-invariants.md
+
+Critical gate result:
+- Focused Core dependency/API unit tests passed 3/3.
+- Focused driver contract/version unit tests passed 2/2.
+- Core source scan found no forbidden dependency references.
+- Contract source assertions covered current version, descriptor families, allowed lanes, verification-only modes, future execution marker, and readonly operations.
+- Anti-stub audit passed with only negative guard assertions matching TODO/NotImplemented text.

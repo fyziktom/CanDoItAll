@@ -1,0 +1,27 @@
+Command: SB004 classify existing live OpenAI proof by source and prior transcript markers
+WorkingDirectory: repo://.
+Invariant IDs: SB004-INV-001 SB006-INV-001
+
+## Positive specialist-agent markers
+private const string LiveOpenAiSmokeVariable = "CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE";
+Assert.False(string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("OPENAI_API_KEY")));
+var workspaceFactory = scope.ServiceProvider.GetRequiredService<ICanDoItAllAgentWorkspaceFactory>();
+var workspaceService = workspaceFactory.GetOrganizationWorkspaceService();
+var agents = await workspaceService.ListAgentsAsync(includeTemplates: false);
+var businessStrategist = FindAgent(agents, "Business Strategist");
+var financialStrategist = FindAgent(agents, "Financial Strategist");
+var marketingSpecialist = FindAgent(agents, "Marketing Specialist");
+IsEnabled(LiveOpenAiSmokeVariable);
+var result = await workspaceService.SendMessageAsync(agentId, null, prompt, cancellationToken);
+
+## Negative process-run markers in live specialist test
+PASS: no ProcessesService, ProcessRun, ProcessDefinition, ProcessRunAutomationDispatchService, or ProcessWorkflowRunCoordinator marker in live specialist test source.
+
+## Prior live transcript markers
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --filter "FullyQualifiedName~LiveSpecialistAgentScenarioIntegrationTests" with CANDOITALL_RUN_LIVE_AGENT_VALIDATION=true, CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE=true, CANDOITALL_LIVE_OPENAI_MAX_TOKENS=800, CANDOITALL_LIVE_OPENAI_TIMEOUT_SECONDS=120
+Secret handling: OPENAI_API_KEY presence only; secret value not printed.
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     1, Přeskočeno:     0, Celkem:     1, Doba trvání: 1 m - CanDoItAll.Tests.Integration.dll (net10.0)
+ExitCode: 0
+
+Classification: existing live proof is a guarded workspace specialist-agent smoke. It is not a live Process module process-run proof.
+ExitCode: 0

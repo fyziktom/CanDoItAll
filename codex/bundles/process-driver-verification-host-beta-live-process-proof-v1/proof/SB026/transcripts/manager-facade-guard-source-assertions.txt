@@ -1,0 +1,50 @@
+Command: rg -n "Manager read-only verification requires|Unsupported manager verification projection mode|Manager read-only audit query requires|Manager read-only audit query limit|Process_manager_readonly_verification_facade_SB026_INV_001|IsDenied|HostDisabled|ProjectionMode|RequestedBy.Trim|AuditRecord.RequestedBy" <manager facade guard source and tests>
+Working directory: C:\repositories\CanDoItAll
+Run label: SB026 manager facade requester/projection/query guard source assertions
+
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:254:        Assert.False(result.IsDenied);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:368:        Assert.True(invalidResult.IsDenied);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:378:        Assert.True(emptyResult.IsDenied);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:440:        AssertHostDenial(disabledHostResult, ProcessVerificationHostDenialCode.HostDisabled);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:485:            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:496:        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, result.Projection.Mode);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:522:            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:527:        Assert.False(result.IsDenied);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:534:        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, response.Projection.Mode);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:559:    public async Task Process_manager_readonly_verification_facade_SB026_INV_001_enforces_requester_projection_query_and_denial_guards()
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:571:            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:577:            (ProcessManagerReadOnlyVerificationProjectionMode)999,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:594:            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:600:        Assert.True(result.IsDenied);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:604:        Assert.Equal(ProcessVerificationHostDenialCode.HostDisabled, denial.Code);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:639:            ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:700:            Assert.DoesNotContain("sk-test", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:701:            Assert.DoesNotContain("hunter2", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:702:            Assert.DoesNotContain("abcdef", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:703:            Assert.Contains("[REDACTED]", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:721:            Assert.Equal(response.AuditRecord.RequestedBy, persisted.RequestedBy);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1106:                ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1111:        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, projection.Mode);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1141:                ProcessManagerReadOnlyVerificationProjectionMode.None,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1147:                ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1185:                    ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1425:        Assert.True(result.IsDenied);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:19:            throw new ArgumentOutOfRangeException(nameof(request), request.Mode, "Unsupported manager verification projection mode.");
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:22:        if (request.Mode != ProcessManagerReadOnlyVerificationProjectionMode.None &&
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:28:        var attached = request.Mode != ProcessManagerReadOnlyVerificationProjectionMode.None;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:36:            request.Mode == ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:39:            request.Mode == ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:47:            request.RequestedBy.Trim(),
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:112:    ProcessManagerReadOnlyVerificationProjectionMode Mode,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:117:internal enum ProcessManagerReadOnlyVerificationProjectionMode
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationProjection.cs:133:    ProcessManagerReadOnlyVerificationProjectionMode Mode,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:68:                request.ProjectionMode,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:69:                hostResponse.AuditRecord.RequestedBy,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:113:        ProcessManagerReadOnlyVerificationProjectionMode projectionMode,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:120:            throw new ArgumentOutOfRangeException(nameof(projectionMode), projectionMode, "Unsupported manager verification projection mode.");
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:125:            throw new ArgumentException("Manager read-only verification requires a requesting manager identity.", nameof(requestedBy));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:130:        ProjectionMode = projectionMode;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:139:    public ProcessManagerReadOnlyVerificationProjectionMode ProjectionMode { get; }
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:157:            throw new ArgumentException("Manager read-only audit query requires a requesting manager identity.", nameof(requestedBy));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:165:                $"Manager read-only audit query limit must be between 1 and {ProcessVerificationAuditQuery.MaximumLimit}.");
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:216:    public bool IsDenied => Status == ProcessManagerReadOnlyVerificationFacadeStatus.Denied;

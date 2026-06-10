@@ -1,0 +1,5 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --stage prepared --repo-root . --bundle-root codex\bundles\process-driver-verification-host-beta-live-process-proof-v1 codex\bundles\process-driver-verification-host-beta-live-process-proof-v1
+Working directory: C:\repositories\CanDoItAll
+Run label: prepared validator after Gate I metadata update
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1
+Exit code: 0

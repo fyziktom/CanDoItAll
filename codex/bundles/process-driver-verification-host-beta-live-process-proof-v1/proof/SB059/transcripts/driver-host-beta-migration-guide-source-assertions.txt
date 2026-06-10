@@ -1,0 +1,26 @@
+SB059 driver host beta migration guide source assertions
+Pattern: Process Driver Read-Only Verification Migration
+src\CanDoItAll.Modules.Processes\README.md:114:## Process Driver Read-Only Verification Migration
+Pattern: Runtime Host Roadmap Decision
+src\CanDoItAll.Modules.Processes\README.md:134:## Runtime Host Roadmap Decision
+Pattern: Current status: `Not approved`
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:759:        Assert.Contains("Current status: `Not approved`", moduleReadme, StringComparison.Ordinal);
+src\CanDoItAll.Modules.Processes\README.md:136:Current status: `Not approved`.
+Pattern: Release-candidate validation refreshed on 2026-06-10
+src\CanDoItAll.Modules.Processes\README.md:140:Release-candidate validation refreshed on 2026-06-10:
+Pattern: focused operator API smoke passed with 2 tests
+src\CanDoItAll.Modules.Processes\README.md:145:- A focused operator API smoke passed with 2 tests for manager diagnostics readback and process-run detail verification audit readback.
+Pattern: Manager-visible diagnostics and verification audit readback
+src\CanDoItAll.Modules.Processes\README.md:152:- Manager-visible diagnostics and verification audit readback may project those read-only observations without process mutation.
+Pattern: Denied until that future gate passes
+src\CanDoItAll.Modules.Processes\README.md:164:Denied until that future gate passes:
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1218:        Assert.Contains("Denied until that future gate passes:", processesReadme, StringComparison.Ordinal);
+Pattern: Generic process-driver runtime host is not approved
+docs\process-runtime-restoration-ledger.md:40:- Generic process-driver runtime host is not approved.
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:761:        Assert.Contains("Generic process-driver runtime host is not approved", restorationLedger, StringComparison.Ordinal);
+Pattern: not runtime-host approval
+docs\process-runtime-restoration-ledger.md:36:Manager/operator projection may use `IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync` to expose diagnostics, `auditRecords`, `observationHash`, `denialCategory`, `denialCode`, and mutation-denial flags. That projection is read-only troubleshooting evidence, not runtime-host approval.
+Pattern: Process_driver_contract_api_SB058_SB059_INV_002
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:725:    public void Process_driver_contract_api_SB058_SB059_INV_002_process_docs_describe_operator_readback_without_runtime_approval()
+Forbidden approval scan
+No forbidden approval claims found.

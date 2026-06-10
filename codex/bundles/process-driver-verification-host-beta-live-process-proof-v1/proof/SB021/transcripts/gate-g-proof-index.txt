@@ -1,0 +1,17 @@
+SB021 Gate G proof index
+Working directory: C:\repositories\CanDoItAll
+Run label: Gate G artifact existence and invariant index
+bundle://proof/SB019/transcripts/selector-hardening-focused-tests.txt => True
+bundle://proof/SB019/transcripts/selector-result-source-assertions.txt => True
+bundle://proof/SB020/transcripts/selector-hardening-focused-tests.txt => True
+bundle://proof/SB020/transcripts/no-fallback-discovery-reflection-source-assertions.txt => True
+bundle://proof/SB021/transcripts/gate-g-source-diff-and-anti-stub-audit.txt => True
+bundle://proof/SB021/transcripts/red-team-selector-hardening-shallow-proof-rejection.txt => True
+bundle://proof/SB021/manifest.md => True
+bundle://proof/SB021/semantic-invariants.md => True
+Command: rg -n 'SB021_INV_001|SB021_INV_002' proof/SB021/semantic-invariants.md proof/SB021/transcripts/red-team-selector-hardening-shallow-proof-rejection.txt
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB021\semantic-invariants.md:3:## SB021_INV_001 Exact Typed Lane Selection
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB021\semantic-invariants.md:13:## SB021_INV_002 No Fallback, Discovery, Reflection, Or Dynamic Dispatch
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB021\transcripts\red-team-selector-hardening-shallow-proof-rejection.txt:6:- SB021_INV_001: selector must expose an exact typed selection result and host must branch on that result.
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB021\transcripts\red-team-selector-hardening-shallow-proof-rejection.txt:7:- SB021_INV_002: selector/host boundary must not use fallback, discovery, reflection, dynamic dispatch, or generic object payload routing.
+Exit code: 0

@@ -1,7 +1,7 @@
 # SB039 — Critical Gate M Core/contract governance
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Critical Gate M Core/contract governance as part of P13: Core genericity and contract governance.
@@ -30,7 +30,7 @@ Critical Gate M Core/contract governance as part of P13: Core genericity and con
 - Critical proof manifest `proof/SB039/manifest.md` and semantic invariants `proof/SB039/semantic-invariants.md`.
 
 ## Dependency Impact
-Downstream phases must not proceed if this subbundle weakens process runtime launch, verification host no-mutation guarantees, Core dependency cleanliness, or live OpenAI policy.
+- Downstream phases must not proceed if this subbundle weakens process runtime launch, verification host no-mutation guarantees, Core dependency cleanliness, or live OpenAI policy.
 
 ## Validation Depth
 - Build/focused tests when source changes.
@@ -56,11 +56,11 @@ Downstream phases must not proceed if this subbundle weakens process runtime lau
 - Do not claim live-provider functionality from a skipped test.
 
 ## Acceptance Checklist
-- [ ] Objective is implemented or explicitly rejected with source-backed reason.
-- [ ] Existing runtime behavior is preserved.
-- [ ] No prohibited dependency or mutation surface is introduced.
-- [ ] Proof transcripts are captured.
-- [ ] Execution report row is updated.
+- [x] Objective is implemented or explicitly rejected with source-backed reason.
+- [x] Existing runtime behavior is preserved.
+- [x] No prohibited dependency or mutation surface is introduced.
+- [x] Proof transcripts are captured.
+- [x] Execution report row is updated.
 
 ## Proof Required
 - Source assertions.
@@ -70,10 +70,10 @@ Downstream phases must not proceed if this subbundle weakens process runtime lau
 - Artifact-backed manifest with changed-file hashes and production behavior artifact matrix.
 
 ## Browser Validation Logging
-N/A unless UI route, manager diagnostics UI, or live process-run UI proof is changed. Large desktop only.
+- N/A unless UI route, manager diagnostics UI, or live process-run UI proof is changed. Large desktop only.
 
 ## Progression Gate
-Critical: downstream phases are blocked until semantic adequacy proof passes.
+- Critical: downstream phases are blocked until semantic adequacy proof passes.
 
 ## Suggested Agent Prompt
 Implement SB039 for `process-driver-verification-host-beta-live-process-proof-v1`. Re-read current source first, avoid report-only closure, preserve no-mutation and Core genericity guarantees, and capture proof before updating status.

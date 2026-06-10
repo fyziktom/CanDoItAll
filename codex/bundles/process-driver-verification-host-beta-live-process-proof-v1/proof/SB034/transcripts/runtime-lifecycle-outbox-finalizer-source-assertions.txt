@@ -1,0 +1,200 @@
+Command: rg -n "StartRunAsync_SB018_INV_001|TransitionStepAsync_rejects_late_transition_after_run_becomes_terminal|TransitionStepAsync_routes_selected_branch_and_skips_the_non_selected_path|Workflow_repair_process_routes_qa_rejection_repair_recheck_and_release|ProcessOutboxRecord|ProcessRunStatus.Completed|ProcessStepRunStatus.Skipped|CompletedAtUtc" tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs src\CanDoItAll.Modules.Processes
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:155:    public async Task StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox() {
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:249:        var outboxRecords = await dbContext.Set<ProcessOutboxRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:297:        var outboxRecords = await dbContext.Set<ProcessOutboxRecord>()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:434:            ProcessRunStatus.Completed,
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:524:    public async Task TransitionStepAsync_rejects_late_transition_after_run_becomes_terminal()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:567:            run.CompletedAtUtc = DateTimeOffset.UtcNow;
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:1458:        Assert.Equal(ProcessStepRunStatus.Skipped, stepRuns.Single(item => item.Title == "Approve release").Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2270:            upstream.CompletedAtUtc = now;
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2408:        Assert.Null(persistedStep.CompletedAtUtc);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2413:        Assert.Null(persistedRun.CompletedAtUtc);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2969:        Assert.Equal(ProcessStepRunStatus.Skipped, directMergeStepRun.Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2973:        Assert.Equal(ProcessStepRunStatus.Skipped, Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after security review").Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2974:        Assert.Equal(ProcessStepRunStatus.Skipped, Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after architecture escalation").Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:2975:        Assert.Equal(ProcessStepRunStatus.Skipped, Assert.Single(branchingStepRuns, item => item.Title == "Approve merge after default normalization").Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3313:        Assert.NotNull(persistedRun.CompletedAtUtc);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3696:    public async Task TransitionStepAsync_routes_selected_branch_and_skips_the_non_selected_path()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3781:        Assert.Equal(ProcessStepRunStatus.Skipped, dbReviewStep.Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3800:        Assert.Equal(ProcessRunStatus.Completed, run.Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3807:    public async Task Workflow_repair_process_routes_qa_rejection_repair_recheck_and_release()
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3894:        Assert.Equal(ProcessStepRunStatus.Skipped, directReleaseNotesStep.Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3933:        Assert.Equal(ProcessStepRunStatus.Skipped, GetStepRunByKey(stepRuns, fixture, StepKeys.DirectReleaseNotes).Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:3937:        Assert.Equal(ProcessRunStatus.Completed, run.Status);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:6514:        run.CompletedAtUtc = status == ProcessRunStatus.Completed ? now : null;
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:6528:                stepRun.CompletedAtUtc = now.AddMinutes(-70 + index * 10);
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:6533:            stepRun.Status = status == ProcessRunStatus.Completed
+tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs:6537:            stepRun.CompletedAtUtc = status == ProcessRunStatus.Completed ? now.AddMinutes(-10) : null;
+src\CanDoItAll.Modules.Processes\Components\LiveProcessesDashboard.razor:3058:            ProcessRunStatus.Completed => "mint",
+src\CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:33:                where run.Status != ProcessRunStatus.Completed
+src\CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:187:        return dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:192:                item.Status == ProcessOutboxRecordStatus.Pending,
+src\CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:208:        var records = (await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Automation\Recovery\ProcessRunRecoveryWorker.cs:211:                    item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Development\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs:74:        if (stepRun.Status == ProcessStepRunStatus.Skipped &&
+src\CanDoItAll.Modules.Processes\Development\ProcessDevelopmentSeedService.RuntimeSeeds.Complex.cs:75:            targetStatus != ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Approval.cs:329:                        provisioningRequest.CompletedAtUtc = null;
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Provisioning.cs:113:                    provisioningRequest.CompletedAtUtc = clock.GetUtcNow();
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Provisioning.cs:123:                provisioningRequest.CompletedAtUtc = clock.GetUtcNow();
+src\CanDoItAll.Modules.Processes\Launch\ProcessesService.Launch.Reads.cs:249:                    item.CompletedAtUtc))
+src\CanDoItAll.Modules.Processes\Launch\ProcessLaunchPlanDisplayProjector.cs:28:            ProcessRunStatus.Completed => new ProcessLaunchPlanDisplayProjection(
+src\CanDoItAll.Modules.Processes\Launch\ProcessLaunchPlanDisplayProjector.cs:75:            ProcessRunStatus.Completed => "mint",
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Estimates.cs:225:            .OrderByDescending(item => item.CompletedAtUtc ?? item.StartedAtUtc ?? item.UpdatedAtUtc)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Estimates.cs:335:        var isCompletedRun = run.Status == ProcessRunStatus.Completed && run.CompletedAtUtc.HasValue;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Estimates.cs:462:        var completedUnits = stepRuns.Count(item => item.Status is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Skipped);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Estimates.cs:475:        if (run.StartedAtUtc.HasValue && run.CompletedAtUtc.HasValue)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Estimates.cs:477:            return Math.Max((int)Math.Ceiling((run.CompletedAtUtc.Value - run.StartedAtUtc.Value).TotalMinutes), 1);
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:147:    public DateTimeOffset? CompletedAtUtc { get; set; }
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:205:    public DateTimeOffset? CompletedAtUtc { get; set; }
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessRuntimeModels.cs:619:    public DateTimeOffset? CompletedAtUtc { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:96:            if (transitionContext.Run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:98:                transitionContext.Run.CompletedAtUtc = now;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:102:                transitionContext.Run.CompletedAtUtc = null;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:291:            (run.Status is ProcessRunStatus.Completed or ProcessRunStatus.Failed &&
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:620:            ProcessRunStatus.Completed or
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:722:            stepRun.CompletedAtUtc = null;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:736:        if (request.TargetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Failed or ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:738:            stepRun.CompletedAtUtc = now;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:761:        if (request.TargetStatus is ProcessStepRunStatus.Completed or ProcessStepRunStatus.Skipped or ProcessStepRunStatus.Refused)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.StepTransitions.cs:773:        if (request.TargetStatus == ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:587:        if (parentRun.Status is ProcessRunStatus.Completed or ProcessRunStatus.Cancelled or ProcessRunStatus.Failed)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.RunStart.cs:823:        run.CompletedAtUtc = resolvedStatus is ProcessRunStatus.Completed or ProcessRunStatus.Failed or ProcessRunStatus.Cancelled
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.Stop.cs:46:            run.CompletedAtUtc = now;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessHealthInvariantAuditor.cs:13:        var missingArtifacts = stepRun.Status == ProcessStepRunStatus.Skipped
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:529:        var outboxProjections = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.cs:728:                    group.Count(run => run.Status == ProcessRunStatus.Completed),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:113:    private static async Task<IReadOnlyList<ProcessOutboxRecordViewModel>> ListOutboxRecordsAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:119:        var records = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:131:    private static ProcessOutboxRecordViewModel MapOutboxRecord(ProcessOutboxRecord record, DateTimeOffset now)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:134:        return new ProcessOutboxRecordViewModel(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:144:            record.CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:150:    private static ProcessOutboxHealthStatus ResolveOutboxHealth(ProcessOutboxRecord record, DateTimeOffset now)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:156:        ProcessOutboxRecordStatus status,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:163:            ProcessOutboxRecordStatus.Completed => ProcessOutboxHealthStatus.Completed,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:164:            ProcessOutboxRecordStatus.DeadLettered => ProcessOutboxHealthStatus.DeadLettered,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:625:        if (stepRun.Status == ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.RuntimeReadQuery.Support.cs:1053:        ProcessOutboxRecordStatus Status,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:18:public enum ProcessOutboxRecordStatus
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:25:public sealed class ProcessOutboxRecord
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:39:    public ProcessOutboxRecordStatus Status { get; set; } = ProcessOutboxRecordStatus.Pending;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:47:    public DateTimeOffset? CompletedAtUtc { get; set; }
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:60:internal sealed class ProcessOutboxRecordConfiguration : IEntityTypeConfiguration<ProcessOutboxRecord>
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:62:    public void Configure(EntityTypeBuilder<ProcessOutboxRecord> builder)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:315:        foreach (var entry in dbContext.ChangeTracker.Entries<ProcessOutboxRecord>())
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:337:        var records = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:343:                item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:365:        ProcessOutboxRecord record,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:374:            record.Status == ProcessOutboxRecordStatus.Pending &&
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:401:    public async Task<ProcessOutboxRecordStatus?> ProcessAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:466:        var query = dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:467:            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:510:    private static async Task<IReadOnlyList<ClaimedProcessOutboxRecord>> ClaimPendingRecordsPostgreSqlAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:556:            AddParameter(command, "@pendingStatus", (int)ProcessOutboxRecordStatus.Pending);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:566:            var claims = new List<ClaimedProcessOutboxRecord>();
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:570:                claims.Add(new ClaimedProcessOutboxRecord(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:599:        var record = new ProcessOutboxRecord
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:606:            Status = ProcessOutboxRecordStatus.Pending,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:611:        await dbContext.Set<ProcessOutboxRecord>().AddAsync(record, cancellationToken);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:615:    private async Task<ProcessOutboxRecordStatus?> LoadStatusAsync(Guid outboxId, CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:618:        return await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:620:            .Select(item => (ProcessOutboxRecordStatus?)item.Status)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:624:    private async Task<ProcessOutboxRecordStatus?> ProcessDirectAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:638:    private async Task<ProcessOutboxRecordStatus?> ProcessClaimedAsync(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:645:        var record = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:660:        if (record.Status is ProcessOutboxRecordStatus.Completed or ProcessOutboxRecordStatus.DeadLettered)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:724:        ProcessOutboxRecordStatus finalStatus;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:730:            finalStatus = ProcessOutboxRecordStatus.Completed;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:741:            finalStatus = ProcessOutboxRecordStatus.DeadLettered;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:753:            finalStatus = ProcessOutboxRecordStatus.Pending;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:782:    private async Task DispatchAsync(ProcessOutboxRecord record, CancellationToken cancellationToken)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:863:        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:865:            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:939:        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:941:            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:960:        return await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:979:        await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:995:        ProcessOutboxRecordStatus status,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1002:        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1004:            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1010:                    .SetProperty(item => item.CompletedAtUtc, completedAtUtc)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1029:        var commandKey = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1041:        var updatedRows = await dbContext.Set<ProcessOutboxRecord>()
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1043:            .Where(item => item.Status == ProcessOutboxRecordStatus.Pending)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1076:        IReadOnlyList<ClaimedProcessOutboxRecord> claimedRecords,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessOutbox.cs:1132:    private sealed record ClaimedProcessOutboxRecord(Guid Id, string LeaseToken, string PartitionKey);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeInvariantAuditor.cs:147:                item.CompletedAtUtc ?? item.StartedAtUtc ?? run.UpdatedAtUtc))
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:541:                item.CompletedAtUtc >= historyStartUtc)
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:825:                group.Max(item => item.CompletedAtUtc)))
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:968:        AddIfPresent(candidates, FindMax(toolReceipts, item => item.CompletedAtUtc));
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:1052:        return status is ProcessRunStatus.Completed or ProcessRunStatus.Blocked or ProcessRunStatus.Failed;
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:1072:            ProcessRunStatus.Completed => 2,
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:1091:            ProcessRunStatus.Completed => "Process finished successfully",
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:1102:            ProcessRunStatus.Completed => $"{run.Name} completed {run.CompletedStepCount}/{run.TotalStepCount} step(s).",
+src\CanDoItAll.Modules.Processes\Runtime\Observation\ProcessObservationService.cs:1113:            ProcessRunStatus.Completed => "check_circle",
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:281:            run.CompletedAtUtc?.ToString("O"),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:368:            step.CompletedAtUtc?.ToString("O"),
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:383:            step.CompletedAtUtc ?? step.StartedAtUtc ?? step.ReadyAtUtc,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeEvidenceSourceProvider.cs:391:                step.CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRunStatusResolver.cs:14:        if (stepRuns.All(item => item.Status == ProcessStepRunStatus.Completed || item.Status == ProcessStepRunStatus.Skipped))
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRunStatusResolver.cs:16:            return ProcessRunStatus.Completed;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRunStatusResolver.cs:42:        return status == ProcessRunStatus.Completed &&
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRunStatusResolver.cs:112:                dependentRun.Status != ProcessStepRunStatus.Skipped);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeProgressionPlanner.cs:59:        if (targetStatus == ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeProgressionPlanner.cs:164:        stepRun.Status = ProcessStepRunStatus.Skipped;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeProgressionPlanner.cs:165:        stepRun.CompletedAtUtc = now;
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeProgressionPlanner.cs:238:            if (sourceStepRun.Status == ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeStateOverviewService.cs:26:            ProcessRunStatus.Completed => this with { Completed = Completed + count },
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:244:            run.CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionClient.cs:359:            receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:189:    DateTimeOffset? CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:221:public sealed record ProcessOutboxRecordViewModel(
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:225:    ProcessOutboxRecordStatus Status,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:231:    DateTimeOffset? CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:512:    DateTimeOffset CompletedAtUtc);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:531:    DateTimeOffset? CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Runtime\ProcessRuntimeViewModels.cs:702:    DateTimeOffset? CompletedAtUtc);
+src\CanDoItAll.Modules.Processes\Runtime\ProcessStepRunTransitions.cs:15:            ProcessStepRunStatus.Ready => targetStatus is ProcessStepRunStatus.InProgress or ProcessStepRunStatus.Blocked or ProcessStepRunStatus.Refused or ProcessStepRunStatus.Skipped or ProcessStepRunStatus.WaitingApproval,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessAutomationExecutionRunSelection.cs:79:            .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.razor.cs:116:    private IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords = [];
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessBrowserProofValidator.cs:32:    DateTimeOffset? CleanupCompletedAtUtc);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessCriticalToolFailureRules.cs:24:                .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RunsPresenter.cs:103:        public IReadOnlyList<ProcessOutboxRecordViewModel> OutboxRecords => workspace.outboxRecords;
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:694:            ProcessStepRunStatus.Skipped => "Step was skipped from the runtime workspace.",
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspace.RuntimeOperations.cs:802:            ProcessRunStatus.Completed => "mint",
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:144:                    SortAtUtc = item.CompletedAtUtc ?? item.UpdatedAtUtc
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:211:            detail.Run.CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:270:                        item.CompletedAtUtc))
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:307:        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:355:        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:395:            executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc);
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:420:        ProcessOutboxRecordViewModel outboxRecord,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:516:        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:524:                    .OrderByDescending(item => item.CompletedAtUtc ?? item.UpdatedAtUtc)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:535:                        item.CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:634:        IReadOnlyList<ProcessOutboxRecordViewModel> outboxRecords,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:638:            .Where(item => item.Status != ProcessStepRunStatus.Skipped)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunDetailsLoader.cs:874:    IReadOnlyList<ProcessOutboxRecordViewModel> OutboxRecords,
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsActiveSection.razor:119:            ProcessRunStatus.Completed => "mint",
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsExecutionSection.razor:191:                        @if (executionRun.CompletedAtUtc.HasValue)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsExecutionSection.razor:194:                                         Text="@($"completed {executionRun.CompletedAtUtc.Value.ToLocalTime():g}")" />
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:690:    private static string ResolveOutboxTiming(ProcessOutboxRecordViewModel outbox)
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:698:        var completed = outbox.CompletedAtUtc.HasValue
+src\CanDoItAll.Modules.Processes\Components\ProcessWorkspaceRunsOperatorConsoleSection.razor:699:            ? $"completed {outbox.CompletedAtUtc.Value.ToLocalTime():g}"
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessHistoricalCarriedProofQueryCoordinator.cs:19:                     .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationReceiptTimeline.cs:17:            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationReceiptTimeline.cs:59:            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationReceiptTimeline.cs:88:            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationReceiptTimeline.cs:123:        return candidate.CompletedAtUtc > baseline.CompletedAtUtc ||
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessImplementationReceiptTimeline.cs:124:               candidate.CompletedAtUtc == baseline.CompletedAtUtc &&
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessProviderNativeBrowserOutputFacts.cs:91:            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs:197:            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:281:            .OrderByDescending(executionRun => executionRun.CompletedAtUtc ?? executionRun.UpdatedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.CompletionArtifactRecovery.cs:481:            CompletedAtUtc = source.CompletedAtUtc,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:304:                     .OrderByDescending(item => item.CompletedAtUtc ?? item.UpdatedAtUtc))
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:309:                         .OrderByDescending(item => item.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:356:                var completedAtUtc = receipt.CompletedAtUtc == default
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:357:                    ? run.CompletedAtUtc ?? run.UpdatedAtUtc
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.Grounding.cs:358:                    : receipt.CompletedAtUtc;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs:64:            .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs:82:                .OrderByDescending(receipt => receipt.CompletedAtUtc)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ImplementationProof.cs:159:            .OrderByDescending(receipt => receipt.CompletedAtUtc)

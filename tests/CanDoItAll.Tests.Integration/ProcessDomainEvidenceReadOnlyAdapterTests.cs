@@ -1,3 +1,5 @@
+using CanDoItAll.Infrastructure.Logging;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core.Artifacts;
@@ -11,7 +13,11 @@ using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
 using CanDoItAll.Processes.Drivers.BusinessAnalysis;
 using CanDoItAll.Processes.Drivers.OfficeEvidence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
+using System.Runtime.CompilerServices;
 using CoreArtifactExpectationSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSnapshot;
 using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
 
@@ -224,7 +230,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_runtime_host_SB015_INV_002_selects_exact_lane_without_cross_lane_fallback()
+    public async Task Process_verification_runtime_host_SB015_INV_002_selects_exact_lane_without_cross_lane_fallback()
     {
         var host = new ProcessVerificationRuntimeHost();
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -241,8 +247,11 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             "process-manager",
             RequestedAt);
 
-        var response = host.Verify(request);
+        var result = await host.VerifyAsync(request);
+        var response = result.Response ?? throw new InvalidOperationException("Expected a successful verification host response.");
 
+        Assert.True(result.IsSuccess);
+        Assert.False(result.IsDenied);
         Assert.Equal(ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency, response.Lane);
         Assert.Equal(ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead, response.Registration.RequiredScopeKind);
         Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, response.Registration.RequiredPermissionMode);
@@ -261,7 +270,80 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_runtime_host_SB018_INV_001_rejects_unsupported_or_empty_lane_without_fallback()
+    public void Process_verification_lane_selector_SB019_INV_001_returns_exact_selection_result()
+    {
+        var selector = new ProcessVerificationLaneSelector(new ProcessVerificationLaneRegistry());
+
+        var selected = selector.SelectExact(ProcessDriverVerificationGatewayLane.OfficeEvidenceRead);
+
+        Assert.True(selected.IsSelected);
+        Assert.Equal(ProcessVerificationLaneSelectionStatus.Selected, selected.Status);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.OfficeEvidenceRead, selected.Lane);
+        Assert.NotNull(selected.Registration);
+        Assert.Equal(ProcessDriverCapabilityScopeKind.OfficeEvidenceRead, selected.Registration.RequiredScopeKind);
+
+        var unsupported = selector.SelectExact((ProcessDriverVerificationGatewayLane)999);
+
+        Assert.False(unsupported.IsSelected);
+        Assert.Equal(ProcessVerificationLaneSelectionStatus.UnsupportedLane, unsupported.Status);
+        Assert.Null(unsupported.Registration);
+
+        var missingSelector = new ProcessVerificationLaneSelector(CreateRegistryExcluding(
+            ProcessDriverVerificationGatewayLane.OfficeEvidenceRead));
+        var missing = missingSelector.SelectExact(ProcessDriverVerificationGatewayLane.OfficeEvidenceRead);
+
+        Assert.False(missing.IsSelected);
+        Assert.Equal(ProcessVerificationLaneSelectionStatus.MissingRegistration, missing.Status);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.OfficeEvidenceRead, missing.Lane);
+        Assert.Null(missing.Registration);
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_SB020_INV_001_denies_defined_but_unregistered_lane_without_fallback()
+    {
+        var host = CreateHost(
+            new ProcessVerificationRuntimeHostOptions(),
+            CreateRegistryExcluding(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead));
+
+        var result = await host.VerifyAsync(CreateBusinessAnalysisHostRequest());
+
+        AssertHostDenial(result, ProcessVerificationHostDenialCode.MissingLaneRegistration);
+        var denial = result.Denial ?? throw new InvalidOperationException("Expected a missing registration denial.");
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, denial.Lane);
+        Assert.Contains("No verification lane registration exists for lane BusinessAnalysisRead", denial.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_verification_lane_selector_SB020_INV_002_uses_explicit_registry_without_reflection_discovery_or_fallback()
+    {
+        var selectorSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessVerificationLaneRegistry.cs");
+        var hostSource = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "Automation",
+            "Dispatch",
+            "ProcessVerificationRuntimeHost.cs");
+        var combinedSource = string.Concat(selectorSource, Environment.NewLine, hostSource);
+
+        Assert.Contains("ProcessDriverVerificationGatewayLaneRules.AllowedLanes.Select", selectorSource, StringComparison.Ordinal);
+        Assert.Contains("SelectExact(", selectorSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("System.Reflection", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Assembly.", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Activator.", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("GetTypes(", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("Type.GetType", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("dynamic ", combinedSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("fallback", combinedSource, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("discover", combinedSource, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_SB018_INV_001_rejects_unsupported_or_empty_lane_without_fallback()
     {
         var host = new ProcessVerificationRuntimeHost();
         var invalidLane = (ProcessDriverVerificationGatewayLane)999;
@@ -272,21 +354,159 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             RequestedAt,
             officeEvidencePayloads: [CreateOfficePayload()]);
 
-        var invalidException = Assert.Throws<ArgumentOutOfRangeException>(() =>
-            host.Verify(new ProcessVerificationHostRequest(
+        var invalidResult = await host.VerifyAsync(new ProcessVerificationHostRequest(
                 invalidLane,
                 emptyArtifactPayload,
                 "process-manager",
-                RequestedAt)));
-        var emptyException = Assert.Throws<InvalidOperationException>(() =>
-            host.Verify(new ProcessVerificationHostRequest(
+                RequestedAt));
+        var emptyResult = await host.VerifyAsync(new ProcessVerificationHostRequest(
                 ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency,
                 emptyArtifactPayload,
                 "process-manager",
-                RequestedAt)));
+                RequestedAt));
 
-        Assert.Contains("Unsupported verification lane", invalidException.Message, StringComparison.Ordinal);
-        Assert.Contains("No payloads were supplied for lane ArtifactEvidenceConsistency", emptyException.Message, StringComparison.Ordinal);
+        Assert.True(invalidResult.IsDenied);
+        var invalidDenial = invalidResult.Denial ?? throw new InvalidOperationException("Expected an unsupported lane denial.");
+        Assert.Equal(ProcessVerificationHostDenialCode.UnsupportedLane, invalidDenial.Code);
+        Assert.Contains("Unsupported verification lane", invalidDenial.Message, StringComparison.Ordinal);
+        Assert.True(invalidDenial.NoMutationPerformed);
+        Assert.False(invalidDenial.AllowsProcessMutation);
+        Assert.False(invalidDenial.AllowsTransitionMutation);
+        Assert.False(invalidDenial.AllowsFinalizerMutation);
+        Assert.Equal(1, invalidDenial.AuditRecord.DeniedCount);
+
+        Assert.True(emptyResult.IsDenied);
+        var emptyDenial = emptyResult.Denial ?? throw new InvalidOperationException("Expected a missing lane payload denial.");
+        Assert.Equal(ProcessVerificationHostDenialCode.MissingLanePayload, emptyDenial.Code);
+        Assert.Contains("No payloads were supplied for lane ArtifactEvidenceConsistency", emptyDenial.Message, StringComparison.Ordinal);
+        Assert.True(emptyDenial.NoMutationPerformed);
+        Assert.False(emptyDenial.AllowsProcessMutation);
+        Assert.False(emptyDenial.AllowsTransitionMutation);
+        Assert.False(emptyDenial.AllowsFinalizerMutation);
+        Assert.Equal(1, emptyDenial.AuditRecord.DeniedCount);
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_SB013_INV_001_honors_cancellation_before_verification()
+    {
+        var host = new ProcessVerificationRuntimeHost();
+        using var cancellation = new CancellationTokenSource();
+        await cancellation.CancelAsync();
+
+        var request = new ProcessVerificationHostRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            new ProcessReadOnlyVerificationBatchPayload(
+                ProcessRunId,
+                StepRunId,
+                "process-manager:cancellation",
+                RequestedAt,
+                businessAnalysisPayloads: [CreateBusinessPayload()]),
+            "process-manager",
+            RequestedAt);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => host.VerifyAsync(request, cancellation.Token));
+    }
+
+    [Fact]
+    public void Process_verification_runtime_host_options_SB016_INV_001_validate_configured_limits()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+        services.Configure<ProcessVerificationRuntimeHostOptions>(options =>
+        {
+            options.MaxPayloadItemsPerLane = 0;
+        });
+
+        using var provider = services.BuildServiceProvider();
+
+        var exception = Assert.Throws<OptionsValidationException>(() =>
+            provider.GetRequiredService<IOptions<ProcessVerificationRuntimeHostOptions>>().Value);
+
+        Assert.Contains(
+            exception.Failures,
+            failure => failure.Contains(nameof(ProcessVerificationRuntimeHostOptions.MaxPayloadItemsPerLane), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_options_SB017_INV_001_deny_disabled_host_disabled_lane_and_payload_limit_breaches()
+    {
+        var request = CreateBusinessAnalysisHostRequest();
+
+        var disabledHostResult = await CreateHost(new ProcessVerificationRuntimeHostOptions
+        {
+            Enabled = false
+        }).VerifyAsync(request);
+
+        AssertHostDenial(disabledHostResult, ProcessVerificationHostDenialCode.HostDisabled);
+
+        var disabledLaneOptions = new ProcessVerificationRuntimeHostOptions();
+        disabledLaneOptions.Lanes.BusinessAnalysisRead = false;
+        var disabledLaneResult = await CreateHost(disabledLaneOptions).VerifyAsync(request);
+
+        AssertHostDenial(disabledLaneResult, ProcessVerificationHostDenialCode.LaneDisabled);
+
+        var itemLimitResult = await CreateHost(new ProcessVerificationRuntimeHostOptions
+        {
+            MaxPayloadItemsPerLane = 1
+        }).VerifyAsync(new ProcessVerificationHostRequest(
+            ProcessDriverVerificationGatewayLane.OfficeEvidenceRead,
+            new ProcessReadOnlyVerificationBatchPayload(
+                ProcessRunId,
+                StepRunId,
+                "process-manager:payload-count-limit",
+                RequestedAt,
+                officeEvidencePayloads: [CreateOfficePayload(), CreateOfficePayload()]),
+            "process-manager",
+            RequestedAt));
+
+        AssertHostDenial(itemLimitResult, ProcessVerificationHostDenialCode.PayloadLimitExceeded);
+
+        var contentLimitResult = await CreateHost(new ProcessVerificationRuntimeHostOptions
+        {
+            MaxSuppliedEvidenceContentBytes = 10
+        }).VerifyAsync(request);
+
+        AssertHostDenial(contentLimitResult, ProcessVerificationHostDenialCode.SuppliedEvidenceContentLimitExceeded);
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_SB046_INV_001_classifies_denials_with_reason_codes_audit_and_no_mutation_flags()
+    {
+        var request = CreateBusinessAnalysisHostRequest();
+        var denialScenarios = new Dictionary<ProcessVerificationHostDenialCode, ProcessVerificationHostFailureCategory>
+        {
+            [ProcessVerificationHostDenialCode.HostDisabled] = ProcessVerificationHostFailureCategory.OperationalPolicy,
+            [ProcessVerificationHostDenialCode.LaneDisabled] = ProcessVerificationHostFailureCategory.OperationalPolicy,
+            [ProcessVerificationHostDenialCode.UnsupportedLane] = ProcessVerificationHostFailureCategory.RequestValidation,
+            [ProcessVerificationHostDenialCode.MissingLaneRegistration] = ProcessVerificationHostFailureCategory.LaneConfiguration,
+            [ProcessVerificationHostDenialCode.MissingLanePayload] = ProcessVerificationHostFailureCategory.RequestValidation,
+            [ProcessVerificationHostDenialCode.PayloadLimitExceeded] = ProcessVerificationHostFailureCategory.ResourceLimit,
+            [ProcessVerificationHostDenialCode.SuppliedEvidenceContentLimitExceeded] = ProcessVerificationHostFailureCategory.ResourceLimit
+        };
+
+        foreach (var scenario in denialScenarios)
+        {
+            var denial = await CreateDenialForCodeAsync(scenario.Key, request);
+
+            Assert.Equal(scenario.Value, denial.Category);
+            Assert.Equal(scenario.Key, denial.Code);
+            Assert.False(string.IsNullOrWhiteSpace(denial.Message));
+            Assert.True(denial.NoMutationPerformed);
+            Assert.False(denial.AllowsProcessMutation);
+            Assert.False(denial.AllowsTransitionMutation);
+            Assert.False(denial.AllowsFinalizerMutation);
+            Assert.Equal(request.Payload.ProcessRunId, denial.ProcessRunId);
+            Assert.Equal(request.Payload.StepRunId, denial.StepRunId);
+            Assert.Equal(request.RequestedBy, denial.RequestedBy);
+            Assert.Equal(0, denial.AuditRecord.ResponseCount);
+            Assert.Equal(0, denial.AuditRecord.AcceptedCount);
+            Assert.Equal(1, denial.AuditRecord.DeniedCount);
+            Assert.Matches("^[A-F0-9]{64}$", denial.AuditRecord.ObservationHash);
+        }
+
+        Assert.Equal(
+            ProcessVerificationHostFailureCategory.VerificationOutcome,
+            ProcessVerificationHostDenialClassifier.Classify(ProcessVerificationHostDenialCode.NoResponsesProduced));
     }
 
     [Fact]
@@ -321,7 +541,455 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public void Process_verification_runtime_host_SB021_INV_001_di_registration_resolves_host_command_and_shared_audit_boundary()
+    public async Task Process_manager_readonly_verification_facade_SB025_INV_001_returns_structured_success_and_audit_query_without_mutation()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:facade-diagnostics",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+
+        var result = await facade.VerifyAsync(new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            " process-manager ",
+            RequestedAt));
+
+        Assert.True(result.IsSuccess);
+        Assert.False(result.IsDenied);
+        Assert.True(result.NoMutationPerformed);
+        Assert.False(result.AllowsProcessMutation);
+        Assert.False(result.AllowsTransitionMutation);
+        Assert.False(result.AllowsFinalizerMutation);
+        var response = result.Response ?? throw new InvalidOperationException("Expected a manager read-only verification response.");
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, response.Lane);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, response.Projection.Mode);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionSource.SuppliedEvidenceOnly, response.Projection.Source);
+        Assert.Equal("process-manager", response.Projection.RequestedBy);
+        Assert.Equal(response.AuditRecord.Id, response.Projection.AuditRecordId);
+        Assert.True(response.NoMutationPerformed);
+        Assert.False(response.AllowsProcessMutation);
+        Assert.False(response.AllowsTransitionMutation);
+        Assert.False(response.AllowsFinalizerMutation);
+
+        var auditReadback = await facade.ListAuditAsync(new ProcessManagerReadOnlyVerificationAuditQueryRequest(
+            "manager-auditor",
+            ProcessRunId,
+            StepRunId,
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            limit: 20));
+
+        Assert.Equal("manager-auditor", auditReadback.RequestedBy);
+        Assert.True(auditReadback.NoMutationPerformed);
+        Assert.False(auditReadback.AllowsProcessMutation);
+        Assert.False(auditReadback.AllowsTransitionMutation);
+        Assert.False(auditReadback.AllowsFinalizerMutation);
+        Assert.Contains(auditReadback.Records, record => record.Id == response.AuditRecord.Id);
+    }
+
+    [Fact]
+    public async Task Process_manager_readonly_verification_facade_SB026_INV_001_enforces_requester_projection_query_and_denial_guards()
+    {
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:facade-guards",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+
+        Assert.Throws<ArgumentException>(() => new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            " ",
+            RequestedAt));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            (ProcessManagerReadOnlyVerificationProjectionMode)999,
+            "process-manager",
+            RequestedAt));
+        Assert.Throws<ArgumentException>(() => new ProcessManagerReadOnlyVerificationAuditQueryRequest(" "));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessManagerReadOnlyVerificationAuditQueryRequest(
+            "process-manager",
+            limit: 0));
+
+        var facade = new ProcessManagerReadOnlyVerificationCommandService(
+            CreateHost(new ProcessVerificationRuntimeHostOptions
+            {
+                Enabled = false
+            }),
+            new InMemoryProcessVerificationAuditStore());
+        var request = new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "process-manager",
+            RequestedAt);
+
+        var result = await facade.VerifyAsync(request);
+
+        Assert.True(result.IsDenied);
+        Assert.False(result.IsSuccess);
+        Assert.Null(result.Response);
+        var denial = result.Denial ?? throw new InvalidOperationException("Expected a manager read-only verification denial.");
+        Assert.Equal(ProcessVerificationHostDenialCode.HostDisabled, denial.Code);
+        Assert.True(result.NoMutationPerformed);
+        Assert.False(result.AllowsProcessMutation);
+        Assert.False(result.AllowsTransitionMutation);
+        Assert.False(result.AllowsFinalizerMutation);
+        Assert.Throws<InvalidOperationException>(() => facade.Run(request));
+    }
+
+    [Fact]
+    public async Task Process_manager_verification_readback_SB028_INV_001_exposes_diagnostics_dto_and_audit_records()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:readback-diagnostics",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var verificationRequest = new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "process-manager",
+            RequestedAt);
+
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            verificationRequest,
+            auditRecordLimit: 10));
+
+        Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, readback.Status);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, readback.Lane);
+        Assert.Equal(ProcessRunId, readback.ProcessRunId);
+        Assert.Equal(StepRunId, readback.StepRunId);
+        Assert.Equal("process-manager:readback-diagnostics", readback.CallerContext);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, readback.ProjectionMode);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionSource.SuppliedEvidenceOnly, readback.ProjectionSource);
+        Assert.True(readback.ProjectionAttached);
+        Assert.True(readback.AuditRecordId.HasValue);
+        Assert.True(readback.ResponseCount > 0);
+        Assert.Equal(readback.Diagnostics.Count, readback.DiagnosticCount);
+        Assert.NotEmpty(readback.Diagnostics);
+        Assert.Contains(readback.AuditRecords, record => record.Id == readback.AuditRecordId);
+        Assert.All(readback.AuditRecords, record => Assert.Matches("^[A-F0-9]{64}$", record.ObservationHash));
+        Assert.True(readback.NoMutationPerformed);
+        Assert.False(readback.AllowsProcessMutation);
+        Assert.False(readback.AllowsTransitionMutation);
+        Assert.False(readback.AllowsFinalizerMutation);
+        Assert.Null(readback.DenialCategory);
+        Assert.Null(readback.DenialCode);
+        Assert.Equal(string.Empty, readback.DenialMessage);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessManagerReadOnlyVerificationReadbackRequest(
+            verificationRequest,
+            auditRecordLimit: 0));
+    }
+
+    [Fact]
+    public async Task Process_manager_verification_readback_SB047_INV_001_projects_denial_category_reason_code_audit_and_no_mutation_flags()
+    {
+        var options = new ProcessVerificationRuntimeHostOptions
+        {
+            Enabled = false
+        };
+        var auditStore = new InMemoryProcessVerificationAuditStore();
+        var host = CreateHost(options, auditStore: auditStore);
+        var facade = new ProcessManagerReadOnlyVerificationCommandService(host, auditStore);
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:denial-readback",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var verificationRequest = new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "process-manager",
+            RequestedAt);
+
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            verificationRequest,
+            auditRecordLimit: 10));
+
+        Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Denied, readback.Status);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, readback.Lane);
+        Assert.Equal(ProcessRunId, readback.ProcessRunId);
+        Assert.Equal(StepRunId, readback.StepRunId);
+        Assert.Equal("process-manager:denial-readback", readback.CallerContext);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, readback.ProjectionMode);
+        Assert.False(readback.ProjectionAttached);
+        Assert.Null(readback.ProjectionSource);
+        Assert.Empty(readback.Diagnostics);
+        Assert.Equal(0, readback.DiagnosticCount);
+        Assert.Equal(0, readback.ResponseCount);
+        Assert.Equal(ProcessVerificationHostFailureCategory.OperationalPolicy, readback.DenialCategory);
+        Assert.Equal(ProcessVerificationHostDenialCode.HostDisabled, readback.DenialCode);
+        Assert.Contains("disabled by options", readback.DenialMessage, StringComparison.Ordinal);
+        Assert.True(readback.AuditRecordId.HasValue);
+        var auditRecord = Assert.Single(readback.AuditRecords);
+        Assert.Equal(readback.AuditRecordId, auditRecord.Id);
+        Assert.Equal(0, auditRecord.ResponseCount);
+        Assert.Equal(0, auditRecord.AcceptedCount);
+        Assert.Equal(1, auditRecord.DeniedCount);
+        Assert.True(auditRecord.NoMutationPerformed);
+        Assert.False(auditRecord.AllowsProcessMutation);
+        Assert.False(auditRecord.AllowsTransitionMutation);
+        Assert.False(auditRecord.AllowsFinalizerMutation);
+        Assert.Matches("^[A-F0-9]{64}$", auditRecord.ObservationHash);
+        Assert.True(readback.NoMutationPerformed);
+        Assert.False(readback.AllowsProcessMutation);
+        Assert.False(readback.AllowsTransitionMutation);
+        Assert.False(readback.AllowsFinalizerMutation);
+    }
+
+    [Fact]
+    public async Task Process_manager_verification_readback_api_smoke_SB029_INV_001_serializes_diagnostics_projection_without_mutation_permissions()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:api-smoke-diagnostics",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            new ProcessManagerReadOnlyVerificationCommandRequest(
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                payload,
+                ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+                "process-manager",
+                RequestedAt)));
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            readback,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.True(root.TryGetProperty("diagnostics", out var diagnostics));
+        Assert.True(root.TryGetProperty("auditRecords", out var auditRecords));
+        Assert.True(diagnostics.GetArrayLength() > 0);
+        Assert.True(auditRecords.GetArrayLength() > 0);
+        Assert.True(root.GetProperty("noMutationPerformed").GetBoolean());
+        Assert.False(root.GetProperty("allowsProcessMutation").GetBoolean());
+        Assert.False(root.GetProperty("allowsTransitionMutation").GetBoolean());
+        Assert.False(root.GetProperty("allowsFinalizerMutation").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Process_manager_diagnostics_operator_smoke_SB055_INV_001_serializes_large_screen_api_readback_with_audit_contract()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:large-screen-api-smoke",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            new ProcessManagerReadOnlyVerificationCommandRequest(
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                payload,
+                ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+                "process-manager",
+                RequestedAt),
+            auditRecordLimit: 10));
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            readback,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal(ProcessRunId.ToString("D"), root.GetProperty("processRunId").GetString());
+        Assert.Equal(StepRunId.ToString("D"), root.GetProperty("stepRunId").GetString());
+        Assert.Equal("process-manager:large-screen-api-smoke", root.GetProperty("callerContext").GetString());
+        Assert.True(root.GetProperty("projectionAttached").GetBoolean());
+        Assert.True(root.GetProperty("responseCount").GetInt32() > 0);
+        Assert.True(root.GetProperty("diagnosticCount").GetInt32() > 0);
+
+        var auditRecordId = root.GetProperty("auditRecordId").GetString();
+        var auditRecord = Assert.Single(
+            root.GetProperty("auditRecords").EnumerateArray(),
+            item => string.Equals(item.GetProperty("id").GetString(), auditRecordId, StringComparison.Ordinal));
+        Assert.True(auditRecord.GetProperty("responseCount").GetInt32() > 0);
+        Assert.True(auditRecord.GetProperty("acceptedCount").GetInt32() > 0);
+        Assert.Equal(0, auditRecord.GetProperty("deniedCount").GetInt32());
+        Assert.True(auditRecord.GetProperty("noMutationPerformed").GetBoolean());
+        Assert.False(auditRecord.GetProperty("allowsProcessMutation").GetBoolean());
+        Assert.False(auditRecord.GetProperty("allowsTransitionMutation").GetBoolean());
+        Assert.False(auditRecord.GetProperty("allowsFinalizerMutation").GetBoolean());
+        Assert.Matches("^[A-F0-9]{64}$", auditRecord.GetProperty("observationHash").GetString());
+        Assert.True(root.GetProperty("noMutationPerformed").GetBoolean());
+        Assert.False(root.GetProperty("allowsProcessMutation").GetBoolean());
+        Assert.False(root.GetProperty("allowsTransitionMutation").GetBoolean());
+        Assert.False(root.GetProperty("allowsFinalizerMutation").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Process_run_detail_verification_audit_readback_SB056_INV_001_projects_process_step_audit_and_denial_metadata_without_mutation()
+    {
+        var auditStore = new InMemoryProcessVerificationAuditStore();
+        var host = CreateHost(
+            new ProcessVerificationRuntimeHostOptions
+            {
+                Enabled = false
+            },
+            auditStore: auditStore);
+        var facade = new ProcessManagerReadOnlyVerificationCommandService(host, auditStore);
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-run-detail:verification-audit-readback",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            new ProcessManagerReadOnlyVerificationCommandRequest(
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                payload,
+                ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+                "process-run-detail",
+                RequestedAt),
+            auditRecordLimit: 10));
+        var json = System.Text.Json.JsonSerializer.Serialize(
+            readback,
+            new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        using var document = System.Text.Json.JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal(ProcessRunId.ToString("D"), root.GetProperty("processRunId").GetString());
+        Assert.Equal(StepRunId.ToString("D"), root.GetProperty("stepRunId").GetString());
+        Assert.Equal("process-run-detail:verification-audit-readback", root.GetProperty("callerContext").GetString());
+        Assert.False(root.GetProperty("projectionAttached").GetBoolean());
+        Assert.Equal(0, root.GetProperty("responseCount").GetInt32());
+        Assert.Equal(0, root.GetProperty("diagnosticCount").GetInt32());
+        Assert.Equal((int)ProcessVerificationHostFailureCategory.OperationalPolicy, root.GetProperty("denialCategory").GetInt32());
+        Assert.Equal((int)ProcessVerificationHostDenialCode.HostDisabled, root.GetProperty("denialCode").GetInt32());
+        Assert.Contains("disabled by options", root.GetProperty("denialMessage").GetString(), StringComparison.Ordinal);
+
+        var auditRecord = Assert.Single(root.GetProperty("auditRecords").EnumerateArray());
+        Assert.Equal(root.GetProperty("auditRecordId").GetString(), auditRecord.GetProperty("id").GetString());
+        Assert.Equal(0, auditRecord.GetProperty("responseCount").GetInt32());
+        Assert.Equal(0, auditRecord.GetProperty("acceptedCount").GetInt32());
+        Assert.Equal(1, auditRecord.GetProperty("deniedCount").GetInt32());
+        Assert.True(auditRecord.GetProperty("noMutationPerformed").GetBoolean());
+        Assert.False(auditRecord.GetProperty("allowsProcessMutation").GetBoolean());
+        Assert.False(auditRecord.GetProperty("allowsTransitionMutation").GetBoolean());
+        Assert.False(auditRecord.GetProperty("allowsFinalizerMutation").GetBoolean());
+        Assert.Matches("^[A-F0-9]{64}$", auditRecord.GetProperty("observationHash").GetString());
+        Assert.True(root.GetProperty("noMutationPerformed").GetBoolean());
+        Assert.False(root.GetProperty("allowsProcessMutation").GetBoolean());
+        Assert.False(root.GetProperty("allowsTransitionMutation").GetBoolean());
+        Assert.False(root.GetProperty("allowsFinalizerMutation").GetBoolean());
+    }
+
+    [Fact]
+    public void Process_readonly_verification_job_SB031_INV_001_models_scheduler_and_workflow_jobs_as_manager_readback_requests_without_mutation()
+    {
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:scheduled-verification",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var schedulerJob = new ProcessReadOnlyVerificationJob(
+            Guid.NewGuid(),
+            ProcessReadOnlyVerificationJobSourceKind.Scheduler,
+            "scheduler-plan:daily-review",
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "scheduler-verifier",
+            RequestedAt,
+            auditRecordLimit: 10);
+        var workflowJob = new ProcessReadOnlyVerificationJob(
+            Guid.NewGuid(),
+            ProcessReadOnlyVerificationJobSourceKind.Workflow,
+            "workflow:qa-readback",
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "workflow-verifier",
+            RequestedAt);
+
+        Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Scheduler, schedulerJob.SourceKind);
+        Assert.Equal("scheduler-plan:daily-review", schedulerJob.SourceReference);
+        Assert.True(schedulerJob.NoMutationPerformed);
+        Assert.False(schedulerJob.AllowsProcessMutation);
+        Assert.False(schedulerJob.AllowsTransitionMutation);
+        Assert.False(schedulerJob.AllowsFinalizerMutation);
+
+        var readbackRequest = schedulerJob.ToManagerReadbackRequest();
+
+        Assert.Equal(10, readbackRequest.AuditRecordLimit);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, readbackRequest.VerificationRequest.Lane);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, readbackRequest.VerificationRequest.ProjectionMode);
+        Assert.Equal("scheduler-verifier", readbackRequest.VerificationRequest.RequestedBy);
+        Assert.Equal(payload, readbackRequest.VerificationRequest.Payload);
+        Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Workflow, workflowJob.SourceKind);
+        Assert.Equal("workflow:qa-readback", workflowJob.SourceReference);
+        Assert.True(workflowJob.NoMutationPerformed);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessReadOnlyVerificationJob(
+            Guid.NewGuid(),
+            (ProcessReadOnlyVerificationJobSourceKind)999,
+            "bad-source",
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "scheduler-verifier",
+            RequestedAt));
+    }
+
+    [Fact]
+    public void Scheduler_workflow_verification_readiness_SB032_INV_001_does_not_call_process_drivers_directly()
+    {
+        var forbiddenPatterns = new[]
+        {
+            "CanDoItAll.Processes.Drivers.",
+            "ProcessDriverVerificationGateway",
+            "IProcessVerificationRuntimeHost",
+            "ProcessVerificationRuntimeHost",
+            "ProcessReadOnlyVerificationBatchOrchestrator",
+            "ProcessReadOnlyVerificationPayloadBuilder"
+        };
+        var sourceRoots = new[]
+        {
+            Path.Combine("src", "CanDoItAll.Modules.SchedulerPlanner"),
+            Path.Combine("src", "CanDoItAll.Modules.AgentFramework")
+        };
+        var matches = FindSourceMatches(sourceRoots, forbiddenPatterns);
+
+        Assert.Empty(matches);
+    }
+
+    [Fact]
+    public async Task Process_verification_runtime_host_SB021_INV_001_di_registration_resolves_host_command_and_shared_audit_boundary()
     {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
@@ -338,11 +1006,12 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             RequestedAt,
             transcriptPayloads: [CreateTranscriptPayload()]);
 
-        var response = host.Verify(new ProcessVerificationHostRequest(
+        var responseResult = await host.VerifyAsync(new ProcessVerificationHostRequest(
             ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification,
             payload,
             "process-manager",
             RequestedAt));
+        var response = responseResult.Response ?? throw new InvalidOperationException("Expected a successful verification host response.");
         var result = command.Run(new ProcessManagerReadOnlyVerificationCommandRequest(
             ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification,
             payload,
@@ -351,13 +1020,177 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             RequestedAt));
 
         Assert.IsType<ProcessVerificationRuntimeHost>(host);
+        Assert.True(responseResult.IsSuccess);
         Assert.Equal(ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification, response.Lane);
         Assert.Equal(ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification, result.Lane);
         Assert.True(response.NoMutationPerformed);
         Assert.True(result.NoMutationPerformed);
-        Assert.Contains(auditStore.List(), record => record.Id == response.AuditRecord.Id);
-        Assert.Contains(auditStore.List(), record => record.Id == result.AuditRecord.Id);
+        var auditRecords = await auditStore.ListAsync();
+        Assert.Contains(auditRecords, record => record.Id == response.AuditRecord.Id);
+        Assert.Contains(auditRecords, record => record.Id == result.AuditRecord.Id);
         Assert.NotEqual(response.AuditRecord.Id, result.AuditRecord.Id);
+    }
+
+    [Fact]
+    public async Task Process_verification_audit_store_SB023_INV_001_persists_redacted_hashes_and_supports_queries()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ISecretRedactor, SecretRedactor>();
+        services.AddPooledDbContextFactory<AppDbContext>(options =>
+            options.UseInMemoryDatabase($"process-verification-audit-{Guid.NewGuid():N}"));
+        services.AddProcessVerificationRuntimeHost();
+        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditStore, EfCoreProcessVerificationAuditStore>());
+        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditQueryService>(provider =>
+            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
+
+        await using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
+        ProcessVerificationHostResponse response;
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            await dbContext.Database.EnsureCreatedAsync();
+
+            var host = scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHost>();
+            var request = new ProcessVerificationHostRequest(
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                new ProcessReadOnlyVerificationBatchPayload(
+                    ProcessRunId,
+                    StepRunId,
+                    "process-manager:durable-audit",
+                    RequestedAt,
+                    businessAnalysisPayloads: [CreateBusinessPayload()]),
+                "process-manager api_key=sk-test password=hunter2 Bearer abcdef",
+                RequestedAt);
+
+            var result = await host.VerifyAsync(request);
+
+            Assert.True(result.IsSuccess);
+            response = result.Response ?? throw new InvalidOperationException("Expected a durable audit verification response.");
+            Assert.Matches("^[A-F0-9]{64}$", response.AuditRecord.ObservationHash);
+            Assert.DoesNotContain("sk-test", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+            Assert.DoesNotContain("hunter2", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+            Assert.DoesNotContain("abcdef", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+            Assert.Contains("[REDACTED]", response.AuditRecord.RequestedBy, StringComparison.Ordinal);
+        }
+
+        await using (var scope = provider.CreateAsyncScope())
+        {
+            var queryService = scope.ServiceProvider.GetRequiredService<IProcessVerificationAuditQueryService>();
+
+            var persisted = await queryService.GetAsync(response.AuditRecord.Id);
+            var runRecords = await queryService.ListAsync(new ProcessVerificationAuditQuery(
+                ProcessRunId,
+                StepRunId,
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                limit: 10));
+
+            var record = Assert.Single(runRecords);
+            Assert.NotNull(persisted);
+            Assert.Equal(response.AuditRecord.Id, persisted.Id);
+            Assert.Equal(response.AuditRecord.ObservationHash, persisted.ObservationHash);
+            Assert.Equal(response.AuditRecord.RequestedBy, persisted.RequestedBy);
+            Assert.Equal(response.AuditRecord.Id, record.Id);
+            Assert.True(record.NoMutationPerformed);
+            Assert.False(record.AllowsProcessMutation);
+            Assert.False(record.AllowsTransitionMutation);
+            Assert.False(record.AllowsFinalizerMutation);
+        }
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessVerificationAuditQuery(limit: 0));
+    }
+
+    [Fact]
+    public async Task Process_readonly_verification_security_SB049_SB050_INV_001_redacts_malicious_secret_corpus_from_diagnostics_audit_and_readback()
+    {
+        const string maliciousTranscript = """
+            Build failed.
+            api_key=sk-malicious-demo
+            access_token: test-access-token
+            bearer abcdef123456
+            password=hunter2
+            secret=fixture-secret
+            owner@example.invalid
+            connectionString=Host=localhost;Password=db-secret
+            <script>alert('x')</script>
+            """;
+        var forbiddenFragments = new[]
+        {
+            "sk-malicious-demo",
+            "test-access-token",
+            "abcdef123456",
+            "hunter2",
+            "fixture-secret",
+            "owner@example.invalid",
+            "Host=localhost",
+            "db-secret"
+        };
+        var redaction = ProcessDriverRedactionPolicy.Redact(maliciousTranscript);
+
+        Assert.Equal(ProcessDriverRedactionStatus.Redacted, redaction.Descriptor.Status);
+        Assert.Contains(ProcessDriverRedactionKind.AccessToken, redaction.Descriptor.AppliedKinds);
+        Assert.Contains(ProcessDriverRedactionKind.Secret, redaction.Descriptor.AppliedKinds);
+        Assert.Contains(ProcessDriverRedactionKind.EmailAddress, redaction.Descriptor.AppliedKinds);
+        Assert.Contains(ProcessDriverRedactionKind.ConnectionString, redaction.Descriptor.AppliedKinds);
+        Assert.Matches("^[A-F0-9]{64}$", redaction.Descriptor.RedactedTextHash);
+        AssertNoForbiddenFragments(redaction.RedactedText, forbiddenFragments);
+
+        var auditStore = new InMemoryProcessVerificationAuditStore();
+        var host = CreateHost(new ProcessVerificationRuntimeHostOptions(), auditStore: auditStore);
+        var facade = new ProcessManagerReadOnlyVerificationCommandService(host, auditStore);
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:malicious-secret-corpus",
+            RequestedAt,
+            transcriptPayloads: [CreateTranscriptPayload(maliciousTranscript)]);
+        var request = new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "process-manager",
+            RequestedAt);
+
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            request,
+            auditRecordLimit: 10));
+
+        Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, readback.Status);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification, readback.Lane);
+        Assert.True(readback.NoMutationPerformed);
+        Assert.False(readback.AllowsProcessMutation);
+        Assert.False(readback.AllowsTransitionMutation);
+        Assert.False(readback.AllowsFinalizerMutation);
+        Assert.Null(readback.DenialCategory);
+        Assert.Null(readback.DenialCode);
+        Assert.NotEmpty(readback.Diagnostics);
+        Assert.Contains(
+            readback.Diagnostics,
+            diagnostic => diagnostic.Category == ProcessDriverDiagnosticCategory.BuildError);
+        Assert.All(
+            readback.Diagnostics,
+            diagnostic => AssertNoForbiddenFragments(diagnostic.Message, forbiddenFragments));
+        var readbackJson = System.Text.Json.JsonSerializer.Serialize(readback);
+        AssertNoForbiddenFragments(readbackJson, forbiddenFragments);
+
+        var auditRecord = Assert.Single(readback.AuditRecords);
+        Assert.Matches("^[A-F0-9]{64}$", auditRecord.ObservationHash);
+        Assert.True(auditRecord.NoMutationPerformed);
+        Assert.False(auditRecord.AllowsProcessMutation);
+        Assert.False(auditRecord.AllowsTransitionMutation);
+        Assert.False(auditRecord.AllowsFinalizerMutation);
+        var storedAuditRecord = Assert.Single(await auditStore.ListAsync(CancellationToken.None));
+        Assert.Equal(auditRecord.Id, storedAuditRecord.Id);
+        AssertNoForbiddenFragments(storedAuditRecord.RequestedBy, forbiddenFragments);
+        AssertNoForbiddenFragments(storedAuditRecord.ObservationHash, forbiddenFragments);
     }
 
     [Fact]
@@ -1007,6 +1840,189 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
                 requestedOperations));
     }
 
+    private static ProcessVerificationHostRequest CreateBusinessAnalysisHostRequest()
+    {
+        return new ProcessVerificationHostRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            new ProcessReadOnlyVerificationBatchPayload(
+                ProcessRunId,
+                StepRunId,
+                "process-manager:business-analysis-options",
+                RequestedAt,
+                businessAnalysisPayloads: [CreateBusinessPayload()]),
+            "process-manager",
+            RequestedAt);
+    }
+
+    private static ProcessVerificationRuntimeHost CreateHost(
+        ProcessVerificationRuntimeHostOptions options,
+        ProcessVerificationLaneRegistry? registry = null,
+        IProcessVerificationAuditStore? auditStore = null)
+    {
+        return new ProcessVerificationRuntimeHost(
+            new ProcessReadOnlyVerificationBatchOrchestrator(),
+            new ProcessVerificationLaneSelector(registry ?? new ProcessVerificationLaneRegistry()),
+            auditStore ?? new InMemoryProcessVerificationAuditStore(),
+            Options.Create(options));
+    }
+
+    private static async Task<ProcessVerificationHostDenial> CreateDenialForCodeAsync(
+        ProcessVerificationHostDenialCode code,
+        ProcessVerificationHostRequest request)
+    {
+        var result = code switch
+        {
+            ProcessVerificationHostDenialCode.HostDisabled => await CreateHost(new ProcessVerificationRuntimeHostOptions
+            {
+                Enabled = false
+            }).VerifyAsync(request),
+            ProcessVerificationHostDenialCode.LaneDisabled => await CreateHost(CreateLaneDisabledOptions()).VerifyAsync(request),
+            ProcessVerificationHostDenialCode.UnsupportedLane => await new ProcessVerificationRuntimeHost().VerifyAsync(new ProcessVerificationHostRequest(
+                (ProcessDriverVerificationGatewayLane)999,
+                request.Payload,
+                request.RequestedBy,
+                request.RequestedAt)),
+            ProcessVerificationHostDenialCode.MissingLaneRegistration => await CreateHost(
+                new ProcessVerificationRuntimeHostOptions(),
+                CreateRegistryExcluding(request.Lane)).VerifyAsync(request),
+            ProcessVerificationHostDenialCode.MissingLanePayload => await new ProcessVerificationRuntimeHost().VerifyAsync(new ProcessVerificationHostRequest(
+                ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency,
+                new ProcessReadOnlyVerificationBatchPayload(
+                    request.Payload.ProcessRunId,
+                    request.Payload.StepRunId,
+                    "process-manager:missing-lane-payload",
+                    request.RequestedAt,
+                    businessAnalysisPayloads: [CreateBusinessPayload()]),
+                request.RequestedBy,
+                request.RequestedAt)),
+            ProcessVerificationHostDenialCode.PayloadLimitExceeded => await CreateHost(new ProcessVerificationRuntimeHostOptions
+            {
+                MaxPayloadItemsPerLane = 1
+            }).VerifyAsync(new ProcessVerificationHostRequest(
+                ProcessDriverVerificationGatewayLane.OfficeEvidenceRead,
+                new ProcessReadOnlyVerificationBatchPayload(
+                    request.Payload.ProcessRunId,
+                    request.Payload.StepRunId,
+                    "process-manager:payload-count-limit",
+                    request.RequestedAt,
+                    officeEvidencePayloads: [CreateOfficePayload(), CreateOfficePayload()]),
+                request.RequestedBy,
+                request.RequestedAt)),
+            ProcessVerificationHostDenialCode.SuppliedEvidenceContentLimitExceeded => await CreateHost(new ProcessVerificationRuntimeHostOptions
+            {
+                MaxSuppliedEvidenceContentBytes = 10
+            }).VerifyAsync(request),
+            _ => throw new ArgumentOutOfRangeException(nameof(code), code, "This helper only creates pre-orchestration host denials.")
+        };
+
+        return result.Denial ?? throw new InvalidOperationException($"Expected verification host denial {code}.");
+    }
+
+    private static ProcessVerificationRuntimeHostOptions CreateLaneDisabledOptions()
+    {
+        var options = new ProcessVerificationRuntimeHostOptions();
+        options.Lanes.BusinessAnalysisRead = false;
+
+        return options;
+    }
+
+    private static ProcessVerificationLaneRegistry CreateRegistryExcluding(ProcessDriverVerificationGatewayLane excludedLane)
+    {
+        return new ProcessVerificationLaneRegistry(ProcessDriverVerificationGatewayLaneRules.AllowedLanes
+            .Where(descriptor => descriptor.Lane != excludedLane)
+            .Select(CreateLaneRegistration));
+    }
+
+    private static ProcessVerificationLaneRegistration CreateLaneRegistration(
+        ProcessDriverVerificationGatewayLaneDescriptor descriptor)
+    {
+        return new ProcessVerificationLaneRegistration(
+            descriptor.Lane,
+            descriptor.RequiredScopeKind,
+            descriptor.RequiredPermissionMode,
+            descriptor.AllowedOperations);
+    }
+
+    private static void AssertHostDenial(
+        ProcessVerificationHostResult result,
+        ProcessVerificationHostDenialCode expectedCode)
+    {
+        Assert.True(result.IsDenied);
+        var denial = result.Denial ?? throw new InvalidOperationException("Expected a verification host denial.");
+        Assert.Equal(expectedCode, denial.Code);
+        Assert.True(denial.NoMutationPerformed);
+        Assert.False(denial.AllowsProcessMutation);
+        Assert.False(denial.AllowsTransitionMutation);
+        Assert.False(denial.AllowsFinalizerMutation);
+        Assert.Equal(1, denial.AuditRecord.DeniedCount);
+    }
+
+    private static string ReadRepositoryFile(params string[] pathParts)
+    {
+        var root = FindRepositoryRoot();
+        var segments = new string[pathParts.Length + 1];
+        segments[0] = root;
+        pathParts.CopyTo(segments, 1);
+        return File.ReadAllText(Path.Combine(segments));
+    }
+
+    private static IEnumerable<string> EnumerateRepositorySourceFiles(params string[] pathParts)
+    {
+        var root = FindRepositoryRoot();
+        var segments = new string[pathParts.Length + 1];
+        segments[0] = root;
+        pathParts.CopyTo(segments, 1);
+        var sourceRoot = Path.Combine(segments);
+        return Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
+            .Where(path =>
+                !path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase) &&
+                !path.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IReadOnlyList<string> FindSourceMatches(
+        IReadOnlyList<string> relativeRoots,
+        IReadOnlyList<string> forbiddenPatterns)
+    {
+        var root = FindRepositoryRoot();
+        var matches = new List<string>();
+
+        foreach (var relativeRoot in relativeRoots)
+        {
+            foreach (var sourceFile in EnumerateRepositorySourceFiles(relativeRoot))
+            {
+                var source = File.ReadAllText(sourceFile);
+                foreach (var pattern in forbiddenPatterns)
+                {
+                    if (source.Contains(pattern, StringComparison.Ordinal))
+                    {
+                        matches.Add($"{Path.GetRelativePath(root, sourceFile)} contains {pattern}");
+                    }
+                }
+            }
+        }
+
+        return matches;
+    }
+
+    private static string FindRepositoryRoot([CallerFilePath] string sourceFilePath = "")
+    {
+        foreach (var startPath in new[] { AppContext.BaseDirectory, Directory.GetCurrentDirectory(), Path.GetDirectoryName(sourceFilePath) ?? string.Empty })
+        {
+            var directory = new DirectoryInfo(startPath);
+            while (directory is not null)
+            {
+                if (File.Exists(Path.Combine(directory.FullName, "CanDoItAll.slnx")))
+                {
+                    return directory.FullName;
+                }
+
+                directory = directory.Parent;
+            }
+        }
+
+        throw new InvalidOperationException("Unable to locate the repository root.");
+    }
+
     private static ProcessReadOnlyVerificationBatchObservation CreateManagerProjectionSourceObservation()
     {
         var orchestrator = new ProcessReadOnlyVerificationBatchOrchestrator();
@@ -1284,6 +2300,16 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         {
             Assert.All(diagnosticAndAuditText, value =>
                 Assert.DoesNotContain(forbiddenFragment, value, StringComparison.Ordinal));
+        }
+    }
+
+    private static void AssertNoForbiddenFragments(
+        string value,
+        IReadOnlyList<string> forbiddenFragments)
+    {
+        foreach (var forbiddenFragment in forbiddenFragments.Where(static fragment => !string.IsNullOrWhiteSpace(fragment)))
+        {
+            Assert.DoesNotContain(forbiddenFragment, value, StringComparison.Ordinal);
         }
     }
 

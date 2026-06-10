@@ -1,5 +1,10 @@
 # Phase Plan
 
+## Phase Sequence
+- Execute phases P01 through P22 in numeric order.
+- Each phase owns the subbundles listed under `## Phase Gates`.
+- Do not start a phase until prior phase closure gates are complete or explicitly blocked with downstream impact documented.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -51,7 +56,10 @@ graph TD
 
 ## Critical Subbundles
 
-Every third subbundle is a critical gate and must include semantic adequacy proof, changed-file hashes, command transcripts, source assertions, anti-stub audit, and red-team evidence.
+- Every third subbundle is a critical gate.
+- Critical gates: SB003, SB006, SB009, SB012, SB015, SB018, SB021, SB024, SB027, SB030, SB033, SB036, SB039, SB042, SB045, SB048, SB051, SB054, SB057, SB060, SB063, SB066.
+- Critical subbundles must include semantic adequacy proof, changed-file hashes, command transcripts, source assertions, anti-stub audit, and red-team evidence.
+- Critical proof must live under `bundle://proof/SBxx/` and cite portable `repo://` or `bundle://` references.
 
 ## Phase Gates
 

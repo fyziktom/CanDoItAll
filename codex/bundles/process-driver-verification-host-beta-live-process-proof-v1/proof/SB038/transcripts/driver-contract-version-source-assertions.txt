@@ -1,0 +1,98 @@
+Command: rg -n "ProcessDriverContractVersion|Current => new\(1, 10, 0\)|ProcessDriverCoreDescriptorFamily|ProcessDriverVerificationGatewayLaneRules|AllowedLanes|ExecutionCapableFuture|VerificationOnly|IsReadonlyVerificationOperation" src\CanDoItAll.Processes.Drivers.Abstractions tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:52:        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), ProcessDriverContractVersion.Current);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:96:        Assert.Contains("CanDoItAll.Processes.Drivers.Abstractions.Gateway.ProcessDriverVerificationGatewayLaneRules", publicTypeNames);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:136:                ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:143:            Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, denial.RequestedMode);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:160:            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:166:            ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:185:        Assert.Equal(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, evidenceReference.CoreDescriptorFamily);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:197:            ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:202:            ProcessDriverContractVersion.Current);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:211:            ContractVersion: ProcessDriverContractVersion.Current);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:278:        var families = Enum.GetValues<ProcessDriverCoreDescriptorFamily>();
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:280:        Assert.Contains(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, families);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:281:        Assert.Contains(ProcessDriverCoreDescriptorFamily.FinalizerEvidence, families);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:282:        Assert.Contains(ProcessDriverCoreDescriptorFamily.RetryDiagnostics, families);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:283:        Assert.Contains(ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence, families);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:284:        Assert.Contains(ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation, families);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:296:        var expectedFamilies = new Dictionary<ProcessDriverCoreDescriptorFamily, int>
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:298:            [ProcessDriverCoreDescriptorFamily.ExecutionEvidence] = 1,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:299:            [ProcessDriverCoreDescriptorFamily.FinalizerEvidence] = 2,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:300:            [ProcessDriverCoreDescriptorFamily.RetryDiagnostics] = 3,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:301:            [ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence] = 4,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:302:            [ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation] = 5
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:304:        var descriptors = ProcessDriverVerificationGatewayLaneRules.AllowedLanes.ToDictionary(
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:308:            .OfType<ProcessDriverCoreDescriptorFamily>()
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:311:        Assert.Equal(expectedFamilies.Count, Enum.GetValues<ProcessDriverCoreDescriptorFamily>().Length);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:317:        Assert.Equal(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, descriptors[ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification].CoreDescriptorFamily);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:318:        Assert.Equal(ProcessDriverCoreDescriptorFamily.ExecutionEvidence, descriptors[ProcessDriverVerificationGatewayLane.RuntimeEvidenceConsistency].CoreDescriptorFamily);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:319:        Assert.Equal(ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence, descriptors[ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency].CoreDescriptorFamily);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:322:        Assert.DoesNotContain(ProcessDriverCoreDescriptorFamily.FinalizerEvidence, gatewayCoreFamilies);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:323:        Assert.DoesNotContain(ProcessDriverCoreDescriptorFamily.RetryDiagnostics, gatewayCoreFamilies);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:326:                Assert.True(ProcessDriverOperationRules.IsReadonlyVerificationOperation(operation))));
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:335:        var version = ProcessDriverContractVersion.Current;
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:346:        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:351:        Assert.Contains("Version source: `ProcessDriverContractVersion.Current => 1.10.0`", snapshot, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:355:            Assert.Contains($"ProcessDriverContractVersion.Current` is `{expectedVersion}`", snapshot, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:364:        Assert.DoesNotContain("ProcessDriverContractVersion.Current => 1.11.0", snapshot, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:373:        var version = ProcessDriverContractVersion.Current;
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:375:        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:379:        Assert.Contains("ExecutionCapableFuture` remains a denied future marker", migrationDoc, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:430:        Assert.Contains("ExecutionCapableFuture` remains a denied marker", matrix, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:507:            "`ProcessDriverContractVersion.Current`.",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:582:            "ExecutionCapableFuture is permission",
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:652:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:732:        Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, officeScope.RequiredPermissionMode);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:733:        Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, businessScope.RequiredPermissionMode);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:734:        Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, artifactScope.RequiredPermissionMode);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:743:            ProcessDriverPermissionMode.VerificationOnly));
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:746:            ProcessDriverPermissionMode.VerificationOnly));
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:749:            ProcessDriverPermissionMode.VerificationOnly));
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:760:        var descriptors = ProcessDriverVerificationGatewayLaneRules.AllowedLanes;
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:770:            ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:772:            ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:779:            ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:784:            ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:786:            ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:791:            ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:798:            ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:804:                Assert.True(ProcessDriverOperationRules.IsReadonlyVerificationOperation(operation))));
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:805:        Assert.Contains("ProcessDriverVerificationGatewayLaneRules", design, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:820:        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), ProcessDriverContractVersion.Current);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:883:        Assert.Contains("`ProcessDriverContractVersion.Current` remains `1.10.0`", readme, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:924:            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:929:            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:934:            ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1045:        var version = ProcessDriverContractVersion.Current;
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1047:        Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1048:        Assert.Contains(ProcessDriverPermissionMode.ExecutionCapableFuture, Enum.GetValues<ProcessDriverPermissionMode>());
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1066:        Assert.Contains("ExecutionCapableFuture` remains a denied marker", decision, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1111:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1128:        Assert.Contains("ExecutionCapableFuture = 3", sourceText, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1142:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1184:            "ExecutionCapableFuture is permission"
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1200:                ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1214:                ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1221:                ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1228:                ProcessDriverPermissionMode.VerificationOnly,
+tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs:1241:        ProcessDriverCoreDescriptorFamily? expectedCoreDescriptorFamily,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:6:public static class ProcessDriverVerificationGatewayLaneRules
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:22:    public static IReadOnlyList<ProcessDriverVerificationGatewayLaneDescriptor> AllowedLanes { get; } =
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:38:                ProcessDriverPermissionMode.VerificationOnly,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:40:                ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:47:                ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:52:                ProcessDriverPermissionMode.VerificationOnly,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:54:                ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:59:                ProcessDriverPermissionMode.VerificationOnly,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneRules.cs:66:                ProcessDriverPermissionMode.VerificationOnly,
+src\CanDoItAll.Processes.Drivers.Abstractions\Gateway\ProcessDriverVerificationGatewayLaneDescriptor.cs:11:    ProcessDriverCoreDescriptorFamily? CoreDescriptorFamily,
+src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverContractVersion.cs:3:public readonly record struct ProcessDriverContractVersion(
+src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverContractVersion.cs:8:    public static ProcessDriverContractVersion Current => new(1, 10, 0);
+src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverVerificationRequest.cs:12:    ProcessDriverContractVersion ContractVersion);
+src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverPermissionMode.cs:6:    VerificationOnly = 1,
+src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverPermissionMode.cs:8:    ExecutionCapableFuture = 3
+src\CanDoItAll.Processes.Drivers.Abstractions\Verification\ProcessDriverVerificationResponse.cs:15:    ProcessDriverContractVersion ContractVersion);
+src\CanDoItAll.Processes.Drivers.Abstractions\Evidence\ProcessDriverEvidencePolicy.cs:45:            ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
+src\CanDoItAll.Processes.Drivers.Abstractions\Permissions\ProcessDriverOperationRules.cs:5:    public static bool IsReadonlyVerificationOperation(ProcessDriverOperation operation)
+src\CanDoItAll.Processes.Drivers.Abstractions\Evidence\ProcessDriverEvidenceReference.cs:7:    ProcessDriverCoreDescriptorFamily? CoreDescriptorFamily);
+src\CanDoItAll.Processes.Drivers.Abstractions\Evidence\ProcessDriverEvidenceReference.cs:20:public enum ProcessDriverCoreDescriptorFamily

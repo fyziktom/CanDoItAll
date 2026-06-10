@@ -722,6 +722,62 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     }
 
     [Fact]
+    public void Process_driver_contract_api_SB058_SB059_INV_002_process_docs_describe_operator_readback_without_runtime_approval()
+    {
+        var moduleReadme = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Modules.Processes",
+            "README.md");
+        var operatorRunbook = ReadRepositoryFile(
+            "docs",
+            "process-agent-operator-runbook.md");
+        var restorationLedger = ReadRepositoryFile(
+            "docs",
+            "process-runtime-restoration-ledger.md");
+        var combinedDocs = string.Join(Environment.NewLine, moduleReadme, operatorRunbook, restorationLedger);
+
+        foreach (var requiredReadbackTerm in new[]
+        {
+            "IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync",
+            "ProcessManagerReadOnlyVerificationReadbackDto",
+            "ProcessVerificationHostFailureCategory",
+            "ProcessVerificationHostDenialCode",
+            "auditRecords",
+            "observationHash",
+            "denialCategory",
+            "denialCode",
+            "denialMessage",
+            "noMutationPerformed = true",
+            "allowsProcessMutation = false",
+            "allowsTransitionMutation = false",
+            "allowsFinalizerMutation = false"
+        })
+        {
+            Assert.Contains(requiredReadbackTerm, combinedDocs, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("Current status: `Not approved`", moduleReadme, StringComparison.Ordinal);
+        Assert.Contains("The generic process-driver runtime host remains not approved", operatorRunbook, StringComparison.Ordinal);
+        Assert.Contains("Generic process-driver runtime host is not approved", restorationLedger, StringComparison.Ordinal);
+
+        foreach (var forbiddenApprovalClaim in new[]
+        {
+            "Production verification host registration decision: `Ready`",
+            "Runtime host status: `Approved`",
+            "runtime host is approved",
+            "driver registry is approved",
+            "DI registration is approved",
+            "manager command may invoke drivers",
+            "scheduler hook may invoke drivers",
+            "workflow hook may invoke drivers",
+            "ExecutionCapableFuture is permission"
+        })
+        {
+            Assert.DoesNotContain(forbiddenApprovalClaim, combinedDocs, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
+    [Fact]
     public void Process_driver_contract_api_SB027_INV_001_office_business_analysis_and_artifact_lanes_stay_readonly()
     {
         var scopes = CreateReadonlyScopes();
@@ -1144,6 +1200,77 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         {
             Assert.DoesNotContain(forbiddenReadmeApprovalClaim, gatewayReadme, StringComparison.OrdinalIgnoreCase);
         }
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB043_SB044_INV_001_future_execution_guards_remain_unsatisfied_and_source_rejects_premature_surfaces()
+    {
+        var root = FindRepositoryRoot();
+        var ledger = ReadRepositoryFile("docs", "process-runtime-restoration-ledger.md");
+        var operatorRunbook = ReadRepositoryFile("docs", "process-agent-operator-runbook.md");
+        var processesReadme = ReadRepositoryFile("src", "CanDoItAll.Modules.Processes", "README.md");
+        var sourceText = ReadReadonlyDriverPipelineSource(root);
+
+        Assert.Contains("## Execution-Capable Future Gate Guards", ledger, StringComparison.Ordinal);
+        Assert.Contains("Guard status: every execution-capable driver prerequisite is `Not satisfied`.", ledger, StringComparison.Ordinal);
+        Assert.Contains("The generic process-driver runtime host remains not approved", operatorRunbook, StringComparison.Ordinal);
+        Assert.Contains("Future approval gate:", processesReadme, StringComparison.Ordinal);
+        Assert.Contains("Denied until that future gate passes:", processesReadme, StringComparison.Ordinal);
+
+        foreach (var prerequisite in new[]
+        {
+            "Runtime lifecycle ownership",
+            "Audit persistence",
+            "Sandbox and allow-list policy",
+            "Authorization and approval",
+            "Command, network, and storage policy",
+            "Compatibility governance",
+            "Red-team negative proof"
+        })
+        {
+            Assert.Contains($"| {prerequisite} | `Not satisfied` |", ledger, StringComparison.Ordinal);
+        }
+
+        foreach (var blockedSurface in new[]
+        {
+            "Runtime host",
+            "Driver registry",
+            "Runtime selector",
+            "Dependency-injection registration",
+            "Manager command",
+            "Scheduler hook",
+            "Workflow hook",
+            "Endpoint mapping",
+            "Workspace or storage write",
+            "External command, network, Office/Graph, or CRM call",
+            "Transition, claim, finalizer, retry, or process mutation",
+            "Execution-capable drivers"
+        })
+        {
+            Assert.Contains($"| {blockedSurface} | `Blocked` |", ledger, StringComparison.Ordinal);
+        }
+
+        foreach (var forbiddenApprovalClaim in new[]
+        {
+            "Guard status: satisfied",
+            "Runtime host status: approved",
+            "runtime host is approved",
+            "driver registry is approved",
+            "runtime selector is approved",
+            "dependency-injection registration is approved",
+            "manager command is approved",
+            "scheduler hook is approved",
+            "workflow hook is approved",
+            "execution-capable drivers are approved",
+            "process mutation allowed"
+        })
+        {
+            Assert.DoesNotContain(forbiddenApprovalClaim, ledger, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(forbiddenApprovalClaim, operatorRunbook, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(forbiddenApprovalClaim, processesReadme, StringComparison.OrdinalIgnoreCase);
+        }
+
+        AssertNoForbiddenRuntimeHostHookTokens(sourceText);
     }
 
     [Fact]

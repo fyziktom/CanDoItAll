@@ -1,0 +1,23 @@
+Command:
+$env:CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION='true'
+$env:CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE='true'
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --filter FullyQualifiedName~LiveProcessRunOpenAiSmokeIntegrationTests --logger "console;verbosity=normal"
+
+Initial implementation budget:
+- CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS unset.
+- DefaultMaxTotalTokens was 2000.
+
+Observed output excerpt:
+Assert.InRange() Failure: Value not in range
+Range: (1 - 2000)
+Actual: 181702
+Failed CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage [1 m 18 s]
+
+Interpretation:
+- This was an intentional red-team useful failure after the first live execution.
+- The live process dispatcher did execute OpenAI and record process-bound provider usage.
+- The too-small 2000-token ceiling rejected the run instead of silently hiding high usage.
+- The default ceiling was changed to 250000 because the current process dispatcher prompt is substantially larger than a workspace-only specialist prompt.
+
+Conclusion: token budget enforcement is active. A shallow implementation that ignores provider usage or silently treats high usage as proof would have passed incorrectly; this one failed closed.
+ExitCode: 1

@@ -1,0 +1,19 @@
+SB030 Gate J proof index
+Working directory: C:\repositories\CanDoItAll
+Run label: Gate J artifact existence and invariant index
+bundle://proof\SB028\transcripts\manager-readback-focused-tests.txt => True
+bundle://proof\SB028\transcripts\manager-readback-dto-source-assertions.txt => True
+bundle://proof\SB029\transcripts\manager-readback-api-smoke-focused-tests.txt => True
+bundle://proof\SB029\transcripts\manager-readback-api-smoke-source-assertions.txt => True
+bundle://proof\SB030\transcripts\gate-j-source-diff-and-anti-stub-audit.txt => True
+bundle://proof\SB030\transcripts\red-team-manager-diagnostics-shallow-proof-rejection.txt => True
+bundle://proof\SB030\manifest.md => True
+bundle://proof\SB030\semantic-invariants.md => True
+Command: rg -n "SB030_INV_001|SB030_INV_002|SB030_INV_003" proof/SB030/semantic-invariants.md proof/SB030/transcripts/red-team-manager-diagnostics-shallow-proof-rejection.txt
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB030\semantic-invariants.md:3:## SB030_INV_001 Typed Diagnostics Readback DTO
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB030\semantic-invariants.md:13:## SB030_INV_002 API-Smoke Diagnostics Projection
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB030\semantic-invariants.md:24:## SB030_INV_003 Facade And Durable Audit Boundary
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB030\transcripts\red-team-manager-diagnostics-shallow-proof-rejection.txt:6:- SB030_INV_001: manager diagnostics readback must expose a typed DTO with diagnostics, audit records, lane/run/step identity, and mutation-denial flags.
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB030\transcripts\red-team-manager-diagnostics-shallow-proof-rejection.txt:7:- SB030_INV_002: diagnostics readback must have an API-smoke proof that serializes diagnostics and auditRecords while preserving no-mutation permissions.
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB030\transcripts\red-team-manager-diagnostics-shallow-proof-rejection.txt:8:- SB030_INV_003: readback must use the manager facade and durable audit query boundary rather than UI-only labels or direct process-state mutation paths.
+Exit code: 0

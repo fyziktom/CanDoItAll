@@ -1,0 +1,6 @@
+SB063 Gate U final anti-stub audit
+Scan scope: changed production/test/docs plus final Gate U proof inputs.
+docs\process-runtime-restoration-ledger.md:43:- Live OpenAI smoke remains opt-in. Deterministic fake-provider and process-runtime tests must not be reported as live OpenAI proof.
+src\CanDoItAll.Modules.Processes\README.md:81:- Required artifacts cannot be treated as satisfied when validation reports missing, invalid, stale, wrong-producer, placeholder-only, unavailable, or hash-mismatched evidence.
+src\CanDoItAll.Modules.Processes\README.md:194:| Required output appears complete but the run is still blocked | Read run detail health, `invariantDiagnostics`, step `blockReasonCode`, `recoveryOptions`, and artifact status fields projected by `ProcessArtifactStatusProjectionService`. | Treat missing, invalid, stale, wrong-producer, placeholder-only, unavailable, or hash-mismatched records as unsatisfied. Record a new current-run artifact instead of editing status text. |
+Classification: matches are existing negative-proof, fake-provider, placeholder-only artifact-status, or red-team vocabulary; no Gate U implementation shortcut, placeholder closure, or default-return runtime path was introduced.

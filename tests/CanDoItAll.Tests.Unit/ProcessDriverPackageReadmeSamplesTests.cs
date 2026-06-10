@@ -93,6 +93,28 @@ public sealed class ProcessDriverPackageReadmeSamplesTests
     }
 
     [Fact]
+    public void Process_driver_package_readmes_SB040_INV_001_documents_verification_pack_manifest_without_registration_or_discovery()
+    {
+        var readme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");
+
+        Assert.Contains("Verification-Pack Manifest Contract", readme, StringComparison.Ordinal);
+        Assert.Contains("review artifact for packaging and compatibility only", readme, StringComparison.Ordinal);
+        Assert.Contains("must not be loaded by production code for registration or discovery", readme, StringComparison.Ordinal);
+        Assert.Contains("packId", readme, StringComparison.Ordinal);
+        Assert.Contains("contractVersion", readme, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverContractVersion.Current", readme, StringComparison.Ordinal);
+        Assert.Contains("lanes", readme, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverVerificationGatewayLane", readme, StringComparison.Ordinal);
+        Assert.Contains("ProcessDriverPermissionMode.VerificationOnly", readme, StringComparison.Ordinal);
+        Assert.Contains("noRuntimeRegistration", readme, StringComparison.Ordinal);
+        Assert.Contains("noSelfDiscovery", readme, StringComparison.Ordinal);
+        Assert.Contains("noExecutionCapableDrivers", readme, StringComparison.Ordinal);
+        Assert.Contains("must not contain type names used for reflection", readme, StringComparison.Ordinal);
+        Assert.Contains("Consumers must keep using typed gateway methods", readme, StringComparison.Ordinal);
+        AssertNoRuntimeOrExternalAccessSamples(readme);
+    }
+
+    [Fact]
     public void Process_driver_package_readmes_SB043_SB044_INV_001_gateway_and_process_migration_docs_match_current_batch_orchestration_source()
     {
         var gatewayReadme = ReadPackageReadme("CanDoItAll.Processes.Drivers.VerificationGateway");

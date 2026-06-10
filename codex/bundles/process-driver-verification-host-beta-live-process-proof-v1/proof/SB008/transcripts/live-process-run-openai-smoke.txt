@@ -1,0 +1,39 @@
+Command:
+$env:CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION='true'
+$env:CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE='true'
+dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --filter FullyQualifiedName~LiveProcessRunOpenAiSmokeIntegrationTests --logger "console;verbosity=normal"
+
+Environment classification:
+- CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION: true for this command only.
+- CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE: true for this command only.
+- OPENAI_API_KEY: present; value not printed.
+- CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL: not set; test used ManagedSeedProviderFallbacks.OpenAiDefaultModel.
+- CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS: not set; test used 180 seconds.
+- CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS: not set; test used 250000 total-token ceiling.
+
+Observed output excerpt:
+Test run for C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Total test files matching the specified pattern: 1
+[xUnit.net 00:01:07.20] Finished: CanDoItAll.Tests.Integration
+Passed CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage [1 m 6 s]
+
+Test run successful.
+Total tests: 1
+Passed: 1
+Total time: 1.1365 Minutes
+
+Semantic assertions executed by the test:
+- The process run is created with ProcessesService.StartRunAsync.
+- The AI party is bound through AiAgentService and resolved with ProcessesService.ResolveAssignmentAsync.
+- Dispatch occurs through IProcessRunAutomationDispatchService.DispatchAsync.
+- The AgentFramework execution run is queried by ProcessRunId and ProcessStepId.
+- ExecutionRun state is Completed and outcome is Succeeded.
+- ExecutionRun.RequestedBy is process-automation-dispatch.
+- ExecutionRun.SourceKind is process-step.
+- ExecutionRun.ProcessRunId and ExecutionRun.ProcessStepId match the Process module run and step.
+- ProviderName and model match the configured OpenAI provider/model.
+- Provider usage observations exist for the same process run and step.
+- Total provider-usage tokens are in range 1..250000.
+
+Conclusion: live OpenAI process-run smoke passed as actual process-run dispatch proof, not workspace-only specialist proof or skipped-test proof.
+ExitCode: 0

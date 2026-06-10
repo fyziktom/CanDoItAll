@@ -1,0 +1,19 @@
+SB027 Gate I proof index
+Working directory: C:\repositories\CanDoItAll
+Run label: Gate I artifact existence and invariant index
+bundle://proof\SB025\transcripts\manager-facade-focused-tests.txt => True
+bundle://proof\SB025\transcripts\manager-facade-contract-source-assertions.txt => True
+bundle://proof\SB026\transcripts\manager-facade-guard-focused-tests.txt => True
+bundle://proof\SB026\transcripts\manager-facade-guard-source-assertions.txt => True
+bundle://proof\SB027\transcripts\gate-i-source-diff-and-anti-stub-audit.txt => True
+bundle://proof\SB027\transcripts\red-team-manager-facade-shallow-proof-rejection.txt => True
+bundle://proof\SB027\manifest.md => True
+bundle://proof\SB027\semantic-invariants.md => True
+Command: rg -n "SB027_INV_001|SB027_INV_002|SB027_INV_003" proof/SB027/semantic-invariants.md proof/SB027/transcripts/red-team-manager-facade-shallow-proof-rejection.txt
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB027\semantic-invariants.md:3:## SB027_INV_001 Stable Async Manager Facade
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB027\semantic-invariants.md:13:## SB027_INV_002 Requester, Projection, Query, And Denial Guards
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB027\semantic-invariants.md:24:## SB027_INV_003 Durable Audit Readback Boundary
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB027\transcripts\red-team-manager-facade-shallow-proof-rejection.txt:6:- SB027_INV_001: manager read-only verification must expose a stable async facade contract with structured success and denial results.
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB027\transcripts\red-team-manager-facade-shallow-proof-rejection.txt:7:- SB027_INV_002: manager read-only facade requests and audit queries must require a requester identity, validate projection/query options, and remain mutation-free.
+codex\bundles\process-driver-verification-host-beta-live-process-proof-v1\proof\SB027\transcripts\red-team-manager-facade-shallow-proof-rejection.txt:8:- SB027_INV_003: manager audit readback must consume the durable audit query boundary instead of enumerating process runtime state or in-memory-only command state.
+Exit code: 0

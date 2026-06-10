@@ -125,6 +125,10 @@ Use `ProcessReadOnlyVerificationPayloadBuilder` to build lane payloads from alre
 
 Migration from lane-by-lane adapter calls should keep request construction typed: create the relevant lane payloads, pass them into `ProcessReadOnlyVerificationBatchPayload`, then call `ProcessReadOnlyVerificationBatchOrchestrator.Verify`. Consume the returned lane observation lists, `Responses`, and `AggregateObservation` as diagnostic read-only evidence only.
 
+For operator-facing verification diagnostics, use `IProcessManagerReadOnlyVerificationFacade.VerifyForReadbackAsync` over the same read-only payload shape. `ProcessManagerReadOnlyVerificationReadbackDto` is the current source-backed readback contract and must carry process-run id, step-run id, caller context, projection metadata, diagnostics, `auditRecords`, `observationHash`, `denialCategory`, `denialCode`, `denialMessage`, `noMutationPerformed = true`, and false mutation permission flags.
+
+`ProcessVerificationHostFailureCategory` and `ProcessVerificationHostDenialCode` are troubleshooting taxonomy. They do not approve execution-capable drivers, dependency-injection registration, scheduler/workflow hooks, manager commands, external calls, storage/workspace writes, finalizer application, transition application, claim mutation, retry scheduling, or process mutation.
+
 Do not add a generic runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, file/network access, storage/workspace write, or process mutation while migrating to the batch orchestrator.
 
 ## Runtime Host Roadmap Decision
@@ -133,18 +137,19 @@ Current status: `Not approved`.
 
 The process runtime now has source-backed proof for UI start, run persistence, dispatch/finalizer behavior, deterministic software and business-analysis scenarios, manager-visible read-only projection, and scheduler/workflow-origin process starts. That proof makes read-only verification projection useful, but it does not approve a generic process-driver runtime host.
 
-Release-candidate validation as of 2026-06-09:
+Release-candidate validation refreshed on 2026-06-10:
 
 - `dotnet build CanDoItAll.slnx --configuration Debug` passed with 0 warnings and 0 errors.
-- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build` passed with 1,134 tests.
-- A focused process integration matrix passed with 199 tests across run lifecycle, outbox dispatch, workflow/direct-agent execution, deterministic process scenarios, trigger-origin starts, read-only diagnostics, boundary guards, hosted-worker policy, and failure observability.
-- A focused Playwright matrix passed at 1900x1200 for global process start, blocked run recovery readback, and project-structure output navigation.
+- `dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build` passed with 1,136 tests.
+- A focused verification host/readback/security integration matrix passed with 34 tests.
+- A focused operator API smoke passed with 2 tests for manager diagnostics readback and process-run detail verification audit readback.
+- The existing focused Playwright matrix remains the UI proof at 1900x1200 for global process start, blocked run recovery readback, and project-structure output navigation; no UI route changed for the verification-host operator smoke API path.
 - Source scans found no active bundle-path leakage and no process driver runtime host, registry, selector, manager command, endpoint mapping, scheduler hook, workflow hook, or driver mutation surface.
 
 Approved current shape:
 
 - Processes may call typed read-only verification adapters over already-loaded caller-supplied facts.
-- Manager-visible diagnostics may project those read-only observations without process mutation.
+- Manager-visible diagnostics and verification audit readback may project those read-only observations without process mutation.
 - Scheduler and workflow-origin process starts must use typed process services, not driver hooks.
 
 Future approval gate:
@@ -192,6 +197,7 @@ Use current-run readbacks before changing state. Start with run detail and narro
 | Project-structure output is too noisy or points to stale receipts | Inspect Workbench projection through `ProjectStructureProcessRunFolderProjectionPolicy`. | Project current-run managed roots and generated or external-delivery output roots; ignore wrong-run, dated receipt, traversal, absolute, and unanchored paths. |
 | A live UI-driven run looks seeded | Read the selected `ProcessTemplateLiveRunProfile` or `ProcessTemplateLiveRunProfileSummary.FreshRunPolicy`. | Reject baseline transitions/artifacts as live proof. Require current-run evidence checks before validation and project-structure writeback. |
 | Process tools are absent from an AgentFramework run | Inspect runtime DI for `IAgentRuntimeToolProvider`, confirm `ProcessAgentRuntimeToolProvider` is registered, check MAF progress for the provider key/display name and expected 23-tool attachment, and inspect receipt or trace `RuntimeToolProviderKey` when available. | Fix module/provider registration or agent process access metadata. Do not add a direct MAF reference to Processes. |
+| Verification host diagnostics are missing or denied | Inspect `ProcessManagerReadOnlyVerificationReadbackDto` for `diagnosticCount`, `auditRecords`, `observationHash`, `denialCategory`, `denialCode`, `denialMessage`, and mutation-denial flags. | Treat the result as read-only troubleshooting evidence. Fix payload, lane, or host policy issues; do not register drivers, invoke a runtime host, or mutate process state. |
 
 ## Migration Notes And Open Blockers
 

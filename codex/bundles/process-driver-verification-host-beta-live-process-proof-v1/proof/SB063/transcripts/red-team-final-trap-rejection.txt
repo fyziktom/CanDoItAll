@@ -1,0 +1,18 @@
+# SB063 Red-Team Final Trap Rejection
+
+## Rejected Traps
+- Report-only closure is rejected. Critical gates through SB060 have manifests, semantic invariants, command transcripts, source assertions, anti-stub audits, red-team proof, and validator output; SB061-SB063 add final focused trap tests and scans before final closure.
+- Live-skip-as-pass is rejected. `final-live-process-run-skip-path.txt` runs with live flags cleared and is classified only as disabled-path proof. The prior SB008 live OpenAI proof remains the only live process-run provider proof, and deterministic/fake-provider tests are not reclassified as live evidence.
+- Generic-host approval is rejected. Unit guards and docs assert prerequisites are `Not satisfied`, premature surfaces are `Blocked`, runtime host status is `Not approved`, and production source has no runtime host, registry, selector, DI registration, manager command, scheduler/workflow hook, or mutation permission.
+- Non-empty diagnostics as approval is rejected. Operator readback is documented and tested as troubleshooting evidence with audit records, hashes, denial taxonomy, and false mutation permission flags.
+- Docs-only optimism is rejected. Gate T added a repository doc guard and Gate U final scans reject current-bundle leakage, changed-doc bundle coupling, raw OpenAI key patterns, UI drift, Core dependency drift, and runtime approval claims.
+
+## Accepted Positive Proof
+- `bundle://proof/SB061/transcripts/final-trap-unit-guards.txt` passed 4/4 unit guards for future execution gates, next-bundle denial, backlog blocking, and docs readback denial posture.
+- `bundle://proof/SB061/transcripts/final-live-process-run-skip-path.txt` passed the disabled live process-run smoke path with live flags cleared.
+- `bundle://proof/SB061/transcripts/final-trap-source-assertions.txt` binds skip-path source, env flags, OpenAI key guard, execution-capable prerequisites, and denial docs to source.
+- `bundle://proof/SB062/transcripts/final-source-scans.txt` is clean for current bundle leakage, changed-doc bundle coupling, runtime hooks, mutation flags, Core dependency drift, raw OpenAI key patterns, and UI/Playwright drift.
+- `bundle://proof/SB063/transcripts/gate-u-final-anti-stub-audit.txt` classifies remaining terms as negative-proof or artifact-status vocabulary.
+
+## Result
+Gate U rejects the final shallow-pass traps and permits final closure only as source-backed, manifest-backed, validator-backed evidence with live-provider classification preserved and runtime-host authority still denied.

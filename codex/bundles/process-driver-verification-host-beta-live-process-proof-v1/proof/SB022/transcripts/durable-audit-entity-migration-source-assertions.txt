@@ -1,0 +1,55 @@
+Command: rg -n "ProcessVerificationAuditEntry|Processes_VerificationAuditRecords|EfCoreProcessVerificationAuditStore|IProcessVerificationAuditQueryService|ProcessVerificationAuditQuery|AddProcessVerificationAuditRecords|CurrentPostgreSqlMigrationIds|MarkPostgreSqlMigrationAppliedAsync" <durable audit source files>
+Working directory: C:\repositories\CanDoItAll
+Run label: SB022 durable audit entity and migration source assertions
+
+tests\CanDoItAll.Tests.Integration\DatabaseMigrationIntegrationTests.cs:15:    private const string ProcessVerificationAuditRecordsMigrationId = "20260610113813_AddProcessVerificationAuditRecords";
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:220:    private const string ProcessVerificationAuditRecordsMigrationId = "20260610113813_AddProcessVerificationAuditRecords";
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:222:    private static readonly string[] CurrentPostgreSqlMigrationIds =
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:372:                $"PostgreSQL profile '{profile.Profile.DisplayName}' has CanDoItAll tables but does not match the current PostgreSQL migration chain. Missing schema requirements: {string.Join(", ", missingRequirements)}. Refusing to record migrations {string.Join(", ", CurrentPostgreSqlMigrationIds)} automatically.");
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:378:            string.Join(", ", CurrentPostgreSqlMigrationIds));
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:383:        foreach (var migrationId in CurrentPostgreSqlMigrationIds) {
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:385:                await MarkPostgreSqlMigrationAppliedAsync(dbContext, migrationId, cancellationToken);
+src\CanDoItAll.Composition\RuntimeHostServiceCollectionExtensions.cs:501:    private static Task MarkPostgreSqlMigrationAppliedAsync(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:17:internal interface IProcessVerificationAuditQueryService
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:22:        ProcessVerificationAuditQuery query,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:26:internal sealed record ProcessVerificationAuditQuery
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:30:    public ProcessVerificationAuditQuery(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:59:internal sealed class InMemoryProcessVerificationAuditStore : IProcessVerificationAuditStore, IProcessVerificationAuditQueryService
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:100:        ProcessVerificationAuditQuery query,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:121:internal sealed class EfCoreProcessVerificationAuditStore(
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:123:    ISecretRedactor secretRedactor) : IProcessVerificationAuditStore, IProcessVerificationAuditQueryService
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:133:        await dbContext.Set<ProcessVerificationAuditEntry>().AddAsync(ToEntry(sanitizedRecord), cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:140:        return await ListAsync(new ProcessVerificationAuditQuery(limit: ProcessVerificationAuditQuery.MaximumLimit), cancellationToken);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:146:        var entry = await dbContext.Set<ProcessVerificationAuditEntry>()
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:154:        ProcessVerificationAuditQuery query,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:160:        var records = dbContext.Set<ProcessVerificationAuditEntry>().AsNoTracking();
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:200:    private static ProcessVerificationAuditEntry ToEntry(ProcessVerificationAuditRecord record)
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:202:        return new ProcessVerificationAuditEntry
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationAuditStore.cs:221:    private static ProcessVerificationAuditRecord ToRecord(ProcessVerificationAuditEntry entry)
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:57:        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditStore, EfCoreProcessVerificationAuditStore>());
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:58:        services.Replace(ServiceDescriptor.Scoped<IProcessVerificationAuditQueryService>(provider =>
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:59:            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>()));
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:119:        services.TryAddSingleton<IProcessVerificationAuditQueryService>(provider =>
+src\CanDoItAll.Modules.Processes\Services\ProcessesModuleServiceCollectionExtensions.cs:120:            (IProcessVerificationAuditQueryService)provider.GetRequiredService<IProcessVerificationAuditStore>());
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:8:    public partial class AddProcessVerificationAuditRecords : Migration
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:13:                name: "Processes_VerificationAuditRecords",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:33:                    table.PrimaryKey("PK_Processes_VerificationAuditRecords", x => x.Id);
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:37:                name: "IX_Processes_VerificationAuditRecords_Lane",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:38:                table: "Processes_VerificationAuditRecords",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:42:                name: "IX_Processes_VerificationAuditRecords_ObservationHash",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:43:                table: "Processes_VerificationAuditRecords",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:47:                name: "IX_Processes_VerificationAuditRecords_ProcessRunId_RecordedAtU~",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:48:                table: "Processes_VerificationAuditRecords",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:52:                name: "IX_Processes_VerificationAuditRecords_StepRunId_RecordedAtUtc",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:53:                table: "Processes_VerificationAuditRecords",
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.cs:60:                name: "Processes_VerificationAuditRecords");
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:13101:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\AppDbContextModelSnapshot.cs:13162:                    b.ToTable("Processes_VerificationAuditRecords", (string)null);
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:15:    [Migration("20260610113813_AddProcessVerificationAuditRecords")]
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:16:    partial class AddProcessVerificationAuditRecords
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:13103:            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+src\CanDoItAll.Migrations.PostgreSql\Migrations\20260610113813_AddProcessVerificationAuditRecords.Designer.cs:13164:                    b.ToTable("Processes_VerificationAuditRecords", (string)null);
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:480:internal sealed class ProcessVerificationAuditEntryConfiguration : IEntityTypeConfiguration<ProcessVerificationAuditEntry>
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:482:    public void Configure(EntityTypeBuilder<ProcessVerificationAuditEntry> builder)
+src\CanDoItAll.Modules.Processes\Persistence\Configurations\ProcessRuntimeEntityConfigurations.cs:484:        builder.ToTable("Processes_VerificationAuditRecords");
+src\CanDoItAll.Modules.Processes\Persistence\Entities\ProcessVerificationAuditEntry.cs:5:internal sealed class ProcessVerificationAuditEntry

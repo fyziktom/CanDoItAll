@@ -1,7 +1,7 @@
 # SB002 — No transient bundle-path source/test guard
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 No transient bundle-path source/test guard as part of P01: Source and proof reconciliation.
@@ -30,7 +30,7 @@ No transient bundle-path source/test guard as part of P01: Source and proof reco
 - Noncritical proof may roll up into the next critical gate, but must still have source-backed transcript references.
 
 ## Dependency Impact
-Downstream phases must not proceed if this subbundle weakens process runtime launch, verification host no-mutation guarantees, Core dependency cleanliness, or live OpenAI policy.
+- Downstream phases must not proceed if this subbundle weakens process runtime launch, verification host no-mutation guarantees, Core dependency cleanliness, or live OpenAI policy.
 
 ## Validation Depth
 - Build/focused tests when source changes.
@@ -56,11 +56,15 @@ Downstream phases must not proceed if this subbundle weakens process runtime lau
 - Do not claim live-provider functionality from a skipped test.
 
 ## Acceptance Checklist
-- [ ] Objective is implemented or explicitly rejected with source-backed reason.
-- [ ] Existing runtime behavior is preserved.
-- [ ] No prohibited dependency or mutation surface is introduced.
-- [ ] Proof transcripts are captured.
-- [ ] Execution report row is updated.
+- [x] Objective is implemented or explicitly rejected with source-backed reason.
+- [x] Existing runtime behavior is preserved.
+- [x] No prohibited dependency or mutation surface is introduced.
+- [x] Proof transcripts are captured.
+- [x] Execution report row is updated.
+
+## Proof Captured
+- `bundle://proof/SB002/transcripts/transient-bundle-path-guard.txt`
+- `bundle://proof/SB002/transcripts/current-bundle-path-source-scan.txt`
 
 ## Proof Required
 - Source assertions.
@@ -69,10 +73,10 @@ Downstream phases must not proceed if this subbundle weakens process runtime lau
 - Roll-up proof into nearest critical gate.
 
 ## Browser Validation Logging
-N/A unless UI route, manager diagnostics UI, or live process-run UI proof is changed. Large desktop only.
+- N/A unless UI route, manager diagnostics UI, or live process-run UI proof is changed. Large desktop only.
 
 ## Progression Gate
-Standard: downstream phase may continue only after source-backed proof exists or a critical gate owns it.
+- Standard: downstream phase may continue only after source-backed proof exists or a critical gate owns it.
 
 ## Suggested Agent Prompt
 Implement SB002 for `process-driver-verification-host-beta-live-process-proof-v1`. Re-read current source first, avoid report-only closure, preserve no-mutation and Core genericity guarantees, and capture proof before updating status.

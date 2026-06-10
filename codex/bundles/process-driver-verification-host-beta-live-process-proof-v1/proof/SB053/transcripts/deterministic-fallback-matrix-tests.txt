@@ -1,0 +1,5 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-build --filter "FullyQualifiedName~SeedBaselineAsync_supports_global_then_project_scoped_baselines_without_slug_collisions|FullyQualifiedName~Business_plan_process_runs_with_business_artifacts_evidence_and_statuses|FullyQualifiedName~Workflow_repair_process_routes_qa_rejection_repair_recheck_and_release"
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+
+Úspěšné!    - Neúspěšné:     0, Úspěšné:     3, Přeskočeno:     0, Celkem:     3, Doba trvání: 56 s - CanDoItAll.Tests.Integration.dll (net10.0)

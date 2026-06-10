@@ -1,0 +1,22 @@
+# SB053 Live Smoke Summary And Deterministic Fallback Matrix
+
+Live process-run OpenAI proof:
+- Transcript: bundle://proof/SB008/transcripts/live-process-run-openai-smoke.txt
+- SHA256: 1b651075903f9bb4a272ded326b3bf8e9fabcbe0b0c512f8dbc3599b8fbe4759
+- Status: Passed previously in this bundle with both live flags enabled and OPENAI_API_KEY present; key value was not printed.
+- Scope: real Process module run through ProcessesService.StartRunAsync, assignment resolution, IProcessRunAutomationDispatchService.DispatchAsync, AgentFramework execution run linked to ProcessRunId/ProcessStepId, provider usage observations, and total token ceiling 1..250000.
+
+Live strict-skip and budget controls:
+- Strict disabled path: bundle://proof/SB008/transcripts/live-process-run-strict-skip-test.txt (ee2930355ac73a20411851789984847194b1fad5746af421207769b946492a56)
+- Budget red-team: bundle://proof/SB008/transcripts/live-process-run-budget-red-team.txt (5d6ff7a1421c1247a00d70939dcbafc594c1cf46696d205f315f87f0df17efb2)
+- Current SB053 action: no live provider call was rerun; release-candidate proof references the existing opt-in live transcript and preserves the policy that skipped tests are not live proof.
+
+Deterministic fallback matrix:
+- Transcript: bundle://proof/SB053/transcripts/deterministic-fallback-matrix-tests.txt
+- SHA256: 0184f63252fe6a53a81919baf5a851166bc0cd3c5aa83cd70fd56d74fd9527fb
+- Status: Passed locally in SB053.
+- Covered tests: baseline seed global/project scope, non-software business-analysis process scenario, and deterministic workflow repair/recheck/release routing.
+
+Release-candidate conclusion:
+- Live proof remains classified as actual process-run OpenAI smoke from SB008, not workspace-only specialist proof and not a skipped test.
+- Deterministic fallback proof is current for SB053 and does not replace the live transcript.

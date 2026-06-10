@@ -1,0 +1,16 @@
+Command: SB003 Gate A proof index file existence, execution-report citation, and invariant binding check
+WorkingDirectory: repo://.
+Invariant IDs: SB003-INV-001
+
+PASS: bundle://proof/SB001/transcripts/source-reconciliation.txt
+PASS: bundle://proof/SB001/transcripts/prepared-validator-after-bundle-repair.txt
+PASS: bundle://proof/SB002/transcripts/transient-bundle-path-guard.txt
+PASS: bundle://proof/SB002/transcripts/current-bundle-path-source-scan.txt
+PASS: bundle://proof/SB003/transcripts/source-scan-and-anti-stub-audit.txt
+PASS: bundle://proof/SB003/transcripts/red-team-report-only-proof-rejection.txt
+PASS: bundle://proof/SB003/manifest.md
+PASS: bundle://proof/SB003/semantic-invariants.md
+PASS: reviews/01-execution-report.md cites SB003 manifest and semantic invariants
+
+PASS: SB003 baseline gate has source reconciliation, transient path guard, anti-stub scan, red-team rejection, manifest, semantic invariants, and execution-report citations.
+ExitCode: 0

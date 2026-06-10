@@ -1,0 +1,15 @@
+# Gate Q Red-Team Rejection
+
+Rejected shallow closure patterns:
+- A redaction test that calls the redactor directly but never exercises verification diagnostics, audit facts, manager readback, or audit hashes.
+- A passing verification result that logs or serializes raw access tokens, generic secrets, emails, connection strings, bearer tokens, or passwords.
+- Audit persistence that stores raw requester secrets or drops observation hashes/no-mutation flags.
+- Treating redaction-only proof as approval for external calls, workspace writes, storage writes, or process mutation.
+- Report-only security closure with no malicious corpus, no source assertions, no production source scan, and no anti-stub audit.
+
+Required positive proof retained:
+- Malicious corpus covers access token, bearer token, password, generic secret, email, and connection-string fragments.
+- Redaction policy reports typed redaction kinds and SHA-256 redacted text hash.
+- Manager readback JSON, diagnostics, stored audit requester, and audit hashes do not contain raw corpus fragments.
+- Production C# source scan finds no raw corpus fragments.
+- Boundary source scan rejects runtime hooks and mutation/external/workspace/storage permission drift.

@@ -1,0 +1,10 @@
+Command: rg -n "NotImplementedException|TODO|stub|fake|return default|throw new NotSupportedException|throw new NotImplementedException|codex\\bundles|process-driver-verification-host-beta-live-process-proof-v1" src\CanDoItAll.Processes.Core src\CanDoItAll.Processes.Drivers.Abstractions tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1185:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1551:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:1552:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2789:    public void Step_completion_finalizer_gate_b_SB08_INV_001_extracts_types_and_readers_without_surface_or_stub_drift()
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2820:        Assert.DoesNotContain("TODO", extractedSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2821:        Assert.DoesNotContain("NotImplementedException", extractedSource, StringComparison.Ordinal);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2878:        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
+tests\CanDoItAll.Tests.Unit\ProcessAgentExecutionBoundaryArchitectureTests.cs:2879:        Assert.DoesNotContain("NotImplementedException", helperSource, StringComparison.Ordinal);
+Result: Only allowed negative test guard assertions matched stub/TODO terms; no implementation placeholder, default-return, unsupported-throw, fake, or current-bundle path tokens found.

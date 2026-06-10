@@ -1,0 +1,78 @@
+SB056 process run detail verification audit source assertions
+Test proves process-run and step-scoped readback projects verification audit records, denial metadata, hashes, and no-mutation flags.
+Pattern: Process_run_detail_verification_audit_readback_SB056_INV_001
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:856:    public async Task Process_run_detail_verification_audit_readback_SB056_INV_001_projects_process_step_audit_and_denial_metadata_without_mutation()
+Pattern: process-run-detail:verification-audit-readback
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:869:            "process-run-detail:verification-audit-readback",
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:888:        Assert.Equal("process-run-detail:verification-audit-readback", root.GetProperty("callerContext").GetString());
+Pattern: denialCategory
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:892:        Assert.Equal((int)ProcessVerificationHostFailureCategory.OperationalPolicy, root.GetProperty("denialCategory").GetInt32());
+Pattern: denialCode
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:893:        Assert.Equal((int)ProcessVerificationHostDenialCode.HostDisabled, root.GetProperty("denialCode").GetInt32());
+Pattern: denialMessage
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:894:        Assert.Contains("disabled by options", root.GetProperty("denialMessage").GetString(), StringComparison.Ordinal);
+Pattern: AcceptedCount
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:353:    int AcceptedCount,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:464:            record.AcceptedCount,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:150:        Assert.Equal(2, observation.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:207:        Assert.Equal(5, aggregate.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:502:            Assert.Equal(0, denial.AuditRecord.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:749:        Assert.Equal(0, auditRecord.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1320:        Assert.Equal(1, artifactSummary.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1414:        Assert.Equal(2, aggregate.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1419:        Assert.Equal(1, officeSummary.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1423:        Assert.Equal(1, businessSummary.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1543:        Assert.Equal(0, aggregate.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1548:        Assert.Equal(0, officeSummary.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1553:        Assert.Equal(0, businessSummary.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1628:        Assert.Equal(observation.ResponseCount, envelope.AcceptedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1712:        Assert.Equal(5, aggregate.AcceptedCount);
+Pattern: DeniedCount
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:354:    int DeniedCount,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:465:            record.DeniedCount,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:151:        Assert.Equal(1, observation.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:208:        Assert.Equal(0, aggregate.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:376:        Assert.Equal(1, invalidDenial.AuditRecord.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:386:        Assert.Equal(1, emptyDenial.AuditRecord.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:503:            Assert.Equal(1, denial.AuditRecord.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:750:        Assert.Equal(1, auditRecord.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1321:        Assert.Equal(0, artifactSummary.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1415:        Assert.Equal(0, aggregate.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1420:        Assert.Equal(0, officeSummary.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1424:        Assert.Equal(0, businessSummary.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1544:        Assert.Equal(3, aggregate.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1549:        Assert.Equal(1, officeSummary.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1554:        Assert.Equal(2, businessSummary.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1629:        Assert.Equal(0, envelope.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1713:        Assert.Equal(0, aggregate.DeniedCount);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1957:        Assert.Equal(1, denial.AuditRecord.DeniedCount);
+Pattern: AllowsFinalizerMutation
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:87:            hostResponse.AllowsFinalizerMutation));
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:110:            AllowsFinalizerMutation: false);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:277:    public bool AllowsFinalizerMutation => Response?.AllowsFinalizerMutation ?? Denial?.AllowsFinalizerMutation ?? false;
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:306:    bool AllowsFinalizerMutation);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:314:    bool AllowsFinalizerMutation);
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:336:    bool AllowsFinalizerMutation,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:358:    bool AllowsFinalizerMutation,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:408:            response.AllowsFinalizerMutation,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:439:            denial.AllowsFinalizerMutation,
+src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationCommandService.cs:469:            record.AllowsFinalizerMutation,
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:261:        Assert.False(response.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:375:        Assert.False(invalidDenial.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:385:        Assert.False(emptyDenial.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:497:            Assert.False(denial.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:535:        Assert.False(result.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:571:        Assert.False(result.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:581:        Assert.False(response.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:594:        Assert.False(auditReadback.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:648:        Assert.False(result.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:695:        Assert.False(readback.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:754:        Assert.False(auditRecord.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:759:        Assert.False(readback.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:946:        Assert.False(schedulerJob.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1105:            Assert.False(record.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1171:        Assert.False(readback.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1189:        Assert.False(auditRecord.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1580:        Assert.False(projection.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1621:        Assert.False(noneProjection.AllowsFinalizerMutation);
+tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs:1956:        Assert.False(denial.AllowsFinalizerMutation);

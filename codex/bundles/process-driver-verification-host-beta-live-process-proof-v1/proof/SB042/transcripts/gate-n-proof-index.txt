@@ -1,0 +1,21 @@
+# Gate N Proof Index
+
+Scope:
+- SB040 Define verification-pack manifest docs/tests.
+- SB041 Prove no self-registration/discovery.
+- SB042 Critical Gate N pack boundary.
+
+Proof artifacts:
+- bundle://proof/SB040/transcripts/verification-pack-manifest-doc-tests.txt
+- bundle://proof/SB040/transcripts/verification-pack-manifest-source-assertions.txt
+- bundle://proof/SB041/transcripts/no-self-registration-discovery-source-scan.txt
+- bundle://proof/SB042/transcripts/gate-n-verification-pack-doc-tests.txt
+- bundle://proof/SB042/transcripts/gate-n-pack-boundary-anti-stub-audit.txt
+- bundle://proof/SB042/transcripts/red-team-pack-boundary-shallow-proof-rejection.txt
+- bundle://proof/SB042/semantic-invariants.md
+
+Critical gate result:
+- Verification-pack manifest README tests passed 3/3.
+- Driver package source scan found no self-registration or discovery hooks.
+- Pack boundary anti-stub audit found no placeholder or bundle-path coupling tokens.
+- Manifest contract remains a review artifact only, not a runtime descriptor.

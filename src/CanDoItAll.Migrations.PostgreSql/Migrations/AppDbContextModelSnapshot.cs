@@ -13098,6 +13098,70 @@ namespace CanDoItAll.Migrations.PostgreSql.Migrations
                     b.ToTable("Processes_StepRuns", (string)null);
                 });
 
+            modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessVerificationAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AcceptedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("AllowsFinalizerMutation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowsProcessMutation")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowsTransitionMutation")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("DeniedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Lane")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<bool>("NoMutationPerformed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ObservationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ProcessRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("RecordedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RequestedBy")
+                        .IsRequired()
+                        .HasMaxLength(240)
+                        .HasColumnType("character varying(240)");
+
+                    b.Property<int>("ResponseCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("StepRunId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Lane");
+
+                    b.HasIndex("ObservationHash");
+
+                    b.HasIndex("ProcessRunId", "RecordedAtUtc");
+
+                    b.HasIndex("StepRunId", "RecordedAtUtc");
+
+                    b.ToTable("Processes_VerificationAuditRecords", (string)null);
+                });
+
             modelBuilder.Entity("CanDoItAll.Modules.Processes.ProcessWorkBrief", b =>
                 {
                     b.Property<Guid>("Id")

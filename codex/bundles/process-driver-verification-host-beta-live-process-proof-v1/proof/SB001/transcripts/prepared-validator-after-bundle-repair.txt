@@ -1,0 +1,4 @@
+Command: python 'C:\repositories\CanDoItAll\codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py' --stage prepared --profile initiative --repo-root 'C:\repositories\CanDoItAll' --bundle-root 'C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1' 'C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1'
+ExitCode: 0
+
+Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-verification-host-beta-live-process-proof-v1

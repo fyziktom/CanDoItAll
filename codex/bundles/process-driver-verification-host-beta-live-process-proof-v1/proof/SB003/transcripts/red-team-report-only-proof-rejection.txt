@@ -1,0 +1,6 @@
+Command: SB003 red-team fake report-only closure rejection
+WorkingDirectory: repo://.
+Invariant IDs: SB003-INV-001
+Input: | SB003 | Passed | Passed | Checked | Passed | prose-only, no artifact-backed transcript, no source assertions |
+Result: rejected because report rows without bundle://proof/SB003/manifest.md, bundle://proof/SB003/semantic-invariants.md, source scans, and transcripts cannot close a critical gate.
+ExitCode: 1

@@ -1,0 +1,73 @@
+SB014 structured non-throwing denial source assertions
+
+## Structured denial result models
+Command: rg -n ProcessVerificationHostResult|ProcessVerificationHostDenial|ProcessVerificationHostDenialCode|MissingLanePayload|NoResponsesProduced src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationRuntimeHostModels.cs
+45:internal sealed record ProcessVerificationHostResult
+47:    private ProcessVerificationHostResult(
+48:        ProcessVerificationHostResultStatus Status,
+50:        ProcessVerificationHostDenial? denial)
+52:        if (Status == ProcessVerificationHostResultStatus.Succeeded && response is null)
+57:        if (Status == ProcessVerificationHostResultStatus.Denied && denial is null)
+67:    public ProcessVerificationHostResultStatus Status { get; }
+71:    public ProcessVerificationHostDenial? Denial { get; }
+73:    public bool IsSuccess => Status == ProcessVerificationHostResultStatus.Succeeded;
+75:    public bool IsDenied => Status == ProcessVerificationHostResultStatus.Denied;
+77:    public static ProcessVerificationHostResult Succeeded(ProcessVerificationHostResponse response)
+80:        return new ProcessVerificationHostResult(ProcessVerificationHostResultStatus.Succeeded, response, denial: null);
+83:    public static ProcessVerificationHostResult Denied(ProcessVerificationHostDenial denial)
+86:        return new ProcessVerificationHostResult(ProcessVerificationHostResultStatus.Denied, response: null, denial);
+90:internal enum ProcessVerificationHostResultStatus
+96:internal enum ProcessVerificationHostDenialCode
+100:    MissingLanePayload,
+101:    NoResponsesProduced
+104:internal sealed record ProcessVerificationHostDenial(
+105:    ProcessVerificationHostDenialCode Code,
+Result: PASSED - required source assertions found.
+
+## Non-throwing denial implementation
+Command: rg -n Deny\(|CreateDenial|MissingLanePayload|UnsupportedLane|NoResponsesProduced|auditStore.Append src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationRuntimeHost.cs
+49:        if (denial.Code == ProcessVerificationHostDenialCode.UnsupportedLane)
+66:            return Task.FromResult(Deny(
+68:                ProcessVerificationHostDenialCode.UnsupportedLane,
+74:            return Task.FromResult(Deny(
+88:            return Task.FromResult(Deny(
+90:                ProcessVerificationHostDenialCode.NoResponsesProduced,
+96:        var auditRecord = auditStore.Append(CreateAuditRecord(
+145:            _ => TryDenyUnsupportedLane(request, out denial)
+163:            denial = CreateDenial(
+165:                ProcessVerificationHostDenialCode.MissingLanePayload,
+183:    private ProcessReadOnlyVerificationBatchPayload? TryDenyUnsupportedLane(
+187:        denial = CreateDenial(
+189:            ProcessVerificationHostDenialCode.UnsupportedLane,
+194:    private ProcessVerificationHostResult Deny(
+199:        return ProcessVerificationHostResult.Denied(CreateDenial(request, code, message));
+202:    private ProcessVerificationHostDenial CreateDenial(
+207:        var auditRecord = auditStore.Append(new ProcessVerificationAuditRecord(
+Result: PASSED - required source assertions found.
+
+## Non-throwing denial tests
+Command: rg -n invalidResult = await host\.VerifyAsync|emptyResult = await host\.VerifyAsync|ProcessVerificationHostDenialCode|DeniedCount tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs
+145:        Assert.Equal(1, observation.DeniedCount);
+202:        Assert.Equal(0, aggregate.DeniedCount);
+278:        var invalidResult = await host.VerifyAsync(new ProcessVerificationHostRequest(
+283:        var emptyResult = await host.VerifyAsync(new ProcessVerificationHostRequest(
+291:        Assert.Equal(ProcessVerificationHostDenialCode.UnsupportedLane, invalidDenial.Code);
+297:        Assert.Equal(1, invalidDenial.AuditRecord.DeniedCount);
+301:        Assert.Equal(ProcessVerificationHostDenialCode.MissingLanePayload, emptyDenial.Code);
+307:        Assert.Equal(1, emptyDenial.AuditRecord.DeniedCount);
+529:        Assert.Equal(0, artifactSummary.DeniedCount);
+623:        Assert.Equal(0, aggregate.DeniedCount);
+628:        Assert.Equal(0, officeSummary.DeniedCount);
+632:        Assert.Equal(0, businessSummary.DeniedCount);
+752:        Assert.Equal(3, aggregate.DeniedCount);
+757:        Assert.Equal(1, officeSummary.DeniedCount);
+762:        Assert.Equal(2, businessSummary.DeniedCount);
+837:        Assert.Equal(0, envelope.DeniedCount);
+921:        Assert.Equal(0, aggregate.DeniedCount);
+Result: PASSED - required source assertions found.
+
+## No forbidden host drift
+Command: rg -n object payload|dynamic dispatch|fallback|Process Core|OPENAI_API_KEY|codex[\\/]bundles src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationRuntimeHost.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationRuntimeHostModels.cs src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationLaneRegistry.cs
+[no matches]
+Result: PASSED - no forbidden matches.
+

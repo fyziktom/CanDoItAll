@@ -476,3 +476,19 @@ internal sealed class ProcessLaunchProvisioningRequestConfiguration : IEntityTyp
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+internal sealed class ProcessVerificationAuditEntryConfiguration : IEntityTypeConfiguration<ProcessVerificationAuditEntry>
+{
+    public void Configure(EntityTypeBuilder<ProcessVerificationAuditEntry> builder)
+    {
+        builder.ToTable("Processes_VerificationAuditRecords");
+        builder.HasKey(record => record.Id);
+        builder.Property(record => record.RequestedBy).HasMaxLength(240).IsRequired();
+        builder.Property(record => record.Lane).HasConversion<string>().HasMaxLength(80);
+        builder.Property(record => record.ObservationHash).HasMaxLength(64).IsRequired();
+        builder.HasIndex(record => new { record.ProcessRunId, record.RecordedAtUtc });
+        builder.HasIndex(record => new { record.StepRunId, record.RecordedAtUtc });
+        builder.HasIndex(record => record.Lane);
+        builder.HasIndex(record => record.ObservationHash);
+    }
+}
