@@ -7,14 +7,14 @@
 - The first runtime host alpha is verification-only and can be implemented with explicit registry/selector over known lanes.
 
 ## Critical Path Risks
-1. The verification host accidentally becomes an execution-capable host by adding shell/file/network/storage/process mutation APIs.
-2. DI registration accidentally becomes auto-discovery and permits unapproved drivers.
-3. Selector fallback accidentally permits wrong-lane execution.
-4. Manager command accidentally applies recovery/finalizer/transition rather than only returning diagnostics.
-5. Live OpenAI smoke leaks secrets or becomes nondeterministic/flaky without budget/timeout.
-6. Audit persistence is added without redaction/hash proof.
-7. Scheduler/workflow integration skips process services and starts calling drivers directly.
-8. Process Core begins referencing driver abstractions, modules, infrastructure, UI, EF, or AgentFramework.
+- The verification host accidentally becomes an execution-capable host by adding shell/file/network/storage/process mutation APIs.
+- DI registration accidentally becomes auto-discovery and permits unapproved drivers.
+- Selector fallback accidentally permits wrong-lane execution.
+- Manager command accidentally applies recovery/finalizer/transition rather than only returning diagnostics.
+- Live OpenAI smoke leaks secrets or becomes nondeterministic/flaky without budget/timeout.
+- Audit persistence is added without redaction/hash proof.
+- Scheduler/workflow integration skips process services and starts calling drivers directly.
+- Process Core begins referencing driver abstractions, modules, infrastructure, UI, EF, or AgentFramework.
 
 ## Validation Risks
 - Deterministic tests may hide provider errors.

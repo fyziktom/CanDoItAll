@@ -1,7 +1,7 @@
 # SB047 — API/process readback release smoke
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Execute the api/process readback release smoke slice for **P16: Large-screen UI and manager diagnostics smoke**.
@@ -17,7 +17,14 @@ Execute the api/process readback release smoke slice for **P16: Large-screen UI 
 ## Exact Source References
 - `repo://src/CanDoItAll.Modules.Processes`
 - `repo://src/CanDoItAll.Processes.Core`
-- `repo://src/CanDoItAll.Processes.Drivers.*`
+- `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
+- `repo://src/CanDoItAll.Processes.Drivers.ArtifactEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.BusinessAnalysis`
+- `repo://src/CanDoItAll.Processes.Drivers.ObservationAggregation`
+- `repo://src/CanDoItAll.Processes.Drivers.OfficeEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.RuntimeEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification`
+- `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway`
 - `repo://tests/CanDoItAll.Tests.Unit`
 - `repo://tests/CanDoItAll.Tests.Integration`
 - `repo://tests/CanDoItAll.Tests.Playwright`
@@ -30,9 +37,11 @@ Execute the api/process readback release smoke slice for **P16: Large-screen UI 
 - Proof artifacts under `bundle://proof/SB047/`.
 
 ## Dependency Impact
+- This subbundle belongs to the phase named in its objective and gates downstream phases through `bundle://plan/01-phase-plan.md`.
 This subbundle belongs to P16. Its output feeds downstream phases in `bundle://plan/01-phase-plan.md`. If this proof is wrong, later host/manager/runtime conclusions are untrustworthy.
 
 ## Validation Depth
+- Execute the focused proof listed in this subbundle; critical gate subbundles also require semantic adequacy manifest and invariant proof.
 Focused implementation proof plus source assertions feeding the next critical gate.
 
 ## Implementation Steps
@@ -71,10 +80,14 @@ Focused implementation proof plus source assertions feeding the next critical ga
 - red-team negative proof for critical gates
 
 ## Browser Validation Logging
+- N/A unless browser-visible or host-visible files change unexpectedly; unexpected UI drift must fail and be re-scoped.
 Use 1900x1200 large desktop Playwright proof if this subbundle changes a browser-visible manager/process UI route; otherwise record N/A with source scan.
 
 ## Progression Gate
+- The subbundle may close only after its proof exists, entry and closure gate rows are updated, and downstream dependencies are checked.
 SB047 may close only after its proof exists and downstream dependencies are checked.
 
 ## Suggested Agent Prompt
 Implement SB047 for process-runtime-live-openai-verification-host-alpha-v1. Preserve process runtime behavior, keep drivers verification-only, and close proof with source-backed tests instead of report-only claims.
+
+

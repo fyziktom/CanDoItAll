@@ -43,6 +43,7 @@ internal static class ProcessManagerReadOnlyVerificationProjectionMapper
             AllowsProcessMutation: false,
             AllowsTransitionMutation: false,
             AllowsFinalizerMutation: false,
+            request.AuditRecordId,
             request.RequestedBy.Trim(),
             request.RequestedAt,
             ProcessReadOnlyObservationClock.ObservedAt(request.RequestedAt));
@@ -110,7 +111,8 @@ internal sealed record ProcessManagerReadOnlyVerificationProjectionRequest(
     ProcessReadOnlyVerificationBatchObservation Observation,
     ProcessManagerReadOnlyVerificationProjectionMode Mode,
     string RequestedBy,
-    DateTimeOffset RequestedAt);
+    DateTimeOffset RequestedAt,
+    Guid? AuditRecordId = null);
 
 internal enum ProcessManagerReadOnlyVerificationProjectionMode
 {
@@ -137,6 +139,7 @@ internal sealed record ProcessManagerReadOnlyVerificationProjection(
     bool AllowsProcessMutation,
     bool AllowsTransitionMutation,
     bool AllowsFinalizerMutation,
+    Guid? AuditRecordId,
     string RequestedBy,
     DateTimeOffset RequestedAt,
     DateTimeOffset ObservedAt);

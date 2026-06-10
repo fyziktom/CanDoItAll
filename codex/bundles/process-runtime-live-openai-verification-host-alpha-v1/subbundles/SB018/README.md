@@ -1,7 +1,7 @@
 # SB018 — Gate F registry/selector closure
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Execute the gate f registry/selector closure slice for **P06: Explicit registry and selector alpha**.
@@ -17,7 +17,14 @@ Execute the gate f registry/selector closure slice for **P06: Explicit registry 
 ## Exact Source References
 - `repo://src/CanDoItAll.Modules.Processes`
 - `repo://src/CanDoItAll.Processes.Core`
-- `repo://src/CanDoItAll.Processes.Drivers.*`
+- `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
+- `repo://src/CanDoItAll.Processes.Drivers.ArtifactEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.BusinessAnalysis`
+- `repo://src/CanDoItAll.Processes.Drivers.ObservationAggregation`
+- `repo://src/CanDoItAll.Processes.Drivers.OfficeEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.RuntimeEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification`
+- `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway`
 - `repo://tests/CanDoItAll.Tests.Unit`
 - `repo://tests/CanDoItAll.Tests.Integration`
 - `repo://tests/CanDoItAll.Tests.Playwright`
@@ -30,9 +37,11 @@ Execute the gate f registry/selector closure slice for **P06: Explicit registry 
 - Proof artifacts under `bundle://proof/SB018/`.
 
 ## Dependency Impact
+- This subbundle belongs to the phase named in its objective and gates downstream phases through `bundle://plan/01-phase-plan.md`.
 This subbundle belongs to P06. Its output feeds downstream phases in `bundle://plan/01-phase-plan.md`. If this proof is wrong, later host/manager/runtime conclusions are untrustworthy.
 
 ## Validation Depth
+- Execute the focused proof listed in this subbundle; critical gate subbundles also require semantic adequacy manifest and invariant proof.
 Critical semantic adequacy gate with artifact-backed manifest, command transcripts, changed-file hashes, source assertions, anti-stub audit, red-team negative proof, and downstream dependency check.
 
 ## Implementation Steps
@@ -74,10 +83,14 @@ Critical semantic adequacy gate with artifact-backed manifest, command transcrip
 If this subbundle creates or changes a production signal, state, record, event, host surface, audit record, or manager command, the proof manifest and semantic invariant contract must include producer, consumer, lifecycle, negative-test, and source citations.
 
 ## Browser Validation Logging
+- N/A unless browser-visible or host-visible files change unexpectedly; unexpected UI drift must fail and be re-scoped.
 N/A unless browser-visible files are changed unexpectedly; unexpected UI drift must fail and be re-scoped.
 
 ## Progression Gate
+- The subbundle may close only after its proof exists, entry and closure gate rows are updated, and downstream dependencies are checked.
 SB018 may close only after its proof exists and downstream dependencies are checked.
 
 ## Suggested Agent Prompt
 Implement SB018 for process-runtime-live-openai-verification-host-alpha-v1. Preserve process runtime behavior, keep drivers verification-only, and close proof with source-backed tests instead of report-only claims.
+
+

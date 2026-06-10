@@ -6,10 +6,12 @@ using CanDoItAll.Processes.Core.Execution;
 using CanDoItAll.Processes.Core.Finalization;
 using CanDoItAll.Processes.Drivers.Abstractions.Audit;
 using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
+using CanDoItAll.Processes.Drivers.Abstractions.Gateway;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
 using CanDoItAll.Processes.Drivers.BusinessAnalysis;
 using CanDoItAll.Processes.Drivers.OfficeEvidence;
+using Microsoft.Extensions.DependencyInjection;
 using CoreArtifactExpectationSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactExpectationSnapshot;
 using CoreArtifactRecordSnapshot = CanDoItAll.Processes.Core.Artifacts.ProcessArtifactRecordSnapshot;
 
@@ -219,6 +221,143 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         AssertReadOnlyList(observation.Responses, observation.Responses[0]);
         AssertReadOnlyList(observation.TranscriptObservations, observation.TranscriptObservations[0]);
         AssertReadOnlyList(aggregate.LaneSummaries, aggregate.LaneSummaries[0]);
+    }
+
+    [Fact]
+    public void Process_verification_runtime_host_SB015_INV_002_selects_exact_lane_without_cross_lane_fallback()
+    {
+        var host = new ProcessVerificationRuntimeHost();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-consumer:host-readonly",
+            RequestedAt,
+            artifactEvidencePayloads: [CreateArtifactPayload()],
+            officeEvidencePayloads: [CreateOfficePayload()],
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var request = new ProcessVerificationHostRequest(
+            ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency,
+            payload,
+            "process-manager",
+            RequestedAt);
+
+        var response = host.Verify(request);
+
+        Assert.Equal(ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency, response.Lane);
+        Assert.Equal(ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead, response.Registration.RequiredScopeKind);
+        Assert.Equal(ProcessDriverPermissionMode.VerificationOnly, response.Registration.RequiredPermissionMode);
+        Assert.True(response.NoMutationPerformed);
+        Assert.False(response.AllowsProcessMutation);
+        Assert.False(response.AllowsTransitionMutation);
+        Assert.False(response.AllowsFinalizerMutation);
+        Assert.Single(response.Observation.ArtifactEvidenceObservations);
+        Assert.Empty(response.Observation.OfficeEvidenceObservations);
+        Assert.Empty(response.Observation.BusinessAnalysisObservations);
+        Assert.Equal(1, response.Observation.ResponseCount);
+        Assert.Equal(response.Observation.ResponseCount, response.AuditRecord.ResponseCount);
+        Assert.Equal(response.Lane, response.AuditRecord.Lane);
+        Assert.True(response.AuditRecord.NoMutationPerformed);
+        Assert.Matches("^[A-F0-9]{64}$", response.AuditRecord.ObservationHash);
+    }
+
+    [Fact]
+    public void Process_verification_runtime_host_SB018_INV_001_rejects_unsupported_or_empty_lane_without_fallback()
+    {
+        var host = new ProcessVerificationRuntimeHost();
+        var invalidLane = (ProcessDriverVerificationGatewayLane)999;
+        var emptyArtifactPayload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-consumer:empty-artifact-lane",
+            RequestedAt,
+            officeEvidencePayloads: [CreateOfficePayload()]);
+
+        var invalidException = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            host.Verify(new ProcessVerificationHostRequest(
+                invalidLane,
+                emptyArtifactPayload,
+                "process-manager",
+                RequestedAt)));
+        var emptyException = Assert.Throws<InvalidOperationException>(() =>
+            host.Verify(new ProcessVerificationHostRequest(
+                ProcessDriverVerificationGatewayLane.ArtifactEvidenceConsistency,
+                emptyArtifactPayload,
+                "process-manager",
+                RequestedAt)));
+
+        Assert.Contains("Unsupported verification lane", invalidException.Message, StringComparison.Ordinal);
+        Assert.Contains("No payloads were supplied for lane ArtifactEvidenceConsistency", emptyException.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_manager_readonly_verification_command_SB024_INV_001_returns_diagnostics_and_audit_without_mutation()
+    {
+        var command = new ProcessManagerReadOnlyVerificationCommandService(new ProcessVerificationRuntimeHost());
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:diagnostics",
+            RequestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var request = new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+            "process-manager",
+            RequestedAt);
+
+        var result = command.Run(request);
+
+        Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, result.Lane);
+        Assert.True(result.NoMutationPerformed);
+        Assert.False(result.AllowsProcessMutation);
+        Assert.False(result.AllowsTransitionMutation);
+        Assert.False(result.AllowsFinalizerMutation);
+        Assert.Equal(ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics, result.Projection.Mode);
+        Assert.True(result.Projection.IsAttached);
+        Assert.NotEmpty(result.Projection.Diagnostics);
+        Assert.Equal(result.AuditRecord.Id, result.Projection.AuditRecordId);
+        Assert.Equal(result.Observation.ResponseCount, result.AuditRecord.ResponseCount);
+    }
+
+    [Fact]
+    public void Process_verification_runtime_host_SB021_INV_001_di_registration_resolves_host_command_and_shared_audit_boundary()
+    {
+        var services = new ServiceCollection();
+        services.AddProcessVerificationRuntimeHost();
+
+        using var provider = services.BuildServiceProvider();
+        using var scope = provider.CreateScope();
+        var host = scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHost>();
+        var command = scope.ServiceProvider.GetRequiredService<ProcessManagerReadOnlyVerificationCommandService>();
+        var auditStore = provider.GetRequiredService<IProcessVerificationAuditStore>();
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            ProcessRunId,
+            StepRunId,
+            "process-manager:di-diagnostics",
+            RequestedAt,
+            transcriptPayloads: [CreateTranscriptPayload()]);
+
+        var response = host.Verify(new ProcessVerificationHostRequest(
+            ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification,
+            payload,
+            "process-manager",
+            RequestedAt));
+        var result = command.Run(new ProcessManagerReadOnlyVerificationCommandRequest(
+            ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification,
+            payload,
+            ProcessManagerReadOnlyVerificationProjectionMode.EvidenceEnvelope,
+            "process-manager",
+            RequestedAt));
+
+        Assert.IsType<ProcessVerificationRuntimeHost>(host);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification, response.Lane);
+        Assert.Equal(ProcessDriverVerificationGatewayLane.DotNetRustTranscriptVerification, result.Lane);
+        Assert.True(response.NoMutationPerformed);
+        Assert.True(result.NoMutationPerformed);
+        Assert.Contains(auditStore.List(), record => record.Id == response.AuditRecord.Id);
+        Assert.Contains(auditStore.List(), record => record.Id == result.AuditRecord.Id);
+        Assert.NotEqual(response.AuditRecord.Id, result.AuditRecord.Id);
     }
 
     [Fact]

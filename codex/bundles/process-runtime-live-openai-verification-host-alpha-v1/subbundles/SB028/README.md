@@ -1,7 +1,7 @@
 # SB028 — Audit persistence model/migration boundary
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Execute the audit persistence model/migration boundary slice for **P10: Immutable audit persistence boundary**.
@@ -17,7 +17,14 @@ Execute the audit persistence model/migration boundary slice for **P10: Immutabl
 ## Exact Source References
 - `repo://src/CanDoItAll.Modules.Processes`
 - `repo://src/CanDoItAll.Processes.Core`
-- `repo://src/CanDoItAll.Processes.Drivers.*`
+- `repo://src/CanDoItAll.Processes.Drivers.Abstractions`
+- `repo://src/CanDoItAll.Processes.Drivers.ArtifactEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.BusinessAnalysis`
+- `repo://src/CanDoItAll.Processes.Drivers.ObservationAggregation`
+- `repo://src/CanDoItAll.Processes.Drivers.OfficeEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.RuntimeEvidence`
+- `repo://src/CanDoItAll.Processes.Drivers.TranscriptVerification`
+- `repo://src/CanDoItAll.Processes.Drivers.VerificationGateway`
 - `repo://tests/CanDoItAll.Tests.Unit`
 - `repo://tests/CanDoItAll.Tests.Integration`
 - `repo://tests/CanDoItAll.Tests.Playwright`
@@ -30,9 +37,11 @@ Execute the audit persistence model/migration boundary slice for **P10: Immutabl
 - Proof artifacts under `bundle://proof/SB028/`.
 
 ## Dependency Impact
+- This subbundle belongs to the phase named in its objective and gates downstream phases through `bundle://plan/01-phase-plan.md`.
 This subbundle belongs to P10. Its output feeds downstream phases in `bundle://plan/01-phase-plan.md`. If this proof is wrong, later host/manager/runtime conclusions are untrustworthy.
 
 ## Validation Depth
+- Execute the focused proof listed in this subbundle; critical gate subbundles also require semantic adequacy manifest and invariant proof.
 Focused implementation proof plus source assertions feeding the next critical gate.
 
 ## Implementation Steps
@@ -71,10 +80,14 @@ Focused implementation proof plus source assertions feeding the next critical ga
 - red-team negative proof for critical gates
 
 ## Browser Validation Logging
+- N/A unless browser-visible or host-visible files change unexpectedly; unexpected UI drift must fail and be re-scoped.
 N/A unless browser-visible files are changed unexpectedly; unexpected UI drift must fail and be re-scoped.
 
 ## Progression Gate
+- The subbundle may close only after its proof exists, entry and closure gate rows are updated, and downstream dependencies are checked.
 SB028 may close only after its proof exists and downstream dependencies are checked.
 
 ## Suggested Agent Prompt
 Implement SB028 for process-runtime-live-openai-verification-host-alpha-v1. Preserve process runtime behavior, keep drivers verification-only, and close proof with source-backed tests instead of report-only claims.
+
+

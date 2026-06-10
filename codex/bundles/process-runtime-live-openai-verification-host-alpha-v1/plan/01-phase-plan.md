@@ -1,5 +1,10 @@
 # Phase Plan
 
+## Phase Sequence
+- Execute P01 through P20 in order; each phase gate must pass before the next phase starts.
+- Within each phase, execute the three owned subbundles in numeric order.
+- Critical subbundles every third subbundle close the phase and must include semantic adequacy proof before downstream phases continue.
+
 ## Subbundle Dependency Map
 
 ```mermaid

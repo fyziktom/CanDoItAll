@@ -1,0 +1,43 @@
+Command: composite source/red-team scans
+WorkingDirectory: repo://.
+Invariant IDs: SB003-INV-001 SB006-INV-001 SB009-INV-001 SB012-INV-001 SB015-INV-001 SB015-INV-002 SB018-INV-001 SB021-INV-001 SB024-INV-001 SB027-INV-001 SB030-INV-001 SB033-INV-001 SB036-INV-001 SB039-INV-001 SB042-INV-001 SB045-INV-001 SB048-INV-001 SB051-INV-001 SB054-INV-001 SB057-INV-001 SB060-INV-001
+StartedUtc: 2026-06-10T00:54:43.3862285Z
+
+## Core reverse dependency scan
+Command: rg -n "CanDoItAll\.Processes\.Drivers|CanDoItAll\.Modules|Microsoft\.EntityFrameworkCore|DbContext|IServiceProvider|IServiceScopeFactory|ILogger<|IStorage|IWorkspace" src/CanDoItAll.Processes.Core
+RawExitCode: 1
+ExpectedRawExitCodes: 1
+Result: PASS
+
+## Forbidden execution host drift scan
+Command: rg -n "ProcessDriverRegistry|ProcessDriverRuntimeSelector|ProcessDriverHost|ProcessDriverManagerCommand|IProcessDriverPack|MapProcessDriver|AddProcessDriver|AddHostedService.*Driver|IHostedService.*Driver|StartAsync.*ProcessDriver|ExecuteAsync.*ProcessDriver" src
+RawExitCode: 1
+ExpectedRawExitCodes: 1
+Result: PASS
+
+## Bundle path coupling scan
+Command: rg -n "process-runtime-live-openai-verification-host-alpha-v1|codex[/\\]bundles" src tests
+RawExitCode: 1
+ExpectedRawExitCodes: 1
+Result: PASS
+
+## Secret value leakage scan
+Command: rg -n "sk-[A-Za-z0-9]{20,}|OPENAI_API_KEY\s*=\s*sk-|api[_-]?key\s*[:=]\s*sk-" src tests codex/bundles/process-runtime-live-openai-verification-host-alpha-v1/proof
+RawExitCode: 1
+ExpectedRawExitCodes: 1
+Result: PASS
+
+## Changed-file anti-stub scan
+Command: rg -n "TODO|NotImplementedException|throw new NotImplemented" <changed process verification files and tests>
+RawExitCode: 1
+ExpectedRawExitCodes: 1
+Result: PASS
+
+## UI drift scan
+Command: git diff --name-only -- src tests | rg -n "\.razor$|\.css$|\.scss$|wwwroot/|\.png$|\.jpg$|\.jpeg$|\.webp$"
+RawExitCode: 1
+ExpectedRawExitCodes: 1
+Result: PASS
+
+ExitCode: 0
+FinishedUtc: 2026-06-10T00:54:44.4568619Z

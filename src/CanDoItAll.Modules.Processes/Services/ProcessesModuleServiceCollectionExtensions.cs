@@ -51,6 +51,7 @@ public static class ProcessesModuleServiceCollectionExtensions
         services.AddScoped<IProcessManagerChatService, ProcessManagerChatService>();
         services.AddScoped<IProcessObservationIntentResolver, ProcessObservationIntentResolver>();
         services.AddScoped<IProcessRuntimeEvidenceSourceProvider, ProcessRuntimeEvidenceSourceProvider>();
+        services.AddProcessVerificationRuntimeHost();
         services.AddScoped<ProcessObservationDashboardState>();
         services.AddScoped<ProcessRuntimeStateOverviewService>();
         services.AddScoped<ProcessWorkspaceRunDetailsLoader>();
@@ -88,6 +89,24 @@ public static class ProcessesModuleServiceCollectionExtensions
 
             services.AddHostedService<ProcessOutboxDrainWorker>();
         }
+
+        return services;
+    }
+
+    internal static IServiceCollection AddProcessVerificationRuntimeHost(this IServiceCollection services)
+    {
+        services.TryAddScoped<ProcessTranscriptVerificationReadOnlyAdapter>();
+        services.TryAddScoped<ProcessRuntimeEvidenceVerificationReadOnlyAdapter>();
+        services.TryAddScoped<ProcessArtifactEvidenceReadOnlyAdapter>();
+        services.TryAddScoped<ProcessOfficeEvidenceReadOnlyAdapter>();
+        services.TryAddScoped<ProcessBusinessAnalysisReadOnlyAdapter>();
+        services.TryAddScoped<ProcessDriverObservationAggregationReadOnlyAdapter>();
+        services.TryAddScoped<ProcessReadOnlyVerificationBatchOrchestrator>();
+        services.TryAddSingleton<ProcessVerificationLaneRegistry>();
+        services.TryAddSingleton<ProcessVerificationLaneSelector>();
+        services.TryAddSingleton<IProcessVerificationAuditStore, InMemoryProcessVerificationAuditStore>();
+        services.TryAddScoped<IProcessVerificationRuntimeHost, ProcessVerificationRuntimeHost>();
+        services.TryAddScoped<ProcessManagerReadOnlyVerificationCommandService>();
 
         return services;
     }
