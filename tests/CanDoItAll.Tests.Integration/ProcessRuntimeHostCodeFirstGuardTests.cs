@@ -6,6 +6,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
 {
     private const string CodexSegment = "codex";
     private const string BundlesSegment = "bundles";
+    private const int RequiredSourceTestDominanceMultiplier = 4;
 
     private static readonly string[] ConcreteBundlePathFragments =
     [
@@ -91,7 +92,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         Assert.Equal(2, summary.BundleChangedLines);
         Assert.Equal(23, summary.SourceAndTestChangedLines);
         Assert.Equal(0, summary.OtherChangedLines);
-        Assert.True(summary.SatisfiesSourceTestDominance(requiredMultiplier: 3));
+        Assert.True(summary.SatisfiesSourceTestDominance(RequiredSourceTestDominanceMultiplier));
     }
 
     [Fact]
@@ -106,7 +107,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
 
         Assert.Equal(5, summary.SourceAndTestChangedLines);
         Assert.Equal(6, summary.BundleChangedLines);
-        Assert.False(summary.SatisfiesSourceTestDominance(requiredMultiplier: 3));
+        Assert.False(summary.SatisfiesSourceTestDominance(RequiredSourceTestDominanceMultiplier));
     }
 
     private static bool ContainsConcreteBundlePath(string text)

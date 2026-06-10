@@ -97,6 +97,38 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
+    public async Task Process_template_catalog_SB02_INV_001_maps_multi_team_development_to_source_backed_software_delivery_template()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+
+        var pack = packLoader.Load();
+        var inventory = ProcessTemplateCatalogInventory.RequiredRepresentativeTemplates;
+        var requiredKeys = inventory
+            .Select(item => item.TemplateKey)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var missingKeys = requiredKeys
+            .Where(key => !pack.Processes.ContainsKey(key))
+            .ToArray();
+        var multiTeam = ProcessTemplateCatalogInventory.GetRequiredTemplate(ProcessTemplateInventoryFamily.MultiTeamDevelopment);
+        var multiTeamDefinition = pack.Processes[multiTeam.TemplateKey];
+
+        Assert.Empty(missingKeys);
+        Assert.Equal(ProcessTemplateInventoryResolutionKind.MappedTemplate, multiTeam.ResolutionKind);
+        Assert.Equal(ProcessTemplateCatalogInventory.SoftwareDeliveryTemplateKey, multiTeam.TemplateKey);
+        Assert.Equal("processes/software-delivery", multiTeam.RelativePath);
+        Assert.Contains("multi-team", multiTeamDefinition.DisplayName, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("multi-team", multiTeamDefinition.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("release governance", multiTeamDefinition.DisplayName, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(multiTeamDefinition.Steps, step => string.Equals(step.Key, "implementation", StringComparison.Ordinal));
+        Assert.Contains(multiTeamDefinition.Steps, step => string.Equals(step.Key, "peer-review", StringComparison.Ordinal));
+        Assert.Contains(multiTeamDefinition.Steps, step => string.Equals(step.Key, "qa-validation", StringComparison.Ordinal));
+        Assert.Contains(multiTeamDefinition.Steps, step => string.Equals(step.Key, "release-approval", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Dotnet_software_delivery_template_hardens_parent_permissions_and_writeback_subprocesses()
     {
         await using var application = await TestApplication.CreateAsync();

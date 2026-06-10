@@ -26,11 +26,8 @@ using Microsoft.Extensions.Options;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ApplicationStartupIntegrationTests {
-    private static readonly (string Key, string RelativePath)[] RequiredProcessTemplateCatalogEntries = [
-        ("software-delivery", "processes/software-delivery"),
-        ("blazor-app-delivery", "processes/blazor-app-delivery"),
-        ("business-plan-development", "processes/business-plan-development")
-    ];
+    private static readonly ProcessTemplateCatalogInventoryItem[] RequiredProcessTemplateCatalogEntries =
+        ProcessTemplateCatalogInventory.RequiredRepresentativeTemplates.ToArray();
 
     [Fact]
     public async Task Web_app_startup_SB009_INV_001_starts_current_composition_with_process_module_registered() {
@@ -64,23 +61,28 @@ public sealed class ApplicationStartupIntegrationTests {
         foreach (var requiredTemplate in RequiredProcessTemplateCatalogEntries) {
             var catalogItem = Assert.Single(
                 templates,
-                template => string.Equals(template.Key, requiredTemplate.Key, StringComparison.Ordinal));
+                template => string.Equals(template.Key, requiredTemplate.TemplateKey, StringComparison.Ordinal));
             Assert.Equal(requiredTemplate.RelativePath, catalogItem.RelativePath.Replace("\\", "/", StringComparison.Ordinal));
+            if (requiredTemplate.Family == ProcessTemplateInventoryFamily.MultiTeamDevelopment) {
+                Assert.Equal(ProcessTemplateInventoryResolutionKind.MappedTemplate, requiredTemplate.ResolutionKind);
+                Assert.Contains("multi-team", catalogItem.DisplayName, StringComparison.OrdinalIgnoreCase);
+                Assert.Contains("multi-team", catalogItem.Summary, StringComparison.OrdinalIgnoreCase);
+            }
 
-            using var detail = await ReadSuccessfulJsonAsync(host.Client, $"/api/processes/templates/{requiredTemplate.Key}/detail");
-            Assert.Equal(requiredTemplate.Key, detail.RootElement.GetProperty("summary").GetProperty("key").GetString());
+            using var detail = await ReadSuccessfulJsonAsync(host.Client, $"/api/processes/templates/{requiredTemplate.TemplateKey}/detail");
+            Assert.Equal(requiredTemplate.TemplateKey, detail.RootElement.GetProperty("summary").GetProperty("key").GetString());
             Assert.True(detail.RootElement.GetProperty("template").GetProperty("steps").GetArrayLength() > 0);
 
-            var envelope = await host.Client.GetFromJsonAsync<ProcessImportExportEnvelope>($"/api/processes/templates/{requiredTemplate.Key}/envelope");
+            var envelope = await host.Client.GetFromJsonAsync<ProcessImportExportEnvelope>($"/api/processes/templates/{requiredTemplate.TemplateKey}/envelope");
             Assert.NotNull(envelope);
             Assert.Equal("CanDoItAll.ProcessTemplatePack/current-module-projection", envelope.SourceFormat);
             Assert.NotEmpty(envelope.Definition.Steps);
             Assert.Contains(
                 envelope.Warnings,
-                warning => warning.Contains($"'{requiredTemplate.Key}'", StringComparison.Ordinal));
+                warning => warning.Contains($"'{requiredTemplate.TemplateKey}'", StringComparison.Ordinal));
 
-            using var mermaid = await ReadSuccessfulJsonAsync(host.Client, $"/api/processes/templates/{requiredTemplate.Key}/mermaid");
-            Assert.Equal(requiredTemplate.Key, mermaid.RootElement.GetProperty("processKey").GetString());
+            using var mermaid = await ReadSuccessfulJsonAsync(host.Client, $"/api/processes/templates/{requiredTemplate.TemplateKey}/mermaid");
+            Assert.Equal(requiredTemplate.TemplateKey, mermaid.RootElement.GetProperty("processKey").GetString());
             Assert.False(string.IsNullOrWhiteSpace(mermaid.RootElement.GetProperty("flowchart").GetString()));
         }
 
@@ -104,7 +106,7 @@ public sealed class ApplicationStartupIntegrationTests {
         var libraryService = scope.ServiceProvider.GetRequiredService<ProcessTemplateLibraryService>();
         var libraryItems = libraryService.ListItems(ProcessTemplateLibraryCategory.Processes);
         foreach (var requiredTemplate in RequiredProcessTemplateCatalogEntries) {
-            Assert.Contains(libraryItems, item => string.Equals(item.Key, requiredTemplate.Key, StringComparison.Ordinal));
+            Assert.Contains(libraryItems, item => string.Equals(item.Key, requiredTemplate.TemplateKey, StringComparison.Ordinal));
         }
     }
 

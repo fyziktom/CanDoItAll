@@ -14,6 +14,7 @@ internal sealed record ProcessReadOnlyVerificationJob
         Guid id,
         ProcessReadOnlyVerificationJobSourceKind sourceKind,
         string sourceReference,
+        string correlationId,
         ProcessDriverVerificationGatewayLane lane,
         ProcessReadOnlyVerificationBatchPayload payload,
         ProcessManagerReadOnlyVerificationProjectionMode projectionMode,
@@ -34,6 +35,11 @@ internal sealed record ProcessReadOnlyVerificationJob
         if (string.IsNullOrWhiteSpace(sourceReference))
         {
             throw new ArgumentException("Read-only verification job source reference is required.", nameof(sourceReference));
+        }
+
+        if (string.IsNullOrWhiteSpace(correlationId))
+        {
+            throw new ArgumentException("Read-only verification job correlation id is required.", nameof(correlationId));
         }
 
         ArgumentNullException.ThrowIfNull(payload);
@@ -58,6 +64,7 @@ internal sealed record ProcessReadOnlyVerificationJob
         Id = id;
         SourceKind = sourceKind;
         SourceReference = sourceReference.Trim();
+        CorrelationId = correlationId.Trim();
         Lane = lane;
         Payload = payload;
         ProjectionMode = projectionMode;
@@ -71,6 +78,8 @@ internal sealed record ProcessReadOnlyVerificationJob
     public ProcessReadOnlyVerificationJobSourceKind SourceKind { get; }
 
     public string SourceReference { get; }
+
+    public string CorrelationId { get; }
 
     public ProcessDriverVerificationGatewayLane Lane { get; }
 

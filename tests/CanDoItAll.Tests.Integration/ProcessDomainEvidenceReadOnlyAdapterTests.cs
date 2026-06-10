@@ -1103,6 +1103,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             Guid.NewGuid(),
             ProcessReadOnlyVerificationJobSourceKind.Scheduler,
             "scheduler-plan:daily-review",
+            "scheduler-correlation:daily-review",
             ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
             payload,
             ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
@@ -1113,6 +1114,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             Guid.NewGuid(),
             ProcessReadOnlyVerificationJobSourceKind.Workflow,
             "workflow:qa-readback",
+            "workflow-correlation:qa-readback",
             ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
             payload,
             ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
@@ -1121,6 +1123,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Scheduler, schedulerJob.SourceKind);
         Assert.Equal("scheduler-plan:daily-review", schedulerJob.SourceReference);
+        Assert.Equal("scheduler-correlation:daily-review", schedulerJob.CorrelationId);
         Assert.True(schedulerJob.NoMutationPerformed);
         Assert.False(schedulerJob.AllowsProcessMutation);
         Assert.False(schedulerJob.AllowsTransitionMutation);
@@ -1135,11 +1138,13 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Equal(payload, readbackRequest.VerificationRequest.Payload);
         Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Workflow, workflowJob.SourceKind);
         Assert.Equal("workflow:qa-readback", workflowJob.SourceReference);
+        Assert.Equal("workflow-correlation:qa-readback", workflowJob.CorrelationId);
         Assert.True(workflowJob.NoMutationPerformed);
         Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessReadOnlyVerificationJob(
             Guid.NewGuid(),
             (ProcessReadOnlyVerificationJobSourceKind)999,
             "bad-source",
+            "bad-correlation",
             ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
             payload,
             ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
@@ -1166,6 +1171,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             Guid.NewGuid(),
             ProcessReadOnlyVerificationJobSourceKind.Scheduler,
             "scheduler-plan:daily-review",
+            "scheduler-correlation:daily-review",
             ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
             payload,
             ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
@@ -1178,10 +1184,15 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Equal(job.Id, result.JobId);
         Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Scheduler, result.SourceKind);
         Assert.Equal("scheduler-plan:daily-review", result.SourceReference);
+        Assert.Equal("scheduler-correlation:daily-review", result.CorrelationId);
         Assert.Equal(ProcessReadOnlyVerificationJobLifecycleStatus.Completed, result.Lifecycle.Status);
         Assert.Equal(job.Id, result.Lifecycle.JobId);
         Assert.Equal(job.SourceKind, result.Lifecycle.SourceKind);
         Assert.Equal(job.SourceReference, result.Lifecycle.SourceReference);
+        Assert.Equal(job.CorrelationId, result.Lifecycle.CorrelationId);
+        Assert.Equal(job.Lane, result.Lifecycle.Lane);
+        Assert.Equal(job.Payload.ProcessRunId, result.Lifecycle.ProcessRunId);
+        Assert.Equal(job.Payload.StepRunId, result.Lifecycle.StepRunId);
         Assert.Equal(job.RequestedAt, result.Lifecycle.StartedAt);
         Assert.True(result.Lifecycle.CompletedAt >= result.Lifecycle.StartedAt);
         Assert.Equal(result.Readback.AuditRecordId, result.Lifecycle.AuditRecordId);
@@ -1213,6 +1224,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             Guid.NewGuid(),
             ProcessReadOnlyVerificationJobSourceKind.Workflow,
             "workflow:qa-readback",
+            "workflow-correlation:qa-readback",
             ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
             payload,
             ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
@@ -1224,7 +1236,10 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Workflow, workflowResult.SourceKind);
         Assert.Equal("workflow:qa-readback", workflowResult.SourceReference);
+        Assert.Equal("workflow-correlation:qa-readback", workflowResult.CorrelationId);
         Assert.Equal(ProcessReadOnlyVerificationJobLifecycleStatus.Completed, workflowResult.Lifecycle.Status);
+        Assert.Equal(workflowJob.CorrelationId, workflowResult.Lifecycle.CorrelationId);
+        Assert.Equal(workflowJob.Lane, workflowResult.Lifecycle.Lane);
         Assert.True(workflowResult.NoMutationPerformed);
         Assert.False(workflowResult.AllowsProcessMutation);
         Assert.False(workflowResult.AllowsTransitionMutation);

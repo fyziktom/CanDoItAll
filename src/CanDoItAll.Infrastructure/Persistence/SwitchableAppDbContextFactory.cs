@@ -2,6 +2,7 @@ using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.ControlPlane;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using System.Reflection;
 
 namespace CanDoItAll.Infrastructure.Persistence;
@@ -30,6 +31,7 @@ public static class AppDbContextOptionsConfigurator
     public static void Configure(DbContextOptionsBuilder optionsBuilder, ResolvedDatabaseProfile profile)
     {
         ArgumentNullException.ThrowIfNull(profile);
+        ConfigureModelCacheKey(optionsBuilder);
 
         switch (profile.Profile.ProviderKind)
         {
@@ -52,6 +54,7 @@ public static class AppDbContextOptionsConfigurator
     {
         ArgumentNullException.ThrowIfNull(databaseOptions);
         ArgumentException.ThrowIfNullOrWhiteSpace(contentRootPath);
+        ConfigureModelCacheKey(optionsBuilder);
 
         var provider = databaseOptions.Provider.Trim().ToLowerInvariant();
         if (provider is "inmemory" or "memory")
@@ -77,6 +80,11 @@ public static class AppDbContextOptionsConfigurator
         }
 
         throw new InvalidOperationException($"Unsupported database provider '{databaseOptions.Provider}'.");
+    }
+
+    public static void ConfigureModelCacheKey(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.ReplaceService<IModelCacheKeyFactory, AppDbContextModelCacheKeyFactory>();
     }
 }
 
