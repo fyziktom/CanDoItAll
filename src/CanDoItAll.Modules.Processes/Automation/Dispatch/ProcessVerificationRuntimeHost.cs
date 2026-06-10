@@ -129,6 +129,7 @@ internal sealed class ProcessVerificationRuntimeHost : IProcessVerificationRunti
             cancellationToken);
 
         return ProcessVerificationHostResult.Succeeded(new ProcessVerificationHostResponse(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(request.Lane),
             request.Lane,
             registration,
             observation,
@@ -272,6 +273,7 @@ internal sealed class ProcessVerificationRuntimeHost : IProcessVerificationRunti
             cancellationToken);
 
         return new ProcessVerificationHostDenial(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(request.Lane),
             ProcessVerificationHostDenialClassifier.Classify(code),
             code,
             message,

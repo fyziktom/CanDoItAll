@@ -2,31 +2,39 @@ namespace CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 
 public static class ProcessDriverOperationRules
 {
+    public static IReadOnlyList<ProcessDriverOperation> ReadonlyVerificationOperations { get; } =
+    [
+        ProcessDriverOperation.InspectExistingEvidence,
+        ProcessDriverOperation.ReturnDiagnostics,
+        ProcessDriverOperation.ReadProcessFacts,
+        ProcessDriverOperation.ExplainDenial
+    ];
+
+    public static IReadOnlyList<ProcessDriverOperation> SideEffectOperations { get; } =
+    [
+        ProcessDriverOperation.MutateProcessState,
+        ProcessDriverOperation.ExecuteCommand,
+        ProcessDriverOperation.RestorePackage,
+        ProcessDriverOperation.WriteArtifact,
+        ProcessDriverOperation.WriteWorkspaceStorage,
+        ProcessDriverOperation.CallOfficeGraph,
+        ProcessDriverOperation.MutateEmailCategory,
+        ProcessDriverOperation.CreateTask,
+        ProcessDriverOperation.MutateBusinessRecord,
+        ProcessDriverOperation.ApplyTransition,
+        ProcessDriverOperation.ClaimDispatch,
+        ProcessDriverOperation.ApplyFinalizer,
+        ProcessDriverOperation.ScheduleRetry
+    ];
+
     public static bool IsReadonlyVerificationOperation(ProcessDriverOperation operation)
     {
-        return operation is
-            ProcessDriverOperation.InspectExistingEvidence or
-            ProcessDriverOperation.ReturnDiagnostics or
-            ProcessDriverOperation.ReadProcessFacts or
-            ProcessDriverOperation.ExplainDenial;
+        return ReadonlyVerificationOperations.Contains(operation);
     }
 
     public static bool IsSideEffectOperation(ProcessDriverOperation operation)
     {
-        return operation is
-            ProcessDriverOperation.MutateProcessState or
-            ProcessDriverOperation.ExecuteCommand or
-            ProcessDriverOperation.RestorePackage or
-            ProcessDriverOperation.WriteArtifact or
-            ProcessDriverOperation.WriteWorkspaceStorage or
-            ProcessDriverOperation.CallOfficeGraph or
-            ProcessDriverOperation.MutateEmailCategory or
-            ProcessDriverOperation.CreateTask or
-            ProcessDriverOperation.MutateBusinessRecord or
-            ProcessDriverOperation.ApplyTransition or
-            ProcessDriverOperation.ClaimDispatch or
-            ProcessDriverOperation.ApplyFinalizer or
-            ProcessDriverOperation.ScheduleRetry;
+        return SideEffectOperations.Contains(operation);
     }
 
     public static ProcessDriverDenialReason ResolveReadonlyDenialReason(ProcessDriverOperation operation)

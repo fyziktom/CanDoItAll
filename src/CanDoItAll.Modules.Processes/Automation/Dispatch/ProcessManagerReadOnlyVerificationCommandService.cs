@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions.Gateway;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 using CanDoItAll.Processes.Drivers.Abstractions.Verification;
@@ -88,6 +89,7 @@ internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProces
                 hostResponse.AuditRecord.Id));
 
         return ProcessManagerReadOnlyVerificationFacadeResult.Succeeded(new ProcessManagerReadOnlyVerificationCommandResult(
+            hostResponse.CapabilityKey,
             request.Lane,
             hostResponse.Observation,
             projection,
@@ -109,7 +111,9 @@ internal sealed class ProcessManagerReadOnlyVerificationCommandService : IProces
                 request.ProcessRunId,
                 request.StepRunId,
                 request.Lane,
-                request.Limit),
+                request.Limit,
+                request.RecordedAtOrAfter,
+                request.RecordedBefore),
             cancellationToken);
 
         return new ProcessManagerReadOnlyVerificationAuditQueryResult(
@@ -210,7 +214,9 @@ internal sealed record ProcessManagerReadOnlyVerificationAuditQueryRequest
         Guid? processRunId = null,
         Guid? stepRunId = null,
         ProcessDriverVerificationGatewayLane? lane = null,
-        int limit = 100)
+        int limit = 100,
+        DateTimeOffset? recordedAtOrAfter = null,
+        DateTimeOffset? recordedBefore = null)
     {
         if (string.IsNullOrWhiteSpace(requestedBy))
         {
@@ -225,11 +231,20 @@ internal sealed record ProcessManagerReadOnlyVerificationAuditQueryRequest
                 $"Manager read-only audit query limit must be between 1 and {ProcessVerificationAuditQuery.MaximumLimit}.");
         }
 
+        if (recordedAtOrAfter.HasValue &&
+            recordedBefore.HasValue &&
+            recordedAtOrAfter.Value >= recordedBefore.Value)
+        {
+            throw new ArgumentException("Manager read-only audit query start time must be earlier than the exclusive end time.", nameof(recordedAtOrAfter));
+        }
+
         RequestedBy = requestedBy.Trim();
         ProcessRunId = processRunId;
         StepRunId = stepRunId;
         Lane = lane;
         Limit = limit;
+        RecordedAtOrAfter = recordedAtOrAfter;
+        RecordedBefore = recordedBefore;
     }
 
     public string RequestedBy { get; }
@@ -241,6 +256,10 @@ internal sealed record ProcessManagerReadOnlyVerificationAuditQueryRequest
     public ProcessDriverVerificationGatewayLane? Lane { get; }
 
     public int Limit { get; }
+
+    public DateTimeOffset? RecordedAtOrAfter { get; }
+
+    public DateTimeOffset? RecordedBefore { get; }
 }
 
 internal sealed record ProcessManagerReadOnlyVerificationReadbackRequest
@@ -329,6 +348,7 @@ internal enum ProcessManagerReadOnlyVerificationFacadeStatus
 }
 
 internal sealed record ProcessManagerReadOnlyVerificationCommandResult(
+    string CapabilityKey,
     ProcessDriverVerificationGatewayLane Lane,
     ProcessReadOnlyVerificationBatchObservation Observation,
     ProcessManagerReadOnlyVerificationProjection Projection,
@@ -348,6 +368,7 @@ internal sealed record ProcessManagerReadOnlyVerificationAuditQueryResult(
 
 internal sealed record ProcessManagerReadOnlyVerificationReadbackDto(
     ProcessManagerReadOnlyVerificationFacadeStatus Status,
+    string CapabilityKey,
     ProcessDriverVerificationGatewayLane Lane,
     Guid ProcessRunId,
     Guid StepRunId,
@@ -360,6 +381,8 @@ internal sealed record ProcessManagerReadOnlyVerificationReadbackDto(
     int DiagnosticCount,
     IReadOnlyList<ProcessManagerReadOnlyVerificationDiagnosticReadbackDto> Diagnostics,
     IReadOnlyList<ProcessManagerReadOnlyVerificationAuditRecordDto> AuditRecords,
+    int EvidenceReferenceCount,
+    string AuditRecordObservationHash,
     ProcessVerificationHostFailureCategory? DenialCategory,
     ProcessVerificationHostDenialCode? DenialCode,
     string DenialMessage,
@@ -368,7 +391,11 @@ internal sealed record ProcessManagerReadOnlyVerificationReadbackDto(
     bool AllowsTransitionMutation,
     bool AllowsFinalizerMutation,
     DateTimeOffset RequestedAt,
-    DateTimeOffset ObservedAt);
+    DateTimeOffset ObservedAt)
+{
+    public ProcessRuntimeHostContractSnapshot Contract { get; init; } =
+        ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.ManagerReadback);
+}
 
 internal sealed record ProcessManagerReadOnlyVerificationDiagnosticReadbackDto(
     ProcessDriverCapabilityScopeKind? Lane,
@@ -420,6 +447,7 @@ internal static class ProcessManagerReadOnlyVerificationReadbackMapper
     {
         return new ProcessManagerReadOnlyVerificationReadbackDto(
             result.Status,
+            response.CapabilityKey,
             response.Lane,
             response.Observation.ProcessRunId,
             response.Observation.StepRunId,
@@ -432,9 +460,11 @@ internal static class ProcessManagerReadOnlyVerificationReadbackMapper
             response.Projection.Diagnostics.Count,
             response.Projection.Diagnostics.Select(ToDiagnosticDto).ToArray(),
             auditRecords.Select(ToAuditRecordDto).ToArray(),
-            DenialCategory: null,
-            DenialCode: null,
-            DenialMessage: string.Empty,
+            CountEvidenceReferences(response.Projection),
+            response.AuditRecord.ObservationHash,
+            null,
+            null,
+            string.Empty,
             response.NoMutationPerformed,
             response.AllowsProcessMutation,
             response.AllowsTransitionMutation,
@@ -451,18 +481,21 @@ internal static class ProcessManagerReadOnlyVerificationReadbackMapper
     {
         return new ProcessManagerReadOnlyVerificationReadbackDto(
             result.Status,
+            denial.CapabilityKey,
             denial.Lane,
             denial.ProcessRunId,
             denial.StepRunId,
             request.Payload.CallerContext,
             request.ProjectionMode,
-            ProjectionSource: null,
-            ProjectionAttached: false,
+            null,
+            false,
             denial.AuditRecord.Id,
-            ResponseCount: 0,
-            DiagnosticCount: 0,
-            Diagnostics: [],
+            0,
+            0,
+            [],
             auditRecords.Select(ToAuditRecordDto).ToArray(),
+            0,
+            denial.AuditRecord.ObservationHash,
             denial.Category,
             denial.Code,
             denial.Message,
@@ -472,6 +505,12 @@ internal static class ProcessManagerReadOnlyVerificationReadbackMapper
             denial.AllowsFinalizerMutation,
             request.RequestedAt,
             denial.AuditRecord.RecordedAt);
+    }
+
+    private static int CountEvidenceReferences(ProcessManagerReadOnlyVerificationProjection projection)
+    {
+        return projection.EvidenceEnvelope?.EvidenceReferences.Count ??
+            projection.Diagnostics.Sum(diagnostic => diagnostic.EvidenceReferences.Count);
     }
 
     private static ProcessManagerReadOnlyVerificationDiagnosticReadbackDto ToDiagnosticDto(

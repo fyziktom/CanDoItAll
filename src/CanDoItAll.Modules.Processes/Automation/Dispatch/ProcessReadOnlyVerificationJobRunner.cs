@@ -1,3 +1,5 @@
+using CanDoItAll.Processes.Contracts;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal interface IProcessReadOnlyVerificationJobRunner {
@@ -37,4 +39,7 @@ internal sealed record ProcessReadOnlyVerificationJobRunResult(
     bool NoMutationPerformed,
     bool AllowsProcessMutation,
     bool AllowsTransitionMutation,
-    bool AllowsFinalizerMutation);
+    bool AllowsFinalizerMutation) {
+    public ProcessRuntimeHostContractSnapshot Contract { get; init; } =
+        ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.SchedulerWorkflowReadOnlyJob);
+}

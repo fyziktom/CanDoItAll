@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core.Execution;
 using CanDoItAll.Processes.Drivers.Abstractions.Audit;
 using CanDoItAll.Processes.Drivers.Abstractions.Evidence;
@@ -324,6 +325,79 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.All(descriptors.Values, descriptor =>
             Assert.All(descriptor.AllowedOperations, operation =>
                 Assert.True(ProcessDriverOperationRules.IsReadonlyVerificationOperation(operation))));
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB011_INV_001_runtime_host_contract_snapshot_stays_out_of_process_core()
+    {
+        var coreProject = ReadRepositoryFile("src", "CanDoItAll.Processes.Core", "CanDoItAll.Processes.Core.csproj");
+        var coreSource = string.Join(
+            Environment.NewLine,
+            Directory
+                .EnumerateFiles(
+                    Path.Combine(FindRepositoryRoot(), "src", "CanDoItAll.Processes.Core"),
+                    "*.cs",
+                    SearchOption.AllDirectories)
+                .Select(File.ReadAllText));
+        var publicRuntimeContract = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Contracts",
+            "Runtime",
+            "ProcessRuntimeHostContractModels.cs");
+
+        Assert.DoesNotContain("CanDoItAll.Processes.Drivers", coreProject, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessRuntimeHostContract", coreSource, StringComparison.Ordinal);
+        Assert.Contains("VerificationHost = 1", publicRuntimeContract, StringComparison.Ordinal);
+        Assert.Contains("DryRunExecution = 2", publicRuntimeContract, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", publicRuntimeContract, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Drivers", publicRuntimeContract, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB002_INV_002_runtime_host_contract_reports_readonly_safety_violations()
+    {
+        var safe = ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.DryRunExecution);
+
+        Assert.True(safe.IsReadOnlySafe);
+        Assert.Empty(safe.ValidateReadOnlySafety());
+        Assert.Equal(ProcessRuntimeHostContractVersion.Current, safe.Version);
+
+        var unsafeSnapshot = safe with
+        {
+            DryRunOnly = false,
+            NoMutationPerformed = false,
+            AllowsProcessMutation = true,
+            AllowsTransitionMutation = true,
+            AllowsFinalizerMutation = true
+        };
+        var violations = unsafeSnapshot
+            .ValidateReadOnlySafety()
+            .Select(item => item.Kind)
+            .ToHashSet();
+
+        Assert.False(unsafeSnapshot.IsReadOnlySafe);
+        Assert.Contains(ProcessRuntimeHostContractViolationKind.ProductionExecutionAllowed, violations);
+        Assert.Contains(ProcessRuntimeHostContractViolationKind.MutationNotRecordedAsDenied, violations);
+        Assert.Contains(ProcessRuntimeHostContractViolationKind.ProcessMutationAllowed, violations);
+        Assert.Contains(ProcessRuntimeHostContractViolationKind.TransitionMutationAllowed, violations);
+        Assert.Contains(ProcessRuntimeHostContractViolationKind.FinalizerMutationAllowed, violations);
+    }
+
+    [Fact]
+    public void Process_driver_contract_api_SB007_INV_002_verification_gateway_static_descriptors_are_readonly_and_complete()
+    {
+        var descriptors = ProcessDriverVerificationGatewayLaneRules.AllowedLanes;
+
+        Assert.Equal(5, descriptors.Count);
+        Assert.All(descriptors, descriptor =>
+        {
+            Assert.All(descriptor.AllowedOperations, operation =>
+                Assert.False(ProcessDriverOperationRules.IsSideEffectOperation(operation)));
+            Assert.Equal(descriptor, ProcessDriverVerificationGatewayLaneRules.Describe(descriptor.Lane));
+        });
+
+        Assert.All(ProcessDriverOperationRules.SideEffectOperations, operation =>
+            Assert.False(ProcessDriverOperationRules.IsReadonlyVerificationOperation(operation)));
     }
 
     [Fact]

@@ -21,6 +21,10 @@ internal interface IProcessVerificationAuditQueryService
     Task<IReadOnlyList<ProcessVerificationAuditRecord>> ListAsync(
         ProcessVerificationAuditQuery query,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<ProcessVerificationAuditRecord>> ListRetentionCandidatesAsync(
+        ProcessVerificationAuditRetentionQuery query,
+        CancellationToken cancellationToken = default);
 }
 
 internal sealed record ProcessVerificationAuditQuery
@@ -69,6 +73,31 @@ internal sealed record ProcessVerificationAuditQuery
     public DateTimeOffset? RecordedAtOrAfter { get; }
 
     public DateTimeOffset? RecordedBefore { get; }
+}
+
+internal sealed record ProcessVerificationAuditRetentionQuery
+{
+    public const int MaximumLimit = 500;
+
+    public ProcessVerificationAuditRetentionQuery(
+        DateTimeOffset recordedBefore,
+        int limit = 100)
+    {
+        if (limit <= 0 || limit > MaximumLimit)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(limit),
+                limit,
+                $"Audit retention query limit must be between 1 and {MaximumLimit}.");
+        }
+
+        RecordedBefore = recordedBefore;
+        Limit = limit;
+    }
+
+    public DateTimeOffset RecordedBefore { get; }
+
+    public int Limit { get; }
 }
 
 internal sealed class InMemoryProcessVerificationAuditStore : IProcessVerificationAuditStore, IProcessVerificationAuditQueryService
@@ -127,6 +156,26 @@ internal sealed class InMemoryProcessVerificationAuditStore : IProcessVerificati
                 .Where(record => !query.RecordedAtOrAfter.HasValue || record.RecordedAt >= query.RecordedAtOrAfter.Value)
                 .Where(record => !query.RecordedBefore.HasValue || record.RecordedAt < query.RecordedBefore.Value)
                 .OrderByDescending(record => record.RecordedAt)
+                .Take(query.Limit)
+                .ToArray();
+
+            return Task.FromResult<IReadOnlyList<ProcessVerificationAuditRecord>>(Array.AsReadOnly(filtered));
+        }
+    }
+
+    public Task<IReadOnlyList<ProcessVerificationAuditRecord>> ListRetentionCandidatesAsync(
+        ProcessVerificationAuditRetentionQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (gate)
+        {
+            var filtered = records
+                .Where(record => record.RecordedAt < query.RecordedBefore)
+                .OrderBy(record => record.RecordedAt)
+                .ThenBy(record => record.Id)
                 .Take(query.Limit)
                 .ToArray();
 
@@ -204,6 +253,24 @@ internal sealed class EfCoreProcessVerificationAuditStore(
         var entries = await records
             .OrderByDescending(record => record.RecordedAtUtc)
             .ThenByDescending(record => record.Id)
+            .Take(query.Limit)
+            .ToListAsync(cancellationToken);
+
+        return entries.Select(ToRecord).ToArray();
+    }
+
+    public async Task<IReadOnlyList<ProcessVerificationAuditRecord>> ListRetentionCandidatesAsync(
+        ProcessVerificationAuditRetentionQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var entries = await dbContext.Set<ProcessVerificationAuditEntry>()
+            .AsNoTracking()
+            .Where(record => record.RecordedAtUtc < query.RecordedBefore)
+            .OrderBy(record => record.RecordedAtUtc)
+            .ThenBy(record => record.Id)
             .Take(query.Limit)
             .ToListAsync(cancellationToken);
 

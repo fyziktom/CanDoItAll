@@ -1,6 +1,10 @@
 # Phase plan
 
-## Subbundle dependency map
+## Phase Sequence
+- Execute SB01 through SB12 in dependency order.
+- Do not start a subbundle until its predecessor closure gate passes or is honestly blocked with a follow-up path.
+
+## Subbundle Dependency Map
 
 ```mermaid
 graph TD
@@ -20,8 +24,13 @@ graph TD
   SB01 --> SB02 --> SB03 --> SB04 --> SB05 --> SB06 --> SB07 --> SB08 --> SB09 --> SB10 --> SB11 --> SB12
 ```
 
-## Critical gates
-All subbundles are critical. This bundle has fewer subbundles; each owns a larger coherent implementation area.
+## Critical Subbundles
+- SB01 through SB12 are critical. This bundle has fewer subbundles; each owns a larger coherent implementation area.
+
+## Phase Gates
+- Prepared-stage bundle validator passes before implementation.
+- Each subbundle has an entry gate, focused implementation, proof manifest, semantic invariant contract, closure gate, and downstream progression decision.
+- Completed-stage bundle validator and code-first ratio gate pass before final closure.
 
 ## Final validation matrix
 - `dotnet build CanDoItAll.slnx --configuration Debug`

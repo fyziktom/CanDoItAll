@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions.Gateway;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 
@@ -33,6 +34,7 @@ internal sealed record ProcessVerificationHostRequest
 }
 
 internal sealed record ProcessVerificationHostResponse(
+    string CapabilityKey,
     ProcessDriverVerificationGatewayLane Lane,
     ProcessVerificationLaneRegistration Registration,
     ProcessReadOnlyVerificationBatchObservation Observation,
@@ -40,7 +42,11 @@ internal sealed record ProcessVerificationHostResponse(
     bool NoMutationPerformed,
     bool AllowsProcessMutation,
     bool AllowsTransitionMutation,
-    bool AllowsFinalizerMutation);
+    bool AllowsFinalizerMutation)
+{
+    public ProcessRuntimeHostContractSnapshot Contract { get; init; } =
+        ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.VerificationHost);
+}
 
 internal sealed record ProcessVerificationHostResult
 {
@@ -132,6 +138,7 @@ internal static class ProcessVerificationHostDenialClassifier
 }
 
 internal sealed record ProcessVerificationHostDenial(
+    string CapabilityKey,
     ProcessVerificationHostFailureCategory Category,
     ProcessVerificationHostDenialCode Code,
     string Message,
@@ -144,7 +151,11 @@ internal sealed record ProcessVerificationHostDenial(
     bool NoMutationPerformed,
     bool AllowsProcessMutation,
     bool AllowsTransitionMutation,
-    bool AllowsFinalizerMutation);
+    bool AllowsFinalizerMutation)
+{
+    public ProcessRuntimeHostContractSnapshot Contract { get; init; } =
+        ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.VerificationHost);
+}
 
 internal sealed record ProcessVerificationLaneRegistration(
     ProcessDriverVerificationGatewayLane Lane,

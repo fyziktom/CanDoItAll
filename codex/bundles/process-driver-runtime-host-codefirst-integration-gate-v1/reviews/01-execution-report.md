@@ -1,38 +1,38 @@
 # Execution Report
 
 ## Status
-Prepared.
+- Completed
 
 ## Subbundle Gate Results
 | Subbundle | Entry gate | Closure gate | Downstream dependencies checked | Progression result | Notes |
 | --- | --- | --- | --- | --- | --- |
-| SB01 | Pending | Pending | Pending | Pending | Code-first baseline and ratio guard |
-| SB02 | Pending | Pending | Pending | Pending | Runtime dry-run contracts |
-| SB03 | Pending | Pending | Pending | Pending | Durable EF audit hardening |
-| SB04 | Pending | Pending | Pending | Pending | Host status and operator API |
-| SB05 | Pending | Pending | Pending | Pending | Scheduler/workflow read-only jobs |
-| SB06 | Pending | Pending | Pending | Pending | Sandbox and authorization evaluator |
-| SB07 | Pending | Pending | Pending | Pending | Static driver capability descriptors |
-| SB08 | Pending | Pending | Pending | Pending | Manager run-detail readback |
-| SB09 | Pending | Pending | Pending | Pending | Live OpenAI process-run hardening |
-| SB10 | Pending | Pending | Pending | Pending | Deterministic process regression |
-| SB11 | Pending | Pending | Pending | Pending | Core genericity and boundary guards |
-| SB12 | Pending | Pending | Pending | Pending | Release candidate and code-first red-team |
+| SB01 | Passed | Passed | Passed | Completed | Code-first ratio tracked with `git diff --numstat`; source/test/docs ratio remained above 2.0 after closure edits. |
+| SB02 | Passed | Passed | Passed | Completed | Runtime host contract moved to `repo://src/CanDoItAll.Processes.Contracts/Runtime/ProcessRuntimeHostContractModels.cs`. |
+| SB03 | Passed | Passed | Passed | Completed | Durable/in-memory audit retention candidates covered by focused integration tests. |
+| SB04 | Passed | Passed | Passed | Completed | Operator status exposes readiness, audit-store kind, retention-query support, and static capability summaries. |
+| SB05 | Passed | Passed | Passed | Completed | Scheduler/workflow read-only job path remains manager-facade routed and covered by integration tests. |
+| SB06 | Passed | Passed | Passed | Completed | Dry-run gate returns capability key, authorization gaps, denied surfaces/operations, and no-mutation contract. |
+| SB07 | Passed | Passed | Passed | Completed | Static capability catalog added without reflection discovery, self-registration, or public driver runtime surface. |
+| SB08 | Passed | Passed | Passed | Completed | Manager readback/API JSON includes capability key, audit id/hash, evidence counts, denial metadata, and mutation flags. |
+| SB09 | Passed | Passed | Passed | Completed | Live OpenAI smoke remains opt-in; guard tests pass and opt-in variables were absent. |
+| SB10 | Passed | Passed | Passed | Completed | Focused process runtime integration tests and full unit suite passed. |
+| SB11 | Passed | Passed | Passed | Completed | Core dependency scans and unit boundary tests keep Process Core generic and driver-free. |
+| SB12 | Passed | Passed | Passed | Completed | Build, focused tests, full unit tests, scans, completed validator, and code-first ratio gate recorded. |
 
 ## Browser Validation Analytics
-| Subbundle | Route | Viewport | Evidence | Screenshots | Result |
+| Subbundle | Route | Viewport | Playwright MCP evidence | Screenshots | Result |
 | --- | --- | --- | --- | --- | --- |
-| SB08 | Process run detail / manager readback if UI changes | 1900x1200 large desktop only | Pending | Pending | Pending |
-| Other backend phases | N/A unless UI changes | N/A | Pending | N/A | Pending |
+| SB08 | API/readback JSON only; no Razor/UI changed | N/A | `dotnet test ... ProcessDomainEvidenceReadOnlyAdapterTests` | N/A | Passed |
+| Other backend phases | N/A unless UI changes | N/A | Build, focused tests, full unit tests, and source scans | N/A | Passed |
 
 ## Analytics Review
-Pending.
+No UI or Razor route changed, so browser validation was not required. API/readback JSON smoke tests covered the manager-facing data shape.
 
 ## Raw Note Closure
 | Raw note | Status | Proof |
 | --- | --- | --- |
-| Review real code and real test outcome | Planned | SB01 |
-| Fix code-vs-bundle ratio problem | Planned | SB01/SB12 |
-| Move toward generic process driver runtime host | Planned | SB02-SB07 |
-| Keep execution-capable drivers blocked until safe | Planned | SB06/SB11/SB12 |
-| Prepare bundle zip | Planned | SB12 |
+| Review real code and real test outcome | Solved | `dotnet build`, focused integration tests, full unit tests, and `repo://docs/processes/runtime-host-codefirst-integration-gate.md` |
+| Fix code-vs-bundle ratio problem | Solved | `git diff --numstat` ratio gate exceeded 2.0 with 10 production files and 4 test files changed. |
+| Move toward generic process driver runtime host | Solved | `repo://src/CanDoItAll.Processes.Contracts/Runtime/ProcessRuntimeHostContractModels.cs` and `repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessVerificationHostCapabilityCatalog.cs` |
+| Keep execution-capable drivers blocked until safe | Solved | `dotnet test ... ProcessDomainEvidenceReadOnlyAdapterTests`, Core dependency scan command, reflection scan command, mutation scan command, and driver abstraction boundary tests. |
+| Prepare bundle zip | Partially solved | `python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py ... --stage completed`; bundle directory is completed and no zip artifact was requested for local repository execution. |

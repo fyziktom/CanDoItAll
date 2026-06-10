@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Drivers.Abstractions.Permissions;
 
 namespace CanDoItAll.Modules.Processes;
@@ -46,6 +47,7 @@ internal sealed class ProcessDryRunExecutionHost(
             : ProcessDryRunExecutionHostDecision.Denied;
 
         return Task.FromResult(new ProcessDryRunExecutionHostResult(
+            ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey,
             request.RequestId,
             request.ProcessRunId,
             request.StepRunId,
@@ -171,6 +173,7 @@ internal enum ProcessDryRunExecutionHostDecision
 }
 
 internal sealed record ProcessDryRunExecutionHostResult(
+    string CapabilityKey,
     Guid RequestId,
     Guid ProcessRunId,
     Guid StepRunId,
@@ -185,7 +188,10 @@ internal sealed record ProcessDryRunExecutionHostResult(
     bool NoMutationPerformed,
     bool AllowsProcessMutation,
     bool AllowsTransitionMutation,
-    bool AllowsFinalizerMutation);
+    bool AllowsFinalizerMutation) {
+    public ProcessRuntimeHostContractSnapshot Contract { get; init; } =
+        ProcessRuntimeHostContractSnapshot.Create(ProcessRuntimeHostContractSurface.DryRunExecution);
+}
 
 internal sealed record ProcessDryRunExecutionPlan(
     string Summary,

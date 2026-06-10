@@ -141,6 +141,7 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
             "ProcessTranscriptVerificationPreflightPolicy.cs",
             "ProcessTranscriptVerificationReadOnlyAdapter.cs",
             "ProcessVerificationAuditStore.cs",
+            "ProcessVerificationHostCapabilityCatalog.cs",
             "ProcessVerificationLaneRegistry.cs",
             "ProcessVerificationRuntimeHost.cs",
             "ProcessVerificationRuntimeHostModels.cs",
@@ -189,6 +190,24 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         Assert.DoesNotContain("ProcessDriverRuntimeSelector", combinedAllowedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverManagerCommand", combinedAllowedSource, StringComparison.Ordinal);
         Assert.DoesNotContain("ProcessDriverHost", combinedAllowedSource, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Process_runtime_host_contract_models_SB011_INV_001_stay_contract_local_and_driver_free()
+    {
+        var source = ReadRepositoryFile(
+            "src",
+            "CanDoItAll.Processes.Contracts",
+            "Runtime",
+            "ProcessRuntimeHostContractModels.cs");
+
+        Assert.Contains("ProcessRuntimeHostContractVersion.Current", source, StringComparison.Ordinal);
+        Assert.Contains("ManagerReadback = 3", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Core", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("CanDoItAll.Processes.Drivers", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("Microsoft.EntityFrameworkCore", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("IServiceCollection", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("ApprovedForFutureExecution", source, StringComparison.Ordinal);
     }
 
     private static ProcessRuntimeEvidenceVerificationReadOnlyEvidencePayload CreatePayload(

@@ -501,6 +501,23 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Equal(ProcessVerificationRuntimeHostReadiness.Ready, status.Readiness);
         Assert.Equal(ProcessVerificationAuditStoreKind.DurableEfCore, status.AuditStoreKind);
         Assert.True(status.UsesDurableAuditStore);
+        Assert.True(status.SupportsAuditRetentionQuery);
+        Assert.Equal(ProcessRuntimeHostContractSurface.OperatorStatus, status.Contract.Surface);
+        Assert.Equal(ProcessRuntimeHostContractVersion.Current, status.Contract.Version);
+        Assert.Equal(ProcessDriverVerificationGatewayLaneRules.AllowedLanes.Count + 1, status.Capabilities.Count);
+        Assert.Contains(status.Capabilities, capability =>
+            capability.Key == ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey &&
+            capability.Kind == ProcessVerificationHostCapabilityKind.DryRunExecutionGate &&
+            capability.ContractSurface == ProcessRuntimeHostContractSurface.DryRunExecution &&
+            capability.IsStaticReadOnlyDescriptor &&
+            !capability.ExecutionAllowed);
+        Assert.All(status.Capabilities, capability =>
+        {
+            Assert.False(capability.ReflectionDiscoveryAllowed);
+            Assert.False(capability.SelfRegistrationAllowed);
+            Assert.All(capability.DeniedOperations, operation =>
+                Assert.True(ProcessDriverOperationRules.IsSideEffectOperation(operation)));
+        });
         Assert.True(status.NoMutationPerformed);
         Assert.False(status.AllowsProcessMutation);
         Assert.False(status.AllowsTransitionMutation);
@@ -538,6 +555,8 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Equal(ProcessVerificationRuntimeHostReadiness.EmergencyDisabled, disabledStatus.Readiness);
         Assert.Equal(ProcessVerificationAuditStoreKind.TestInMemory, disabledStatus.AuditStoreKind);
         Assert.False(disabledStatus.UsesDurableAuditStore);
+        Assert.True(disabledStatus.SupportsAuditRetentionQuery);
+        Assert.Equal(ProcessRuntimeHostContractSurface.OperatorStatus, disabledStatus.Contract.Surface);
         Assert.True(disabledStatus.NoMutationPerformed);
         Assert.False(disabledStatus.AllowsProcessMutation);
         Assert.False(disabledStatus.AllowsTransitionMutation);
@@ -565,6 +584,8 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
             Assert.Equal(scenario.Value, denial.Category);
             Assert.Equal(scenario.Key, denial.Code);
+            Assert.Equal(ProcessRuntimeHostContractSurface.VerificationHost, denial.Contract.Surface);
+            Assert.Equal(ProcessRuntimeHostContractVersion.Current, denial.Contract.Version);
             Assert.False(string.IsNullOrWhiteSpace(denial.Message));
             Assert.True(denial.NoMutationPerformed);
             Assert.False(denial.AllowsProcessMutation);
@@ -675,6 +696,47 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public async Task Process_verification_audit_retention_query_SB003_INV_001_lists_old_records_without_deleting_or_mutating()
+    {
+        var auditStore = new InMemoryProcessVerificationAuditStore();
+        var oldRecord = new ProcessVerificationAuditRecord(
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            RequestedAt.AddDays(-40),
+            ProcessRunId,
+            StepRunId,
+            "process-manager",
+            ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+            ResponseCount: 1,
+            AcceptedCount: 1,
+            DeniedCount: 0,
+            NoMutationPerformed: true,
+            AllowsProcessMutation: false,
+            AllowsTransitionMutation: false,
+            AllowsFinalizerMutation: false,
+            ProcessDriverEvidencePolicy.ComputeSha256("old-record"));
+        var currentRecord = oldRecord with
+        {
+            Id = Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+            RecordedAt = RequestedAt,
+            ObservationHash = ProcessDriverEvidencePolicy.ComputeSha256("current-record")
+        };
+
+        await auditStore.AppendAsync(oldRecord);
+        await auditStore.AppendAsync(currentRecord);
+
+        var retentionCandidates = await auditStore.ListRetentionCandidatesAsync(
+            new ProcessVerificationAuditRetentionQuery(RequestedAt.AddDays(-7), limit: 10));
+        var allRecords = await auditStore.ListAsync();
+
+        var candidate = Assert.Single(retentionCandidates);
+        Assert.Equal(oldRecord.Id, candidate.Id);
+        Assert.Equal(2, allRecords.Count);
+        Assert.Contains(allRecords, record => record.Id == oldRecord.Id);
+        Assert.Contains(allRecords, record => record.Id == currentRecord.Id);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessVerificationAuditRetentionQuery(RequestedAt, limit: 0));
+    }
+
+    [Fact]
     public async Task Process_manager_readonly_verification_facade_SB026_INV_001_enforces_requester_projection_query_and_denial_guards()
     {
         var payload = new ProcessReadOnlyVerificationBatchPayload(
@@ -700,6 +762,10 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new ProcessManagerReadOnlyVerificationAuditQueryRequest(
             "process-manager",
             limit: 0));
+        Assert.Throws<ArgumentException>(() => new ProcessManagerReadOnlyVerificationAuditQueryRequest(
+            "process-manager",
+            recordedAtOrAfter: RequestedAt,
+            recordedBefore: RequestedAt));
 
         var facade = new ProcessManagerReadOnlyVerificationCommandService(
             CreateHost(new ProcessVerificationRuntimeHostOptions
@@ -756,6 +822,9 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             auditRecordLimit: 10));
 
         Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, readback.Status);
+        Assert.Equal(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead),
+            readback.CapabilityKey);
         Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, readback.Lane);
         Assert.Equal(ProcessRunId, readback.ProcessRunId);
         Assert.Equal(StepRunId, readback.StepRunId);
@@ -766,9 +835,14 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.True(readback.AuditRecordId.HasValue);
         Assert.True(readback.ResponseCount > 0);
         Assert.Equal(readback.Diagnostics.Count, readback.DiagnosticCount);
+        Assert.True(readback.EvidenceReferenceCount > 0);
         Assert.NotEmpty(readback.Diagnostics);
         Assert.Contains(readback.AuditRecords, record => record.Id == readback.AuditRecordId);
         Assert.All(readback.AuditRecords, record => Assert.Matches("^[A-F0-9]{64}$", record.ObservationHash));
+        Assert.Equal(
+            readback.AuditRecords.Single(record => record.Id == readback.AuditRecordId).ObservationHash,
+            readback.AuditRecordObservationHash);
+        Assert.Equal(ProcessRuntimeHostContractSurface.ManagerReadback, readback.Contract.Surface);
         Assert.True(readback.NoMutationPerformed);
         Assert.False(readback.AllowsProcessMutation);
         Assert.False(readback.AllowsTransitionMutation);
@@ -809,6 +883,9 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             auditRecordLimit: 10));
 
         Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Denied, readback.Status);
+        Assert.Equal(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead),
+            readback.CapabilityKey);
         Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, readback.Lane);
         Assert.Equal(ProcessRunId, readback.ProcessRunId);
         Assert.Equal(StepRunId, readback.StepRunId);
@@ -819,6 +896,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Empty(readback.Diagnostics);
         Assert.Equal(0, readback.DiagnosticCount);
         Assert.Equal(0, readback.ResponseCount);
+        Assert.Equal(0, readback.EvidenceReferenceCount);
         Assert.Equal(ProcessVerificationHostFailureCategory.OperationalPolicy, readback.DenialCategory);
         Assert.Equal(ProcessVerificationHostDenialCode.HostDisabled, readback.DenialCode);
         Assert.Contains("disabled by options", readback.DenialMessage, StringComparison.Ordinal);
@@ -833,6 +911,8 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.False(auditRecord.AllowsTransitionMutation);
         Assert.False(auditRecord.AllowsFinalizerMutation);
         Assert.Matches("^[A-F0-9]{64}$", auditRecord.ObservationHash);
+        Assert.Equal(auditRecord.ObservationHash, readback.AuditRecordObservationHash);
+        Assert.Equal(ProcessRuntimeHostContractSurface.ManagerReadback, readback.Contract.Surface);
         Assert.True(readback.NoMutationPerformed);
         Assert.False(readback.AllowsProcessMutation);
         Assert.False(readback.AllowsTransitionMutation);
@@ -871,6 +951,12 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         Assert.True(root.TryGetProperty("diagnostics", out var diagnostics));
         Assert.True(root.TryGetProperty("auditRecords", out var auditRecords));
+        Assert.Equal(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead),
+            root.GetProperty("capabilityKey").GetString());
+        Assert.True(root.GetProperty("evidenceReferenceCount").GetInt32() > 0);
+        Assert.Matches("^[A-F0-9]{64}$", root.GetProperty("auditRecordObservationHash").GetString());
+        Assert.Equal((int)ProcessRuntimeHostContractSurface.ManagerReadback, root.GetProperty("contract").GetProperty("surface").GetInt32());
         Assert.True(diagnostics.GetArrayLength() > 0);
         Assert.True(auditRecords.GetArrayLength() > 0);
         Assert.True(root.GetProperty("noMutationPerformed").GetBoolean());
@@ -911,15 +997,21 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         Assert.Equal(ProcessRunId.ToString("D"), root.GetProperty("processRunId").GetString());
         Assert.Equal(StepRunId.ToString("D"), root.GetProperty("stepRunId").GetString());
+        Assert.Equal(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead),
+            root.GetProperty("capabilityKey").GetString());
         Assert.Equal("process-manager:large-screen-api-smoke", root.GetProperty("callerContext").GetString());
         Assert.True(root.GetProperty("projectionAttached").GetBoolean());
         Assert.True(root.GetProperty("responseCount").GetInt32() > 0);
         Assert.True(root.GetProperty("diagnosticCount").GetInt32() > 0);
+        Assert.True(root.GetProperty("evidenceReferenceCount").GetInt32() > 0);
+        Assert.Equal((int)ProcessRuntimeHostContractSurface.ManagerReadback, root.GetProperty("contract").GetProperty("surface").GetInt32());
 
         var auditRecordId = root.GetProperty("auditRecordId").GetString();
         var auditRecord = Assert.Single(
             root.GetProperty("auditRecords").EnumerateArray(),
             item => string.Equals(item.GetProperty("id").GetString(), auditRecordId, StringComparison.Ordinal));
+        Assert.Equal(auditRecord.GetProperty("observationHash").GetString(), root.GetProperty("auditRecordObservationHash").GetString());
         Assert.True(auditRecord.GetProperty("responseCount").GetInt32() > 0);
         Assert.True(auditRecord.GetProperty("acceptedCount").GetInt32() > 0);
         Assert.Equal(0, auditRecord.GetProperty("deniedCount").GetInt32());
@@ -967,16 +1059,22 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         Assert.Equal(ProcessRunId.ToString("D"), root.GetProperty("processRunId").GetString());
         Assert.Equal(StepRunId.ToString("D"), root.GetProperty("stepRunId").GetString());
+        Assert.Equal(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead),
+            root.GetProperty("capabilityKey").GetString());
         Assert.Equal("process-run-detail:verification-audit-readback", root.GetProperty("callerContext").GetString());
         Assert.False(root.GetProperty("projectionAttached").GetBoolean());
         Assert.Equal(0, root.GetProperty("responseCount").GetInt32());
         Assert.Equal(0, root.GetProperty("diagnosticCount").GetInt32());
+        Assert.Equal(0, root.GetProperty("evidenceReferenceCount").GetInt32());
+        Assert.Equal((int)ProcessRuntimeHostContractSurface.ManagerReadback, root.GetProperty("contract").GetProperty("surface").GetInt32());
         Assert.Equal((int)ProcessVerificationHostFailureCategory.OperationalPolicy, root.GetProperty("denialCategory").GetInt32());
         Assert.Equal((int)ProcessVerificationHostDenialCode.HostDisabled, root.GetProperty("denialCode").GetInt32());
         Assert.Contains("disabled by options", root.GetProperty("denialMessage").GetString(), StringComparison.Ordinal);
 
         var auditRecord = Assert.Single(root.GetProperty("auditRecords").EnumerateArray());
         Assert.Equal(root.GetProperty("auditRecordId").GetString(), auditRecord.GetProperty("id").GetString());
+        Assert.Equal(auditRecord.GetProperty("observationHash").GetString(), root.GetProperty("auditRecordObservationHash").GetString());
         Assert.Equal(0, auditRecord.GetProperty("responseCount").GetInt32());
         Assert.Equal(0, auditRecord.GetProperty("acceptedCount").GetInt32());
         Assert.Equal(1, auditRecord.GetProperty("deniedCount").GetInt32());
@@ -1081,6 +1179,8 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Equal("scheduler-plan:daily-review", result.SourceReference);
         Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, result.Readback.Status);
         Assert.Equal(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead, result.Readback.Lane);
+        Assert.Equal(ProcessRuntimeHostContractSurface.SchedulerWorkflowReadOnlyJob, result.Contract.Surface);
+        Assert.Equal(ProcessRuntimeHostContractSurface.ManagerReadback, result.Readback.Contract.Surface);
         Assert.NotEmpty(result.Readback.Diagnostics);
         Assert.Contains(result.Readback.AuditRecords, record => record.Id == result.Readback.AuditRecordId);
         Assert.True(result.NoMutationPerformed);
@@ -1205,6 +1305,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         var result = await host.EvaluateAsync(request);
 
         Assert.Equal(ProcessDryRunExecutionHostDecision.Denied, result.Decision);
+        Assert.Equal(ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey, result.CapabilityKey);
         Assert.Equal(ProcessExecutionCapableDriverGateDecision.Blocked, result.GateResult.Decision);
         Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.SourceBackedApprovalBundle, result.GateResult.MissingRequirements);
         Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.AuthorizationApprovalRevocation, result.GateResult.MissingRequirements);
@@ -1218,6 +1319,8 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.Contains(ProcessExecutionCapableDriverAuthorizationGap.EmergencyStopActiveOrUnknown, result.AuthorizationGaps);
         Assert.Equal("Dry-run request denied; no production effects were executed.", result.Plan.Summary);
         Assert.Contains(result.Plan.Steps, step => step.Kind == ProcessDryRunExecutionPlanStepKind.DenyProductionEffects);
+        Assert.Equal(ProcessRuntimeHostContractSurface.DryRunExecution, result.Contract.Surface);
+        Assert.Equal(ProcessRuntimeHostContractVersion.Current, result.Contract.Version);
         Assert.True(result.NoMutationPerformed);
         Assert.False(result.AllowsProcessMutation);
         Assert.False(result.AllowsTransitionMutation);
@@ -1261,6 +1364,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         var blocked = await host.EvaluateAsync(request);
 
         Assert.Equal(ProcessDryRunExecutionHostDecision.Denied, blocked.Decision);
+        Assert.Equal(ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey, blocked.CapabilityKey);
         Assert.Equal(ProcessExecutionCapableDriverGateDecision.Blocked, blocked.GateResult.Decision);
         Assert.Contains(ProcessExecutionCapableDriverFutureGateRequirement.AuthorizationApprovalRevocation, blocked.GateResult.MissingRequirements);
         Assert.Contains(ProcessExecutionCapableDriverAuthorizationGap.EmergencyStopActiveOrUnknown, blocked.AuthorizationGaps);
@@ -1287,14 +1391,55 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         var planned = await host.EvaluateAsync(clearRequest);
 
         Assert.Equal(ProcessDryRunExecutionHostDecision.DryRunPlanCreated, planned.Decision);
+        Assert.Equal(ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey, planned.CapabilityKey);
         Assert.Equal(ProcessExecutionCapableDriverGateDecision.ApprovedForFutureExecution, planned.GateResult.Decision);
         Assert.Empty(planned.DeniedSurfaces);
         Assert.Empty(planned.DeniedOperations);
         Assert.Empty(planned.AuthorizationGaps);
+        Assert.Equal(ProcessRuntimeHostContractSurface.DryRunExecution, planned.Contract.Surface);
+        Assert.Equal(ProcessRuntimeHostContractVersion.Current, planned.Contract.Version);
         Assert.True(planned.NoMutationPerformed);
         Assert.False(planned.AllowsProcessMutation);
         Assert.False(planned.AllowsTransitionMutation);
         Assert.False(planned.AllowsFinalizerMutation);
+    }
+
+    [Fact]
+    public void Process_verification_host_capability_catalog_SB007_INV_001_is_static_readonly_and_complete()
+    {
+        var descriptors = ProcessVerificationHostCapabilityCatalog.StaticDescriptors;
+        var verificationDescriptors = descriptors
+            .Where(item => item.Kind == ProcessVerificationHostCapabilityKind.VerificationLane)
+            .ToDictionary(item => item.Key, StringComparer.Ordinal);
+        var dryRunDescriptor = ProcessVerificationHostCapabilityCatalog.Require(
+            ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey);
+
+        Assert.Equal(ProcessDriverVerificationGatewayLaneRules.AllowedLanes.Count + 1, descriptors.Count);
+        Assert.Equal(ProcessVerificationHostCapabilityKind.DryRunExecutionGate, dryRunDescriptor.Kind);
+        Assert.Equal(ProcessRuntimeHostContractSurface.DryRunExecution, dryRunDescriptor.ContractSurface);
+        Assert.Equal(ProcessDriverPermissionMode.ExecutionCapableFuture, dryRunDescriptor.PermissionMode);
+        Assert.All(descriptors, descriptor =>
+        {
+            Assert.True(descriptor.IsStaticReadOnlyDescriptor);
+            Assert.False(descriptor.ReflectionDiscoveryAllowed);
+            Assert.False(descriptor.SelfRegistrationAllowed);
+            Assert.False(descriptor.ExecutionAllowed);
+            Assert.All(descriptor.AllowedOperations, operation =>
+                Assert.False(ProcessDriverOperationRules.IsSideEffectOperation(operation)));
+            Assert.All(ProcessDriverOperationRules.SideEffectOperations, operation =>
+                Assert.Contains(operation, descriptor.DeniedOperations));
+        });
+
+        foreach (var lane in ProcessDriverVerificationGatewayLaneRules.AllowedLanes)
+        {
+            var key = ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(lane.Lane);
+            Assert.True(verificationDescriptors.TryGetValue(key, out var descriptor), $"Missing descriptor for {key}.");
+
+            Assert.Equal(ProcessVerificationHostCapabilityKind.VerificationLane, descriptor!.Kind);
+            Assert.Equal(ProcessRuntimeHostContractSurface.VerificationHost, descriptor.ContractSurface);
+            Assert.Equal(lane.RequiredPermissionMode, descriptor.PermissionMode);
+            Assert.Equal(lane.AllowedOperations, descriptor.AllowedOperations);
+        }
     }
 
     [Fact]
