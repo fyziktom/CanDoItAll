@@ -70,6 +70,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private ProcessWorkspaceRunDetailsLoader RunDetailsLoader { get; set; } = default!;
 
     [Inject]
+    private IProcessManagerReadOnlyVerificationFacade ManagerVerificationFacade { get; set; } = default!;
+
+    [Inject]
     private ProcessRuntimeStateOverviewService RuntimeStateOverviewService { get; set; } = default!;
 
     [Inject]
@@ -130,6 +133,7 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private IReadOnlyList<ProjectPartyOption> partyOptions = [];
     private IReadOnlyList<ProcessManagerAgentOption> managerAgentOptions = [];
 
+    private ProcessRuntimeHostReadbackPanelViewModel? runtimeHostReadback;
     private ProcessRuntimeStateOverview runtimeStateOverview = ProcessRuntimeStateOverview.Empty(null);
     private ProcessAnalyticsSummary analytics = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     private ProcessRunHealthSummaryViewModel selectedRunHealth = ProcessRunHealthSummaryViewModel.Empty;
@@ -210,6 +214,8 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
     private string selectedRunGraphsError = string.Empty;
     private Guid? selectedRunGraphsLoadedRunId;
     private ProcessLiveObservationSnapshot? selectedRunGraphsSnapshot;
+    private bool runtimeHostReadbackLoading;
+    private string runtimeHostReadbackError = string.Empty;
 
     private IReadOnlyList<ProcessDefinitionListItem> FilteredDefinitions => definitions
         .Where(definition =>

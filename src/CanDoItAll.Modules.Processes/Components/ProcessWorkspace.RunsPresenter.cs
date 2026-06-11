@@ -104,6 +104,12 @@ public partial class ProcessWorkspace
 
         public ProcessRunHealthSummaryViewModel SelectedRunHealth => workspace.selectedRunHealth;
 
+        public ProcessRuntimeHostReadbackPanelViewModel? RuntimeHostReadback => workspace.runtimeHostReadback;
+
+        public bool RuntimeHostReadbackLoading => workspace.runtimeHostReadbackLoading;
+
+        public string RuntimeHostReadbackError => workspace.runtimeHostReadbackError;
+
         public IReadOnlyList<ProcessRunAssignmentViewModel> Assignments => workspace.assignments;
 
         public ProcessRunAssignmentViewModel? SelectedAssignment => workspace.SelectedAssignment;

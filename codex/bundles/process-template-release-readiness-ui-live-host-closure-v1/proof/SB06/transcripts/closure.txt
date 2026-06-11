@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~Target_launcher_starts_real_process_run|FullyQualifiedName~Target_launcher_starts_real_workflow_run|FullyQualifiedName~Target_launcher_records_no_messages_for_completed_workflow_output" --no-restore
+ExitCode: 0
+Test name: Target_launcher_starts_real_process_run
+Invariant ID: SB06-INV-001
+Result: Passed target launcher scheduler/workflow representative tests.
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~Process_readonly_verification_job_SB031_INV_001|FullyQualifiedName~Process_readonly_verification_job_runner_SB07_INV_001" --no-restore
+ExitCode: 0
+Result: Passed read-only verification job lifecycle tests.
+Anti-stub audit: No scheduler/workflow direct-driver execution or verification-job mutation path was added.

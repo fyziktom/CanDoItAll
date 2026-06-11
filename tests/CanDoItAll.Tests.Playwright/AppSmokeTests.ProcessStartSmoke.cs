@@ -103,6 +103,29 @@ public sealed partial class AppSmokeTests {
             Path = Path.Combine(artifactsDir, "01-selected-run-summary-large-desktop.png")
         });
 
+        await page.GetByTestId("processes-runs-tabs").GetByRole(AriaRole.Tab, new() {
+            Name = "Execution",
+            Exact = true
+        }).ClickAsync();
+        var runtimeHostReadback = page.GetByTestId("processes-runtime-host-readback");
+        await runtimeHostReadback.WaitForAsync(new LocatorWaitForOptions {
+            Timeout = 30_000
+        });
+        await WaitForBodyTextAsync(page, "Operator readback", 30_000);
+        var runtimeHostReadbackText = await runtimeHostReadback.InnerTextAsync();
+        Assert.DoesNotContain("Runtime-host readback failed", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains(runId.ToString("D"), runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("process-workspace:run-detail-runtime-host-readback", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("No mutation", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("process writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+        await runtimeHostReadback.ScreenshotAsync(new() {
+            Path = Path.Combine(artifactsDir, "02-runtime-host-readback-large-desktop.png")
+        });
+
+        await page.GetByTestId("processes-runs-tabs").GetByRole(AriaRole.Tab, new() {
+            Name = "Activity",
+            Exact = true
+        }).ClickAsync();
         await page.GetByTestId($"processes-run-history-item-{runId:D}").ClickAsync();
         var runStepsDialog = page.GetByTestId("processes-run-steps-dialog");
         await runStepsDialog.GetByTestId("processes-run-steps-dialog-step-list").WaitForAsync();
@@ -117,7 +140,7 @@ public sealed partial class AppSmokeTests {
         Assert.Contains("recommended: Recover artifacts only", recoveryText, StringComparison.Ordinal);
         Assert.Contains("Recover artifacts only", recoveryText, StringComparison.Ordinal);
         await runStepsDialog.ScreenshotAsync(new() {
-            Path = Path.Combine(artifactsDir, "02-step-recovery-diagnostics-large-desktop.png")
+            Path = Path.Combine(artifactsDir, "03-step-recovery-diagnostics-large-desktop.png")
         });
 
         await runStepsDialog.GetByRole(AriaRole.Button, new() {
@@ -138,7 +161,7 @@ public sealed partial class AppSmokeTests {
         Assert.Contains("Satisfied", artifactLedgerText, StringComparison.Ordinal);
         Assert.Contains($"Artifact record: {artifactId:D}", artifactLedgerText, StringComparison.Ordinal);
         await artifactLedger.ScreenshotAsync(new() {
-            Path = Path.Combine(artifactsDir, "03-artifact-ledger-large-desktop.png")
+            Path = Path.Combine(artifactsDir, "04-artifact-ledger-large-desktop.png")
         });
 
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());

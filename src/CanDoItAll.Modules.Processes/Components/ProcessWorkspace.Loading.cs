@@ -525,6 +525,7 @@ public partial class ProcessWorkspace
             new ProcessRunObservationQuery(selectedRunId.Value, ProjectId),
             cancellationToken);
         ApplyRunDetails(runSnapshot.Details);
+        await LoadRuntimeHostReadbackAsync(cancellationToken);
     }
 
     private void ApplyRunDetails(ProcessWorkspaceRunDetails runDetails)
@@ -607,6 +608,7 @@ public partial class ProcessWorkspace
         directMessageSourceRoleRequirementId = null;
         directMessageTargetRoleRequirementId = null;
         directMessageBody = string.Empty;
+        ClearRuntimeHostReadback();
     }
 
     private Guid? ResolveSelectedProcessId()

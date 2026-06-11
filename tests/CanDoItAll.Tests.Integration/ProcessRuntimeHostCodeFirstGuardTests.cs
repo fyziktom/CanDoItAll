@@ -139,6 +139,28 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
+    public void Process_runtime_host_codefirst_SB01_INV_008_manual_contract_tests_are_not_counted_as_automation_proofs()
+    {
+        var root = FindRepositoryRoot();
+        var e2eSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "CanDoItAll.Tests.Integration",
+            "ProcessTemplateExecutionE2ETests.cs"));
+        var manualContractMethods = ExtractMethodNamesContaining(e2eSource, "SuppressAutomationDispatch = true");
+        var proofMethodNames = LongRunningTemplateAutomationProofs
+            .Select(proof => proof.MethodName)
+            .ToHashSet(StringComparer.Ordinal);
+        var manualMethodsCountedAsAutomationProofs = manualContractMethods
+            .Where(proofMethodNames.Contains)
+            .ToArray();
+
+        Assert.Empty(manualMethodsCountedAsAutomationProofs);
+        Assert.All(manualContractMethods, methodName =>
+            Assert.Contains("manual_contract", methodName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public void Process_runtime_host_codefirst_SB01_INV_003_numstat_summary_groups_source_tests_docs_and_bundle_lines()
     {
         var summary = ProcessRuntimeHostCodeFirstDiffSummary.FromNumstatLines(
@@ -283,6 +305,42 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         }
 
         throw new InvalidOperationException($"Could not parse method body for '{methodName}'.");
+    }
+
+    private static IReadOnlyList<string> ExtractMethodNamesContaining(string source, string text)
+    {
+        var lines = source.Split(["\r\n", "\n"], StringSplitOptions.None);
+
+        return lines
+            .Select((line, index) => new { Line = line, Index = index })
+            .Where(item => item.Line.Contains(text, StringComparison.Ordinal))
+            .Select(item => FindNearestFactMethodName(lines, item.Index))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string FindNearestFactMethodName(IReadOnlyList<string> lines, int startIndex)
+    {
+        for (var index = startIndex; index >= 0; index--)
+        {
+            var line = lines[index].Trim();
+            if (!line.StartsWith("public async Task ", StringComparison.Ordinal) &&
+                !line.StartsWith("public void ", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var nameEnd = line.IndexOf('(');
+            var nameStart = nameEnd > 0
+                ? line.LastIndexOf(' ', nameEnd - 1) + 1
+                : -1;
+            if (nameStart > 0 && nameEnd > nameStart)
+            {
+                return line[nameStart..nameEnd];
+            }
+        }
+
+        throw new InvalidOperationException($"Could not locate a test method before line {startIndex + 1}.");
     }
 
     private sealed record LongRunningE2EProofContract(string MethodName, string InvariantId);

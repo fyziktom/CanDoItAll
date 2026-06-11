@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --filter "FullyQualifiedName~LiveProcessRunOpenAiSmokeIntegrationTests" --no-restore
+ExitCode: 0
+Test name: LiveProcessRunOpenAiSmokeIntegrationTests
+Invariant ID: SB05-INV-001
+Result: Passed guarded classification tests. Live provider execution was skipped because CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION, CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE, model, timeout, and token budget env vars were unset.
+Command: git diff -U0 3d0272bef8056db7d426c5dc8f77a9abbcbbe095 -- . | rg "(?i)(OPENAI_API_KEY|sk-|api[_-]?key\s*[:=]|password\s*[:=]|secret\s*[:=])"
+ExitCode: 1
+Result: No changed-line secret matches.
+Anti-stub audit: No fake live result, API key literal, or unbounded live execution path was added.

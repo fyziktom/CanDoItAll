@@ -177,6 +177,57 @@ public sealed class ProcessWorkspaceTests
     }
 
     [Fact]
+    public async Task Run_execution_tab_exposes_runtime_host_readback_for_selected_run()
+    {
+        await using var harness = await ComponentTestHarness.CreateAsync();
+        var projectsService = harness.Context.Services.GetRequiredService<ProjectsService>();
+        var processesService = harness.Context.Services.GetRequiredService<ProcessesService>();
+        var projectId = await CreateProjectAsync(projectsService, "Runtime host readback component project");
+        var saveResult = await processesService.SaveAsync(BuildDefinitionEditor(projectId, Guid.NewGuid()));
+
+        Assert.True(saveResult.IsSuccess, string.Join(" | ", saveResult.Errors.Select(error => error.Message)));
+
+        var publishResult = await processesService.PublishAsync(saveResult.Value);
+
+        Assert.True(publishResult.IsSuccess, string.Join(" | ", publishResult.Errors.Select(error => error.Message)));
+
+        var runResult = await processesService.StartRunAsync(
+            new ProcessRunStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = "Runtime host readback proof",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = "Component test runtime-host readback."
+            });
+
+        Assert.True(runResult.IsSuccess, string.Join(" | ", runResult.Errors.Select(error => error.Message)));
+
+        var cut = harness.Context.RenderComponent<ProcessWorkspace>(parameters => parameters
+            .Add(component => component.ProjectId, projectId));
+
+        cut.WaitForAssertion(() => Assert.Contains("Workspace-visible process", cut.Markup));
+
+        await ActivateRunsTabAsync(cut);
+        await SelectRunAsync(cut, runResult.Value);
+        await ActivateRunExecutionTabAsync(cut);
+
+        cut.WaitForAssertion(() =>
+        {
+            var panel = cut.Find("[data-testid='processes-runtime-host-readback']");
+
+            Assert.DoesNotContain("Runtime-host readback failed", panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains("Operator readback", panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains(runResult.Value.ToString("D"), panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains("process-workspace:run-detail-runtime-host-readback", panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains("No mutation", panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains("process writes: denied", panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains("transition writes: denied", panel.TextContent, StringComparison.Ordinal);
+            Assert.Contains("finalizer writes: denied", panel.TextContent, StringComparison.Ordinal);
+        });
+    }
+
+    [Fact]
     public async Task Workspace_shell_uses_internal_scroll_regions_for_definition_list_and_detail_tabs()
     {
         await using var harness = await ComponentTestHarness.CreateAsync();
@@ -2153,6 +2204,23 @@ public sealed class ProcessWorkspaceTests
 
         cut.Render();
         cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-selected-run-graphs-tab']")));
+    }
+
+    private static async Task ActivateRunExecutionTabAsync(IRenderedComponent<ProcessWorkspace> cut)
+    {
+        var runsTab = cut.FindComponent<ProcessWorkspaceRunsTab>();
+        var method = typeof(ProcessWorkspaceRunsTab).GetMethod("HandleSelectedRunViewChanged", BindingFlags.Instance | BindingFlags.NonPublic);
+        Assert.NotNull(method);
+
+        await cut.InvokeAsync(async () =>
+        {
+            var task = method!.Invoke(runsTab.Instance, [3]) as Task;
+            Assert.NotNull(task);
+            await task!;
+        });
+
+        cut.Render();
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find("[data-testid='processes-runtime-host-readback']")));
     }
 
     private static async Task SelectRunAsync(IRenderedComponent<ProcessWorkspace> cut, Guid runId)
