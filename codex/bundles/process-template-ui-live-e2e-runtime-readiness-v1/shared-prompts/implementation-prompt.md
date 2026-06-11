@@ -1,0 +1,1 @@
+Implement the owning subbundle as a code-first source/test change. Keep proof concise. Preserve Process Core genericity, use representative process templates, and keep the runtime-host verification/dry-run only. Do not introduce execution-capable drivers, reflection discovery, fallback selectors, or driver self-registration.
