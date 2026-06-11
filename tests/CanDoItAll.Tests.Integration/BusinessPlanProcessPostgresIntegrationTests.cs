@@ -1,4 +1,6 @@
+using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
+using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
@@ -91,6 +93,54 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             runResult.Value,
             validationLabel,
             managedArtifactRoot);
+    }
+
+    [Fact]
+    public async Task Business_plan_process_SB05_INV_001_completes_through_automation_dispatch_finalizer_and_readback()
+    {
+        const string validationLabel = "Business-analysis automation validation";
+
+        await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+
+        var projectId = await ProcessTemplateAutomationTestSupport.CreateProjectAsync(
+            projectsService,
+            "Business-analysis automation validation project",
+            "Planning");
+
+        var result = await ProcessTemplateAutomationTestSupport.ExecuteTemplateWithProcessMockAgentsAsync(
+            scope.ServiceProvider,
+            "business-plan-development",
+            projectId,
+            validationLabel,
+            $"{validationLabel} launch",
+            "Validate the business-plan representative template through automation dispatch, finalizer completion, and business artifact readback.",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["business-strategist"] = ProcessMockAgentRoleKeys.ProductOwner,
+                ["financial-strategist"] = ProcessMockAgentRoleKeys.Developer,
+                ["marketing-specialist"] = ProcessMockAgentRoleKeys.ReleaseManager
+            },
+            timeout: TimeSpan.FromSeconds(90));
+
+        AssertAutomationStep(result.StepRuns, "Capture strategy intake", ProcessStepRunStatus.Completed);
+        AssertAutomationStep(result.StepRuns, "Review product evidence", ProcessStepRunStatus.Completed);
+        AssertAutomationStep(result.StepRuns, "Draft business plan", ProcessStepRunStatus.Completed);
+        AssertAutomationStep(result.StepRuns, "Model financial assumptions", ProcessStepRunStatus.Completed);
+        AssertAutomationStep(result.StepRuns, "Prepare marketing plan", ProcessStepRunStatus.Completed);
+        AssertAutomationStep(result.StepRuns, "Review integrated business plan", ProcessStepRunStatus.Completed, "Approved");
+        AssertAutomationStep(result.StepRuns, "Publish approved plan handoff", ProcessStepRunStatus.Completed);
+        AssertAutomationStep(result.StepRuns, "Capture blocked-plan corrections", ProcessStepRunStatus.Skipped);
+
+        Assert.DoesNotContain(result.StepRuns, step => step.Title.Contains("software", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(result.StepRuns, step => step.Title.Contains(".net", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(result.StepRuns, step => step.Title.Contains("blazor", StringComparison.OrdinalIgnoreCase));
+        AssertAutomationArtifact(result.ArtifactRecords, "Business plan", ProcessArtifactKind.Deliverable);
+        AssertAutomationArtifact(result.ArtifactRecords, "Financial model and sensitivity note", ProcessArtifactKind.Dataset);
+        AssertAutomationArtifact(result.ArtifactRecords, "Go-to-market and experiment plan", ProcessArtifactKind.Deliverable);
+        AssertAutomationArtifact(result.ArtifactRecords, "Integrated business plan review", ProcessArtifactKind.Decision);
+        AssertAutomationFinalizerSummaries(result.ExecutionRuns);
     }
 
     [Fact]
@@ -417,6 +467,41 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             "approved" => "Approved",
             _ => outcomeKey
         };
+    }
+
+    private static void AssertAutomationStep(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        string title,
+        ProcessStepRunStatus expectedStatus,
+        string? expectedBranchTitle = null)
+    {
+        var step = Assert.Single(stepRuns, item => item.Title == title);
+        Assert.Equal(expectedStatus, step.Status);
+        if (!string.IsNullOrWhiteSpace(expectedBranchTitle))
+        {
+            Assert.Equal(expectedBranchTitle, step.SelectedBranchOutcomeTitle);
+        }
+    }
+
+    private static void AssertAutomationArtifact(
+        IReadOnlyList<ProcessArtifactRecord> artifactRecords,
+        string title,
+        ProcessArtifactKind artifactKind)
+    {
+        Assert.Contains(
+            artifactRecords,
+            artifact => artifact.Title == title &&
+                artifact.ArtifactKind == artifactKind &&
+                !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath));
+    }
+
+    private static void AssertAutomationFinalizerSummaries(IReadOnlyList<ExecutionRunRecord> executionRuns)
+    {
+        Assert.All(executionRuns, executionRun =>
+        {
+            Assert.Contains("\"status\"", executionRun.ResultSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Completed", executionRun.ResultSummary, StringComparison.OrdinalIgnoreCase);
+        });
     }
 
     private static string BuildDatabaseConnectionString(string connectionString, string databaseName)

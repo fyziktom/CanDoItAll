@@ -63,6 +63,7 @@ internal sealed class CanDoItAllAgentWorkspaceFactory(
         var runtime = new ProcessMockAgentRuntime(
             scenarioRuntime,
             fileService,
+            workspaceRoot,
             processMockAgentOptions);
         var checkpointBridge = new WorkflowBackedAgentExecutionCheckpointBridge(store, workspaceRoot, scope);
         var governanceBridge = new DurableAgentExecutionGovernanceBridge(checkpointBridge);

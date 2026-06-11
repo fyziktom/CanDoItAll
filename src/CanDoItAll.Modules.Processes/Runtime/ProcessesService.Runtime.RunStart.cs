@@ -910,27 +910,6 @@ public sealed partial class ProcessesService
             role.PreferredProjectAssignmentRole ?? ProjectPartyAssignmentRole.TeamMember,
             out var candidates);
         var candidate = candidates?.FirstOrDefault();
-        if (candidate is null &&
-            context.DirectAiCandidatesByRoleRequirementId.TryGetValue(role.Id, out var directAiCandidate))
-        {
-            return new ProcessRunAssignment
-            {
-                ProcessRunId = processRunId,
-                RoleRequirementId = role.Id,
-                PartyId = directAiCandidate.PartyId,
-                DisplayName = directAiCandidate.DisplayName,
-                ExecutorKind = ProcessExecutorKindNames.Normalize(directAiCandidate.ExecutorKind),
-                BindingReason = string.IsNullOrWhiteSpace(directAiCandidate.RecommendationSummary)
-                    ? "Matched bound AI resource from the shared agent directory for direct assisted execution."
-                    : directAiCandidate.RecommendationSummary,
-                SourceRegistryKey = directAiCandidate.SourceRegistryKey,
-                SnapshotSummary = role.SnapshotSummary,
-                IsFallback = false,
-                IsCapabilityGap = false,
-                AllowsDirectMessaging = directAiCandidate.AllowsDirectMessaging
-            };
-        }
-
         if (context.InheritedAssignmentsByRoleRequirementId.TryGetValue(role.Id, out var inheritedCandidate))
         {
             var parentAssignment = inheritedCandidate.Assignment;
@@ -951,6 +930,27 @@ public sealed partial class ProcessesService
                 IsFallback = parentAssignment.IsFallback,
                 IsCapabilityGap = parentAssignment.IsCapabilityGap,
                 AllowsDirectMessaging = parentAssignment.AllowsDirectMessaging && !parentAssignment.IsCapabilityGap
+            };
+        }
+
+        if (candidate is null &&
+            context.DirectAiCandidatesByRoleRequirementId.TryGetValue(role.Id, out var directAiCandidate))
+        {
+            return new ProcessRunAssignment
+            {
+                ProcessRunId = processRunId,
+                RoleRequirementId = role.Id,
+                PartyId = directAiCandidate.PartyId,
+                DisplayName = directAiCandidate.DisplayName,
+                ExecutorKind = ProcessExecutorKindNames.Normalize(directAiCandidate.ExecutorKind),
+                BindingReason = string.IsNullOrWhiteSpace(directAiCandidate.RecommendationSummary)
+                    ? "Matched bound AI resource from the shared agent directory for direct assisted execution."
+                    : directAiCandidate.RecommendationSummary,
+                SourceRegistryKey = directAiCandidate.SourceRegistryKey,
+                SnapshotSummary = role.SnapshotSummary,
+                IsFallback = false,
+                IsCapabilityGap = false,
+                AllowsDirectMessaging = directAiCandidate.AllowsDirectMessaging
             };
         }
 

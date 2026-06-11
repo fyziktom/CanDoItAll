@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --filter FullyQualifiedName~Process_readonly_verification_job_runner_SB07_INV_001_executes_scheduler_and_workflow_lifecycle_status_provenance_readback_without_mutation
+Exit code: 0
+
+Result summary:
+Passed 1 test.
+Duration reported by test runner: 246 ms.
+
+Semantic assertion:
+The test ran scheduler and workflow jobs through the actual read-only job runner, verified completed lifecycle status, source/correlation provenance, process/step ids, manager readback success, audit id/hash linkage, contract surfaces, audit records, and no mutation flags.

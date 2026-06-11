@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --filter FullyQualifiedName~Process_runtime_host_readback_SB06_INV_001_uses_real_process_run_and_step_ids_without_mutation
+Exit code: 0
+
+Result summary:
+Passed 1 test.
+Duration reported by test runner: 29 s.
+
+Semantic assertion:
+The test launched `business-plan-development` through process-mock automation, selected the completed `Review integrated business plan` step, verified manager readback against the real run/step ids, verified runtime-host readiness, and projected a denied dry-run command readback with audit reference and no mutation flags.

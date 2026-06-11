@@ -47,7 +47,10 @@ public static class ProcessSubprocessArtifactSourceResolver
             var mappedArtifacts = childArtifacts
                 .Where(artifact =>
                     artifact.ArtifactExpectationId == mapping.ChildExpectationId &&
-                    IsSubprocessSourceArtifactEligible(artifact, expectation))
+                    IsSubprocessSourceArtifactEligible(
+                        artifact,
+                        expectation,
+                        allowArtifactKindProjection: !mapping.IsLegacyTextMapping))
                 .OrderByDescending(artifact => artifact.CreatedAtUtc)
                 .ToList();
             if (mappedArtifacts.Count > 0)
@@ -213,9 +216,10 @@ public static class ProcessSubprocessArtifactSourceResolver
 
     private static bool IsSubprocessSourceArtifactEligible(
         ProcessArtifactRecordSnapshot artifact,
-        ProcessArtifactExpectationSnapshot expectation)
+        ProcessArtifactExpectationSnapshot expectation,
+        bool allowArtifactKindProjection = false)
     {
-        return artifact.ArtifactKind == expectation.ArtifactKind &&
+        return (allowArtifactKindProjection || artifact.ArtifactKind == expectation.ArtifactKind) &&
                artifact.SensitivityLevel >= expectation.SensitivityLevel &&
                ProcessArtifactExpectationSatisfactionRules.SatisfiesTrustRequirement(artifact.TrustStatus, expectation.TrustRequirement);
     }

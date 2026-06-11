@@ -1,0 +1,5 @@
+Command: rg -n "CanDoItAll\.(Modules|AgentFramework|Web)" src\CanDoItAll.Processes.Core
+Exit code: 1
+
+Result:
+No Process Core dependency drift into Modules, AgentFramework, or Web was found.

@@ -273,7 +273,15 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
         var releaseNotesStep = GetStepRunByKey(stepRuns, fixture, ProcessWorkflowRepairDefinitionTestFixture.StepKeys.ReleaseNotes);
 
         Assert.Equal(ProcessStepRunStatus.Completed, qaFirstReviewStep.Status);
-        Assert.Equal("Repairs required", qaFirstReviewStep.SelectedBranchOutcomeTitle);
+        if (!string.Equals("Repairs required", qaFirstReviewStep.SelectedBranchOutcomeTitle, StringComparison.Ordinal))
+        {
+            Assert.Fail(await BuildRunDiagnosticsAsync(
+                dbContextFactory,
+                processesService,
+                workspaceService,
+                runId,
+                $"Expected first QA review to select Repairs required, but selected '{qaFirstReviewStep.SelectedBranchOutcomeTitle}'."));
+        }
         Assert.Equal(
             Assert.Single(qaFirstReviewStep.AvailableBranchOutcomes, item => item.Title == "Repairs required").Id,
             qaFirstReviewStep.SelectedBranchOutcomeId);
@@ -1060,7 +1068,9 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
                 .Append(" / ")
                 .Append(executionRun.Outcome)
                 .Append(" / step=")
-                .AppendLine(executionRun.ProcessStepId);
+                .Append(executionRun.ProcessStepId)
+                .Append(" / result=")
+                .AppendLine(executionRun.ResultSummary);
         }
 
         return builder.ToString();

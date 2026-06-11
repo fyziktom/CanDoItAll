@@ -1,7 +1,7 @@
 # SB06: Runtime-host readback on real process runs
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Attach/use verification-host and dry-run readback against real ProcessRun/StepRun IDs from SB03-SB05. Return audit id/hash, evidence count, capability key, denial category, and no-mutation flags.
@@ -17,9 +17,9 @@ Attach/use verification-host and dry-run readback against real ProcessRun/StepRu
 - Current branch must be `maf-processes-refactor`.
 
 ## Exact Source References
-- repo://ProcessManagerReadOnlyVerificationReadback.cs
-- repo://ProcessManagerRuntimeHostDryRunReadback.cs
-- repo://ProcessVerificationRuntimeHostStatus.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerReadOnlyVerificationReadback.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerRuntimeHostDryRunReadback.cs
+- repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessVerificationRuntimeHostStatus.cs
 
 ## Deliverables
 - Real production and/or test code changes for this coherent implementation area.
@@ -27,10 +27,11 @@ Attach/use verification-host and dry-run readback against real ProcessRun/StepRu
 - Concise execution-report update.
 
 ## Dependency Impact
-This makes runtime-host useful to operators without enabling effects.
+- This makes runtime-host useful to operators without enabling effects.
 
 ## Validation Depth
-Critical. Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
+- Critical.
+- Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
 
 ## Implementation Steps
 1. Re-open the exact source references and nearby tests.
@@ -66,10 +67,11 @@ Critical. Require semantic positive proof, adversarial negative proof, source as
 - For template execution subbundles, proof must show dispatch/finalizer/artifact readback, not manual transition-only proof.
 
 ## Browser Validation Logging
-N/A unless UI/project-structure routes/components are touched or used as user-facing proof. If browser proof is required, use a 1900x1200 large desktop viewport only.
+- N/A unless UI/project-structure routes/components are touched or used as user-facing proof.
+- If browser proof is required, use a 1900x1200 large desktop viewport only.
 
 ## Progression Gate
-Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
+- Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
 
 ## Suggested Agent Prompt
 Implement SB06 as a code-first coherent runtime/template-host improvement. Keep the proof concise, preserve Process Core genericity, and keep execution-capable driver behavior blocked.

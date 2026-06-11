@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --filter FullyQualifiedName~Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback
+Exit code: 0
+
+Result summary:
+Passed 1 test.
+Duration reported by test runner: 26 s.
+
+Semantic assertion:
+The Blazor template was imported, launched with process-mock role assignments, drained through the durable outbox, completed automation-dispatched steps, recorded expected artifacts, and every execution run carried a finalizer summary.

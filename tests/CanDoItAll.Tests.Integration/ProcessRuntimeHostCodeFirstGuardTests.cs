@@ -6,7 +6,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
 {
     private const string CodexSegment = "codex";
     private const string BundlesSegment = "bundles";
-    private const int RequiredSourceTestDominanceMultiplier = 4;
+    private const int RequiredSourceTestDominanceMultiplier = 5;
 
     private static readonly string[] ConcreteBundlePathFragments =
     [
@@ -108,6 +108,21 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         Assert.Equal(5, summary.SourceAndTestChangedLines);
         Assert.Equal(6, summary.BundleChangedLines);
         Assert.False(summary.SatisfiesSourceTestDominance(RequiredSourceTestDominanceMultiplier));
+    }
+
+    [Fact]
+    public void Process_runtime_host_codefirst_SB01_INV_005_numstat_summary_accepts_exact_five_to_one_source_test_dominance()
+    {
+        var summary = ProcessRuntimeHostCodeFirstDiffSummary.FromNumstatLines(
+        [
+            "6\t4\tsrc/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessDryRunExecutionHost.cs",
+            "3\t2\ttests/CanDoItAll.Tests.Integration/ProcessRuntimeHostCodeFirstGuardTests.cs",
+            "2\t1\tcodex/bundles/process-template-automation-e2e-multiteam-host-readiness-v1/reviews/01-execution-report.md"
+        ]);
+
+        Assert.Equal(15, summary.SourceAndTestChangedLines);
+        Assert.Equal(3, summary.BundleChangedLines);
+        Assert.True(summary.SatisfiesSourceTestDominance(RequiredSourceTestDominanceMultiplier));
     }
 
     private static bool ContainsConcreteBundlePath(string text)

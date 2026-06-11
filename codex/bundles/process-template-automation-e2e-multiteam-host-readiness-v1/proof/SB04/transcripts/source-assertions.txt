@@ -1,0 +1,17 @@
+Command: rg -n "Software_delivery_template_SB04_INV_001|ExecuteTemplateWithProcessMockAgentsAsync|AssertFinalizerSummaries" tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
+Exit code: 0
+
+Key matches:
+- tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs:74 declares `Software_delivery_template_SB04_INV_001_completes_multi_team_governance_through_automation_dispatch`.
+- tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs:96 executes `software-delivery` through `ExecuteTemplateWithProcessMockAgentsAsync`.
+- tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs:130-132 assert first-pass release readiness, rollout, and post-release learning completion.
+- tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs:141 asserts finalizer summaries.
+
+Command: rg -n "WriteRequiredBrowserOutputFiles|RequiresPromptImageArtifactFile|InheritedAssignmentsByRoleRequirementId|allowArtifactKindProjection|writeback|browser_" src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime*.cs src/CanDoItAll.Modules.Processes/Runtime/ProcessesService.Runtime.RunStart.cs src/CanDoItAll.Processes.Core/Artifacts/ProcessSubprocessArtifactSourceResolver.cs src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessRunAutomationDispatchService.StepCompletionFinalizer.cs
+Exit code: 0
+
+Key matches:
+- `ProcessMockAgentRuntime` writes durable process-mock browser outputs and uses image files only for direct screenshot/image required artifacts.
+- `ProcessesService.Runtime.RunStart` checks `InheritedAssignmentsByRoleRequirementId` before direct AI candidates.
+- `ProcessSubprocessArtifactSourceResolver` allows explicit child mappings to bridge artifact kinds while legacy text mappings remain same-kind.
+- `ProcessRunAutomationDispatchService.StepCompletionFinalizer` treats `writeback` titles as narrative containers rather than direct image artifacts.

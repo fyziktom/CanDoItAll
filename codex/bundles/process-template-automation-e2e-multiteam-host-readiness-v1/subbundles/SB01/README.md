@@ -1,7 +1,7 @@
 # SB01: Baseline, current diff, and ratio guard
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Refresh current SHA/diff, measure real code vs bundle churn, and block proof-heavy closure before implementation starts.
@@ -17,8 +17,8 @@ Refresh current SHA/diff, measure real code vs bundle churn, and block proof-hea
 - Current branch must be `maf-processes-refactor`.
 
 ## Exact Source References
-- repo://ProcessRuntimeHostCodeFirstGuardTests.cs
-- repo://reviews/01-execution-report.md
+- repo://tests/CanDoItAll.Tests.Integration/ProcessRuntimeHostCodeFirstGuardTests.cs
+- bundle://reviews/01-execution-report.md
 
 ## Deliverables
 - Real production and/or test code changes for this coherent implementation area.
@@ -26,10 +26,11 @@ Refresh current SHA/diff, measure real code vs bundle churn, and block proof-hea
 - Concise execution-report update.
 
 ## Dependency Impact
-No downstream template proof can start until current-state and ratio baseline are captured.
+- No downstream template proof can start until current-state and ratio baseline are captured.
 
 ## Validation Depth
-Critical. Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
+- Critical.
+- Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
 
 ## Implementation Steps
 1. Re-open the exact source references and nearby tests.
@@ -63,12 +64,14 @@ Critical. Require semantic positive proof, adversarial negative proof, source as
 - Anti-stub scan.
 - Boundary scan.
 - For template execution subbundles, proof must show dispatch/finalizer/artifact readback, not manual transition-only proof.
+- Closure proof: `bundle://proof/SB01/manifest.md` and `bundle://proof/SB01/semantic-invariants.md`.
 
 ## Browser Validation Logging
-N/A unless UI/project-structure routes/components are touched or used as user-facing proof. If browser proof is required, use a 1900x1200 large desktop viewport only.
+- N/A unless UI/project-structure routes/components are touched or used as user-facing proof.
+- If browser proof is required, use a 1900x1200 large desktop viewport only.
 
 ## Progression Gate
-Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
+- Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
 
 ## Suggested Agent Prompt
 Implement SB01 as a code-first coherent runtime/template-host improvement. Keep the proof concise, preserve Process Core genericity, and keep execution-capable driver behavior blocked.

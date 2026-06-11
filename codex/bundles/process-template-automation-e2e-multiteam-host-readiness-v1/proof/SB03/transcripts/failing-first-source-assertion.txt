@@ -1,0 +1,8 @@
+Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs | rg "Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback"
+Exit code: 1
+
+Command: git cat-file -e HEAD:tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
+Exit code: 1
+
+Result summary:
+The baseline had no SB03 automation E2E test and no shared process-mock template automation harness. An import-only or manual-transition proof would not satisfy this subbundle.

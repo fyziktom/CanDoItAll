@@ -129,6 +129,33 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
+    public async Task Process_template_catalog_SB02_INV_002_exposes_reverse_family_mapping_for_multi_team_software_delivery()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+
+        var pack = packLoader.Load();
+        var mappedFamilies = ProcessTemplateCatalogInventory
+            .GetRequiredTemplatesForTemplate(ProcessTemplateCatalogInventory.SoftwareDeliveryTemplateKey);
+        var familyKinds = mappedFamilies.Select(item => item.Family).ToArray();
+        var resolutionKinds = mappedFamilies.Select(item => item.ResolutionKind).ToArray();
+
+        Assert.Equal(
+            [ProcessTemplateInventoryFamily.SoftwareDevelopment, ProcessTemplateInventoryFamily.MultiTeamDevelopment],
+            familyKinds);
+        Assert.Equal(
+            [ProcessTemplateInventoryResolutionKind.ExactTemplate, ProcessTemplateInventoryResolutionKind.MappedTemplate],
+            resolutionKinds);
+        Assert.All(mappedFamilies, item => Assert.Equal("processes/software-delivery", item.RelativePath));
+        Assert.All(mappedFamilies, item => Assert.True(pack.Processes.ContainsKey(item.TemplateKey)));
+        Assert.Contains(
+            mappedFamilies,
+            item => item.ResolutionSummary.Contains("multi-team", StringComparison.OrdinalIgnoreCase) &&
+                item.ResolutionSummary.Contains("release governance", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
     public async Task Dotnet_software_delivery_template_hardens_parent_permissions_and_writeback_subprocesses()
     {
         await using var application = await TestApplication.CreateAsync();

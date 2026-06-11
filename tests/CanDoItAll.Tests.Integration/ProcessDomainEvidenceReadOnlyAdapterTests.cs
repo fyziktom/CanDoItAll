@@ -1,6 +1,8 @@
 using CanDoItAll.Infrastructure.Logging;
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Processes.Contracts;
 using CanDoItAll.Processes.Core.Artifacts;
 using CanDoItAll.Processes.Core.Diagnostics;
@@ -967,6 +969,110 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
+    public async Task Process_runtime_host_readback_SB06_INV_001_uses_real_process_run_and_step_ids_without_mutation() {
+        await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+
+        var projectId = await ProcessTemplateAutomationTestSupport.CreateProjectAsync(
+            projectsService,
+            "Runtime-host readback automation validation project",
+            "Verification");
+        var runResult = await ProcessTemplateAutomationTestSupport.ExecuteTemplateWithProcessMockAgentsAsync(
+            scope.ServiceProvider,
+            "business-plan-development",
+            projectId,
+            "Runtime-host readback automation validation",
+            "Runtime-host readback automation validation launch",
+            "Validate runtime-host manager readback against a real automation-dispatched process run and step.",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["business-strategist"] = ProcessMockAgentRoleKeys.ProductOwner,
+                ["financial-strategist"] = ProcessMockAgentRoleKeys.Developer,
+                ["marketing-specialist"] = ProcessMockAgentRoleKeys.ReleaseManager
+            },
+            timeout: TimeSpan.FromSeconds(90));
+        var completedStep = Assert.Single(
+            runResult.StepRuns,
+            step => string.Equals(step.Title, "Review integrated business plan", StringComparison.Ordinal));
+        Assert.Equal(ProcessStepRunStatus.Completed, completedStep.Status);
+
+        var requestedAt = DateTimeOffset.UtcNow;
+        var payload = new ProcessReadOnlyVerificationBatchPayload(
+            runResult.RunId,
+            completedStep.Id,
+            "process-manager:sb06-real-run-readback",
+            requestedAt,
+            businessAnalysisPayloads: [CreateBusinessPayload()]);
+        var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
+        var readback = await facade.VerifyForReadbackAsync(new ProcessManagerReadOnlyVerificationReadbackRequest(
+            new ProcessManagerReadOnlyVerificationCommandRequest(
+                ProcessDriverVerificationGatewayLane.BusinessAnalysisRead,
+                payload,
+                ProcessManagerReadOnlyVerificationProjectionMode.Diagnostics,
+                "process-manager",
+                requestedAt),
+            auditRecordLimit: 10));
+
+        Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, readback.Status);
+        Assert.Equal(runResult.RunId, readback.ProcessRunId);
+        Assert.Equal(completedStep.Id, readback.StepRunId);
+        Assert.Equal(
+            ProcessVerificationHostCapabilityCatalog.VerificationLaneKey(ProcessDriverVerificationGatewayLane.BusinessAnalysisRead),
+            readback.CapabilityKey);
+        Assert.True(readback.AuditRecordId.HasValue);
+        Assert.True(readback.EvidenceReferenceCount > 0);
+        Assert.Matches("^[A-F0-9]{64}$", readback.AuditRecordObservationHash);
+        Assert.Null(readback.DenialCategory);
+        Assert.Null(readback.DenialCode);
+        Assert.Equal(string.Empty, readback.DenialMessage);
+        Assert.True(readback.NoMutationPerformed);
+        Assert.False(readback.AllowsProcessMutation);
+        Assert.False(readback.AllowsTransitionMutation);
+        Assert.False(readback.AllowsFinalizerMutation);
+
+        var status = await scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHostStatusService>()
+            .GetStatusAsync(new ProcessVerificationRuntimeHostStatusRequest(
+                "sb06-real-run-status",
+                "process-manager",
+                requestedAt));
+
+        Assert.Equal("sb06-real-run-status", status.CorrelationId);
+        Assert.Equal(ProcessVerificationRuntimeHostReadiness.Ready, status.Readiness);
+        Assert.True(status.NoMutationPerformed);
+        Assert.False(status.AllowsProcessMutation);
+        Assert.False(status.AllowsTransitionMutation);
+        Assert.False(status.AllowsFinalizerMutation);
+
+        var dryRunHost = new ProcessDryRunExecutionHost(new ProcessExecutionCapableDriverFutureGate());
+        var dryRun = await dryRunHost.EvaluateAsync(new ProcessDryRunExecutionRequest(
+            Guid.NewGuid(),
+            runResult.RunId,
+            completedStep.Id,
+            "process-operator",
+            "SB06 dry-run readback for real process run",
+            [ProcessExecutionCapableDriverSurface.CommandExecution],
+            [ProcessDriverOperation.ExecuteCommand],
+            ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun,
+            ProcessExecutionCapableDriverApprovalEvidence.None,
+            requestedAt));
+        var dryRunReadback = ProcessManagerRuntimeHostDryRunReadbackMapper.Project(dryRun);
+
+        Assert.Equal(runResult.RunId, dryRunReadback.ProcessRunId);
+        Assert.Equal(completedStep.Id, dryRunReadback.StepRunId);
+        Assert.Equal(ProcessDryRunExecutionHostDecision.Denied, dryRunReadback.Decision);
+        Assert.Equal(ProcessVerificationHostCapabilityCatalog.DryRunExecutionGateKey, dryRunReadback.CapabilityKey);
+        Assert.True(dryRunReadback.DenialCount > 0);
+        Assert.True(dryRunReadback.AuthorizationGapCount > 0);
+        Assert.False(string.IsNullOrWhiteSpace(dryRunReadback.AuditReferenceId));
+        Assert.Matches("^[a-f0-9]{64}$", dryRunReadback.AuditReferenceContentHash);
+        Assert.True(dryRunReadback.NoMutationPerformed);
+        Assert.False(dryRunReadback.AllowsProcessMutation);
+        Assert.False(dryRunReadback.AllowsTransitionMutation);
+        Assert.False(dryRunReadback.AllowsFinalizerMutation);
+    }
+
+    [Fact]
     public async Task Process_manager_diagnostics_operator_smoke_SB055_INV_001_serializes_large_screen_api_readback_with_audit_contract()
     {
         var services = new ServiceCollection();
@@ -1153,7 +1259,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
     }
 
     [Fact]
-    public async Task Process_readonly_verification_job_runner_SB024_INV_001_executes_scheduler_and_workflow_jobs_through_manager_host_boundary() {
+    public async Task Process_readonly_verification_job_runner_SB07_INV_001_executes_scheduler_and_workflow_lifecycle_status_provenance_readback_without_mutation() {
         var services = new ServiceCollection();
         services.AddProcessVerificationRuntimeHost();
         services.AddInMemoryProcessVerificationAuditStoreForTests();
@@ -1234,12 +1340,32 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         var workflowResult = await runner.RunAsync(workflowJob);
 
+        Assert.Equal(workflowJob.Id, workflowResult.JobId);
         Assert.Equal(ProcessReadOnlyVerificationJobSourceKind.Workflow, workflowResult.SourceKind);
         Assert.Equal("workflow:qa-readback", workflowResult.SourceReference);
         Assert.Equal("workflow-correlation:qa-readback", workflowResult.CorrelationId);
         Assert.Equal(ProcessReadOnlyVerificationJobLifecycleStatus.Completed, workflowResult.Lifecycle.Status);
+        Assert.Equal(workflowJob.Id, workflowResult.Lifecycle.JobId);
+        Assert.Equal(workflowJob.SourceKind, workflowResult.Lifecycle.SourceKind);
+        Assert.Equal(workflowJob.SourceReference, workflowResult.Lifecycle.SourceReference);
         Assert.Equal(workflowJob.CorrelationId, workflowResult.Lifecycle.CorrelationId);
         Assert.Equal(workflowJob.Lane, workflowResult.Lifecycle.Lane);
+        Assert.Equal(workflowJob.Payload.ProcessRunId, workflowResult.Lifecycle.ProcessRunId);
+        Assert.Equal(workflowJob.Payload.StepRunId, workflowResult.Lifecycle.StepRunId);
+        Assert.Equal(workflowResult.Readback.AuditRecordId, workflowResult.Lifecycle.AuditRecordId);
+        Assert.True(workflowResult.Lifecycle.AuditRecordCount > 0);
+        Assert.Equal(ProcessManagerReadOnlyVerificationFacadeStatus.Succeeded, workflowResult.Readback.Status);
+        Assert.Equal(ProcessRuntimeHostContractSurface.SchedulerWorkflowReadOnlyJob, workflowResult.Contract.Surface);
+        Assert.Equal(workflowJob.Id, workflowResult.Contract.RequestIdentity?.RequestId);
+        Assert.Equal(workflowJob.Payload.ProcessRunId, workflowResult.Contract.RequestIdentity?.ProcessRunId);
+        Assert.Equal(workflowJob.Payload.StepRunId, workflowResult.Contract.RequestIdentity?.StepRunId);
+        Assert.Equal(workflowJob.RequestedBy, workflowResult.Contract.RequestIdentity?.RequestedBy);
+        var workflowAuditRecordId = workflowResult.Readback.AuditRecordId ??
+            throw new InvalidOperationException("Expected workflow verification job audit id.");
+        Assert.Equal($"verification-job:{workflowAuditRecordId:N}", workflowResult.Contract.AuditReference?.AuditId);
+        Assert.Equal(workflowResult.Readback.AuditRecordObservationHash, workflowResult.Contract.AuditReference?.ContentHash);
+        Assert.Equal(ProcessRuntimeHostContractSurface.ManagerReadback, workflowResult.Readback.Contract.Surface);
+        Assert.Contains(workflowResult.Readback.AuditRecords, record => record.Id == workflowResult.Readback.AuditRecordId);
         Assert.True(workflowResult.NoMutationPerformed);
         Assert.False(workflowResult.AllowsProcessMutation);
         Assert.False(workflowResult.AllowsTransitionMutation);

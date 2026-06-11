@@ -1,0 +1,7 @@
+Command: Select-String -Path tests\CanDoItAll.Tests.Integration\ProcessRuntimeHostCodeFirstGuardTests.cs -Pattern RequiredSourceTestDominanceMultiplier = 5, Process_runtime_host_codefirst_SB01_INV_005
+Working directory: C:\repositories\CanDoItAll
+Run label: SB01 source assertions
+Output:
+private const int RequiredSourceTestDominanceMultiplier = 5;
+public void Process_runtime_host_codefirst_SB01_INV_005_numstat_summary_accepts_exact_five_to_one_source_test_dominance()
+Exit code: 0

@@ -1,0 +1,6 @@
+Command: git show HEAD:src/CanDoItAll.Modules.Processes/Templates/ProcessTemplateCatalogInventory.cs | assert GetRequiredTemplatesForTemplate exists
+Working directory: C:\repositories\CanDoItAll
+Run label: SB02 failing-first source assertion
+Output:
+SB02_INV_002 expected failure: HEAD did not expose reverse family mapping by template key.
+Exit code: 1

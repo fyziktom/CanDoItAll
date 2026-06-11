@@ -1,0 +1,8 @@
+Command: rg -n "CanDoItAll.Modules|CanDoItAll.Web|EntityFrameworkCore|AgentFramework" src/CanDoItAll.Processes.Core -g"*.cs"
+Exit code: 1
+
+Result summary:
+No Process Core dependency drift to Modules, Web, EF Core, or AgentFramework was introduced.
+
+Boundary conclusion:
+SB05 added a non-software template automation E2E test and reused the generic process-mock harness. No business-analysis domain terms were added to Process Core.

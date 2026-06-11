@@ -1,0 +1,5 @@
+Command: git diff -U0 -- codex\bundles\process-template-automation-e2e-multiteam-host-readiness-v1 src tests | Select-String -Pattern '^\+.*(sk-[A-Za-z0-9_-]{20,}|BEGIN (RSA|OPENSSH|PRIVATE) KEY|password\s*=|api[_-]?key\s*=|connectionString)'
+Exit code: 0
+
+Result:
+No added secret-like lines were found. Existing redaction-test fixture strings are not newly added by this bundle closure.

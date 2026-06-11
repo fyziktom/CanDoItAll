@@ -16376,6 +16376,39 @@ Ancestor path to the target work node:
     }
 
     [Fact]
+    public void SubprocessArtifactProjectionMapping_uses_explicit_child_mapping_across_artifact_kinds()
+    {
+        var childHandoffExpectationId = Guid.NewGuid();
+        var parentChecklistExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = Guid.NewGuid(),
+            ArtifactKind = ProcessArtifactKind.Checklist,
+            Title = "Migration and rollout preparation checklist",
+            SubprocessChildArtifactExpectationId = childHandoffExpectationId
+        };
+        var childHandoffArtifact = new ProcessArtifactRecord
+        {
+            Id = Guid.NewGuid(),
+            ArtifactExpectationId = childHandoffExpectationId,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = "Implementation slice handoff packet",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        var result = ProcessSubprocessArtifactSourceResolver.ResolveSourceArtifact(
+            [childHandoffArtifact],
+            [parentChecklistExpectation],
+            parentChecklistExpectation,
+            out var diagnostic);
+
+        Assert.Equal(childHandoffArtifact.Id, result?.Id);
+        Assert.Equal(string.Empty, diagnostic);
+    }
+
+    [Fact]
     public void SubprocessArtifactProjectionMapping_SB09_INV_001_blocks_same_kind_heuristic_without_child_mapping()
     {
         var parentFinanceExpectation = new ProcessArtifactExpectation
@@ -17021,6 +17054,41 @@ Ancestor path to the target work node:
 
         Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.InvalidFormat, result.Status);
         Assert.Contains("not an image file", result.Diagnostic, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void ArtifactContractValidation_accepts_markdown_screenshot_writeback_record()
+    {
+        var processRunId = Guid.NewGuid();
+        var stepRunId = Guid.NewGuid();
+        var executionRunId = Guid.NewGuid();
+        var expectation = CreateDispatchArtifactExpectation(
+            ProcessArtifactKind.Evidence,
+            ".NET UI screenshot writeback",
+            isRequired: true,
+            "Must capture project-structure writeback ids and managed screenshot paths.");
+        var artifact = new ProcessArtifactRecord
+        {
+            ProcessRunId = processRunId,
+            StepRunId = stepRunId,
+            ArtifactExpectationId = expectation.Id,
+            ArtifactKind = ProcessArtifactKind.Evidence,
+            Title = expectation.Title,
+            ManagedStoragePath = "artifacts/process-runs/current/net-ui-screenshot-writeback.md",
+            ExternalReferenceKey = $"workspace-written-artifact|{executionRunId:D}|{expectation.Id:D}|artifacts/process-runs/current/net-ui-screenshot-writeback.md",
+            ReviewSummary = "Markdown writeback record with screenshot artifact paths and project-structure ids.",
+            ProvenanceSummary = $"Written by execution run {executionRunId:D}."
+        };
+
+        var result = ProcessRunAutomationDispatchService.ValidateArtifactExpectationForRecordedArtifacts(
+            processRunId,
+            stepRunId,
+            expectation,
+            [artifact],
+            ProcessRunAutomationDispatchService.ProcessStepCompletionExecutorKind.DirectAgent,
+            executionRunId);
+
+        Assert.Equal(ProcessRunAutomationDispatchService.ProcessArtifactValidationStatus.Satisfied, result.Status);
     }
 
     [Fact]

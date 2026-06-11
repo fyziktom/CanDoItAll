@@ -1,0 +1,13 @@
+Command: rg -n "Business_plan_process_SB05_INV_001|ExecuteTemplateWithProcessMockAgentsAsync|AssertFinalizerSummaries" tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
+Exit code: 0
+
+Key matches:
+- tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs:99 declares `Business_plan_process_SB05_INV_001_completes_through_automation_dispatch_finalizer_and_readback`.
+- tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs:112 executes `business-plan-development` through `ExecuteTemplateWithProcessMockAgentsAsync`.
+- The assertions check completed business-plan steps, recorded artifacts, and finalizer summaries.
+
+Command: rg -n "ResolvePromptRequiredArtifacts|BuildPromptRequiredArtifactSections|ResolvePromptRequiredToolNames" src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime*.cs
+Exit code: 0
+
+Key matches:
+- The process mock reads prompt-required artifact contracts and required current-run tool receipts generically, rather than hard-coding software-only template output.

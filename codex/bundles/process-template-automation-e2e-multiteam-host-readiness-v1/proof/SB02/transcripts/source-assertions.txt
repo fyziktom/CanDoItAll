@@ -1,0 +1,9 @@
+Command: Select-String source assertions for SB02 reverse mapping
+Working directory: C:\repositories\CanDoItAll
+Run label: SB02 source assertions
+Output:
+ProcessTemplateCatalogInventory.cs: public static IReadOnlyList<ProcessTemplateCatalogInventoryItem> GetRequiredTemplatesForTemplate(string templateKey)
+ProcessTemplateGovernanceTests.cs: Process_template_catalog_SB02_INV_002_exposes_reverse_family_mapping_for_multi_team_software_delivery
+ProcessTemplateGovernanceTests.cs: [ProcessTemplateInventoryFamily.SoftwareDevelopment, ProcessTemplateInventoryFamily.MultiTeamDevelopment]
+ProcessTemplateGovernanceTests.cs: [ProcessTemplateInventoryResolutionKind.ExactTemplate, ProcessTemplateInventoryResolutionKind.MappedTemplate]
+Exit code: 0

@@ -1,0 +1,14 @@
+Command: (Get-Content src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs).Count; (Get-Content src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.PromptArtifacts.cs).Count; (Get-Content src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.SessionState.cs).Count; (Get-Content src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.BranchOutcomes.cs).Count
+Exit code: 0
+
+Result:
+- `ProcessMockAgentRuntime.cs`: 630 lines.
+- `ProcessMockAgentRuntime.PromptArtifacts.cs`: 392 lines.
+- `ProcessMockAgentRuntime.SessionState.cs`: 515 lines.
+- `ProcessMockAgentRuntime.BranchOutcomes.cs`: 222 lines.
+
+Command: git diff -U0 -- src tests | Select-String -Pattern '^\+.*(process-template-automation-e2e-multiteam-host-readiness-v1|codex/bundles|codex\\bundles)'
+Exit code: 0
+
+Result:
+Only one added bundle-path string was found, and it is an intentional fixture inside `ProcessRuntimeHostCodeFirstGuardTests`.

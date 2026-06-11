@@ -1,3 +1,5 @@
+using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
@@ -7,6 +9,138 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessTemplateExecutionE2ETests {
+    [Fact]
+    public async Task Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback() {
+        const string validationLabel = "Blazor process automation validation";
+
+        await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await ProcessTemplateAutomationTestSupport.CreateProjectAsync(
+            projectsService,
+            "Blazor process automation validation project",
+            "Execution");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Build governed Blazor app through automation",
+                "Implementation",
+                "Build a Blazor WASM PWA with runtime/browser proof and project-structure writeback through automation dispatch.",
+                null,
+                ObjectSubtype: "task"));
+
+        var result = await ProcessTemplateAutomationTestSupport.ExecuteTemplateWithProcessMockAgentsAsync(
+            scope.ServiceProvider,
+            "blazor-app-delivery",
+            projectId,
+            validationLabel,
+            $"{validationLabel} launch",
+            "Validate a Blazor template through automation dispatch, finalizer completion, and managed artifact readback.",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["blazor-delivery-manager"] = ProcessMockAgentRoleKeys.ProductOwner,
+                ["blazor-solution-architect"] = ProcessMockAgentRoleKeys.Architect,
+                ["blazor-engineer"] = ProcessMockAgentRoleKeys.Developer,
+                ["blazor-qa-lead"] = ProcessMockAgentRoleKeys.Qa
+            },
+            new ProcessProjectStructureContext {
+                ProjectId = projectId,
+                NodeId = "process-definition:blazor-app-delivery",
+                NodeTitle = "Blazor app delivery",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            TimeSpan.FromSeconds(120));
+
+        AssertStep(result.StepRuns, "Resolve Blazor delivery contract", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Build Blazor application", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Validate Blazor runtime and browser evidence", ProcessStepRunStatus.Completed, "Quality accepted");
+        AssertStep(result.StepRuns, "Record Blazor results and evidence index", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Repair Blazor validation findings", ProcessStepRunStatus.Skipped);
+        AssertStep(result.StepRuns, "Revalidate Blazor repair", ProcessStepRunStatus.Skipped);
+        AssertStep(result.StepRuns, "Record repaired Blazor results and evidence index", ProcessStepRunStatus.Skipped);
+        AssertStep(result.StepRuns, "Escalate unresolved Blazor repair findings", ProcessStepRunStatus.Skipped);
+
+        AssertArtifact(result.ArtifactRecords, "Blazor implementation change set", ProcessArtifactKind.Deliverable);
+        AssertArtifact(result.ArtifactRecords, "Blazor runtime evidence pack", ProcessArtifactKind.Evidence);
+        AssertArtifact(result.ArtifactRecords, "Project-structure result writeback summary", ProcessArtifactKind.Brief);
+        AssertFinalizerSummaries(result.ExecutionRuns);
+    }
+
+    [Fact]
+    public async Task Software_delivery_template_SB04_INV_001_completes_multi_team_governance_through_automation_dispatch() {
+        const string validationLabel = "Multi-team software delivery automation validation";
+
+        await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var workbenchService = scope.ServiceProvider.GetRequiredService<ProjectWorkbenchService>();
+
+        var projectId = await ProcessTemplateAutomationTestSupport.CreateProjectAsync(
+            projectsService,
+            "Multi-team software delivery automation validation project",
+            "Release");
+        var workItem = await workbenchService.CreateObjectAsync(
+            projectId,
+            new ProjectObjectCreateRequest(
+                ProjectObjectType.WorkItem,
+                "Ship governed multi-team software change",
+                "Release",
+                "Coordinate implementation, peer review, QA, security, release approval, evidence writeback, and post-release learning.",
+                null,
+                ObjectSubtype: "epic"));
+
+        var result = await ProcessTemplateAutomationTestSupport.ExecuteTemplateWithProcessMockAgentsAsync(
+            scope.ServiceProvider,
+            "software-delivery",
+            projectId,
+            validationLabel,
+            $"{validationLabel} launch",
+            "Validate the software-delivery representative template through production automation dispatch and multi-role governance.",
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["product-owner"] = ProcessMockAgentRoleKeys.ProductOwner,
+                ["delivery-manager"] = ProcessMockAgentRoleKeys.ProductOwner,
+                ["solution-architect"] = ProcessMockAgentRoleKeys.Architect,
+                ["lead-engineer"] = ProcessMockAgentRoleKeys.Developer,
+                ["qa-lead"] = ProcessMockAgentRoleKeys.Qa,
+                ["security-reviewer"] = ProcessMockAgentRoleKeys.RepairDeveloper,
+                ["release-manager"] = ProcessMockAgentRoleKeys.ReleaseManager
+            },
+            new ProcessProjectStructureContext {
+                ProjectId = projectId,
+                NodeId = "process-definition:software-delivery",
+                NodeTitle = "Multi-team software delivery",
+                ParentNodeId = workItem.Id,
+                ParentNodeTitle = workItem.Title
+            },
+            TimeSpan.FromSeconds(150));
+
+        AssertStep(result.StepRuns, "Clarify .NET scope and app type boundary", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Run .NET architecture design and review subprocess", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Run .NET implementation slice subprocess", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Complete peer review and integration readiness", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Run QA validation and runtime or browser proof", ProcessStepRunStatus.Completed, "Quality accepted");
+        AssertStep(result.StepRuns, "Perform security and data-handling review", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Record .NET run commands under process run node", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Capture and store .NET UI screenshots", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Approve first-pass release readiness", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Execute first-pass controlled release rollout", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Capture first-pass post-release learning", ProcessStepRunStatus.Completed);
+        AssertStep(result.StepRuns, "Repair validation findings", ProcessStepRunStatus.Skipped);
+        AssertStep(result.StepRuns, "Re-run QA validation and runtime or browser proof after repair", ProcessStepRunStatus.Skipped);
+        AssertStep(result.StepRuns, "Escalate unresolved repair findings", ProcessStepRunStatus.Skipped);
+
+        AssertArtifact(result.ArtifactRecords, "Scope boundary packet", ProcessArtifactKind.Brief);
+        AssertArtifact(result.ArtifactRecords, "Implementation change set", ProcessArtifactKind.Deliverable);
+        AssertArtifact(result.ArtifactRecords, "Regression evidence pack", ProcessArtifactKind.Evidence);
+        AssertArtifact(result.ArtifactRecords, "Release approval record", ProcessArtifactKind.Decision);
+        AssertFinalizerSummaries(result.ExecutionRuns);
+    }
+
     [Fact]
     public async Task Blazor_app_delivery_template_runs_from_project_structure_context_with_artifacts_and_readback() {
         const string validationLabel = "Blazor process execution validation";
@@ -260,5 +394,35 @@ public sealed class ProcessTemplateExecutionE2ETests {
         return string.IsNullOrWhiteSpace(collapsed)
             ? "artifact"
             : collapsed;
+    }
+
+    private static void AssertStep(
+        IReadOnlyList<ProcessStepRunViewModel> stepRuns,
+        string title,
+        ProcessStepRunStatus expectedStatus,
+        string? expectedBranchTitle = null) {
+        var step = Assert.Single(stepRuns, item => item.Title == title);
+        Assert.Equal(expectedStatus, step.Status);
+        if (!string.IsNullOrWhiteSpace(expectedBranchTitle)) {
+            Assert.Equal(expectedBranchTitle, step.SelectedBranchOutcomeTitle);
+        }
+    }
+
+    private static void AssertArtifact(
+        IReadOnlyList<ProcessArtifactRecord> artifactRecords,
+        string title,
+        ProcessArtifactKind artifactKind) {
+        Assert.Contains(
+            artifactRecords,
+            artifact => artifact.Title == title &&
+                artifact.ArtifactKind == artifactKind &&
+                !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath));
+    }
+
+    private static void AssertFinalizerSummaries(IReadOnlyList<ExecutionRunRecord> executionRuns) {
+        Assert.All(executionRuns, executionRun => {
+            Assert.Contains("\"status\"", executionRun.ResultSummary, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Completed", executionRun.ResultSummary, StringComparison.OrdinalIgnoreCase);
+        });
     }
 }

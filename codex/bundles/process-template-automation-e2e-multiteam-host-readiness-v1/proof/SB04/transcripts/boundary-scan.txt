@@ -1,0 +1,8 @@
+Command: rg -n "CanDoItAll.Modules|CanDoItAll.Web|EntityFrameworkCore|AgentFramework" src/CanDoItAll.Processes.Core -g"*.cs"
+Exit code: 1
+
+Result summary:
+No Process Core dependency drift to Modules, Web, EF Core, or AgentFramework was introduced.
+
+Boundary conclusion:
+The only Process Core change is generic artifact source eligibility for explicit subprocess mappings. It introduces no domain-specific software-delivery terms and no execution-capable driver behavior.

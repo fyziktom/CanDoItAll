@@ -1,0 +1,11 @@
+Command: git diff --unified=0 -- src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime*.cs tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs | rg -n "^\+.*(TODO|NotImplemented|NotSupportedException|throw new NotImplementedException)"
+Exit code: 1
+
+Result summary:
+No added TODO, NotImplemented, NotSupportedException, or throw-new-NotImplementedException markers were found in the SB05 changed lines.
+
+Command: rg -n "TODO|NotImplemented|NotSupportedException|throw new NotImplementedException" src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime*.cs
+Exit code: 1
+
+Result summary:
+No production stub markers found in the SB05 runtime file.

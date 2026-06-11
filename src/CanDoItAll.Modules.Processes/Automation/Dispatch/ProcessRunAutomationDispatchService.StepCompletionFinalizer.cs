@@ -925,7 +925,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                titleText.Contains("index", StringComparison.Ordinal) ||
                titleText.Contains("log", StringComparison.Ordinal) ||
                titleText.Contains("manifest", StringComparison.Ordinal) ||
-               titleText.Contains("list", StringComparison.Ordinal);
+               titleText.Contains("list", StringComparison.Ordinal) ||
+               titleText.Contains("writeback", StringComparison.Ordinal);
     }
 
     private static string ResolveManagedArtifactExtension(string managedStoragePath)

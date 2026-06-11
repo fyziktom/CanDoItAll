@@ -1,0 +1,9 @@
+Command: rg -n "Process_runtime_host_readback_SB06_INV_001|VerifyForReadbackAsync|ProcessVerificationRuntimeHostStatusRequest|ProcessDryRunExecutionHost|ProcessManagerRuntimeHostDryRunReadbackMapper" tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs
+Exit code: 0
+
+Key matches:
+- `Process_runtime_host_readback_SB06_INV_001_uses_real_process_run_and_step_ids_without_mutation` creates a process-mock app and launches `business-plan-development`.
+- The test asserts the real completed step title `Review integrated business plan`.
+- Manager readback asserts process run id, step run id, capability key, audit id/hash, evidence count, no denial fields, and no mutation flags.
+- Runtime-host status asserts `Ready` and no mutation flags.
+- Dry-run readback asserts denied command execution, authorization gaps, audit reference id/hash, and no mutation flags.

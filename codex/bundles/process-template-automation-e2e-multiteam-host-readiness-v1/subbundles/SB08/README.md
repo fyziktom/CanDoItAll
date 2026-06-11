@@ -1,7 +1,7 @@
 # SB08: Release matrix, large-screen proof, and red-team closure
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Run build/unit/focused integration, optional live OpenAI classification, large-screen UI proof if touched, code-first ratio, and red-team scans.
@@ -28,10 +28,11 @@ Run build/unit/focused integration, optional live OpenAI classification, large-s
 - Concise execution-report update.
 
 ## Dependency Impact
-Final closure and next-phase decision.
+- Final closure and next-phase decision.
 
 ## Validation Depth
-Critical. Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
+- Critical.
+- Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
 
 ## Implementation Steps
 1. Re-open the exact source references and nearby tests.
@@ -67,10 +68,11 @@ Critical. Require semantic positive proof, adversarial negative proof, source as
 - For template execution subbundles, proof must show dispatch/finalizer/artifact readback, not manual transition-only proof.
 
 ## Browser Validation Logging
-N/A unless UI/project-structure routes/components are touched or used as user-facing proof. If browser proof is required, use a 1900x1200 large desktop viewport only.
+- N/A unless UI/project-structure routes/components are touched or used as user-facing proof.
+- If browser proof is required, use a 1900x1200 large desktop viewport only.
 
 ## Progression Gate
-Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
+- Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
 
 ## Suggested Agent Prompt
 Implement SB08 as a code-first coherent runtime/template-host improvement. Keep the proof concise, preserve Process Core genericity, and keep execution-capable driver behavior blocked.

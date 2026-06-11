@@ -1,0 +1,9 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --filter FullyQualifiedName~Business_plan_process_SB05_INV_001_completes_through_automation_dispatch_finalizer_and_readback
+Exit code: 0
+
+Result summary:
+Passed 1 test.
+Duration reported by test runner: 28 s.
+
+Semantic assertion:
+The business-plan template was imported, launched with process-mock role assignments, drained through automation dispatch, completed expected business-analysis steps, recorded business-plan artifacts, and every execution run carried a finalizer summary.

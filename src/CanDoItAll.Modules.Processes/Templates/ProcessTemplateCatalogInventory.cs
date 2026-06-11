@@ -55,4 +55,13 @@ public static class ProcessTemplateCatalogInventory {
     public static ProcessTemplateCatalogInventoryItem GetRequiredTemplate(ProcessTemplateInventoryFamily family) {
         return RequiredRepresentativeTemplates.Single(item => item.Family == family);
     }
+
+    public static IReadOnlyList<ProcessTemplateCatalogInventoryItem> GetRequiredTemplatesForTemplate(string templateKey) {
+        ArgumentException.ThrowIfNullOrWhiteSpace(templateKey);
+
+        return RequiredRepresentativeTemplates
+            .Where(item => string.Equals(item.TemplateKey, templateKey, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(item => item.Family)
+            .ToArray();
+    }
 }

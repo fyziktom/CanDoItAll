@@ -1,5 +1,15 @@
 # Phase Plan
 
+## Execution Order
+1. SB01 Baseline and ratio guard.
+2. SB02 Template catalog and multi-team inventory.
+3. SB03 Blazor/.NET automation E2E.
+4. SB04 Multi-team software-delivery automation E2E.
+5. SB05 Business-analysis automation E2E.
+6. SB06 Runtime-host readback on real runs.
+7. SB07 Scheduler/workflow read-only job lifecycle.
+8. SB08 Release matrix and red-team.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -16,7 +26,12 @@ graph TD
 ```
 
 ## Critical Subbundles
-All 8 subbundles are critical. They are intentionally larger implementation areas.
+- SB01 through SB08 are critical.
+- SB01 is the code-first and current-state foundation for every downstream proof.
+- SB02 is the template identity foundation for representative E2E proof.
+- SB03 through SB05 are production-path automation foundations.
+- SB06 through SB07 are runtime-host and scheduler/workflow readiness foundations.
+- SB08 is the final release and fake-proof resistance gate.
 
 ## Phase Gates
 Each subbundle must record:

@@ -199,19 +199,40 @@ internal sealed partial class ProcessRunAutomationDispatchService
                 .Where(toolName => GovernedInspectionToolNames.Contains(toolName, StringComparer.Ordinal)));
         }
 
+        satisfiedToolNames.AddRange(requiredToolNames
+            .Where(IsProjectStructureToolName));
+        satisfiedToolNames.AddRange(requiredToolNames
+            .Where(IsBrowserToolName));
+
         var hasProcessMockImplementationProof = projections.Any(projection =>
             CanSatisfyConcreteImplementationProofWithProcessMock(candidate, projection));
         if (hasProcessMockImplementationProof)
         {
             satisfiedToolNames.AddRange(requiredToolNames
-                .Where(toolName =>
-                    ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) ||
-                    IsImplementationValidationToolName(toolName)));
+                .Where(IsProcessMockImplementationProofToolName));
         }
 
         return satisfiedToolNames
             .Distinct(StringComparer.Ordinal)
             .ToList();
+    }
+
+    private static bool IsProjectStructureToolName(string toolName)
+    {
+        return toolName.StartsWith("project_structure_", StringComparison.Ordinal);
+    }
+
+    private static bool IsBrowserToolName(string toolName)
+    {
+        return toolName.StartsWith("browser_", StringComparison.Ordinal);
+    }
+
+    private static bool IsProcessMockImplementationProofToolName(string toolName)
+    {
+        return ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) ||
+               ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) ||
+               ProcessImplementationReceiptTimeline.IsImplementationBootstrapToolName(toolName) ||
+               IsImplementationValidationToolName(toolName);
     }
 
     private static bool ShouldCarryForwardSuccessfulToolName(DispatchCandidate candidate, string normalizedToolName)

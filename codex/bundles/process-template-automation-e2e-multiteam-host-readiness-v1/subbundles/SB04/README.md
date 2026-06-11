@@ -1,7 +1,7 @@
 # SB04: Multi-team software-delivery automation E2E
 
 ## Status
-Prepared.
+Completed.
 
 ## Objective
 Run the representative multi-team/software-delivery process through automation runtime with multi-role assignments, peer review, QA validation, release approval, and artifact handoffs.
@@ -17,9 +17,9 @@ Run the representative multi-team/software-delivery process through automation r
 - Current branch must be `maf-processes-refactor`.
 
 ## Exact Source References
-- repo://software-delivery template
-- repo://ProcessTemplateGovernanceTests.cs
-- repo://ProcessTemplateExecutionE2ETests.cs
+- repo://Templates/Processes/processes/software-delivery/definition.json
+- repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateGovernanceTests.cs
+- repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateExecutionE2ETests.cs
 
 ## Deliverables
 - Real production and/or test code changes for this coherent implementation area.
@@ -27,10 +27,11 @@ Run the representative multi-team/software-delivery process through automation r
 - Concise execution-report update.
 
 ## Dependency Impact
-This closes the user-visible multi-team development confidence gap.
+- This closes the user-visible multi-team development confidence gap.
 
 ## Validation Depth
-Critical. Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
+- Critical.
+- Require semantic positive proof, adversarial negative proof, source assertions, anti-stub scan, and downstream progression decision.
 
 ## Implementation Steps
 1. Re-open the exact source references and nearby tests.
@@ -66,10 +67,11 @@ Critical. Require semantic positive proof, adversarial negative proof, source as
 - For template execution subbundles, proof must show dispatch/finalizer/artifact readback, not manual transition-only proof.
 
 ## Browser Validation Logging
-N/A unless UI/project-structure routes/components are touched or used as user-facing proof. If browser proof is required, use a 1900x1200 large desktop viewport only.
+- N/A unless UI/project-structure routes/components are touched or used as user-facing proof.
+- If browser proof is required, use a 1900x1200 large desktop viewport only.
 
 ## Progression Gate
-Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
+- Do not proceed downstream until this subbundle has source-backed proof and no shallow-pass trap remains.
 
 ## Suggested Agent Prompt
 Implement SB04 as a code-first coherent runtime/template-host improvement. Keep the proof concise, preserve Process Core genericity, and keep execution-capable driver behavior blocked.
