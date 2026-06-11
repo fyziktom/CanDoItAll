@@ -1,9 +1,11 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.AgentFramework.Hosting;
 using CanDoItAll.Modules.Processes;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 
@@ -12,6 +14,7 @@ namespace CanDoItAll.Tests.Integration;
 public sealed class BusinessPlanProcessPostgresIntegrationTests
 {
     private const string RepositoryRoot = @"C:\repositories\CanDoItAll";
+    private const string AutomationDispatchCommandKey = "dispatch-run-automation";
 
     [Fact]
     public async Task Business_plan_template_includes_atomic_product_evidence_review()
@@ -96,18 +99,40 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     }
 
     [Fact]
-    public async Task Business_plan_process_SB05_INV_001_completes_through_automation_dispatch_finalizer_and_readback()
+    public async Task Business_plan_process_SB05_INV_001_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback()
     {
         const string validationLabel = "Business-analysis automation validation";
 
-        await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync();
+        var availability = await PostgresTestAvailability.EnsureAvailableAsync(RepositoryRoot);
+        Assert.True(availability.IsAvailable, availability.Message);
+        Assert.False(string.IsNullOrWhiteSpace(availability.ConnectionString));
+
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-business-plan-sb05-postgres");
+        var profile = testEnvironment.CreatePostgreSqlProfile("business-plan-sb05");
+        await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync(
+            new TestHarnessOptions
+            {
+                TestEnvironment = testEnvironment,
+                ActiveProfile = profile
+            });
         await using var scope = application.Services.CreateAsyncScope();
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
         var projectId = await ProcessTemplateAutomationTestSupport.CreateProjectAsync(
             projectsService,
             "Business-analysis automation validation project",
             "Planning");
+        var completedAutomationStepTitles = new[]
+        {
+            "Capture strategy intake",
+            "Review product evidence",
+            "Draft business plan",
+            "Model financial assumptions",
+            "Prepare marketing plan",
+            "Review integrated business plan",
+            "Publish approved plan handoff"
+        };
 
         var result = await ProcessTemplateAutomationTestSupport.ExecuteTemplateWithProcessMockAgentsAsync(
             scope.ServiceProvider,
@@ -118,9 +143,9 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
             "Validate the business-plan representative template through automation dispatch, finalizer completion, and business artifact readback.",
             new Dictionary<string, string>(StringComparer.Ordinal)
             {
-                ["business-strategist"] = ProcessMockAgentRoleKeys.ProductOwner,
-                ["financial-strategist"] = ProcessMockAgentRoleKeys.Developer,
-                ["marketing-specialist"] = ProcessMockAgentRoleKeys.ReleaseManager
+                ["business-strategist"] = ProcessMockAgentRoleKeys.BusinessStrategist,
+                ["financial-strategist"] = ProcessMockAgentRoleKeys.FinancialStrategist,
+                ["marketing-specialist"] = ProcessMockAgentRoleKeys.MarketingSpecialist
             },
             timeout: TimeSpan.FromSeconds(90));
 
@@ -133,13 +158,15 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
         AssertAutomationStep(result.StepRuns, "Publish approved plan handoff", ProcessStepRunStatus.Completed);
         AssertAutomationStep(result.StepRuns, "Capture blocked-plan corrections", ProcessStepRunStatus.Skipped);
 
-        Assert.DoesNotContain(result.StepRuns, step => step.Title.Contains("software", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(result.StepRuns, step => step.Title.Contains(".net", StringComparison.OrdinalIgnoreCase));
-        Assert.DoesNotContain(result.StepRuns, step => step.Title.Contains("blazor", StringComparison.OrdinalIgnoreCase));
-        AssertAutomationArtifact(result.ArtifactRecords, "Business plan", ProcessArtifactKind.Deliverable);
-        AssertAutomationArtifact(result.ArtifactRecords, "Financial model and sensitivity note", ProcessArtifactKind.Dataset);
-        AssertAutomationArtifact(result.ArtifactRecords, "Go-to-market and experiment plan", ProcessArtifactKind.Deliverable);
-        AssertAutomationArtifact(result.ArtifactRecords, "Integrated business plan review", ProcessArtifactKind.Decision);
+        AssertBusinessAutomationDispatchReadback(result, completedAutomationStepTitles);
+        AssertNoSoftwareDomainLeakage(result);
+        AssertAutomationArtifact(result.ArtifactRecords, "Business strategy intake brief", ProcessArtifactKind.Brief, application.ActiveProfile.WorkspaceRootPath);
+        AssertAutomationArtifact(result.ArtifactRecords, "Product evidence assessment", ProcessArtifactKind.Evidence, application.ActiveProfile.WorkspaceRootPath);
+        AssertAutomationArtifact(result.ArtifactRecords, "Business plan", ProcessArtifactKind.Deliverable, application.ActiveProfile.WorkspaceRootPath);
+        AssertAutomationArtifact(result.ArtifactRecords, "Financial model and sensitivity note", ProcessArtifactKind.Dataset, application.ActiveProfile.WorkspaceRootPath);
+        AssertAutomationArtifact(result.ArtifactRecords, "Go-to-market and experiment plan", ProcessArtifactKind.Deliverable, application.ActiveProfile.WorkspaceRootPath);
+        AssertAutomationArtifact(result.ArtifactRecords, "Integrated business plan review", ProcessArtifactKind.Decision, application.ActiveProfile.WorkspaceRootPath);
+        await AssertPersistedBusinessAutomationReadbackAsync(dbContextFactory, result, projectId);
         AssertAutomationFinalizerSummaries(result.ExecutionRuns);
     }
 
@@ -483,16 +510,166 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
         }
     }
 
+    private static void AssertBusinessAutomationDispatchReadback(
+        ProcessTemplateAutomationRunResult result,
+        IReadOnlyCollection<string> completedStepTitles)
+    {
+        Assert.NotEmpty(result.OutboxRecords);
+        Assert.All(result.OutboxRecords, outbox =>
+        {
+            Assert.Equal(ProcessOutboxRecordStatus.Completed, outbox.Status);
+        });
+        Assert.Contains(
+            result.OutboxRecords,
+            outbox => string.Equals(outbox.CommandKey, AutomationDispatchCommandKey, StringComparison.Ordinal));
+
+        var completedStepIds = result.StepRuns
+            .Where(step => completedStepTitles.Contains(step.Title, StringComparer.Ordinal))
+            .Select(step => step.Id.ToString("D"))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(completedStepTitles.Count, completedStepIds.Count);
+        Assert.Equal(completedStepIds.Count, result.ExecutionRuns.Count);
+
+        Assert.All(result.ExecutionRuns, executionRun =>
+        {
+            Assert.Equal(ProcessMockAgentCatalog.ProcessSourceKind, executionRun.SourceKind);
+            Assert.Equal(result.RunId.ToString("D"), executionRun.ProcessRunId);
+            Assert.Contains(executionRun.ProcessStepId, completedStepIds);
+            Assert.Equal(ProcessMockAgentCatalog.ProviderName, executionRun.ProviderName);
+            Assert.Equal(ProcessMockAgentCatalog.Model, executionRun.Model);
+            Assert.Equal(ExecutionState.Completed, executionRun.State);
+            Assert.Equal(RunOutcome.Succeeded, executionRun.Outcome);
+        });
+
+        Assert.Contains(
+            result.ExecutionRuns,
+            executionRun => executionRun.SerializedSessionStateJson?.Contains(
+                ProcessMockAgentRoleKeys.BusinessStrategist,
+                StringComparison.Ordinal) == true);
+        Assert.Contains(
+            result.ExecutionRuns,
+            executionRun => executionRun.SerializedSessionStateJson?.Contains(
+                ProcessMockAgentRoleKeys.FinancialStrategist,
+                StringComparison.Ordinal) == true);
+        Assert.Contains(
+            result.ExecutionRuns,
+            executionRun => executionRun.SerializedSessionStateJson?.Contains(
+                ProcessMockAgentRoleKeys.MarketingSpecialist,
+                StringComparison.Ordinal) == true);
+    }
+
+    private static async Task AssertPersistedBusinessAutomationReadbackAsync(
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        ProcessTemplateAutomationRunResult result,
+        Guid projectId)
+    {
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+
+        var persistedRun = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .SingleAsync(run => run.Id == result.RunId);
+        Assert.Equal(projectId, persistedRun.ProjectId);
+        Assert.Equal(ProcessRunStatus.Completed, persistedRun.Status);
+
+        var persistedOutboxRecords = await dbContext.Set<ProcessOutboxRecord>()
+            .AsNoTracking()
+            .Where(record => record.ProcessRunId == result.RunId)
+            .OrderBy(record => record.CreatedAtUtc)
+            .ToListAsync();
+        Assert.NotEmpty(persistedOutboxRecords);
+        Assert.All(persistedOutboxRecords, record =>
+        {
+            Assert.Equal(ProcessOutboxRecordStatus.Completed, record.Status);
+        });
+        Assert.Contains(
+            persistedOutboxRecords,
+            record => string.Equals(record.CommandKey, AutomationDispatchCommandKey, StringComparison.Ordinal));
+
+        var persistedArtifacts = await dbContext.Set<ProcessArtifactRecord>()
+            .AsNoTracking()
+            .Where(artifact => artifact.ProcessRunId == result.RunId)
+            .OrderBy(artifact => artifact.CreatedAtUtc)
+            .ToListAsync();
+        Assert.Equal(result.ArtifactRecords.Count, persistedArtifacts.Count);
+        AssertBusinessArtifactTitles(persistedArtifacts);
+        AssertNoSoftwareDomainLeakage(persistedArtifacts);
+    }
+
+    private static void AssertBusinessArtifactTitles(IReadOnlyCollection<ProcessArtifactRecord> artifactRecords)
+    {
+        Assert.Contains(artifactRecords, artifact => artifact.Title == "Business strategy intake brief");
+        Assert.Contains(artifactRecords, artifact => artifact.Title == "Product evidence assessment");
+        Assert.Contains(artifactRecords, artifact => artifact.Title == "Business plan");
+        Assert.Contains(artifactRecords, artifact => artifact.Title == "Financial model and sensitivity note");
+        Assert.Contains(artifactRecords, artifact => artifact.Title == "Go-to-market and experiment plan");
+        Assert.Contains(artifactRecords, artifact => artifact.Title == "Integrated business plan review");
+    }
+
+    private static void AssertNoSoftwareDomainLeakage(ProcessTemplateAutomationRunResult result)
+    {
+        Assert.All(result.StepRuns, step =>
+        {
+            AssertNoSoftwareDomainLeakage(step.Title, $"step '{step.Title}' title");
+            AssertNoSoftwareDomainLeakage(step.CurrentExecutorName, $"step '{step.Title}' executor");
+            AssertNoSoftwareDomainLeakage(step.DecisionSummary, $"step '{step.Title}' decision summary");
+        });
+        AssertNoSoftwareDomainLeakage(result.ArtifactRecords);
+        Assert.All(result.ExecutionRuns, executionRun =>
+        {
+            AssertNoSoftwareDomainLeakage(executionRun.Title, $"execution run '{executionRun.Id:D}' title");
+            AssertNoSoftwareDomainLeakage(executionRun.ResultSummary, $"execution run '{executionRun.Id:D}' result summary");
+            AssertNoSoftwareDomainLeakage(
+                executionRun.SerializedSessionStateJson ?? string.Empty,
+                $"execution run '{executionRun.Id:D}' session state");
+        });
+    }
+
+    private static void AssertNoSoftwareDomainLeakage(IReadOnlyCollection<ProcessArtifactRecord> artifactRecords)
+    {
+        Assert.All(artifactRecords, artifact =>
+        {
+            AssertNoSoftwareDomainLeakage(artifact.Title, $"artifact '{artifact.Title}' title");
+            AssertNoSoftwareDomainLeakage(artifact.ProvenanceSummary, $"artifact '{artifact.Title}' provenance");
+            AssertNoSoftwareDomainLeakage(artifact.ReviewSummary, $"artifact '{artifact.Title}' review");
+            AssertNoSoftwareDomainLeakage(artifact.ManagedStoragePath, $"artifact '{artifact.Title}' path");
+        });
+    }
+
+    private static void AssertNoSoftwareDomainLeakage(string? value, string context)
+    {
+        var text = value ?? string.Empty;
+        foreach (var term in new[] { "software", ".net", "blazor", "developer", "implementation", "release manager", "qa" })
+        {
+            Assert.False(
+                text.Contains(term, StringComparison.OrdinalIgnoreCase),
+                $"Unexpected software-domain term '{term}' in {context}: {text}");
+        }
+    }
+
     private static void AssertAutomationArtifact(
         IReadOnlyList<ProcessArtifactRecord> artifactRecords,
         string title,
-        ProcessArtifactKind artifactKind)
+        ProcessArtifactKind artifactKind,
+        string? workspaceRootPath = null)
     {
-        Assert.Contains(
-            artifactRecords,
-            artifact => artifact.Title == title &&
+        var matchingArtifacts = artifactRecords
+            .Where(artifact => artifact.Title == title &&
                 artifact.ArtifactKind == artifactKind &&
-                !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath));
+                !string.IsNullOrWhiteSpace(artifact.ManagedStoragePath))
+            .ToList();
+        Assert.NotEmpty(matchingArtifacts);
+        if (string.IsNullOrWhiteSpace(workspaceRootPath))
+        {
+            return;
+        }
+
+        Assert.Contains(matchingArtifacts, artifact =>
+        {
+            var fullPath = Path.Combine(
+                workspaceRootPath,
+                artifact.ManagedStoragePath.Replace('/', Path.DirectorySeparatorChar));
+            return File.Exists(fullPath) && new FileInfo(fullPath).Length > 0;
+        });
     }
 
     private static void AssertAutomationFinalizerSummaries(IReadOnlyList<ExecutionRunRecord> executionRuns)

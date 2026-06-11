@@ -314,6 +314,92 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
+    public async Task StartRunFromTriggerAsync_SB07_INV_001_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
+        var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
+        var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
+
+        var projectId = await CreateProjectAsync(projectsService, "SB07 scheduler workflow trigger project");
+        var definition = BuildDefinitionEditor(projectId, Guid.NewGuid());
+        var saveResult = await processesService.SaveAsync(definition);
+        AssertSuccess(saveResult);
+        AssertSuccess(await processesService.PublishAsync(saveResult.Value));
+
+        var schedulerSourceId = Guid.Parse("07000000-0000-0000-0000-000000000001");
+        var workflowSourceId = Guid.Parse("07000000-0000-0000-0000-000000000002");
+
+        var schedulerRunId = await StartAndAssertTriggerRunAsync(
+            ProcessRunTriggerSourceKind.SchedulerPlan,
+            schedulerSourceId,
+            "SB07 scheduler plan trigger proof",
+            "scheduler-planner",
+            "SB07 scheduler-origin process start through process-owned trigger service.");
+        var workflowRunId = await StartAndAssertTriggerRunAsync(
+            ProcessRunTriggerSourceKind.WorkflowRun,
+            workflowSourceId,
+            "SB07 workflow trigger proof",
+            "workflow-runtime",
+            "SB07 workflow-origin process start through process-owned trigger service.");
+
+        Assert.NotEqual(schedulerRunId, workflowRunId);
+
+        async Task<Guid> StartAndAssertTriggerRunAsync(
+            ProcessRunTriggerSourceKind sourceKind,
+            Guid sourceId,
+            string sourceName,
+            string requestedBy,
+            string triggerReason)
+        {
+            var runResult = await processesService.StartRunFromTriggerAsync(new ProcessRunTriggerStartRequest
+            {
+                ProcessDefinitionId = saveResult.Value,
+                ProjectId = projectId,
+                RunName = $"SB07 {sourceKind} representative process start",
+                OperatingMode = ProcessOperatingMode.AssistedExecution,
+                TriggerReason = triggerReason,
+                TriggerSourceKind = sourceKind,
+                TriggerSourceId = sourceId,
+                TriggerSourceName = sourceName,
+                RequestedBy = requestedBy
+            });
+
+            AssertSuccess(runResult);
+
+            var details = await processesService.GetRunDetailsAsync(runResult.Value);
+            Assert.Equal(2, details.StepRuns.Count);
+            Assert.Empty(details.WorkflowRuns);
+            Assert.Empty(details.ExecutionRuns);
+
+            await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+            var persistedRun = await dbContext.Set<ProcessRun>()
+                .AsNoTracking()
+                .SingleAsync(item => item.Id == runResult.Value);
+            var outboxRecords = await dbContext.Set<ProcessOutboxRecord>()
+                .AsNoTracking()
+                .Where(item => item.ProcessRunId == runResult.Value)
+                .ToListAsync();
+            var workflowLinks = await dbContext.Set<ProcessWorkflowRunLink>()
+                .AsNoTracking()
+                .Where(item => item.ProcessRunId == runResult.Value)
+                .ToListAsync();
+
+            Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
+            Assert.Contains(sourceKind.ToString(), persistedRun.TriggerReason, StringComparison.Ordinal);
+            Assert.Contains(sourceId.ToString("D"), persistedRun.TriggerReason, StringComparison.Ordinal);
+            Assert.Contains($"Requested by {requestedBy}", persistedRun.TriggerReason, StringComparison.Ordinal);
+            Assert.DoesNotContain("driver", persistedRun.TriggerReason, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(outboxRecords, item => item.CommandKey == StartRunCommandKey);
+            Assert.Contains(outboxRecords, item => item.CommandKey == AutomationDispatchCommandKey);
+            Assert.Empty(workflowLinks);
+
+            return runResult.Value;
+        }
+    }
+
+    [Fact]
     public async Task StartRunFromTriggerAsync_SB038_INV_002_rejects_workflow_trigger_without_source_identity()
     {
         await using var application = await TestApplication.CreateAsync();

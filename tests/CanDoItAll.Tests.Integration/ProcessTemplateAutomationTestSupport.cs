@@ -25,14 +25,26 @@ internal static class ProcessTemplateAutomationTestSupport
         "dotnet-ui-screenshot-writeback"
     ];
 
-    public static Task<TestApplication> CreateProcessMockEnabledApplicationAsync()
+    public static Task<TestApplication> CreateProcessMockEnabledApplicationAsync(TestHarnessOptions? options = null)
     {
+        var configurationOverrides = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        if (options?.ConfigurationOverrides is not null)
+        {
+            foreach (var (key, value) in options.ConfigurationOverrides)
+            {
+                configurationOverrides[key] = value;
+            }
+        }
+
+        configurationOverrides[$"{ProcessMockAgentOptions.SectionName}:Enabled"] = "true";
+
         return TestApplication.CreateAsync(new TestHarnessOptions
         {
-            ConfigurationOverrides = new Dictionary<string, string?>
-            {
-                [$"{ProcessMockAgentOptions.SectionName}:Enabled"] = "true"
-            }
+            TestEnvironment = options?.TestEnvironment,
+            ActiveProfile = options?.ActiveProfile,
+            SchemaModules = options?.SchemaModules ?? TestSchemaBootstrapModules.Full,
+            ConfigurationOverrides = configurationOverrides,
+            ConfigureServices = options?.ConfigureServices
         });
     }
 

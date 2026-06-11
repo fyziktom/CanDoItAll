@@ -1,0 +1,9 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS: SB03_INV_001 automation proof has no SuppressAutomationDispatch = true.
+PASS: SB03_INV_002 missing-role proof has no SuppressAutomationDispatch = true.
+PASS: manual contract test is labeled with manual_contract and calls CompleteStepAsync.
+PASS: CompleteStepAsync is the only Blazor-template helper path that uses SuppressAutomationDispatch = true.
+Occurrences:
+342:                SuppressAutomationDispatch = true
+381:            SuppressAutomationDispatch = true

@@ -1,0 +1,8 @@
+Command: generated proof transcript normalization
+ExitCode: 1
+EXPECTED FAIL: HEAD lacks PostgreSQL-specific SB05 automation test name; missing 'Business_plan_process_SB05_INV_001_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback' in HEAD
+EXPECTED FAIL: HEAD lacks business strategist process-mock role mapping; missing 'ProcessMockAgentRoleKeys.BusinessStrategist' in HEAD
+EXPECTED FAIL: HEAD lacks persisted business automation DB readback; missing 'AssertPersistedBusinessAutomationReadbackAsync' in HEAD
+EXPECTED FAIL: HEAD lacks business process-mock catalog role; missing 'BusinessStrategist' in HEAD
+EXPECTED FAIL: HEAD lacks business process-mock runtime handler; missing 'ExecuteBusinessStrategist' in HEAD
+Failing-first result: non-zero is expected because HEAD does not contain the SB05 PostgreSQL/business-role/readback proof changes.

@@ -1,0 +1,13 @@
+Command: powershell audit SB01-SB08 manifests, semantic invariants, transcript references, and command headers
+ExitCode: 0
+Scope: proof\SB01 through proof\SB08
+SB01 manifest present; semantic present: True; transcript references: 5
+SB02 manifest present; semantic present: True; transcript references: 4
+SB03 manifest present; semantic present: True; transcript references: 6
+SB04 manifest present; semantic present: True; transcript references: 6
+SB05 manifest present; semantic present: True; transcript references: 7
+SB06 manifest present; semantic present: True; transcript references: 7
+SB07 manifest present; semantic present: True; transcript references: 6
+SB08 manifest present; semantic present: True; transcript references: 15
+FailureCount: 0
+Result: PASS - all referenced manifests, semantic invariant contracts, and transcript headers are present.

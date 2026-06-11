@@ -152,6 +152,9 @@ internal sealed partial class ProcessMockAgentRuntime(
             ProcessMockAgentRoleKeys.Qa => ExecuteQa(state),
             ProcessMockAgentRoleKeys.RepairDeveloper => ExecuteRepairDeveloper(state),
             ProcessMockAgentRoleKeys.ReleaseManager => ExecuteReleaseManager(state),
+            ProcessMockAgentRoleKeys.BusinessStrategist => ExecuteBusinessStrategist(state),
+            ProcessMockAgentRoleKeys.FinancialStrategist => ExecuteFinancialStrategist(state),
+            ProcessMockAgentRoleKeys.MarketingSpecialist => ExecuteMarketingSpecialist(state),
             _ => throw new InvalidOperationException($"Unsupported process mock role '{roleKey}'.")
         };
         var inspectedArtifactPaths = ResolveArtifactInspectionPaths(prompt);
@@ -497,6 +500,117 @@ internal sealed partial class ProcessMockAgentRuntime(
             "Release notes were written after QA approval.",
             ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
             "Release manager mock artifact saved.",
+            artifacts);
+    }
+
+    private ProcessMockRuntimeOutcome ExecuteBusinessStrategist(ProcessMockRuntimeState state)
+    {
+        fileService.CreateDirectory(state.ArtifactRoot);
+        var strategyPath = $"{state.ArtifactRoot}/08-business-strategy.md";
+        var markdown =
+            """
+            # Business Strategy Plan
+
+            The business strategist captured planning assumptions, product evidence, plan synthesis, integrated review, and approved handoff details.
+
+            ## Business Planning Controls
+            - Facts, assumptions, open questions, and risks are kept distinct.
+            - Product evidence is reviewed before the business plan is synthesized.
+            - Integrated review records the decision status and next actions.
+            """;
+        fileService.WriteTextFile(strategyPath, markdown, overwrite: true);
+
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                strategyPath,
+                "business strategy intake brief product evidence assessment business plan integrated business plan review approved plan handoff assumption inventory")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "08", artifacts);
+        var responseSummary = MergeSummary(
+            "Business strategy artifacts were written for deterministic business-plan automation.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
+            "Completed",
+            "Business planning artifact was written.",
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
+            "Business strategist mock artifact saved.",
+            artifacts);
+    }
+
+    private ProcessMockRuntimeOutcome ExecuteFinancialStrategist(ProcessMockRuntimeState state)
+    {
+        fileService.CreateDirectory(state.ArtifactRoot);
+        var financialPath = $"{state.ArtifactRoot}/09-financial-model.md";
+        var markdown =
+            """
+            # Financial Model And Sensitivity Note
+
+            The financial strategist captured drivers, assumptions, ranges, data gaps, and sensitivity findings for the business plan.
+
+            ## Financial Planning Controls
+            - Forecasts identify drivers and confidence ranges.
+            - Missing source data remains visible.
+            - Downstream review can reuse the model assumptions.
+            """;
+        fileService.WriteTextFile(financialPath, markdown, overwrite: true);
+
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                financialPath,
+                "financial model sensitivity note drivers assumptions ranges data gaps business plan")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "09", artifacts);
+        var responseSummary = MergeSummary(
+            "Financial planning artifact was written for deterministic business-plan automation.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
+            "Completed",
+            "Financial planning artifact was written.",
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
+            "Financial strategist mock artifact saved.",
+            artifacts);
+    }
+
+    private ProcessMockRuntimeOutcome ExecuteMarketingSpecialist(ProcessMockRuntimeState state)
+    {
+        fileService.CreateDirectory(state.ArtifactRoot);
+        var marketingPath = $"{state.ArtifactRoot}/10-marketing-plan.md";
+        var markdown =
+            """
+            # Go-To-Market And Experiment Plan
+
+            The marketing specialist captured audience, promise, channels, budget dependencies, metrics, and validation experiments.
+
+            ## Marketing Planning Controls
+            - Audience and channel assumptions are explicit.
+            - Proof needs and validation experiments are named.
+            - Marketing actions remain tied to business-plan constraints.
+            """;
+        fileService.WriteTextFile(marketingPath, markdown, overwrite: true);
+
+        var artifacts = new List<ProcessMockRuntimeArtifact>
+        {
+            CreateArtifact(
+                marketingPath,
+                "go market experiment plan marketing audience promise channels metrics validation business plan")
+        };
+        var promptSections = BuildPromptRequiredArtifactSections(state, "10", artifacts);
+        var responseSummary = MergeSummary(
+            "Marketing planning artifact was written for deterministic business-plan automation.",
+            promptSections);
+
+        return BuildOutcome(
+            responseSummary,
+            "Completed",
+            "Marketing planning artifact was written.",
+            ResolveAcceptingBranchOutcomeKey(state.OriginalPrompt),
+            "Marketing specialist mock artifact saved.",
             artifacts);
     }
 

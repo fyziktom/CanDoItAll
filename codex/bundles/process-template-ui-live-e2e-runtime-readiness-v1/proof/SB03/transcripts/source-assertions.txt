@@ -1,0 +1,31 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS: test source contains Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback
+PASS: test source contains Blazor_app_delivery_template_SB03_INV_002_missing_process_mock_role_mapping_fails_before_dispatch
+PASS: SB03 positive method contains ExecuteTemplateWithProcessMockAgentsAsync
+PASS: SB03 positive method contains AssertAutomationDispatchReadback
+PASS: SB03 positive method contains AssertFinalizerSummaries
+PASS: SB03 positive method contains application.ActiveProfile.WorkspaceRootPath
+PASS: SB03 positive method contains Quality accepted
+PASS: SB03 positive method does not contain SuppressAutomationDispatch = true
+PASS: SB03 negative method contains blazor-engineer
+PASS: SB03 negative method contains Process-mock role mapping is missing required launch roles
+PASS: SB03 negative method contains Assert.Empty(projectRuns)
+PASS: SB03 negative method contains Assert.Empty(automationDispatches)
+PASS: manual contract test label contains Blazor_app_delivery_template_manual_contract_test_runs_from_project_structure_context_with_artifacts_and_readback
+PASS: dispatch assertion helper contains ProcessOutboxRecordStatus.Completed
+PASS: dispatch assertion helper contains ProcessMockAgentCatalog.ProcessSourceKind
+PASS: dispatch assertion helper contains ProcessMockAgentCatalog.ProviderName
+PASS: dispatch assertion helper contains ProcessMockAgentCatalog.Model
+PASS: dispatch assertion helper contains ExecutionState.Completed
+PASS: dispatch assertion helper contains RunOutcome.Succeeded
+PASS: managed readback assertion contains artifactFile.Exists && artifactFile.Length > 0
+PASS: automation support contains SelectProcessMockLaunchCandidatesAsync
+PASS: automation support contains SubmitLaunchPlanForApprovalAsync
+PASS: automation support contains DecideLaunchPlanApprovalAsync
+PASS: automation support contains ExecuteLaunchPlanAsync
+PASS: automation support contains ProcessPendingAsync
+PASS: automation support contains ListExecutionRunsAsync
+PASS: automation support contains Process-mock role mapping is missing required launch roles
+PASS: launch candidate selection runs before submit, approval, and execution.
+PASS: missing process-mock role mapping assertion is inside candidate selection, before dispatch can be submitted.

@@ -1,0 +1,5 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS: no software-delivery, multi-team, release-governance, Blazor, business-plan, or template-inventory vocabulary found in Process Core/Contracts.
+SCANNED: src\CanDoItAll.Processes.Core
+SCANNED: src\CanDoItAll.Processes.Contracts

@@ -1,0 +1,7 @@
+Command: rg -n mutator-api-patterns <read-only verification scopes>
+ExitCode: 0
+Scope: src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerReadOnlyVerificationReadback.cs; src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessManagerRuntimeHostDryRunReadback.cs; src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDryRunExecutionPipeline.cs; src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessDryRunExecutionHost.cs; src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessVerificationRuntimeHost.cs; src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobRunner.cs; src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs
+SearchExitCode: 1
+ForbiddenHitCount: 0
+Result: PASS - no process, transition, finalizer, storage, HTTP, local process, dispatch, or run-start mutator APIs found in read-only runtime-host verification/readback paths.
+Scheduler note: SchedulerPlannerService is excluded from this read-only scan because it legitimately persists scheduler dispatch state and calls ProcessesService.StartRunFromTriggerAsync; SB07 forbidden-hook scan covers that path.

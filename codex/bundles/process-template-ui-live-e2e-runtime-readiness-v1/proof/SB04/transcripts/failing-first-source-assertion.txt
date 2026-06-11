@@ -1,0 +1,7 @@
+Command: generated proof transcript normalization
+ExitCode: 1
+EXPECTED FAIL: HEAD lacks SB04 strengthened source proof tokens:
+- SB04_INV_002 canonical no-alias catalog test
+- software-delivery role assignment assertions
+- direct governance execution-run assertion set
+- post-release learning managed artifact assertion

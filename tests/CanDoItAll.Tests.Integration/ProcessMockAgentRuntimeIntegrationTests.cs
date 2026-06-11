@@ -16,6 +16,16 @@ namespace CanDoItAll.Tests.Integration;
 
 public sealed class ProcessMockAgentRuntimeIntegrationTests
 {
+    private static readonly string[] WorkflowRepairRoleKeys =
+    [
+        ProcessMockAgentRoleKeys.ProductOwner,
+        ProcessMockAgentRoleKeys.Architect,
+        ProcessMockAgentRoleKeys.Developer,
+        ProcessMockAgentRoleKeys.Qa,
+        ProcessMockAgentRoleKeys.RepairDeveloper,
+        ProcessMockAgentRoleKeys.ReleaseManager
+    ];
+
     [Fact]
     public async Task Process_mock_catalog_is_not_seeded_when_disabled()
     {
@@ -130,12 +140,15 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
         var details = await processesService.GetLaunchPlanAsync(launchResult.Value);
         Assert.NotNull(details);
-        Assert.Equal(ProcessMockAgentCatalog.Roles.Count, details!.Roles.Count);
+        Assert.Equal(WorkflowRepairRoleKeys.Length, details!.Roles.Count);
 
         var technicalAgentBridge = scope.ServiceProvider.GetRequiredService<IAiTechnicalAgentBridge>();
-        var staffingFacts = await technicalAgentBridge.GetStaffingFactsAsync(ProcessMockAgentCatalog.Roles.Select(role => role.PartyId).ToList());
+        var workflowCatalogRoles = ProcessMockAgentCatalog.Roles
+            .Where(role => WorkflowRepairRoleKeys.Contains(role.RoleKey, StringComparer.Ordinal))
+            .ToList();
+        var staffingFacts = await technicalAgentBridge.GetStaffingFactsAsync(workflowCatalogRoles.Select(role => role.PartyId).ToList());
 
-        foreach (var catalogRole in ProcessMockAgentCatalog.Roles)
+        foreach (var catalogRole in workflowCatalogRoles)
         {
             var launchRole = Assert.Single(details.Roles, role => string.Equals(role.RoleKey, catalogRole.RoleKey, StringComparison.Ordinal));
             Assert.True(launchRole.SelectedCandidateId.HasValue);
@@ -204,7 +217,7 @@ public sealed class ProcessMockAgentRuntimeIntegrationTests
 
         var launchDetails = await processesService.GetLaunchPlanAsync(launchResult.Value);
         Assert.NotNull(launchDetails);
-        Assert.Equal(ProcessMockAgentCatalog.Roles.Count, launchDetails!.Roles.Count);
+        Assert.Equal(WorkflowRepairRoleKeys.Length, launchDetails!.Roles.Count);
         Assert.All(launchDetails.Roles, role => {
             Assert.True(role.SelectedCandidateId.HasValue);
             var selectedCandidate = Assert.Single(role.Candidates, candidate => candidate.Id == role.SelectedCandidateId.Value);

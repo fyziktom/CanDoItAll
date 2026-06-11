@@ -1,0 +1,8 @@
+Command: generated proof transcript normalization
+ExitCode: 1
+SB06 failing-first source assertion against HEAD
+EXPECTED FAIL missing in HEAD: ["business-strategist"] = ProcessMockAgentRoleKeys.BusinessStrategist
+EXPECTED FAIL missing in HEAD: Assert.Equal(ProcessRuntimeHostContractVersion.Current, readback.Contract.Version)
+EXPECTED FAIL missing in HEAD: Assert.Contains(ProcessExecutionCapableDriverSurface.CommandExecution, dryRunReadback.DeniedSurfaces)
+EXPECTED FAIL missing in HEAD: Assert.Equal(ProcessRuntimeHostContractSurface.DryRunExecution, dryRunReadback.Contract.Surface)
+Expected failure confirms SB06 proof is not satisfied by the pre-change source.

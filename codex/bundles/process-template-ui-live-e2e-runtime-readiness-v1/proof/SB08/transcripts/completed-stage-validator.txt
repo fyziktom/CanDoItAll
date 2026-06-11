@@ -1,0 +1,3 @@
+Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-template-ui-live-e2e-runtime-readiness-v1 --stage completed --repo-root C:\repositories\CanDoItAll
+ExitCode: 0
+Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-template-ui-live-e2e-runtime-readiness-v1

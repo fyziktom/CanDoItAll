@@ -329,14 +329,18 @@ public sealed partial class AppSmokeTests
             : nodeId;
     }
 
-    private static HttpClient CreateProjectStructureAgentApiClient(string baseUrl)
+    private static HttpClient CreateProjectStructureAgentApiClient(
+        string baseUrl,
+        string agentId = "sb012-playwright-agent",
+        string agentName = "SB012 Playwright",
+        string branchName = "tests/project-structure-sb012")
     {
         var client = CreateProcessApiClient(baseUrl);
-        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentId, "sb012-playwright-agent");
-        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentName, "SB012 Playwright");
+        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentId, agentId);
+        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentName, agentName);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.MachineName, Environment.MachineName);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.RepositoryRoot, GetRepoRoot());
-        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.BranchName, "tests/project-structure-sb012");
+        client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.BranchName, branchName);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.SessionId, Guid.NewGuid().ToString("N"));
         return client;
     }

@@ -1,0 +1,29 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS source fragment: Process_runtime_host_readback_SB06_INV_001_uses_real_process_run_and_step_ids_without_mutation
+PASS source fragment: ExecuteTemplateWithProcessMockAgentsAsync
+PASS source fragment: ["business-strategist"] = ProcessMockAgentRoleKeys.BusinessStrategist
+PASS source fragment: ["financial-strategist"] = ProcessMockAgentRoleKeys.FinancialStrategist
+PASS source fragment: ["marketing-specialist"] = ProcessMockAgentRoleKeys.MarketingSpecialist
+PASS source fragment: IProcessManagerReadOnlyVerificationFacade
+PASS source fragment: VerifyForReadbackAsync
+PASS source fragment: Assert.Equal(runResult.RunId, readback.ProcessRunId)
+PASS source fragment: Assert.Equal(completedStep.Id, readback.StepRunId)
+PASS source fragment: Assert.True(readback.EvidenceReferenceCount > 0)
+PASS source fragment: Assert.Matches("^[A-F0-9]{64}$", readback.AuditRecordObservationHash)
+PASS source fragment: Assert.Equal(ProcessRuntimeHostContractVersion.Current, readback.Contract.Version)
+PASS source fragment: Assert.Equal(ProcessRuntimeHostContractSurface.ManagerReadback, readback.Contract.Surface)
+PASS source fragment: Assert.Empty(readback.Contract.ValidateReadOnlySafety())
+PASS source fragment: Assert.Equal(ProcessRuntimeHostContractSurface.OperatorStatus, status.Contract.Surface)
+PASS source fragment: ProcessManagerRuntimeHostDryRunReadbackMapper.Project(dryRun)
+PASS source fragment: Assert.Equal(ProcessDryRunExecutionHostDecision.Denied, dryRunReadback.Decision)
+PASS source fragment: Assert.Contains(ProcessExecutionCapableDriverSurface.CommandExecution, dryRunReadback.DeniedSurfaces)
+PASS source fragment: Assert.Contains(ProcessDriverOperation.ExecuteCommand, dryRunReadback.DeniedOperations)
+PASS source fragment: Assert.Contains(dryRunReadback.Denials, denial => denial.Category == ProcessRuntimeHostDenialCategory.SideEffect)
+PASS source fragment: Assert.Equal(ProcessRuntimeHostContractSurface.DryRunExecution, dryRunReadback.Contract.Surface)
+PASS source fragment: Assert.Equal(runResult.RunId, requestIdentity.ProcessRunId)
+PASS source fragment: Assert.Equal(completedStep.Id, requestIdentity.StepRunId)
+PASS source fragment: Assert.Equal(ProcessRuntimeHostSandboxDecisionKind.Denied, sandboxDecision.Kind)
+PASS source fragment: Assert.False(sandboxDecision.ExecutionAllowed)
+PASS source fragment: Assert.True(sandboxDecision.DryRunOnly)
+PASS source fragment: Assert.Contains(ProcessRuntimeHostEffectSurface.LocalCommand, sandboxDecision.DeniedSurfaces)

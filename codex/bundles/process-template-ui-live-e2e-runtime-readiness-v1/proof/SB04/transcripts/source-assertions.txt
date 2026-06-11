@@ -1,0 +1,28 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS: governance source contains Process_template_catalog_SB04_INV_002_uses_software_delivery_as_canonical_multi_team_representative_without_alias_key
+PASS: SB04 E2E contains ExecuteTemplateWithProcessMockAgentsAsync
+PASS: SB04 E2E contains directGovernanceExecutionStepTitles
+PASS: SB04 E2E contains AssertAutomationDispatchReadback
+PASS: SB04 E2E contains requireExactExecutionSet: false
+PASS: SB04 E2E contains AssertRoleAssignments
+PASS: SB04 E2E contains Product owner
+PASS: SB04 E2E contains Delivery manager
+PASS: SB04 E2E contains Solution architect
+PASS: SB04 E2E contains Lead engineer
+PASS: SB04 E2E contains QA lead
+PASS: SB04 E2E contains Security reviewer
+PASS: SB04 E2E contains Release manager
+PASS: SB04 E2E contains ProcessExecutorKindNames.AiAgent
+PASS: SB04 E2E contains Project structure context brief
+PASS: SB04 E2E contains .NET Run command writeback
+PASS: SB04 E2E contains .NET UI screenshot writeback
+PASS: SB04 E2E contains Release approval record
+PASS: SB04 E2E contains Post-release learning review
+PASS: SB04 automation proof does not contain SuppressAutomationDispatch = true
+PASS: catalog proof contains multi-team-development
+PASS: catalog proof contains Assert.False(pack.Processes.ContainsKey("multi-team-development"))
+PASS: catalog proof contains ProcessTemplateCatalogInventory.SoftwareDeliveryTemplateKey
+PASS: catalog proof contains ProcessTemplateInventoryFamily.MultiTeamDevelopment
+PASS: catalog proof contains ProcessTemplateInventoryResolutionKind.MappedTemplate
+PASS: catalog proof contains Multi-team software delivery and release governance

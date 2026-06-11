@@ -1,0 +1,6 @@
+Command: powershell -NoProfile -Command <baseline SB01_INV_006/SB01_INV_007 source assertion>
+WorkingDirectory: C:\repositories\CanDoItAll
+StartUtc: 2026-06-11T09:55:20.7785094Z
+Exit code: 1
+Output:
+HEAD baseline does not contain SB01_INV_006 or SB01_INV_007 guard coverage.

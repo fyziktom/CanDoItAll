@@ -156,6 +156,33 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
+    public async Task Process_template_catalog_SB04_INV_002_uses_software_delivery_as_canonical_multi_team_representative_without_alias_key()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var packLoader = scope.ServiceProvider.GetRequiredService<ProcessTemplatePackLoader>();
+
+        var pack = packLoader.Load();
+        var multiTeam = ProcessTemplateCatalogInventory.GetRequiredTemplate(ProcessTemplateInventoryFamily.MultiTeamDevelopment);
+        var softwareDeliveryFamilies = ProcessTemplateCatalogInventory
+            .GetRequiredTemplatesForTemplate(ProcessTemplateCatalogInventory.SoftwareDeliveryTemplateKey)
+            .Select(item => item.Family)
+            .ToArray();
+        var definition = pack.Processes[ProcessTemplateCatalogInventory.SoftwareDeliveryTemplateKey];
+
+        Assert.False(pack.Processes.ContainsKey("multi-team-development"));
+        Assert.Equal(ProcessTemplateCatalogInventory.SoftwareDeliveryTemplateKey, multiTeam.TemplateKey);
+        Assert.Equal(ProcessTemplateInventoryResolutionKind.MappedTemplate, multiTeam.ResolutionKind);
+        Assert.Contains(ProcessTemplateInventoryFamily.SoftwareDevelopment, softwareDeliveryFamilies);
+        Assert.Contains(ProcessTemplateInventoryFamily.MultiTeamDevelopment, softwareDeliveryFamilies);
+        Assert.Equal("Multi-team software delivery and release governance", definition.DisplayName);
+        Assert.Contains("release governance", definition.DisplayName, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("multi-team", definition.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("release", definition.Summary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("governance", definition.Summary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Dotnet_software_delivery_template_hardens_parent_permissions_and_writeback_subprocesses()
     {
         await using var application = await TestApplication.CreateAsync();

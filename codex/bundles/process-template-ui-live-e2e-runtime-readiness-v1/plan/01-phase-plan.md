@@ -1,5 +1,15 @@
 # Phase Plan
 
+## Execution Order
+- SB01 establishes the diff and proof baseline before any implementation-heavy phase.
+- SB02 proves the user-visible project/project-structure launch path.
+- SB03 hardens Blazor/.NET automation dispatch before broader representative templates.
+- SB04 proves the software-delivery multi-team representative path.
+- SB05 proves non-software business-analysis automation on PostgreSQL.
+- SB06 attaches runtime-host readback to real representative runs.
+- SB07 proves scheduler/workflow launch and read-only verification jobs without driver hooks.
+- SB08 runs release validation, red-team scans, live opt-in classification, ratio check, and zip closure.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -17,7 +27,14 @@ graph TD
 
 ## Critical Subbundles
 
-All subbundles are critical and intentionally larger implementation areas. The implementation agent must not split these into proof-only micro edits.
+- SB01 is critical because downstream code-first closure depends on its ratio and source-scan gates.
+- SB02 is critical because user-facing launch confidence cannot be inferred from API-only proof.
+- SB03 is critical because downstream representative template proof depends on production-path automation dispatch.
+- SB04 is critical because the raw request names multi-team development and this bundle treats `software-delivery` as the canonical representative unless evidence says otherwise.
+- SB05 is critical because business-analysis must be PostgreSQL-backed and free of software-domain leakage.
+- SB06 is critical because runtime-host readback must attach to real run and step identities without mutation side effects.
+- SB07 is critical because scheduler/workflow origins must use process-owned launch paths without driver hooks.
+- SB08 is critical because final release confidence depends on full validation, red-team scans, browser proof, and the code-first ratio.
 
 ## Phase Gates
 

@@ -1,0 +1,20 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+SB07 anti-stub audit scope:
+- tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
+- tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs
+- src\CanDoItAll.Modules.Processes\Runtime\ProcessesService.Runtime.TriggerStart.cs
+- src\CanDoItAll.Modules.SchedulerPlanner\SchedulerPlannerService.cs
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobModel.cs
+- src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessReadOnlyVerificationJobRunner.cs
+PASS live-path fragment: TestApplication.CreateAsync
+PASS live-path fragment: processesService.SaveAsync
+PASS live-path fragment: processesService.PublishAsync
+PASS live-path fragment: processesService.StartRunFromTriggerAsync
+PASS live-path fragment: dbContext.Set<ProcessOutboxRecord>()
+PASS live-path fragment: services.AddProcessVerificationRuntimeHost()
+PASS live-path fragment: services.AddInMemoryProcessVerificationAuditStoreForTests()
+PASS live-path fragment: IProcessReadOnlyVerificationJobRunner
+PASS live-path fragment: runner.RunAsync(job)
+PASS live-path fragment: runner.RunAsync(workflowJob)
+PASS no SB07 TODO/Skip/NotImplemented/stub/placeholder/bypass markers found in scoped files.

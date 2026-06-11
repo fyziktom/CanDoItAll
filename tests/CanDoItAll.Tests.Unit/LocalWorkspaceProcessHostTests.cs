@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using CanDoItAll.AgentFramework.Core;
 
 namespace CanDoItAll.Tests.Unit;
@@ -11,30 +12,9 @@ public sealed class LocalWorkspaceProcessHostTests
         var host = new LocalWorkspaceProcessHost();
         var childSleepSeconds = 30;
         var childPidFilePath = Path.Combine(Path.GetTempPath(), $"CanDoItAll.LocalWorkspaceProcessHostTests.{Guid.NewGuid():N}.pid");
-        var command = string.Join(
-            Environment.NewLine,
-            [
-                $"$childPidFilePath = '{childPidFilePath.Replace("'", "''")}'",
-                "$childPwshPath = Join-Path $PSHOME 'pwsh.exe'",
-                "if (-not (Test-Path -LiteralPath $childPwshPath)) {",
-                "    $childPwshPath = 'pwsh'",
-                "}",
-                string.Empty,
-                "$psi = [System.Diagnostics.ProcessStartInfo]::new()",
-                "$psi.FileName = $childPwshPath",
-                "$psi.UseShellExecute = $false",
-                "$psi.RedirectStandardOutput = $false",
-                "$psi.RedirectStandardError = $false",
-                "$psi.CreateNoWindow = $true",
-                "$null = $psi.ArgumentList.Add('-NoLogo')",
-                "$null = $psi.ArgumentList.Add('-NoProfile')",
-                "$null = $psi.ArgumentList.Add('-NonInteractive')",
-                "$null = $psi.ArgumentList.Add('-Command')",
-                $"$null = $psi.ArgumentList.Add('Write-Output ''child-start''; Start-Sleep -Seconds {childSleepSeconds}')",
-                "$child = [System.Diagnostics.Process]::Start($psi)",
-                "Set-Content -LiteralPath $childPidFilePath -Value $child.Id -NoNewline",
-                "Write-Output 'parent-done'"
-            ]);
+        var command = OperatingSystem.IsWindows()
+            ? BuildWindowsDetachedChildCommand(childPidFilePath, childSleepSeconds)
+            : BuildPortableDetachedChildCommand(childPidFilePath, childSleepSeconds);
         var request = new WorkspaceProcessExecutionRequest(
             ToolName: "workspace_pwsh_run_script",
             RecipeId: "pwsh_run_script",
@@ -120,5 +100,74 @@ public sealed class LocalWorkspaceProcessHostTests
         catch
         {
         }
+    }
+
+    private static string BuildWindowsDetachedChildCommand(string childPidFilePath, int childSleepSeconds)
+    {
+        var escapedChildPidFilePath = childPidFilePath.Replace("'", "''");
+        var childCommand = $"Set-Content -LiteralPath '{escapedChildPidFilePath}' -Value $PID -NoNewline; Write-Output 'child-start'; Start-Sleep -Seconds {childSleepSeconds}";
+        var encodedChildCommand = Convert.ToBase64String(Encoding.Unicode.GetBytes(childCommand));
+
+        return string.Join(
+            Environment.NewLine,
+            [
+                "$childPwshPath = Join-Path $PSHOME 'pwsh.exe'",
+                "if (-not (Test-Path -LiteralPath $childPwshPath)) {",
+                "    $childPwshPath = 'pwsh'",
+                "}",
+                "$cmdPath = $env:ComSpec",
+                "if ([string]::IsNullOrWhiteSpace($cmdPath)) {",
+                "    $cmdPath = 'cmd.exe'",
+                "}",
+                "$cmdStartInfo = [System.Diagnostics.ProcessStartInfo]::new()",
+                "$cmdStartInfo.FileName = $cmdPath",
+                "$cmdStartInfo.UseShellExecute = $false",
+                "$cmdStartInfo.RedirectStandardOutput = $false",
+                "$cmdStartInfo.RedirectStandardError = $false",
+                "$cmdStartInfo.CreateNoWindow = $true",
+                "$null = $cmdStartInfo.ArgumentList.Add('/c')",
+                "$null = $cmdStartInfo.ArgumentList.Add('start')",
+                "$null = $cmdStartInfo.ArgumentList.Add('\"\"')",
+                "$null = $cmdStartInfo.ArgumentList.Add('/b')",
+                "$null = $cmdStartInfo.ArgumentList.Add($childPwshPath)",
+                "$null = $cmdStartInfo.ArgumentList.Add('-NoLogo')",
+                "$null = $cmdStartInfo.ArgumentList.Add('-NoProfile')",
+                "$null = $cmdStartInfo.ArgumentList.Add('-NonInteractive')",
+                "$null = $cmdStartInfo.ArgumentList.Add('-EncodedCommand')",
+                $"$null = $cmdStartInfo.ArgumentList.Add('{encodedChildCommand}')",
+                "$cmdProcess = [System.Diagnostics.Process]::Start($cmdStartInfo)",
+                "if ($cmdProcess -ne $null) {",
+                "    $cmdProcess.WaitForExit(5000) | Out-Null",
+                "}",
+                "Write-Output 'parent-done'"
+            ]);
+    }
+
+    private static string BuildPortableDetachedChildCommand(string childPidFilePath, int childSleepSeconds)
+    {
+        return string.Join(
+            Environment.NewLine,
+            [
+                $"$childPidFilePath = '{childPidFilePath.Replace("'", "''")}'",
+                "$childPwshPath = Join-Path $PSHOME 'pwsh.exe'",
+                "if (-not (Test-Path -LiteralPath $childPwshPath)) {",
+                "    $childPwshPath = 'pwsh'",
+                "}",
+                string.Empty,
+                "$psi = [System.Diagnostics.ProcessStartInfo]::new()",
+                "$psi.FileName = $childPwshPath",
+                "$psi.UseShellExecute = $false",
+                "$psi.RedirectStandardOutput = $false",
+                "$psi.RedirectStandardError = $false",
+                "$psi.CreateNoWindow = $true",
+                "$null = $psi.ArgumentList.Add('-NoLogo')",
+                "$null = $psi.ArgumentList.Add('-NoProfile')",
+                "$null = $psi.ArgumentList.Add('-NonInteractive')",
+                "$null = $psi.ArgumentList.Add('-Command')",
+                $"$null = $psi.ArgumentList.Add('Write-Output ''child-start''; Start-Sleep -Seconds {childSleepSeconds}')",
+                "$child = [System.Diagnostics.Process]::Start($psi)",
+                "Set-Content -LiteralPath $childPidFilePath -Value $child.Id -NoNewline",
+                "Write-Output 'parent-done'"
+            ]);
     }
 }

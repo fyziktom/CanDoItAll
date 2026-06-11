@@ -1,0 +1,15 @@
+Command: source assertions for SB02 Playwright project-structure launch proof
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:20: Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:15: ProjectStructureAssignmentReviewStartTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:205: ProjectStructureAssignmentReviewStartTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:477: ProjectStructureAssignmentReviewStartTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:492: ProjectStructureAssignmentReviewStartTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:498: ProjectStructureAssignmentReviewStartTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:150: BuildProjectStructureOutlineNodeTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:570: BuildProjectStructureOutlineNodeTestId
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:127: ProjectStructureProcessDefinitionLinkInput
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:219: ProcessLaunchPlanStatus.Executing
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs:197: Project structure context JSON:
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureProcesses.cs:334: string agentId = "sb012-playwright-agent"
+PASS tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectStructureProcesses.cs:336: branchName = "tests/project-structure-sb012"
+Exit code: 0

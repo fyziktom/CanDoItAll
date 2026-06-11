@@ -1727,6 +1727,9 @@ internal sealed partial class ProcessRunAutomationDispatchService
             (ProcessMockRepairDeveloperRoleKey, _) => ("05-repair.md", "repair implementation validation evidence"),
             (ProcessMockQaRoleKey, ProcessMockBranchApproved) => ("06-qa-approval.md", "qa approval implementation release evidence"),
             (ProcessMockReleaseManagerRoleKey, _) => ("07-release-notes.md", "release notes qa approval rollout evidence"),
+            (ProcessMockBusinessStrategistRoleKey, _) => ("08-business-strategy.md", "business strategy intake product evidence assessment business plan integrated review approved handoff"),
+            (ProcessMockFinancialStrategistRoleKey, _) => ("09-financial-model.md", "financial model sensitivity note drivers assumptions ranges data gaps"),
+            (ProcessMockMarketingSpecialistRoleKey, _) => ("10-marketing-plan.md", "marketing market experiment plan audience promise channels metrics validation"),
             _ => (string.Empty, string.Empty)
         };
 

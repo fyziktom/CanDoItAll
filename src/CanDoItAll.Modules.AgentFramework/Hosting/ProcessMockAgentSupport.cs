@@ -72,7 +72,31 @@ public static class ProcessMockAgentCatalog
             "Release Manager",
             "Writes deterministic release notes after QA approval.",
             "Prepare release notes that summarize scope, repair evidence, QA approval, and residual risk.",
-            AgentWorkloadKind.Management)
+            AgentWorkloadKind.Management),
+        new(
+            ProcessMockAgentRoleKeys.BusinessStrategist,
+            ProcessMockAgentRolePartyIds.BusinessStrategist,
+            "Process Mock Business Strategist",
+            "Business Strategist",
+            "Writes deterministic business strategy, product evidence, plan, and review artifacts.",
+            "Prepare governed business planning artifacts that separate facts, assumptions, risks, and next actions.",
+            AgentWorkloadKind.Management),
+        new(
+            ProcessMockAgentRoleKeys.FinancialStrategist,
+            ProcessMockAgentRolePartyIds.FinancialStrategist,
+            "Process Mock Financial Strategist",
+            "Financial Strategist",
+            "Writes deterministic financial model and sensitivity artifacts.",
+            "Prepare financial planning evidence with drivers, ranges, assumptions, and data gaps.",
+            AgentWorkloadKind.Spreadsheet),
+        new(
+            ProcessMockAgentRoleKeys.MarketingSpecialist,
+            ProcessMockAgentRolePartyIds.MarketingSpecialist,
+            "Process Mock Marketing Specialist",
+            "Marketing Specialist",
+            "Writes deterministic go-to-market and experiment planning artifacts.",
+            "Prepare marketing planning evidence with audience, promise, channels, metrics, and experiments.",
+            AgentWorkloadKind.Sales)
     ];
 
     public static string CreateRoleTag(string roleKey)
@@ -105,6 +129,9 @@ public static class ProcessMockAgentRoleKeys
     public const string Qa = "qa";
     public const string RepairDeveloper = "repair-developer";
     public const string ReleaseManager = "release-manager";
+    public const string BusinessStrategist = "business-strategist";
+    public const string FinancialStrategist = "financial-strategist";
+    public const string MarketingSpecialist = "marketing-specialist";
 }
 
 public static class ProcessMockAgentRolePartyIds
@@ -115,6 +142,9 @@ public static class ProcessMockAgentRolePartyIds
     public static readonly Guid Qa = Guid.Parse("3f540e6d-5b9e-49e6-9ab4-8ff6b4fd1004");
     public static readonly Guid RepairDeveloper = Guid.Parse("3f540e6d-5b9e-49e6-9ab4-8ff6b4fd1005");
     public static readonly Guid ReleaseManager = Guid.Parse("3f540e6d-5b9e-49e6-9ab4-8ff6b4fd1006");
+    public static readonly Guid BusinessStrategist = Guid.Parse("3f540e6d-5b9e-49e6-9ab4-8ff6b4fd1007");
+    public static readonly Guid FinancialStrategist = Guid.Parse("3f540e6d-5b9e-49e6-9ab4-8ff6b4fd1008");
+    public static readonly Guid MarketingSpecialist = Guid.Parse("3f540e6d-5b9e-49e6-9ab4-8ff6b4fd1009");
 }
 
 public sealed record ProcessMockAgentRoleDefinition(

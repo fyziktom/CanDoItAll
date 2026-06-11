@@ -63,6 +63,9 @@ internal sealed partial class ProcessRunAutomationDispatchService(
     private const string ProcessMockQaRoleKey = "qa";
     private const string ProcessMockRepairDeveloperRoleKey = "repair-developer";
     private const string ProcessMockReleaseManagerRoleKey = "release-manager";
+    private const string ProcessMockBusinessStrategistRoleKey = "business-strategist";
+    private const string ProcessMockFinancialStrategistRoleKey = "financial-strategist";
+    private const string ProcessMockMarketingSpecialistRoleKey = "marketing-specialist";
     private const string ProcessMockBranchRepairsRequired = "repairs-required";
     private const string ProcessMockBranchApproved = "approved";
     private static readonly TimeSpan FreshInProgressRecoveryGracePeriod = TimeSpan.FromMinutes(10);

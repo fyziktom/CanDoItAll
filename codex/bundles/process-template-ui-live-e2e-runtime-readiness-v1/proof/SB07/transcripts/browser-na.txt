@@ -1,0 +1,6 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+SB07 browser validation note
+Result: N/A
+Reason: SB07 covers scheduler/workflow-origin service launch paths and read-only verification job lifecycle. It has no browser-visible route or component change.
+Proof is integration/API-level: focused tests and production source scans under proof/SB07/transcripts.

@@ -1,0 +1,3 @@
+Command: rg -n "TODO|NotImplemented|throw new NotImplementedException|Skip\\(" changed SB02 Playwright files
+No TODO, NotImplemented, throw new NotImplementedException, or Skip markers found in changed SB02 test files.
+Exit code: 0

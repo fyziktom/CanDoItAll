@@ -1,0 +1,6 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS: no TODO, NotImplementedException, Assert.Skip, or throw new NotImplemented markers found in SB04 touched/support files.
+AUDITED: tests\CanDoItAll.Tests.Integration\ProcessTemplateExecutionE2ETests.cs
+AUDITED: tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs
+AUDITED: tests\CanDoItAll.Tests.Integration\ProcessTemplateAutomationTestSupport.cs

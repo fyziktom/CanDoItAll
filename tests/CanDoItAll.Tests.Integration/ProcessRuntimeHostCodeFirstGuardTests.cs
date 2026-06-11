@@ -29,6 +29,27 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         "File.OpenRead"
     ];
 
+    private static readonly LongRunningE2EProofContract[] LongRunningTemplateAutomationProofs =
+    [
+        new(
+            "Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback",
+            "SB03_INV_001"),
+        new(
+            "Software_delivery_template_SB04_INV_001_completes_multi_team_governance_through_automation_dispatch",
+            "SB04_INV_001")
+    ];
+
+    private static readonly string[] ProductionAutomationPathTokens =
+    [
+        "CreateLaunchPlanAsync",
+        "SelectProcessMockLaunchCandidatesAsync",
+        "SubmitLaunchPlanForApprovalAsync",
+        "DecideLaunchPlanApprovalAsync",
+        "ExecuteLaunchPlanAsync",
+        "ProcessPendingAsync",
+        "ListExecutionRunsAsync"
+    ];
+
     [Fact]
     public void Process_runtime_host_codefirst_SB01_INV_001_source_inventory_is_not_bundle_path_coupled()
     {
@@ -41,7 +62,8 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
             Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessVerificationAuditStore.cs"),
             Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessManagerReadOnlyVerificationCommandService.cs"),
             Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessReadOnlyVerificationJobRunner.cs"),
-            Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessDryRunExecutionHost.cs")
+            Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessDryRunExecutionHost.cs"),
+            Path.Combine(root, "src", "CanDoItAll.Modules.Processes", "Automation", "Dispatch", "ProcessDryRunExecutionPipeline.cs")
         };
         var missingFiles = sourceFiles
             .Where(path => !File.Exists(path))
@@ -72,6 +94,48 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
             .ToArray();
 
         Assert.Empty(coupledFiles);
+    }
+
+    [Fact]
+    public void Process_runtime_host_codefirst_SB01_INV_006_numstat_command_requires_explicit_current_bundle_start_sha()
+    {
+        var arguments = ProcessRuntimeHostCodeFirstDiffSummary.BuildNumstatArguments("0123456");
+
+        Assert.Equal(["diff", "--numstat", "0123456...HEAD"], arguments);
+        Assert.Throws<ArgumentException>(() => ProcessRuntimeHostCodeFirstDiffSummary.BuildNumstatArguments(""));
+        Assert.Throws<ArgumentException>(() => ProcessRuntimeHostCodeFirstDiffSummary.BuildNumstatArguments("origin/main"));
+    }
+
+    [Fact]
+    public void Process_runtime_host_codefirst_SB01_INV_007_long_running_template_e2e_proof_cites_production_dispatch_path()
+    {
+        var root = FindRepositoryRoot();
+        var e2eSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "CanDoItAll.Tests.Integration",
+            "ProcessTemplateExecutionE2ETests.cs"));
+        var supportSource = File.ReadAllText(Path.Combine(
+            root,
+            "tests",
+            "CanDoItAll.Tests.Integration",
+            "ProcessTemplateAutomationTestSupport.cs"));
+        var missingProductionPathTokens = ProductionAutomationPathTokens
+            .Where(token => !supportSource.Contains(token, StringComparison.Ordinal))
+            .ToArray();
+
+        Assert.Empty(missingProductionPathTokens);
+
+        foreach (var proof in LongRunningTemplateAutomationProofs)
+        {
+            var methodBody = ExtractMethodBody(e2eSource, proof.MethodName);
+
+            Assert.Contains(proof.InvariantId, proof.MethodName, StringComparison.Ordinal);
+            Assert.Contains("ExecuteTemplateWithProcessMockAgentsAsync", methodBody, StringComparison.Ordinal);
+            Assert.Contains("AssertFinalizerSummaries", methodBody, StringComparison.Ordinal);
+            Assert.Contains("AssertArtifact", methodBody, StringComparison.Ordinal);
+            Assert.DoesNotContain("SuppressAutomationDispatch = true", methodBody, StringComparison.Ordinal);
+        }
     }
 
     [Fact]
@@ -187,6 +251,42 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         throw new InvalidOperationException("Could not locate repository root.");
     }
 
+    private static string ExtractMethodBody(string source, string methodName)
+    {
+        var markerIndex = source.IndexOf(methodName, StringComparison.Ordinal);
+        if (markerIndex < 0)
+        {
+            throw new InvalidOperationException($"Could not find method '{methodName}'.");
+        }
+
+        var bodyStart = source.IndexOf('{', markerIndex);
+        if (bodyStart < 0)
+        {
+            throw new InvalidOperationException($"Could not find method body for '{methodName}'.");
+        }
+
+        var depth = 0;
+        for (var index = bodyStart; index < source.Length; index++)
+        {
+            if (source[index] == '{')
+            {
+                depth++;
+            }
+            else if (source[index] == '}')
+            {
+                depth--;
+                if (depth == 0)
+                {
+                    return source[bodyStart..(index + 1)];
+                }
+            }
+        }
+
+        throw new InvalidOperationException($"Could not parse method body for '{methodName}'.");
+    }
+
+    private sealed record LongRunningE2EProofContract(string MethodName, string InvariantId);
+
     private sealed record ProcessRuntimeHostCodeFirstDiffSummary(
         int SourceChangedLines,
         int TestChangedLines,
@@ -202,6 +302,22 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
 
             return BundleChangedLines == 0 ||
                 SourceAndTestChangedLines >= requiredMultiplier * BundleChangedLines;
+        }
+
+        public static IReadOnlyList<string> BuildNumstatArguments(string startSha)
+        {
+            if (string.IsNullOrWhiteSpace(startSha))
+            {
+                throw new ArgumentException("The bundle start SHA must be explicit.", nameof(startSha));
+            }
+
+            if (startSha.Length is < 7 or > 40 ||
+                startSha.Any(character => !Uri.IsHexDigit(character)))
+            {
+                throw new ArgumentException("The bundle start SHA must be a 7-40 character hexadecimal Git object id.", nameof(startSha));
+            }
+
+            return ["diff", "--numstat", $"{startSha}...HEAD"];
         }
 
         public static ProcessRuntimeHostCodeFirstDiffSummary FromNumstatLines(IEnumerable<string> lines)

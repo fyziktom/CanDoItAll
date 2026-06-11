@@ -1,0 +1,11 @@
+Command: generated proof transcript normalization
+ExitCode: 0
+PASS: src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentSupport.cs has no stub/TODO/skip markers.
+PASS: src\CanDoItAll.Modules.AgentFramework\Hosting\ProcessMockAgentRuntime.cs has no stub/TODO/skip markers.
+PASS: src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.cs has no stub/TODO/skip markers.
+PASS: src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessRunAutomationDispatchService.ArtifactValidation.cs has no stub/TODO/skip markers.
+PASS: src\CanDoItAll.Modules.Processes\Automation\Dispatch\ProcessArtifactProjectionFacetImplementations.cs has no stub/TODO/skip markers.
+PASS: tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs has no stub/TODO/skip markers.
+PASS: tests\CanDoItAll.Tests.Integration\ProcessTemplateAutomationTestSupport.cs has no stub/TODO/skip markers.
+PASS: tests\CanDoItAll.Tests.Integration\ProcessMockAgentRuntimeIntegrationTests.cs has no stub/TODO/skip markers.
+PASS: SB05 automation method does not suppress automation dispatch.
