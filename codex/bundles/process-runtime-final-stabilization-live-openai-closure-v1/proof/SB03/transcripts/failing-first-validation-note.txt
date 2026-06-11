@@ -1,0 +1,11 @@
+Command: record SB03 failing-first applicability
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 
+2026-06-11T18:56:16.3978344Z
+
+Failing-first transcript: N/A; no production behavior change in this process validation subbundle.
+Reason: SB03 reruns existing deterministic automation/readback coverage and classifies infrastructure availability. It does not change source code or alter runtime behavior.
+Adversarial negative proof is the suppress-dispatch source scan: a matrix method containing SuppressAutomationDispatch = true would fail bundle://proof/SB03/transcripts/suppress-automation-dispatch-scan.txt.
+ExitCode: 0
+EndTimeUtc: 
+2026-06-11T18:56:16.4050575Z

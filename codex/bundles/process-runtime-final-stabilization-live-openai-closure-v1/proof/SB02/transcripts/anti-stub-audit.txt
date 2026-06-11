@@ -1,0 +1,7 @@
+Command: rg -n "TODO|NotImplemented|fixture-specific" src/CanDoItAll.AgentFramework.Maf/Runtime/MafAgentRuntime.cs tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:48:42.1704138Z
+RunLabel: SB02 anti-stub audit
+PASS: no TODO, NotImplemented, or fixture-specific markers found in SB02 changed files.
+ExitCode: 0
+EndTimeUtc: 2026-06-11T18:48:42.1991511Z

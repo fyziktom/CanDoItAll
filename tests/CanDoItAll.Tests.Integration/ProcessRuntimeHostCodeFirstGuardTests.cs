@@ -148,6 +148,36 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     [Fact]
+    public void Process_runtime_host_codefirst_SB01_INV_011_ratio_failure_is_advisory_when_runtime_release_evidence_is_green()
+    {
+        var runtimeStableWithRatioChurn = StabilizationReleaseEvidence.FromProof(
+            deterministicRuntimePass: true,
+            uiProofPass: true,
+            liveOpenAiPass: true,
+            liveOpenAiProviderBlocked: false,
+            boundaryScanPass: true,
+            codeFirstRatioPass: false,
+            sourceTestEvidenceMissing: false,
+            proofOnlyClosure: false);
+        var proofOnlyRatioFailure = runtimeStableWithRatioChurn with
+        {
+            SourceTestEvidenceMissing = true,
+            ProofOnlyClosure = true
+        };
+
+        var runtimeStableClassification = runtimeStableWithRatioChurn.Classify();
+        var proofOnlyClassification = proofOnlyRatioFailure.Classify();
+
+        Assert.Equal(StabilizationReleaseOutcome.MergeReadyForStabilization, runtimeStableClassification.Outcome);
+        Assert.False(runtimeStableClassification.IsFunctionalRuntimeBlocker);
+        Assert.Contains(StabilizationReleaseClassification.CodeFirstRatioAdvisoryReason, runtimeStableClassification.AdvisoryReasons);
+        Assert.DoesNotContain(StabilizationReleaseClassification.CodeFirstRatioFunctionalBlockerReason, runtimeStableClassification.BlockingReasons);
+        Assert.Equal(StabilizationReleaseOutcome.NotRuntimeStable, proofOnlyClassification.Outcome);
+        Assert.True(proofOnlyClassification.IsFunctionalRuntimeBlocker);
+        Assert.Contains(StabilizationReleaseClassification.CodeFirstRatioFunctionalBlockerReason, proofOnlyClassification.BlockingReasons);
+    }
+
+    [Fact]
     public void Process_runtime_host_codefirst_SB01_INV_007_long_running_template_e2e_proof_cites_production_dispatch_path()
     {
         var root = FindRepositoryRoot();
@@ -482,6 +512,124 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
     }
 
     private sealed record LongRunningE2EProofContract(string MethodName, string InvariantId);
+
+    private enum StabilizationReleaseOutcome
+    {
+        MergeReadyForStabilization,
+        RuntimeStableLiveBlocked,
+        NotRuntimeStable
+    }
+
+    private sealed record StabilizationReleaseEvidence(
+        bool DeterministicRuntimePass,
+        bool UiProofPass,
+        bool LiveOpenAiPass,
+        bool LiveOpenAiProviderBlocked,
+        bool BoundaryScanPass,
+        bool CodeFirstRatioPass,
+        bool SourceTestEvidenceMissing,
+        bool ProofOnlyClosure)
+    {
+        public static StabilizationReleaseEvidence FromProof(
+            bool deterministicRuntimePass,
+            bool uiProofPass,
+            bool liveOpenAiPass,
+            bool liveOpenAiProviderBlocked,
+            bool boundaryScanPass,
+            bool codeFirstRatioPass,
+            bool sourceTestEvidenceMissing,
+            bool proofOnlyClosure)
+        {
+            return new StabilizationReleaseEvidence(
+                deterministicRuntimePass,
+                uiProofPass,
+                liveOpenAiPass,
+                liveOpenAiProviderBlocked,
+                boundaryScanPass,
+                codeFirstRatioPass,
+                sourceTestEvidenceMissing,
+                proofOnlyClosure);
+        }
+
+        public StabilizationReleaseClassification Classify()
+        {
+            return StabilizationReleaseClassification.FromEvidence(this);
+        }
+    }
+
+    private sealed record StabilizationReleaseClassification(
+        StabilizationReleaseOutcome Outcome,
+        bool IsFunctionalRuntimeBlocker,
+        IReadOnlyList<string> BlockingReasons,
+        IReadOnlyList<string> AdvisoryReasons)
+    {
+        public const string CodeFirstRatioAdvisoryReason =
+            "Code-first ratio failed and is recorded as advisory churn because functional release evidence is green.";
+
+        public const string CodeFirstRatioFunctionalBlockerReason =
+            "Code-first ratio failure indicates missing source/test evidence or proof-only fake closure.";
+
+        public static StabilizationReleaseClassification FromEvidence(StabilizationReleaseEvidence evidence)
+        {
+            ArgumentNullException.ThrowIfNull(evidence);
+
+            List<string> blockingReasons = [];
+            List<string> advisoryReasons = [];
+
+            if (!evidence.DeterministicRuntimePass)
+            {
+                blockingReasons.Add("Deterministic runtime matrix failed.");
+            }
+
+            if (!evidence.UiProofPass)
+            {
+                blockingReasons.Add("Large-screen UI proof failed.");
+            }
+
+            if (!evidence.BoundaryScanPass)
+            {
+                blockingReasons.Add("Boundary scan found runtime or driver drift.");
+            }
+
+            if (!evidence.CodeFirstRatioPass)
+            {
+                if (evidence.SourceTestEvidenceMissing || evidence.ProofOnlyClosure)
+                {
+                    blockingReasons.Add(CodeFirstRatioFunctionalBlockerReason);
+                }
+                else
+                {
+                    advisoryReasons.Add(CodeFirstRatioAdvisoryReason);
+                }
+            }
+
+            if (blockingReasons.Count > 0)
+            {
+                return new StabilizationReleaseClassification(
+                    StabilizationReleaseOutcome.NotRuntimeStable,
+                    IsFunctionalRuntimeBlocker: true,
+                    blockingReasons,
+                    advisoryReasons);
+            }
+
+            if (!evidence.LiveOpenAiPass || evidence.LiveOpenAiProviderBlocked)
+            {
+                blockingReasons.Add("Live OpenAI smoke did not pass.");
+
+                return new StabilizationReleaseClassification(
+                    StabilizationReleaseOutcome.RuntimeStableLiveBlocked,
+                    IsFunctionalRuntimeBlocker: false,
+                    blockingReasons,
+                    advisoryReasons);
+            }
+
+            return new StabilizationReleaseClassification(
+                StabilizationReleaseOutcome.MergeReadyForStabilization,
+                IsFunctionalRuntimeBlocker: false,
+                blockingReasons,
+                advisoryReasons);
+        }
+    }
 
     private sealed record ProcessRuntimeHostCodeFirstClosureReport(
         string ExplicitBaseline,

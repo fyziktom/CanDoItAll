@@ -1,0 +1,19 @@
+Command: dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --configuration Debug --no-build --filter "FullyQualifiedName~AppSmokeTests.Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run" --logger "console;verbosity=normal" WorkingDirectory: C:\repositories\CanDoItAll StartTimeUtc: 2026-06-11T19:13:51.2665554Z Viewport: 1900x1200 from AppSmokeTests.ProjectScopedProcessLaunch.cs 
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.13]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.20]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.23]   Starting:    CanDoItAll.Tests.Playwright
+[xUnit.net 00:01:16.54]   Finished:    CanDoItAll.Tests.Playwright
+  Úspěšné CanDoItAll.Tests.Playwright.AppSmokeTests.Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run [1 m 1 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 1
+     Úspěšné: 1
+ Celkový čas: 1,2851 Minuty
+
+ExitCode: 
+0
+EndTimeUtc: 
+2026-06-11T19:15:09.1987977Z

@@ -7,9 +7,9 @@ PowerShell example:
 ```powershell
 $env:CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION = "true"
 $env:CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE = "true"
-$env:CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL = "gpt-4.1-mini"
+$env:CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL = "5.4-mini"
 $env:CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS = "180"
-$env:CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS = "10000"
+$env:CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS = "100000"
 
 dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj `
   --configuration Debug --no-restore `
@@ -19,7 +19,7 @@ dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.cspr
 
 ## Notes
 - `OPENAI_API_KEY` must be detected as present but never printed.
-- If model `gpt-4.1-mini` is not valid in the local provider setup, Codex may use the repo's configured default model, but it must record the chosen model explicitly.
+- Use model `5.4-mini` for this closure smoke unless local provider configuration rejects that exact model.
 - Timeout must remain within the test bounds.
-- Token ceiling should remain low enough for a smoke test. Use `10000` unless a source-backed reason requires another value.
+- Token ceiling may be up to `100000` for this smoke, following the user correction that the previous bundle's `10000` cap can be 10x larger.
 - A skipped live test is not live proof.

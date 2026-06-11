@@ -1,6 +1,9 @@
+using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.AgentFramework.Maf;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Modules.AgentFramework;
 using CanDoItAll.Modules.CrmHr;
@@ -104,6 +107,25 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         Assert.DoesNotContain("sk-", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Live_process_run_smoke_SB02_INV_001_provider_failure_diagnostics_include_sanitized_exception_detail()
+    {
+        var diagnosticMethod = typeof(MafAgentRuntime).GetMethod(
+            "BuildProviderFailureDiagnostic",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        Assert.NotNull(diagnosticMethod);
+
+        var diagnostic = Assert.IsType<string>(diagnosticMethod.Invoke(
+            null,
+            [new InvalidOperationException("Provider rejected model test-model with key sk-test-secret-value.")]));
+
+        Assert.Contains("Provider streaming failed before a successful runtime response.", diagnostic, StringComparison.Ordinal);
+        Assert.Contains("System.InvalidOperationException", diagnostic, StringComparison.Ordinal);
+        Assert.Contains("Provider rejected model test-model", diagnostic, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-test-secret-value", diagnostic, StringComparison.Ordinal);
+        Assert.Contains("[REDACTED]", diagnostic, StringComparison.Ordinal);
+    }
+
     private static async Task<LiveProcessSmokeResult> RunLiveProcessSmokeAsync(
         string adminConnectionString,
         string databaseName,
@@ -158,9 +180,6 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         var runDetails = await processesService.GetRunDetailsAsync(runId);
         var completedStep = Assert.Single(runDetails.StepRuns);
         var assignment = Assert.Single(runDetails.Assignments);
-        Assert.Equal(ProcessStepRunStatus.Completed, completedStep.Status);
-        Assert.Equal(ProcessExecutorKindNames.AiAgent, assignment.ExecutorKind);
-        Assert.Equal(agentPartyId, assignment.PartyId);
 
         var executionRuns = await workspaceService.ListExecutionRunsAsync(
             new ExecutionRunQuery(
@@ -173,8 +192,13 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
             item => string.Equals(item.RequestedBy, ProcessRunAutomationDispatchService.AutomationActor, StringComparison.Ordinal));
         var executionDetail = await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, dispatchTimeout.Token);
 
-        Assert.Equal(ExecutionState.Completed, executionDetail.Run.State);
-        Assert.Equal(RunOutcome.Succeeded, executionDetail.Run.Outcome);
+        var failureMessage = BuildLiveProcessFailureMessage(runId, step.Id, completedStep, executionDetail);
+
+        Assert.True(completedStep.Status == ProcessStepRunStatus.Completed, failureMessage);
+        Assert.Equal(ProcessExecutorKindNames.AiAgent, assignment.ExecutorKind);
+        Assert.Equal(agentPartyId, assignment.PartyId);
+        Assert.True(executionDetail.Run.State == ExecutionState.Completed, failureMessage);
+        Assert.True(executionDetail.Run.Outcome == RunOutcome.Succeeded, failureMessage);
         Assert.Equal("process-step", executionDetail.Run.SourceKind);
         Assert.Equal(step.Id.ToString("D"), executionDetail.Run.SourceId);
         Assert.Equal(runId.ToString("D"), executionDetail.Run.ProcessRunId);
@@ -200,6 +224,65 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         });
 
         return new LiveProcessSmokeResult(executionDetail.Run.Model, totalTokens);
+    }
+
+    private static string BuildLiveProcessFailureMessage(
+        Guid runId,
+        Guid stepRunId,
+        ProcessStepRunViewModel step,
+        ExecutionRunDetail executionDetail)
+    {
+        var builder = new StringBuilder();
+        builder.Append("SB02 live OpenAI process-run smoke failed. ");
+        builder.Append("Classification target: provider/config/API/finalizer/artifact/readback. ");
+        AppendDiagnostic(builder, "ProcessRunId", runId.ToString("D"));
+        AppendDiagnostic(builder, "StepRunId", stepRunId.ToString("D"));
+        AppendDiagnostic(builder, "StepStatus", step.Status.ToString());
+        AppendDiagnostic(builder, "StepBlockReasonCode", step.BlockReasonCode.ToString());
+        AppendDiagnostic(builder, "StepBlockedReason", step.BlockedReason);
+        AppendDiagnostic(builder, "StepExceptionSummary", step.ExceptionSummary);
+        AppendDiagnostic(builder, "StepRefusalReason", step.RefusalReason);
+        AppendDiagnostic(builder, "ExecutionRunId", executionDetail.Run.Id.ToString("D"));
+        AppendDiagnostic(builder, "ExecutionState", executionDetail.Run.State.ToString());
+        AppendDiagnostic(builder, "ExecutionOutcome", executionDetail.Run.Outcome?.ToString() ?? "<none>");
+        AppendDiagnostic(builder, "ProviderName", executionDetail.Run.ProviderName);
+        AppendDiagnostic(builder, "Model", executionDetail.Run.Model);
+        AppendDiagnostic(builder, "ResultSummary", executionDetail.Run.ResultSummary);
+
+        foreach (var logEntry in executionDetail.ExecutionLog
+            .OrderBy(item => item.CreatedAtUtc)
+            .TakeLast(12))
+        {
+            AppendDiagnostic(
+                builder,
+                "ExecutionLog",
+                $"{logEntry.State}/{logEntry.Phase}: {logEntry.Message}");
+        }
+
+        foreach (var usage in executionDetail.UsageObservations.TakeLast(4))
+        {
+            AppendDiagnostic(
+                builder,
+                "UsageObservation",
+                $"{usage.ProviderKind}/{usage.Model}/{usage.UsageStatus}/totalTokens={usage.TotalTokens}");
+            AppendDiagnostic(builder, "UsageDiagnostics", usage.DiagnosticsJson);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendDiagnostic(StringBuilder builder, string label, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        builder
+            .Append(label)
+            .Append('=')
+            .Append(value.ReplaceLineEndings(" ").Trim())
+            .Append("; ");
     }
 
     private static async Task<ProviderProfile> ConfigureOpenAiProviderAsync(

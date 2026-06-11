@@ -1,0 +1,9 @@
+Command: git show HEAD:tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectScopedProcessLaunch.cs and assert completed-run runtime-host screenshot token is absent
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:01:41.6964182Z
+
+EXPECTED FAILING-FIRST: baseline HEAD lacks completed-run runtime-host readback screenshot token.
+This proves the new SB04 browser assertion closes a real proof gap rather than re-reporting old coverage.
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:01:41.7464908Z

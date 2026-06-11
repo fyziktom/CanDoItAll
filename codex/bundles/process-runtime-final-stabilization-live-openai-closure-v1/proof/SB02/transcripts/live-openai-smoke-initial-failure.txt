@@ -1,0 +1,49 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --no-build --filter FullyQualifiedName~LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage --logger "console;verbosity=normal"
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:41:45.9816432Z
+RunLabel: SB02 live OpenAI process-run smoke
+OPENAI_API_KEY: present-redacted
+CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION: true
+CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE: true
+CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL: 5.4-mini
+CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS: 180
+CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS: 100000
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.15]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.27]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.29]   Starting:    CanDoItAll.Tests.Integration
+[xUnit.net 00:00:17.61]     CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage [FAIL]
+[xUnit.net 00:00:17.61]       Assert.Equal() Failure: Values differ
+[xUnit.net 00:00:17.61]       Expected: Completed
+[xUnit.net 00:00:17.61]       Actual:   Failed
+[xUnit.net 00:00:17.61]       Stack Trace:
+[xUnit.net 00:00:17.61]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(161,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:17.61]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(202,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:17.61]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(202,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:17.61]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(202,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:17.61]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(52,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage()
+[xUnit.net 00:00:17.61]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(65,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage()
+[xUnit.net 00:00:17.61]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:17.62]   Finished:    CanDoItAll.Tests.Integration
+  Neúspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage [17 s]
+  Chybová zpráva:
+   Assert.Equal() Failure: Values differ
+Expected: Completed
+Actual:   Failed
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 161
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 202
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 202
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 202
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 52
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 65
+--- End of stack trace from previous location ---
+
+Testovací běh nebyl úspěšný.
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 18,0896 Sekundy
+ExitCode: 1
+EndTimeUtc: 2026-06-11T18:42:04.9450867Z

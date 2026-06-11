@@ -1,0 +1,8 @@
+Command: rg -n "TODO|HACK|NotImplemented|throw new NotImplementedException|fixture-specific" src\CanDoItAll.Processes.Core src\CanDoItAll.Processes.Contracts tests\CanDoItAll.Tests.Unit\ProcessDriverContractApiVerificationBoundaryTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:06:33.1540490Z
+
+PASS: no stub markers found in Process Core, Process Contracts, or the boundary unit test file.
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:06:33.1983879Z

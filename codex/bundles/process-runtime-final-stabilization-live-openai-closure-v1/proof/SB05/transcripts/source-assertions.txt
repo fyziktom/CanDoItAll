@@ -1,0 +1,15 @@
+Command: assert SB05 boundary proof transcripts contain required pass classifications
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:06:49.4934683Z
+
+PASS: boundary unit suite ran 32 tests
+PASS: boundary unit suite passed 32 tests
+PASS: Process Core module leakage absent
+PASS: read-only runtime-host effectful API scan passed
+PASS: scheduler/workflow driver hook scan passed
+PASS: driver runtime drift scan passed
+PASS: bundle path coupling scan passed
+PASS: anti-stub audit passed
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:06:49.5157677Z

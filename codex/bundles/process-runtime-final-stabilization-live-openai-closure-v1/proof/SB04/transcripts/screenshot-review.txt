@@ -1,0 +1,26 @@
+Command: review SB04 screenshot artifact presence, dimensions, hashes, and assertion-backed UI states
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:01:29.7909097Z
+Viewport: 1900x1200 browser context; element screenshots may be smaller than viewport
+
+PASS: 01-project-template-selected-large-desktop.png width=1900 height=1200 bytes=261619 sha256=b76bacaa86c74a74a15d5f680af3b5756251d7555853c1be8dd931a68bf97100
+PASS: 02-project-template-linked-structure-large-desktop.png width=1900 height=1200 bytes=630177 sha256=7b69089f27c132815e4dde050cc928037d7b1f18be7a55b7738bb7a6d211db72
+PASS: 03-project-structure-start-confirm-large-desktop.png width=1152 height=548 bytes=84685 sha256=53c57b590b26345177a98abdb1aed163245254b1deab34c94a7ba32f83292e47
+PASS: 04-project-structure-assignment-review-large-desktop.png width=1876 height=1176 bytes=216173 sha256=9f56fddd065f9e319a4caefa78dd15c5baf8afeec53dd4d11622b982f27da65e
+PASS: 05-project-structure-assignment-ready-large-desktop.png width=1876 height=1176 bytes=216173 sha256=9f56fddd065f9e319a4caefa78dd15c5baf8afeec53dd4d11622b982f27da65e
+PASS: 06-project-run-completed-summary-large-desktop.png width=1203 height=213 bytes=30988 sha256=cc38986572f23124af3b55ff2f5b5eeb2bcd38504c8a0d3be4e58c27fb5bbe51
+PASS: 07-project-run-artifacts-readback-large-desktop.png width=1900 height=1204 bytes=326588 sha256=a60dc32179f5c8f9773504f8ae8f0a8a57758eb1ec4f013eb4bca399a64122f4
+PASS: 08-project-run-runtime-host-readback-large-desktop.png width=1158 height=719 bytes=93165 sha256=8ef7fd33a0fe4d72a6385f1f14dae6fc75e3144f29954bd5958d12fbafbe6e12
+PASS: 09-project-run-completed-steps-large-desktop.png width=1900 height=1200 bytes=182209 sha256=ba567907b8d49528640a9a8af8979fdcee583d018f58784e7dd2945111773ef4
+
+Assertion-backed UI states from the Playwright test transcript:
+- launch/template selection visible
+- project-structure start confirmation visible
+- assignment review and ready state visible
+- completed run summary visible
+- artifacts/evidence readback visible with Artifact record text
+- runtime-host operator readback visible with run id, capability, hash, evidence refs, and no-mutation/denied-write flags
+- completed/skipped step dialog visible
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:01:29.9105058Z

@@ -1,0 +1,21 @@
+Command: classify final live OpenAI smoke transcript
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:17:03.2980153Z
+
+PASS: API key presence was redacted
+PASS: model was 5.4-mini
+PASS: max total tokens was 100000
+PASS: provider activity was reached
+PASS: provider run used 5.4-mini
+PASS: provider returned model_not_found
+PASS: provider error includes requested model diagnostic
+PASS: live test failed and is not counted as pass
+
+Classification: live-provider-blocked
+Exact blocker: OpenAI Responses rejected model 5.4-mini with HTTP 400 invalid_request_error/model_not_found after provider activity.
+Exact fix path: choose a model accepted by the configured OpenAI Responses provider, set CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL to that model, keep bounded timeout/token env values, and rerun the same smoke.
+Not classified as deterministic process runtime, PostgreSQL, assignment, dispatch-start, finalizer, artifact, readback, cleanup, or skipped-proof failure.
+Final decision implication: deterministic runtime, UI, and boundary proofs are green, but merge-ready cannot be claimed while the requested live provider model fails.
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:17:03.3072995Z

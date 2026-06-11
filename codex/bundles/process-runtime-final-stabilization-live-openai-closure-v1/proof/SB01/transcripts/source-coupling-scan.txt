@@ -1,0 +1,7 @@
+Command: rg -n "codex[/\\]bundles[/\\][^\"'\\s]+" src -g "*.cs"
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:40:14.5021413Z
+RunLabel: SB01 production source concrete bundle path scan
+PASS: no concrete codex/bundles/<name> production source coupling found under src.
+ExitCode: 0
+EndTimeUtc: 2026-06-11T18:40:14.5721607Z

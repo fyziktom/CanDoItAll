@@ -1,0 +1,8 @@
+Command: scan Process Core, contracts, and process dispatch paths for driver runtime selector, reflection discovery, or self-registration drift
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:06:33.1539494Z
+
+PASS: no driver runtime selector, reflection discovery, or self-registration drift found.
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:06:33.2278125Z

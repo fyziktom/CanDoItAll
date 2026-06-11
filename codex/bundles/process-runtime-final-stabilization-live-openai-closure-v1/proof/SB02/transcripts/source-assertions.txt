@@ -1,0 +1,12 @@
+Command: Select-String required SB02 diagnostic and live smoke tokens
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:48:42.1488880Z
+RunLabel: SB02 source assertions
+PASS: SB02_INV_001 guard exists
+PASS: Live smoke diagnostic includes ProcessRunId
+PASS: Live smoke diagnostic includes StepRunId
+PASS: Live smoke diagnostic includes UsageDiagnostics
+PASS: Runtime provider diagnostic builder exists
+PASS: Runtime diagnostic redacts exception text
+ExitCode: 0
+EndTimeUtc: 2026-06-11T18:48:42.1693155Z

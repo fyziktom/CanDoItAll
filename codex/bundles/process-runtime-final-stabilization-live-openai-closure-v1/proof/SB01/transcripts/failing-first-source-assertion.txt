@@ -1,0 +1,7 @@
+Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProcessRuntimeHostCodeFirstGuardTests.cs | Select-String SB01_INV_011
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:40:14.4264758Z
+RunLabel: SB01 failing-first baseline source assertion
+EXPECTED-FAIL: baseline HEAD does not contain SB01_INV_011 ratio advisory policy guard.
+ExitCode: 1
+EndTimeUtc: 2026-06-11T18:40:14.5008084Z

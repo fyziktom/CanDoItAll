@@ -470,7 +470,7 @@ public sealed partial class MafAgentRuntime(
                             runtimeSessionKey,
                             updates,
                             ProviderUsageSourcePhases.AgentRuntime,
-                            "Provider streaming failed before a successful runtime response."));
+                            BuildProviderFailureDiagnostic(exception)));
                 }
             }
 
@@ -995,6 +995,31 @@ public sealed partial class MafAgentRuntime(
                     },
                     SerializerOptions)))
         ];
+    }
+
+    private static string BuildProviderFailureDiagnostic(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+
+        var builder = new StringBuilder("Provider streaming failed before a successful runtime response.");
+        var current = exception;
+        var depth = 0;
+        while (current is not null && depth < 4)
+        {
+            builder
+                .Append(" Exception")
+                .Append(depth)
+                .Append('=')
+                .Append(current.GetType().FullName ?? current.GetType().Name)
+                .Append(": ")
+                .Append(WorkflowExecutorRedaction.RedactText(current.Message))
+                .Append('.');
+
+            current = current.InnerException;
+            depth++;
+        }
+
+        return builder.ToString();
     }
 
     private static ProviderUsageObservation CreateMissingProviderUsageObservation(

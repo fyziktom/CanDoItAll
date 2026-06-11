@@ -302,6 +302,30 @@ public sealed partial class AppSmokeTests {
         });
 
         await page.GetByTestId("processes-runs-tabs").GetByRole(AriaRole.Tab, new() {
+            Name = "Execution",
+            Exact = true
+        }).ClickAsync();
+        var runtimeHostReadback = page.GetByTestId("processes-runtime-host-readback");
+        await runtimeHostReadback.WaitForAsync(new LocatorWaitForOptions {
+            Timeout = 30_000
+        });
+        await WaitForBodyTextAsync(page, "Operator readback", 30_000);
+        var runtimeHostReadbackText = await runtimeHostReadback.InnerTextAsync();
+        Assert.DoesNotContain("Runtime-host readback failed", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains(runId.ToString("D"), runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("process-workspace:run-detail-runtime-host-readback", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("Capability", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("Hash", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("evidence refs", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("No mutation", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("process writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("transition writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("finalizer writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+        await runtimeHostReadback.ScreenshotAsync(new() {
+            Path = Path.Combine(artifactsDir, "08-project-run-runtime-host-readback-large-desktop.png")
+        });
+
+        await page.GetByTestId("processes-runs-tabs").GetByRole(AriaRole.Tab, new() {
             Name = "Activity",
             Exact = true
         }).ClickAsync();
@@ -313,7 +337,7 @@ public sealed partial class AppSmokeTests {
         var runStepsDialogText = await runStepsDialog.InnerTextAsync();
         Assert.Contains(ProcessRunStatus.Completed.ToString(), runStepsDialogText, StringComparison.Ordinal);
         await runStepsDialog.ScreenshotAsync(new() {
-            Path = Path.Combine(artifactsDir, "08-project-run-completed-steps-large-desktop.png")
+            Path = Path.Combine(artifactsDir, "09-project-run-completed-steps-large-desktop.png")
         });
         await runStepsDialog.GetByRole(AriaRole.Button, new() {
             Name = "Close",

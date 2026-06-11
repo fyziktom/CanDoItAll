@@ -1,0 +1,8 @@
+Command: rg -n "TODO|HACK|NotImplemented|throw new NotImplementedException|fixture-specific" tests\CanDoItAll.Tests.Integration\ProcessTemplateExecutionE2ETests.cs tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs tests\CanDoItAll.Tests.Integration\ProcessDomainEvidenceReadOnlyAdapterTests.cs tests\CanDoItAll.Tests.Integration\ProcessesServiceIntegrationTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:56:16.0504552Z
+
+PASS: no stub markers found in SB03 referenced integration source files.
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T18:56:16.0890016Z

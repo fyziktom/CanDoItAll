@@ -1,0 +1,7 @@
+Command: rg -n "TODO|NotImplemented|fixture-specific" tests/CanDoItAll.Tests.Integration/ProcessRuntimeHostCodeFirstGuardTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:40:14.5739026Z
+RunLabel: SB01 anti-stub audit
+PASS: no TODO, NotImplemented, or fixture-specific markers found in the changed SB01 guard file.
+ExitCode: 0
+EndTimeUtc: 2026-06-11T18:40:14.5993169Z

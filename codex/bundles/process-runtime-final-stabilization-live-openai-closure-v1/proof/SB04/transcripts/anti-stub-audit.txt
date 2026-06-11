@@ -1,0 +1,8 @@
+Command: rg -n "TODO|HACK|NotImplemented|throw new NotImplementedException|fixture-specific" tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T19:01:29.9152295Z
+
+PASS: no stub markers found in the SB04 changed Playwright test file.
+
+ExitCode: 0
+EndTimeUtc: 2026-06-11T19:01:29.9592865Z

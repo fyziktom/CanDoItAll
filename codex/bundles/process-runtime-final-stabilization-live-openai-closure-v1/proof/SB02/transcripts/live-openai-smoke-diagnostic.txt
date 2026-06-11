@@ -1,0 +1,99 @@
+Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --filter FullyQualifiedName~LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage --logger "console;verbosity=normal"
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T18:43:32.6005448Z
+RunLabel: SB02 live OpenAI diagnostic process-run smoke
+OPENAI_API_KEY: present-redacted
+CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION: true
+CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE: true
+CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL: 5.4-mini
+CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS: 180
+CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS: 100000
+  CanDoItAll.Tools.Documents -> C:\repositories\CanDoItAll\src\CanDoItAll.Tools.Documents\bin\Debug\net10.0\CanDoItAll.Tools.Documents.dll
+  CanDoItAll.Processes.Contracts -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Contracts\bin\Debug\net10.0\CanDoItAll.Processes.Contracts.dll
+  CanDoItAll.Processes.Drivers.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.Abstractions\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.Abstractions.dll
+  CanDoItAll.SharedKernel -> C:\repositories\CanDoItAll\src\CanDoItAll.SharedKernel\bin\Debug\net10.0\CanDoItAll.SharedKernel.dll
+  CanDoItAll.AgentFramework.SemanticCompletion.Driver -> C:\repositories\CanDoItAll.AgentFramework.SemanticCompletion\src\CanDoItAll.AgentFramework.SemanticCompletion.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.SemanticCompletion.Driver.dll
+  CanDoItAll.AgentFramework.Rag.Driver -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Driver\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Driver.dll
+  CanDoItAll.AgentFramework.Models -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Models\bin\Debug\net10.0\CanDoItAll.AgentFramework.Models.dll
+  CanDoItAll.Infrastructure -> C:\repositories\CanDoItAll\src\CanDoItAll.Infrastructure\bin\Debug\net10.0\CanDoItAll.Infrastructure.dll
+  CanDoItAll.Processes.Drivers.ObservationAggregation -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ObservationAggregation\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.ObservationAggregation.dll
+  CanDoItAll.Processes.Drivers.OfficeEvidence -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.OfficeEvidence\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.OfficeEvidence.dll
+  CanDoItAll.Processes.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Core\bin\Debug\net10.0\CanDoItAll.Processes.Core.dll
+  CanDoItAll.Processes.Drivers.BusinessAnalysis -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.BusinessAnalysis\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.BusinessAnalysis.dll
+  CanDoItAll.Processes.Drivers.TranscriptVerification -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.TranscriptVerification\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.TranscriptVerification.dll
+  CanDoItAll.Processes.Drivers.RuntimeEvidence -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.RuntimeEvidence\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.RuntimeEvidence.dll
+  CanDoItAll.AgentFramework.Rag.Qdrant -> C:\repositories\CanDoItAll.AgentFramework.Rag\src\CanDoItAll.AgentFramework.Rag.Qdrant\bin\Debug\net10.0\CanDoItAll.AgentFramework.Rag.Qdrant.dll
+  CanDoItAll.Processes.Drivers.ArtifactEvidence -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.ArtifactEvidence\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.ArtifactEvidence.dll
+  CanDoItAll.AgentFramework.Tooling -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Tooling\bin\Debug\net10.0\CanDoItAll.AgentFramework.Tooling.dll
+  CanDoItAll.Plugins.Abstractions -> C:\repositories\CanDoItAll\src\CanDoItAll.Plugins.Abstractions\bin\Debug\net10.0\CanDoItAll.Plugins.Abstractions.dll
+  CanDoItAll.AgentFramework.Core -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Core\bin\Debug\net10.0\CanDoItAll.AgentFramework.Core.dll
+  CanDoItAll.AppComponents -> C:\repositories\CanDoItAll\src\CanDoItAll.AppComponents\bin\Debug\net10.0\CanDoItAll.AppComponents.dll
+  CanDoItAll.AgentFramework.Voice -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Voice\bin\Debug\net10.0\CanDoItAll.AgentFramework.Voice.dll
+  CanDoItAll.Plugin.Email -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Email\bin\Debug\net10.0\CanDoItAll.Plugin.Email.dll
+  CanDoItAll.AgentFramework.Persistence -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Persistence\bin\Debug\net10.0\CanDoItAll.AgentFramework.Persistence.dll
+  CanDoItAll.Modules.Security -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Security\bin\Debug\net10.0\CanDoItAll.Modules.Security.dll
+  CanDoItAll.Modules.Collaboration -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Collaboration\bin\Debug\net10.0\CanDoItAll.Modules.Collaboration.dll
+  CanDoItAll.Manager -> C:\repositories\CanDoItAll\tools\CanDoItAll.Manager\bin\Debug\net10.0\CanDoItAll.Manager.dll
+  CanDoItAll.AgentFramework.Components -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Components\bin\Debug\net10.0\CanDoItAll.AgentFramework.Components.dll
+  CanDoItAll.Modules.Projects -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Projects\bin\Debug\net10.0\CanDoItAll.Modules.Projects.dll
+  CanDoItAll.Processes.Drivers.VerificationGateway -> C:\repositories\CanDoItAll\src\CanDoItAll.Processes.Drivers.VerificationGateway\bin\Debug\net10.0\CanDoItAll.Processes.Drivers.VerificationGateway.dll
+  CanDoItAll.Modules.CognitiveMemory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CognitiveMemory\bin\Debug\net10.0\CanDoItAll.Modules.CognitiveMemory.dll
+  CanDoItAll.Modules.Plugins -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Plugins\bin\Debug\net10.0\CanDoItAll.Modules.Plugins.dll
+  CanDoItAll.Modules.Activity -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Activity\bin\Debug\net10.0\CanDoItAll.Modules.Activity.dll
+  CanDoItAll.Modules.Validation -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Validation\bin\Debug\net10.0\CanDoItAll.Modules.Validation.dll
+  CanDoItAll.Modules.Workspace -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workspace\bin\Debug\net10.0\CanDoItAll.Modules.Workspace.dll
+  CanDoItAll.Plugin.Office365 -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Office365\bin\Debug\net10.0\CanDoItAll.Plugin.Office365.dll
+  CanDoItAll.Plugin.Gmail -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Gmail\bin\Debug\net10.0\CanDoItAll.Plugin.Gmail.dll
+  CanDoItAll.Plugin.Docker -> C:\repositories\CanDoItAll\src\plugins\CanDoItAll.Plugin.Docker\bin\Debug\net10.0\CanDoItAll.Plugin.Docker.dll
+  CanDoItAll.AgentFramework.Maf -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Maf\bin\Debug\net10.0\CanDoItAll.AgentFramework.Maf.dll
+  CanDoItAll.Modules.Automation -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Automation\bin\Debug\net10.0\CanDoItAll.Modules.Automation.dll
+  CanDoItAll.Modules.TestLab -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.TestLab\bin\Debug\net10.0\CanDoItAll.Modules.TestLab.dll
+  CanDoItAll.Modules.Resources -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Resources\bin\Debug\net10.0\CanDoItAll.Modules.Resources.dll
+  CanDoItAll.Modules.Prompts -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Prompts\bin\Debug\net10.0\CanDoItAll.Modules.Prompts.dll
+  CanDoItAll.AgentFramework.Hosting -> C:\repositories\CanDoItAll\src\CanDoItAll.AgentFramework.Hosting\bin\Debug\net10.0\CanDoItAll.AgentFramework.Hosting.dll
+  CanDoItAll.Modules.CrmHr -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.CrmHr\bin\Debug\net10.0\CanDoItAll.Modules.CrmHr.dll
+  CanDoItAll.Modules.Factory -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Factory\bin\Debug\net10.0\CanDoItAll.Modules.Factory.dll
+  CanDoItAll.Modules.Processes -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Processes\bin\Debug\net10.0\CanDoItAll.Modules.Processes.dll
+  CanDoItAll.Modules.SchedulerPlanner -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.SchedulerPlanner\bin\Debug\net10.0\CanDoItAll.Modules.SchedulerPlanner.dll
+  CanDoItAll.Modules.Workbench -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.Workbench\bin\Debug\net10.0\CanDoItAll.Modules.Workbench.dll
+  CanDoItAll.Modules.AgentFramework -> C:\repositories\CanDoItAll\src\CanDoItAll.Modules.AgentFramework\bin\Debug\net10.0\CanDoItAll.Modules.AgentFramework.dll
+  CanDoItAll.Composition -> C:\repositories\CanDoItAll\src\CanDoItAll.Composition\bin\Debug\net10.0\CanDoItAll.Composition.dll
+  CanDoItAll.Migrations.PostgreSql -> C:\repositories\CanDoItAll\src\CanDoItAll.Migrations.PostgreSql\bin\Debug\net10.0\CanDoItAll.Migrations.PostgreSql.dll
+  CanDoItAll.Web -> C:\repositories\CanDoItAll\src\CanDoItAll.Web\bin\Debug\net10.0\CanDoItAll.Web.dll
+  CanDoItAll.Tests.Support -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Support\bin\Debug\net10.0\CanDoItAll.Tests.Support.dll
+  CanDoItAll.Tests.Integration -> C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.18]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.34]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.36]   Starting:    CanDoItAll.Tests.Integration
+[xUnit.net 00:00:15.83]     CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage [FAIL]
+[xUnit.net 00:00:15.84]       SB02 live OpenAI process-run smoke failed. Classification target: provider/config/API/finalizer/artifact/readback. ProcessRunId=390af05f-df21-41e0-9522-a0cf2e2144eb; StepRunId=949db1b4-d794-44a4-8b4f-567df661552f; StepStatus=Failed; StepBlockReasonCode=AgentExecutionFailed; StepExceptionSummary=AgentFramework run 'You are executing a CanDoItAll process step. ...' failed: Provider runtime failed after provider activity. Usage was captured when available.; ExecutionRunId=c0a86b20-e2ed-485d-88a1-8ae561958255; ExecutionState=Failed; ExecutionOutcome=Failed; ProviderName=OpenAI default; Model=5.4-mini; ResultSummary=Provider runtime failed after provider activity. Usage was captured when available.; ExecutionLog=Preparing/Workspace tools: Attached configured workspace file and storage tools from the current agent settings. Process dispatch override profile: business-analysis.; ExecutionLog=Preparing/Context contributors: Attached 1 registered agent context contributor(s) in deterministic order.; ExecutionLog=Preparing/Approval policy: Auto-approve is active for this run, so future tool approval gates will be suppressed.; ExecutionLog=Preparing/Framework: Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.; ExecutionLog=Preparing/Process cooperation: Process dispatch selected cooperation mode 'SingleAgent' with workspace tool profile 'business-analysis' because single-agent step execution. Execution boundary: Step may create managed process artifacts only. Workspace tool profile: business-analysis.; ExecutionLog=Preparing/Planning: Preparing provider OpenAI default.; UsageObservation=OpenAi/5.4-mini/MissingAfterProviderActivity/totalTokens=0; 
+[xUnit.net 00:00:15.84]       Stack Trace:
+[xUnit.net 00:00:15.84]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(176,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:15.84]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(205,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:15.84]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(205,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:15.84]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(205,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens)
+[xUnit.net 00:00:15.84]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(53,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage()
+[xUnit.net 00:00:15.84]         C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs(66,0): at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage()
+[xUnit.net 00:00:15.84]         --- End of stack trace from previous location ---
+[xUnit.net 00:00:15.85]   Finished:    CanDoItAll.Tests.Integration
+  Neúspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage [15 s]
+  Chybová zpráva:
+   SB02 live OpenAI process-run smoke failed. Classification target: provider/config/API/finalizer/artifact/readback. ProcessRunId=390af05f-df21-41e0-9522-a0cf2e2144eb; StepRunId=949db1b4-d794-44a4-8b4f-567df661552f; StepStatus=Failed; StepBlockReasonCode=AgentExecutionFailed; StepExceptionSummary=AgentFramework run 'You are executing a CanDoItAll process step. ...' failed: Provider runtime failed after provider activity. Usage was captured when available.; ExecutionRunId=c0a86b20-e2ed-485d-88a1-8ae561958255; ExecutionState=Failed; ExecutionOutcome=Failed; ProviderName=OpenAI default; Model=5.4-mini; ResultSummary=Provider runtime failed after provider activity. Usage was captured when available.; ExecutionLog=Preparing/Workspace tools: Attached configured workspace file and storage tools from the current agent settings. Process dispatch override profile: business-analysis.; ExecutionLog=Preparing/Context contributors: Attached 1 registered agent context contributor(s) in deterministic order.; ExecutionLog=Preparing/Approval policy: Auto-approve is active for this run, so future tool approval gates will be suppressed.; ExecutionLog=Preparing/Framework: Composing the Microsoft Agent Framework runtime for the selected provider and capabilities.; ExecutionLog=Preparing/Process cooperation: Process dispatch selected cooperation mode 'SingleAgent' with workspace tool profile 'business-analysis' because single-agent step execution. Execution boundary: Step may create managed process artifacts only. Workspace tool profile: business-analysis.; ExecutionLog=Preparing/Planning: Preparing provider OpenAI default.; UsageObservation=OpenAi/5.4-mini/MissingAfterProviderActivity/totalTokens=0; 
+  Trasování zásobníku:
+     at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 176
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 205
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 205
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.RunLiveProcessSmokeAsync(String adminConnectionString, String databaseName, String model, Int32 timeoutSeconds, Int32 maxTotalTokens) in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 205
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 53
+   at CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Process_run_dispatch_executes_bound_openai_agent_and_records_process_usage() in C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs:line 66
+--- End of stack trace from previous location ---
+
+Testovací běh nebyl úspěšný.
+Celkový počet testů: 1
+     Neúspěšné: 1
+ Celkový čas: 16,3276 Sekundy
+ExitCode: 1
+EndTimeUtc: 2026-06-11T18:44:13.4217648Z
