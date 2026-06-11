@@ -1,10 +1,18 @@
 # SB03: Representative template automation regression hardening
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Keep Blazor/.NET, canonical multi-team/software-delivery, and business-analysis process automation green and unambiguous.
+
+## Covered Inputs
+- `bundle://inputs/00-original-request.md`: determine whether representative processes still work like before.
+- `bundle://requirements/01-normalized-requirements.md`: REQ-003 and REQ-004.
+
+## Prerequisites
+- SB02 closure gate must pass.
+- UI proof must not reveal a launch/completion defect that invalidates backend automation assumptions.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
@@ -15,10 +23,16 @@ Keep Blazor/.NET, canonical multi-team/software-delivery, and business-analysis 
 - repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
 
 ## Scope
-Strengthen backend E2E so representative tests assert launch plan approval/execution, outbox completed, execution-run per active automated step, finalizer summaries, artifacts, assignments, branch outcomes, and managed file readback.
+- Strengthen backend E2E so representative tests assert launch plan approval/execution, outbox completed, execution-run per active automated step, finalizer summaries, artifacts, assignments, branch outcomes, and managed file readback.
+- Keep manual-transition tests classified as state/contract tests rather than automation proof.
+
+## Dependency Impact
+- SB04 and SB05 depend on representative automation proof to trust runtime-host, scheduler, and workflow readback against real completed process behavior.
+- SB06 depends on this phase for the focused integration matrix.
 
 ## Validation Depth
-Critical. Requires focused tests, source assertions, anti-stub scan, boundary scan, and concise proof.
+- Critical subbundle.
+- Requires focused integration tests, source assertions, anti-stub scan, boundary scan, semantic adequacy proof, and concise artifact-backed proof.
 
 ## Implementation Steps
 
@@ -39,10 +53,11 @@ Critical. Requires focused tests, source assertions, anti-stub scan, boundary sc
 - Manual-transition tests renamed/classified as `manual_contract` or equivalent.
 
 ## Browser Validation Logging
-Use large desktop 1900×1200 when the subbundle changes or proves user-visible process launch/readback. Otherwise record N/A with reason.
+- N/A unless the phase changes browser-visible behavior; otherwise record N/A with reason in `bundle://reviews/01-execution-report.md`.
 
 ## Progression Gate
-Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
+- SB04 may start only after representative automation matrix proof, manual-test classification proof, semantic invariant contract, and `bundle://proof/SB03/manifest.md` exist.
+- Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
 
 
 ## Do Not Do

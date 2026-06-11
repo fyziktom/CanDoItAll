@@ -1,0 +1,26 @@
+SB06 code-first ratio
+ExplicitBaseline: 430496c5e7217a847e9172dcc0c2fba57f75f75c
+CommandPolicy: git diff --numstat explicit bundle start SHA plus git ls-files --others --exclude-standard for untracked non-binary worktree files.
+BinaryPolicy: skip untracked binary artifacts with .png/.jpg/.jpeg/.gif/.webp/.ico/.zip/.dll/.exe/.pdb/.trx/.bin extensions, matching numstat binary skip semantics.
+SourceChangedLines: 0
+TestChangedLines: 652
+DocumentationChangedLines: 0
+BundleChangedLines: 3668
+OtherChangedLines: 0
+SourceAndTestChangedLines: 652
+RequiredSourceAndTestLinesAt5xBundle: 18340
+RatioPass: False
+Decision: Blocked: code-first ratio does not satisfy 5x source/test dominance over bundle changes.
+Top counted bundle text files by changed lines:
+1202	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB06/transcripts/unit-tests.txt
+1164	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB06/transcripts/unit-tests-rerun.txt
+89	tracked-diff	codex/bundles/process-runtime-stabilization-release-closure-v1/reviews/01-execution-report.md
+68	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB02/transcripts/focused-playwright-test.txt
+63	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB06/transcripts/build.txt
+54	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB04/manifest.md
+50	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB02/manifest.md
+46	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB05/manifest.md
+45	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB03/manifest.md
+40	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB05/semantic-invariants.md
+35	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB05/transcripts/source-assertions.txt
+35	untracked-file	codex/bundles/process-runtime-stabilization-release-closure-v1/proof/SB01/transcripts/focused-test.txt

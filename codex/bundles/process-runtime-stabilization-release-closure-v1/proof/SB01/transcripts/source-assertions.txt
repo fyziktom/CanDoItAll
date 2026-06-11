@@ -1,0 +1,11 @@
+Command: Select-String required SB01 guard tokens in ProcessRuntimeHostCodeFirstGuardTests.cs
+WorkingDirectory: C:\repositories\CanDoItAll
+StartTimeUtc: 2026-06-11T14:45:41.2965474Z
+ExitCode: 0
+Output:
+Invariant ID: SB01_INV_006
+Invariant ID: SB01_INV_007
+Invariant ID: SB01_INV_008
+Invariant ID: SB01_INV_009
+Invariant ID: SB01_INV_010
+All required source assertion tokens are present.

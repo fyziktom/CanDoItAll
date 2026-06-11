@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.12]   Discovering: CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.24]   Discovered:  CanDoItAll.Tests.Unit
+[xUnit.net 00:00:00.26]   Starting:    CanDoItAll.Tests.Unit
+[xUnit.net 00:00:08.79]   Finished:    CanDoItAll.Tests.Unit
+  Úspěšné CanDoItAll.Tests.Unit.AppDbContextRuntimeSwitchTests.CreateDbContextAsync_keeps_canonical_profile_until_restart_after_activation [8 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 1
+     Úspěšné: 1
+ Celkový čas: 9,3203 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\TestResults\sb06-unit-rerun-failed.trx

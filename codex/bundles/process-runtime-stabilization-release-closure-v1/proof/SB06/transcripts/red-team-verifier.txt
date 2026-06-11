@@ -1,0 +1,10 @@
+SB06 red-team verifier
+PASS: reject merge-ready because ratio failed
+PASS: release decision matches failed ratio
+PASS: reject counting skipped live smoke as proof
+PASS: deterministic integration matrix remains green
+PASS: browser launch-to-completion proof remains green
+PASS: manual-transition tests are not counted as automation proof
+PASS: final decision cannot be merge-ready while the ratio transcript reports RatioPass: False.
+PASS: live OpenAI smoke is skipped and not counted because explicit opt-in/model/timeout/token variables are absent.
+PASS: deterministic runtime proof is green but does not override the failed merge gate.

@@ -1,0 +1,11 @@
+SB02 browser screenshot inventory
+Route and viewport: project process workspace and project-structure launch flow, 1900x1200 large desktop viewport
+01-project-template-selected-large-desktop.png	261653	249c31ade6c868309e2d4e486871f86eb24bc6b65cc2b341aae935247b1e23c4
+02-project-template-linked-structure-large-desktop.png	629352	e3180e262db7c1d825416658810954e42a2620d4d5f3304c0886d4e6fbe05ea3
+03-project-structure-start-confirm-large-desktop.png	84589	570ffb01bb2ca1770bb7a6e7ad8046dac8a20153e3102be169c55cbc91e457ad
+04-project-structure-assignment-review-large-desktop.png	216584	f892a9feb15de4b37de97c276606d8c55711fb3ff7dd0d1b9da97e605e80a7c3
+05-project-structure-assignment-ready-large-desktop.png	216584	f892a9feb15de4b37de97c276606d8c55711fb3ff7dd0d1b9da97e605e80a7c3
+06-project-run-completed-summary-large-desktop.png	31099	ed9a667bdadef3817d5459e5647b6d377c30452defc01e35223bf04aaac0363b
+07-project-run-artifacts-readback-large-desktop.png	326078	ed6bba97399715eb00997eb8c8622d2b77ef459c3f5a6891426da31e792f7da1
+08-project-run-completed-steps-large-desktop.png	182393	578295ca0d363d75ec753526f67105ba1d4c344489a99fc41a55878fab3dc6a8
+PASS: all 8 SB02 screenshots are present and hashed

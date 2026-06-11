@@ -116,8 +116,13 @@ public sealed partial class AppSmokeTests {
         Assert.DoesNotContain("Runtime-host readback failed", runtimeHostReadbackText, StringComparison.Ordinal);
         Assert.Contains(runId.ToString("D"), runtimeHostReadbackText, StringComparison.Ordinal);
         Assert.Contains("process-workspace:run-detail-runtime-host-readback", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("Capability", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("Hash", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("evidence refs", runtimeHostReadbackText, StringComparison.Ordinal);
         Assert.Contains("No mutation", runtimeHostReadbackText, StringComparison.Ordinal);
         Assert.Contains("process writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("transition writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+        Assert.Contains("finalizer writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
         await runtimeHostReadback.ScreenshotAsync(new() {
             Path = Path.Combine(artifactsDir, "02-runtime-host-readback-large-desktop.png")
         });
@@ -542,6 +547,10 @@ public sealed partial class AppSmokeTests {
         public List<ProcessStepRunViewModel> StepRuns { get; set; } = [];
 
         public List<ProcessArtifactViewModel> Artifacts { get; set; } = [];
+
+        public List<ProcessOutboxRecordViewModel> OutboxRecords { get; set; } = [];
+
+        public List<ProcessExecutionRunViewModel> ExecutionRuns { get; set; } = [];
 
         public ProcessRunHealthSummaryViewModel? Health { get; set; }
     }

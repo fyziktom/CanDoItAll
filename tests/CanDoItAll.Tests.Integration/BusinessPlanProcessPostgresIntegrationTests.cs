@@ -41,7 +41,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     }
 
     [Fact]
-    public async Task Business_plan_process_runs_with_business_artifacts_evidence_and_statuses()
+    public async Task Business_plan_process_manual_contract_runs_with_business_artifacts_evidence_and_statuses()
     {
         const string validationLabel = "Business-analysis scenario validation";
         const string managedArtifactRoot = "artifacts/business/analysis-validation";
@@ -171,7 +171,7 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
     }
 
     [Fact]
-    public async Task Business_plan_process_projects_and_runs_on_postgresql()
+    public async Task Business_plan_process_manual_contract_projects_and_runs_on_postgresql()
     {
         var availability = await PostgresTestAvailability.EnsureAvailableAsync(RepositoryRoot);
         Assert.True(availability.IsAvailable, availability.Message);

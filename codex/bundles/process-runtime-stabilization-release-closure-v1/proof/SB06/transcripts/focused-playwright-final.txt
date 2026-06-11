@@ -1,0 +1,14 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\bin\Debug\net10.0\CanDoItAll.Tests.Playwright.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.12]   Discovering: CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.19]   Discovered:  CanDoItAll.Tests.Playwright
+[xUnit.net 00:00:00.21]   Starting:    CanDoItAll.Tests.Playwright
+  Úspěšné CanDoItAll.Tests.Playwright.AppSmokeTests.Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run [1 m 5 s]
+[xUnit.net 00:01:23.07]   Finished:    CanDoItAll.Tests.Playwright
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 1
+     Úspěšné: 1
+ Celkový čas: 1,3934 Minuty
+Soubor výsledků: C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Playwright\TestResults\sb06-final-playwright.trx

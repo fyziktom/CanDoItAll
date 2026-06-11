@@ -314,7 +314,7 @@ public sealed class ProcessesServiceIntegrationTests
     }
 
     [Fact]
-    public async Task StartRunFromTriggerAsync_SB07_INV_001_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks()
+    public async Task StartRunFromTriggerAsync_SB05_INV_001_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks()
     {
         await using var application = await TestApplication.CreateAsync();
         await using var scope = application.Services.CreateAsyncScope();
@@ -387,12 +387,21 @@ public sealed class ProcessesServiceIntegrationTests
                 .ToListAsync();
 
             Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
+            Assert.Equal($"SB07 {sourceKind} representative process start", persistedRun.Name);
+            Assert.Equal(ProcessOperatingMode.AssistedExecution, persistedRun.OperatingMode);
             Assert.Contains(sourceKind.ToString(), persistedRun.TriggerReason, StringComparison.Ordinal);
             Assert.Contains(sourceId.ToString("D"), persistedRun.TriggerReason, StringComparison.Ordinal);
+            Assert.Contains(sourceName, persistedRun.TriggerReason, StringComparison.Ordinal);
             Assert.Contains($"Requested by {requestedBy}", persistedRun.TriggerReason, StringComparison.Ordinal);
             Assert.DoesNotContain("driver", persistedRun.TriggerReason, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(outboxRecords, item => item.CommandKey == StartRunCommandKey);
             Assert.Contains(outboxRecords, item => item.CommandKey == AutomationDispatchCommandKey);
+            Assert.DoesNotContain(outboxRecords, item => item.Status == ProcessOutboxRecordStatus.DeadLettered);
+            Assert.All(outboxRecords, item => {
+                Assert.Equal(runResult.Value, item.ProcessRunId);
+                Assert.NotEqual(Guid.Empty, item.Id);
+                Assert.False(string.IsNullOrWhiteSpace(item.PayloadJson));
+            });
             Assert.Empty(workflowLinks);
 
             return runResult.Value;

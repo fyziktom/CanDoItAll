@@ -1,0 +1,15 @@
+SB03 source assertions
+PASS: PostgreSQL business automation proof method exists [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=Business_plan_process_SB05_INV_001_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback
+PASS: business automation proof uses process-mock launch/execution support [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=ExecuteTemplateWithProcessMockAgentsAsync
+PASS: business automation proof asserts dispatch/outbox/execution readback [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=AssertBusinessAutomationDispatchReadback
+PASS: business automation proof asserts PostgreSQL persistence readback [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=AssertPersistedBusinessAutomationReadbackAsync
+PASS: business automation proof asserts finalizer summaries [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=AssertAutomationFinalizerSummaries
+PASS: in-memory manual-transition business test is classified as manual_contract [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=Business_plan_process_manual_contract_runs_with_business_artifacts_evidence_and_statuses
+PASS: PostgreSQL manual-transition business test is classified as manual_contract [tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs] pattern=Business_plan_process_manual_contract_projects_and_runs_on_postgresql
+PASS: SB03 guard exists [tests\CanDoItAll.Tests.Integration\ProcessRuntimeHostCodeFirstGuardTests.cs] pattern=Process_runtime_host_codefirst_SB03_INV_011_business_plan_postgres_automation_proof_is_not_manual_transition_contract
+PASS: representative automation support creates launch plan [tests\CanDoItAll.Tests.Integration\ProcessTemplateAutomationTestSupport.cs] pattern=CreateLaunchPlanAsync
+PASS: representative automation support executes launch plan [tests\CanDoItAll.Tests.Integration\ProcessTemplateAutomationTestSupport.cs] pattern=ExecuteLaunchPlanAsync
+PASS: representative automation support drains production outbox [tests\CanDoItAll.Tests.Integration\ProcessTemplateAutomationTestSupport.cs] pattern=ProcessPendingAsync
+PASS: representative automation support reads execution runs [tests\CanDoItAll.Tests.Integration\ProcessTemplateAutomationTestSupport.cs] pattern=ListExecutionRunsAsync
+PASS: stale unclassified business-plan manual-transition test names are absent
+PASS: focused guard transcript proves the business automation method body does not contain SuppressAutomationDispatch=true

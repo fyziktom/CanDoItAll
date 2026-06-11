@@ -1,0 +1,7 @@
+SB02 anti-stub audit
+Files: tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProjectScopedProcessLaunch.cs, tests\CanDoItAll.Tests.Playwright\AppSmokeTests.ProcessStartSmoke.cs, tests\CanDoItAll.Tests.Playwright\PlaywrightAppFixture.cs
+Stub patterns: TODO|HACK|NotImplementedException|throw new NotImplemented|return null;\s*//
+Forbidden dispatch-suppression scope: SB02 project-structure launch test only
+PASS: no TODO/HACK/NotImplemented/stub return markers found in changed SB02 files
+PASS: SB02 project-structure launch test does not set SuppressAutomationDispatch=true
+NOTE: AppSmokeTests.ProcessStartSmoke.cs contains a pre-existing suppressed-dispatch smoke path outside the SB02 representative launch proof; SB02 source assertions scope the forbidden marker to the new project-structure proof path.

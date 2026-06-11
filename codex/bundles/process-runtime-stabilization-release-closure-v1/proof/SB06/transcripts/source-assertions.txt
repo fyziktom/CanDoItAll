@@ -1,0 +1,42 @@
+SB06 source assertions
+PASS: proof/SB01/manifest.md exists
+PASS: proof/SB01/semantic-invariants.md exists
+PASS: proof/SB02/manifest.md exists
+PASS: proof/SB02/semantic-invariants.md exists
+PASS: proof/SB03/manifest.md exists
+PASS: proof/SB03/semantic-invariants.md exists
+PASS: proof/SB04/manifest.md exists
+PASS: proof/SB04/semantic-invariants.md exists
+PASS: proof/SB05/manifest.md exists
+PASS: proof/SB05/semantic-invariants.md exists
+PASS: proof/SB06/manifest.md exists
+PASS: proof/SB06/semantic-invariants.md exists
+PASS: release decision file exists
+PASS: release decision is not merge-ready
+PASS: release decision cites failed ratio
+PASS: release decision classifies live smoke as skipped
+PASS: build has 0 warnings
+PASS: build has 0 errors
+PASS: initial unit cleanup failure is preserved
+PASS: failed unit test rerun passed
+PASS: full unit rerun count is 1142
+PASS: full unit rerun passed 1142 tests
+PASS: focused integration count is 21
+PASS: focused integration passed 21 tests
+PASS: focused integration includes SB05 guard
+PASS: Playwright final rerun includes launch-to-completed-run proof
+PASS: Playwright final count is 1
+PASS: Playwright final passed 1 test
+PASS: live smoke skipped marker exists
+PASS: live classification records CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION absent
+PASS: live classification records CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE absent
+PASS: live classification records CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL absent
+PASS: live classification records CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS absent
+PASS: live classification records CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS absent
+PASS: live settings guard count is 7
+PASS: live settings guard passed 7 tests
+PASS: code-first ratio failed marker exists
+PASS: code-first ratio source/test line count exists
+PASS: code-first ratio bundle line count exists
+PASS: code-first ratio threshold exists
+PASS: screenshot inventory contains 8 png entries

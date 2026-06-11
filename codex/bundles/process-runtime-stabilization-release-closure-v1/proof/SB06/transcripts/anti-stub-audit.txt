@@ -1,0 +1,3 @@
+SB06 anti-stub audit
+Command: git diff --unified=0 430496c5e7217a847e9172dcc0c2fba57f75f75c -- src tests
+PASS: no TODO, HACK, NotImplemented, stub, or fake-pass markers in added src/tests lines.

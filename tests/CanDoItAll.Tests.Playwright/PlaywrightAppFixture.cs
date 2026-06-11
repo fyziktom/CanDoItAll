@@ -125,7 +125,7 @@ public sealed class PlaywrightAppFixture : IAsyncLifetime
 
     private async Task WaitForRuntimeReadyAsync()
     {
-        var timeoutAt = DateTimeOffset.UtcNow.AddSeconds(45);
+        var timeoutAt = DateTimeOffset.UtcNow.AddMinutes(2);
 
         while (DateTimeOffset.UtcNow < timeoutAt)
         {

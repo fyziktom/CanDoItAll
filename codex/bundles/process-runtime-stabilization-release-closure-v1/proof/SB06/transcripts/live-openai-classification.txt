@@ -1,0 +1,8 @@
+SB06 live OpenAI classification
+OPENAI_API_KEY: present (value redacted)
+CANDOITALL_RUN_LIVE_PROCESS_RUN_VALIDATION: absent
+CANDOITALL_ENABLE_LIVE_OPENAI_SMOKE: absent
+CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL: absent
+CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS: absent
+CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS: absent
+Decision: skipped. Explicit live opt-in/model/timeout/token budget variables are not all present, so live OpenAI smoke is not counted as deterministic release proof.

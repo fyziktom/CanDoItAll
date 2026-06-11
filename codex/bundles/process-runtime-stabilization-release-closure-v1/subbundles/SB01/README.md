@@ -1,10 +1,18 @@
 # SB01: Baseline reconciliation and previous blocker closure
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Reconcile current branch state, previous SB08 code-first blocker, and actual functional release posture before changing runtime behavior.
+
+## Covered Inputs
+- `bundle://inputs/00-original-request.md`: review real code and tests and stabilize process launching/execution before further extraction.
+- `bundle://requirements/01-normalized-requirements.md`: REQ-001.
+
+## Prerequisites
+- Prepared-stage bundle validation must pass after repair.
+- No product implementation phase may start until the bundle-start SHA is captured.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
@@ -15,10 +23,17 @@ Reconcile current branch state, previous SB08 code-first blocker, and actual fun
 - repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
 
 ## Scope
-Capture the exact bundle-start SHA. Compare current implementation against the previous blocked report. Ensure ratio guard uses explicit start SHA and counts only `src + tests` as implementation.
+- Capture the exact bundle-start SHA.
+- Compare current implementation against the previous blocked report.
+- Ensure ratio guard uses explicit start SHA and counts only `src + tests` as implementation.
+
+## Dependency Impact
+- SB02 through SB06 depend on SB01 for a trustworthy release baseline and code-first ratio guard.
+- If SB01 cannot prove the baseline, downstream release proof is blocked.
 
 ## Validation Depth
-Critical. Requires focused tests, source assertions, anti-stub scan, boundary scan, and concise proof.
+- Critical subbundle.
+- Requires focused tests, source assertions, anti-stub scan, boundary scan, semantic adequacy proof, and concise artifact-backed proof.
 
 ## Implementation Steps
 
@@ -37,12 +52,15 @@ Critical. Requires focused tests, source assertions, anti-stub scan, boundary sc
 - `git diff --numstat <bundle-start-sha>...HEAD` grouped by `src`, `tests`, `docs`, `codex/bundles`.
 - Focused guard test showing implicit/stale baseline is rejected.
 - Source scan proving no long-lived test reads concrete bundle files except intentional guard fixtures.
+- Completed proof manifest: `bundle://proof/SB01/manifest.md`.
+- Semantic invariant contract: `bundle://proof/SB01/semantic-invariants.md`.
 
 ## Browser Validation Logging
-Use large desktop 1900×1200 when the subbundle changes or proves user-visible process launch/readback. Otherwise record N/A with reason.
+- N/A unless SB01 changes or proves browser-visible behavior; record N/A with reason in `bundle://reviews/01-execution-report.md`.
 
 ## Progression Gate
-Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
+- SB02 may start only after SB01 records the explicit start SHA, baseline decision, ratio guard proof, semantic invariant contract, and `bundle://proof/SB01/manifest.md`.
+- Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
 
 
 ## Do Not Do

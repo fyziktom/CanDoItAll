@@ -1,0 +1,5 @@
+SB04 boundary scan
+Command: git diff added-line scan for forbidden Process Core extraction, driver surface, reflection discovery, dynamic dispatch, and mutating manager commands.
+Scope: SB04 added lines in ProcessDomainEvidenceReadOnlyAdapterTests.cs and AppSmokeTests.ProcessStartSmoke.cs.
+Added-line sample count: 20
+PASS: SB04 added lines introduce no Process Core extraction, reflection discovery, dynamic dispatch, execution-capable driver surface, mutating manager command, or representative dispatch suppression.

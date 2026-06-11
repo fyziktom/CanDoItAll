@@ -1,10 +1,18 @@
 # SB04: Runtime-host operator readback closure
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Close the explicit runtime-host UI/readback gap recorded in the previous bundle.
+
+## Covered Inputs
+- `bundle://inputs/00-original-request.md`: identify what the refactor left incomplete and close the runtime-host readback gap.
+- `bundle://requirements/01-normalized-requirements.md`: REQ-005.
+
+## Prerequisites
+- SB03 closure gate must pass.
+- Representative process runs and step ids must be available for runtime-host readback tests.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
@@ -15,10 +23,16 @@ Close the explicit runtime-host UI/readback gap recorded in the previous bundle.
 - repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
 
 ## Scope
-Expose manager/runtime-host readback for selected process run/step through an operator-visible surface or a stable API route with a UI follow-up clearly eliminated or reclassified. Prefer adding a compact run-detail diagnostics panel if feasible.
+- Expose manager/runtime-host readback for selected process run/step through an operator-visible surface or a stable API route with a UI follow-up clearly eliminated or reclassified.
+- Prefer adding a compact run-detail diagnostics panel if feasible.
+
+## Dependency Impact
+- SB05 depends on runtime-host readback remaining read-only and process-owned.
+- SB06 depends on this phase to remove or honestly classify the previous run-detail UI gap.
 
 ## Validation Depth
-Critical. Requires focused tests, source assertions, anti-stub scan, boundary scan, and concise proof.
+- Critical subbundle.
+- Requires focused service/API tests, UI proof if a panel is added, source assertions, anti-stub scan, semantic adequacy proof, and concise artifact-backed proof.
 
 ## Implementation Steps
 
@@ -39,10 +53,12 @@ Critical. Requires focused tests, source assertions, anti-stub scan, boundary sc
 - Readback includes audit id/hash, capability key, denial category/code, evidence count, no-mutation flags, and dry-run denial details.
 
 ## Browser Validation Logging
-Use large desktop 1900×1200 when the subbundle changes or proves user-visible process launch/readback. Otherwise record N/A with reason.
+- If UI is added, record route, 1900x1200 viewport, Playwright MCP actions, screenshot, assertions, and result in `bundle://reviews/01-execution-report.md`.
+- If API-only closure is selected, record N/A with the reason and proof that the UI gap was eliminated or explicitly reclassified.
 
 ## Progression Gate
-Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
+- SB05 may start only after runtime-host readback proof, no-mutation proof, semantic invariant contract, and `bundle://proof/SB04/manifest.md` exist.
+- Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
 
 
 ## Do Not Do

@@ -1,0 +1,7 @@
+SB03 failing-first source assertion against HEAD
+EXPECTED_FAIL: baseline HEAD does not contain the SB03 manual-contract classification and guard markers.
+Simulated assertion exit code: 1
+HEAD missing manual-contract business-plan method name: Business_plan_process_manual_contract_runs_with_business_artifacts_evidence_and_statuses
+HEAD missing manual-contract business-plan method name: Business_plan_process_manual_contract_projects_and_runs_on_postgresql
+HEAD missing SB03 business-plan automation proof guard method.
+PASS: failing-first source assertion is valid because the baseline lacks the new SB03 hardening markers.

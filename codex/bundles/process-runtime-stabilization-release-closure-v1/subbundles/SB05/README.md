@@ -1,10 +1,18 @@
 # SB05: Scheduler/workflow process-owned lifecycle closure
 
 ## Status
-Prepared.
+- Status: `Completed`
 
 ## Objective
 Prove scheduler/workflow-origin process starts and read-only verification jobs work through process-owned paths without driver hooks.
+
+## Covered Inputs
+- `bundle://inputs/00-original-request.md`: determine whether scheduler/workflow process starts still work like before without further extraction.
+- `bundle://requirements/01-normalized-requirements.md`: REQ-006.
+
+## Prerequisites
+- SB04 closure gate must pass.
+- Runtime-host readback proof must not expose mutating verification behavior.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
@@ -15,10 +23,16 @@ Prove scheduler/workflow-origin process starts and read-only verification jobs w
 - repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
 
 ## Scope
-Harden tests and source boundaries for `StartRunFromTriggerAsync`, scheduler/workflow metadata persistence, start-run/outbox records, verification job lifecycle, and audit/readback.
+- Harden tests and source boundaries for `StartRunFromTriggerAsync`, scheduler/workflow metadata persistence, start-run/outbox records, verification job lifecycle, and audit/readback.
+- Keep verification jobs read-only and process-owned.
+
+## Dependency Impact
+- SB06 depends on this phase for scheduler/workflow release confidence and boundary scan proof.
+- A failure here reopens SB03/SB04 if representative automation or readback assumptions are contradicted.
 
 ## Validation Depth
-Critical. Requires focused tests, source assertions, anti-stub scan, boundary scan, and concise proof.
+- Critical subbundle.
+- Requires focused integration tests, lifecycle assertions, source assertions, anti-stub scan, boundary scan, semantic adequacy proof, and concise artifact-backed proof.
 
 ## Implementation Steps
 
@@ -39,10 +53,11 @@ Critical. Requires focused tests, source assertions, anti-stub scan, boundary sc
 - Source scan proving scheduler/workflow paths do not call driver runtime hooks directly.
 
 ## Browser Validation Logging
-Use large desktop 1900×1200 when the subbundle changes or proves user-visible process launch/readback. Otherwise record N/A with reason.
+- N/A unless the phase changes browser-visible behavior; otherwise record N/A with reason in `bundle://reviews/01-execution-report.md`.
 
 ## Progression Gate
-Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
+- SB06 may start only after scheduler/workflow lifecycle proof, read-only verification proof, semantic invariant contract, and `bundle://proof/SB05/manifest.md` exist.
+- Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
 
 
 ## Do Not Do

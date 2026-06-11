@@ -1,0 +1,9 @@
+SB04 failing-first source assertion against baseline HEAD
+Command: git show HEAD:<path> and fixed-string checks for SB04-only markers.
+EXPECTED-FAIL	HEAD:tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs	Process_runtime_host_readback_SB04_INV_001_uses_real_process_run_step_ids_and_dry_run_denial_without_mutation
+EXPECTED-FAIL	HEAD:tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs	process-manager:sb04-real-run-readback
+EXPECTED-FAIL	HEAD:tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs	sideEffectDenial.Code
+EXPECTED-FAIL	HEAD:tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessStartSmoke.cs	Assert.Contains("Capability", runtimeHostReadbackText, StringComparison.Ordinal);
+EXPECTED-FAIL	HEAD:tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessStartSmoke.cs	Assert.Contains("transition writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+EXPECTED-FAIL	HEAD:tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessStartSmoke.cs	Assert.Contains("finalizer writes: denied", runtimeHostReadbackText, StringComparison.Ordinal);
+PASS: baseline HEAD lacks SB04-only markers; current worktree source assertions are required for closure.

@@ -1,0 +1,20 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.18]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.32]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.35]   Starting:    CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.39]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(environmentVariable: "CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS", value: "not-an-integer") [8 ms]
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(environmentVariable: "CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS", value: "not-an-integer") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(environmentVariable: "CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS", value: "500001") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(environmentVariable: "CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS", value: "29") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(environmentVariable: "CANDOITALL_LIVE_PROCESS_RUN_MAX_TOTAL_TOKENS", value: "9999") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(environmentVariable: "CANDOITALL_LIVE_PROCESS_RUN_TIMEOUT_SECONDS", value: "301") [< 1 ms]
+  Úspěšné CanDoItAll.Tests.Integration.LiveProcessRunOpenAiSmokeIntegrationTests.Live_process_run_smoke_SB027_INV_001_requires_explicit_model_timeout_and_token_budget [< 1 ms]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 7
+     Úspěšné: 7
+ Celkový čas: 0,9258 Sekundy
+Soubor výsledků: C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\TestResults\sb06-live-settings.trx

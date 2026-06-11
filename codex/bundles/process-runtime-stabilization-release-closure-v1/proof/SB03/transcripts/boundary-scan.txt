@@ -1,0 +1,8 @@
+SB03 boundary scan
+Current worktree src/tests files changed by SB02/SB03:
+  tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs
+  tests/CanDoItAll.Tests.Integration/ProcessRuntimeHostCodeFirstGuardTests.cs
+  tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProcessStartSmoke.cs
+  tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectScopedProcessLaunch.cs
+  tests/CanDoItAll.Tests.Playwright/PlaywrightAppFixture.cs
+PASS: current src/tests worktree changes are test-only and introduce no Process Core, driver, reflection, or dynamic dispatch boundary changes

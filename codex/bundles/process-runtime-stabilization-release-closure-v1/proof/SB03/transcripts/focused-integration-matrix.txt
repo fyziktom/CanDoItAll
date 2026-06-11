@@ -1,0 +1,16 @@
+Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
+Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
+[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.4+50e68bbb8b (64-bit .NET 10.0.8)
+[xUnit.net 00:00:00.19]   Discovering: CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.34]   Discovered:  CanDoItAll.Tests.Integration
+[xUnit.net 00:00:00.36]   Starting:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.ProcessTemplateExecutionE2ETests.Software_delivery_template_SB04_INV_001_completes_multi_team_governance_through_automation_dispatch [58 s]
+  Úspěšné CanDoItAll.Tests.Integration.ProcessTemplateExecutionE2ETests.Blazor_app_delivery_template_SB03_INV_001_completes_through_automation_dispatch_finalizer_and_readback [8 s]
+[xUnit.net 00:01:18.18]   Finished:    CanDoItAll.Tests.Integration
+  Úspěšné CanDoItAll.Tests.Integration.BusinessPlanProcessPostgresIntegrationTests.Business_plan_process_SB05_INV_001_completes_on_postgresql_through_automation_dispatch_finalizer_and_readback [10 s]
+
+Testovací běh byl úspěšný.
+Celkový počet testů: 3
+     Úspěšné: 3
+ Celkový čas: 1,3123 Minuty
+Soubor výsledků: C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\TestResults\sb03-matrix-proof.trx

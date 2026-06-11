@@ -1,10 +1,19 @@
 # SB06: Final release matrix and merge-readiness decision
 
 ## Status
-Prepared.
+- Status: `Completed`
+- Closure result: deterministic runtime matrix green; final release decision `not merge-ready` because the code-first ratio gate failed.
 
 ## Objective
 Run the release matrix and make a clear decision whether processes are stable enough to merge/stabilize before further extraction.
+
+## Covered Inputs
+- `bundle://inputs/00-original-request.md`: make the final stabilization decision before further Process Core extraction.
+- `bundle://requirements/01-normalized-requirements.md`: REQ-007 and REQ-008.
+
+## Prerequisites
+- SB05 closure gate must pass.
+- All prior critical proof manifests and semantic invariant contracts must exist.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/ProcessTemplateAutomationTestSupport.cs
@@ -15,10 +24,16 @@ Run the release matrix and make a clear decision whether processes are stable en
 - repo://src/CanDoItAll.Modules.AgentFramework/Hosting/ProcessMockAgentRuntime.cs
 
 ## Scope
-Run build, unit tests, focused template automation, Playwright launch-to-completion, scheduler/workflow, runtime-host readback, source scans, and live OpenAI classification.
+- Run build, unit tests, focused template automation, Playwright launch-to-completion, scheduler/workflow, runtime-host readback, source scans, and live OpenAI classification.
+- Produce the final release decision file and raw-note closure.
+
+## Dependency Impact
+- SB06 closes the bundle and decides whether the branch is merge-ready, runtime-ready-but-UI/live-blocked, or not merge-ready.
+- If final matrix proof contradicts any prior phase, reopen the affected subbundle instead of closing the bundle.
 
 ## Validation Depth
-Critical. Requires focused tests, source assertions, anti-stub scan, boundary scan, and concise proof.
+- Critical final-closure subbundle.
+- Requires build, unit/focused integration tests, Playwright proof, source assertions, anti-stub and boundary scans, live-smoke classification, red-team verifier artifact, semantic adequacy proof, and concise artifact-backed proof.
 
 ## Implementation Steps
 
@@ -42,10 +57,12 @@ Critical. Requires focused tests, source assertions, anti-stub scan, boundary sc
 - Final release decision file.
 
 ## Browser Validation Logging
-Use large desktop 1900×1200 when the subbundle changes or proves user-visible process launch/readback. Otherwise record N/A with reason.
+- Record final route, 1900x1200 viewport, Playwright MCP actions, screenshots, assertions, and result in `bundle://reviews/01-execution-report.md`.
+- Reuse SB02 route only if it still proves the final release claim.
 
 ## Progression Gate
-Downstream work must stop if this subbundle cannot prove its outcome without weakening the scope.
+- Bundle closure may run only after the final release matrix, raw-note closure, red-team verifier artifact, semantic invariant contract, `bundle://proof/SB06/manifest.md`, and completed-stage validator are ready.
+- If any required proof is missing or weak, mark the bundle blocked or reopen the owning subbundle.
 
 
 ## Do Not Do
