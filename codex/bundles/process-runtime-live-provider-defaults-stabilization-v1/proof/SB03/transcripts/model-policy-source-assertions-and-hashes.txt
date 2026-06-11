@@ -1,0 +1,32 @@
+Command: model policy anti-shallow source assertions and changed-file hashes
+PASS required pattern: ResolveOptionalTextSetting(LiveModelVariable)
+631:            ResolveOptionalTextSetting(LiveModelVariable),
+PASS required pattern: LiveProviderModelSource.ExplicitOverride
+145:        Assert.Equal(LiveProviderModelSource.ExplicitOverride, resolution.Source);
+411:                LiveProviderModelSource.ExplicitOverride);
+PASS required pattern: LiveProviderModelSource.ProviderDefault
+156:        Assert.Equal(LiveProviderModelSource.ProviderDefault, resolution.Source);
+418:                LiveProviderModelSource.ProviderDefault);
+PASS required pattern: LiveProviderModelSource.SuggestedModelFallback
+167:        Assert.Equal(LiveProviderModelSource.SuggestedModelFallback, resolution.Source);
+427:                LiveProviderModelSource.SuggestedModelFallback);
+PASS required pattern: provider-default-missing
+178:        Assert.Contains("provider-default-missing", exception.Message, StringComparison.Ordinal);
+431:            "provider-default-missing: managed OpenAI provider has no DefaultModel and no SuggestedModels entry. " +
+PASS required pattern: Live_process_run_smoke_SB03_INV_001_model_override_is_optional_when_budgets_are_present
+80:    public void Live_process_run_smoke_SB03_INV_001_model_override_is_optional_when_budgets_are_present()
+PASS required pattern: Live_process_run_smoke_SB03_INV_004_uses_explicit_model_override_when_present
+138:    public void Live_process_run_smoke_SB03_INV_004_uses_explicit_model_override_when_present()
+PASS required pattern: Live_process_run_smoke_SB03_INV_005_uses_managed_provider_default_when_override_is_absent
+149:    public void Live_process_run_smoke_SB03_INV_005_uses_managed_provider_default_when_override_is_absent()
+PASS required pattern: Live_process_run_smoke_SB03_INV_006_uses_first_suggested_model_when_default_is_empty
+160:    public void Live_process_run_smoke_SB03_INV_006_uses_first_suggested_model_when_default_is_empty()
+PASS required pattern: Live_process_run_smoke_SB03_INV_007_fails_as_provider_default_missing_without_default_or_suggestions
+171:    public void Live_process_run_smoke_SB03_INV_007_fails_as_provider_default_missing_without_default_or_suggestions()
+PASS forbidden shallow policy absent: ResolveRequiredTextSetting(LiveModelVariable)
+PASS forbidden shallow policy absent: CANDOITALL_LIVE_PROCESS_RUN_OPENAI_MODEL must be set explicitly
+Changed file hashes:
+66D2BFDF089606BA1F852BDCEC6214E2796145A74A0B7992CC30490016B43128  C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs
+Git diff name-only for implementation scope:
+tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
+ExitCode: 0

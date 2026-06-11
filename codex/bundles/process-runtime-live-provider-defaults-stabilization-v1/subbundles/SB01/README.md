@@ -1,7 +1,7 @@
 # SB01: Current state and blocker taxonomy
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Current state and blocker taxonomy
@@ -12,7 +12,8 @@ Current state and blocker taxonomy
 - Live provider model_not_found evidence for `5.4-mini`.
 
 ## Prerequisites
-Follow dependency map in `plan/01-phase-plan.md`.
+- Prepared-stage bundle validator must pass before implementation starts.
+- No earlier subbundle is required; this is the first dependency-map phase.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
@@ -36,10 +37,19 @@ Acceptance:
 
 
 ## Dependency Impact
-Downstream subbundles cannot claim stabilization until this subbundle's classification/proof is complete.
+- SB02 through SB08 depend on this phase's runtime/provider/blocker taxonomy.
+- If the classification changes, downstream proof and final release classification must be reopened.
 
 ## Validation Depth
-Critical. Require source-backed tests or command transcripts, plus source scans where applicable.
+- Critical foundation.
+- Require source-backed command transcripts and source scans for runtime/core extraction status.
+- Require `proof/SB01/manifest.md` and `proof/SB01/semantic-invariants.md`.
+
+## Implementation Steps
+- Read the latest bundle execution report, raw request, and current-state analysis.
+- Audit named runtime, UI, core, and integration source references for current shape.
+- Classify the current blocker as deterministic runtime, UI, boundary, provider/model, advisory proof, or unknown.
+- Record source assertions and command transcripts under `proof/SB01/`.
 
 ## Do Not Do
 - Do not extract dispatcher/runtime core into a new library.
@@ -56,11 +66,19 @@ Critical. Require source-backed tests or command transcripts, plus source scans 
 - No direct provider bypass.
 - Proof is concise and source-backed.
 
+## Proof Required
+- Prepared-stage validator transcript for the repaired bundle.
+- Source scan transcript for Process Core extraction and direct-provider bypass status.
+- Semantic adequacy proof that rejects a shallow "status text only" classification.
+- Anti-stub audit transcript covering production and test paths touched by this phase.
+
 ## Browser Validation Logging
-Use N/A unless this subbundle affects UI. For UI proof use large desktop 1900x1200 and record route, assertions, and screenshot paths.
+- N/A for SB01 unless the taxonomy audit discovers a UI change in this phase.
+- If UI proof becomes necessary, use large desktop 1900x1200 and record route, assertions, and screenshot paths.
 
 ## Progression Gate
-Proceed only after source/test/build/browser/live evidence is honestly classified.
+- Proceed to SB02 only after the current blocker taxonomy is source-backed and no runtime-core extraction has started.
+- Reopen SB01 if later subbundles prove the initial classification wrong.
 
 ## Suggested Agent Prompt
 Implement SB01 as a stabilization task. Prefer real source/test fixes only when needed. Keep process runtime stable and do not begin runtime-core extraction.

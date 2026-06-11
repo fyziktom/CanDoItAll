@@ -1,7 +1,7 @@
 # SB06: Boundary and no-extraction scans
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Boundary and no-extraction scans
@@ -12,7 +12,8 @@ Boundary and no-extraction scans
 - Live provider model_not_found evidence for `5.4-mini`.
 
 ## Prerequisites
-Follow dependency map in `plan/01-phase-plan.md`.
+- SB05 deterministic and UI regression proof must be passed or precisely classified.
+- SB01 through SB04 proof must not show a runtime-core extraction or provider bypass.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
@@ -38,10 +39,19 @@ Acceptance:
 
 
 ## Dependency Impact
-Downstream subbundles cannot claim stabilization until this subbundle's classification/proof is complete.
+- SB07 final decision depends on this phase proving boundary/no-extraction constraints.
+- SB08 stabilization ledger depends on this phase to define what remains frozen.
 
 ## Validation Depth
-Critical. Require source-backed tests or command transcripts, plus source scans where applicable.
+- Critical foundation.
+- Require boundary scans for Process Core leakage, runtime extraction, driver execution, fallback selectors, direct provider bypass, and secret leakage.
+- Require `proof/SB06/manifest.md` and `proof/SB06/semantic-invariants.md`.
+
+## Implementation Steps
+- Scan Process Core for runtime/template/provider/EF/UI/driver/domain leakage.
+- Scan the repo for new Process Runtime Core package/library extraction and dispatcher/outbox/finalizer moves.
+- Scan for execution-capable driver host, fallback selector/reflection discovery/self-registration, scheduler/workflow direct driver hooks, and secret leakage.
+- Record source assertions and command transcripts under `proof/SB06/`.
 
 ## Do Not Do
 - Do not extract dispatcher/runtime core into a new library.
@@ -58,11 +68,19 @@ Critical. Require source-backed tests or command transcripts, plus source scans 
 - No direct provider bypass.
 - Proof is concise and source-backed.
 
+## Proof Required
+- Boundary scan transcripts for each disallowed drift category.
+- Source assertion artifact naming allowed and disallowed surfaces.
+- Semantic adequacy proof that rejects scanning only project names while missing source references.
+- Anti-stub audit transcript covering production paths in the scans.
+
 ## Browser Validation Logging
-Use N/A unless this subbundle affects UI. For UI proof use large desktop 1900x1200 and record route, assertions, and screenshot paths.
+- N/A for SB06 unless a boundary repair changes browser-visible behavior.
+- If UI proof becomes necessary, use large desktop 1900x1200 and record route, assertions, and screenshot paths.
 
 ## Progression Gate
-Proceed only after source/test/build/browser/live evidence is honestly classified.
+- Proceed to SB07 only after no-extraction and no-driver/bypass boundaries are source-backed.
+- Reopen SB06 if final review or release decision discovers boundary drift.
 
 ## Suggested Agent Prompt
 Implement SB06 as a stabilization task. Prefer real source/test fixes only when needed. Keep process runtime stable and do not begin runtime-core extraction.

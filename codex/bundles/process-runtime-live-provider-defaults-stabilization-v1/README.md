@@ -1,7 +1,15 @@
 # process-runtime-live-provider-defaults-stabilization-v1
 
 ## Status
-Prepared for Codex implementation.
+Completed for Codex implementation.
+
+## Validation Summary
+Bundle preparation status: `Completed`
+Bundle readiness gate: `Passed`
+Execution status: `Completed`
+Subbundle gate review: `Passed`
+Final closure gate: `Passed`
+Browser validation analytics: `Passed`
 
 ## Purpose
 Close the final stabilization gap after representative process runtime, UI, scheduler/workflow, and boundary proofs are green, but live OpenAI process-run proof is blocked by forcing an invalid model (`5.4-mini`).
@@ -31,3 +39,16 @@ The branch should end with one of these explicit decisions:
 1. `runtime-stable-live-passed`: deterministic + UI + boundary + live OpenAI process-run proof pass.
 2. `runtime-stable-provider-config-blocked`: deterministic + UI + boundary pass, live fails because configured provider/model/API rejects the request with precise diagnostics.
 3. `not-runtime-stable`: deterministic/UI/process runtime path fails independent of provider/model selection.
+
+## Final Decision
+`runtime-stable-live-passed`.
+
+Evidence:
+- bundle://proof/SB05/transcripts/solution-build-no-restore.txt
+- bundle://proof/SB05/transcripts/unit-tests.txt
+- bundle://proof/SB05/transcripts/focused-integration-matrix.txt
+- bundle://proof/SB05/transcripts/playwright-project-structure-launch.txt
+- bundle://proof/SB04/transcripts/live-openai-process-smoke-summary.txt
+- bundle://proof/SB02/transcripts/provider-binding-source-assertions.txt
+- bundle://proof/SB06/transcripts/boundary-no-extraction-scans.txt
+- bundle://proof/SB08/transcripts/completed-stage-validator.txt

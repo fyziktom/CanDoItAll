@@ -1,7 +1,7 @@
 # SB03: Managed provider default model policy
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Managed provider default model policy
@@ -12,7 +12,8 @@ Managed provider default model policy
 - Live provider model_not_found evidence for `5.4-mini`.
 
 ## Prerequisites
-Follow dependency map in `plan/01-phase-plan.md`.
+- SB01 blocker taxonomy must be complete.
+- SB02 provider binding audit must prove the managed provider path remains intact.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
@@ -37,10 +38,19 @@ Acceptance:
 
 
 ## Dependency Impact
-Downstream subbundles cannot claim stabilization until this subbundle's classification/proof is complete.
+- SB04 depends on this phase to choose the live model correctly.
+- SB05 through SB07 depend on this phase to separate runtime failures from provider/model configuration failures.
 
 ## Validation Depth
-Critical. Require source-backed tests or command transcripts, plus source scans where applicable.
+- Critical foundation.
+- Require focused tests for explicit override, managed default, suggested model fallback, and missing default failure.
+- Require `proof/SB03/manifest.md` and `proof/SB03/semantic-invariants.md`.
+
+## Implementation Steps
+- Find the live OpenAI process-run smoke model-selection code.
+- Extract the smallest strongly typed model-resolution policy needed by tests.
+- Preserve explicit env override behavior while making it optional.
+- Add focused policy tests and diagnostic assertions without printing secrets.
 
 ## Do Not Do
 - Do not extract dispatcher/runtime core into a new library.
@@ -57,11 +67,19 @@ Critical. Require source-backed tests or command transcripts, plus source scans 
 - No direct provider bypass.
 - Proof is concise and source-backed.
 
+## Proof Required
+- Failing-first or adversarial test transcript for missing/invalid shallow model policy.
+- Passing focused test transcript for override/default/suggested/missing model behavior.
+- Changed-file hash artifact for all edited source and test files.
+- Anti-stub audit transcript covering production and test code changed by this phase.
+
 ## Browser Validation Logging
-Use N/A unless this subbundle affects UI. For UI proof use large desktop 1900x1200 and record route, assertions, and screenshot paths.
+- N/A for SB03 because the planned work is backend/test policy only.
+- If implementation unexpectedly changes UI, add large desktop 1900x1200 proof before closure.
 
 ## Progression Gate
-Proceed only after source/test/build/browser/live evidence is honestly classified.
+- Proceed to SB04 only after model-resolution tests pass and diagnostics distinguish default, suggested fallback, explicit override, and missing provider default.
+- Reopen SB03 if live smoke proves the selected model source is ambiguous or misclassified.
 
 ## Suggested Agent Prompt
 Implement SB03 as a stabilization task. Prefer real source/test fixes only when needed. Keep process runtime stable and do not begin runtime-core extraction.

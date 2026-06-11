@@ -1,0 +1,2 @@
+Command: rg --fixed-strings ResolveRequiredTextSetting(LiveModelVariable) tests\CanDoItAll.Tests.Integration\LiveProcessRunOpenAiSmokeIntegrationTests.cs
+ExitCode: 1

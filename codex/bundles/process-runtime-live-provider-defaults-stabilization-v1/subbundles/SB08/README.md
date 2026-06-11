@@ -1,7 +1,7 @@
 # SB08: Stabilization ledger and next-phase freeze
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Stabilization ledger and next-phase freeze
@@ -12,7 +12,8 @@ Stabilization ledger and next-phase freeze
 - Live provider model_not_found evidence for `5.4-mini`.
 
 ## Prerequisites
-Follow dependency map in `plan/01-phase-plan.md`.
+- SB07 final release decision must be complete and proof-backed.
+- All earlier subbundle statuses must be completed or honestly blocked.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
@@ -35,10 +36,19 @@ Acceptance:
 
 
 ## Dependency Impact
-Downstream subbundles cannot claim stabilization until this subbundle's classification/proof is complete.
+- Final bundle closure depends on this phase aligning stabilization ledger, freeze, proof paths, and follow-up items.
+- Future extraction work depends on this phase's ledger being notes-only, not implementation.
 
 ## Validation Depth
-Critical. Require source-backed tests or command transcripts, plus source scans where applicable.
+- Critical foundation.
+- Require ledger/freeze documentation plus final closure validator proof.
+- Require `proof/SB08/manifest.md` and `proof/SB08/semantic-invariants.md`.
+
+## Implementation Steps
+- Document current stable process runtime, UI, provider, and boundary surfaces.
+- Document future runtime-core extraction candidates as notes only.
+- Add an explicit freeze against Process Runtime Core extraction until stabilization branch acceptance.
+- Run final bundle validator and record remaining blockers or closure state.
 
 ## Do Not Do
 - Do not extract dispatcher/runtime core into a new library.
@@ -55,11 +65,19 @@ Critical. Require source-backed tests or command transcripts, plus source scans 
 - No direct provider bypass.
 - Proof is concise and source-backed.
 
+## Proof Required
+- Stabilization ledger artifact and final freeze text.
+- Final bundle completed-stage validator transcript or blocker transcript.
+- Semantic adequacy proof that rejects ledger text that starts extraction work.
+- Final red-team or verifier artifact for fake-proof resistance across all critical subbundles.
+
 ## Browser Validation Logging
-Use N/A unless this subbundle affects UI. For UI proof use large desktop 1900x1200 and record route, assertions, and screenshot paths.
+- N/A for SB08 unless ledger work changes browser-visible behavior.
+- If UI proof becomes necessary, cite SB05 browser analytics or rerun large desktop proof.
 
 ## Progression Gate
-Proceed only after source/test/build/browser/live evidence is honestly classified.
+- Final closure passes only after root status, execution report, raw-note closure, proof manifests, semantic invariants, and final validators agree.
+- If any proof is missing or weak, reopen the owning subbundle instead of closing SB08.
 
 ## Suggested Agent Prompt
 Implement SB08 as a stabilization task. Prefer real source/test fixes only when needed. Keep process runtime stable and do not begin runtime-core extraction.

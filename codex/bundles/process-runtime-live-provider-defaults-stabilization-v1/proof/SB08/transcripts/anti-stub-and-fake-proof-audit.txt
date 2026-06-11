@@ -1,0 +1,8 @@
+Command: anti-stub and fake-proof audit
+Changed implementation file scan:
+PASS: no stub/fake-proof tokens in changed implementation file
+Bundle proof shallow diagnostic template scan:
+PASS: no shallow diagnostic template or TODO/stub markers in bundle proof
+Live transcript secret scan:
+PASS: live transcript contains no sk-* secret-shaped values
+ExitCode: 0

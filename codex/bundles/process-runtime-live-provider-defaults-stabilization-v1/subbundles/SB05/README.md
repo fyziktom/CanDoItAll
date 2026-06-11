@@ -1,7 +1,7 @@
 # SB05: Deterministic runtime and UI regression matrix
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Deterministic runtime and UI regression matrix
@@ -12,7 +12,8 @@ Deterministic runtime and UI regression matrix
 - Live provider model_not_found evidence for `5.4-mini`.
 
 ## Prerequisites
-Follow dependency map in `plan/01-phase-plan.md`.
+- SB04 live smoke must be passed or precisely classified.
+- SB03 model-resolution policy tests must still pass after live-smoke changes.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
@@ -37,10 +38,19 @@ Acceptance:
 
 
 ## Dependency Impact
-Downstream subbundles cannot claim stabilization until this subbundle's classification/proof is complete.
+- SB06 and SB07 depend on this phase proving deterministic runtime and UI behavior after the live-policy repair.
+- If deterministic or UI proof fails, final classification must be `not-runtime-stable`.
 
 ## Validation Depth
-Critical. Require source-backed tests or command transcripts, plus source scans where applicable.
+- Critical foundation.
+- Require focused deterministic integration proof and large desktop Playwright proof.
+- Require `proof/SB05/manifest.md` and `proof/SB05/semantic-invariants.md`.
+
+## Implementation Steps
+- Run the representative Blazor, software-delivery, PostgreSQL business-plan, scheduler/workflow-origin, and read-only verification tests.
+- Run the large desktop project/project-structure launch-to-completed-run Playwright proof.
+- Capture screenshots and route/action/assertion details for UI proof.
+- Classify any deterministic or browser failure separately from provider/model failures.
 
 ## Do Not Do
 - Do not extract dispatcher/runtime core into a new library.
@@ -57,11 +67,19 @@ Critical. Require source-backed tests or command transcripts, plus source scans 
 - No direct provider bypass.
 - Proof is concise and source-backed.
 
+## Proof Required
+- Command transcripts for deterministic process runtime integration tests.
+- Playwright transcript and screenshot artifact for large desktop completed-run proof.
+- Semantic adequacy proof that rejects status/count-only process proof.
+- Anti-stub audit transcript covering runtime and UI proof surfaces.
+
 ## Browser Validation Logging
-Use N/A unless this subbundle affects UI. For UI proof use large desktop 1900x1200 and record route, assertions, and screenshot paths.
+- Required for SB05.
+- Use large desktop 1900x1200, record route, assertions, Playwright MCP evidence, and screenshot paths.
 
 ## Progression Gate
-Proceed only after source/test/build/browser/live evidence is honestly classified.
+- Proceed to SB06 only after deterministic runtime and UI completed-run proof pass or are honestly classified as runtime/UI failures.
+- Reopen SB05 if boundary scans or final decision expose a deterministic or UI regression missed by this phase.
 
 ## Suggested Agent Prompt
 Implement SB05 as a stabilization task. Prefer real source/test fixes only when needed. Keep process runtime stable and do not begin runtime-core extraction.

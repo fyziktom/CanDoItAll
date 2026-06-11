@@ -12,6 +12,7 @@ using CanDoItAll.Modules.Projects;
 using CanDoItAll.Tests.Support;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Xunit.Abstractions;
 
 namespace CanDoItAll.Tests.Integration;
 
@@ -27,6 +28,13 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     private const int MaximumTimeoutSeconds = 300;
     private const int MinimumMaxTotalTokens = 10_000;
     private const int MaximumMaxTotalTokens = 500_000;
+
+    private readonly ITestOutputHelper output;
+
+    public LiveProcessRunOpenAiSmokeIntegrationTests(ITestOutputHelper output)
+    {
+        this.output = output;
+    }
 
     [Fact]
     [Trait("Category", "LiveProcessRun")]
@@ -55,11 +63,11 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
             var processSmoke = await RunLiveProcessSmokeAsync(
                 availability.ConnectionString!,
                 databaseName,
-                settings.Model,
+                settings.ExplicitModelOverride,
                 settings.TimeoutSeconds,
                 settings.MaxTotalTokens);
 
-            Assert.Equal(settings.Model, processSmoke.ExecutionModel);
+            Assert.Equal(processSmoke.ModelResolution.Model, processSmoke.ExecutionModel);
             Assert.InRange(processSmoke.TotalTokens, 1, settings.MaxTotalTokens);
         }
         finally
@@ -69,16 +77,35 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     }
 
     [Fact]
-    public void Live_process_run_smoke_SB027_INV_001_requires_explicit_model_timeout_and_token_budget()
+    public void Live_process_run_smoke_SB03_INV_001_model_override_is_optional_when_budgets_are_present()
     {
         using var environment = new EnvironmentVariableScope(
             (LiveModelVariable, null),
             (LiveTimeoutSecondsVariable, "180"),
             (LiveMaxTotalTokensVariable, "250000"));
 
+        var settings = ResolveLiveSettings();
+
+        Assert.Null(settings.ExplicitModelOverride);
+        Assert.Equal(180, settings.TimeoutSeconds);
+        Assert.Equal(250000, settings.MaxTotalTokens);
+    }
+
+    [Theory]
+    [InlineData(LiveTimeoutSecondsVariable)]
+    [InlineData(LiveMaxTotalTokensVariable)]
+    public void Live_process_run_smoke_SB03_INV_002_rejects_missing_budget_without_secret_leakage(string environmentVariable)
+    {
+        using var environment = new EnvironmentVariableScope(
+            (LiveModelVariable, null),
+            (LiveTimeoutSecondsVariable, "180"),
+            (LiveMaxTotalTokensVariable, "250000"),
+            (environmentVariable, null));
+
         var exception = Assert.Throws<InvalidOperationException>(ResolveLiveSettings);
 
-        Assert.Contains(LiveModelVariable, exception.Message, StringComparison.Ordinal);
+        Assert.Contains(environmentVariable, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(LiveModelVariable, exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("OPENAI_API_KEY", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("sk-", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -90,12 +117,12 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     [InlineData(LiveMaxTotalTokensVariable, "9999")]
     [InlineData(LiveMaxTotalTokensVariable, "500001")]
     [InlineData(LiveMaxTotalTokensVariable, "not-an-integer")]
-    public void Live_process_run_smoke_SB027_INV_002_rejects_invalid_budget_bounds_without_secret_leakage(
+    public void Live_process_run_smoke_SB03_INV_003_rejects_invalid_budget_bounds_without_secret_leakage(
         string environmentVariable,
         string value)
     {
         using var environment = new EnvironmentVariableScope(
-            (LiveModelVariable, "live-model-for-bounds-validation"),
+            (LiveModelVariable, null),
             (LiveTimeoutSecondsVariable, "180"),
             (LiveMaxTotalTokensVariable, "250000"),
             (environmentVariable, value));
@@ -103,6 +130,54 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         var exception = Assert.Throws<InvalidOperationException>(ResolveLiveSettings);
 
         Assert.Contains(environmentVariable, exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("OPENAI_API_KEY", exception.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("sk-", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Live_process_run_smoke_SB03_INV_004_uses_explicit_model_override_when_present()
+    {
+        var provider = CreateProviderProfile(defaultModel: "managed-default-model", suggestedModels: ["suggested-model"]);
+
+        var resolution = ResolveLiveProviderModel(provider, " explicit-live-model ");
+
+        Assert.Equal("explicit-live-model", resolution.Model);
+        Assert.Equal(LiveProviderModelSource.ExplicitOverride, resolution.Source);
+    }
+
+    [Fact]
+    public void Live_process_run_smoke_SB03_INV_005_uses_managed_provider_default_when_override_is_absent()
+    {
+        var provider = CreateProviderProfile(defaultModel: "managed-default-model", suggestedModels: ["suggested-model"]);
+
+        var resolution = ResolveLiveProviderModel(provider, explicitModelOverride: null);
+
+        Assert.Equal("managed-default-model", resolution.Model);
+        Assert.Equal(LiveProviderModelSource.ProviderDefault, resolution.Source);
+    }
+
+    [Fact]
+    public void Live_process_run_smoke_SB03_INV_006_uses_first_suggested_model_when_default_is_empty()
+    {
+        var provider = CreateProviderProfile(defaultModel: " ", suggestedModels: [" ", "suggested-model", "later-model"]);
+
+        var resolution = ResolveLiveProviderModel(provider, explicitModelOverride: null);
+
+        Assert.Equal("suggested-model", resolution.Model);
+        Assert.Equal(LiveProviderModelSource.SuggestedModelFallback, resolution.Source);
+    }
+
+    [Fact]
+    public void Live_process_run_smoke_SB03_INV_007_fails_as_provider_default_missing_without_default_or_suggestions()
+    {
+        var provider = CreateProviderProfile(defaultModel: "", suggestedModels: [" ", ""]);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            ResolveLiveProviderModel(provider, explicitModelOverride: null));
+
+        Assert.Contains("provider-default-missing", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ProviderId=", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("ProviderName=OpenAI default", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("OPENAI_API_KEY", exception.Message, StringComparison.Ordinal);
         Assert.DoesNotContain("sk-", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
@@ -126,10 +201,10 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         Assert.Contains("[REDACTED]", diagnostic, StringComparison.Ordinal);
     }
 
-    private static async Task<LiveProcessSmokeResult> RunLiveProcessSmokeAsync(
+    private async Task<LiveProcessSmokeResult> RunLiveProcessSmokeAsync(
         string adminConnectionString,
         string databaseName,
-        string model,
+        string? explicitModelOverride,
         int timeoutSeconds,
         int maxTotalTokens)
     {
@@ -149,8 +224,15 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
 
-        var provider = await ConfigureOpenAiProviderAsync(workspaceService, model, timeoutSeconds);
-        var agentPartyId = await CreateBoundAgentAsync(aiAgentService, provider, model);
+        var providerConfiguration = await ConfigureOpenAiProviderAsync(
+            workspaceService,
+            explicitModelOverride,
+            timeoutSeconds);
+        var provider = providerConfiguration.Provider;
+        var modelResolution = providerConfiguration.ModelResolution;
+        output.WriteLine(BuildLiveProviderDiagnostic(provider, modelResolution));
+
+        var agentPartyId = await CreateBoundAgentAsync(aiAgentService, provider, modelResolution.Model);
         var projectId = await CreateProjectAsync(projectsService);
         var processDefinition = BuildLiveProcessDefinition(projectId);
         var definitionId = await SaveAndPublishProcessAsync(processesService, processDefinition.Editor);
@@ -205,7 +287,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         Assert.Equal(step.Id.ToString("D"), executionDetail.Run.ProcessStepId);
         Assert.Equal(ProcessRunAutomationDispatchService.AutomationActor, executionDetail.Run.RequestedBy);
         Assert.Equal(provider.Name, executionDetail.Run.ProviderName);
-        Assert.Equal(model, executionDetail.Run.Model);
+        Assert.Equal(modelResolution.Model, executionDetail.Run.Model);
 
         var processUsage = executionDetail.UsageObservations
             .Where(item =>
@@ -220,10 +302,10 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         {
             Assert.Equal(executionDetail.Run.Id, usage.ExecutionRunId);
             Assert.Equal(ProviderKind.OpenAi, usage.ProviderKind);
-            Assert.Equal(model, usage.Model);
+            Assert.Equal(modelResolution.Model, usage.Model);
         });
 
-        return new LiveProcessSmokeResult(executionDetail.Run.Model, totalTokens);
+        return new LiveProcessSmokeResult(executionDetail.Run.Model, totalTokens, modelResolution);
     }
 
     private static string BuildLiveProcessFailureMessage(
@@ -234,7 +316,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     {
         var builder = new StringBuilder();
         builder.Append("SB02 live OpenAI process-run smoke failed. ");
-        builder.Append("Classification target: provider/config/API/finalizer/artifact/readback. ");
+        builder.Append("Classification target: provider-model-blocked/provider-model-override-invalid/provider-auth-blocked/provider-quota-blocked/PostgreSQL-blocked/finalizer-blocked/artifact-readback-blocked/runtime-failed. ");
         AppendDiagnostic(builder, "ProcessRunId", runId.ToString("D"));
         AppendDiagnostic(builder, "StepRunId", stepRunId.ToString("D"));
         AppendDiagnostic(builder, "StepStatus", step.Status.ToString());
@@ -285,9 +367,9 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
             .Append("; ");
     }
 
-    private static async Task<ProviderProfile> ConfigureOpenAiProviderAsync(
+    private static async Task<LiveOpenAiProviderConfiguration> ConfigureOpenAiProviderAsync(
         IAgentFrameworkWorkspaceService workspaceService,
-        string model,
+        string? explicitModelOverride,
         int timeoutSeconds)
     {
         var providers = await workspaceService.ListProvidersAsync();
@@ -298,20 +380,76 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
                 item.Purpose == ProviderProfilePurpose.Chat)
             ?? throw new InvalidOperationException("The managed-seed OpenAI default chat provider was not found.");
 
+        var modelResolution = ResolveLiveProviderModel(provider, explicitModelOverride);
         var editor = await workspaceService.GetProviderEditorAsync(provider.Id);
-        editor.DefaultModel = model;
+        editor.DefaultModel = modelResolution.Model;
         editor.ApiKeyEnvironmentVariable = "OPENAI_API_KEY";
         editor.Transport = ProviderTransportKind.Responses;
         editor.SupportsTools = true;
         editor.SupportsBackgroundResponses = true;
         editor.ConfigurationJson = WriteTimeoutSeconds(editor.ConfigurationJson, timeoutSeconds);
-        if (!editor.SuggestedModels.Contains(model, StringComparer.OrdinalIgnoreCase))
+        if (!editor.SuggestedModels.Contains(modelResolution.Model, StringComparer.OrdinalIgnoreCase))
         {
-            editor.SuggestedModels.Add(model);
+            editor.SuggestedModels.Add(modelResolution.Model);
         }
 
         await workspaceService.SaveProviderAsync(editor);
-        return (await workspaceService.ListProvidersAsync()).Single(item => item.Id == provider.Id);
+        var configuredProvider = (await workspaceService.ListProvidersAsync()).Single(item => item.Id == provider.Id);
+        return new LiveOpenAiProviderConfiguration(configuredProvider, modelResolution);
+    }
+
+    private static LiveProviderModelResolution ResolveLiveProviderModel(
+        ProviderProfile provider,
+        string? explicitModelOverride)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+
+        if (!string.IsNullOrWhiteSpace(explicitModelOverride))
+        {
+            return new LiveProviderModelResolution(
+                explicitModelOverride.Trim(),
+                LiveProviderModelSource.ExplicitOverride);
+        }
+
+        if (!string.IsNullOrWhiteSpace(provider.DefaultModel))
+        {
+            return new LiveProviderModelResolution(
+                provider.DefaultModel.Trim(),
+                LiveProviderModelSource.ProviderDefault);
+        }
+
+        var suggestedModel = provider.SuggestedModels
+            .FirstOrDefault(item => !string.IsNullOrWhiteSpace(item));
+        if (!string.IsNullOrWhiteSpace(suggestedModel))
+        {
+            return new LiveProviderModelResolution(
+                suggestedModel.Trim(),
+                LiveProviderModelSource.SuggestedModelFallback);
+        }
+
+        throw new InvalidOperationException(
+            "provider-default-missing: managed OpenAI provider has no DefaultModel and no SuggestedModels entry. " +
+            BuildProviderIdentityDiagnostic(provider));
+    }
+
+    private static string BuildLiveProviderDiagnostic(
+        ProviderProfile provider,
+        LiveProviderModelResolution modelResolution)
+    {
+        return $"{BuildProviderIdentityDiagnostic(provider)}; Model={modelResolution.Model}; ModelSource={modelResolution.Source}";
+    }
+
+    private static string BuildProviderIdentityDiagnostic(ProviderProfile provider)
+    {
+        return string.Join(
+            "; ",
+            [
+                $"ProviderId={provider.Id:D}",
+                $"ProviderName={provider.Name}",
+                $"ProviderKind={provider.Kind}",
+                $"ProviderTransport={provider.Transport}",
+                $"ProviderPurpose={provider.Purpose}"
+            ]);
     }
 
     private static async Task<Guid> CreateBoundAgentAsync(
@@ -490,7 +628,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
     private static LiveProcessSmokeSettings ResolveLiveSettings()
     {
         return new LiveProcessSmokeSettings(
-            ResolveRequiredTextSetting(LiveModelVariable),
+            ResolveOptionalTextSetting(LiveModelVariable),
             ResolveRequiredBoundedIntegerSetting(
                 LiveTimeoutSecondsVariable,
                 MinimumTimeoutSeconds,
@@ -501,13 +639,12 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
                 MaximumMaxTotalTokens));
     }
 
-    private static string ResolveRequiredTextSetting(string environmentVariable)
+    private static string? ResolveOptionalTextSetting(string environmentVariable)
     {
         var value = Environment.GetEnvironmentVariable(environmentVariable);
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidOperationException(
-                $"{environmentVariable} must be set explicitly for live OpenAI process-run smoke validation.");
+            return null;
         }
 
         return value.Trim();
@@ -591,12 +728,54 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         Guid RoleId,
         Guid StepDefinitionId);
 
-    private sealed record LiveProcessSmokeResult(string ExecutionModel, int TotalTokens);
+    private sealed record LiveProcessSmokeResult(
+        string ExecutionModel,
+        int TotalTokens,
+        LiveProviderModelResolution ModelResolution);
 
     private sealed record LiveProcessSmokeSettings(
-        string Model,
+        string? ExplicitModelOverride,
         int TimeoutSeconds,
         int MaxTotalTokens);
+
+    private sealed record LiveOpenAiProviderConfiguration(
+        ProviderProfile Provider,
+        LiveProviderModelResolution ModelResolution);
+
+    private sealed record LiveProviderModelResolution(
+        string Model,
+        LiveProviderModelSource Source);
+
+    private enum LiveProviderModelSource
+    {
+        ExplicitOverride,
+        ProviderDefault,
+        SuggestedModelFallback
+    }
+
+    private static ProviderProfile CreateProviderProfile(
+        string defaultModel,
+        IReadOnlyList<string> suggestedModels)
+    {
+        return new ProviderProfile(
+            Id: Guid.Parse("c1c103db-707e-3f52-8809-8d804fc171d1"),
+            Name: ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
+            Kind: ProviderKind.OpenAi,
+            BaseUrl: ManagedSeedProviderFallbacks.OpenAiBaseUrl,
+            ApiKeyEnvironmentVariable: "OPENAI_API_KEY",
+            DefaultModel: defaultModel,
+            Transport: ProviderTransportKind.Responses,
+            IsEnabled: true,
+            SupportsStreaming: true,
+            SupportsTools: true,
+            PreferFrameworkManagedChatHistory: false,
+            SupportsBackgroundResponses: true,
+            ConfigurationJson: "{\"history\":\"service-managed\"}",
+            Notes: "Test provider.",
+            HealthStatus: "Not checked",
+            LastCheckedAtUtc: null,
+            SuggestedModels: suggestedModels);
+    }
 
     private sealed class EnvironmentVariableScope : IDisposable
     {

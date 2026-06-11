@@ -1,7 +1,7 @@
 # SB02: Provider binding audit
 
 ## Status
-Prepared.
+- Status: Completed
 
 ## Objective
 Provider binding audit
@@ -12,7 +12,8 @@ Provider binding audit
 - Live provider model_not_found evidence for `5.4-mini`.
 
 ## Prerequisites
-Follow dependency map in `plan/01-phase-plan.md`.
+- SB01 closure gate must classify the current blocker and confirm no premature extraction.
+- The exact source references must still exist in the repo.
 
 ## Exact Source References
 - repo://tests/CanDoItAll.Tests.Integration/LiveProcessRunOpenAiSmokeIntegrationTests.cs
@@ -35,10 +36,19 @@ Acceptance:
 
 
 ## Dependency Impact
-Downstream subbundles cannot claim stabilization until this subbundle's classification/proof is complete.
+- SB03 and SB04 depend on this phase proving the managed provider/MAF path is still the live route.
+- If direct OpenAI/raw HTTP bypass exists, live smoke proof and release classification must be blocked.
 
 ## Validation Depth
-Critical. Require source-backed tests or command transcripts, plus source scans where applicable.
+- Critical foundation.
+- Require source-backed provider binding scans plus focused test or diagnostic proof where available.
+- Require `proof/SB02/manifest.md` and `proof/SB02/semantic-invariants.md`.
+
+## Implementation Steps
+- Audit the live process-run smoke and process runtime services for provider routing.
+- Confirm `ProviderProfileId`, `IAgentFrameworkWorkspaceService`, managed provider profile, and MAF/AgentFramework execution are used.
+- Add or repair source scans/tests that reject direct OpenAI/raw HTTP bypass in the relevant process paths.
+- Record provider diagnostic fields and secret-masking assertions.
 
 ## Do Not Do
 - Do not extract dispatcher/runtime core into a new library.
@@ -55,11 +65,19 @@ Critical. Require source-backed tests or command transcripts, plus source scans 
 - No direct provider bypass.
 - Proof is concise and source-backed.
 
+## Proof Required
+- Source assertion artifact proving the managed provider path and absence of direct OpenAI/raw HTTP calls.
+- Command transcript for provider-bypass scans.
+- Semantic adequacy proof that rejects a shallow scan limited to one filename.
+- Anti-stub audit transcript covering process live smoke and runtime services.
+
 ## Browser Validation Logging
-Use N/A unless this subbundle affects UI. For UI proof use large desktop 1900x1200 and record route, assertions, and screenshot paths.
+- N/A for SB02 unless provider-path repair changes browser-visible behavior.
+- If UI proof becomes necessary, use large desktop 1900x1200 and record route, assertions, and screenshot paths.
 
 ## Progression Gate
-Proceed only after source/test/build/browser/live evidence is honestly classified.
+- Proceed to SB03 only after provider routing is proven to use managed CanDoItAll/MAF providers with no secret leakage.
+- Reopen SB02 if live diagnostics or tests later show a direct-provider bypass.
 
 ## Suggested Agent Prompt
 Implement SB02 as a stabilization task. Prefer real source/test fixes only when needed. Keep process runtime stable and do not begin runtime-core extraction.

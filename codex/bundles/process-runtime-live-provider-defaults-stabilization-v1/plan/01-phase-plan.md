@@ -1,5 +1,8 @@
 # Phase Plan
 
+## Execution Order
+- Execute SB01 through SB08 in sequence because each phase depends on the previous phase's proof and release classification.
+
 ## Subbundle Dependency Map
 
 ```mermaid
@@ -14,7 +17,8 @@ graph TD
 ```
 
 ## Critical Subbundles
-All subbundles are critical. They are intentionally larger implementation areas, not micro tasks.
+- SB01, SB02, SB03, SB04, SB05, SB06, SB07, and SB08 are critical.
+- Each subbundle is intentionally a larger stabilization area, not a micro task.
 
 ## Phase Gates
 Every subbundle must:

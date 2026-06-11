@@ -1,0 +1,34 @@
+Command: provider binding source assertions for managed OpenAI process-run smoke
+PASS: workspace service resolved
+221:        var workspaceService = scope.ServiceProvider.GetRequiredService<IAgentFrameworkWorkspaceService>();
+371:        IAgentFrameworkWorkspaceService workspaceService,
+PASS: managed OpenAI default provider name
+377:                string.Equals(item.Name, ManagedSeedProviderFallbacks.OpenAiDefaultProviderName, StringComparison.Ordinal) &&
+762:            Name: ManagedSeedProviderFallbacks.OpenAiDefaultProviderName,
+PASS: OpenAI provider kind
+304:            Assert.Equal(ProviderKind.OpenAi, usage.ProviderKind);
+378:                item.Kind == ProviderKind.OpenAi &&
+763:            Kind: ProviderKind.OpenAi,
+PASS: Responses transport
+379:                item.Transport == ProviderTransportKind.Responses &&
+387:        editor.Transport = ProviderTransportKind.Responses;
+767:            Transport: ProviderTransportKind.Responses,
+PASS: Chat provider purpose
+380:                item.Purpose == ProviderProfilePurpose.Chat)
+PASS: agent profile ProviderProfileId binding
+470:            ProviderProfileId = provider.Id,
+PASS: process automation dispatch service
+225:        var dispatchService = scope.ServiceProvider.GetRequiredService<IProcessRunAutomationDispatchService>();
+PASS: automation actor execution run readback
+274:            item => string.Equals(item.RequestedBy, ProcessRunAutomationDispatchService.AutomationActor, StringComparison.Ordinal));
+288:        Assert.Equal(ProcessRunAutomationDispatchService.AutomationActor, executionDetail.Run.RequestedBy);
+PASS: process usage observations asserted
+292:        var processUsage = executionDetail.UsageObservations
+344:        foreach (var usage in executionDetail.UsageObservations.TakeLast(4))
+PASS: provider diagnostic includes model source
+439:        return $"{BuildProviderIdentityDiagnostic(provider)}; Model={modelResolution.Model}; ModelSource={modelResolution.Source}";
+PASS: API key env variable name only
+386:        editor.ApiKeyEnvironmentVariable = "OPENAI_API_KEY";
+Command: rg direct provider bypass tokens in scoped process paths
+PASS: no direct OpenAI client/raw HTTP bypass tokens in scoped process paths
+ExitCode: 0

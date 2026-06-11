@@ -1,0 +1,5 @@
+Command: dotnet test live OpenAI process-run smoke with managed provider default model and no explicit override
+Source transcript: bundle://proof/SB04/transcripts/live-openai-process-smoke-detailed.txt
+Result: passed 1/1 live process-run smoke tests with no skipped tests
+ProviderId=c1c103db-707e-3f52-8809-8d804fc171d1; ProviderName=OpenAI default; ProviderKind=OpenAi; ProviderTransport=Responses; ProviderPurpose=Chat; Model=gpt-5.4-mini; ModelSource=ProviderDefault
+ExitCode: 0
