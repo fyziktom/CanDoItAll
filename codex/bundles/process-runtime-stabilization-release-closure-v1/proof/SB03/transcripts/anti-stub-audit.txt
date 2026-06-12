@@ -1,4 +1,0 @@
-SB03 anti-stub audit
-Files: tests\CanDoItAll.Tests.Integration\BusinessPlanProcessPostgresIntegrationTests.cs, tests\CanDoItAll.Tests.Integration\ProcessRuntimeHostCodeFirstGuardTests.cs
-Patterns: TODO|HACK|NotImplementedException|throw new NotImplemented|return null;\s*//
-PASS: no TODO/HACK/NotImplemented/stub return markers found in changed SB03 files

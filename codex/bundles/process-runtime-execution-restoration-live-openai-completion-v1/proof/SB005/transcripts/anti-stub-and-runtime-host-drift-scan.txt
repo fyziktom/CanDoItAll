@@ -1,6 +1,0 @@
-Command: persisted run lifecycle production stub/runtime-host audit
-WorkingDirectory: C:\repositories\CanDoItAll
-
-Output:
-
-ExitCode: 1

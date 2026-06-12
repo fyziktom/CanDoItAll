@@ -1,5 +1,0 @@
-
-Command: git diff --name-only -- src tests | filter UI/media paths
-ChangedSourceTestFileCount: 9
-UiMediaMatchCount: 0
-ExitCode: 0

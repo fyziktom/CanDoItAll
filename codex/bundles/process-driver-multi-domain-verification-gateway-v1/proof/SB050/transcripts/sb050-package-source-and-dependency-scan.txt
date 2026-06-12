@@ -1,7 +1,0 @@
-SB050 package source and dependency scan
-Verified driver package source roots remain runtime/DI/IO/network/EF/host/registry free.
-Verified driver projects do not introduce PackageReference dependencies.
-Verified unit test project references all driver packages and integration project references the adapter boundary packages it compiles against.
-Verified module process driver references stay limited to read-only dispatch adapters and policies.
-No stub markers, high-confidence secrets, or UI/media drift found.
-PASSED

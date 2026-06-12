@@ -1,3 +1,0 @@
-Command: PowerShell synthetic negative proof for SB045 Process Core genericity guard
-PASS synthetic leaky Core source would be rejected by genericity guard: DotNetRust, dotnet, SoftwareDevelopment, OfficeEvidence, Office365, BusinessAnalysis, BusinessPlan, CanDoItAll.Processes.Drivers, CanDoItAll.Modules, CanDoItAll.Infrastructure, AppDbContext, IServiceProvider
-SB045 negative result: software/business/Office/driver/module/infrastructure leakage cannot satisfy Gate O.

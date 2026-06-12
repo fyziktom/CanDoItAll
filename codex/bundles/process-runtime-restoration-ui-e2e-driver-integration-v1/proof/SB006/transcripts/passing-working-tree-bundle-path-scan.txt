@@ -1,5 +1,0 @@
-Command: rg scan over src/tests C# source for transient bundle paths; pass when no matches are found
-ExitCode: 0
-Output:
-SB006_INV_001 PASS: working tree C# source/test code contains no concrete transient bundle paths.
-

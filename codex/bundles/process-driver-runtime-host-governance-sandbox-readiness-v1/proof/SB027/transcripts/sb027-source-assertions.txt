@@ -1,9 +1,0 @@
-Command: source assertion ledger for SB027
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: sb027-source-assertions
-ExitCode: 0
-Output:
-PASS SB027_INV_001 is tied to repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessManagerReadOnlyVerificationCommandService.cs.
-PASS Phase P09 Live OpenAI process-run proof hardening closes with positive proof bundle://proof/SB051/transcripts/solution-build-debug.txt, bundle://proof/SB051/transcripts/focused-process-runtime-verification-host-integration-matrix.txt.
-PASS Verification host surfaces remain read-only and do not authorize shell, package restore, Office, Graph, CRM, workspace, storage, or process mutation through drivers.
-PASS Anti-stub audit uses required-source-scans and concrete source references rather than report-only assertions.

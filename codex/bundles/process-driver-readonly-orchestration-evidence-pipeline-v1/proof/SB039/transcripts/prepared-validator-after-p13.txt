@@ -1,6 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1 --stage prepared --repo-root C:\repositories\CanDoItAll
-ExitCode: 0
-StartedAtUtc: 2026-06-09T01:58:20.8826674Z
-FinishedAtUtc: 2026-06-09T01:58:21.1707733Z
-
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-readonly-orchestration-evidence-pipeline-v1

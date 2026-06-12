@@ -1,5 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB049\SB049-focused-integration.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:   199, Přeskočeno:     0, Celkem:   199, Doba trvání: 15 m 11 s - CanDoItAll.Tests.Integration.dll (net10.0)

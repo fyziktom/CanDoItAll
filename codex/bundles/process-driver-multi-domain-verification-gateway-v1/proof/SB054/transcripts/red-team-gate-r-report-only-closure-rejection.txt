@@ -1,8 +1,0 @@
-Gate R red-team report-only/collapsed-row closure rejection
-Rejected report-row-only: missing 5 required artifact(s).
-Rejected manifests-without-transcript-scan: missing 2 required artifact(s).
-Rejected scan-without-build: missing 4 required artifact(s).
-Rejected collapsed-future-rows: missing 3 required artifact(s).
-Accepted complete Gate R artifact-backed proof.
-Rejected report-row-only, manifests-without-transcript-scan, scan-without-build, and collapsed-future-row closure claims.
-PASSED

@@ -1,6 +1,0 @@
-Command: SB051 anti-stub docs negative proof
-Synthetic unsupported claim rejected: True :: The generic process-driver runtime host is supported for process execution.
-Synthetic unsupported claim rejected: True :: The driver registry is enabled for process execution.
-Synthetic unsupported claim rejected: True :: Process drivers may mutate process state.
-Synthetic unsupported claim rejected: True :: Scheduler hook starts process drivers.
-PASS: SB051 synthetic unsupported runtime-host documentation claims are rejected.

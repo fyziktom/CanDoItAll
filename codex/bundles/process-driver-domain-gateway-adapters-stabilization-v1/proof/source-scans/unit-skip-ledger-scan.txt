@@ -1,2 +1,0 @@
-Command: rg -n '\[Fact\(Skip|\[Theory\(Skip|HistoricalBundleFixtureQuarantineReason' tests/CanDoItAll.Tests.Unit
-PASS: no unit [Fact(Skip)], [Theory(Skip)], or historical fixture quarantine marker found.

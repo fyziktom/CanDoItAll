@@ -1,8 +1,0 @@
-Command: rg -n "TODO|HACK|NotImplemented|throw new NotImplementedException|fixture-specific" changed implementation/test source files
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-11T19:16:36.3570002Z
-
-PASS: no stub markers found in changed implementation/test source files.
-
-ExitCode: 0
-EndTimeUtc: 2026-06-11T19:16:36.3913947Z

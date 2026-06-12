@@ -1,6 +1,0 @@
-Command: Select-String -Path tests\CanDoItAll.Tests.Integration\ProcessRuntimeHostCodeFirstGuardTests.cs -Pattern TODO|NotImplemented|throw new NotImplementedException
-WorkingDirectory: C:\repositories\CanDoItAll
-StartUtc: 2026-06-11T09:55:20.7784781Z
-Exit code: 0
-Output:
-No TODO, NotImplemented, or throw new NotImplementedException markers found in SB01 changed test file.

@@ -1,5 +1,0 @@
-Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs | rg -n "Process_runtime_host_readback_SB06_INV_001"
-Exit code: 1
-
-Result:
-The baseline did not contain a focused SB06 test proving runtime-host readback against real automation-dispatched process run and step ids.

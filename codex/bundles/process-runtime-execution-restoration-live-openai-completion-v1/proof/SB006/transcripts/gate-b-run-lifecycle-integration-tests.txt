@@ -1,8 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessesServiceIntegrationTests.StartRunAsync_SB018_INV_001_persists_project_context_runtime_rows_and_dispatch_outbox|FullyQualifiedName~ProcessesServiceIntegrationTests.StartRunAsync_SB018_INV_002_rejects_invalid_not_ready_and_duplicate_start_attempts" --logger "trx;LogFileName=SB006-gate-b-run-lifecycle.trx" --results-directory "codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB006\test-results" WorkingDirectory: C:\repositories\CanDoItAll Invariant ID: SB006_INV_001  Output:
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-execution-restoration-live-openai-completion-v1\proof\SB006\test-results\SB006-gate-b-run-lifecycle.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:     2, Přeskočeno:     0, Celkem:     2, Doba trvání: 23 s - CanDoItAll.Tests.Integration.dll (net10.0)
-
-ExitCode: 0

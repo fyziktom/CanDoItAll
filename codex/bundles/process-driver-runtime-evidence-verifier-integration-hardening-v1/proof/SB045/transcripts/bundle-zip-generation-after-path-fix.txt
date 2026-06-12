@@ -1,6 +1,0 @@
-Command: Compress-Archive -Path codex\bundles\process-driver-runtime-evidence-verifier-integration-hardening-v1\* -DestinationPath codex\bundles\process-driver-runtime-evidence-verifier-integration-hardening-v1.zip -Force
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: SB045 bundle zip generation after path fix
-ZIP: repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1.zip
-SHA256: C72D8908D331AE75728F21E11332CBFE45AC8C522D3ADC7F3997BD636B0DFCDC
-ExitCode: 0

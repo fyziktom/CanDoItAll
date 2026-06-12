@@ -1,8 +1,0 @@
-Command: Select-String TODO, NotImplemented, throw new NotImplementedException in changed SB01 test file
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-11T14:45:41.3149533Z
-ExitCode: 0
-Output:
-Invariant ID: SB01_INV_009
-Invariant ID: SB01_INV_010
-Anti-stub audit passed: no TODO, NotImplemented, or NotImplementedException markers in changed SB01 test file.

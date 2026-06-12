@@ -1,5 +1,0 @@
-Command: Compress-Archive -Path bundle contents -DestinationPath codex\bundles\process-driver-readonly-release-candidate-stabilization-v1.zip -Force
-Archive: codex/bundles/process-driver-readonly-release-candidate-stabilization-v1.zip
-Archive exists: True
-Archive bytes: 239625
-Exit code: 0

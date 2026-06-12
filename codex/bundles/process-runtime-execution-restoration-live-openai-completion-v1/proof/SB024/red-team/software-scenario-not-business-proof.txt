@@ -1,3 +1,0 @@
-Red-team case: Gate H must not count the software/.NET mock process as non-software business-analysis proof.
-Required positive proof uses the business-plan-development template, asserts no software/developer/.NET/Blazor step titles and no MutateProductTarget operation, records six business artifacts, completes non-blocked steps, skips the blocked correction branch, and reads the Business plan managed artifact content.
-Proof transcript: bundle://proof/SB024/transcripts/business-analysis-process-tests.txt.

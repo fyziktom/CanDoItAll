@@ -1,6 +1,0 @@
-Red-team negative: SB006_INV_001
-
-Shallow implementation rejected: creating a run row without step/work brief/outbox rows, or allowing invalid/unpublished/not-ready/duplicate launch starts.
-The Gate B integration test requires persisted ProcessRun, ProcessStepRun, ProcessWorkBrief, ProcessJournalEntry, ProcessOutboxRecord rows and typed guard errors: processes.run.published-version-required, processes.run.launch-plan-not-ready, and processes.run.launch-plan-already-executed.
-
-Result: Pass. Status-only run creation and duplicate execution are rejected by focused integration proof.

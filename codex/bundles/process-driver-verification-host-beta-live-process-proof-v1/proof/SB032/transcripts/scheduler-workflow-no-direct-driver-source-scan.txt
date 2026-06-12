@@ -1,2 +1,0 @@
-Command: rg -n "CanDoItAll\.Processes\.Drivers|ProcessDriverVerificationGateway|IProcessVerificationRuntimeHost|ProcessVerificationRuntimeHost|ProcessReadOnlyVerificationBatchOrchestrator|ProcessReadOnlyVerificationPayloadBuilder" src\CanDoItAll.Modules.SchedulerPlanner src\CanDoItAll.Modules.AgentFramework
-Result: No forbidden direct process driver or verification host references found in SchedulerPlanner or AgentFramework sources.

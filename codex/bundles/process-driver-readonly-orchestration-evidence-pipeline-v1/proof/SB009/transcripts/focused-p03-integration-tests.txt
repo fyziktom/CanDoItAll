@@ -1,9 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --no-build --filter "FullyQualifiedName~ProcessDomainEvidenceReadOnlyAdapterTests|FullyQualifiedName~ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests|FullyQualifiedName~ProcessTranscriptVerificationReadOnlyAdapterTests"
-ExitCode: 0
-StartedAtUtc: 2026-06-08T23:08:01.6603241Z
-
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:    13, Přeskočeno:     0, Celkem:    13, Doba trvání: 353 ms - CanDoItAll.Tests.Integration.dll (net10.0)
-

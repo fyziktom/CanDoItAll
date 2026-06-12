@@ -1,4 +1,0 @@
-Command: rg -n forbidden process-driver runtime host/registry/selector/DI/manager tokens over production source scan roots
-PASS no forbidden process-driver runtime host/registry/selector/manager/DI tokens in production scan roots.
-Command: rg -n forbidden DI/runtime tokens over process driver package source only
-PASS process driver packages have no DI registration, hosted service, or runtime mapping tokens.

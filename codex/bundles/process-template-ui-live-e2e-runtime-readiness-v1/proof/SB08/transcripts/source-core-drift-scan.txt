@@ -1,5 +1,0 @@
-Command: rg -n -i representative-template-vocabulary src\CanDoItAll.Processes.Core src\CanDoItAll.Processes.Contracts
-ExitCode: 0
-Scope: src\CanDoItAll.Processes.Core; src\CanDoItAll.Processes.Contracts
-SearchExitCode: 1
-Result: PASS - no representative template or process-mock vocabulary found in Process Core or Contracts.

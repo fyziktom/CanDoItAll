@@ -1,8 +1,0 @@
-Command: rg -n "Process_readonly_verification_job_runner_SB07_INV_001|ProcessReadOnlyVerificationJobRunner|SchedulerWorkflowReadOnlyJob|ProcessReadOnlyVerificationJobLifecycleStatus.Completed|verification-job:" tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessReadOnlyVerificationJobRunner.cs
-Exit code: 0
-
-Key matches:
-- The SB07 test resolves `IProcessReadOnlyVerificationJobRunner` from DI and runs scheduler and workflow jobs.
-- `ProcessReadOnlyVerificationJobRunner` maps manager readback into `ProcessReadOnlyVerificationJobLifecycleRecord`.
-- The runner exposes `ProcessRuntimeHostContractSurface.SchedulerWorkflowReadOnlyJob` and audit references shaped as `verification-job:{auditRecordId}`.
-- The test asserts manager readback contract surface, audit records, request identity, lifecycle provenance, and no mutation flags.

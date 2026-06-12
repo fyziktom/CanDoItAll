@@ -1,5 +1,0 @@
-Command:
-rg -n "IProcessRuntimeDriver|ProcessRuntimeDriver|RuntimeDriverHost|ProcessRuntimeDriverHost|execution-capable driver|driver runtime hook|driver mutation|AddHostedService<.*RuntimeDriver|AddHostedService<.*DriverHost|ProcessDriverRuntimeHost" src\CanDoItAll.Modules.Processes tests\CanDoItAll.Tests.Integration tests\CanDoItAll.Tests.Playwright -g "*.cs" -g "*.razor"
-
-Exit code: 1
-Result: no matches. Gate Q did not introduce a process runtime driver host, runtime driver hook, or driver mutation surface.

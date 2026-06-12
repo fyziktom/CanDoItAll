@@ -1,4 +1,0 @@
-SB05 boundary scan
-Command: production-source scan for scheduler process launcher and read-only verification job runner boundaries.
-PASS: Scheduler process launcher uses ProcessesService.StartRunFromTriggerAsync and not workflow runtime or execution-capable driver hooks.
-PASS: Verification job runner delegates to IProcessManagerReadOnlyVerificationFacade, emits SchedulerWorkflowReadOnlyJob contract, and keeps all mutation flags denied.

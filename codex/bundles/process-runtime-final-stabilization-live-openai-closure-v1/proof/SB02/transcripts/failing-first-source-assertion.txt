@@ -1,7 +1,0 @@
-Command: git show HEAD:<changed files> | Select-String SB02_INV_001,BuildProviderFailureDiagnostic
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-11T18:48:42.0271061Z
-RunLabel: SB02 failing-first baseline source assertion
-EXPECTED-FAIL: baseline HEAD lacks SB02_INV_001 and BuildProviderFailureDiagnostic.
-ExitCode: 1
-EndTimeUtc: 2026-06-11T18:48:42.1475264Z

@@ -1,4 +1,0 @@
-Red-team case: a stale worker that loses its lease must not finalize the outbox record.
-Required negative test: ProcessOutboxIntegrationTests.Automation_dispatch_stale_worker_cannot_finalize_after_lease_is_stolen.
-Proof transcript: bundle://proof/SB009/transcripts/dispatch-claim-worker-integration-tests.txt.
-Expected behavior: first worker returns 0 after lease theft, record remains Pending with attempt count 1, expired lease permits a later worker to complete it with attempt count 2.

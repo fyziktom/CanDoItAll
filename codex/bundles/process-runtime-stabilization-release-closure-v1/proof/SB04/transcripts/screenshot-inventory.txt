@@ -1,7 +1,0 @@
-SB04 browser screenshot inventory
-Route and viewport: /processes?processId={definitionId}&runId={runId}, 1900x1200 large desktop viewport
-01-selected-run-summary-large-desktop.png	31581	fe40900bf6c9984ba8bdd79d48effd8864e306b6992c06ae243a91c3a5620fc7
-02-runtime-host-readback-large-desktop.png	93892	c3bb6812669ebbb2a01ed5124e1ee67da3c7cba93f7ad87baf6577b44549bb26
-03-step-recovery-diagnostics-large-desktop.png	130463	6ad47eeccbc6c338364c1b0200fea4c99a18bcd8ba524ce357ffe53b343f57cc
-04-artifact-ledger-large-desktop.png	15868	a4eb050c06541878267d27edfd92b927bd4e30a7ebf1b3951f36b4a918139a64
-PASS: SB04 UI screenshots are present and hashed

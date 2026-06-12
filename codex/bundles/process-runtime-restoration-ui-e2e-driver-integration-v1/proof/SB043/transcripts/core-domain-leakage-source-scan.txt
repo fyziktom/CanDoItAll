@@ -1,4 +1,0 @@
-Command: PowerShell scan non-build Process Core source for software/Office/business domain leakage and forbidden dependencies
-Scanned non-build Core C# files: 15
-PASS no .NET/software-only, Office-only, business-only, driver, module, infrastructure, workspace/storage, EF, DI, or AgentFramework leakage in Process Core source.
-PASS Process Core project reference boundary remains Contracts-only with no package or driver/module/infrastructure references.

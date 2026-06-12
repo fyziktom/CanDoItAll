@@ -1,5 +1,0 @@
-Command: git show HEAD:tests/CanDoItAll.Tests.Integration/BusinessPlanProcessPostgresIntegrationTests.cs | rg "Business_plan_process_SB05_INV_001_completes_through_automation_dispatch_finalizer_and_readback"
-Exit code: 1
-
-Result summary:
-The baseline had no SB05 business-plan automation E2E. Manual service transition proof or software-only automation proof would not satisfy this subbundle.

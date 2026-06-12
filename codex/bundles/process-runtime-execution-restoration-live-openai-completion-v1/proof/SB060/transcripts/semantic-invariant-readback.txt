@@ -1,7 +1,0 @@
-Command: SB060 semantic invariant readback
-
-Invariant ID: SB058_INV_001
-Invariant ID: SB059_INV_001
-Invariant ID: SB060_INV_001
-
-Result: passed. SB060 semantic invariants are readable for final handoff closure.

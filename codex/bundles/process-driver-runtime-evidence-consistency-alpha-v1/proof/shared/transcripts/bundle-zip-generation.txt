@@ -1,8 +1,0 @@
-Command: Compress-Archive -LiteralPath C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1 -DestinationPath C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1.zip -Force
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-08T11:50:28.3336139Z
-EndTimeUtc: 2026-06-08T11:50:28.9505569Z
-ExitCode: 0
-Output:
-Created: C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1.zip
-LengthBytes: 239064

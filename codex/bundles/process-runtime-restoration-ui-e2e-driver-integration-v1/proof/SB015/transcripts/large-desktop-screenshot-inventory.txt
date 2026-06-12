@@ -1,5 +1,0 @@
-SB015 large-desktop screenshot inventory
-PASS 01-template-selected-large-desktop.png -> 1900x1200, 260479 bytes, 2026-06-09 09:30:20
-PASS 02-runs-tab-before-launch-large-desktop.png -> 1253x859, 99080 bytes, 2026-06-09 09:30:22
-PASS 02-launch-plan-created-large-desktop.png -> 679x10888, 122279 bytes, 2026-06-09 09:30:24
-PASS 03-run-selected-large-desktop.png -> 1253x213, 29245 bytes, 2026-06-09 09:30:28

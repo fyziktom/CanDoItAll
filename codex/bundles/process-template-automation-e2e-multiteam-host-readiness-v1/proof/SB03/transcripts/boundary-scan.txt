@@ -1,8 +1,0 @@
-Command: rg -n "CanDoItAll.Modules|CanDoItAll.Web|EntityFrameworkCore|AgentFramework" src/CanDoItAll.Processes.Core -g"*.cs"
-Exit code: 1
-
-Result summary:
-No Process Core dependency drift to Modules, Web, EF Core, or AgentFramework was introduced.
-
-Boundary conclusion:
-SB03 changes stay in AgentFramework hosting, process dispatch validation, and integration tests. No execution-capable process-driver side effects were added.

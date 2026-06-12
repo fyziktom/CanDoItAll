@@ -1,6 +1,0 @@
-Command: rg -n "TODO|NotImplemented|throw new NotImplementedException" src\CanDoItAll.Modules.Processes\Templates\ProcessTemplateCatalogInventory.cs tests\CanDoItAll.Tests.Integration\ProcessTemplateGovernanceTests.cs
-Working directory: C:\repositories\CanDoItAll
-Run label: SB02 anti-stub audit
-Output:
-No TODO, NotImplemented, or NotImplementedException markers found. ripgrep exit code 1 means no matches.
-Exit code: 1

@@ -1,8 +1,0 @@
-Command: SB010 source assertion synthesis from P04 typed batch envelope proof
-ExitCode: 0
-Invariant ID: SB010-TYPED-BATCH-ENVELOPE
-Source assertion: repo://src/CanDoItAll.Processes.Drivers.VerificationGateway/ProcessDriverVerificationBatch.cs defines strongly typed batch request lists for all five verification lanes.
-Source assertion: repo://src/CanDoItAll.Processes.Drivers.VerificationGateway/ProcessDriverVerificationBatch.cs defines strongly typed response lists, `AllResponses`, and optional aggregate without runtime host, registry, selector, DI, manager command, file/network/storage/workspace writes, or process mutation.
-Source assertion: repo://tests/CanDoItAll.Tests.Unit/ProcessDriverVerificationGatewayTests.cs exercises the typed batch envelope through `VerifyBatch`.
-Semantic positive proof: bundle://proof/SB012/transcripts/build-typed-batch-gateway-explicit-lanes.txt, bundle://proof/SB012/transcripts/focused-p04-gateway-tests-explicit-lanes.txt, and bundle://proof/SB012/transcripts/full-unit-p04-explicit-lanes-rerun.txt all have ExitCode: 0.
-Adversarial negative proof: bundle://proof/SB012/transcripts/p04-source-scans-explicit-lanes.txt rejects object/dynamic dispatch, lane selectors, side effects, Core reverse dependencies, UI/media drift, and stubs.

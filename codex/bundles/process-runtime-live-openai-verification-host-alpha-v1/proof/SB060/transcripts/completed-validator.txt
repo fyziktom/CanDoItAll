@@ -1,9 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py 'codex\bundles\process-runtime-live-openai-verification-host-alpha-v1' --stage completed --repo-root 'C:\repositories\CanDoItAll'
-WorkingDirectory: repo://.
-Invariant IDs: SB060-INV-001
-StartedUtc: 2026-06-10T01:02:12.8427627Z
-
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-openai-verification-host-alpha-v1
-
-ExitCode: 0
-FinishedUtc: 2026-06-10T01:02:13.3488647Z

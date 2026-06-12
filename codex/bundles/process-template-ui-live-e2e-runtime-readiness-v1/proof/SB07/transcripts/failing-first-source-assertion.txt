@@ -1,9 +1,0 @@
-Command: generated proof transcript normalization
-ExitCode: 1
-SB07 failing-first source assertion against HEAD
-EXPECTED FAIL missing in HEAD: ProcessesServiceIntegrationTests.cs: StartRunFromTriggerAsync_SB07_INV_001_starts_scheduler_and_workflow_origin_runs_through_process_owned_path_without_driver_hooks
-EXPECTED FAIL missing in HEAD: ProcessesServiceIntegrationTests.cs: ProcessRunTriggerSourceKind.SchedulerPlan
-EXPECTED FAIL missing in HEAD: ProcessDomainEvidenceReadOnlyAdapterTests.cs: Assert.True(result.Contract.IsReadOnlySafe)
-EXPECTED FAIL missing in HEAD: ProcessDomainEvidenceReadOnlyAdapterTests.cs: Assert.Equal(workflowJob.RequestedAt, workflowResult.Lifecycle.StartedAt)
-EXPECTED FAIL missing in HEAD: ProcessDomainEvidenceReadOnlyAdapterTests.cs: Assert.True(workflowResult.Contract.IsReadOnlySafe)
-Expected failure confirms SB07 proof is not satisfied by the pre-change source.

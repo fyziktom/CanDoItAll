@@ -1,4 +1,0 @@
-src\CanDoItAll.Modules.Processes\README.md:142:- Source scans found no active bundle-path leakage and no process driver runtime host, registry, selector, manager command, endpoint mapping, scheduler hook, workflow hook, or driver mutation surface.
-src\CanDoItAll.Modules.Processes\README.md:161:- Generic process-driver runtime host, driver registry, runtime selector, dependency-injection registration, manager command, scheduler hook, workflow hook, endpoint mapping, workspace/storage writes, external calls, process mutation, or execution-capable drivers.
-src\CanDoItAll.Modules.Processes\README.md:200:Open blockers before execution-capable drivers can be considered:
-src\CanDoItAll.Modules.Processes\README.md:205:- Public API/versioning, migration documentation, source guards, focused tests, and red-team proof for execution-capable drivers must be delivered in a future approval bundle.

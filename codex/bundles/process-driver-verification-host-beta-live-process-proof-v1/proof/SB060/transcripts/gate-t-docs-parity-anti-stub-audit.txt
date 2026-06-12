@@ -1,6 +1,0 @@
-SB060 Gate T docs parity anti-stub audit
-Scan scope: Gate T changed docs and focused doc guard test.
-src\CanDoItAll.Modules.Processes\README.md:81:- Required artifacts cannot be treated as satisfied when validation reports missing, invalid, stale, wrong-producer, placeholder-only, unavailable, or hash-mismatched evidence.
-src\CanDoItAll.Modules.Processes\README.md:194:| Required output appears complete but the run is still blocked | Read run detail health, `invariantDiagnostics`, step `blockReasonCode`, `recoveryOptions`, and artifact status fields projected by `ProcessArtifactStatusProjectionService`. | Treat missing, invalid, stale, wrong-producer, placeholder-only, unavailable, or hash-mismatched records as unsatisfied. Record a new current-run artifact instead of editing status text. |
-docs\process-runtime-restoration-ledger.md:43:- Live OpenAI smoke remains opt-in. Deterministic fake-provider and process-runtime tests must not be reported as live OpenAI proof.
-Classification: matches, if any, are existing guard vocabulary or negative-proof terms; Gate T docs and tests use concrete field names, commands, and denial assertions rather than placeholder closure.

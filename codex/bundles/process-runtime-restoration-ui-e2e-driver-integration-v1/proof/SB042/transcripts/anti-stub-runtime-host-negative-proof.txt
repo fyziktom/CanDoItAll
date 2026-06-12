@@ -1,4 +1,0 @@
-Command: PowerShell synthetic negative proof for SB042 runtime-host guard token detection
-PASS synthetic runtime-host source would be rejected by runtime token guard: IProcessDriverHost, ProcessDriverHost, ProcessDriverRuntimeHost, ProcessDriverRegistry, ProcessDriverRuntimeSelector, ProcessDriverManagerCommand, ProcessDriverServiceCollectionExtensions, AddProcessDriver
-PASS synthetic DI registration source would be rejected by driver-package token guard: IServiceCollection, ServiceCollectionExtensions, AddSingleton, AddHostedService, BackgroundService
-SB042 negative result: a fake process-driver host/registry/selector/manager/DI implementation cannot satisfy the guard.

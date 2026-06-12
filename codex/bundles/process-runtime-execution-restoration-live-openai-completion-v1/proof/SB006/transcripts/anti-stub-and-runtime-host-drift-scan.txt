@@ -1,7 +1,0 @@
-Command: Gate B production stub/runtime-host audit
-WorkingDirectory: C:\repositories\CanDoItAll
-Invariant ID: SB006_INV_001
-
-Output:
-
-ExitCode: 1

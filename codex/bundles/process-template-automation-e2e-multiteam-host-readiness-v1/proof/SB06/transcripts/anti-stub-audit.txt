@@ -1,5 +1,0 @@
-Command: git diff -U0 -- "*.cs" | Select-String -Pattern '^\+.*(TODO|HACK|NotImplementedException|throw new NotImplementedException|\bStub\b|\bDummy\b)'
-Exit code: 0
-
-Result:
-No added stub/TODO/NotImplemented markers were found. Git reported LF/CRLF warnings only.

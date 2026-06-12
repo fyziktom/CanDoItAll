@@ -1,8 +1,0 @@
-Command: dotnet test focused guard includes concrete bundle file read coupling scan
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-11T14:45:41.3211810Z
-ExitCode: 0
-Output:
-Invariant ID: SB01_INV_002
-The focused guard suite includes Process_runtime_host_codefirst_SB01_INV_002_long_lived_runtime_host_tests_do_not_read_concrete_bundle_files.
-The passing focused-test transcript is the executable proof; this scan records that bundle-path coupling is limited to intentional guard fixtures.

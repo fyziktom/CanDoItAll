@@ -1,2 +1,0 @@
-Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py --stage prepared codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1

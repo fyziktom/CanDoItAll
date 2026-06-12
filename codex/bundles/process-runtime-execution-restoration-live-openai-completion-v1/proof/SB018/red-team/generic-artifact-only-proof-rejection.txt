@@ -1,3 +1,0 @@
-Red-team case: Gate F must not claim .NET scenario completion from generic artifact records alone.
-Required positive proof includes ValidationEngine.cs creation, repaired ValidationEngine.cs content, implementation change set, migration/rollout checklist, completed process run, completed steps, and managed artifact readback.
-Proof transcript: bundle://proof/SB018/transcripts/dotnet-process-scenario-tests.txt.

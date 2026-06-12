@@ -1,8 +1,0 @@
-Command: proof index path/invariant verification
-WorkingDirectory: repo://
-RunLabel: SB024 closure proof index
-Invariant ID: SB024_INV_001
-Requirement: REQ-005, REQ-006, REQ-009
-Positive proof: bundle://proof/SB009/transcripts/contract-api-boundary-after-runtime-evidence-version-bump.txt
-Source proof: repo://src/CanDoItAll.Processes.Drivers.Abstractions/Verification/ProcessDriverContractVersion.cs and repo://src/CanDoItAll.Processes.Drivers.Abstractions/Verification/ProcessDriverDiagnostic.cs
-ExitCode: 0

@@ -1,5 +1,0 @@
-Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProcessDomainEvidenceReadOnlyAdapterTests.cs | rg -n "SB07_INV_001|workflowResult.Contract.AuditReference"
-Exit code: 1
-
-Result:
-The baseline did not contain a traceable SB07 lifecycle/readback invariant name or the added workflow-branch audit contract assertions.

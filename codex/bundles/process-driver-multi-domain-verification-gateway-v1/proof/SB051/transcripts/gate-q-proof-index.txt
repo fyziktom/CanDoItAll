@@ -1,4 +1,0 @@
-Gate Q positive proof index
-Verified Gate Q build, focused unit, focused integration, source scan, red-team rejection, semantic invariants, and upstream SB049/SB050 manifests.
-Verified Gate Q proof artifacts are high-confidence secret clean.
-PASSED

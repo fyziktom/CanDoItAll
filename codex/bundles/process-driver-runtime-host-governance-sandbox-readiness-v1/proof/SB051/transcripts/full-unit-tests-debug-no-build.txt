@@ -1,9 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --configuration Debug --no-build
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: full-unit-tests-debug-no-build
-ExitCode: 0
-Output:
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:  1137, Přeskočeno:     0, Celkem:  1137, Doba trvání: 4 m 20 s - CanDoItAll.Tests.Unit.dll (net10.0)

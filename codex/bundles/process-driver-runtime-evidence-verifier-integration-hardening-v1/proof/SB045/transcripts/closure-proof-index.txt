@@ -1,8 +1,0 @@
-Command: proof index path/invariant verification
-WorkingDirectory: repo://
-RunLabel: SB045 closure proof index
-Invariant ID: SB045_INV_001
-Requirement: REQ-013
-Positive proof: bundle://proof/SB045/transcripts/unit-tests-excluding-known-unrelated-stale-fixtures.txt
-Source proof: repo://codex/bundles/process-driver-runtime-evidence-verifier-integration-hardening-v1/reviews/01-execution-report.md
-ExitCode: 0

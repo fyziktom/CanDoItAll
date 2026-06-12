@@ -1,7 +1,0 @@
-Command: generated proof transcript normalization
-ExitCode: 0
-PASS: No software/.NET/Blazor/developer/implementation/release-manager/QA leakage in business template step and artifact fields.
-PASS: SB05 automation role map does not use ProcessMockAgentRoleKeys.ProductOwner
-PASS: SB05 automation role map does not use ProcessMockAgentRoleKeys.Developer
-PASS: SB05 automation role map does not use ProcessMockAgentRoleKeys.ReleaseManager
-PASS: Process Core/Contracts do not contain business template implementation terms.

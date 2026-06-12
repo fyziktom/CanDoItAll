@@ -1,7 +1,0 @@
-Command: git show HEAD:tests/CanDoItAll.Tests.Playwright/AppSmokeTests.ProjectScopedProcessLaunch.cs; assert SB02 invariant tokens are present in HEAD baseline
-git show exit code: 0
-Missing in HEAD as expected: Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run
-Missing in HEAD as expected: ProjectStructureAssignmentReviewStartTestId
-Missing in HEAD as expected: BuildProjectStructureOutlineNodeTestId
-Missing in HEAD as expected: Project structure context JSON:
-Exit code: 1

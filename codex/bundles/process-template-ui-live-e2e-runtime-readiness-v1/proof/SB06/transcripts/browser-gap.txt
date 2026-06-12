@@ -1,8 +1,0 @@
-SB06 browser validation gap
-Search scope: Razor/UI and Playwright visible text for runtime-host readback exposure.
-Command: rg -l "VerifyForReadback|ProcessManagerReadOnlyVerification|ManagerReadback|RuntimeHost|runtime-host|DryRunExecution|dry-run" src -g "*.razor" --glob "!**/bin/**" --glob "!**/obj/**"
-ExitCode: 0
-Result: no Razor files expose manager runtime-host readback or dry-run denial details.
-Command: rg -n "runtime host|runtime-host|Manager readback|dry-run|Dry-run|DryRun|denied surfaces|contract snapshot" tests\CanDoItAll.Tests.Playwright -g "*.cs"
-Result: only SB08 operational observability dry-run scaffolding matched; no SB06 run-detail UI assertion exists.
-Conclusion: SB06 is closed with API/facade readback proof. UI exposure is an explicit gap for later run-detail/observability work.

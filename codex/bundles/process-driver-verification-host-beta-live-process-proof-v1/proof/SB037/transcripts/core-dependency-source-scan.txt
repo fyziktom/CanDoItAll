@@ -1,2 +1,0 @@
-Command: rg -n "CanDoItAll\.Processes\.Drivers|CanDoItAll\.Modules\.|Microsoft\.EntityFrameworkCore|IServiceCollection|HttpClient|File\.|Directory\.|ProcessVerificationRuntimeHost|ProcessDriverVerificationGateway" src\CanDoItAll.Processes.Core
-Result: Process Core has no process-driver, module, EF, DI, HTTP, filesystem, verification-host, or gateway references.

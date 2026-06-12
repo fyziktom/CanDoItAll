@@ -1,3 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-runtime-live-provider-defaults-stabilization-v1 --stage completed --repo-root .
-Bundle is valid for stage 'completed': C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-provider-defaults-stabilization-v1
-ExitCode: 0

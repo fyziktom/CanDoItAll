@@ -1,9 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-restore --filter "FullyQualifiedName~ProcessTemplateGovernanceTests&FullyQualifiedName~SB02_INV"
-Working directory: C:\repositories\CanDoItAll
-Run label: SB02 focused catalog governance tests
-Output:
-Process_template_catalog_SB02_INV_001_maps_multi_team_development_to_source_backed_software_delivery_template
-Process_template_catalog_SB02_INV_002_exposes_reverse_family_mapping_for_multi_team_software_delivery
-Blazor_wasm_pwa_live_run_profile_SB02_INV_001_starts_fresh_and_takes_topic_from_run_request
-Successful: failed 0, passed 3, skipped 0, total 3.
-Exit code: 0

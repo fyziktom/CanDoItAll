@@ -1,3 +1,0 @@
-SB04 anti-stub audit
-Command: fixed-string and regex scan of SB04 changed files for TODO, HACK, NotImplemented, throw new NotImplementedException, and stub-return markers.
-PASS: no TODO, HACK, NotImplemented, stub, or fake-pass markers found in SB04 changed files.

@@ -1,9 +1,0 @@
-Red-team negative: SB003_INV_001
-
-A shallow closure that marked the prior process-runtime-live-e2e-openai-hardening-v1 bundle as complete from status rows alone would be wrong.
-The prior report remains In progress and leaves SB013-SB048 Pending. Current closure requires fresh source scans, focused tests, and downstream runtime execution proof in later subbundles.
-
-Rejected proof shape: report row or prose says complete without current source/test scan transcripts.
-Required proof shape: bundle://proof/SB001/source-inventory.md, bundle://proof/SB002/transient-path-classification.md, this SB003 manifest, and later runtime execution proof.
-
-Result: Pass. Status-only/report-only proof is explicitly rejected for Gate A.

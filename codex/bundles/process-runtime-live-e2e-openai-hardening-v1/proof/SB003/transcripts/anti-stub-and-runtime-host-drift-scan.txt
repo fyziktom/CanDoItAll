@@ -1,4 +1,0 @@
-
-Command: rg -n 'TODO|NotImplementedException|throw new NotImplemented|IProcessDriverHost|ProcessDriverHost|IProcessDriverPack|ProcessDriverManagerCommand|AddProcessDriver|MapProcessDriver|SchedulerHook|WorkflowHook' src/CanDoItAll.Modules.Processes src/CanDoItAll.Web src/CanDoItAll.Composition src/CanDoItAll.Modules.SchedulerPlanner tests/CanDoItAll.Tests.Unit/ProcessDriverFakeProofResistanceTests.cs
-RawRgExitCode: 1
-ExitCode: 0 (rg exit 1 means no matches for this anti-stub/runtime-host drift scan).

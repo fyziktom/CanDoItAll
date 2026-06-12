@@ -1,1 +1,0 @@
-Validate the subbundle with focused tests, source scans, and browser proof when user-visible launch/readback is involved. Reject report-only proof, API-only proof where UI proof is required, skipped live tests claimed as live proof, and manual transitions claimed as automation proof.

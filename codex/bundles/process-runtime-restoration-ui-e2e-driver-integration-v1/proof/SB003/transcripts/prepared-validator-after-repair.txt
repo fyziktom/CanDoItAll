@@ -1,5 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py --profile initiative --stage prepared --repo-root C:\repositories\CanDoItAll codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1
-ExitCode: 0
-Output:
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-runtime-restoration-ui-e2e-driver-integration-v1
-

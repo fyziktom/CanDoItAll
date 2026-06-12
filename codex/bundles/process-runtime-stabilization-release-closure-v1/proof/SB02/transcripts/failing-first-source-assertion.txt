@@ -1,8 +1,0 @@
-SB02 failing-first source assertion against HEAD
-EXPECTED_FAIL: baseline HEAD does not contain the SB02 launch-to-completed-run invariant markers.
-Simulated assertion exit code: 1
-HEAD missing project-scoped pattern: SelectSb02ProcessMockLaunchCandidatesAsync
-HEAD missing project-scoped pattern: DrainSb02ProcessRunOutboxUntilSettledAsync
-HEAD missing project-scoped pattern: 07-project-run-artifacts-readback-large-desktop.png
-HEAD missing run-detail DTO pattern: OutboxRecords
-PASS: failing-first source assertion is valid because the baseline lacks the new completion/readback proof markers.

@@ -1,9 +1,0 @@
-Command: source assertion ledger for SB039
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: sb039-source-assertions
-ExitCode: 0
-Output:
-PASS SB039_INV_001 is tied to repo://src/CanDoItAll.Modules.Processes/Automation/Dispatch/ProcessExecutionCapableDriverFutureGate.cs.
-PASS Phase P13 Dry-run sandbox and allow-list contracts closes with positive proof bundle://proof/SB012/transcripts/passing-focused-governance-types.txt.
-PASS Verification host surfaces remain read-only and do not authorize shell, package restore, Office, Graph, CRM, workspace, storage, or process mutation through drivers.
-PASS Anti-stub audit uses required-source-scans and concrete source references rather than report-only assertions.

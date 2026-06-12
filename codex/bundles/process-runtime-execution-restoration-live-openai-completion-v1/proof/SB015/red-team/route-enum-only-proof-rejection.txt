@@ -1,3 +1,0 @@
-Red-team case: Gate E must not claim direct/MAF execution from route enum presence alone.
-Required positive proof includes workflow-backed dispatch with workflow run links, human-input waiting approval mapping, mock provider durable outbox process completion, direct-agent candidate creation preserving binding/cooperation facts, and source routing through process-owned finalizer.
-Proof transcript: bundle://proof/SB015/transcripts/maf-direct-agent-execution-tests.txt.

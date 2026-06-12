@@ -1,8 +1,0 @@
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Unit\bin\Debug\net10.0\CanDoItAll.Tests.Unit.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-Soubor výsledků: C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-e2e-openai-hardening-v1\proof\SB003\test-results\SB003-full-unit-rerun-no-build.trx
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:  1134, Přeskočeno:     0, Celkem:  1134, Doba trvání: 4 m 4 s - CanDoItAll.Tests.Unit.dll (net10.0)
-
-Command: dotnet test tests\CanDoItAll.Tests.Unit\CanDoItAll.Tests.Unit.csproj --no-build --logger "trx;LogFileName=SB003-full-unit-rerun-no-build.trx" --results-directory "C:\repositories\CanDoItAll\codex\bundles\process-runtime-live-e2e-openai-hardening-v1\proof\SB003\test-results"
-ExitCode: 0

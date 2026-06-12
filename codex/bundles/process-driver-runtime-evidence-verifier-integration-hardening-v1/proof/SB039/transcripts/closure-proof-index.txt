@@ -1,8 +1,0 @@
-Command: proof index path/invariant verification
-WorkingDirectory: repo://
-RunLabel: SB039 closure proof index
-Invariant ID: SB039_INV_001
-Requirement: REQ-012
-Positive proof: bundle://proof/SB024/transcripts/focused-transcript-tests-after-shared-uri-policy-overload.txt
-Source proof: repo://tests/CanDoItAll.Tests.Unit/ProcessDriverTranscriptVerificationAlphaTests.cs and repo://tests/CanDoItAll.Tests.Unit/ProcessDriverRuntimeEvidenceConsistencyAlphaTests.cs
-ExitCode: 0

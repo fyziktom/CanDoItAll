@@ -1,6 +1,0 @@
-Command: python codex\skills\bundles\candoitall-bundle-preparation\scripts\validate_bundle.py codex\bundles\process-driver-multi-domain-verification-gateway-v1 --stage prepared --repo-root .
-Working directory: C:\repositories\CanDoItAll
-Run label: SB006 prepared validator after Gate B 2026-06-08
---- output ---
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-multi-domain-verification-gateway-v1
-Exit code: 0

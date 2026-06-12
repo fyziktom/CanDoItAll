@@ -1,7 +1,0 @@
-Command: rg -n "TODO|NotImplementedException|throw new NotImplemented" src/CanDoItAll.Modules.Processes src/CanDoItAll.Web/Api/ProcessesApi.cs src/CanDoItAll.Web/ProjectStructureAgentApi.cs src/CanDoItAll.Modules.SchedulerPlanner/SchedulerPlannerService.cs
-
-Output:
-No TODO, NotImplementedException, or throw new NotImplemented markers found in scoped production runtime paths.
-
-ExitCode: 0
-RawRgExitCode: 1

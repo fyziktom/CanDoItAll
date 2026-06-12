@@ -1,4 +1,0 @@
-Red-team case: route/finalizer/artifact proof must not stop at outbox drain or step status only.
-Required positive tests include full mock workflow durable outbox dispatch, artifact handoff, workflow assignment dispatch, and run-detail API readback.
-Proof transcript: bundle://proof/SB012/transcripts/route-finalizer-artifact-e2e-tests.txt.
-Expected behavior: dispatch completes route work, finalizes step/run state, records process artifacts, persists managed artifacts, and exposes workflow/artifact readback.

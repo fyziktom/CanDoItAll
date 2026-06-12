@@ -1,6 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run" --no-build
-ExitCode: 0
-Test name: Project_structure_process_template_launch_SB02_INV_001_launches_approved_template_from_structure_context_and_reads_back_run
-Invariant ID: SB04-INV-001
-Result: Passed. Screenshots include repo://output/playwright/process-template-ui-live-e2e-runtime-readiness-sb02/06-project-run-detail-large-desktop.png and repo://output/playwright/process-template-ui-live-e2e-runtime-readiness-sb02/07-project-run-steps-large-desktop.png.
-Anti-stub audit: No duplicate multi-team alias or project-structure shortcut was added.

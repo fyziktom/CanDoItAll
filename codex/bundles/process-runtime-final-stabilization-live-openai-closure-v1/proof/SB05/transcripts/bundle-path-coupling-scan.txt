@@ -1,8 +1,0 @@
-Command: rg -n "process-runtime-final-stabilization-live-openai-closure-v1|bundle://proof/SB05/" src tests
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-11T19:05:46.6371446Z
-
-PASS: no current-bundle concrete path coupling found in production or test source.
-
-ExitCode: 0
-EndTimeUtc: 2026-06-11T19:05:46.7145339Z

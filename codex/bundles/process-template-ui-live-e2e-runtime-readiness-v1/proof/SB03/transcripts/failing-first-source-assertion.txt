@@ -1,4 +1,0 @@
-Command: generated proof transcript normalization
-ExitCode: 1
-EXPECTED FAIL: HEAD lacks SB03_INV_002 missing process-mock role mapping proof.
-This is the adversarial baseline that SB03 must close.

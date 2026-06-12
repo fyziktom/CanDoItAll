@@ -1,6 +1,0 @@
-Command: git show HEAD:tests/CanDoItAll.Tests.Integration/ProcessRuntimeHostCodeFirstGuardTests.cs | assert RequiredSourceTestDominanceMultiplier = 5
-Working directory: C:\repositories\CanDoItAll
-Run label: SB01 failing-first source assertion
-Output:
-SB01_INV_005 expected failure: HEAD enforced 4x, not 5x.
-Exit code: 1

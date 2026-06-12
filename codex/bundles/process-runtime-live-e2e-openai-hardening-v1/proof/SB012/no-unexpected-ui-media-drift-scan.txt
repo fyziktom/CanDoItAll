@@ -1,8 +1,0 @@
-SB012 UI/media drift scan
-> git diff --name-only -- src tests | rg -n "\.(png|jpg|jpeg|gif|svg|webp|mp4)$"
-NO MEDIA ASSET MATCHES
-
-> git diff --name-only -- src tests | rg -n "\.(razor|css|scss)$"
-3:src/CanDoItAll.Modules.Processes/Pages/ProcessesPage.razor
-4:src/CanDoItAll.Modules.Processes/Pages/ProjectProcessesPage.razor
-Result: expected Razor query-binding changes only; no production or test media assets changed.

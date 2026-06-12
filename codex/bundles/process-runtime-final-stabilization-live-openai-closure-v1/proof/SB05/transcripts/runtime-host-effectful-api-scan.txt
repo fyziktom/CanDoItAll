@@ -1,8 +1,0 @@
-Command: scan read-only runtime-host and manager-readback paths for direct effectful process/API calls
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-11T19:05:34.2211572Z
-
-PASS: no direct effectful process/API calls found in read-only runtime-host and manager-readback paths.
-
-ExitCode: 0
-EndTimeUtc: 2026-06-11T19:05:34.2621948Z

@@ -1,3 +1,0 @@
-Red-team case: Gate G must not count deterministic fake-provider tests as live OpenAI proof.
-Policy requires opt-in flag, API key, explicit budget, and explicit timeout. The opt-in flag is absent and budget/timeout are absent, so live smoke is skipped.
-The API key value was not printed. The skip is explicit and is not counted as live-provider functionality passing.

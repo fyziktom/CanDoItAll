@@ -1,4 +1,0 @@
-Gate R positive proof index
-Verified Gate R build, closure scan, red-team rejection, semantic invariants, and upstream SB051-SB053 manifests.
-Verified Gate R proof artifacts are high-confidence secret clean.
-PASSED

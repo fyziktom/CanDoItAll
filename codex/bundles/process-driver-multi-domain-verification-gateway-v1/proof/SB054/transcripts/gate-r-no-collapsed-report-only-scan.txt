@@ -1,7 +1,0 @@
-Gate R no-collapsed-row and no-report-only scan
-Verified SB001-SB053 execution rows are fully passed and not collapsed.
-Verified SB001-SB053 manifests are transcript-backed and not report-only.
-Verified critical gate production behavior and semantic artifact matrices exist.
-Verified SB054-SB060 rows remain explicitly pending before roadmap/final closure.
-No high-confidence secrets or UI/media drift found.
-PASSED

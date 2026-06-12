@@ -1,9 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Components\CanDoItAll.Tests.Components.csproj --filter "FullyQualifiedName~Run_execution_tab_exposes_runtime_host_readback_for_selected_run" --no-restore
-ExitCode: 0
-Test name: Run_execution_tab_exposes_runtime_host_readback_for_selected_run
-Invariant ID: SB03-INV-001
-Result: Passed. The rendered Execution tab contains the selected run id, caller context, No mutation, and denied process writes.
-Command: dotnet test tests\CanDoItAll.Tests.Playwright\CanDoItAll.Tests.Playwright.csproj --filter "FullyQualifiedName~Process_run_detail_recovery_SB030_large_screen_displays_blocked_recovery_and_artifact_readback" --no-restore
-ExitCode: 0
-Result: Passed. Screenshot: repo://output/playwright/process-run-detail-recovery-sb030/02-runtime-host-readback-large-desktop.png
-Anti-stub audit: No fake runtime-host service, execution-capable driver, or write-capable readback path was introduced.

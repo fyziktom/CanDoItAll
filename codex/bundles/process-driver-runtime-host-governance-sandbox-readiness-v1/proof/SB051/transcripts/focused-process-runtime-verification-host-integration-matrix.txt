@@ -1,9 +1,0 @@
-Command: dotnet test tests\CanDoItAll.Tests.Integration\CanDoItAll.Tests.Integration.csproj --configuration Debug --no-build --filter "FullyQualifiedName~ProcessDomainEvidenceReadOnlyAdapterTests|FullyQualifiedName~LiveProcessRunOpenAiSmokeIntegrationTests|FullyQualifiedName~ProcessesServiceIntegrationTests|FullyQualifiedName~ProcessRuntimeOperatorReadModelTests|FullyQualifiedName~ApplicationStartupIntegrationTests"
-WorkingDirectory: C:\repositories\CanDoItAll
-RunLabel: focused-process-runtime-verification-host-integration-matrix
-ExitCode: 0
-Output:
-Testovací běh pro C:\repositories\CanDoItAll\tests\CanDoItAll.Tests.Integration\bin\Debug\net10.0\CanDoItAll.Tests.Integration.dll (.NETCoreApp,Version=v10.0)
-Celkový počet testovacích souborů, které odpovídají zadanému vzoru: 1
-
-Úspěšné!    - Neúspěšné:     0, Úspěšné:   152, Přeskočeno:     0, Celkem:   152, Doba trvání: 10 m 13 s - CanDoItAll.Tests.Integration.dll (net10.0)

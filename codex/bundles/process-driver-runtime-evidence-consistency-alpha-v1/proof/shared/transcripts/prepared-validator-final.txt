@@ -1,8 +1,0 @@
-Command: python C:\Users\lucys\.codex\skills\candoitall-bundle-preparation\scripts\validate_bundle.py C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1 --stage prepared
-WorkingDirectory: C:\repositories\CanDoItAll
-StartTimeUtc: 2026-06-08T11:50:02.6569713Z
-EndTimeUtc: 2026-06-08T11:50:03.0197601Z
-ExitCode: 0
-Output:
-Bundle is valid for stage 'prepared': C:\repositories\CanDoItAll\codex\bundles\process-driver-runtime-evidence-consistency-alpha-v1
-
