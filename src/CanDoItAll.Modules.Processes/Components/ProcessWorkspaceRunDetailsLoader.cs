@@ -17,10 +17,14 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
 
     public async Task<ProcessWorkspaceRunDetails> LoadAsync(Guid runId, CancellationToken cancellationToken = default)
     {
+        var run = await processesService.GetRunAsync(runId, cancellationToken);
         var runDetails = await processesService.GetRunDetailsAsync(runId, cancellationToken);
         var journalEscalations = await escalationService.ListAsync(runId, cancellationToken);
         var journalTimeline = await escalationService.ListJournalTimelineAsync(runId, cancellationToken);
         var executionRuns = await LoadExecutionRunsAsync(runId, runDetails.StepRuns, cancellationToken);
+        var usageSummary = run is null
+            ? ProcessRunUsageSummaryViewModel.Empty
+            : await LoadRunTreeUsageSummaryAsync(run, cancellationToken);
         var stepRuns = EnrichStepHealth(runDetails.StepRuns, executionRuns, runDetails.OutboxRecords);
         var operatorApprovals = BuildOperatorApprovals(runId, executionRuns);
         var workflowRuns = await EnrichWorkflowRunsAsync(runDetails.WorkflowRuns, cancellationToken);
@@ -35,6 +39,7 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
             Health = BuildRunHealth(stepRuns, executionRuns, runDetails.OutboxRecords, runDetails.InvariantDiagnostics),
             Escalations = escalations,
             OperatorApprovals = operatorApprovals,
+            UsageSummary = usageSummary,
             AttemptTimeline = BuildAttemptTimeline(
                 stepRuns,
                 executionRuns,
@@ -114,6 +119,103 @@ public sealed class ProcessWorkspaceRunDetailsLoader(
         return summaries
             .OrderByDescending(item => item.UpdatedAtUtc)
             .ToList();
+    }
+
+    private async Task<ProcessRunUsageSummaryViewModel> LoadRunTreeUsageSummaryAsync(
+        ProcessRunListItem run,
+        CancellationToken cancellationToken)
+    {
+        var candidateRuns = await processesService.ListRunsAsync(
+            definitionId: null,
+            run.ProjectId,
+            cancellationToken);
+        if (candidateRuns.All(item => item.Id != run.Id))
+        {
+            candidateRuns = candidateRuns.Concat([run]).ToArray();
+        }
+
+        var runCostInputs = candidateRuns
+            .Select(item => new ProcessRunTreeCostInput(
+                item.Id,
+                item.ParentRunId,
+                item.EstimatedCost,
+                item.ActualCost))
+            .ToArray();
+        var coveredRunIds = ProcessRunTreeCostCalculator.ResolveCoveredRunIds([run.Id], runCostInputs);
+        if (coveredRunIds.Count == 0)
+        {
+            coveredRunIds = new HashSet<Guid> { run.Id };
+        }
+
+        var executionRunDetails = await LoadExecutionRunDetailsForProcessRunsAsync(
+            coveredRunIds,
+            cancellationToken);
+        var usageObservations = executionRunDetails
+            .SelectMany(item => item.UsageObservations)
+            .GroupBy(ResolveUsageObservationKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+        var legacyMetricsWithoutUsageObservations = executionRunDetails
+            .Where(detail => detail.UsageObservations.Count == 0)
+            .SelectMany(detail => detail.Metrics)
+            .GroupBy(metric => metric.Id)
+            .Select(group => group.First())
+            .ToArray();
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var providerUsage = ProcessProviderUsageSummaryBuilder.Build(
+            usageObservations,
+            legacyMetricsWithoutUsageObservations,
+            providers);
+
+        return new ProcessRunUsageSummaryViewModel(
+            coveredRunIds.Count,
+            Math.Max(0, coveredRunIds.Count - 1),
+            executionRunDetails.Count,
+            providerUsage.ObservationCount,
+            providerUsage.KnownObservationCount,
+            providerUsage.UnknownObservationCount,
+            providerUsage.InputTokens,
+            providerUsage.CachedInputTokens,
+            providerUsage.OutputTokens,
+            providerUsage.ReasoningTokens,
+            providerUsage.TotalTokens,
+            usageObservations.Sum(item => item.ToolCallCount) + legacyMetricsWithoutUsageObservations.Sum(item => item.ToolCalls),
+            providerUsage.KnownCostUsd,
+            run.EstimatedCost,
+            run.ActualCost,
+            run.TreeEstimatedCost,
+            run.TreeActualCost);
+    }
+
+    private async Task<IReadOnlyList<ExecutionRunDetail>> LoadExecutionRunDetailsForProcessRunsAsync(
+        IReadOnlyCollection<Guid> processRunIds,
+        CancellationToken cancellationToken)
+    {
+        var details = new List<ExecutionRunDetail>();
+        foreach (var processRunId in processRunIds)
+        {
+            var executionRuns = await workspaceService.ListExecutionRunsAsync(
+                new ExecutionRunQuery(
+                    Take: 1000,
+                    ProcessRunId: processRunId.ToString("D")),
+                cancellationToken);
+            foreach (var executionRun in executionRuns)
+            {
+                details.Add(await workspaceService.GetExecutionRunDetailAsync(executionRun.Id, cancellationToken));
+            }
+        }
+
+        return details;
+    }
+
+    private static string ResolveUsageObservationKey(ProviderUsageObservation observation)
+    {
+        if (!string.IsNullOrWhiteSpace(observation.ProviderResponseId))
+        {
+            return $"{observation.ProviderName}|{observation.Model}|{observation.ProviderResponseId}|{observation.SourcePhase}";
+        }
+
+        return observation.Id.ToString("N");
     }
 
     private async Task<IReadOnlyList<ProcessExecutionRunViewModel>> LoadExecutionRunsAsync(
@@ -888,6 +990,8 @@ public sealed record ProcessWorkspaceRunDetails(
     public IReadOnlyList<ProcessEscalationViewModel> Escalations { get; init; } = [];
 
     public IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals { get; init; } = [];
+
+    public ProcessRunUsageSummaryViewModel UsageSummary { get; init; } = ProcessRunUsageSummaryViewModel.Empty;
 
     public IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline { get; init; } = [];
 }

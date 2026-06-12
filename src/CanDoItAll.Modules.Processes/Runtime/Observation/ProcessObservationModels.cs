@@ -239,7 +239,16 @@ public sealed record ProcessLiveRunCard(
     int BlockedOrFailedStepCount,
     Guid? ManagerAgentId,
     string ManagerAgentName,
-    string HealthSummary);
+    string HealthSummary)
+{
+    public decimal TreeEstimatedCost { get; init; } = EstimatedCost;
+
+    public decimal TreeActualCost { get; init; } = ActualCost;
+
+    public decimal KnownProviderUsageCostUsd { get; init; }
+
+    public int DescendantRunCount { get; init; }
+}
 
 public sealed record ProcessLiveEscalationCard(
     string Key,

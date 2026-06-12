@@ -8,6 +8,7 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class ProcessManagerChatService(
     ProcessesService processesService,
     IAgentFrameworkWorkspaceService workspaceService,
+    ProcessWorkspaceRunDetailsLoader runDetailsLoader,
     ILogger<ProcessManagerChatService> logger) : IProcessManagerChatService
 {
     private const int RecentThreadLimit = 10;
@@ -122,10 +123,11 @@ internal sealed class ProcessManagerChatService(
         {
             ChatSessionId = request.ChatSessionId ?? request.Query.ChatSessionId
         };
+        var usageSummary = await LoadRunUsageSummaryAsync(effectiveQuery, cancellationToken);
         var result = await workspaceService.ExecuteRunAsync(
             new ExecutionRunRequest(
                 AgentId: resolution.Agent.Id,
-                Prompt: BuildManagerChatPrompt(effectiveQuery, prompt, resolution.AgentResolution),
+                Prompt: BuildManagerChatPrompt(effectiveQuery, prompt, resolution.AgentResolution, usageSummary),
                 ChatSessionId: effectiveQuery.ChatSessionId,
                 Context: BuildManagerChatInvocationContext(effectiveQuery, resolution.AgentResolution),
                 AutoApprovePendingToolCalls: false),
@@ -263,7 +265,8 @@ internal sealed class ProcessManagerChatService(
     private static string BuildManagerChatPrompt(
         ProcessManagerChatProjectionQuery query,
         string prompt,
-        ProcessManagerAgentResolution resolution)
+        ProcessManagerAgentResolution resolution,
+        ProcessRunUsageSummaryViewModel usageSummary)
     {
         return $"""
 Context:
@@ -276,8 +279,15 @@ Context:
 - Process run progress: {query.CompletedStepCount}/{query.TotalStepCount} steps completed, {query.BlockedStepCount} blocked, {query.CapabilityGapCount} capability gaps.
 - Active execution count: {query.ActiveExecutionCount}.
 - Pending approval count: {query.PendingApprovalCount}.
-- Estimated cost: {query.EstimatedCost}.
-- Actual cost: {query.ActualCost}.
+- Own run estimated cost: {usageSummary.OwnEstimatedCost}.
+- Own run actual cost: {usageSummary.OwnActualCost}.
+- Process tree estimated cost: {usageSummary.TreeEstimatedCost}.
+- Process tree persisted actual cost: {usageSummary.TreeActualCost}.
+- Process tree known provider usage cost: {usageSummary.KnownProviderUsageCostUsd}.
+- Process tree reconciled actual cost: {usageSummary.ReconciledActualCostUsd}.
+- Process tree run count: {usageSummary.ProcessRunCount}; descendant subprocess runs: {usageSummary.DescendantRunCount}.
+- Process tree provider usage observations: {usageSummary.KnownProviderUsageObservationCount} known, {usageSummary.UnknownProviderUsageObservationCount} incomplete, {usageSummary.ProviderUsageObservationCount} total.
+- Process tree tokens: input={usageSummary.InputTokens}; cachedInput={usageSummary.CachedInputTokens}; output={usageSummary.OutputTokens}; reasoning={usageSummary.ReasoningTokens}; total={usageSummary.TotalTokens}; toolCalls={usageSummary.ToolCallCount}.
 - Last run activity UTC: {query.UpdatedAtUtc:O}.
 - Selected process run manager: {ResolveManagerLabel(query)}.
 - Manager resolution: {resolution.Summary} Reason={resolution.ReasonCode}; confidence={resolution.Confidence}.
@@ -289,6 +299,41 @@ Context:
 User request:
 {prompt.Trim()}
 """;
+    }
+
+    private async Task<ProcessRunUsageSummaryViewModel> LoadRunUsageSummaryAsync(
+        ProcessManagerChatProjectionQuery query,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return (await runDetailsLoader.LoadAsync(query.ProcessRunId, cancellationToken)).UsageSummary;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                exception,
+                "Failed to load process manager chat usage summary. ProcessRunId={ProcessRunId}.",
+                query.ProcessRunId);
+            return new ProcessRunUsageSummaryViewModel(
+                ProcessRunCount: 1 + Math.Max(0, query.DescendantRunCount),
+                DescendantRunCount: Math.Max(0, query.DescendantRunCount),
+                ExecutionRunCount: 0,
+                ProviderUsageObservationCount: 0,
+                KnownProviderUsageObservationCount: 0,
+                UnknownProviderUsageObservationCount: 0,
+                InputTokens: 0,
+                CachedInputTokens: 0,
+                OutputTokens: 0,
+                ReasoningTokens: 0,
+                TotalTokens: 0,
+                ToolCallCount: 0,
+                KnownProviderUsageCostUsd: 0m,
+                OwnEstimatedCost: query.EstimatedCost,
+                OwnActualCost: query.ActualCost,
+                TreeEstimatedCost: query.TreeEstimatedCost,
+                TreeActualCost: query.TreeActualCost);
+        }
     }
 
     private static ExecutionInvocationContext BuildManagerChatInvocationContext(

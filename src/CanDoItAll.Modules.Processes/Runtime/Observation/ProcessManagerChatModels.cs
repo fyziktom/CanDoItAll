@@ -43,7 +43,14 @@ public sealed record ProcessManagerChatProjectionQuery(
     Guid? ManagerAgentId,
     string ManagerAgentName,
     Guid? ProjectId,
-    Guid? ChatSessionId = null);
+    Guid? ChatSessionId = null)
+{
+    public decimal TreeEstimatedCost { get; init; } = EstimatedCost;
+
+    public decimal TreeActualCost { get; init; } = ActualCost;
+
+    public int DescendantRunCount { get; init; }
+}
 
 public sealed record ProcessManagerChatMessageRequest(
     ProcessManagerChatProjectionQuery Query,

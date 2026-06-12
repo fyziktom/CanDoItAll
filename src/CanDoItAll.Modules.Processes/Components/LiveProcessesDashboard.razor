@@ -2631,7 +2631,12 @@ Reason: {ResolveMissingText(escalation.Reason)}
             run.ManagerAgentId,
             run.ManagerAgentName,
             ProjectId,
-            chatSessionId);
+            chatSessionId)
+        {
+            TreeEstimatedCost = run.TreeEstimatedCost,
+            TreeActualCost = run.TreeActualCost,
+            DescendantRunCount = run.DescendantRunCount
+        };
     }
 
     private string BuildManagerChatPromptWithAttachments()

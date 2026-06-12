@@ -885,7 +885,8 @@ internal static class ProcessesApi
             ShouldInclude(query.IncludeEscalations) ? details.Escalations : [],
             ShouldInclude(query.IncludeOperatorApprovals) ? details.OperatorApprovals : [],
             ShouldInclude(query.IncludeAttemptTimeline) ? details.AttemptTimeline : [],
-            details.Health);
+            details.Health,
+            details.UsageSummary);
     }
 
     private static async Task<ProcessStepRunViewModel?> FindStepRunAsync(
@@ -1297,7 +1298,8 @@ internal sealed record ProcessRunDetail(
     IReadOnlyList<ProcessEscalationViewModel> Escalations,
     IReadOnlyList<ProcessOperatorApprovalViewModel> OperatorApprovals,
     IReadOnlyList<ProcessAttemptTimelineEntryViewModel> AttemptTimeline,
-    ProcessRunHealthSummaryViewModel Health);
+    ProcessRunHealthSummaryViewModel Health,
+    ProcessRunUsageSummaryViewModel UsageSummary);
 
 internal sealed record ProcessTemplateImportApiRequest(
     Guid? ProjectId,

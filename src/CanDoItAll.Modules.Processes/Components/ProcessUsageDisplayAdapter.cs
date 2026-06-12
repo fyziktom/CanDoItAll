@@ -100,9 +100,9 @@ public static class ProcessUsageDisplayAdapter
 
         return ResolveDisplayKind(stats) switch
         {
-            ProcessUsageCostDisplayKind.KnownActual => FormatMoney(run.ActualCost, culture),
+            ProcessUsageCostDisplayKind.KnownActual => BuildRunActualCostText(run, culture),
             ProcessUsageCostDisplayKind.ZeroCost => "$0",
-            ProcessUsageCostDisplayKind.Estimated => run.EstimatedCost > 0m ? $"Est. {FormatMoney(run.EstimatedCost, culture)}" : "Estimated",
+            ProcessUsageCostDisplayKind.Estimated => run.TreeEstimatedCost > 0m ? $"Est. {FormatMoney(run.TreeEstimatedCost, culture)}" : "Estimated",
             ProcessUsageCostDisplayKind.MissingUsage => "Usage missing",
             ProcessUsageCostDisplayKind.UnknownUsage => "Usage unknown",
             _ => "Usage unknown"
@@ -176,6 +176,16 @@ public static class ProcessUsageDisplayAdapter
         return stats.ProviderUsage.ObservationCount == 0
             ? "No provider usage or cost was observed in this scope."
             : $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s) reported zero calculated cost.";
+    }
+
+    private static string BuildRunActualCostText(
+        ProcessLiveRunCard run,
+        CultureInfo culture)
+    {
+        var value = FormatMoney(run.TreeActualCost, culture);
+        return run.DescendantRunCount > 0
+            ? $"Total {value}"
+            : value;
     }
 
     private static string FormatMoney(decimal value, CultureInfo culture)

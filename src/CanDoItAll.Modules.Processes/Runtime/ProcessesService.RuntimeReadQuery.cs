@@ -667,6 +667,7 @@ public sealed partial class ProcessRuntimeReadQueryService(
         }
 
         var runIds = runs.Select(run => run.Id).ToList();
+        var costRollupsByRunId = await LoadRunTreeCostRollupsAsync(dbContext, runs, cancellationToken);
         var stepRunSummariesByRunId = await dbContext.Set<ProcessStepRun>()
             .AsNoTracking()
             .Where(stepRun => runIds.Contains(stepRun.ProcessRunId))
@@ -687,6 +688,8 @@ public sealed partial class ProcessRuntimeReadQueryService(
                     var stepRunSummary = stepRunSummariesByRunId.TryGetValue(run.Id, out var resolvedStepRunSummary)
                         ? resolvedStepRunSummary
                         : ProcessRunStepSummaryProjection.Empty(run.Id);
+                    var costRollup = costRollupsByRunId.GetValueOrDefault(run.Id) ??
+                        new ProcessRunTreeCostRollup(run.EstimatedCost, run.ActualCost, 0);
 
                     return new ProcessRunListItem(
                         run.Id,
@@ -708,9 +711,45 @@ public sealed partial class ProcessRuntimeReadQueryService(
                         stepRunSummary.CapabilityGapCount,
                         run.EstimatedCost,
                         run.ActualCost,
-                        run.UpdatedAtUtc);
+                        run.UpdatedAtUtc)
+                    {
+                        TreeEstimatedCost = costRollup.EstimatedCost,
+                        TreeActualCost = costRollup.ActualCost,
+                        DescendantRunCount = costRollup.DescendantRunCount
+                    };
                 })
             .ToList();
+    }
+
+    private static async Task<IReadOnlyDictionary<Guid, ProcessRunTreeCostRollup>> LoadRunTreeCostRollupsAsync(
+        AppDbContext dbContext,
+        IReadOnlyList<ProcessRunListProjection> runs,
+        CancellationToken cancellationToken)
+    {
+        var rootRunIds = runs
+            .Select(run => run.RootRunId == Guid.Empty ? run.Id : run.RootRunId)
+            .Concat(runs.Select(run => run.Id))
+            .Where(runId => runId != Guid.Empty)
+            .Distinct()
+            .ToList();
+        if (rootRunIds.Count == 0)
+        {
+            return new Dictionary<Guid, ProcessRunTreeCostRollup>();
+        }
+
+        var treeRuns = await dbContext.Set<ProcessRun>()
+            .AsNoTracking()
+            .Where(run =>
+                rootRunIds.Contains(run.Id) ||
+                (run.RootRunId.HasValue && rootRunIds.Contains(run.RootRunId.Value)))
+            .Select(run => new ProcessRunTreeCostInput(
+                run.Id,
+                run.ParentRunId,
+                run.EstimatedCost,
+                run.ActualCost))
+            .ToListAsync(cancellationToken);
+
+        return ProcessRunTreeCostCalculator.BuildRollups(treeRuns);
     }
 
     private static async Task<ProcessAnalyticsSummary> BuildAnalyticsAsync(

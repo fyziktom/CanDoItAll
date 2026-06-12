@@ -79,6 +79,58 @@ public sealed class ProcessUsageDisplayAdapterTests
     }
 
     [Fact]
+    public void BuildRunCostText_uses_tree_actual_cost_when_run_has_descendants()
+    {
+        var stats = CreateStats(
+            actualCost: 12.34m,
+            providerUsage: new ProviderUsageSummary(
+                ObservationCount: 1,
+                KnownObservationCount: 1,
+                UnknownObservationCount: 0,
+                InputTokens: 100,
+                CachedInputTokens: 0,
+                OutputTokens: 50,
+                ReasoningTokens: 0,
+                TotalTokens: 150,
+                KnownCostUsd: 12.34m));
+        var run = CreateRun(actualCost: 0.95m) with
+        {
+            TreeActualCost = 2.73m,
+            DescendantRunCount = 3
+        };
+
+        var text = ProcessUsageDisplayAdapter.BuildRunCostText(stats, run, CultureInfo.GetCultureInfo("en-US"));
+
+        Assert.Equal("Total $2.73", text);
+    }
+
+    [Fact]
+    public void BuildRunCostText_uses_tree_estimated_cost_when_actual_usage_is_not_available()
+    {
+        var stats = CreateStats(
+            actualCost: 0m,
+            providerUsage: new ProviderUsageSummary(
+                ObservationCount: 1,
+                KnownObservationCount: 1,
+                UnknownObservationCount: 0,
+                InputTokens: 0,
+                CachedInputTokens: 0,
+                OutputTokens: 0,
+                ReasoningTokens: 0,
+                TotalTokens: 0,
+                KnownCostUsd: 0m));
+        var run = CreateRun(actualCost: 0m) with
+        {
+            TreeEstimatedCost = 5.54m,
+            DescendantRunCount = 2
+        };
+
+        var text = ProcessUsageDisplayAdapter.BuildRunCostText(stats, run, CultureInfo.GetCultureInfo("en-US"));
+
+        Assert.Equal("Est. $5.54", text);
+    }
+
+    [Fact]
     public void BuildCostDisplay_distinguishes_missing_usage_from_unknown_usage()
     {
         var stats = CreateStats(

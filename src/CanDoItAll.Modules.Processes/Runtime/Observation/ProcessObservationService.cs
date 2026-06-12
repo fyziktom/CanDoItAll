@@ -387,6 +387,10 @@ internal sealed class ProcessObservationService(
             executionRuns,
             query.HistoryWindow,
             cancellationToken);
+        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
+        var knownProviderUsageCostsByRunId = BuildKnownProviderUsageCostsByRunId(
+            executionRunDetails,
+            providers);
         var escalationCards = blockedIncidentSummaryService.BuildEscalationIncidentCards(
             BuildLiveEscalationCards(
                 observedRuns,
@@ -405,6 +409,7 @@ internal sealed class ProcessObservationService(
             escalationCards,
             blockedRunIdsCoveredByEscalations,
             executionRunDetails,
+            knownProviderUsageCostsByRunId,
             blockedIncidentSummaryService);
         var runEventCards = BuildLiveRunEventCards(
             allRuns,
@@ -422,7 +427,6 @@ internal sealed class ProcessObservationService(
         var legacyMetricsWithoutUsageObservations = ExtractLiveLegacyMetricsWithoutUsageObservations(
             executionRunDetails,
             historyStartUtc);
-        var providers = await workspaceService.ListProvidersAsync(cancellationToken);
         var providerUsage = BuildProviderUsageSummary(
             usageObservations,
             legacyMetricsWithoutUsageObservations,
@@ -448,7 +452,7 @@ internal sealed class ProcessObservationService(
             escalationCards,
             runEventCards,
             BuildLiveAgentCards(activeRunSummaries),
-            BuildLiveStats(observedRuns, activeRunSummaries, metrics, providerUsage),
+            BuildLiveStats(observedRuns, allRuns, activeRunSummaries, metrics, providerUsage),
             BuildLiveMetricPoints(metrics, query.HistoryWindow),
             BuildLiveToolUsage(toolReceipts),
             revision,
@@ -590,9 +594,17 @@ internal sealed class ProcessObservationService(
         IReadOnlyList<ProcessLiveEscalationCard> escalationCards,
         IReadOnlySet<Guid> blockedRunIdsCoveredByEscalations,
         IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        IReadOnlyDictionary<Guid, decimal> knownProviderUsageCostsByRunId,
         ProcessLiveBlockedIncidentSummaryService blockedIncidentSummaryService)
     {
         var childRunsByParentRunId = ProcessLiveBlockedIncidentSummaryService.BuildChildRunsByParentRunId(allRuns);
+        var runCostInputs = allRuns
+            .Select(run => new ProcessRunTreeCostInput(
+                run.Id,
+                run.ParentRunId,
+                run.EstimatedCost,
+                run.ActualCost))
+            .ToArray();
         var escalationCardsByRunId = escalationCards
             .GroupBy(item => item.RunId)
             .ToDictionary(group => group.Key, group => (IReadOnlyList<ProcessLiveEscalationCard>)group.ToArray());
@@ -604,6 +616,9 @@ internal sealed class ProcessObservationService(
                 activeRunSummariesByRunId.TryGetValue(run.Id, out var activeSummary);
                 escalationCardsByRunId.TryGetValue(run.Id, out var runEscalations);
                 runEscalations ??= [];
+                var coveredRunIds = ProcessRunTreeCostCalculator.ResolveCoveredRunIds([run.Id], runCostInputs);
+                var knownProviderUsageCost = coveredRunIds.Sum(runId => knownProviderUsageCostsByRunId.GetValueOrDefault(runId));
+                var treeActualCost = Math.Max(run.TreeActualCost, knownProviderUsageCost);
                 return new ProcessLiveRunCard(
                     run.Id,
                     run.ProcessDefinitionId,
@@ -629,7 +644,13 @@ internal sealed class ProcessObservationService(
                         activeSummary,
                         runEscalations,
                         childRunsByParentRunId,
-                        executionRunDetails));
+                        executionRunDetails))
+                {
+                    TreeEstimatedCost = run.TreeEstimatedCost,
+                    TreeActualCost = treeActualCost,
+                    KnownProviderUsageCostUsd = knownProviderUsageCost,
+                    DescendantRunCount = run.DescendantRunCount
+                };
             })
             .OrderBy(item => ResolveLiveRunSortRank(item.Status))
             .ThenByDescending(item => item.ActiveExecutionCount)
@@ -763,11 +784,21 @@ internal sealed class ProcessObservationService(
 
     private static ProcessLiveStats BuildLiveStats(
         IReadOnlyList<ProcessRunListItem> observedRuns,
+        IReadOnlyList<ProcessRunListItem> allRuns,
         IReadOnlyList<ProcessActiveRunSummaryViewModel> activeRunSummaries,
         IReadOnlyList<AgentRunMetric> metrics,
         ProviderUsageSummary providerUsage)
     {
-        var observedActualCost = observedRuns.Sum(item => item.ActualCost);
+        var observedRunIds = observedRuns.Select(item => item.Id).ToArray();
+        var runCostInputs = allRuns
+            .Select(run => new ProcessRunTreeCostInput(
+                run.Id,
+                run.ParentRunId,
+                run.EstimatedCost,
+                run.ActualCost))
+            .ToArray();
+        var coveredCostRollup = ProcessRunTreeCostCalculator.BuildCoveredRollup(observedRunIds, runCostInputs);
+        var observedActualCost = coveredCostRollup.ActualCost;
         var liveMetricCost = ProviderPricingCalculator.SumKnownCosts(metrics);
         var liveUsageCost = providerUsage.KnownCostUsd;
         var actualCost = Math.Max(observedActualCost, Math.Max(liveMetricCost, liveUsageCost));
@@ -786,7 +817,7 @@ internal sealed class ProcessObservationService(
             ClampToInt(metrics.Sum(item => (long)item.CachedInputTokens)),
             ClampToInt(metrics.Sum(item => (long)item.OutputTokens)),
             ClampToInt(metrics.Sum(item => (long)item.ToolCalls)),
-            observedRuns.Sum(item => item.EstimatedCost),
+            coveredCostRollup.EstimatedCost,
             actualCost,
             providerUsage);
     }
@@ -796,27 +827,51 @@ internal sealed class ProcessObservationService(
         IReadOnlyList<AgentRunMetric> legacyMetricsWithoutUsageObservations,
         IReadOnlyList<ProviderProfile> providers)
     {
-        var usageSummary = ProviderPricingCalculator.SummarizeUsage(usageObservations, providers);
-        var knownLegacyMetrics = legacyMetricsWithoutUsageObservations
-            .Where(metric => metric.CostUsd > 0m)
-            .ToArray();
-        var unknownLegacyMetrics = legacyMetricsWithoutUsageObservations
-            .Where(metric => metric.CostUsd <= 0m && HasProviderActivity(metric))
-            .ToArray();
+        return ProcessProviderUsageSummaryBuilder.Build(
+            usageObservations,
+            legacyMetricsWithoutUsageObservations,
+            providers);
+    }
 
-        return new ProviderUsageSummary(
-            usageSummary.ObservationCount + knownLegacyMetrics.Length + unknownLegacyMetrics.Length,
-            usageSummary.KnownObservationCount + knownLegacyMetrics.Length,
-            usageSummary.UnknownObservationCount + unknownLegacyMetrics.Length,
-            usageSummary.InputTokens + knownLegacyMetrics.Sum(metric => metric.InputTokens),
-            usageSummary.CachedInputTokens + knownLegacyMetrics.Sum(metric => metric.CachedInputTokens),
-            usageSummary.OutputTokens + knownLegacyMetrics.Sum(metric => metric.OutputTokens),
-            usageSummary.ReasoningTokens,
-            usageSummary.TotalTokens + knownLegacyMetrics.Sum(metric => Math.Max(0, metric.InputTokens) + Math.Max(0, metric.OutputTokens)),
-            decimal.Round(
-                usageSummary.KnownCostUsd + knownLegacyMetrics.Sum(metric => metric.CostUsd),
-                6,
-                MidpointRounding.AwayFromZero));
+    private static IReadOnlyDictionary<Guid, decimal> BuildKnownProviderUsageCostsByRunId(
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        IReadOnlyList<ProviderProfile> providers)
+    {
+        if (executionRunDetails.Count == 0)
+        {
+            return new Dictionary<Guid, decimal>();
+        }
+
+        return executionRunDetails
+            .Select(detail => new
+            {
+                RunId = TryParseGuid(detail.Run.ProcessRunId),
+                Detail = detail
+            })
+            .Where(item => item.RunId.HasValue)
+            .GroupBy(item => item.RunId!.Value)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                {
+                    var details = group.Select(item => item.Detail).ToArray();
+                    var usageObservations = details
+                        .SelectMany(detail => detail.UsageObservations)
+                        .GroupBy(ResolveUsageObservationKey, StringComparer.OrdinalIgnoreCase)
+                        .Select(observationGroup => observationGroup.First())
+                        .ToArray();
+                    var legacyMetricsWithoutUsageObservations = details
+                        .Where(detail => detail.UsageObservations.Count == 0)
+                        .SelectMany(detail => detail.Metrics)
+                        .GroupBy(metric => metric.Id)
+                        .Select(metricGroup => metricGroup.First())
+                        .ToArray();
+                    return ProcessProviderUsageSummaryBuilder.Build(
+                        usageObservations,
+                        legacyMetricsWithoutUsageObservations,
+                        providers)
+                        .KnownCostUsd;
+                });
     }
 
     private static IReadOnlyList<ProcessLiveMetricPoint> BuildLiveMetricPoints(
@@ -1049,15 +1104,6 @@ internal sealed class ProcessObservationService(
         {
             values.Add(value.Value);
         }
-    }
-
-    private static bool HasProviderActivity(AgentRunMetric metric)
-    {
-        return metric.InputTokens > 0 ||
-               metric.OutputTokens > 0 ||
-               metric.CachedInputTokens > 0 ||
-               metric.ToolCalls > 0 ||
-               metric.DurationMs > 0;
     }
 
     private static string ResolveUsageObservationKey(ProviderUsageObservation observation)

@@ -242,7 +242,7 @@ public partial class ProcessWorkspace
             return;
         }
 
-        var prompt = BuildManagerChatPrompt(BuildManagerChatPromptWithAttachments());
+        var prompt = await BuildManagerChatPromptAsync(BuildManagerChatPromptWithAttachments());
         if (string.IsNullOrWhiteSpace(prompt))
         {
             SetError("Write a manager chat prompt before sending it.");
@@ -389,7 +389,7 @@ User request:
 """;
     }
 
-    private string BuildManagerChatPrompt(string prompt)
+    private async Task<string> BuildManagerChatPromptAsync(string prompt)
     {
         if (string.IsNullOrWhiteSpace(prompt))
         {
@@ -397,6 +397,9 @@ User request:
         }
 
         var selectedRun = ManagerChatSelectedRun;
+        var usageSummary = selectedRun is null
+            ? ProcessRunUsageSummaryViewModel.Empty
+            : await LoadManagerChatUsageSummaryAsync(selectedRun);
         var projectContext = ProjectId.HasValue
             ? $"- Project id: {ProjectId.Value:D}.{Environment.NewLine}- Project name: {projectName}"
             : "- Project: Global process library";
@@ -407,6 +410,15 @@ User request:
 - Selected process run name: {selectedRun.Name}.
 - Selected process run status: {selectedRun.Status}.
 - Selected process run progress: {selectedRun.CompletedStepCount}/{selectedRun.TotalStepCount} steps completed, {selectedRun.BlockedStepCount} blocked, {selectedRun.CapabilityGapCount} capability gaps.
+- Own run estimated cost: {usageSummary.OwnEstimatedCost}.
+- Own run actual cost: {usageSummary.OwnActualCost}.
+- Process tree estimated cost: {usageSummary.TreeEstimatedCost}.
+- Process tree persisted actual cost: {usageSummary.TreeActualCost}.
+- Process tree known provider usage cost: {usageSummary.KnownProviderUsageCostUsd}.
+- Process tree reconciled actual cost: {usageSummary.ReconciledActualCostUsd}.
+- Process tree run count: {usageSummary.ProcessRunCount}; descendant subprocess runs: {usageSummary.DescendantRunCount}.
+- Process tree provider usage observations: {usageSummary.KnownProviderUsageObservationCount} known, {usageSummary.UnknownProviderUsageObservationCount} incomplete, {usageSummary.ProviderUsageObservationCount} total.
+- Process tree tokens: input={usageSummary.InputTokens}; cachedInput={usageSummary.CachedInputTokens}; output={usageSummary.OutputTokens}; reasoning={usageSummary.ReasoningTokens}; total={usageSummary.TotalTokens}; toolCalls={usageSummary.ToolCallCount}.
 - Selected process run manager: {(string.IsNullOrWhiteSpace(selectedRun.ManagerAgentName) ? "Default process manager" : selectedRun.ManagerAgentName)}.
 """;
 
@@ -426,6 +438,36 @@ Context:
 User request:
 {prompt}
 """;
+    }
+
+    private async Task<ProcessRunUsageSummaryViewModel> LoadManagerChatUsageSummaryAsync(ProcessRunListItem selectedRun)
+    {
+        try
+        {
+            return (await RunDetailsLoader.LoadAsync(selectedRun.Id)).UsageSummary;
+        }
+        catch (Exception exception)
+        {
+            SetError($"Manager chat usage summary could not be loaded. {exception.Message}");
+            return new ProcessRunUsageSummaryViewModel(
+                ProcessRunCount: 1 + Math.Max(0, selectedRun.DescendantRunCount),
+                DescendantRunCount: Math.Max(0, selectedRun.DescendantRunCount),
+                ExecutionRunCount: 0,
+                ProviderUsageObservationCount: 0,
+                KnownProviderUsageObservationCount: 0,
+                UnknownProviderUsageObservationCount: 0,
+                InputTokens: 0,
+                CachedInputTokens: 0,
+                OutputTokens: 0,
+                ReasoningTokens: 0,
+                TotalTokens: 0,
+                ToolCallCount: 0,
+                KnownProviderUsageCostUsd: 0m,
+                OwnEstimatedCost: selectedRun.EstimatedCost,
+                OwnActualCost: selectedRun.ActualCost,
+                TreeEstimatedCost: selectedRun.TreeEstimatedCost,
+                TreeActualCost: selectedRun.TreeActualCost);
+        }
     }
 
     private ExecutionInvocationContext BuildManagerChatInvocationContext()

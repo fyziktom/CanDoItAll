@@ -253,7 +253,12 @@ public partial class ProcessWorkspace
 
     private static string BuildRunCostText(ProcessRunListItem run)
     {
-        return $"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual";
+        if (run.DescendantRunCount == 0)
+        {
+            return $"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual";
+        }
+
+        return $"{run.TreeEstimatedCost:C} estimated total / {run.TreeActualCost:C} actual total ({run.ActualCost:C} own run)";
     }
 
     private static string BuildRunFilterResultText(int visibleCount, int totalCount)

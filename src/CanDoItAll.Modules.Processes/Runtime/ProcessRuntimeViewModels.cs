@@ -23,7 +23,14 @@ public sealed record ProcessRunListItem(
     int CapabilityGapCount,
     decimal EstimatedCost,
     decimal ActualCost,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc)
+{
+    public decimal TreeEstimatedCost { get; init; } = EstimatedCost;
+
+    public decimal TreeActualCost { get; init; } = ActualCost;
+
+    public int DescendantRunCount { get; init; }
+}
 
 public enum ProcessRunEstimateSourceKind {
     DefinitionFallback,
@@ -548,6 +555,47 @@ public sealed record ProcessExecutionRunViewModel(
     public IReadOnlyList<ProcessExecutionCheckpointViewModel> Checkpoints { get; init; } = [];
 
     public IReadOnlyList<ProcessExecutionToolReceiptViewModel> ToolReceipts { get; init; } = [];
+}
+
+public sealed record ProcessRunUsageSummaryViewModel(
+    int ProcessRunCount,
+    int DescendantRunCount,
+    int ExecutionRunCount,
+    int ProviderUsageObservationCount,
+    int KnownProviderUsageObservationCount,
+    int UnknownProviderUsageObservationCount,
+    int InputTokens,
+    int CachedInputTokens,
+    int OutputTokens,
+    int ReasoningTokens,
+    int TotalTokens,
+    int ToolCallCount,
+    decimal KnownProviderUsageCostUsd,
+    decimal OwnEstimatedCost,
+    decimal OwnActualCost,
+    decimal TreeEstimatedCost,
+    decimal TreeActualCost)
+{
+    public static ProcessRunUsageSummaryViewModel Empty { get; } = new(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0m,
+        0m,
+        0m,
+        0m,
+        0m);
+
+    public decimal ReconciledActualCostUsd => Math.Max(TreeActualCost, KnownProviderUsageCostUsd);
 }
 
 public sealed record ProcessWorkflowRunViewModel(
