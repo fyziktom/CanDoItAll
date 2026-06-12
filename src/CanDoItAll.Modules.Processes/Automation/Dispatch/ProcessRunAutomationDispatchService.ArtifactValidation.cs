@@ -564,7 +564,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
                !IsFailedToolReceipt(receipt);
     }
 
-    private static IReadOnlyList<string> ResolveManagedWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
+    internal static IReadOnlyList<string> ResolveManagedWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
         var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
         var text = string.Join(
@@ -1524,6 +1524,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        if (ProcessArtifactProviderNativeVisualValidationRules.RequiresVisualArtifactFile(expectedArtifact) &&
+            !ProcessArtifactProviderNativeVisualValidationRules.IsImageArtifact(artifact))
+        {
+            return false;
+        }
+
         if (TryExtractExpectedArtifactRelativePath(expectedArtifact.ValidationRequirementSummary, out var expectedRelativePath))
         {
             return string.Equals(
@@ -1584,6 +1590,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         if (!IsNarrativeEvidenceArtifactExpectation(expectedArtifact) ||
             IsProviderNativeBrowserOutputArtifact(artifact) ||
+            ProcessArtifactProviderNativeVisualValidationRules.RequiresVisualArtifactFile(expectedArtifact) ||
             !IsManagedRunTextArtifactPath(relativePath) ||
             expectedArtifacts.Count(IsNarrativeEvidenceArtifactExpectation) != 1)
         {

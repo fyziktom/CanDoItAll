@@ -39,7 +39,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
         while (!cancellationToken.IsCancellationRequested)
         {
             var candidateHeaderLoadStarted = Stopwatch.GetTimestamp();
-            var candidateHeaders = await LoadDispatchCandidateHeadersAsync(processRunId, cancellationToken);
+            var candidateHeaders = await LoadDispatchCandidateHeadersAsync(
+                processRunId,
+                triggerStepRunId,
+                trigger,
+                cancellationToken);
             logger.LogDebug(
                 "Loaded {CandidateCount} dispatch candidate headers for process run {ProcessRunId} in {ElapsedMilliseconds} ms.",
                 candidateHeaders.Count,
@@ -109,7 +113,10 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     internal sealed record ProcessStepDispatchClaim(Guid StepRunId, string ClaimToken);
 
-    internal sealed record DispatchCandidateHeader(Guid StepRunId, ProcessStepRunStatus Status);
+    internal sealed record DispatchCandidateHeader(
+        Guid StepRunId,
+        ProcessStepRunStatus Status,
+        ProcessStepKind StepKind);
 
     internal async Task<bool> IsRunClosedToAutomationAsync(
         Guid processRunId,
@@ -138,12 +145,16 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private async Task<IReadOnlyList<DispatchCandidateHeader>> LoadDispatchCandidateHeadersAsync(
         Guid processRunId,
+        Guid? targetStepRunId,
+        string trigger,
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         return await ProcessDispatchCandidateHeaderSelector.SelectAsync(
             dbContext,
             processRunId,
+            targetStepRunId,
+            trigger,
             clock.GetUtcNow(),
             cancellationToken);
     }

@@ -322,7 +322,7 @@
       "Key": "validate-first-build",
       "Title": "Validate first build and test discovery",
       "Subtitle": "Build proof",
-      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Do not start a web app, run browser proof, or implement feature behavior in this setup validation step unless the parent process explicitly asks for runtime proof as part of setup.",
+      "Notes": "Run restore/build and a targeted test discovery or initial test command so the scaffold is known good before handoff. Do not launch runtime, start a web app, run browser proof, or implement feature behavior in this setup validation step; runtime and browser proof belong to downstream validation steps unless the parent process defines a separate runtime-proof setup step.",
       "StepKind": "Review",
       "AllowsManualSkip": false,
       "AllowsSafeRefusal": false,
@@ -396,7 +396,6 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "RunValidation",
-        "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],
       "OperationTargetScope": "ExternalProductTargetReadOnly"

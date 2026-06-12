@@ -32,6 +32,11 @@ internal sealed class WorkspaceCommandPlanBuilder
         "xunit"
     };
 
+    private static readonly HashSet<string> ApprovedDotnetTemplateOptions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "--pwa"
+    };
+
     private static readonly HashSet<string> AllowedProjectExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".csproj",
@@ -175,7 +180,7 @@ internal sealed class WorkspaceCommandPlanBuilder
             stderrLimitCharacters: 64 * 1024);
     }
 
-    public WorkspaceCommandPlan BuildDotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 1200)
+    public WorkspaceCommandPlan BuildDotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300)
     {
         var target = BuildDotnetTarget(targetPath, workingDirectory);
         var arguments = new List<string> { "test" };
@@ -324,10 +329,18 @@ internal sealed class WorkspaceCommandPlanBuilder
             throw new InvalidOperationException("Provide a template name.");
         }
 
-        var normalizedTemplate = template.Trim();
+        var templateSpec = ParseDotnetTemplateSpec(template);
+        var normalizedTemplate = templateSpec.Template;
         if (!ApprovedDotnetTemplates.Contains(normalizedTemplate))
         {
             throw new InvalidOperationException($"Template '{template}' is not approved. Allowed templates: {string.Join(", ", ApprovedDotnetTemplates.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
+        }
+
+        var unapprovedTemplateOption = templateSpec.Options.FirstOrDefault(option => !ApprovedDotnetTemplateOptions.Contains(option));
+        if (unapprovedTemplateOption is not null)
+        {
+            throw new InvalidOperationException(
+                $"Template option '{unapprovedTemplateOption}' is not approved for workspace_dotnet_new. Allowed template options: {string.Join(", ", ApprovedDotnetTemplateOptions.OrderBy(item => item, StringComparer.OrdinalIgnoreCase))}.");
         }
 
         if (string.IsNullOrWhiteSpace(name)
@@ -373,10 +386,11 @@ internal sealed class WorkspaceCommandPlanBuilder
         var arguments = new List<string>
         {
             "new",
-            normalizedTemplate,
-            "-n",
-            trimmedName
+            normalizedTemplate
         };
+        arguments.AddRange(templateSpec.Options);
+        arguments.Add("-n");
+        arguments.Add(trimmedName);
         if (force)
         {
             arguments.Add("--force");
@@ -416,6 +430,30 @@ internal sealed class WorkspaceCommandPlanBuilder
             WorkspacePathPolicy.NormalizeRelativePath(solutionBasePath + ".slnx"),
             WorkspacePathPolicy.NormalizeRelativePath(solutionBasePath + ".sln")
         ];
+    }
+
+    private static DotnetNewTemplateSpec ParseDotnetTemplateSpec(string template)
+    {
+        var tokens = Regex.Split(template.Trim(), @"\s+")
+            .Where(token => !string.IsNullOrWhiteSpace(token))
+            .ToArray();
+
+        if (tokens.Length == 0)
+        {
+            throw new InvalidOperationException("Provide a template name.");
+        }
+
+        var optionWithoutPrefix = tokens
+            .Skip(1)
+            .FirstOrDefault(token => !token.StartsWith("-", StringComparison.Ordinal));
+
+        if (optionWithoutPrefix is not null)
+        {
+            throw new InvalidOperationException(
+                $"Template argument '{optionWithoutPrefix}' is not approved for workspace_dotnet_new. Pass only approved option flags after the template name.");
+        }
+
+        return new DotnetNewTemplateSpec(tokens[0], tokens.Skip(1).ToArray());
     }
 
     private static bool ContainsProjectFile(string directory)
@@ -1007,7 +1045,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("}");
         builder.AppendLine("function Mount-StaticWebAssetsAliasMappings {");
         builder.AppendLine("    param([object[]]$Mappings)");
+        builder.AppendLine("    if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return @() }");
         builder.AppendLine("    foreach ($mapping in @($Mappings)) {");
+        builder.AppendLine("        if ($null -eq $mapping) { continue }");
         builder.AppendLine("        if (Test-Path -LiteralPath $mapping.contentRoot -PathType Container) { continue }");
         builder.AppendLine("        $existingDrive = Get-PSDrive -Name $mapping.driveLetter -ErrorAction SilentlyContinue");
         builder.AppendLine("        if ($existingDrive -ne $null) {");
@@ -1027,7 +1067,9 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("}");
         builder.AppendLine("function Dismount-StaticWebAssetsAliasMappings {");
         builder.AppendLine("    param([object[]]$Mappings)");
+        builder.AppendLine("    if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return }");
         builder.AppendLine("    foreach ($mapping in @($Mappings | Where-Object { $_.mounted })) {");
+        builder.AppendLine("        if ($null -eq $mapping) { continue }");
         builder.AppendLine("        try { & subst $mapping.drive /d 2>$null | Out-Null } catch { }");
         builder.AppendLine("    }");
         builder.AppendLine("}");
@@ -1094,7 +1136,7 @@ internal sealed class WorkspaceCommandPlanBuilder
         builder.AppendLine("    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $stdoutLog) | Out-Null");
         builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:ASPNETCORE_ENVIRONMENT)) { $env:ASPNETCORE_ENVIRONMENT = 'Development' }");
         builder.AppendLine("    if ([string]::IsNullOrWhiteSpace($env:DOTNET_ENVIRONMENT)) { $env:DOTNET_ENVIRONMENT = 'Development' }");
-        builder.AppendLine("    if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings (Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }");
+        builder.AppendLine("    if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings -Mappings @(Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }");
         builder.AppendLine("    $dotnetPath = (Get-Command dotnet -ErrorAction Stop).Source");
         builder.AppendLine("    $argumentList = @('run', '--project', $projectPath, '--configuration', $configuration, '--no-launch-profile')");
         builder.AppendLine("    if ($noBuild) { $argumentList += '--no-build' }");
@@ -1307,6 +1349,10 @@ internal sealed class WorkspaceCommandPlanBuilder
         string StderrLogFullPath,
         string StartupReceiptFullPath,
         IReadOnlyList<string> TargetPaths);
+
+    private sealed record DotnetNewTemplateSpec(
+        string Template,
+        IReadOnlyList<string> Options);
 
     private sealed record DotnetRunUrls(string? ListenUrl, string? ProbeUrl);
 }

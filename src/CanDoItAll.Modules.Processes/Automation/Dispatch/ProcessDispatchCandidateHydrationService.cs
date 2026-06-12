@@ -47,6 +47,7 @@ internal sealed class ProcessDispatchCandidateHydrationService(
             dbContext,
             processRunId,
             claimedStepRunId,
+            trigger,
             cancellationToken);
         if (snapshot is null)
         {

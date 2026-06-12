@@ -500,7 +500,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ProcessMissingUpstreamArtifactMaterializationFactsResolver.ResolveMissingInputs(candidate).Count > 0 ||
             !IsDispositionRoutingStep(candidate) ||
             !HasSatisfiedRequiredCompletionArtifacts(candidate, validationResults) ||
-            !TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out branchOutcome))
+            !TryResolveExplicitDispositionBranchOutcome(candidate, responseText, out branchOutcome) ||
+            !IsRecoverableSatisfiedArtifactDispositionBranch(branchOutcome))
         {
             return false;
         }
@@ -510,6 +511,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
             ResolveDeclaredOutcomeReason(responseText),
             $"recovered from {completionStatus} status because required current-run artifacts are satisfied");
         return true;
+    }
+
+    private static bool IsRecoverableSatisfiedArtifactDispositionBranch(DispatchBranchOutcome branchOutcome)
+    {
+        return IsRepairBranchOutcomeCandidate(branchOutcome, IsPrimaryRepairBranchOutcomeToken) ||
+               IsRepairBranchOutcomeCandidate(branchOutcome, IsSecondaryRepairBranchOutcomeToken);
     }
 
     private static bool HasSatisfiedRequiredCompletionArtifacts(
@@ -926,6 +933,8 @@ internal sealed partial class ProcessRunAutomationDispatchService
                titleText.Contains("log", StringComparison.Ordinal) ||
                titleText.Contains("manifest", StringComparison.Ordinal) ||
                titleText.Contains("list", StringComparison.Ordinal) ||
+               titleText.Contains("record", StringComparison.Ordinal) ||
+               titleText.Contains("receipt", StringComparison.Ordinal) ||
                titleText.Contains("writeback", StringComparison.Ordinal);
     }
 

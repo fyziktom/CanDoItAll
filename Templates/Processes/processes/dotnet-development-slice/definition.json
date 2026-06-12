@@ -500,6 +500,7 @@
         "ReadProjectStructure",
         "ReadUpstreamArtifacts",
         "RunValidation",
+        "LaunchRuntime",
         "CaptureRuntimeProof",
         "WriteManagedProcessArtifacts"
       ],

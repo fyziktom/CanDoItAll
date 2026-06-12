@@ -199,12 +199,6 @@ internal static class ProcessProjectionSnapshotBuilderAdapter
 
     private static IReadOnlyList<string> ResolveManagedWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
     {
-        var text = string.Join(
-            Environment.NewLine,
-            [
-                receipt.RequestSummary,
-                receipt.ExitSummary
-            ]);
-        return ProcessConcreteProductPathRules.ResolveWorkspacePathsFromToolRequest(text);
+        return ProcessRunAutomationDispatchService.ResolveManagedWorkspacePathsFromReceipt(receipt);
     }
 }

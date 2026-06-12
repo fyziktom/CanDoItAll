@@ -134,8 +134,7 @@ public static class ProcessArtifactValidationRequirementDescriptorRules
         var contractText = CollapsePromptWhitespace(string.Join(
             ' ',
             expectation.Title,
-            expectation.ValidationRequirementSummary,
-            expectation.AllowedFutureUsageSummary)).ToLowerInvariant();
+            expectation.ValidationRequirementSummary)).ToLowerInvariant();
         if (TryResolveExplicitArtifactExpectationMode(contractText, out var explicitMode))
         {
             return explicitMode;

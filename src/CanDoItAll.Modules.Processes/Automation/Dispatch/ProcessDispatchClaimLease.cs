@@ -51,13 +51,19 @@ internal sealed class ProcessDispatchClaimStore(IDbContextFactory<AppDbContext> 
         CancellationToken cancellationToken)
     {
         await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+        var allowsTargetedSubprocessDispatch =
+            ProcessDispatchTargetedTriggerRules.IsSubprocessStatusNotification(request.NormalizedTrigger);
         var updatedRows = await dbContext.Set<ProcessStepRun>()
             .Where(item => item.Id == request.StepRunId)
             .Where(item => item.ProcessRunId == request.ProcessRunId)
             .Where(item =>
                 item.Status == ProcessStepRunStatus.Ready ||
                 item.Status == ProcessStepRunStatus.WaitingApproval ||
-                item.Status == ProcessStepRunStatus.InProgress)
+                item.Status == ProcessStepRunStatus.InProgress ||
+                (allowsTargetedSubprocessDispatch &&
+                 (item.Status == ProcessStepRunStatus.Blocked ||
+                  item.Status == ProcessStepRunStatus.Failed) &&
+                 item.StepKind == ProcessStepKind.Subprocess))
             .Where(item =>
                 item.AutomationDispatchLeaseExpiresAtUtc == null ||
                 item.AutomationDispatchLeaseExpiresAtUtc <= now)

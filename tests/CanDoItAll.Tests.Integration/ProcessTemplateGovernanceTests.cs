@@ -97,6 +97,25 @@ public sealed class ProcessTemplateGovernanceTests
     }
 
     [Fact]
+    public async Task Dotnet_solution_setup_template_keeps_first_build_validation_build_test_only()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var definition = projectionService.GetProjectedEnvelope("dotnet-solution-setup").Definition;
+        var step = GetStep(definition, "validate-first-build");
+
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, step.OperationTargetScope);
+        Assert.Contains(ProcessStepOperation.RunValidation, step.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.WriteManagedProcessArtifacts, step.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.LaunchRuntime, step.AllowedOperations);
+        Assert.DoesNotContain(ProcessStepOperation.CaptureRuntimeProof, step.AllowedOperations);
+        Assert.Contains("Do not launch runtime", step.Notes, StringComparison.Ordinal);
+        Assert.Contains("downstream validation steps", step.Notes, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task Process_template_catalog_SB02_INV_001_maps_multi_team_development_to_source_backed_software_delivery_template()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -245,10 +264,15 @@ public sealed class ProcessTemplateGovernanceTests
 
         var runtimeDefinition = projectionService.GetProjectedEnvelope("dotnet-runtime-command-writeback").Definition;
         Assert.All(runtimeDefinition.Steps, step => Assert.False(AllowsProductMutation(step)));
+        var runtimeManifestStep = GetStep(runtimeDefinition, "resolve-dotnet-run-commands");
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, runtimeManifestStep.OperationTargetScope);
+        Assert.DoesNotContain(ProcessStepOperation.ExecuteExternalAction, runtimeManifestStep.AllowedOperations);
+        Assert.Contains("planned Run command", runtimeManifestStep.OutputContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("no project-structure mutation", runtimeManifestStep.ArtifactExpectations.Single().ValidationRequirementSummary, StringComparison.OrdinalIgnoreCase);
         AssertWritebackStep(runtimeDefinition, "write-run-command-nodes");
         var runtimeContractText = string.Join(
             " ",
-            GetStep(runtimeDefinition, "resolve-dotnet-run-commands").Notes,
+            runtimeManifestStep.Notes,
             GetStep(runtimeDefinition, "write-run-command-nodes").Notes,
             GetStep(runtimeDefinition, "runtime-command-handoff").EvidenceContractSummary);
 
@@ -259,10 +283,15 @@ public sealed class ProcessTemplateGovernanceTests
 
         var screenshotDefinition = projectionService.GetProjectedEnvelope("dotnet-ui-screenshot-writeback").Definition;
         Assert.All(screenshotDefinition.Steps, step => Assert.False(AllowsProductMutation(step)));
+        var screenshotCaptureStep = GetStep(screenshotDefinition, "capture-ui-screenshots");
+        Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, screenshotCaptureStep.OperationTargetScope);
+        Assert.DoesNotContain(ProcessStepOperation.ExecuteExternalAction, screenshotCaptureStep.AllowedOperations);
+        Assert.Contains("Do not create project-structure nodes or image assets here", screenshotCaptureStep.Notes, StringComparison.OrdinalIgnoreCase);
         AssertWritebackStep(screenshotDefinition, "store-ui-screenshots");
         var screenshotContractText = string.Join(
             " ",
             GetStep(screenshotDefinition, "resolve-ui-screenshot-applicability").Notes,
+            screenshotCaptureStep.Notes,
             GetStep(screenshotDefinition, "store-ui-screenshots").Notes,
             GetStep(screenshotDefinition, "screenshot-handoff").EvidenceContractSummary);
 
@@ -274,6 +303,8 @@ public sealed class ProcessTemplateGovernanceTests
         var sliceValidationStep = GetStep(sliceDefinition, "add-tests-and-proof");
         Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, sliceValidationStep.OperationTargetScope);
         Assert.Contains(ProcessStepOperation.RunValidation, sliceValidationStep.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.LaunchRuntime, sliceValidationStep.AllowedOperations);
+        Assert.Contains(ProcessStepOperation.CaptureRuntimeProof, sliceValidationStep.AllowedOperations);
         Assert.DoesNotContain(ProcessStepOperation.MutateProductTarget, sliceValidationStep.AllowedOperations);
         Assert.Contains("route back to implementation", sliceValidationStep.Notes, StringComparison.OrdinalIgnoreCase);
     }
@@ -598,6 +629,40 @@ public sealed class ProcessTemplateGovernanceTests
         Assert.Contains(ProcessStepOperation.RunValidation, validationStep.AllowedOperations);
         Assert.Contains(ProcessStepOperation.LaunchRuntime, validationStep.AllowedOperations);
         Assert.Contains(ProcessStepOperation.CaptureRuntimeProof, validationStep.AllowedOperations);
+    }
+
+    [Fact]
+    public async Task Dotnet_feature_template_bounds_generated_test_validation_timeouts()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+        var projectionService = scope.ServiceProvider.GetRequiredService<ProcessTemplateProjectionService>();
+
+        var definition = projectionService.GetProjectedEnvelope("dotnet-feature-function-implementation").Definition;
+        var implementationStep = GetStep(definition, "code-change");
+        var validationStep = GetStep(definition, "targeted-validation");
+        var implementationText = string.Join(
+            " ",
+            implementationStep.Notes,
+            ReadTemplateDocRef("processes/dotnet-feature-function-implementation/steps/code-change.md"));
+        var validationText = string.Join(
+            " ",
+            validationStep.Notes,
+            ReadTemplateDocRef("processes/dotnet-feature-function-implementation/steps/targeted-validation.md"));
+
+        Assert.Contains("workspace_dotnet_test timeout of 300 seconds or less", implementationText, StringComparison.Ordinal);
+        Assert.Contains("maximum iteration guard", implementationText, StringComparison.Ordinal);
+        Assert.Contains("workspace_dotnet_test timeout of 300 seconds or less", validationText, StringComparison.Ordinal);
+        Assert.Contains("record the command and timeout as failing proof", validationText, StringComparison.Ordinal);
+    }
+
+    private static string ReadTemplateDocRef(string docRef)
+    {
+        var path = Path.Combine(
+            "Templates",
+            "Processes",
+            docRef.Replace('/', Path.DirectorySeparatorChar));
+        return File.ReadAllText(path);
     }
 
     private static bool AllowsProductMutation(ProcessStepImportExportModel step)

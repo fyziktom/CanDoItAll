@@ -179,6 +179,12 @@ internal static class ProcessArtifactExpectationResolver
             return false;
         }
 
+        if (ProcessArtifactProviderNativeVisualValidationRules.RequiresVisualArtifactFile(expectedArtifact) &&
+            !ProcessArtifactProviderNativeVisualValidationRules.IsImageArtifact(artifact))
+        {
+            return false;
+        }
+
         if (ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(
                 expectedArtifact.ValidationRequirementSummary,
                 out var expectedRelativePath))
@@ -240,6 +246,7 @@ internal static class ProcessArtifactExpectationResolver
     {
         if (!IsNarrativeEvidenceArtifactExpectation(expectedArtifact) ||
             ProcessArtifactProviderNativeVisualValidationRules.IsProviderNativeBrowserOutputArtifact(artifact) ||
+            ProcessArtifactProviderNativeVisualValidationRules.RequiresVisualArtifactFile(expectedArtifact) ||
             !IsManagedRunTextArtifactPath(relativePath) ||
             expectedArtifacts.Count(IsNarrativeEvidenceArtifactExpectation) != 1)
         {

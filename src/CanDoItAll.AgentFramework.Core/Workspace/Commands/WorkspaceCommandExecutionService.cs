@@ -61,7 +61,7 @@ public sealed class WorkspaceCommandExecutionService : IWorkspaceCommandExecutio
             "LocalExecution",
             approvalRequired: false);
 
-    public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 1200)
+    public Task<WorkspaceCommandExecutionResult> DotnetTest(string? targetPath = null, string configuration = "Debug", string? filter = null, bool noBuild = false, bool noRestore = false, string? workingDirectory = null, int timeoutSeconds = 300)
         => ExecutePlanAsync(
             () => planBuilder.BuildDotnetTest(targetPath, configuration, filter, noBuild, noRestore, workingDirectory, timeoutSeconds),
             "workspace_dotnet_test",

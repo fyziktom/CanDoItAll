@@ -28,6 +28,7 @@ internal static class ProcessDispatchCandidateHydrationLoader
         AppDbContext dbContext,
         Guid processRunId,
         Guid claimedStepRunId,
+        string trigger,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(dbContext);
@@ -35,7 +36,12 @@ internal static class ProcessDispatchCandidateHydrationLoader
         var run = await dbContext.Set<ProcessRun>()
             .AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == processRunId, cancellationToken);
-        if (run is null || !ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate(run.Status))
+        var allowsTargetedSubprocessDispatch =
+            run is not null &&
+            ProcessDispatchTargetedTriggerRules.IsSubprocessStatusNotificationDispatchable(run.Status, trigger);
+        if (run is null ||
+            (!ProcessDispatchRouteEligibility.IsRunEligibleForDispatchCandidate(run.Status) &&
+             !allowsTargetedSubprocessDispatch))
         {
             return null;
         }
@@ -49,11 +55,21 @@ internal static class ProcessDispatchCandidateHydrationLoader
                 item.Id == claimedStepRunId &&
                 (item.Status == ProcessStepRunStatus.Ready ||
                  item.Status == ProcessStepRunStatus.WaitingApproval ||
-                 item.Status == ProcessStepRunStatus.InProgress))
+                 item.Status == ProcessStepRunStatus.InProgress ||
+                  (allowsTargetedSubprocessDispatch &&
+                   (item.Status == ProcessStepRunStatus.Blocked ||
+                    item.Status == ProcessStepRunStatus.Failed) &&
+                   item.StepKind == ProcessStepKind.Subprocess)))
             .OrderBy(item => item.Sequence)
             .ToListAsync(cancellationToken);
         dispatchableSteps = dispatchableSteps
-            .Where(item => ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(run.Status, item.Status))
+            .Where(item =>
+                ProcessDispatchRouteEligibility.IsStepStatusDispatchableForRun(run.Status, item.Status) ||
+                ProcessDispatchTargetedTriggerRules.IsSubprocessStatusNotificationDispatchable(
+                    run.Status,
+                    item.Status,
+                    item.StepKind,
+                    trigger))
             .ToList();
         if (dispatchableSteps.Count == 0)
         {

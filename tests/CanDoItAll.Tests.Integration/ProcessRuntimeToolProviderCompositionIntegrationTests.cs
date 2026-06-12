@@ -1,9 +1,14 @@
+using System.Text.Json;
+using System.Text;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.AgentFramework.Persistence;
 using CanDoItAll.AgentFramework.Tooling;
 using CanDoItAll.Modules.Processes;
+using CanDoItAll.Modules.Projects;
 using CanDoItAll.Modules.Workbench;
+using CanDoItAll.SharedKernel;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CanDoItAll.Tests.Integration;
@@ -94,6 +99,78 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
     }
 
     [Fact]
+    public async Task ProjectStructureRuntimeToolProvider_grants_governed_process_scoped_current_project_asset_write_without_global_project_write()
+    {
+        await using var application = await TestApplication.CreateAsync();
+        await using var scope = application.Services.CreateAsyncScope();
+
+        var projectStructureProvider = Assert.Single(
+            scope.ServiceProvider.GetServices<IAgentRuntimeToolProvider>()
+                .OfType<ProjectStructureAgentRuntimeToolProvider>());
+        var projectId = await CreateProjectAsync(
+            scope.ServiceProvider.GetRequiredService<ProjectsService>(),
+            "Process scoped project-structure runtime provider");
+        var seed = SandboxWorkspaceSeedFactory.Create();
+        var seededAgent = seed.Agents[0];
+        var provider = Assert.Single(seed.Providers, item => item.Id == seededAgent.ProviderProfileId);
+        var agent = seededAgent with
+        {
+            Permissions = AgentPermissionsPolicy.Default,
+            ConfigurationJson = AgentProjectStructureAccessMetadata.Write(
+                seededAgent.ConfigurationJson,
+                new AgentProjectStructureAccessSettings
+                {
+                    CanRead = false,
+                    CanWrite = false,
+                    AllowAllProjects = false
+                })
+        };
+        using var auditScope = WorkspaceExecutionAuditContext.BeginScope(
+            CreateTrustedProcessRun(agent.Id, projectId));
+        var tools = await projectStructureProvider.CreateToolsAsync(
+            CreateProjectScopedProviderContext(agent, provider, projectId),
+            CancellationToken.None);
+        var assetCreateTool = Assert.IsAssignableFrom<AIFunction>(
+            Assert.Single(tools, item => string.Equals(item.Name, "project_structure_asset_create", StringComparison.OrdinalIgnoreCase)));
+
+        var createdAsset = ReadToolResult<ProjectStructureNodeSummary>(await assetCreateTool.InvokeAsync(
+            new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["projectId"] = projectId,
+                ["request"] = new ProjectStructureAssetCreateInput(
+                    ProjectObjectType.File,
+                    "Scoped process evidence",
+                    "Runtime provider access proof",
+                    "Created by a process-scoped project-structure grant.",
+                    new ProjectObjectMediaPayload(
+                        "scoped-process-evidence.txt",
+                        "text/plain",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes("process scoped evidence"))),
+                    ParentNodeKey: $"project:{projectId:D}",
+                    ObjectSubtype: "text")
+            })));
+
+        Assert.Equal(ProjectObjectType.File, createdAsset.ObjectType);
+        Assert.Equal("Scoped process evidence", createdAsset.Title);
+
+        var projectCreateTool = Assert.IsAssignableFrom<AIFunction>(
+            Assert.Single(tools, item => string.Equals(item.Name, "project_structure_project_create", StringComparison.OrdinalIgnoreCase)));
+        var exception = await Record.ExceptionAsync(async () =>
+            await projectCreateTool.InvokeAsync(new AIFunctionArguments(new Dictionary<string, object?>
+            {
+                ["request"] = new ProjectStructureProjectSaveRequest(
+                    "Unexpected project",
+                    "Global write should remain denied.",
+                    "Process-scoped project-structure access must not create projects.",
+                    "Execution",
+                    ProjectStatus.Active)
+            })));
+        var projectStructureException = AssertProjectStructureException(exception);
+
+        Assert.Equal("ProjectStructureWriteDenied", projectStructureException.ErrorCode);
+    }
+
+    [Fact]
     public async Task ProcessRuntimeProvider_app_composition_preserves_process_tool_exact_name_parity()
     {
         await using var application = await TestApplication.CreateAsync();
@@ -147,5 +224,114 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
         {
             Assert.Contains(toolNames, item => string.Equals(item, toolName, StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    private static AgentRuntimeToolProviderContext CreateProjectScopedProviderContext(
+        AgentDefinition agent,
+        ProviderProfile provider,
+        Guid projectId)
+    {
+        return new AgentRuntimeToolProviderContext(
+            agent,
+            provider,
+            [],
+            SuppressApprovalRequirements: false,
+            AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
+            RuntimeSessionKey: "process-scoped-project-structure-write",
+            Tags: new Dictionary<string, string>
+            {
+                ["workspaceScopeKind"] = WorkspaceScopeKind.Project.ToString(),
+                ["workspaceScopeKey"] = projectId.ToString("D")
+            });
+    }
+
+    private static ExecutionRunRecord CreateTrustedProcessRun(Guid agentId, Guid projectId)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var metadataJson = ExecutionInvocationMetadata.ApplyContextWorkspaceScope(
+            $$"""
+            {
+              "{{ExecutionInvocationMetadata.ProcessStepAllowedOperationsMetadataKey}}": [
+                "{{ProcessOperationContractNames.ReadProjectStructure}}",
+                "{{ProcessOperationContractNames.ExecuteExternalAction}}"
+              ]
+            }
+            """,
+            WorkspaceScopeDescriptor.Project(projectId.ToString("D")));
+        return new ExecutionRunRecord(
+            Id: Guid.NewGuid(),
+            AgentId: agentId,
+            ChatSessionId: null,
+            Title: "Process scoped project-structure provider test",
+            SourceKind: "process-step",
+            SourceId: Guid.NewGuid().ToString("D"),
+            CorrelationId: Guid.NewGuid().ToString("D"),
+            CausationId: string.Empty,
+            RequestedBy: "process-runtime",
+            RequestedByKind: "system",
+            MetadataJson: metadataJson,
+            InputSummary: "Test process-scoped project-structure access.",
+            ResultSummary: string.Empty,
+            ProviderName: "test",
+            Model: "test",
+            State: ExecutionState.Preparing,
+            Outcome: null,
+            CreatedAtUtc: now,
+            UpdatedAtUtc: now,
+            StartedAtUtc: now,
+            CompletedAtUtc: null,
+            RuntimeSessionKey: string.Empty,
+            SerializedSessionStateJson: null,
+            PendingApprovals: [],
+            ProcessRunId: Guid.NewGuid().ToString("D"),
+            ProcessStepId: Guid.NewGuid().ToString("D"));
+    }
+
+    private static async Task<Guid> CreateProjectAsync(ProjectsService projectsService, string name)
+    {
+        var result = await projectsService.SaveAsync(new ProjectEditorModel
+        {
+            Name = name,
+            Description = $"{name} description",
+            Objective = $"{name} objective",
+            CurrentPhase = "Execution",
+            Status = ProjectStatus.Active
+        });
+
+        Assert.True(result.IsSuccess, string.Join(" | ", result.Errors.Select(error => error.Message)));
+        return result.Value;
+    }
+
+    private static ProjectStructureAgentException AssertProjectStructureException(Exception? exception)
+    {
+        if (exception is ProjectStructureAgentException projectStructureException)
+        {
+            return projectStructureException;
+        }
+
+        if (exception?.InnerException is ProjectStructureAgentException innerProjectStructureException)
+        {
+            return innerProjectStructureException;
+        }
+
+        throw new Xunit.Sdk.XunitException(
+            $"Expected {nameof(ProjectStructureAgentException)}, got {exception?.GetType().FullName ?? "<null>"}.");
+    }
+
+    private static T ReadToolResult<T>(object? result)
+    {
+        if (result is T typed)
+        {
+            return typed;
+        }
+
+        if (result is JsonElement jsonElement)
+        {
+            return jsonElement.Deserialize<T>(AgentOutputJson.SerializerOptions)
+                   ?? throw new Xunit.Sdk.XunitException($"Tool result JSON could not be deserialized as {typeof(T).Name}.");
+        }
+
+        throw new Xunit.Sdk.XunitException(
+            $"Expected tool result {typeof(T).Name}, got {result?.GetType().FullName ?? "<null>"}.");
     }
 }

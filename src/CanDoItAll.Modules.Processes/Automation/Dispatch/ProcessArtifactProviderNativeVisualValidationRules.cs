@@ -19,6 +19,11 @@ internal static class ProcessArtifactProviderNativeVisualValidationRules
             return 0;
         }
 
+        if (!RequiresVisualArtifactFile(expectedArtifact))
+        {
+            return 0;
+        }
+
         var expectedText = CollapsePromptWhitespace(
             $"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}");
         if (!ContainsVisualArtifactSignal(expectedText))
@@ -162,7 +167,32 @@ internal static class ProcessArtifactProviderNativeVisualValidationRules
                normalizedText.Contains("screen shot", StringComparison.Ordinal);
     }
 
-    private static bool IsImageArtifact(ProcessAutomationExecutionArtifact artifact)
+    public static bool RequiresVisualArtifactFile(ProcessArtifactExpectationSnapshot expectedArtifact)
+    {
+        ArgumentNullException.ThrowIfNull(expectedArtifact);
+
+        if (ProcessArtifactPathValidationRules.TryExtractExpectedArtifactRelativePath(
+                expectedArtifact.ValidationRequirementSummary,
+                out var declaredRelativePath))
+        {
+            return IsImageExtension(Path.GetExtension(declaredRelativePath));
+        }
+
+        var titleText = CollapsePromptWhitespace(expectedArtifact.Title).ToLowerInvariant();
+        var contractText = CollapsePromptWhitespace(
+            $"{expectedArtifact.Title} {expectedArtifact.ValidationRequirementSummary}").ToLowerInvariant();
+
+        if (ContainsExplicitImageFileSignal(contractText) &&
+            !IsNarrativeVisualContainerTitle(titleText))
+        {
+            return true;
+        }
+
+        return ContainsVisualEvidenceToken(titleText) &&
+               !IsNarrativeVisualContainerTitle(titleText);
+    }
+
+    public static bool IsImageArtifact(ProcessAutomationExecutionArtifact artifact)
     {
         var extension = Path.GetExtension(artifact.RelativePath);
         return artifact.ContentType.Contains("image", StringComparison.OrdinalIgnoreCase) ||
@@ -177,6 +207,41 @@ internal static class ProcessArtifactProviderNativeVisualValidationRules
                extension.Equals(".svg", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".gif", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".webp", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool ContainsExplicitImageFileSignal(string text)
+    {
+        return text.Contains(".png", StringComparison.Ordinal) ||
+               text.Contains(".jpg", StringComparison.Ordinal) ||
+               text.Contains(".jpeg", StringComparison.Ordinal) ||
+               text.Contains(".webp", StringComparison.Ordinal) ||
+               text.Contains(".svg", StringComparison.Ordinal) ||
+               text.Contains("image file", StringComparison.Ordinal) ||
+               text.Contains("screenshot file", StringComparison.Ordinal) ||
+               text.Contains("image artifact", StringComparison.Ordinal) ||
+               text.Contains("screenshot artifact", StringComparison.Ordinal) ||
+               text.Contains("as an image", StringComparison.Ordinal) ||
+               text.Contains("as a screenshot", StringComparison.Ordinal);
+    }
+
+    private static bool ContainsVisualEvidenceToken(string text)
+    {
+        return text.Contains("screenshot", StringComparison.Ordinal) ||
+               text.Contains("image", StringComparison.Ordinal);
+    }
+
+    private static bool IsNarrativeVisualContainerTitle(string titleText)
+    {
+        return titleText.Contains("pack", StringComparison.Ordinal) ||
+               titleText.Contains("summary", StringComparison.Ordinal) ||
+               titleText.Contains("report", StringComparison.Ordinal) ||
+               titleText.Contains("index", StringComparison.Ordinal) ||
+               titleText.Contains("log", StringComparison.Ordinal) ||
+               titleText.Contains("manifest", StringComparison.Ordinal) ||
+               titleText.Contains("list", StringComparison.Ordinal) ||
+               titleText.Contains("record", StringComparison.Ordinal) ||
+               titleText.Contains("receipt", StringComparison.Ordinal) ||
+               titleText.Contains("writeback", StringComparison.Ordinal);
     }
 
     private static string NormalizeToolToken(string value)

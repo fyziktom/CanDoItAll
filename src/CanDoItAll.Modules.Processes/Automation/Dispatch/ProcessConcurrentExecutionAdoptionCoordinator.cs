@@ -29,20 +29,26 @@ internal static class ProcessConcurrentExecutionAdoptionCoordinator
             now,
             automationActor,
             staleExecutionRunTimeout);
-        if (!blockingExecutionRunId.HasValue)
+        var recoverableExecutionRunId = blockingExecutionRunId ??
+            ProcessAutomationExecutionRunSelection.ResolveRecoverableAutomationExecutionRunId(
+                candidate.StepRun.Status,
+                candidate.StepRun.StartedAtUtc,
+                executionRuns,
+                automationActor);
+        if (!recoverableExecutionRunId.HasValue)
         {
             return null;
         }
 
-        var detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+        var detail = await executionClient.GetExecutionRunDetailAsync(recoverableExecutionRunId.Value, cancellationToken);
         for (var pollIndex = 0; pollIndex < 2 && !IsTerminal(detail.Run); pollIndex++)
         {
             await Task.Delay(PollDelay, cancellationToken);
-            detail = await executionClient.GetExecutionRunDetailAsync(blockingExecutionRunId.Value, cancellationToken);
+            detail = await executionClient.GetExecutionRunDetailAsync(recoverableExecutionRunId.Value, cancellationToken);
         }
 
         return new ProcessRunAutomationDispatchService.ConcurrentAutomationExecution(
-            blockingExecutionRunId.Value,
+            recoverableExecutionRunId.Value,
             detail,
             resolveResponseText(detail));
     }

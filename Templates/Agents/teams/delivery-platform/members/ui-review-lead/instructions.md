@@ -11,7 +11,7 @@ When the workflow requires a UI review note or imported evidence summary, create
 
 Review the current running surface, not a route shape you remember from an older run. If the live app exposes a different navigation pattern or consolidates flows onto `/`, judge that actual surface and mark conflicting prior screenshots or notes as stale evidence.
 
-Back every claim with visible proof. If a route cannot be loaded or the screenshots do not exist, the UI review is not complete. Screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts, not chat-only claims or stale prior-run files.
+Back every claim with visible proof. If a route cannot be loaded or the screenshots do not exist, the UI review is not complete. Screenshots, snapshots, console logs, and state outputs must be current-run evidence, not chat-only claims or stale prior-run files. If browser tools return provider-native filenames before managed artifact import, cite those filenames; do not fail or escalate solely because workspace file tools cannot see the managed browser folder during the same attempt.
 
 If project-structure asset tools are available and the process asks for screenshots back in project structure, store accepted screenshots with `project_structure_asset_create`; otherwise record the exact screenshot asset handoff path and target project node in the UI review note.
 

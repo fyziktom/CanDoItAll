@@ -540,7 +540,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("scaffold directly into it instead of adding an extra nested", instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before any scaffold call", instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", instructions, StringComparison.Ordinal);
-        Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as process-visible current-run artifacts", instructions, StringComparison.Ordinal);
+        Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -565,7 +566,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("For spreadsheets, inspect workbook structure", instructions, StringComparison.Ordinal);
         Assert.Contains("Final delivery order is strict", instructions, StringComparison.Ordinal);
         Assert.Contains("Do not claim completion with chat-only evidence", instructions, StringComparison.Ordinal);
-        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("provider-native filenames before managed artifact import", instructions, StringComparison.Ordinal);
         Assert.Contains("store accepted screenshots as ImageAsset nodes or record the exact project-structure asset handoff", instructions, StringComparison.Ordinal);
     }
 
@@ -583,8 +585,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
                     string.Equals(item.Key, "dotnet-app-delivery-inline-skill", StringComparison.OrdinalIgnoreCase));
         var instructions = ReadInlineSkillInstructions(capability.ConfigurationJson);
 
-        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", instructions, StringComparison.Ordinal);
-        Assert.Contains("capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as process-visible artifacts", instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", instructions, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -862,7 +864,8 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("If a .NET app is not already running", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("If a non-.NET app is not already running and only PowerShell execution is available", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not call `workspace_dotnet_build`, `workspace_dotnet_test`, or `workspace_dotnet_run` for non-.NET deliverables", qaEditor.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", qaEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("screenshot asset handoff path and target project node", qaEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("generated delivery workspaces or other non-git execution roots", codeReviewEditor.Instructions, StringComparison.Ordinal);
@@ -874,7 +877,7 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("stock scaffold", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-theme", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("frontend-skill", uiReviewEditor.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("process-visible current-run artifacts", uiReviewEditor.Instructions, StringComparison.Ordinal);
+        Assert.Contains("current-run evidence", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", uiReviewEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not accept vague statements like \"secure enough.\"", securityEditor.Instructions, StringComparison.Ordinal);
         Assert.Contains("Prior-run summaries do not override the current code", securityEditor.Instructions, StringComparison.Ordinal);
@@ -926,21 +929,22 @@ public sealed class AgentFrameworkWorkspaceSeedIntegrationTests
         Assert.Contains("checking that the grounded product root is missing or safe to scaffold", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("host and tests as siblings", dotnetDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Browser proof must be process-visible current-run artifacts", dotnetDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", dotnetDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("BaseLib", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("component-library", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Before scaffolding, check the mapped product root", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("workspace_dotnet_run", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Workspace command timeout arguments are seconds", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("small JavaScript interop", blazorDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Browser proof must be process-visible current-run artifacts", blazorDeveloper.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Capture screenshot, browser_snapshot or browser_evaluate state output, and browser_console_messages as current-run evidence", blazorDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package.json", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("package manager", javascriptDeveloper.Instructions, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("For peer review and integration-readiness steps", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not satisfy a behavior defect by adding manifests", javascriptDeveloper.Instructions, StringComparison.Ordinal);
         Assert.Contains("browser_navigate", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("Do not submit Completed or Blocked for missing browser receipts from file inspection alone", javascriptQa.Instructions, StringComparison.Ordinal);
-        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be process-visible current-run artifacts", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("Browser screenshots, snapshots, console logs, and state outputs must be current-run evidence", javascriptQa.Instructions, StringComparison.Ordinal);
+        Assert.Contains("workspace file tools cannot see the managed browser folder during the same attempt", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("project_structure_asset_create", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("External generated app folders are often not git repositories", javascriptQa.Instructions, StringComparison.Ordinal);
         Assert.Contains("npm.cmd", javascriptQa.Instructions, StringComparison.Ordinal);

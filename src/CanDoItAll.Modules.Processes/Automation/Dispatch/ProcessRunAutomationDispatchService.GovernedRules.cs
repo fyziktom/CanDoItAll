@@ -354,6 +354,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool RequiresProjectStructureAssetWriteback(DispatchCandidate candidate)
     {
+        if (!AllowsProjectStructureWriteback(candidate.StepDefinition))
+        {
+            return false;
+        }
+
         var contractText = CollapsePromptWhitespace(string.Join(
                 ' ',
                 candidate.StepRun.Title,
@@ -425,6 +430,12 @@ internal sealed partial class ProcessRunAutomationDispatchService
         }
 
         if (IsPlanningArchitectureOrBoundaryStep(candidate))
+        {
+            return false;
+        }
+
+        if (TryResolvePersistedOperationContract(candidate.StepDefinition, out var persistedContract) &&
+            !persistedContract.AllowedOperations.Contains(ProcessStepOperation.CaptureRuntimeProof))
         {
             return false;
         }
@@ -815,10 +826,23 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
-        return currentRunText.Contains("validation", StringComparison.OrdinalIgnoreCase) ||
-               currentRunText.Contains("browser proof", StringComparison.OrdinalIgnoreCase) ||
-               currentRunText.Contains("runtime proof", StringComparison.OrdinalIgnoreCase) ||
-               currentRunText.Contains("screenshot", StringComparison.OrdinalIgnoreCase);
+        var normalized = RemoveApplicabilityOnlyBrowserEvidencePhrases(currentRunText);
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return false;
+        }
+
+        return ContainsConcreteBrowserProofSignal(normalized) ||
+               normalized.Contains("browser evidence", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("browser validation", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("browser-visible", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("runtime proof", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("runtime evidence", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("visual validation", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("rendered ui", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("rendered page", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("visible behavior", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Contains("playwright", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool ContainsExplicitBrowserSurfaceSignal(string value)

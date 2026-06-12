@@ -63,7 +63,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         ArgumentNullException.ThrowIfNull(context);
         cancellationToken.ThrowIfCancellationRequested();
 
-        return ValueTask.FromResult(toolBuilder.CreateTools(context.Agent));
+        return ValueTask.FromResult(toolBuilder.CreateTools(context));
     }
 
     private sealed class ProjectStructureToolBuilder(
@@ -84,10 +84,13 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         private readonly string workspaceRoot = workspaceRoot;
         private string? currentBranchName;
 
-        public IReadOnlyList<AITool> CreateTools(AgentDefinition agent)
+        public IReadOnlyList<AITool> CreateTools(AgentRuntimeToolProviderContext context)
         {
+            var agent = context.Agent;
             var accessSettings = AgentProjectStructureAccessMetadata.Read(agent.ConfigurationJson);
-            var accessState = new ProjectStructureAccessState(accessSettings);
+            var accessState = new ProjectStructureAccessState(
+                accessSettings,
+                ResolveScopedProcessAccess(context));
 
             return
             [
@@ -944,7 +947,6 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
             string leaseToken,
             CancellationToken cancellationToken)
         {
-            EnsureWriteAllowed(accessState);
             var resolvedScope = await ResolveScopeAsync(agent, accessState, scope, true, cancellationToken);
             return await ExecuteAsync(
                 agent,
@@ -1114,7 +1116,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
         {
             if (requireWrite)
             {
-                EnsureWriteAllowed(accessState);
+                EnsureAnyWriteAllowed(accessState);
             }
             else
             {
@@ -1137,6 +1139,15 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                         cancellationToken);
                     if (structure.Nodes.Count > 0)
                     {
+                        if (requireWrite)
+                        {
+                            EnsureProjectWriteAllowed(accessState, projectId);
+                        }
+                        else
+                        {
+                            EnsureProjectReadAllowed(accessState, projectId);
+                        }
+
                         return new ProjectStructureResolvedScope(
                             ProjectStructureLeaseScopeKind.ProjectNode,
                             nodeId,
@@ -1251,6 +1262,19 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
         private static void EnsureWriteAllowed(ProjectStructureAccessState accessState)
         {
+            if (accessState.CanWriteUnscoped)
+            {
+                return;
+            }
+
+            throw new ProjectStructureAgentException(
+                403,
+                "ProjectStructureWriteDenied",
+                "This agent is not allowed to write project structure. Enable write access in the agent settings.");
+        }
+
+        private static void EnsureAnyWriteAllowed(ProjectStructureAccessState accessState)
+        {
             if (accessState.CanWrite)
             {
                 return;
@@ -1270,7 +1294,7 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
         private static void EnsureProjectWriteAllowed(ProjectStructureAccessState accessState, Guid projectId)
         {
-            EnsureWriteAllowed(accessState);
+            EnsureAnyWriteAllowed(accessState);
             EnsureProjectAllowed(accessState, projectId);
         }
 
@@ -1287,6 +1311,44 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
                 "ProjectStructureProjectDenied",
                 $"Project '{projectId:D}' is outside the agent's allowed project-structure scope.");
         }
+
+        private static ProjectStructureScopedProcessAccess? ResolveScopedProcessAccess(AgentRuntimeToolProviderContext context)
+        {
+            if (context.Purpose != AgentRuntimeToolProviderPurpose.GovernedProcessAutomation ||
+                WorkspaceExecutionAuditContext.Current is not { } auditScope ||
+                string.IsNullOrWhiteSpace(auditScope.ProcessRunId) ||
+                string.IsNullOrWhiteSpace(auditScope.ProcessStepId) ||
+                !TryResolveProjectScopeId(context.Tags, out var projectId))
+            {
+                return null;
+            }
+
+            var canRead = ContainsProcessOperation(
+                auditScope.ProcessStepAllowedOperations,
+                ProcessOperationContractNames.ReadProjectStructure);
+            var canWrite = ContainsProcessOperation(
+                auditScope.ProcessStepAllowedOperations,
+                ProcessOperationContractNames.ExecuteExternalAction);
+            return !canRead && !canWrite
+                ? null
+                : new ProjectStructureScopedProcessAccess(projectId, canRead, canWrite);
+        }
+
+        private static bool TryResolveProjectScopeId(
+            IReadOnlyDictionary<string, string> tags,
+            out Guid projectId)
+        {
+            projectId = Guid.Empty;
+            return tags.TryGetValue("workspaceScopeKind", out var scopeKind) &&
+                   string.Equals(scopeKind, WorkspaceScopeKind.Project.ToString(), StringComparison.OrdinalIgnoreCase) &&
+                   tags.TryGetValue("workspaceScopeKey", out var scopeKey) &&
+                   Guid.TryParse(scopeKey, out projectId);
+        }
+
+        private static bool ContainsProcessOperation(
+            IReadOnlyList<string> operations,
+            string operationName)
+            => operations.Any(operation => string.Equals(operation, operationName, StringComparison.OrdinalIgnoreCase));
 
         private static ProjectManagementKnowledgeCategory MapGuidanceCategory(ProjectManagementGuidanceCategory category)
         {
@@ -1339,23 +1401,37 @@ public sealed class ProjectStructureAgentRuntimeToolProvider : IAgentRuntimeTool
 
     private sealed class ProjectStructureAccessState
     {
-        public ProjectStructureAccessState(AgentProjectStructureAccessSettings settings)
+        public ProjectStructureAccessState(
+            AgentProjectStructureAccessSettings settings,
+            ProjectStructureScopedProcessAccess? scopedProcessAccess)
         {
             var normalized = AgentProjectStructureAccessMetadata.Normalize(settings);
-            CanRead = normalized.CanRead;
-            CanWrite = normalized.CanWrite;
+            CanRead = normalized.CanRead || scopedProcessAccess?.CanRead == true;
+            CanWrite = normalized.CanWrite || scopedProcessAccess?.CanWrite == true;
+            CanWriteUnscoped = normalized.CanWrite;
             AllowAllProjects = normalized.AllowAllProjects;
             AllowedProjectIds = normalized.AllowedProjectIds.ToHashSet();
+            if (scopedProcessAccess is not null)
+            {
+                AllowedProjectIds.Add(scopedProcessAccess.ProjectId);
+            }
         }
 
         public bool CanRead { get; }
 
         public bool CanWrite { get; }
 
+        public bool CanWriteUnscoped { get; }
+
         public bool AllowAllProjects { get; }
 
         public HashSet<Guid> AllowedProjectIds { get; }
     }
+
+    private sealed record ProjectStructureScopedProcessAccess(
+        Guid ProjectId,
+        bool CanRead,
+        bool CanWrite);
 
     private sealed record ProjectStructureResolvedScope(
         ProjectStructureLeaseScopeKind ScopeKind,

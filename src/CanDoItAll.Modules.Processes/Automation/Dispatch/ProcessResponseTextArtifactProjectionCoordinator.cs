@@ -70,8 +70,7 @@ internal sealed class ProcessResponseTextArtifactProjectionCoordinator : IProces
                 continue;
             }
 
-            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id) ||
-                context.Run.Artifacts.Any(artifact => expectationMatcher.ResolveArtifactExpectationId(context.Candidate, context.Run, artifact) == expectedArtifact.Id))
+            if (context.Candidate.MutableState.RecordedArtifactExpectationIds.Contains(expectedArtifact.Id))
             {
                 continue;
             }

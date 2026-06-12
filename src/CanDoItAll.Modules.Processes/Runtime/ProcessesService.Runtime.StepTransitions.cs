@@ -85,7 +85,9 @@ public sealed partial class ProcessesService
                 transitionContext.StepDefinitionsById,
                 stepRunsByDefinitionId,
                 transitionContext.StepDependenciesByStepId,
-                now);
+                now,
+                invalidateDependentStepRuns: request.AllowCompletedAgentRerun &&
+                    request.TargetStatus == ProcessStepRunStatus.InProgress);
 
             transitionContext.Run.UpdatedAtUtc = now;
             transitionContext.Run.Status = ProcessRunStatusResolver.Resolve(

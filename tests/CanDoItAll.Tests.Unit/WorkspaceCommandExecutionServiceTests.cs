@@ -258,7 +258,8 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Contains("Mount-StaticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("Dismount-StaticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("staticWebAssetsAliasMappings = @($staticWebAssetsAliasMappings)", script, StringComparison.Ordinal);
-            Assert.Contains("if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings (Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }", script, StringComparison.Ordinal);
+            Assert.Contains("if ($noBuild) { $staticWebAssetsAliasMappings = Mount-StaticWebAssetsAliasMappings -Mappings @(Resolve-StaticWebAssetsAliasMappings $projectPath $workspaceRoot $configuration) }", script, StringComparison.Ordinal);
+            Assert.Contains("if ($null -eq $Mappings -or $Mappings.Count -eq 0) { return @() }", script, StringComparison.Ordinal);
             Assert.Contains("Stop-AppProcessTree $processTreeIds", script, StringComparison.Ordinal);
             Assert.Contains("Dismount-StaticWebAssetsAliasMappings $staticWebAssetsAliasMappings", script, StringComparison.Ordinal);
             Assert.Contains("Process tree was stopped after smoke validation", script, StringComparison.Ordinal);
@@ -365,6 +366,7 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal("workspace_dotnet_test", processHost.LastRequest!.ToolName);
             Assert.Equal("test", processHost.LastRequest.Arguments[0]);
             Assert.Equal("tests/SampleWeb.Tests/SampleWeb.Tests.csproj".Replace('/', Path.DirectorySeparatorChar), processHost.LastRequest.Arguments[1]);
+            Assert.Equal(300, processHost.LastRequest.TimeoutSeconds);
             Assert.Contains("tests/SampleWeb.Tests/SampleWeb.Tests.csproj", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
         }
         finally
@@ -578,6 +580,53 @@ public sealed class WorkspaceCommandExecutionServiceTests
             Assert.Equal(["new", "blazorwasm", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
             Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
             Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_accepts_blazor_webassembly_pwa_template_option()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm --pwa", "TetrisGame", "apps");
+
+            Assert.True(result.Succeeded);
+            Assert.NotNull(processHost.LastRequest);
+            Assert.Equal("workspace_dotnet_new", processHost.LastRequest!.ToolName);
+            Assert.Equal(["new", "blazorwasm", "--pwa", "-n", "TetrisGame"], processHost.LastRequest.Arguments);
+            Assert.Equal(Path.Combine(workspaceRoot, "apps"), processHost.LastRequest.WorkingDirectory);
+            Assert.Contains("apps/TetrisGame", result.Receipt.TargetPaths, StringComparer.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            TryDeleteDirectory(workspaceRoot);
+        }
+    }
+
+    [Fact]
+    public async Task DotnetNew_rejects_unapproved_inline_template_option()
+    {
+        var workspaceRoot = Path.Combine(Path.GetTempPath(), $"CanDoItAll.WorkspaceCommandExecutionServiceTests.{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(workspaceRoot, "apps"));
+        var processHost = new FakeWorkspaceProcessHost();
+        var service = new WorkspaceCommandExecutionService(workspaceRoot, processHost);
+
+        try
+        {
+            var result = await service.DotnetNew("blazorwasm --install-source", "TetrisGame", "apps");
+
+            Assert.False(result.Succeeded);
+            Assert.Contains("Template option '--install-source' is not approved", result.Message, StringComparison.Ordinal);
+            Assert.Null(processHost.LastRequest);
         }
         finally
         {

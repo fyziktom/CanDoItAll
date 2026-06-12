@@ -25,7 +25,7 @@ Every step declares explicit operations and target scope so role permissions rem
 - Operation target scope: ExternalProductTargetReadOnly
 - Depends on: resolve-ui-screenshot-applicability
 - Outputs: Screenshot files and browser evidence for UI targets, or explicit no-UI receipt for non-UI targets.
-- Evidence: Screenshots, route URLs, console state, runtime command references, cleanup receipt, or no-UI evidence.
+- Evidence: Screenshots, durable browser_snapshot or browser_evaluate state output, route URLs, console state, runtime command references, cleanup receipt, or no-UI evidence.
 
 ### 3. Store screenshots under process run node (`store-ui-screenshots`)
 - Step kind: Review
