@@ -4,11 +4,13 @@
 @using CanDoItAll.AgentFramework.Models
 @using CanDoItAll.Components.Common
 @using CanDoItAll.Components.Charts
+@using CanDoItAll.Infrastructure.Configuration
 @implements IAsyncDisposable
 @inject IProcessObservationService ObservationService
 @inject IProcessManagerChatService ManagerChatService
 @inject IAgentFrameworkWorkspaceService AgentWorkspaceService
 @inject IProcessEscalationService EscalationService
+@inject ICurrencyFormatter CurrencyFormatter
 
 <PageTitle>@PageTitleText</PageTitle>
 
@@ -171,7 +173,7 @@
     <ChildContent>
         <Stack GapScale="LayoutGap.Medium">
             <p class="live-processes-dialog-copy">
-                The process remains unchanged. The card returns when the status changes or the selected interval expires.
+                The process remains unchanged. Close removes this card from the current projection; timed hide returns when the status changes or the selected interval expires.
             </p>
             <div class="live-processes-duration-grid">
                 <Button Text="10 minutes"
@@ -195,6 +197,11 @@
     </ChildContent>
     <Footer>
         <Cluster JustifyContent="JustifyContent.End">
+            <Button Text="Close card"
+                    Icon="close"
+                    ButtonStyle="ButtonStyle.Light"
+                    Size="ButtonSize.Small"
+                    Click="CloseSuppressTargetCardAsync" />
             <Button Text="Cancel"
                     ButtonStyle="ButtonStyle.Light"
                     Size="ButtonSize.Small"
@@ -478,7 +485,7 @@
     private ProcessLiveStats CurrentStats => snapshot?.Stats ?? ProcessLiveStats.Empty;
 
     private ProcessUsageCostDisplay CurrentCostDisplay
-        => ProcessUsageDisplayAdapter.BuildCostDisplay(CurrentStats, CultureInfo.CurrentCulture);
+        => ProcessUsageDisplayAdapter.BuildCostDisplay(CurrentStats, CurrencyFormatter);
 
     private IReadOnlyList<ProcessLiveProcessOption> ProcessOptions => snapshot?.ProcessOptions ?? [];
 
@@ -757,8 +764,8 @@
 
                 <button type="button"
                         class="live-processes-card-action live-processes-card-close"
-                        title="Hide this process card"
-                        aria-label="@($"Hide {run.RunName}")"
+                        title="Close or hide this process card"
+                        aria-label="@($"Close or hide {run.RunName}")"
                         @onclick:stopPropagation="true"
                         @onclick="@(() => OpenSuppressDialog(run))">
                     <Icon Name="close" />
@@ -770,8 +777,10 @@
                     <p class="cda-eyebrow">@run.DefinitionName</p>
                     <h2>@run.RunName</h2>
                 </div>
-                <StatusBadge Tone="@ResolveRunTone(run.Status)"
-                             Text="@run.Status.ToString()" />
+                <span class="live-processes-card__status">
+                    <StatusBadge Tone="@ResolveRunTone(run.Status)"
+                                 Text="@run.Status.ToString()" />
+                </span>
             </div>
 
             <div class="live-processes-progress"
@@ -803,7 +812,7 @@
 
             <div class="live-processes-card__footer">
                 <StatusBadge Tone="@ProcessUsageDisplayAdapter.BuildRunCostTone(CurrentStats)"
-                             Text="@ProcessUsageDisplayAdapter.BuildRunCostText(CurrentStats, run, CultureInfo.CurrentCulture)" />
+                             Text="@ProcessUsageDisplayAdapter.BuildRunCostText(CurrentStats, run, CurrencyFormatter)" />
                 <StatusBadge Tone="info"
                              Text="@($"{run.CompletedStepCount}/{run.TotalStepCount} steps")" />
                 @if (run.DeadLetteredOutboxCount > 0)
@@ -1873,6 +1882,19 @@
         return Task.CompletedTask;
     }
 
+    private Task CloseSuppressTargetCardAsync()
+    {
+        if (suppressTarget is not null)
+        {
+            dismissedActivityCardKeys.Add(BuildRunDismissKey(suppressTarget));
+            RebuildVisibleProjection();
+        }
+
+        suppressDialogOpen = false;
+        suppressTarget = null;
+        return Task.CompletedTask;
+    }
+
     private void DismissActivityCard(string key)
     {
         if (!string.IsNullOrWhiteSpace(key))
@@ -2579,6 +2601,7 @@ Reason: {ResolveMissingText(escalation.Reason)}
             .ToArray();
         visibleRuns = snapshot.Runs
             .Where(item => !IsSuppressed(item.RunId, item.Status))
+            .Where(item => !dismissedActivityCardKeys.Contains(BuildRunDismissKey(item)))
             .Where(item => item.Status != ProcessRunStatus.Blocked || !visibleEscalationRunIds.Contains(item.RunId))
             .ToArray();
         visibleAgents = snapshot.ActiveAgents
@@ -2598,8 +2621,14 @@ Reason: {ResolveMissingText(escalation.Reason)}
         var currentKeys = snapshot.Escalations
             .Select(item => item.Key)
             .Concat(snapshot.RunEvents.Select(item => item.Key))
+            .Concat(snapshot.Runs.Select(BuildRunDismissKey))
             .ToHashSet(StringComparer.Ordinal);
         dismissedActivityCardKeys.RemoveWhere(key => !currentKeys.Contains(key));
+    }
+
+    private static string BuildRunDismissKey(ProcessLiveRunCard run)
+    {
+        return $"run:{run.RunId:D}:{run.Status}";
     }
 
     private bool IsSuppressed(Guid runId, ProcessRunStatus status)
@@ -3235,9 +3264,7 @@ Reply with the next concrete action or remaining blocker. Do not treat this mess
 
     private static string FormatMoney(decimal value)
     {
-        return value == 0m
-            ? "$0"
-            : FormattableString.Invariant($"${value:N2}");
+        return CurrencyFormatting.Format(value);
     }
 
     private static string FormatAge(TimeSpan age)

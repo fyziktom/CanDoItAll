@@ -112,7 +112,12 @@ public partial class ProcessWorkspace
 
         public string BuildRunCostText(ProcessRunListItem run)
         {
-            return ProcessWorkspace.BuildRunCostText(run);
+            return workspace.BuildRunCostText(run);
+        }
+
+        public string FormatCost(decimal value)
+        {
+            return workspace.CurrencyFormatter.Format(value);
         }
 
         public IReadOnlyList<ProcessWorkspaceTagViewModel> BuildRunTags(ProcessRunListItem run)

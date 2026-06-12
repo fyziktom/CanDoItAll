@@ -76,7 +76,7 @@ This template runs in `Strict` contract mode. Architecture, implementation, vali
 - Operation target scope: ExternalActionControlled
 - Depends on: implementation, architecture-review, qa-validation/quality-accepted
 - Subprocess: `dotnet-runtime-command-writeback`
-- Outputs: Observed .NET runtime command project-structure writeback child run with parent-ready writeback evidence.
+- Outputs: Observed .NET runtime command project-structure writeback child run with parent-ready evidence for runtime-capable Run app and Run tests nodes.
 - Evidence: Child run status, managed artifacts, project-structure receipts, node ids, and blockers.
 
 ### 10. Capture and store .NET UI screenshots (`capture-ui-screenshots`)
@@ -120,7 +120,7 @@ This template runs in `Strict` contract mode. Architecture, implementation, vali
 - Operation target scope: ExternalActionControlled
 - Depends on: quality-repair, implementation, architecture-review, qa-recheck/quality-accepted
 - Subprocess: `dotnet-runtime-command-writeback`
-- Outputs: Observed .NET runtime command project-structure writeback child run with parent-ready writeback evidence.
+- Outputs: Observed .NET runtime command project-structure writeback child run with parent-ready evidence for runtime-capable Run app and Run tests nodes.
 - Evidence: Child run status, managed artifacts, project-structure receipts, node ids, and blockers.
 
 ### 16. Capture and store repaired .NET UI screenshots (`capture-ui-screenshots-after-repair`)

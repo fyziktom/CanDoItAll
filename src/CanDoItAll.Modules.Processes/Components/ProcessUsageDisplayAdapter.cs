@@ -1,4 +1,5 @@
 using System.Globalization;
+using CanDoItAll.Infrastructure.Configuration;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -28,12 +29,31 @@ public static class ProcessUsageDisplayAdapter
         ArgumentNullException.ThrowIfNull(stats);
         ArgumentNullException.ThrowIfNull(culture);
 
+        return BuildCostDisplay(stats, CurrencyFormatting.Format);
+    }
+
+    public static ProcessUsageCostDisplay BuildCostDisplay(
+        ProcessLiveStats stats,
+        ICurrencyFormatter currencyFormatter)
+    {
+        ArgumentNullException.ThrowIfNull(currencyFormatter);
+
+        return BuildCostDisplay(stats, currencyFormatter.Format);
+    }
+
+    private static ProcessUsageCostDisplay BuildCostDisplay(
+        ProcessLiveStats stats,
+        Func<decimal, string> formatMoney)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+        ArgumentNullException.ThrowIfNull(formatMoney);
+
         var kind = ResolveDisplayKind(stats);
         if (kind == ProcessUsageCostDisplayKind.MissingUsage)
         {
             return new ProcessUsageCostDisplay(
                 kind,
-                stats.EstimatedCost > 0m ? $"Est. {FormatMoney(stats.EstimatedCost, culture)}" : "Usage missing",
+                stats.EstimatedCost > 0m ? $"Est. {formatMoney(stats.EstimatedCost)}" : "Usage missing",
                 "Provider usage observations are missing for this scope, so exact actual cost is not shown.",
                 "warning",
                 "Estimated process cost only because provider usage is incomplete.",
@@ -55,8 +75,8 @@ public static class ProcessUsageDisplayAdapter
         {
             return new ProcessUsageCostDisplay(
                 kind,
-                $"Est. {FormatMoney(stats.EstimatedCost, culture)}",
-                BuildEstimatedUsageTooltip(stats, culture),
+                $"Est. {formatMoney(stats.EstimatedCost)}",
+                BuildEstimatedUsageTooltip(stats, formatMoney),
                 "warning",
                 "Estimated process cost; actual provider price is not fully known.",
                 ShowsPreciseActualCost: false);
@@ -75,8 +95,8 @@ public static class ProcessUsageDisplayAdapter
 
         return new ProcessUsageCostDisplay(
             kind,
-            FormatMoney(stats.ActualCost, culture),
-            BuildCompleteUsageTooltip(stats, culture),
+            formatMoney(stats.ActualCost),
+            BuildCompleteUsageTooltip(stats, formatMoney),
             "danger",
             "Visible process cards, sorted by current attention.",
             ShowsPreciseActualCost: true);
@@ -98,11 +118,33 @@ public static class ProcessUsageDisplayAdapter
         ArgumentNullException.ThrowIfNull(run);
         ArgumentNullException.ThrowIfNull(culture);
 
+        return BuildRunCostText(stats, run, CurrencyFormatting.Format);
+    }
+
+    public static string BuildRunCostText(
+        ProcessLiveStats stats,
+        ProcessLiveRunCard run,
+        ICurrencyFormatter currencyFormatter)
+    {
+        ArgumentNullException.ThrowIfNull(currencyFormatter);
+
+        return BuildRunCostText(stats, run, currencyFormatter.Format);
+    }
+
+    private static string BuildRunCostText(
+        ProcessLiveStats stats,
+        ProcessLiveRunCard run,
+        Func<decimal, string> formatMoney)
+    {
+        ArgumentNullException.ThrowIfNull(stats);
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(formatMoney);
+
         return ResolveDisplayKind(stats) switch
         {
-            ProcessUsageCostDisplayKind.KnownActual => BuildRunActualCostText(run, culture),
+            ProcessUsageCostDisplayKind.KnownActual => BuildRunActualCostText(run, formatMoney),
             ProcessUsageCostDisplayKind.ZeroCost => "$0",
-            ProcessUsageCostDisplayKind.Estimated => run.TreeEstimatedCost > 0m ? $"Est. {FormatMoney(run.TreeEstimatedCost, culture)}" : "Estimated",
+            ProcessUsageCostDisplayKind.Estimated => run.TreeEstimatedCost > 0m ? $"Est. {formatMoney(run.TreeEstimatedCost)}" : "Estimated",
             ProcessUsageCostDisplayKind.MissingUsage => "Usage missing",
             ProcessUsageCostDisplayKind.UnknownUsage => "Usage unknown",
             _ => "Usage unknown"
@@ -154,21 +196,21 @@ public static class ProcessUsageDisplayAdapter
 
     private static string BuildEstimatedUsageTooltip(
         ProcessLiveStats stats,
-        CultureInfo culture)
+        Func<decimal, string> formatMoney)
     {
-        return $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s), but no priced actual cost was available. Estimated process cost: {FormatMoney(stats.EstimatedCost, culture)}.";
+        return $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s), but no priced actual cost was available. Estimated process cost: {formatMoney(stats.EstimatedCost)}.";
     }
 
     private static string BuildCompleteUsageTooltip(
         ProcessLiveStats stats,
-        CultureInfo culture)
+        Func<decimal, string> formatMoney)
     {
         if (stats.ProviderUsage.ObservationCount == 0)
         {
             return "No provider usage was observed in this scope.";
         }
 
-        return $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s). Estimated process cost: {FormatMoney(stats.EstimatedCost, culture)}.";
+        return $"{stats.ProviderUsage.KnownObservationCount:N0} provider usage observation(s). Estimated process cost: {formatMoney(stats.EstimatedCost)}.";
     }
 
     private static string BuildZeroCostTooltip(ProcessLiveStats stats)
@@ -180,18 +222,11 @@ public static class ProcessUsageDisplayAdapter
 
     private static string BuildRunActualCostText(
         ProcessLiveRunCard run,
-        CultureInfo culture)
+        Func<decimal, string> formatMoney)
     {
-        var value = FormatMoney(run.TreeActualCost, culture);
+        var value = formatMoney(run.TreeActualCost);
         return run.DescendantRunCount > 0
             ? $"Total {value}"
             : value;
-    }
-
-    private static string FormatMoney(decimal value, CultureInfo culture)
-    {
-        return value == 0m
-            ? "$0"
-            : value.ToString("C", culture);
     }
 }

@@ -23,8 +23,8 @@
                      TooltipText="@($"{analytics.SafeNonActionCount} safe non-actions recorded")"
                      Tone="warning" />
         <CompactStat Label="actual cost"
-                     Value="@analytics.ActualCost.ToString("C")"
-                     TooltipText="@($"{analytics.EstimatedCost:C} estimated in scope")"
+                     Value="@Presenter.FormatCost(analytics.ActualCost)"
+                     TooltipText="@($"{Presenter.FormatCost(analytics.EstimatedCost)} estimated in scope")"
                      Tone="info" />
     </CompactStatStrip>
 

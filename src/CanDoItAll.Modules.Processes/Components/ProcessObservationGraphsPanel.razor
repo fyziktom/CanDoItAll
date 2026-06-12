@@ -2,6 +2,8 @@
 @using System.Globalization
 @using CanDoItAll.Components.Charts
 @using CanDoItAll.Components.Common
+@using CanDoItAll.Infrastructure.Configuration
+@inject ICurrencyFormatter CurrencyFormatter
 
 <Stack GapScale="LayoutGap.Medium"
        Class="w-full"
@@ -136,7 +138,7 @@
     private IReadOnlyList<ProcessLiveRunCard> Runs => Snapshot?.Runs ?? [];
 
     private ProcessUsageCostDisplay CostDisplay
-        => ProcessUsageDisplayAdapter.BuildCostDisplay(Snapshot?.Stats ?? ProcessLiveStats.Empty, CultureInfo.CurrentCulture);
+        => ProcessUsageDisplayAdapter.BuildCostDisplay(Snapshot?.Stats ?? ProcessLiveStats.Empty, CurrencyFormatter);
 
     private string CostChartDescription
         => Snapshot is null ? CostDescription : CostDisplay.ChartDescription;

@@ -2,6 +2,7 @@ using System.Text.Json;
 using CanDoItAll.AgentFramework.Core;
 using CanDoItAll.Components.BaseLib;
 using CanDoItAll.Components.CanvasLib;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Modules.Projects;
 using CanDoItAll.SharedKernel;
 using Microsoft.AspNetCore.Components;
@@ -92,6 +93,9 @@ public partial class ProcessWorkspace : ComponentBase, IDisposable, IAsyncDispos
 
     [Inject]
     private IAgentFrameworkWorkspaceService AgentWorkspaceService { get; set; } = default!;
+
+    [Inject]
+    private ICurrencyFormatter CurrencyFormatter { get; set; } = default!;
 
     [Inject]
     private ProcessCatalogWarmupService CatalogWarmupService { get; set; } = default!;

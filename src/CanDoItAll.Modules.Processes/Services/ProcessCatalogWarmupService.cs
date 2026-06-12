@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CanDoItAll.Modules.Processes;
 
-internal sealed class ProcessCatalogWarmupService(
+public sealed class ProcessCatalogWarmupService(
     ProcessesService processesService,
     ProcessTemplatePackLoader packLoader,
     ProcessTemplateProjectionService projectionService,

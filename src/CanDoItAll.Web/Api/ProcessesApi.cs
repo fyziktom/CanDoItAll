@@ -76,6 +76,15 @@ internal static class ProcessesApi
             ApiEndpointResults.FromResult(await processesService.ImportAsync(request, cancellationToken)))
             .WithName("ImportProcessDefinition");
 
+        processes.MapPost("/catalog/synchronize-defaults", async (
+                ProcessCatalogWarmupService catalogWarmupService,
+                CancellationToken cancellationToken) =>
+            {
+                await catalogWarmupService.WarmupAsync(synchronizeExistingDefinitions: true, cancellationToken);
+                return Results.Ok(new ApiAck(true));
+            })
+            .WithName("SynchronizeDefaultProcessCatalog");
+
         processes.MapGet("/runs", async (
                 [AsParameters] ProcessRunListApiQuery query,
                 ProcessesService processesService,

@@ -251,14 +251,14 @@ public partial class ProcessWorkspace
         return $"Updated {run.UpdatedAtUtc.LocalDateTime:g} / {ageText}";
     }
 
-    private static string BuildRunCostText(ProcessRunListItem run)
+    private string BuildRunCostText(ProcessRunListItem run)
     {
         if (run.DescendantRunCount == 0)
         {
-            return $"{run.EstimatedCost:C} estimated / {run.ActualCost:C} actual";
+            return $"{CurrencyFormatter.Format(run.EstimatedCost)} estimated / {CurrencyFormatter.Format(run.ActualCost)} actual";
         }
 
-        return $"{run.TreeEstimatedCost:C} estimated total / {run.TreeActualCost:C} actual total ({run.ActualCost:C} own run)";
+        return $"{CurrencyFormatter.Format(run.TreeEstimatedCost)} estimated total / {CurrencyFormatter.Format(run.TreeActualCost)} actual total ({CurrencyFormatter.Format(run.ActualCost)} own run)";
     }
 
     private static string BuildRunFilterResultText(int visibleCount, int totalCount)

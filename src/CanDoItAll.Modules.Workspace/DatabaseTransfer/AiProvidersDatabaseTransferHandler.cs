@@ -112,12 +112,16 @@ public sealed class AiProvidersDatabaseTransferHandler : IDatabaseTransferHandle
             {
                 WorkspaceName = sourceSettings.WorkspaceName,
                 DefaultPromptOutputFormat = sourceSettings.DefaultPromptOutputFormat,
+                CurrencyCode = sourceSettings.CurrencyCode,
+                CurrencyCultureName = sourceSettings.CurrencyCultureName,
                 Notes = sourceSettings.Notes
             };
             await context.TargetDbContext.Set<WorkspaceSettings>().AddAsync(targetSettings, cancellationToken);
         }
 
         targetSettings.DefaultProviderProfileId = sourceSettings.DefaultProviderProfileId;
+        targetSettings.CurrencyCode = sourceSettings.CurrencyCode;
+        targetSettings.CurrencyCultureName = sourceSettings.CurrencyCultureName;
         targetSettings.UpdatedAtUtc = sourceSettings.UpdatedAtUtc;
     }
 }

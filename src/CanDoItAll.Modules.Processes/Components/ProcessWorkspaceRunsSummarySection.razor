@@ -13,8 +13,8 @@
                  TooltipText="Assignments or execution gaps detected."
                  Tone="danger" />
     <CompactStat Label="actual cost"
-                 Value="@Presenter.SelectedRun.ActualCost.ToString("C")"
-                 TooltipText="@($"{Presenter.SelectedRun.EstimatedCost:C} estimated for this run.")"
+                 Value="@Presenter.FormatCost(Presenter.SelectedRun.ActualCost)"
+                 TooltipText="@($"{Presenter.FormatCost(Presenter.SelectedRun.EstimatedCost)} estimated for this run.")"
                  Tone="info" />
 </CompactStatStrip>
 

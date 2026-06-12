@@ -57,6 +57,28 @@ public sealed class ProcessUsageDisplayAdapterTests
     }
 
     [Fact]
+    public void BuildCostDisplay_uses_usd_default_instead_of_current_culture_currency()
+    {
+        var stats = CreateStats(
+            actualCost: 12.34m,
+            providerUsage: new ProviderUsageSummary(
+                ObservationCount: 1,
+                KnownObservationCount: 1,
+                UnknownObservationCount: 0,
+                InputTokens: 100,
+                CachedInputTokens: 0,
+                OutputTokens: 50,
+                ReasoningTokens: 0,
+                TotalTokens: 150,
+                KnownCostUsd: 12.34m));
+
+        var display = ProcessUsageDisplayAdapter.BuildCostDisplay(stats, CultureInfo.GetCultureInfo("cs-CZ"));
+
+        Assert.Equal("$12.34", display.Value);
+        Assert.DoesNotContain("Kč", display.Value, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void BuildRunCostText_hides_run_actual_cost_when_scope_usage_is_incomplete()
     {
         var stats = CreateStats(

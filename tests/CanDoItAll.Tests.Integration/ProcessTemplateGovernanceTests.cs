@@ -267,7 +267,7 @@ public sealed class ProcessTemplateGovernanceTests
         var runtimeManifestStep = GetStep(runtimeDefinition, "resolve-dotnet-run-commands");
         Assert.Equal(ProcessStepTargetScope.ExternalProductTargetReadOnly, runtimeManifestStep.OperationTargetScope);
         Assert.DoesNotContain(ProcessStepOperation.ExecuteExternalAction, runtimeManifestStep.AllowedOperations);
-        Assert.Contains("planned Run command", runtimeManifestStep.OutputContractSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime-capable", runtimeManifestStep.OutputContractSummary, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("no project-structure mutation", runtimeManifestStep.ArtifactExpectations.Single().ValidationRequirementSummary, StringComparison.OrdinalIgnoreCase);
         AssertWritebackStep(runtimeDefinition, "write-run-command-nodes");
         var runtimeContractText = string.Join(
@@ -276,7 +276,11 @@ public sealed class ProcessTemplateGovernanceTests
             GetStep(runtimeDefinition, "write-run-command-nodes").Notes,
             GetStep(runtimeDefinition, "runtime-command-handoff").EvidenceContractSummary);
 
-        Assert.Contains("Run command", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("runtime-capable", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Environment node", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Script node", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ProjectBlock + operations", runtimeContractText, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ProjectBlock + delivery", runtimeContractText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Run app", runtimeContractText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Run tests", runtimeContractText, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("process run node", runtimeContractText, StringComparison.OrdinalIgnoreCase);

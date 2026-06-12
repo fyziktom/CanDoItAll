@@ -325,7 +325,19 @@
 }
 
 .live-processes-card__identity {
+    flex: 1 1 auto;
     min-width: 0;
+}
+
+.live-processes-card__status {
+    display: inline-flex;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.live-processes-card__status > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .live-processes-card__identity h2,

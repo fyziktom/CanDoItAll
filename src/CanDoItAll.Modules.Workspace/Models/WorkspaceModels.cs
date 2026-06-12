@@ -1,4 +1,5 @@
 using CanDoItAll.Infrastructure.Persistence;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.SharedKernel;
 using CanDoItAll.Modules.Security;
@@ -21,6 +22,10 @@ public sealed class WorkspaceSettings
     public Guid? DefaultProviderProfileId { get; set; }
 
     public string DefaultPromptOutputFormat { get; set; } = "Markdown";
+
+    public string CurrencyCode { get; set; } = CurrencyDisplaySettings.Default.CurrencyCode;
+
+    public string CurrencyCultureName { get; set; } = CurrencyDisplaySettings.Default.CultureName;
 
     public string Notes { get; set; } = string.Empty;
 
@@ -72,6 +77,8 @@ internal sealed class WorkspaceSettingsConfiguration : IEntityTypeConfiguration<
         builder.HasKey(settings => settings.Id);
         builder.Property(settings => settings.WorkspaceName).HasMaxLength(200).IsRequired();
         builder.Property(settings => settings.DefaultPromptOutputFormat).HasMaxLength(40).IsRequired();
+        builder.Property(settings => settings.CurrencyCode).HasMaxLength(3).HasDefaultValue("USD").IsRequired();
+        builder.Property(settings => settings.CurrencyCultureName).HasMaxLength(40).HasDefaultValue("en-US").IsRequired();
         builder.Property(settings => settings.Notes).HasColumnType("TEXT");
     }
 }
@@ -99,6 +106,10 @@ public sealed class WorkspaceSettingsModel
     public string WorkspaceName { get; set; } = "CanDoItAll";
 
     public string DefaultPromptOutputFormat { get; set; } = "Markdown";
+
+    public string CurrencyCode { get; set; } = CurrencyDisplaySettings.Default.CurrencyCode;
+
+    public string CurrencyCultureName { get; set; } = CurrencyDisplaySettings.Default.CultureName;
 
     public string Notes { get; set; } = string.Empty;
 }
@@ -163,7 +174,8 @@ public sealed partial class WorkspaceService(
     IProviderRuntimeGateway providerRuntimeGateway,
     IStorageCatalogService storageCatalogService,
     IStorageDriverRegistry storageDriverRegistry,
-    IActivityStream activityStream)
+    IActivityStream activityStream,
+    CurrencyDisplayState currencyDisplayState)
 {
     public async Task<WorkspaceSettingsModel> GetSettingsAsync(CancellationToken cancellationToken = default)
     {
@@ -175,16 +187,23 @@ public sealed partial class WorkspaceService(
             .FirstOrDefaultAsync(cancellationToken);
         if (settings is null)
         {
-            return new WorkspaceSettingsModel();
+            var defaultModel = new WorkspaceSettingsModel();
+            currencyDisplayState.Update(defaultModel.CurrencyCode, defaultModel.CurrencyCultureName);
+            return defaultModel;
         }
 
-        return new WorkspaceSettingsModel
+        var currencySettings = CurrencyDisplaySettings.Normalize(settings.CurrencyCode, settings.CurrencyCultureName);
+        var model = new WorkspaceSettingsModel
         {
             DefaultProviderProfileId = settings.DefaultProviderProfileId,
             WorkspaceName = settings.WorkspaceName,
             DefaultPromptOutputFormat = settings.DefaultPromptOutputFormat,
+            CurrencyCode = currencySettings.CurrencyCode,
+            CurrencyCultureName = currencySettings.CultureName,
             Notes = settings.Notes
         };
+        currencyDisplayState.Update(currencySettings);
+        return model;
     }
 
     public async Task SaveSettingsAsync(WorkspaceSettingsModel model, CancellationToken cancellationToken = default)
@@ -204,8 +223,12 @@ public sealed partial class WorkspaceService(
         settings.WorkspaceName = string.IsNullOrWhiteSpace(model.WorkspaceName) ? "CanDoItAll" : model.WorkspaceName.Trim();
         settings.DefaultProviderProfileId = model.DefaultProviderProfileId;
         settings.DefaultPromptOutputFormat = string.IsNullOrWhiteSpace(model.DefaultPromptOutputFormat) ? "Markdown" : model.DefaultPromptOutputFormat.Trim();
+        var currencySettings = CurrencyDisplaySettings.Normalize(model.CurrencyCode, model.CurrencyCultureName);
+        settings.CurrencyCode = currencySettings.CurrencyCode;
+        settings.CurrencyCultureName = currencySettings.CultureName;
         settings.Notes = model.Notes?.Trim() ?? string.Empty;
         settings.UpdatedAtUtc = clock.GetUtcNow();
+        currencyDisplayState.Update(currencySettings);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await activityStream.RecordAsync(new ActivityWriteRequest(

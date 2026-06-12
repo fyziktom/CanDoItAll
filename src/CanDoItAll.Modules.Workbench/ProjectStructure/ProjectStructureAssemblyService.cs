@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using CanDoItAll.Infrastructure.Configuration;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Modules.Factory;
@@ -1272,7 +1273,7 @@ internal sealed class ProcessProjectionContributor : IProjectStructureProjection
                     ? null
                     : $"Target: {projectStructureContext.ResolveTargetNodeTitle()} ({projectStructureContext.ResolveTargetNodeId()})",
                 string.IsNullOrWhiteSpace(run.ExecutorSnapshotSummary) ? null : $"Executors: {run.ExecutorSnapshotSummary.Trim()}",
-                $"Estimated cost: {run.EstimatedCost:C} | Actual cost: {run.ActualCost:C}",
+                $"Estimated cost: {CurrencyFormatting.Format(run.EstimatedCost)} | Actual cost: {CurrencyFormatting.Format(run.ActualCost)}",
                 stats.BlockedStepCount > 0 ? $"Blocked step(s): {stats.BlockedStepCount}" : null
             }.Where(item => !string.IsNullOrWhiteSpace(item)));
     }

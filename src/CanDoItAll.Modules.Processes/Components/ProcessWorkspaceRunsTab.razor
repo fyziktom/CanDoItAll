@@ -28,7 +28,7 @@
                         <h3 class="text-lg font-semibold text-slate-950">@selectedRun.Name</h3>
                         <p class="text-sm leading-6 text-slate-600">@Presenter.BuildRunSummary(selectedRun)</p>
                         <p class="text-sm leading-6 text-slate-500">
-                            @selectedRun.EstimatedCost.ToString("C") estimated / @selectedRun.ActualCost.ToString("C") actual
+                            @Presenter.FormatCost(selectedRun.EstimatedCost) estimated / @Presenter.FormatCost(selectedRun.ActualCost) actual
                         </p>
                         @if (!string.IsNullOrWhiteSpace(Presenter.SelectedRunHealth.ActionableReason))
                         {

@@ -71,7 +71,7 @@
                              TooltipText="Capability gaps in the selected run."
                              Tone="danger" />
                 <CompactStat Label="actual cost"
-                             Value="@selectedRun.ActualCost.ToString("C")"
+                             Value="@Presenter.FormatCost(selectedRun.ActualCost)"
                              TooltipText="Actual cost recorded for the selected run."
                              Tone="info" />
             </CompactStatStrip>
