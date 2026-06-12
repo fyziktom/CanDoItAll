@@ -232,7 +232,9 @@ internal sealed class ProcessDefinitionDraftCloneEngine
                     WorkflowOutputId = artifactExpectation.WorkflowOutputId,
                     WorkflowOutputName = artifactExpectation.WorkflowOutputName,
                     WorkflowOutputKind = artifactExpectation.WorkflowOutputKind,
-                    SubprocessChildArtifactExpectationId = artifactExpectation.SubprocessChildArtifactExpectationId
+                    SubprocessChildArtifactExpectationId = artifactExpectation.SubprocessChildArtifactExpectationId,
+                    SubprocessChildStepKey = artifactExpectation.SubprocessChildStepKey,
+                    SubprocessChildArtifactTitle = artifactExpectation.SubprocessChildArtifactTitle
                 },
                 cancellationToken);
         }

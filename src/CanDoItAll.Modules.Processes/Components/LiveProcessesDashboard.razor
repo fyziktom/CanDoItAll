@@ -2571,11 +2571,15 @@ Reason: {ResolveMissingText(escalation.Reason)}
         visibleEscalations = snapshot.Escalations
             .Where(item => !dismissedActivityCardKeys.Contains(item.Key))
             .ToArray();
+        var visibleEscalationRunIds = visibleEscalations
+            .Select(item => item.RunId)
+            .ToHashSet();
         visibleRunEvents = snapshot.RunEvents
             .Where(item => !dismissedActivityCardKeys.Contains(item.Key))
             .ToArray();
         visibleRuns = snapshot.Runs
             .Where(item => !IsSuppressed(item.RunId, item.Status))
+            .Where(item => item.Status != ProcessRunStatus.Blocked || !visibleEscalationRunIds.Contains(item.RunId))
             .ToArray();
         visibleAgents = snapshot.ActiveAgents
             .Where(item =>

@@ -284,6 +284,10 @@ public sealed class ProcessArtifactExpectation
     public WorkflowArtifactKind? WorkflowOutputKind { get; set; }
 
     public Guid? SubprocessChildArtifactExpectationId { get; set; }
+
+    public string SubprocessChildStepKey { get; set; } = string.Empty;
+
+    public string SubprocessChildArtifactTitle { get; set; } = string.Empty;
 }
 
 public sealed class ProcessStepArtifactInputDefinition

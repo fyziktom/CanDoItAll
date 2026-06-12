@@ -129,6 +129,8 @@ public sealed partial class ProcessesService
                     subprocessChildArtifactExpectationId != Guid.Empty
                         ? subprocessChildArtifactExpectationId
                         : null;
+                artifactExpectation.SubprocessChildStepKey = artifactModel.SubprocessChildStepKey.Trim();
+                artifactExpectation.SubprocessChildArtifactTitle = artifactModel.SubprocessChildArtifactTitle.Trim();
 
                 context.ArtifactExpectationIdMap[artifactExpectation.Id] = artifactExpectation.Id;
                 context.RetainedArtifactExpectationIds.Add(artifactExpectation.Id);

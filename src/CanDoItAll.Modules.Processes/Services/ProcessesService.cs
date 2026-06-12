@@ -234,7 +234,9 @@ public sealed partial class ProcessesService(
                             WorkflowOutputId = item.WorkflowOutputId,
                             WorkflowOutputName = item.WorkflowOutputName,
                             WorkflowOutputKind = item.WorkflowOutputKind,
-                            SubprocessChildArtifactExpectationId = item.SubprocessChildArtifactExpectationId
+                            SubprocessChildArtifactExpectationId = item.SubprocessChildArtifactExpectationId,
+                            SubprocessChildStepKey = item.SubprocessChildStepKey,
+                            SubprocessChildArtifactTitle = item.SubprocessChildArtifactTitle
                         })
                         .ToList(),
                     ArtifactInputs = BuildEditorArtifactInputs(step, artifactInputs)

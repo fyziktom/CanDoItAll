@@ -3064,6 +3064,56 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     }
 
     [Fact]
+    public void ResolveRequiredToolNames_for_validation_contract_planning_step_ignores_later_runtime_tool_references()
+    {
+        var tools = InvokeResolveRequiredToolNames(
+            new ProcessDefinition
+            {
+                Name = ".NET feature/function implementation subprocess",
+                Slug = "dotnet-feature-function-implementation"
+            },
+            new ProcessStepDefinition
+            {
+                Key = "test-contract",
+                Title = "Define focused validation contract",
+                StepKind = ProcessStepKind.Review,
+                AllowedOperations =
+                [
+                    ProcessStepOperation.ReadProcessContext,
+                    ProcessStepOperation.ReadProjectStructure,
+                    ProcessStepOperation.ReadUpstreamArtifacts,
+                    ProcessStepOperation.WriteManagedProcessArtifacts,
+                    ProcessStepOperation.EscalateOrDecide
+                ],
+                OperationTargetScope = ProcessStepTargetScope.ExternalProductTargetReadOnly
+            },
+            new ProcessStepRun
+            {
+                Title = "Define focused validation contract",
+                StepKind = ProcessStepKind.Review,
+                CurrentExecutorName = "Feature validation owner"
+            },
+            new ProcessWorkBrief
+            {
+                Title = "Define focused validation contract",
+                WorkBriefText = "Plan the proof only. Do not execute build, test, launch, or browser tools in this step. For UI proof, require the later validation step to obtain a launch receipt such as workspace_dotnet_run and navigate only to the returned URL.",
+                ExpectedOutcome = "Validation contract with required tests, commands, exit-code expectations, and UI proof when applicable.",
+                EvidenceExpectationSummary = "Feature validation contract"
+            },
+            [
+                (ProcessArtifactKind.Evidence, "Feature validation contract", "Must list focused test/build/browser proof commands and map each proof item to acceptance criteria.")
+            ]);
+
+        Assert.DoesNotContain("workspace_dotnet_build", tools);
+        Assert.DoesNotContain("workspace_dotnet_test", tools);
+        Assert.DoesNotContain("workspace_dotnet_run", tools);
+        Assert.DoesNotContain("workspace_pwsh_run_script", tools);
+        Assert.DoesNotContain("browser_snapshot", tools);
+        Assert.DoesNotContain("browser_take_screenshot", tools);
+        Assert.DoesNotContain("browser_console_messages", tools);
+    }
+
+    [Fact]
     public void ResolveRequiredToolNames_for_blazor_revalidation_does_not_require_project_structure_writeback_without_external_action()
     {
         var tools = InvokeResolveRequiredToolNames(
@@ -17163,6 +17213,88 @@ Ancestor path to the target work node:
 
         Assert.Equal(childArtifact.Id, result?.Id);
         Assert.Contains("legacy same-kind subprocess artifact fallback", diagnostic, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SubprocessArtifactProjectionMapping_remaps_stale_child_expectation_id_by_child_step_and_artifact_title()
+    {
+        AppDbContextModelRegistry.ConfigureAssemblies([typeof(ProcessesModuleAssemblyMarker).Assembly]);
+
+        var parentStepDefinitionId = Guid.NewGuid();
+        var staleChildStepDefinitionId = Guid.NewGuid();
+        var actualChildStepDefinitionId = Guid.NewGuid();
+        var staleChildExpectationId = Guid.NewGuid();
+        var actualChildExpectationId = Guid.NewGuid();
+        var actualChildDefinitionVersionId = Guid.NewGuid();
+        var childRunId = Guid.NewGuid();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase($"subprocess-projection-remap-{Guid.NewGuid():N}")
+            .Options;
+        await using var dbContext = new AppDbContext(options);
+        dbContext.Set<ProcessStepDefinition>().AddRange(
+            new ProcessStepDefinition
+            {
+                Id = staleChildStepDefinitionId,
+                ProcessDefinitionVersionId = Guid.NewGuid(),
+                Key = "implement-code-change",
+                Title = "Implement bounded code change"
+            },
+            new ProcessStepDefinition
+            {
+                Id = actualChildStepDefinitionId,
+                ProcessDefinitionVersionId = actualChildDefinitionVersionId,
+                Key = "implement-code-change",
+                Title = "Implement bounded code change"
+            });
+        dbContext.Set<ProcessArtifactExpectation>().AddRange(
+            new ProcessArtifactExpectation
+            {
+                Id = staleChildExpectationId,
+                StepDefinitionId = staleChildStepDefinitionId,
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = "Slice implementation change set"
+            },
+            new ProcessArtifactExpectation
+            {
+                Id = actualChildExpectationId,
+                StepDefinitionId = actualChildStepDefinitionId,
+                ArtifactKind = ProcessArtifactKind.Deliverable,
+                Title = "Slice implementation change set"
+            });
+        await dbContext.SaveChangesAsync();
+
+        var parentExpectation = new ProcessArtifactExpectation
+        {
+            Id = Guid.NewGuid(),
+            StepDefinitionId = parentStepDefinitionId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Implementation change set",
+            SubprocessChildArtifactExpectationId = staleChildExpectationId
+        };
+        var childArtifact = new ProcessArtifactRecord
+        {
+            Id = Guid.NewGuid(),
+            ProcessRunId = childRunId,
+            ArtifactExpectationId = actualChildExpectationId,
+            ArtifactKind = ProcessArtifactKind.Deliverable,
+            Title = "Slice implementation change set",
+            TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
+            SensitivityLevel = ProcessSensitivityLevel.Internal,
+            CreatedAtUtc = DateTimeOffset.UtcNow
+        };
+
+        var effectiveExpectations = await ProcessSubprocessProjectionPersistenceService.ResolveEffectiveProjectionExpectationsAsync(
+            dbContext,
+            [parentExpectation],
+            [childArtifact],
+            actualChildDefinitionVersionId,
+            CancellationToken.None);
+
+        var effectiveExpectation = Assert.Single(effectiveExpectations);
+        Assert.Equal(parentExpectation.Id, effectiveExpectation.Id);
+        Assert.Equal(actualChildExpectationId, effectiveExpectation.SubprocessChildArtifactExpectationId);
+        Assert.Equal("implement-code-change", effectiveExpectation.SubprocessChildStepKey);
+        Assert.Equal("Slice implementation change set", effectiveExpectation.SubprocessChildArtifactTitle);
     }
 
     [Fact]

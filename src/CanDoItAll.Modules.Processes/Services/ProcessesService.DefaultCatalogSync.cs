@@ -236,7 +236,9 @@ internal static class ProcessDefinitionSyncComparer
                             item.WorkflowOutputId,
                             item.WorkflowOutputName,
                             item.WorkflowOutputKind,
-                            item.SubprocessChildArtifactExpectationId
+                            item.SubprocessChildArtifactExpectationId,
+                            item.SubprocessChildStepKey,
+                            item.SubprocessChildArtifactTitle
                         })
                         .ToArray(),
                     ArtifactInputs = step.ArtifactInputs

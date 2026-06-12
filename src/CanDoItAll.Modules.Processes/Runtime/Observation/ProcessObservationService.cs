@@ -8,6 +8,7 @@ namespace CanDoItAll.Modules.Processes;
 internal sealed class ProcessObservationService(
     ProcessesService processesService,
     ProcessWorkspaceRunDetailsLoader runDetailsLoader,
+    ProcessLiveBlockedIncidentSummaryService blockedIncidentSummaryService,
     IProcessEscalationService escalationService,
     ProcessRuntimeStateOverviewService runtimeStateOverviewService,
     IAgentFrameworkWorkspaceService workspaceService,
@@ -372,15 +373,6 @@ internal sealed class ProcessObservationService(
             cancellationToken);
         var activeRunSummariesByRunId = activeRunSummaries.ToDictionary(item => item.RunId);
         var liveEscalationsByRunId = await escalationService.ListForRunsAsync(observedRunIds, cancellationToken);
-        var escalationCards = BuildLiveEscalationCards(
-            observedRuns,
-            definitionsById,
-            liveEscalationsByRunId);
-        var runEventCards = BuildLiveRunEventCards(
-            allRuns,
-            definitionsById,
-            historyStartUtc,
-            query.ProcessRunId);
         HashSet<Guid> processRunIdsForHistory = query.ProcessRunId.HasValue
             ? [query.ProcessRunId.Value]
             : query.ProcessDefinitionId.HasValue
@@ -395,6 +387,36 @@ internal sealed class ProcessObservationService(
             executionRuns,
             query.HistoryWindow,
             cancellationToken);
+        var escalationCards = blockedIncidentSummaryService.BuildEscalationIncidentCards(
+            BuildLiveEscalationCards(
+                observedRuns,
+                definitionsById,
+                liveEscalationsByRunId),
+            allRuns,
+            executionRunDetails);
+        var blockedRunIdsCoveredByEscalations = blockedIncidentSummaryService.ResolveBlockedRunIdsCoveredByEscalations(
+            escalationCards,
+            allRuns);
+        var runCards = BuildLiveRunCards(
+            observedRuns,
+            allRuns,
+            definitionsById,
+            activeRunSummariesByRunId,
+            escalationCards,
+            blockedRunIdsCoveredByEscalations,
+            executionRunDetails,
+            blockedIncidentSummaryService);
+        var runEventCards = BuildLiveRunEventCards(
+            allRuns,
+            definitionsById,
+            historyStartUtc,
+            query.ProcessRunId,
+            runCards.Select(item => item.RunId).ToHashSet(),
+            blockedRunIdsCoveredByEscalations
+                .Concat(escalationCards.Select(item => item.RunId))
+                .ToHashSet(),
+            executionRunDetails,
+            blockedIncidentSummaryService);
         var metrics = ExtractLiveMetrics(executionRunDetails, historyStartUtc);
         var usageObservations = ExtractLiveUsageObservations(executionRunDetails, historyStartUtc);
         var legacyMetricsWithoutUsageObservations = ExtractLiveLegacyMetricsWithoutUsageObservations(
@@ -422,7 +444,7 @@ internal sealed class ProcessObservationService(
             query.HistoryWindow,
             query.ProcessRunId,
             BuildLiveProcessOptions(allRuns, definitionsById),
-            BuildLiveRunCards(observedRuns, definitionsById, activeRunSummariesByRunId),
+            runCards,
             escalationCards,
             runEventCards,
             BuildLiveAgentCards(activeRunSummaries),
@@ -562,13 +584,26 @@ internal sealed class ProcessObservationService(
 
     private static IReadOnlyList<ProcessLiveRunCard> BuildLiveRunCards(
         IReadOnlyList<ProcessRunListItem> runs,
+        IReadOnlyList<ProcessRunListItem> allRuns,
         IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById,
-        IReadOnlyDictionary<Guid, ProcessActiveRunSummaryViewModel> activeRunSummariesByRunId)
+        IReadOnlyDictionary<Guid, ProcessActiveRunSummaryViewModel> activeRunSummariesByRunId,
+        IReadOnlyList<ProcessLiveEscalationCard> escalationCards,
+        IReadOnlySet<Guid> blockedRunIdsCoveredByEscalations,
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        ProcessLiveBlockedIncidentSummaryService blockedIncidentSummaryService)
     {
+        var childRunsByParentRunId = ProcessLiveBlockedIncidentSummaryService.BuildChildRunsByParentRunId(allRuns);
+        var escalationCardsByRunId = escalationCards
+            .GroupBy(item => item.RunId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<ProcessLiveEscalationCard>)group.ToArray());
+
         return runs
+            .Where(run => run.Status != ProcessRunStatus.Blocked || !blockedRunIdsCoveredByEscalations.Contains(run.Id))
             .Select(run =>
             {
                 activeRunSummariesByRunId.TryGetValue(run.Id, out var activeSummary);
+                escalationCardsByRunId.TryGetValue(run.Id, out var runEscalations);
+                runEscalations ??= [];
                 return new ProcessLiveRunCard(
                     run.Id,
                     run.ProcessDefinitionId,
@@ -589,7 +624,12 @@ internal sealed class ProcessObservationService(
                     activeSummary?.BlockedOrFailedStepCount ?? run.BlockedStepCount,
                     run.ManagerAgentId,
                     run.ManagerAgentName,
-                    activeSummary?.HealthSummary ?? string.Empty);
+                    blockedIncidentSummaryService.BuildRunHealthSummary(
+                        run,
+                        activeSummary,
+                        runEscalations,
+                        childRunsByParentRunId,
+                        executionRunDetails));
             })
             .OrderBy(item => ResolveLiveRunSortRank(item.Status))
             .ThenByDescending(item => item.ActiveExecutionCount)
@@ -659,13 +699,22 @@ internal sealed class ProcessObservationService(
         IReadOnlyList<ProcessRunListItem> runs,
         IReadOnlyDictionary<Guid, ProcessDefinitionListItem> definitionsById,
         DateTimeOffset historyStartUtc,
-        Guid? processRunId)
+        Guid? processRunId,
+        IReadOnlySet<Guid> visibleRunIds,
+        IReadOnlySet<Guid> escalationRunIds,
+        IReadOnlyList<ExecutionRunDetail> executionRunDetails,
+        ProcessLiveBlockedIncidentSummaryService blockedIncidentSummaryService)
     {
+        var childRunsByParentRunId = ProcessLiveBlockedIncidentSummaryService.BuildChildRunsByParentRunId(runs);
         return runs
             .Where(run => IsLiveRunEventStatus(run.Status))
             .Where(run => processRunId.HasValue
                 ? run.Id == processRunId.Value
                 : run.UpdatedAtUtc >= historyStartUtc)
+            .Where(run => !blockedIncidentSummaryService.ShouldSuppressRunEvent(
+                run,
+                visibleRunIds,
+                escalationRunIds))
             .Select(run => new ProcessLiveRunEventCard(
                 BuildLiveRunEventKey(run),
                 run.Id,
@@ -674,7 +723,10 @@ internal sealed class ProcessObservationService(
                 run.Name,
                 run.Status,
                 ResolveLiveRunEventTitle(run),
-                ResolveLiveRunEventSummary(run),
+                blockedIncidentSummaryService.BuildRunEventSummary(
+                    run,
+                    childRunsByParentRunId,
+                    executionRunDetails),
                 ResolveLiveRunEventIcon(run.Status),
                 run.UpdatedAtUtc,
                 run.ManagerAgentId,

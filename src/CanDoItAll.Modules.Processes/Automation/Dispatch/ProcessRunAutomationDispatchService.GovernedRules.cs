@@ -548,6 +548,11 @@ internal sealed partial class ProcessRunAutomationDispatchService
             return false;
         }
 
+        if (!IsToolAllowedByCurrentStepOperationContract(candidate, toolName))
+        {
+            return false;
+        }
+
         if (toolName is "project_structure_node_create" or "project_structure_node_update" or "project_structure_asset_create")
         {
             return true;
@@ -561,6 +566,73 @@ internal sealed partial class ProcessRunAutomationDispatchService
         return !IsPlanningArchitectureOrBoundaryStep(candidate) &&
                !IsScreenshotReviewOrStorageConsumerStep(candidate, string.Empty) &&
                !IsScreenshotCleanupOrHandoffConsumerStep(candidate, string.Empty);
+    }
+
+    private static bool IsToolAllowedByCurrentStepOperationContract(DispatchCandidate candidate, string toolName)
+    {
+        var normalizedToolName = NormalizeToolToken(toolName);
+        if (string.IsNullOrWhiteSpace(normalizedToolName))
+        {
+            return false;
+        }
+
+        if (!ToolCapabilityRegistry.TryResolve(normalizedToolName, out var capability))
+        {
+            return true;
+        }
+
+        var operationContract = ResolveProcessStepOperationContract(candidate);
+        return capability.OperationRequirementKind switch
+        {
+            ToolCapabilityOperationRequirementKind.Static => capability.OperationRequirements.Count == 0 ||
+                capability.OperationRequirements.All(requirement =>
+                    requirement.AnyOf.Any(operation => HasAllowedOperation(operationContract, operation))),
+            ToolCapabilityOperationRequirementKind.WorkspaceFileMutation =>
+                IsWorkspaceFileMutationToolAllowedByCurrentStep(operationContract, normalizedToolName),
+            ToolCapabilityOperationRequirementKind.WorkspaceScript =>
+                IsWorkspaceScriptToolAllowedByCurrentStep(operationContract),
+            ToolCapabilityOperationRequirementKind.DotNetRun =>
+                operationContract.AllowedOperations.Contains(ProcessStepOperation.RunValidation) ||
+                operationContract.AllowedOperations.Contains(ProcessStepOperation.LaunchRuntime),
+            ToolCapabilityOperationRequirementKind.ProcessArtifactRecord =>
+                operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteManagedProcessArtifacts) ||
+                operationContract.AllowedOperations.Contains(ProcessStepOperation.RecoverArtifactsOnly),
+            _ => true
+        };
+    }
+
+    private static bool IsWorkspaceFileMutationToolAllowedByCurrentStep(
+        ProcessStepOperationContract operationContract,
+        string normalizedToolName)
+    {
+        if (normalizedToolName is ToolContractCatalog.WorkspaceWriteFile or ToolContractCatalog.WorkspaceAppendFile)
+        {
+            return operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteManagedProcessArtifacts) ||
+                   operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteExternalArtifactDestination) ||
+                   operationContract.AllowsProductMutation;
+        }
+
+        return operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteExternalArtifactDestination) ||
+               operationContract.AllowsProductMutation;
+    }
+
+    private static bool IsWorkspaceScriptToolAllowedByCurrentStep(ProcessStepOperationContract operationContract)
+    {
+        return operationContract.AllowsProductMutation ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.RunValidation) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.LaunchRuntime) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.CaptureRuntimeProof) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.ExecuteExternalAction) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.WriteExternalArtifactDestination) ||
+               operationContract.AllowedOperations.Contains(ProcessStepOperation.RecoverArtifactsOnly);
+    }
+
+    private static bool HasAllowedOperation(
+        ProcessStepOperationContract operationContract,
+        string operation)
+    {
+        return operationContract.AllowedOperations.Any(allowedOperation =>
+            string.Equals(allowedOperation.ToString(), operation, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool IsJavaScriptOnlyRunContext(DispatchCandidate candidate)

@@ -323,6 +323,8 @@ internal sealed class ProcessArtifactExpectationConfiguration : IEntityTypeConfi
         builder.Property(expectation => expectation.WorkflowOutputId).HasMaxLength(160);
         builder.Property(expectation => expectation.WorkflowOutputName).HasMaxLength(160);
         builder.Property(expectation => expectation.WorkflowOutputKind).HasConversion<string>().HasMaxLength(48);
+        builder.Property(expectation => expectation.SubprocessChildStepKey).HasMaxLength(160);
+        builder.Property(expectation => expectation.SubprocessChildArtifactTitle).HasMaxLength(160);
         builder.HasIndex(expectation => expectation.StepDefinitionId);
         builder.HasIndex(expectation => expectation.SubprocessChildArtifactExpectationId);
         builder.HasOne<ProcessStepDefinition>()
