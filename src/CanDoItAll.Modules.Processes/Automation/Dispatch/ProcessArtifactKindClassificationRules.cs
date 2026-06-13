@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 
 namespace CanDoItAll.Modules.Processes;
 
@@ -87,7 +88,7 @@ internal static class ProcessArtifactKindClassificationRules
 
         return string.Equals(artifact.ArtifactKind, "generated-output", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-               ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension)
+               SoftwareDeliveryPathRules.IsCodeOrProjectExtension(extension)
             ? ProcessArtifactKind.Deliverable
             : ProcessArtifactKind.Evidence;
     }

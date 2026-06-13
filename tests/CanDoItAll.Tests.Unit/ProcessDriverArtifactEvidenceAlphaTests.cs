@@ -241,7 +241,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
             projectionLineage: [lineage],
             validationRequirements: [requirement],
             suppliedContentFactory: reference => ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
-                reference with { Uri = "bundle://proof/SB034/different-artifact-projection.json" },
+                reference with { Uri = "artifact://proof/scenario034/different-artifact-projection.json" },
                 ArtifactEvidencePayload)));
         var wrongFamily = verifier.Verify(CreateRequest(
             projectionLineage: [lineage],
@@ -334,7 +334,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
         IReadOnlyList<ProcessArtifactExpectationSnapshot>? expectedArtifacts = null,
         IReadOnlyList<ProcessArtifactRecordSnapshot>? artifactRecords = null,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string projectionEvidenceUri = "bundle://proof/SB034/artifact-projection-evidence.json",
+        string projectionEvidenceUri = "artifact://proof/scenario034/artifact-projection-evidence.json",
         ProcessDriverCoreDescriptorFamily projectionFamily = ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence,
         Func<ProcessDriverEvidenceReference, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
@@ -345,7 +345,7 @@ public sealed class ProcessDriverArtifactEvidenceAlphaTests
             projectionFamily);
         var validationReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB034/artifact-projection-validation.json",
+            "artifact://proof/scenario034/artifact-projection-validation.json",
             ArtifactEvidencePayload,
             ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation);
         var suppliedContent = suppliedContentFactory?.Invoke(projectionReference) ??

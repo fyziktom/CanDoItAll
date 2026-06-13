@@ -1,5 +1,6 @@
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.Storage;
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using CanDoItAll.SharedKernel;
 using System.Text;
 using System.Text.Json;
@@ -121,8 +122,8 @@ internal sealed class ProcessProjectionPathResolver : IProcessProjectionPathReso
         return ProcessExecutionArtifactMetadataRules.ResolveWorkspaceWrittenArtifactRelativePath(
             workspaceScope,
             writtenPath,
-            ProcessConcreteProductPathRules.IsExternalTargetAliasPath,
-            ProcessConcreteProductPathRules.TryMapWorkspacePathForPrompt,
+            SoftwareDeliveryPathRules.IsExternalTargetAliasPath,
+            SoftwareDeliveryPathRules.TryMapWorkspacePathForPrompt,
             ProcessScopedManagedArtifactPathRules.ResolveScopedManagedRelativePath);
     }
 
@@ -140,8 +141,8 @@ internal sealed class ProcessProjectionPathResolver : IProcessProjectionPathReso
             workspaceScope,
             writtenPath,
             projectedRelativePath,
-            ProcessConcreteProductPathRules.IsExternalTargetAliasPath,
-            ProcessConcreteProductPathRules.TryMapWorkspacePathForPrompt,
+            SoftwareDeliveryPathRules.IsExternalTargetAliasPath,
+            SoftwareDeliveryPathRules.TryMapWorkspacePathForPrompt,
             ProcessScopedManagedArtifactPathRules.ResolveScopedManagedRelativePath,
             TryResolveArtifactFullPathCore,
             out fullPath,
@@ -173,7 +174,7 @@ internal sealed class ProcessProjectionPathResolver : IProcessProjectionPathReso
             return false;
         }
 
-        if (ProcessConcreteProductPathRules.IsExternalTargetAliasPath(normalizedRelativePath))
+        if (SoftwareDeliveryPathRules.IsExternalTargetAliasPath(normalizedRelativePath))
         {
             return TryResolveExternalTargetArtifactFullPath(normalizedRelativePath, out fullPath, out failureReason);
         }
@@ -198,7 +199,7 @@ internal sealed class ProcessProjectionPathResolver : IProcessProjectionPathReso
     {
         var normalizedPath = WorkspaceScopeDescriptor.NormalizeRelativePath(relativePath);
         if (string.IsNullOrWhiteSpace(normalizedPath) ||
-            ProcessConcreteProductPathRules.IsExternalTargetAliasPath(normalizedPath))
+            SoftwareDeliveryPathRules.IsExternalTargetAliasPath(normalizedPath))
         {
             return;
         }
@@ -635,7 +636,7 @@ internal sealed class ProcessProjectionProjectStructureMatcher : IProcessProject
             expectedArtifact,
             ProcessProjectStructureArtifactPathRules.ResolveProjectStructureRequiredArtifactPaths(
                 projectStructureContractText,
-                ProcessConcreteProductPathRules.TryMapWorkspacePathForPrompt),
+                SoftwareDeliveryPathRules.TryMapWorkspacePathForPrompt),
             out governedPath);
     }
 
@@ -644,7 +645,7 @@ internal sealed class ProcessProjectionProjectStructureMatcher : IProcessProject
         return ProcessProjectStructureArtifactPathRules.ArtifactPathMatchesGovernedProjectStructurePath(
             artifactPath,
             governedPath,
-            ProcessConcreteProductPathRules.TryMapWorkspacePathForPrompt);
+            SoftwareDeliveryPathRules.TryMapWorkspacePathForPrompt);
     }
 }
 

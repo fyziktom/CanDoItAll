@@ -14,7 +14,7 @@ const string descriptorPayload = """{"source":"caller-supplied-runtime-snapshot"
 
 var evidence = new ProcessDriverEvidenceReference(
     ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-    "bundle://proof/sample/runtime-evidence.json",
+    "artifact://proof/sample/runtime-evidence.json",
     ProcessDriverEvidencePolicy.ComputeSha256(descriptorPayload),
     ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
 var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(

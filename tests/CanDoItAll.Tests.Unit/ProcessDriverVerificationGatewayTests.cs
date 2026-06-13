@@ -506,7 +506,7 @@ public sealed class ProcessDriverVerificationGatewayTests
         string transcriptText,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null)
     {
-        var transcriptUri = "bundle://proof/SB018/transcripts/dotnet-transcript.txt";
+        var transcriptUri = "artifact://proof/scenario018/transcripts/dotnet-transcript.txt";
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
             transcriptUri,
@@ -546,7 +546,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB018/transcripts/runtime-evidence.json",
+            "artifact://proof/scenario018/transcripts/runtime-evidence.json",
             suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
@@ -579,12 +579,12 @@ public sealed class ProcessDriverVerificationGatewayTests
     {
         var projectionReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB018/artifact-projection-evidence.json",
+            "artifact://proof/scenario018/artifact-projection-evidence.json",
             suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
         var validationReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB018/artifact-projection-validation.json",
+            "artifact://proof/scenario018/artifact-projection-validation.json",
             suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation);
         var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
@@ -617,7 +617,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
-            "bundle://proof/SB018/office-evidence.json",
+            "artifact://proof/scenario018/office-evidence.json",
             suppliedPayload,
             coreDescriptorFamily: null);
         var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
@@ -645,7 +645,7 @@ public sealed class ProcessDriverVerificationGatewayTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
-            "bundle://proof/SB018/business-analysis.json",
+            "artifact://proof/scenario018/business-analysis.json",
             suppliedPayload,
             coreDescriptorFamily: null);
         var verificationRequest = ProcessDriverVerificationTestHarness.CreateVerificationRequest(
@@ -673,7 +673,7 @@ public sealed class ProcessDriverVerificationGatewayTests
         {
             EvidenceReference = suppliedContent.EvidenceReference with
             {
-                ContentHash = ProcessDriverEvidencePolicy.ComputeSha256("SB024 tampered supplied evidence reference")
+                ContentHash = ProcessDriverEvidencePolicy.ComputeSha256("Scenario024 tampered supplied evidence reference")
             }
         };
     }

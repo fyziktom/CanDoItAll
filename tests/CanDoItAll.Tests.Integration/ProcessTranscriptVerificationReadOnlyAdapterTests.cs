@@ -164,7 +164,7 @@ test result: FAILED. 1 passed; 1 failed
         string transcriptText,
         ProcessDriverTranscriptLanguage language,
         string? transcriptHash = null,
-        string uri = "bundle://proof/SB024/transcripts/process-supplied-transcript.txt",
+        string uri = "artifact://proof/scenario024/transcripts/process-supplied-transcript.txt",
         ProcessDriverCapabilityScope? scope = null,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null)
     {

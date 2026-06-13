@@ -105,7 +105,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
         var mismatchedEnvelope = verifier.Verify(CreateRequest(
             [item],
             suppliedContentFactory: reference => ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(
-                reference with { Uri = "bundle://proof/SB028/different-office-evidence.json" },
+                reference with { Uri = "artifact://proof/scenario028/different-office-evidence.json" },
                 OfficePayload)));
         var emptyItems = verifier.Verify(CreateRequest([]));
 
@@ -206,7 +206,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
             var result = verifier.Verify(CreateRequest(
                 [item],
                 requestedOperations: [attempt.Operation],
-                evidenceUri: $"bundle://proof/SB029/{attempt.Name}.json"));
+                evidenceUri: $"artifact://proof/scenario029/{attempt.Name}.json"));
 
             ProcessDriverVerificationTestHarness.AssertSideEffectDenied(result, attempt.Operation);
             Assert.Equal(attempt.ExpectedDenialReason, result.DenialReason);
@@ -232,7 +232,7 @@ public sealed class ProcessDriverOfficeEvidenceAlphaTests
     private static OfficeEvidenceVerificationRequest CreateRequest(
         IReadOnlyList<OfficeEvidenceItem> items,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB028/office-evidence.json",
+        string evidenceUri = "artifact://proof/scenario028/office-evidence.json",
         Func<ProcessDriverEvidenceReference, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(

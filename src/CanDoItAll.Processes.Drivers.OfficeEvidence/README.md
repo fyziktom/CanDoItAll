@@ -14,7 +14,7 @@ const string officePayload = """{"items":[{"kind":"email","id":"message-1"}]}"""
 
 var evidence = new ProcessDriverEvidenceReference(
     ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
-    "bundle://proof/sample/office-evidence.json",
+    "artifact://proof/sample/office-evidence.json",
     ProcessDriverEvidencePolicy.ComputeSha256(officePayload),
     coreDescriptorFamily: null);
 var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(

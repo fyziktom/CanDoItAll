@@ -5,7 +5,7 @@
   "BlockingIssues": [],
   "Warnings": [
     "The current module can represent explicit Dependencies, ArtifactInputs, DecisionRoleRequirementId, and branch outcomes directly.",
-    "Some authoring chrome actions are still hardcoded in ProcessCanvasSurfaceFactory; bundle includes a corrective subbundle for de-hardcoding."
+    "Some authoring chrome actions are still hardcoded in ProcessCanvasSurfaceFactory; template includes a corrective workstream for de-hardcoding."
   ],
   "ProjectedEnvelopeFacts": {
     "RoleCount": 3,
@@ -23,7 +23,7 @@
   ],
   "RecommendedFollowUps": [
     "Keep the template pack as the authored source of truth and treat the import envelope as a projection.",
-    "Run the corrective canvas-chrome subbundle before relying on toolbox chrome extensibility.",
+    "Run the corrective canvas-chrome workstream before relying on toolbox chrome extensibility.",
     "Keep bundle validation in CI so dependency and artifact-input regressions are surfaced immediately."
   ]
 }

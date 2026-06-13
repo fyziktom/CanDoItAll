@@ -65,7 +65,7 @@ internal sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapter
         var material = CreateDescriptorPayloadMaterial(payload);
         var evidenceReference = evidenceReferences.FirstOrDefault() ?? new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://runtime-evidence/supplied-descriptor-payload",
+            "artifact://runtime-evidence/supplied-descriptor-payload",
             ProcessDriverEvidencePolicy.ComputeSha256(material),
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
 

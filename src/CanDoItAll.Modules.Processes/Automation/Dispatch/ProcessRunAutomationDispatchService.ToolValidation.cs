@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -148,7 +149,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
             receipt.RequestSummary,
             receipt.WorkingDirectory,
             receipt.ExitSummary);
-        return ProcessImplementationStackRules.ContainsProjectFileSignal(inspectedText);
+        return SoftwareDeliveryContractRules.ContainsProjectFileSignal(inspectedText);
     }
 
     private static bool CanSatisfyImplementationProofToolsWithCarriedProof(
@@ -232,7 +233,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
     {
         return ImplementationProofToolNames.Contains(toolName, StringComparer.Ordinal) ||
                ConcreteProductMutationToolNames.Contains(toolName, StringComparer.Ordinal) ||
-               ProcessImplementationReceiptTimeline.IsImplementationBootstrapToolName(toolName) ||
+               SoftwareDeliveryReceiptTimeline.IsImplementationBootstrapToolName(toolName) ||
                IsImplementationValidationToolName(toolName);
     }
 

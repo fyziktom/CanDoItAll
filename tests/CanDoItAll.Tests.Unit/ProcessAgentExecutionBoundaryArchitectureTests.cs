@@ -193,6 +193,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Processes.Drivers.ObservationAggregation",
             "CanDoItAll.Processes.Drivers.OfficeEvidence",
             "CanDoItAll.Processes.Drivers.RuntimeEvidence",
+            "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence",
             "CanDoItAll.Processes.Drivers.TranscriptVerification",
             "CanDoItAll.Processes.Drivers.VerificationGateway"
         };
@@ -262,7 +263,7 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
     }
 
     [Fact]
-    public void SoftwareDelivery_fallback_adapter_is_the_only_premerge_driver_boundary_exception()
+    public void SoftwareDelivery_evidence_policy_requires_driver_package_without_dispatcher_adapter()
     {
         var root = FindRepositoryRoot();
         var dispatchDirectory = Path.Combine(
@@ -278,36 +279,17 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
             "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence.csproj");
         var adapterPath = Path.Combine(dispatchDirectory, "ProcessSoftwareDeliveryEvidenceAdapter.cs");
         var domainDirectory = Path.Combine(dispatchDirectory, "Domain", "SoftwareDelivery");
-        var adapterAndDomainSource = string.Join(
+        var dispatchSource = string.Join(
             Environment.NewLine,
             Directory
-                .EnumerateFiles(domainDirectory, "*.cs", SearchOption.AllDirectories)
-                .Append(adapterPath)
+                .EnumerateFiles(dispatchDirectory, "*.cs", SearchOption.AllDirectories)
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .Select(File.ReadAllText));
-        var forbiddenFallbackTokens = new[]
-        {
-            "SaveChangesAsync",
-            "DbContext",
-            "RecordArtifactAsync",
-            "HttpClient",
-            "GraphServiceClient",
-            "GetRequiredService",
-            "IServiceProvider",
-            "Assembly.GetTypes",
-            "Activator.CreateInstance",
-            "Process.Start("
-        };
 
-        Assert.False(File.Exists(softwareDeliveryDriverProject));
-        Assert.True(File.Exists(adapterPath), adapterPath);
-        Assert.True(Directory.Exists(domainDirectory), domainDirectory);
-        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter", adapterAndDomainSource, StringComparison.Ordinal);
-
-        foreach (var forbiddenFallbackToken in forbiddenFallbackTokens)
-        {
-            Assert.DoesNotContain(forbiddenFallbackToken, adapterAndDomainSource, StringComparison.Ordinal);
-        }
+        Assert.True(File.Exists(softwareDeliveryDriverProject), softwareDeliveryDriverProject);
+        Assert.False(File.Exists(adapterPath), $"Remove the obsolete dispatcher adapter: {adapterPath}");
+        Assert.False(Directory.Exists(domainDirectory), $"Move policy files out of the dispatcher domain folder: {domainDirectory}");
+        Assert.DoesNotContain("private static class ProcessSoftwareDeliveryEvidenceAdapter", dispatchSource, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -318,23 +300,23 @@ public sealed class ProcessAgentExecutionBoundaryArchitectureTests
         var executionReport = ReadProcessDriverMultiDomainFixtureFile(
             "reviews",
             "01-execution-report.md");
-        var manifest = ReadProcessDriverMultiDomainFixtureFile(
-            "proof",
-            "SB003",
-            "manifest.md");
-        var semanticInvariants = ReadProcessDriverMultiDomainFixtureFile(
-            "proof",
-            "SB003",
-            "semantic-invariants.md");
+        var fixtureRoot = CreateStableArchitectureFixtureRoot(FindRepositoryRoot());
+        var manifest = ReadFixtureFileContaining(
+            fixtureRoot,
+            "manifest.md",
+            "red-team-report-only-proof-rejection.txt");
+        var semanticInvariants = ReadFixtureFileContaining(
+            fixtureRoot,
+            "semantic-invariants.md",
+            "Red-team negative case");
 
         Assert.Contains("do **not** introduce a generic runtime driver host, registry, selector", readme, StringComparison.Ordinal);
         Assert.Contains("scheduler/workflow hook", readme, StringComparison.Ordinal);
-        Assert.Contains("| SB003 | Passed | Passed | Checked | Passed |", executionReport, StringComparison.Ordinal);
-        Assert.Contains("bundle://proof/SB003/manifest.md", executionReport, StringComparison.Ordinal);
-        Assert.Contains("bundle://proof/SB003/semantic-invariants.md", executionReport, StringComparison.Ordinal);
-        Assert.Contains("bundle://proof/SB003/transcripts/red-team-report-only-proof-rejection.txt", manifest, StringComparison.Ordinal);
-        Assert.Contains("bundle://proof/SB003/transcripts/gate-a-proof-index.txt", manifest, StringComparison.Ordinal);
-        Assert.Contains("SB003_INV_001", semanticInvariants, StringComparison.Ordinal);
+        Assert.Contains("| Passed | Passed | Checked | Passed |", executionReport, StringComparison.Ordinal);
+        Assert.Contains("red-team-report-only-proof-rejection.txt", manifest, StringComparison.Ordinal);
+        Assert.Contains("gate-a-proof-index.txt", manifest, StringComparison.Ordinal);
+        Assert.Contains("Expected behavior", semanticInvariants, StringComparison.Ordinal);
+        Assert.Contains("Disallowed shallow implementation", semanticInvariants, StringComparison.Ordinal);
         Assert.DoesNotContain("Status-only rows", manifest, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -1264,7 +1246,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
     }
 
     [Fact]
-    public void Implementation_proof_helpers_are_module_local_without_core_or_driver_contracts()
+    public void Implementation_proof_policy_is_driver_owned_with_module_mapping_only()
     {
         var root = FindRepositoryRoot();
         var processesDispatchDirectory = Path.Combine(
@@ -1273,80 +1255,32 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch");
-        var softwareDeliveryDomainDirectory = Path.Combine(
-            processesDispatchDirectory,
-            "Domain",
-            "SoftwareDelivery");
-        var domainHelperFiles = new[]
-        {
-            "ProcessImplementationStackRules.cs",
-            "ProcessConcreteProductPathRules.cs",
-            "ProcessImplementationReceiptTimeline.cs",
-            "ProcessDotNetHostEvidenceRules.cs",
-            "ProcessCarriedImplementationProofRules.cs"
-        };
-        var rootHelperFiles = new[]
-        {
-            "ProcessRunAutomationDispatchService.ImplementationProofBridges.cs"
-        };
+        var driverDirectory = Path.Combine(
+            root,
+            "src",
+            "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence");
         var dispatcherPath = Path.Combine(processesDispatchDirectory, "ProcessRunAutomationDispatchService.ImplementationProof.cs");
-        var adapterPath = Path.Combine(processesDispatchDirectory, "ProcessSoftwareDeliveryEvidenceAdapter.cs");
         var artifactValidationPath = Path.Combine(processesDispatchDirectory, "ProcessRunAutomationDispatchService.ArtifactValidation.cs");
-
-        var helperSource = string.Join(
-            Environment.NewLine,
-            domainHelperFiles
-                .Select(file =>
-                {
-                    var path = Path.Combine(softwareDeliveryDomainDirectory, file);
-                    Assert.True(File.Exists(path), file);
-                    return File.ReadAllText(path);
-                })
-                .Concat(rootHelperFiles.Select(file =>
-                {
-                    var path = Path.Combine(processesDispatchDirectory, file);
-                    Assert.True(File.Exists(path), file);
-                    return File.ReadAllText(path);
-                })));
+        var driverSource = ReadProductionSourceTextFromDirectories([driverDirectory]);
         var dispatcherSource = File.ReadAllText(dispatcherPath);
-        var adapterSource = File.ReadAllText(adapterPath);
         var artifactValidationSource = File.ReadAllText(artifactValidationPath);
 
-        Assert.Contains("internal sealed record ProcessImplementationContractSnapshot", helperSource, StringComparison.Ordinal);
-        Assert.Contains("internal static class ProcessImplementationStackRules", helperSource, StringComparison.Ordinal);
-        Assert.Contains("internal static class ProcessConcreteProductPathRules", helperSource, StringComparison.Ordinal);
-        Assert.Contains("internal static class ProcessImplementationReceiptTimeline", helperSource, StringComparison.Ordinal);
-        Assert.Contains("internal static class ProcessDotNetHostEvidenceRules", helperSource, StringComparison.Ordinal);
-        Assert.Contains("internal static class ProcessCarriedImplementationProofRules", helperSource, StringComparison.Ordinal);
-        Assert.Contains("private static class ProcessMockImplementationProofBridge", helperSource, StringComparison.Ordinal);
-        Assert.Contains("private static class ProcessImplementationArtifactWriteSatisfactionBridge", helperSource, StringComparison.Ordinal);
-        Assert.Contains("private static class ProcessSoftwareDeliveryEvidenceAdapter", adapterSource, StringComparison.Ordinal);
-        Assert.Contains("ResolveMissingConcreteImplementationProofSummary", adapterSource, StringComparison.Ordinal);
-        Assert.Contains("ResolveMissingRunnableApplicationProofSummary", adapterSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter.ResolveMissingConcreteImplementationProofSummary", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessSoftwareDeliveryEvidenceAdapter.ResolveMissingRunnableApplicationProofSummary", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessImplementationContractSnapshot.RequiresCurrentAttemptProductMutation", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessImplementationStackRules.ImplementationContractMentionsDotNet", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessConcreteProductPathRules.HasConcreteProductPath", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessImplementationReceiptTimeline.ResolveLatestImplementationProofReadReceipt", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessDotNetHostEvidenceRules.ResolveRunnableDotNetHostProjectPaths", dispatcherSource, StringComparison.Ordinal);
-        Assert.Contains("ProcessCarriedImplementationProofRules.ResolveCarriedImplementationProof", dispatcherSource, StringComparison.Ordinal);
+        Assert.True(Directory.Exists(driverDirectory), driverDirectory);
+        Assert.Contains("SoftwareDelivery", driverSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessSoftwareDeliveryEvidenceAdapter.", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessImplementationStackRules.", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessConcreteProductPathRules.", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessImplementationReceiptTimeline.", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessDotNetHostEvidenceRules.", dispatcherSource, StringComparison.Ordinal);
+        Assert.DoesNotContain("ProcessCarriedImplementationProofRules.", dispatcherSource, StringComparison.Ordinal);
         Assert.Contains("ProcessMockImplementationProofBridge.MatchesExpectedArtifact", artifactValidationSource, StringComparison.Ordinal);
         Assert.Contains("ProcessImplementationArtifactWriteSatisfactionBridge.CanProjectWorkspaceWrittenArtifact", artifactValidationSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("CanDoItAll.Processes.Core", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("IProcessDriverPack", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("DriverPack", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("ProcessDriver", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("DbContext", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("storagePlacementService", helperSource, StringComparison.Ordinal);
-        Assert.DoesNotContain("TODO", helperSource, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("NotImplemented", helperSource, StringComparison.Ordinal);
         Assert.True(dispatcherSource.Split(Environment.NewLine).Length < 1120);
         AssertNarrowProcessCoreSeed(root);
     }
 
     [Fact]
-    public void SoftwareDelivery_proof_policy_stack_terms_stay_in_domain_adapter_seam()
+    public void SoftwareDelivery_proof_policy_stack_terms_stay_in_driver_or_explicit_mapper()
     {
         var dispatchDirectory = Path.Combine(
             FindRepositoryRoot(),
@@ -1354,19 +1288,16 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             "CanDoItAll.Modules.Processes",
             "Automation",
             "Dispatch");
-        var softwareDeliveryDomainDirectory = Path.Combine(
-            dispatchDirectory,
-            "Domain",
-            "SoftwareDelivery");
-        var adapterPath = Path.Combine(dispatchDirectory, "ProcessSoftwareDeliveryEvidenceAdapter.cs");
+        var genericPromptFiles = new[]
+        {
+            Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.ExecutionPrompt.cs"),
+            Path.Combine(dispatchDirectory, "ProcessRunAutomationDispatchService.RecoveryDirective.cs")
+        };
         var forbiddenPattern = new Regex(
-            @"(Blazor|Razor|dotnet|\.csproj|\.slnx|npm|pnpm|yarn|vite|react|vue|svelte|javascript|typescript)",
-            RegexOptions.CultureInvariant);
+            @"(Blazor|Razor|\.NET|dotnet|\.csproj|\.slnx|npm|pnpm|yarn|vite|react|vue|svelte|javascript|typescript|external-target|Start-Process|HttpListener|python -m http\.server)",
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-        var violations = Directory
-            .EnumerateFiles(dispatchDirectory, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !path.StartsWith(softwareDeliveryDomainDirectory, StringComparison.OrdinalIgnoreCase))
-            .Where(path => !string.Equals(path, adapterPath, StringComparison.OrdinalIgnoreCase))
+        var violations = genericPromptFiles
             .SelectMany(path => File.ReadLines(path)
                 .Select((line, index) => new
                 {
@@ -1377,8 +1308,13 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             .Where(item => forbiddenPattern.IsMatch(item.Line))
             .Select(item => $"{Path.GetRelativePath(dispatchDirectory, item.Path)}:{item.LineNumber}:{item.Line.Trim()}")
             .ToArray();
+        var promptSource = File.ReadAllText(genericPromptFiles[0]);
+        var recoverySource = File.ReadAllText(genericPromptFiles[1]);
 
         Assert.True(violations.Length == 0, string.Join(Environment.NewLine, violations.Take(20)));
+        Assert.Contains("SoftwareDeliveryGuidancePolicy.CreateExecutionGuidance", promptSource, StringComparison.Ordinal);
+        Assert.Contains("SoftwareDeliveryGuidancePolicy.CreateRecoveryGuidance", recoverySource, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(Path.Combine(dispatchDirectory, "Domain", "SoftwareDelivery")));
     }
 
     [Fact]
@@ -4677,6 +4613,22 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
         return ReadStableArchitectureFixtureFile("ProcessDriverReadonlyOrchestrationEvidencePipeline", pathParts);
     }
 
+    private static string ReadFixtureFileContaining(
+        string fixtureRoot,
+        string fileName,
+        string requiredContent)
+    {
+        var matchingPath = Directory
+            .EnumerateFiles(fixtureRoot, fileName, SearchOption.AllDirectories)
+            .Where(path => File.ReadAllText(path).Contains(requiredContent, StringComparison.Ordinal))
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault();
+
+        Assert.True(matchingPath is not null, $"No fixture file named {fileName} contains {requiredContent}.");
+
+        return File.ReadAllText(matchingPath);
+    }
+
     private static string ReadStableArchitectureFixtureFile(
         string fixtureDirectory,
         params string[] pathParts)
@@ -4751,6 +4703,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.ObservationAggregation"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.OfficeEvidence"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.RuntimeEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.TranscriptVerification"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.VerificationGateway"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Web"),
@@ -4768,6 +4721,7 @@ Property:CanDoItAll.Processes.Core.Subprocess.ProcessSubprocessRunFacts.Status:C
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.ObservationAggregation"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.OfficeEvidence"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.RuntimeEvidence"),
+            Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.TranscriptVerification"),
             Path.Combine(repositoryRoot, "src", "CanDoItAll.Processes.Drivers.VerificationGateway")
         ];

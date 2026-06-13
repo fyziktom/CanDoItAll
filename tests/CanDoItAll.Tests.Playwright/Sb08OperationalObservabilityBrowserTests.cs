@@ -5,14 +5,14 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
-public sealed class Sb08OperationalObservabilityBrowserTests
+public sealed class Scenario08OperationalObservabilityBrowserTests
 {
-    private const string AppUrlEnvironmentVariable = "CANDOITALL_SB08_APP_URL";
-    private const string OutputRootEnvironmentVariable = "CANDOITALL_SB08_BROWSER_OUTPUT_ROOT";
-    private const string ExecutorNodeName = "SB08 proof executor";
+    private const string AppUrlEnvironmentVariable = "CANDOITALL_Scenario08_APP_URL";
+    private const string OutputRootEnvironmentVariable = "CANDOITALL_Scenario08_BROWSER_OUTPUT_ROOT";
+    private const string ExecutorNodeName = "Scenario08 proof executor";
 
     [Fact]
-    [Trait("Category", "SB08")]
+    [Trait("Category", "Scenario08")]
     public async Task Operational_observability_surfaces_render_desktop_and_mobile_proof()
     {
         var appUrl = Environment.GetEnvironmentVariable(AppUrlEnvironmentVariable);
@@ -24,7 +24,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
 
         ResetDirectory(outputRoot);
         var workflowDefinition = await SaveWorkflowDefinitionAsync(appUrl);
-        var viewportResults = new List<Sb08ViewportProofResult>();
+        var viewportResults = new List<Scenario08ViewportProofResult>();
 
         using var playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
@@ -34,7 +34,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
 
         try
         {
-            foreach (var viewport in Sb08ViewportSpec.All)
+            foreach (var viewport in Scenario08ViewportSpec.All)
             {
                 viewportResults.Add(await CaptureViewportProofAsync(browser, appUrl, outputRoot, workflowDefinition, viewport));
                 await WriteSummaryAsync(outputRoot, viewportResults);
@@ -47,12 +47,12 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         }
     }
 
-    private static async Task<Sb08ViewportProofResult> CaptureViewportProofAsync(
+    private static async Task<Scenario08ViewportProofResult> CaptureViewportProofAsync(
         IBrowser browser,
         string appUrl,
         string outputRoot,
         WorkflowDefinition workflowDefinition,
-        Sb08ViewportSpec viewport)
+        Scenario08ViewportSpec viewport)
     {
         await using var context = await browser.NewContextAsync(new BrowserNewContextOptions
         {
@@ -66,14 +66,14 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         });
 
         var page = await context.NewPageAsync();
-        var diagnostics = new Sb08BrowserDiagnostics();
+        var diagnostics = new Scenario08BrowserDiagnostics();
         AttachDiagnostics(page, diagnostics);
 
         var processDetailCaptured = await CaptureLiveProcessProofAsync(page, appUrl, outputRoot, viewport);
         var workflowExecutorCaptured = await CaptureWorkflowExecutorProofAsync(page, appUrl, outputRoot, workflowDefinition, viewport);
 
         await WriteDiagnosticsAsync(outputRoot, viewport, diagnostics);
-        return new Sb08ViewportProofResult(
+        return new Scenario08ViewportProofResult(
             viewport.Name,
             viewport.Width,
             viewport.Height,
@@ -91,7 +91,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         IPage page,
         string appUrl,
         string outputRoot,
-        Sb08ViewportSpec viewport)
+        Scenario08ViewportSpec viewport)
     {
         await page.GotoAsync(BuildRoute(appUrl, "/processes/live"), new PageGotoOptions
         {
@@ -179,7 +179,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         string appUrl,
         string outputRoot,
         WorkflowDefinition workflowDefinition,
-        Sb08ViewportSpec viewport)
+        Scenario08ViewportSpec viewport)
     {
         await page.GotoAsync(BuildRoute(appUrl, "/agents/workflows"), new PageGotoOptions
         {
@@ -275,8 +275,8 @@ public sealed class Sb08OperationalObservabilityBrowserTests
             new WorkflowStorageFileExecutorSettings
             {
                 Operation = WorkflowStorageFileOperation.WriteText,
-                Path = "artifacts/sb08-observability-proof.txt",
-                Content = "SB08 executor preview/commit observability proof.",
+                Path = "artifacts/scenario08-observability-proof.txt",
+                Content = "Scenario08 executor preview/commit observability proof.",
                 Overwrite = true,
                 DryRun = true
             },
@@ -285,19 +285,19 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         return new WorkflowDefinitionSaveRequest(
             Id: null,
             ExpectedVersionId: null,
-            Name: $"SB08 executor observability proof {DateTimeOffset.UtcNow:yyyyMMddHHmmss}",
+            Name: $"Scenario08 executor observability proof {DateTimeOffset.UtcNow:yyyyMMddHHmmss}",
             Description: "Browser proof workflow containing a storage executor node so preview/commit and side-effect badges render in the workflow editor.",
             Status: WorkflowLifecycleStatus.Active,
             Graph: new WorkflowGraph(
                 new WorkflowNodeId("start"),
                 [
                     CreateWorkflowNode("start", WorkflowNodeKind.Start, resultShape: WorkflowValueShape.Text),
-                    CreateExecutorWorkflowNode("sb08-proof-executor", settingsJson),
+                    CreateExecutorWorkflowNode("scenario08-proof-executor", settingsJson),
                     CreateWorkflowNode("end", WorkflowNodeKind.End, inputShape: WorkflowValueShape.Text)
                 ],
                 [
-                    CreateWorkflowEdge("start-to-executor", "start", "sb08-proof-executor"),
-                    CreateWorkflowEdge("executor-to-end", "sb08-proof-executor", "end")
+                    CreateWorkflowEdge("start-to-executor", "start", "scenario08-proof-executor"),
+                    CreateWorkflowEdge("executor-to-end", "scenario08-proof-executor", "end")
                 ]),
             RuntimePolicy: new WorkflowRuntimePolicy(
                 WorkflowRuntimeBackendKind.InProcess,
@@ -340,7 +340,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
                 AgentId: null,
                 SubworkflowId: null,
                 ExternalRequestKind: null,
-                Instructions: "Write a deterministic SB08 proof artifact during committed workflow execution.",
+                Instructions: "Write a deterministic Scenario08 proof artifact during committed workflow execution.",
                 InputShape: WorkflowValueShape.Text,
                 ResultShape: WorkflowValueShape.Text) with
             {
@@ -408,7 +408,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         await scope.GetByText(name, new LocatorGetByTextOptions { Exact = true }).First.ClickAsync();
     }
 
-    private static void AttachDiagnostics(IPage page, Sb08BrowserDiagnostics diagnostics)
+    private static void AttachDiagnostics(IPage page, Scenario08BrowserDiagnostics diagnostics)
     {
         page.Console += (_, message) =>
         {
@@ -433,8 +433,8 @@ public sealed class Sb08OperationalObservabilityBrowserTests
 
     private static async Task WriteDiagnosticsAsync(
         string outputRoot,
-        Sb08ViewportSpec viewport,
-        Sb08BrowserDiagnostics diagnostics)
+        Scenario08ViewportSpec viewport,
+        Scenario08BrowserDiagnostics diagnostics)
     {
         await File.WriteAllLinesAsync(Path.Combine(outputRoot, $"browser-console-{viewport.Name}.txt"), diagnostics.ConsoleMessages);
         await File.WriteAllLinesAsync(Path.Combine(outputRoot, $"browser-console-errors-{viewport.Name}.txt"), diagnostics.ConsoleErrors);
@@ -466,7 +466,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
 
     private static async Task WriteSummaryAsync(
         string outputRoot,
-        IReadOnlyCollection<Sb08ViewportProofResult> results)
+        IReadOnlyCollection<Scenario08ViewportProofResult> results)
     {
         await File.WriteAllTextAsync(
             Path.Combine(outputRoot, "browser-validation-summary.json"),
@@ -517,20 +517,20 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         }
     }
 
-    private sealed record Sb08ViewportSpec(
+    private sealed record Scenario08ViewportSpec(
         string Name,
         int Width,
         int Height,
         bool IsMobile)
     {
-        public static IReadOnlyList<Sb08ViewportSpec> All { get; } =
+        public static IReadOnlyList<Scenario08ViewportSpec> All { get; } =
         [
             new("desktop", 1440, 1000, false),
             new("mobile", 390, 844, true)
         ];
     }
 
-    private sealed record Sb08ViewportProofResult(
+    private sealed record Scenario08ViewportProofResult(
         string Viewport,
         int Width,
         int Height,
@@ -543,7 +543,7 @@ public sealed class Sb08OperationalObservabilityBrowserTests
         int FailedRequestCount,
         DateTimeOffset CapturedAtUtc);
 
-    private sealed class Sb08BrowserDiagnostics
+    private sealed class Scenario08BrowserDiagnostics
     {
         public List<string> ConsoleMessages { get; } = [];
 

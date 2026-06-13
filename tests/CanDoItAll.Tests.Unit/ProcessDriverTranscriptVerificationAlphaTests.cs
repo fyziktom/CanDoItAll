@@ -87,7 +87,7 @@ CSC : warning CS8618: Non-nullable property 'Name' must contain a non-null value
 Program.cs(12,18): error CS1002: ; expected
 Failed CanDoItAll.Tests.Unit.ProcessDriverTranscriptVerificationAlphaTests
 NETSDK1045: The current .NET SDK does not support targeting .NET 11.0.
-missing artifact proof/SB012/manifest.md
+missing artifact proof/Scenario012/manifest.md
 runtime proof gap: no source assertion was captured
 warning CA1416: This call site is reachable on all platforms.
 token=sk-live-secret lucy@example.com
@@ -464,7 +464,7 @@ password=hunter2 rust.user@example.com
         Func<ProcessDriverEvidenceReference, string, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
         var contentHash = ProcessDriverEvidencePolicy.ComputeSha256(transcriptText);
-        var resolvedTranscriptUri = transcriptUri ?? $"bundle://proof/SB012/transcripts/{language.ToString().ToLowerInvariant()}-transcript.txt";
+        var resolvedTranscriptUri = transcriptUri ?? $"artifact://proof/scenario012/transcripts/{language.ToString().ToLowerInvariant()}-transcript.txt";
         var transcriptReference = new ProcessDriverTranscriptReference(
             resolvedTranscriptUri,
             transcriptHash ?? contentHash,

@@ -159,7 +159,7 @@ public sealed class ProcessesServiceIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB018 run persistence project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario018 run persistence project");
         var managerRoleId = Guid.NewGuid();
         var definition = BuildDefinitionEditor(projectId, managerRoleId);
         var saveResult = await processesService.SaveAsync(definition);
@@ -169,17 +169,17 @@ public sealed class ProcessesServiceIntegrationTests
 
         var projectStructureContext = new ProcessProjectStructureContext {
             ProjectId = projectId,
-            NodeId = "process-node-sb018",
+            NodeId = "process-node-scenario018",
             NodeTitle = "Start process from project structure",
-            ParentNodeId = "work-item-sb018",
+            ParentNodeId = "work-item-scenario018",
             ParentNodeTitle = "Customer onboarding work item"
         };
         var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            RunName = "SB018 persisted run proof",
+            RunName = "Scenario018 persisted run proof",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
-            TriggerReason = "SB018 verifies durable project-structure process-start input.",
+            TriggerReason = "Scenario018 verifies durable project-structure process-start input.",
             ProjectStructureContext = projectStructureContext
         });
 
@@ -208,8 +208,8 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.Equal(0, persistedRun.HierarchyDepth);
         Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
         Assert.NotNull(persistedRun.StartedAtUtc);
-        Assert.Contains("SB018 verifies durable project-structure process-start input.", persistedRun.TriggerReason, StringComparison.Ordinal);
-        Assert.Contains("Customer onboarding work item (work-item-sb018)", persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Contains("Scenario018 verifies durable project-structure process-start input.", persistedRun.TriggerReason, StringComparison.Ordinal);
+        Assert.Contains("Customer onboarding work item (work-item-scenario018)", persistedRun.TriggerReason, StringComparison.Ordinal);
         Assert.True(ProcessProjectStructureContextFormatter.TryParse(persistedRun.TriggerReason, out var persistedContext));
         Assert.NotNull(persistedContext);
         Assert.Equal(projectStructureContext.ProjectId, persistedContext!.ProjectId);
@@ -236,7 +236,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.All(
             persistedWorkBriefs,
             brief => {
-                Assert.Contains("Customer onboarding work item (work-item-sb018)", brief.WorkBriefText, StringComparison.Ordinal);
+                Assert.Contains("Customer onboarding work item (work-item-scenario018)", brief.WorkBriefText, StringComparison.Ordinal);
                 Assert.Contains(projectId.ToString("D"), brief.WorkBriefText, StringComparison.Ordinal);
             });
 
@@ -263,7 +263,7 @@ public sealed class ProcessesServiceIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB038 workflow trigger project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario038 workflow trigger project");
         var definition = BuildDefinitionEditor(projectId, Guid.NewGuid());
         var saveResult = await processesService.SaveAsync(definition);
         AssertSuccess(saveResult);
@@ -274,12 +274,12 @@ public sealed class ProcessesServiceIntegrationTests
         {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            RunName = "SB038 workflow-origin manual process start",
+            RunName = "Scenario038 workflow-origin manual process start",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
-            TriggerReason = "SB038 validates a workflow-origin process start without introducing a workflow executor hook.",
+            TriggerReason = "Scenario038 validates a workflow-origin process start without introducing a workflow executor hook.",
             TriggerSourceKind = ProcessRunTriggerSourceKind.WorkflowRun,
             TriggerSourceId = workflowRunId,
-            TriggerSourceName = "SB038 workflow trigger proof",
+            TriggerSourceName = "Scenario038 workflow trigger proof",
             RequestedBy = "integration-tests"
         });
 
@@ -322,7 +322,7 @@ public sealed class ProcessesServiceIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB07 scheduler workflow trigger project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario07 scheduler workflow trigger project");
         var definition = BuildDefinitionEditor(projectId, Guid.NewGuid());
         var saveResult = await processesService.SaveAsync(definition);
         AssertSuccess(saveResult);
@@ -334,15 +334,15 @@ public sealed class ProcessesServiceIntegrationTests
         var schedulerRunId = await StartAndAssertTriggerRunAsync(
             ProcessRunTriggerSourceKind.SchedulerPlan,
             schedulerSourceId,
-            "SB07 scheduler plan trigger proof",
+            "Scenario07 scheduler plan trigger proof",
             "scheduler-planner",
-            "SB07 scheduler-origin process start through process-owned trigger service.");
+            "Scenario07 scheduler-origin process start through process-owned trigger service.");
         var workflowRunId = await StartAndAssertTriggerRunAsync(
             ProcessRunTriggerSourceKind.WorkflowRun,
             workflowSourceId,
-            "SB07 workflow trigger proof",
+            "Scenario07 workflow trigger proof",
             "workflow-runtime",
-            "SB07 workflow-origin process start through process-owned trigger service.");
+            "Scenario07 workflow-origin process start through process-owned trigger service.");
 
         Assert.NotEqual(schedulerRunId, workflowRunId);
 
@@ -357,7 +357,7 @@ public sealed class ProcessesServiceIntegrationTests
             {
                 ProcessDefinitionId = saveResult.Value,
                 ProjectId = projectId,
-                RunName = $"SB07 {sourceKind} representative process start",
+                RunName = $"Scenario07 {sourceKind} representative process start",
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
                 TriggerReason = triggerReason,
                 TriggerSourceKind = sourceKind,
@@ -387,7 +387,7 @@ public sealed class ProcessesServiceIntegrationTests
                 .ToListAsync();
 
             Assert.Equal(ProcessRunStatus.Active, persistedRun.Status);
-            Assert.Equal($"SB07 {sourceKind} representative process start", persistedRun.Name);
+            Assert.Equal($"Scenario07 {sourceKind} representative process start", persistedRun.Name);
             Assert.Equal(ProcessOperatingMode.AssistedExecution, persistedRun.OperatingMode);
             Assert.Contains(sourceKind.ToString(), persistedRun.TriggerReason, StringComparison.Ordinal);
             Assert.Contains(sourceId.ToString("D"), persistedRun.TriggerReason, StringComparison.Ordinal);
@@ -437,13 +437,13 @@ public sealed class ProcessesServiceIntegrationTests
 
         var missingDefinitionResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
             ProcessDefinitionId = Guid.NewGuid(),
-            RunName = "SB018 missing definition proof",
+            RunName = "Scenario018 missing definition proof",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
             TriggerReason = "Missing definitions must not create runs."
         });
         AssertFailureCode(missingDefinitionResult, "processes.run.published-version-required");
 
-        var projectId = await CreateProjectAsync(projectsService, "SB018 start guard project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario018 start guard project");
         var managerRoleId = Guid.NewGuid();
         var definition = BuildDefinitionEditor(projectId, managerRoleId);
         var saveResult = await processesService.SaveAsync(definition);
@@ -452,29 +452,29 @@ public sealed class ProcessesServiceIntegrationTests
         var unpublishedRunResult = await processesService.StartRunAsync(new ProcessRunStartRequest {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            RunName = "SB018 unpublished definition proof",
+            RunName = "Scenario018 unpublished definition proof",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
             TriggerReason = "Unpublished definitions must not create runs."
         });
         AssertFailureCode(unpublishedRunResult, "processes.run.published-version-required");
 
         AssertSuccess(await processesService.PublishAsync(saveResult.Value));
-        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "SB018 Launch Manager");
+        var managerPartyId = await CreatePartyAsync(partyDirectoryService, PartyType.Person, "Scenario018 Launch Manager");
         AssertSuccess(await bridge.SaveAssignmentAsync(new ProjectPartyAssignmentUpsertRequest {
             ProjectId = projectId,
             PartyId = managerPartyId,
             Role = ProjectPartyAssignmentRole.Manager,
             IsPrimary = true,
-            Source = "sb018-integration-test"
+            Source = "scenario018-integration-test"
         }));
 
         var launchResult = await processesService.CreateLaunchPlanAsync(new ProcessLaunchCreateRequest {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            LaunchName = "SB018 duplicate launch guard",
+            LaunchName = "Scenario018 duplicate launch guard",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
-            TriggerReason = "SB018 verifies launch execution guardrails.",
-            RequestedBy = "sb018-integration-test"
+            TriggerReason = "Scenario018 verifies launch execution guardrails.",
+            RequestedBy = "scenario018-integration-test"
         });
         AssertSuccess(launchResult);
 
@@ -483,14 +483,14 @@ public sealed class ProcessesServiceIntegrationTests
         });
         AssertFailureCode(notReadyExecution, "processes.run.launch-plan-not-ready");
 
-        AssertSuccess(await processesService.SubmitLaunchPlanForApprovalAsync(launchResult.Value, "sb018-integration-test"));
+        AssertSuccess(await processesService.SubmitLaunchPlanForApprovalAsync(launchResult.Value, "scenario018-integration-test"));
         AssertSuccess(await processesService.DecideLaunchPlanApprovalAsync(new ProcessLaunchApprovalDecisionRequest {
             LaunchPlanId = launchResult.Value,
             Status = ProcessLaunchApprovalStatus.Approved,
-            ResolutionSummary = "SB018 approved the launch plan for duplicate execution guard proof.",
-            DecidedBy = "sb018-integration-test"
+            ResolutionSummary = "Scenario018 approved the launch plan for duplicate execution guard proof.",
+            DecidedBy = "scenario018-integration-test"
         }));
-        AssertSuccess(await processesService.ProvisionLaunchPlanAsync(launchResult.Value, "sb018-integration-test"));
+        AssertSuccess(await processesService.ProvisionLaunchPlanAsync(launchResult.Value, "scenario018-integration-test"));
 
         var firstExecution = await processesService.ExecuteLaunchPlanAsync(new ProcessLaunchExecutionRequest {
             LaunchPlanId = launchResult.Value
@@ -2389,10 +2389,10 @@ public sealed class ProcessesServiceIntegrationTests
             TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
             SensitivityLevel = ProcessSensitivityLevel.Internal,
             ProvenanceSummary = "Recorded by the same materialization call that must reopen the downstream step.",
-            AllowedFutureUsageSummary = "SB01-INV-001 regression proof.",
+            AllowedFutureUsageSummary = "Scenario01-INV-001 regression proof.",
             ReviewSummary = "Materialized evidence is present.",
             ManagedStoragePath = "artifacts/materialization/materialized-evidence.md",
-            ExternalReferenceKey = $"sb01-inv-001:{Guid.NewGuid():N}"
+            ExternalReferenceKey = $"scenario01-inv-001:{Guid.NewGuid():N}"
         });
 
         AssertSuccess(recordResult);
@@ -2669,7 +2669,7 @@ public sealed class ProcessesServiceIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
         var ownOutput = await CreateBlockedRunAsync(
-            "SB12 own missing artifact recovery",
+            "Scenario12 own missing artifact recovery",
             "missing required artifact: Delivery readiness evidence",
             ProcessStepBlockCause.OwnOutput);
         var ownOutputStep = Assert.Single(
@@ -2684,7 +2684,7 @@ public sealed class ProcessesServiceIntegrationTests
         Assert.DoesNotContain(ProcessStepRecoveryOption.WaitForArtifactMaterialization, ownOutputStep.RecoveryOptions);
 
         var upstream = await CreateBlockedRunAsync(
-            "SB12 upstream missing artifact recovery",
+            "Scenario12 upstream missing artifact recovery",
             "Required upstream artifacts are missing and the source step must provide required artifact input.",
             ProcessStepBlockCause.UpstreamInput);
         var upstreamStep = Assert.Single(
@@ -2716,7 +2716,7 @@ public sealed class ProcessesServiceIntegrationTests
                 ProjectId = projectId,
                 RunName = projectName,
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = "Verify SB12 block recovery health."
+                TriggerReason = "Verify Scenario12 block recovery health."
             });
 
             AssertSuccess(runResult);
@@ -3440,7 +3440,7 @@ public sealed class ProcessesServiceIntegrationTests
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB10 high criticality lint project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario10 high criticality lint project");
         var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
         definition.Criticality = ProcessCriticality.High;
         var saveResult = await processesService.SaveAsync(definition);
@@ -3463,7 +3463,7 @@ public sealed class ProcessesServiceIntegrationTests
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB12 strict contract mode project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario12 strict contract mode project");
         var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
         definition.ContractMode = ProcessDefinitionContractMode.Strict;
         var saveResult = await processesService.SaveAsync(definition);
@@ -3487,7 +3487,7 @@ public sealed class ProcessesServiceIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB12 compatibility contract mode project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario12 compatibility contract mode project");
         var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
         definition.ContractMode = ProcessDefinitionContractMode.Compatibility;
         var saveResult = await processesService.SaveAsync(definition);
@@ -3521,7 +3521,7 @@ public sealed class ProcessesServiceIntegrationTests
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB10 delegated lint project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario10 delegated lint project");
         var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
         definition.ContractMode = ProcessDefinitionContractMode.Compatibility;
         var saveResult = await processesService.SaveAsync(definition);
@@ -3541,9 +3541,9 @@ public sealed class ProcessesServiceIntegrationTests
         {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            RunName = "SB10 lint gate run",
+            RunName = "Scenario10 lint gate run",
             OperatingMode = ProcessOperatingMode.AssistedExecution,
-            TriggerReason = "SB10 strict lint gate verification."
+            TriggerReason = "Scenario10 strict lint gate verification."
         });
 
         Assert.True(runResult.IsFailure);
@@ -3560,7 +3560,7 @@ public sealed class ProcessesServiceIntegrationTests
         var projectsService = scope.ServiceProvider.GetRequiredService<ProjectsService>();
         var processesService = scope.ServiceProvider.GetRequiredService<ProcessesService>();
 
-        var projectId = await CreateProjectAsync(projectsService, "SB01 governed live contract lint project");
+        var projectId = await CreateProjectAsync(projectsService, "Scenario01 governed live contract lint project");
         var definition = BuildProductMutationLintGateDefinitionEditor(projectId, Guid.NewGuid());
         definition.ContractMode = ProcessDefinitionContractMode.Compatibility;
         definition.Criticality = ProcessCriticality.Standard;
@@ -3574,9 +3574,9 @@ public sealed class ProcessesServiceIntegrationTests
         {
             ProcessDefinitionId = saveResult.Value,
             ProjectId = projectId,
-            RunName = "SB01 governed live lint gate run",
+            RunName = "Scenario01 governed live lint gate run",
             OperatingMode = ProcessOperatingMode.GovernedLive,
-            TriggerReason = "SB01 governed live strict contract verification."
+            TriggerReason = "Scenario01 governed live strict contract verification."
         });
 
         Assert.True(runResult.IsFailure);
@@ -4290,7 +4290,7 @@ public sealed class ProcessesServiceIntegrationTests
         exportEnvelope.Definition.DefinitionConcurrencyToken = null;
         exportEnvelope.Definition.WorkingVersionConcurrencyToken = null;
         exportEnvelope.Definition.Name = "Imported step operation contract process";
-        exportEnvelope.Definition.ChangeSummary = "Imported for SB08 operation contract persistence validation.";
+        exportEnvelope.Definition.ChangeSummary = "Imported for Scenario08 operation contract persistence validation.";
         var importResult = await processesService.ImportAsync(exportEnvelope);
 
         AssertSuccess(importResult);
@@ -5710,7 +5710,7 @@ public sealed class ProcessesServiceIntegrationTests
             CustomerName = "Acme Customer",
             OwnerName = "Morgan Process Lead",
             GovernancePolicySummary = "Downstream work must wait for typed upstream artifacts.",
-            ChangeSummary = "SB01-INV-001 integration definition.",
+            ChangeSummary = "Scenario01-INV-001 integration definition.",
             ConstitutionRuleSummary = "Artifact materialization is runtime state, not prompt text.",
             OperatingModeSummary = "Assisted execution with explicit materialization.",
             SimulationReadinessSummary = "Safe for local integration validation.",

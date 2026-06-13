@@ -126,7 +126,7 @@ public sealed class ProcessDriverBusinessAnalysisAlphaTests
         var mismatchedEnvelope = verifier.Verify(CreateRequest(
             [item],
             suppliedContentFactory: reference => ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(
-                reference with { Uri = "bundle://proof/SB031/different-business-analysis.json" },
+                reference with { Uri = "artifact://proof/scenario031/different-business-analysis.json" },
                 BusinessAnalysisPayload)));
         var emptyItems = verifier.Verify(CreateRequest([]));
         var businessMutation = verifier.Verify(CreateRequest(
@@ -204,7 +204,7 @@ public sealed class ProcessDriverBusinessAnalysisAlphaTests
     private static BusinessAnalysisVerificationRequest CreateRequest(
         IReadOnlyList<BusinessAnalysisEvidenceItem> items,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB031/business-analysis.json",
+        string evidenceUri = "artifact://proof/scenario031/business-analysis.json",
         Func<ProcessDriverEvidenceReference, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(

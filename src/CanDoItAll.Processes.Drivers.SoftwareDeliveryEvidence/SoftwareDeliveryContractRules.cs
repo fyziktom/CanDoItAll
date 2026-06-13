@@ -1,90 +1,43 @@
 using System.Text.RegularExpressions;
 
-namespace CanDoItAll.Modules.Processes;
+namespace CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 
-internal sealed record ProcessImplementationContractSnapshot(string Text, string TriggerText)
+public static class SoftwareDeliveryContractRules
 {
-    internal static ProcessImplementationContractSnapshot Create(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-        string? additionalContext = null)
-    {
-        var contractTextParts = new[]
-            {
-                candidate.StepRun.Title,
-                candidate.WorkBrief?.Title,
-                candidate.WorkBrief?.WorkBriefText,
-                candidate.WorkBrief?.ExpectedOutcome,
-                candidate.WorkBrief?.EvidenceExpectationSummary,
-                additionalContext
-            }
-            .Concat(candidate.ExpectedArtifacts.Select(item => item.Title))
-            .Concat(candidate.ExpectedArtifacts.Select(item => item.ValidationRequirementSummary));
-        var triggerText = ProcessProjectStructureContextFormatter.RemoveSerializedContext(candidate.Run.TriggerReason);
-        var triggerTextParts = new[]
-        {
-            triggerText,
-            candidate.StepRun.Title,
-            candidate.WorkBrief?.Title,
-            candidate.WorkBrief?.WorkBriefText,
-            candidate.WorkBrief?.ExpectedOutcome,
-            candidate.WorkBrief?.EvidenceExpectationSummary
-        };
+    public static string JavaScriptContractToken => "javascript";
 
-        return new ProcessImplementationContractSnapshot(
-            CollapsePromptWhitespace(string.Join(' ', contractTextParts)),
-            CollapsePromptWhitespace(string.Join(' ', triggerTextParts)));
-    }
-
-    internal static bool RequiresCurrentAttemptProductMutation(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-        bool requiresConcreteImplementationProof)
-    {
-        if (!requiresConcreteImplementationProof)
-        {
-            return false;
-        }
-
-        var text = Create(candidate).Text;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        return ProcessImplementationStackRules.ContainsContractWord(text, "repair") ||
-               ProcessImplementationStackRules.ContainsContractWord(text, "repaired") ||
-               ProcessImplementationStackRules.ContainsContractWord(text, "rework") ||
-               ProcessImplementationStackRules.ContainsContractWord(text, "remediation") ||
-               ProcessImplementationStackRules.ContainsContractWord(text, "remediate") ||
-               ProcessImplementationStackRules.ContainsContractWord(text, "fix") ||
-               ProcessImplementationStackRules.ContainsContractWord(text, "fixes");
-    }
-
-    private static string CollapsePromptWhitespace(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return string.Empty;
-        }
-
-        return Regex.Replace(
-                value,
-                @"\s+",
-                " ",
-                RegexOptions.CultureInvariant)
-            .Trim();
-    }
-}
-
-internal static class ProcessImplementationStackRules
-{
-    internal static string JavaScriptContractToken => "javascript";
-
-    internal static bool IsDotNetWorkspaceToolName(string normalizedToolName)
+    public static bool IsDotNetWorkspaceToolName(string normalizedToolName)
     {
         return normalizedToolName.StartsWith("workspace_dotnet_", StringComparison.Ordinal);
     }
 
-    internal static bool ContainsProjectFileSignal(string text)
+    public static SoftwareDeliveryContractSignals ResolveSignals(
+        SoftwareDeliveryImplementationContractSnapshot contract)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+
+        var mentionsDotNet = ImplementationContractMentionsDotNet(contract);
+        var mentionsJavaScript = ImplementationContractMentionsJavaScript(contract);
+        var negatesDotNet = ImplementationContractNegatesDotNet(contract);
+        var containsRunnableApplicationSignal = ContainsRunnableApplicationContractSignal(contract);
+        return new SoftwareDeliveryContractSignals(
+            mentionsDotNet && mentionsJavaScript
+                ? SoftwareDeliveryImplementationStack.Mixed
+                : mentionsDotNet
+                    ? SoftwareDeliveryImplementationStack.DotNet
+                    : mentionsJavaScript
+                        ? SoftwareDeliveryImplementationStack.JavaScript
+                        : contract.RequiresConcreteImplementationProof
+                            ? SoftwareDeliveryImplementationStack.Unknown
+                            : SoftwareDeliveryImplementationStack.NonSoftware,
+            mentionsDotNet,
+            mentionsJavaScript,
+            negatesDotNet,
+            containsRunnableApplicationSignal,
+            RequiresSourceOrProjectImplementationProof(containsRunnableApplicationSignal));
+    }
+
+    public static bool ContainsProjectFileSignal(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -96,7 +49,7 @@ internal static class ProcessImplementationStackRules
                text.Contains(".sln", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool ContainsDevelopmentProfileSignal(string text)
+    public static bool ContainsDevelopmentProfileSignal(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -115,10 +68,12 @@ internal static class ProcessImplementationStackRules
                ContainsAffirmativeImplementationStackToken(text, "c#");
     }
 
-    internal static bool ContainsRunnableApplicationContractSignal(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate)
+    public static bool ContainsRunnableApplicationContractSignal(
+        SoftwareDeliveryImplementationContractSnapshot contract)
     {
-        var text = ProcessImplementationContractSnapshot.Create(candidate).Text;
+        ArgumentNullException.ThrowIfNull(contract);
+
+        var text = contract.ContractText;
         if (string.IsNullOrWhiteSpace(text))
         {
             return false;
@@ -137,30 +92,26 @@ internal static class ProcessImplementationStackRules
                text.Contains(".csproj", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool ImplementationContractMentionsTests(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-        bool requiresConcreteImplementationProof)
+    public static bool ImplementationContractMentionsTests(
+        SoftwareDeliveryImplementationContractSnapshot contract)
     {
-        if (!requiresConcreteImplementationProof ||
-            !ContainsRunnableApplicationContractSignal(candidate))
+        ArgumentNullException.ThrowIfNull(contract);
+
+        if (!contract.RequiresConcreteImplementationProof ||
+            !ContainsRunnableApplicationContractSignal(contract))
         {
             return false;
         }
 
-        var text = ProcessImplementationContractSnapshot.Create(candidate).TriggerText;
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        return ContainsExplicitImplementationTestRequest(text);
+        return ContainsExplicitImplementationTestRequest(contract.TriggerText);
     }
 
-    internal static bool ImplementationContractMentionsDotNet(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-        string? additionalContext = null)
+    public static bool ImplementationContractMentionsDotNet(
+        SoftwareDeliveryImplementationContractSnapshot contract)
     {
-        var text = ProcessImplementationContractSnapshot.Create(candidate, additionalContext).Text;
+        ArgumentNullException.ThrowIfNull(contract);
+
+        var text = contract.ContractText;
         if (string.IsNullOrWhiteSpace(text))
         {
             return false;
@@ -179,11 +130,12 @@ internal static class ProcessImplementationStackRules
                ContainsAffirmativeImplementationStackToken(text, "nuget");
     }
 
-    internal static bool ImplementationContractMentionsJavaScript(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-        string? additionalContext = null)
+    public static bool ImplementationContractMentionsJavaScript(
+        SoftwareDeliveryImplementationContractSnapshot contract)
     {
-        var text = ProcessImplementationContractSnapshot.Create(candidate, additionalContext).Text;
+        ArgumentNullException.ThrowIfNull(contract);
+
+        var text = contract.ContractText;
         if (string.IsNullOrWhiteSpace(text))
         {
             return false;
@@ -200,11 +152,12 @@ internal static class ProcessImplementationStackRules
                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    internal static bool ImplementationContractNegatesDotNet(
-        ProcessRunAutomationDispatchService.DispatchCandidate candidate,
-        string? additionalContext = null)
+    public static bool ImplementationContractNegatesDotNet(
+        SoftwareDeliveryImplementationContractSnapshot contract)
     {
-        var text = ProcessImplementationContractSnapshot.Create(candidate, additionalContext).Text;
+        ArgumentNullException.ThrowIfNull(contract);
+
+        var text = contract.ContractText;
         if (string.IsNullOrWhiteSpace(text))
         {
             return false;
@@ -223,7 +176,32 @@ internal static class ProcessImplementationStackRules
                ContainsNegatedImplementationStackToken(text, "nuget");
     }
 
-    internal static bool ContainsExplicitImplementationTestRequest(string text)
+    public static bool RequiresCurrentAttemptProductMutation(
+        SoftwareDeliveryImplementationContractSnapshot contract)
+    {
+        ArgumentNullException.ThrowIfNull(contract);
+
+        if (!contract.RequiresConcreteImplementationProof)
+        {
+            return false;
+        }
+
+        var text = contract.ContractText;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return ContainsContractWord(text, "repair") ||
+               ContainsContractWord(text, "repaired") ||
+               ContainsContractWord(text, "rework") ||
+               ContainsContractWord(text, "remediation") ||
+               ContainsContractWord(text, "remediate") ||
+               ContainsContractWord(text, "fix") ||
+               ContainsContractWord(text, "fixes");
+    }
+
+    public static bool ContainsExplicitImplementationTestRequest(string text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -266,7 +244,7 @@ internal static class ProcessImplementationStackRules
                    RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    internal static bool ContainsNegatedImplementationStackToken(string text, string token)
+    public static bool ContainsNegatedImplementationStackToken(string text, string token)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -279,7 +257,7 @@ internal static class ProcessImplementationStackRules
             .Any(match => IsNegatedImplementationStackMention(text, match.Index));
     }
 
-    internal static bool ContainsAffirmativeImplementationStackToken(string text, string token)
+    public static bool ContainsAffirmativeImplementationStackToken(string text, string token)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -293,7 +271,7 @@ internal static class ProcessImplementationStackRules
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    internal static bool ContainsAffirmativeImplementationStackPattern(
+    public static bool ContainsAffirmativeImplementationStackPattern(
         string text,
         string pattern,
         RegexOptions options)
@@ -309,7 +287,7 @@ internal static class ProcessImplementationStackRules
         return false;
     }
 
-    internal static bool IsNegatedImplementationStackMention(string text, int matchIndex)
+    public static bool IsNegatedImplementationStackMention(string text, int matchIndex)
     {
         var prefixStart = Math.Max(0, matchIndex - 64);
         var prefix = text[prefixStart..matchIndex];
@@ -319,11 +297,24 @@ internal static class ProcessImplementationStackRules
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
 
-    internal static bool ContainsContractWord(string text, string word)
+    public static bool ContainsContractWord(string text, string word)
     {
         return Regex.IsMatch(
             text,
             $@"(?<![A-Za-z0-9_]){Regex.Escape(word)}(?![A-Za-z0-9_])",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }
+
+    private static bool RequiresSourceOrProjectImplementationProof(bool containsRunnableApplicationContractSignal)
+    {
+        return containsRunnableApplicationContractSignal;
+    }
 }
+
+public sealed record SoftwareDeliveryContractSignals(
+    SoftwareDeliveryImplementationStack Stack,
+    bool MentionsDotNet,
+    bool MentionsJavaScript,
+    bool NegatesDotNet,
+    bool ContainsRunnableApplicationSignal,
+    bool RequiresSourceOrProjectImplementationProof);

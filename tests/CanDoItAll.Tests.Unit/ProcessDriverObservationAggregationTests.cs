@@ -363,23 +363,23 @@ public sealed class ProcessDriverObservationAggregationTests
             ProcessDriverCapabilityScopeKind.DotNetRustTranscriptVerification => (
                 ProcessDriverEvidenceReferenceKind.CommandTranscript,
                 ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
-                "bundle://proof/SB037/transcript-observation.txt"),
+                "artifact://proof/scenario037/transcript-observation.txt"),
             ProcessDriverCapabilityScopeKind.RuntimeFactsRead => (
                 ProcessDriverEvidenceReferenceKind.CoreDescriptor,
                 ProcessDriverCoreDescriptorFamily.ExecutionEvidence,
-                "bundle://proof/SB037/runtime-observation.json"),
+                "artifact://proof/scenario037/runtime-observation.json"),
             ProcessDriverCapabilityScopeKind.OfficeEvidenceRead => (
                 ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
                 (ProcessDriverCoreDescriptorFamily?)null,
-                "bundle://proof/SB037/office-observation.json"),
+                "artifact://proof/scenario037/office-observation.json"),
             ProcessDriverCapabilityScopeKind.BusinessAnalysisRead => (
                 ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
                 (ProcessDriverCoreDescriptorFamily?)null,
-                "bundle://proof/SB037/business-observation.json"),
+                "artifact://proof/scenario037/business-observation.json"),
             ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead => (
                 ProcessDriverEvidenceReferenceKind.CoreDescriptor,
                 ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence,
-                "bundle://proof/SB037/artifact-observation.json"),
+                "artifact://proof/scenario037/artifact-observation.json"),
             _ => throw new ArgumentOutOfRangeException(nameof(lane), lane, "Unsupported aggregation lane.")
         };
 

@@ -294,6 +294,8 @@ The dispatcher prompt starts with `You are executing a CanDoItAll process step.`
 - recovery directive when a previous run is being repaired
 - governed evidence rules for `workspace_stat_path`, `workspace_read_file`, browser proof, build/test proof, and concrete product write tools when the step requires them
 
+Stack-specific software-delivery evidence and recovery wording is produced by the read-only `CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence` package. The dispatcher supplies typed process facts and approved inspection snapshots; it does not keep Blazor, JavaScript, build-host, or static-server policy text in the generic prompt builder.
+
 This prompt is intentionally stricter than a generic chat message. It makes tool and evidence use part of the step contract, not optional assistant behavior.
 
 ### Completion And Recovery

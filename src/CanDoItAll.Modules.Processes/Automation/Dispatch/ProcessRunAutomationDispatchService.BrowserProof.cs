@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Core;
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using CanDoItAll.AgentFramework.Models;
 using CanDoItAll.Infrastructure.ControlPlane;
 using CanDoItAll.Infrastructure.Persistence;
@@ -313,7 +314,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool ContainsNaturalBrowserConsoleEvidenceSignal(string text)
     {
-        var scriptToken = Regex.Escape(ProcessImplementationStackRules.JavaScriptContractToken);
+        var scriptToken = Regex.Escape(SoftwareDeliveryContractRules.JavaScriptContractToken);
         return Regex.IsMatch(
             text,
             $@"(?<![A-Za-z0-9_])(?:browser|{scriptToken})\s+console(?![A-Za-z0-9_])|(?<![A-Za-z0-9_])console\s+(?:messages?|logs?|diagnostics?)(?![A-Za-z0-9_])",

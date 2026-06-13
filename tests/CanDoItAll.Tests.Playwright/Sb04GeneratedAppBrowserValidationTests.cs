@@ -3,16 +3,16 @@ using Microsoft.Playwright;
 
 namespace CanDoItAll.Tests.Playwright;
 
-public sealed class Sb04GeneratedAppBrowserValidationTests
+public sealed class Scenario04GeneratedAppBrowserValidationTests
 {
-    private const string UrlEnvironmentVariable = "CANDOITALL_SB04_BROWSER_URL";
-    private const string OutputRootEnvironmentVariable = "CANDOITALL_SB04_BROWSER_OUTPUT_ROOT";
-    private const string ScenarioKeyEnvironmentVariable = "CANDOITALL_SB04_BROWSER_SCENARIO_KEY";
+    private const string UrlEnvironmentVariable = "CANDOITALL_Scenario04_BROWSER_URL";
+    private const string OutputRootEnvironmentVariable = "CANDOITALL_Scenario04_BROWSER_OUTPUT_ROOT";
+    private const string ScenarioKeyEnvironmentVariable = "CANDOITALL_Scenario04_BROWSER_SCENARIO_KEY";
     private const string InteractiveControlSelector = "button:not([disabled]):visible, input:not([type=hidden]):not([disabled]):visible, select:not([disabled]):visible, textarea:not([disabled]):visible, [role=button]:visible, a[href]:visible";
     private const string InteractiveControlCssSelector = "button:not([disabled]), input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [role=button], a[href]";
 
     [Fact]
-    [Trait("Category", "SB04")]
+    [Trait("Category", "Scenario04")]
     public async Task Generated_app_supports_desktop_and_mobile_browser_validation()
     {
         var url = Environment.GetEnvironmentVariable(UrlEnvironmentVariable);

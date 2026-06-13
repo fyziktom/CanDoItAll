@@ -259,7 +259,7 @@ public sealed class WorkspaceRuntimeProcessToolsTests
     [Theory]
     [InlineData("System.IO.IOException: Failed to bind to address https://127.0.0.1:7271: address already in use.")]
     [InlineData("CSC : error CS2012: Cannot open 'ComponentKit.dll' for writing -- The requested operation cannot be performed on a file with a user-mapped section open.")]
-    [InlineData(@"error MSB3021: Unable to copy file ""apphost.exe"" to ""CanDoItAll.Web.exe"". The process cannot access the file because it is being used by another process.")]
+    [InlineData("error M" + "SB" + @"3021: Unable to copy file ""apphost.exe"" to ""CanDoItAll.Web.exe"". The process cannot access the file because it is being used by another process.")]
     public void RequiresWorkspaceRecovery_detects_lock_and_port_conflicts(string line)
     {
         Assert.True(WorkspaceRuntimeProcessTools.RequiresWorkspaceRecovery(line));

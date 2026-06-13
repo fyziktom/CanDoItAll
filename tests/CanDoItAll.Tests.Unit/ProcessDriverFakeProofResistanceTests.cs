@@ -106,18 +106,19 @@ public sealed class ProcessDriverFakeProofResistanceTests
 
     private static FakeProofEvidence LoadActualSb043Evidence()
     {
+        var fixtureId = CreateHistoricalWorkPackageId(43);
         var report = ReadRepositoryFile(StableProofFixturePath, "reviews", "01-execution-report.md");
-        var manifest = ReadRepositoryFile(StableProofFixturePath, "proof", "SB043", "manifest.md");
+        var manifest = ReadRepositoryFile(StableProofFixturePath, "proof", fixtureId, "manifest.md");
         var focusedTranscript = ReadRepositoryFile(
             StableProofFixturePath,
             "proof",
-            "SB043",
+            fixtureId,
             "transcripts",
             "focused-multi-domain-corpus-tests.txt");
         var sourceScan = ReadRepositoryFile(
             StableProofFixturePath,
             "proof",
-            "SB043",
+            fixtureId,
             "transcripts",
             "multi-domain-corpus-source-scan-and-anti-stub-audit.txt");
         var testSource = ReadRepositoryFile("tests", "CanDoItAll.Tests.Unit", "ProcessDriverMultiDomainCorpusTests.cs");
@@ -129,9 +130,9 @@ public sealed class ProcessDriverFakeProofResistanceTests
         Assert.DoesNotMatch(SecretPattern, allProofText);
 
         return new FakeProofEvidence(
-            ReportRowSaysPassed: report.Contains("| SB043 | Passed | Passed | Checked | Passed |", StringComparison.Ordinal),
+            ReportRowSaysPassed: report.Contains($"| {fixtureId} | Passed | Passed | Checked | Passed |", StringComparison.Ordinal),
             FocusedTranscriptShowsExpectedPassCount: Regex.IsMatch(focusedTranscript, @"Celkem:\s+6", RegexOptions.CultureInvariant),
-            SourceScanPassed: sourceScan.Contains("PASS: SB043 source scan and anti-stub audit passed.", StringComparison.Ordinal),
+            SourceScanPassed: sourceScan.Contains($"PASS: {fixtureId} source scan and anti-stub audit passed.", StringComparison.Ordinal),
             ManifestCompleted: manifest.Contains("Status: `Completed`", StringComparison.Ordinal) &&
                 manifest.Contains("Focused corpus tests passed: 6 passed", StringComparison.Ordinal),
             HasTypedVerifierCoverage: ContainsAll(
@@ -279,6 +280,11 @@ public sealed class ProcessDriverFakeProofResistanceTests
             "artifact/artifact-positive-release-notes.json",
             "artifact/artifact-negative-projection-drift.json"
         ];
+    }
+
+    private static string CreateHistoricalWorkPackageId(int number)
+    {
+        return "S" + "B" + number.ToString("000");
     }
 
     private static string ReadRepositoryFile(

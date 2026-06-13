@@ -1,4 +1,5 @@
 using CanDoItAll.AgentFramework.Models;
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using CanDoItAll.SharedKernel;
 
 namespace CanDoItAll.Modules.Processes;
@@ -16,7 +17,7 @@ internal static class ProcessArtifactExpectationResolver
 
         var governedArtifacts = ProcessProjectStructureArtifactPathRules.ResolveProjectStructureRequiredArtifactPaths(
             projectStructureContractText,
-            ProcessConcreteProductPathRules.TryMapWorkspacePathForPrompt);
+            SoftwareDeliveryPathRules.TryMapWorkspacePathForPrompt);
         if (governedArtifacts.Count > 0)
         {
             foreach (var expectedArtifact in expectedArtifacts)
@@ -28,7 +29,7 @@ internal static class ProcessArtifactExpectationResolver
                     ProcessProjectStructureArtifactPathRules.ArtifactPathMatchesGovernedProjectStructurePath(
                         artifact.RelativePath,
                         governedPath,
-                        ProcessConcreteProductPathRules.TryMapWorkspacePathForPrompt))
+                        SoftwareDeliveryPathRules.TryMapWorkspacePathForPrompt))
                 {
                     return expectedArtifact;
                 }
@@ -326,7 +327,7 @@ internal static class ProcessArtifactExpectationResolver
     private static bool IsLikelyProductSourceOrProjectFileName(string fileName)
     {
         var extension = Path.GetExtension(fileName);
-        return ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension);
+        return SoftwareDeliveryPathRules.IsCodeOrProjectExtension(extension);
     }
 
     private static string CollapsePromptWhitespace(string? text)

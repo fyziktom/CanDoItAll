@@ -14,7 +14,7 @@ const string businessPayload = """{"items":[{"kind":"deliverable","id":"analysis
 
 var evidence = new ProcessDriverEvidenceReference(
     ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
-    "bundle://proof/sample/business-analysis.json",
+    "artifact://proof/sample/business-analysis.json",
     ProcessDriverEvidencePolicy.ComputeSha256(businessPayload),
     coreDescriptorFamily: null);
 var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(

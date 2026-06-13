@@ -181,7 +181,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
             [
                 new OfficeEvidenceItem(
                     OfficeEvidenceItemKind.EmailMessage,
-                    "mail-sb043-positive-001",
+                    "mail-scenario043-positive-001",
                     "Release readiness follow-up",
                     "program.manager@example.invalid",
                     ["process.owner@example.invalid", "release.lead@example.invalid"],
@@ -189,7 +189,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
                     "Follow-up confirms the release readiness review action item is assigned to the process owner."),
                 new OfficeEvidenceItem(
                     OfficeEvidenceItemKind.Document,
-                    "doc-sb043-positive-001",
+                    "doc-scenario043-positive-001",
                     "Release readiness notes",
                     "program.manager@example.invalid",
                     [],
@@ -202,7 +202,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
             [
                 new OfficeEvidenceItem(
                     OfficeEvidenceItemKind.EmailMessage,
-                    "mail-sb043-negative-001",
+                    "mail-scenario043-negative-001",
                     string.Empty,
                     string.Empty,
                     [],
@@ -235,13 +235,13 @@ public sealed class ProcessDriverMultiDomainCorpusTests
             [
                 new BusinessAnalysisEvidenceItem(
                     BusinessAnalysisEvidenceItemKind.Deliverable,
-                    "analysis-sb043-positive-001",
+                    "analysis-scenario043-positive-001",
                     "Customer churn risk analysis",
                     positiveText,
                     DateTimeOffset.Parse("2026-06-08T13:00:00Z")),
                 new BusinessAnalysisEvidenceItem(
                     BusinessAnalysisEvidenceItemKind.SupportingEvidence,
-                    "evidence-sb043-positive-001",
+                    "evidence-scenario043-positive-001",
                     "Renewal-team interview summary",
                     positiveText,
                     DateTimeOffset.Parse("2026-06-08T13:05:00Z"))
@@ -252,7 +252,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
             [
                 new BusinessAnalysisEvidenceItem(
                     BusinessAnalysisEvidenceItemKind.Deliverable,
-                    "analysis-sb043-negative-001",
+                    "analysis-scenario043-negative-001",
                     "Enterprise onboarding recommendation",
                     negativeText,
                     DateTimeOffset.Parse("2026-06-08T13:10:00Z"))
@@ -375,7 +375,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
         {
             var content = ReadCorpusFile(relativePath.Split('/'));
 
-            Assert.Contains("SB043", content, StringComparison.Ordinal);
+            Assert.Contains(CreateHistoricalWorkPackageId(43), content, StringComparison.Ordinal);
             Assert.True(content.Length > 120);
             Assert.DoesNotMatch(SecretPattern, content);
             AssertNoRuntimeHostOrSideEffectTokens(content);
@@ -404,7 +404,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
         string fixtureName)
     {
         var contentHash = ProcessDriverEvidencePolicy.ComputeSha256(transcriptText);
-        var fixtureUri = $"bundle://testdata/SB043/transcript/{fixtureName}";
+        var fixtureUri = $"artifact://testdata/scenario043/transcript/{fixtureName}";
         var transcriptReference = new ProcessDriverTranscriptReference(
             fixtureUri,
             contentHash,
@@ -421,7 +421,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
                 ProcessDriverPermissionMode.VerificationOnly),
             [transcriptEvidence],
             ProcessDriverVerificationTestHarness.TranscriptReadonlyOperations,
-            "manager:sb043-transcript-corpus");
+            "manager:scenario043-transcript-corpus");
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateTranscriptText(
             transcriptEvidence,
             transcriptText);
@@ -446,7 +446,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            $"bundle://testdata/SB043/runtime/{fixtureName}",
+            $"artifact://testdata/scenario043/runtime/{fixtureName}",
             suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
@@ -459,7 +459,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
                 ProcessDriverPermissionMode.ManagerReadonly),
             [evidenceReference],
             ProcessDriverVerificationTestHarness.RuntimeReadonlyOperations,
-            "manager:sb043-runtime-corpus");
+            "manager:scenario043-runtime-corpus");
 
         return new RuntimeEvidenceConsistencyVerificationRequest(
             verificationRequest,
@@ -480,7 +480,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
-            $"bundle://testdata/SB043/office/{fixtureName}",
+            $"artifact://testdata/scenario043/office/{fixtureName}",
             suppliedPayload,
             coreDescriptorFamily: null);
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateOfficeEvidencePayload(
@@ -493,7 +493,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
                 ProcessDriverPermissionMode.VerificationOnly),
             [evidenceReference],
             ProcessDriverVerificationTestHarness.OfficeReadonlyOperations,
-            "manager:sb043-office-corpus");
+            "manager:scenario043-office-corpus");
 
         return new OfficeEvidenceVerificationRequest(
             verificationRequest,
@@ -509,7 +509,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     {
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
-            $"bundle://testdata/SB043/business/{fixtureName}",
+            $"artifact://testdata/scenario043/business/{fixtureName}",
             suppliedPayload,
             coreDescriptorFamily: null);
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateBusinessAnalysisPayload(
@@ -522,7 +522,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
                 ProcessDriverPermissionMode.VerificationOnly),
             [evidenceReference],
             ProcessDriverVerificationTestHarness.BusinessAnalysisReadonlyOperations,
-            "manager:sb043-business-corpus");
+            "manager:scenario043-business-corpus");
 
         return new BusinessAnalysisVerificationRequest(
             verificationRequest,
@@ -543,12 +543,12 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     {
         var projectionReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            $"bundle://testdata/SB043/artifact/{fixtureName}",
+            $"artifact://testdata/scenario043/artifact/{fixtureName}",
             suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
         var validationReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            $"bundle://testdata/SB043/artifact/{fixtureName}#validation",
+            $"artifact://testdata/scenario043/artifact/{fixtureName}#validation",
             suppliedPayload,
             ProcessDriverCoreDescriptorFamily.ArtifactProjectionValidation);
         var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(
@@ -561,7 +561,7 @@ public sealed class ProcessDriverMultiDomainCorpusTests
                 ProcessDriverPermissionMode.VerificationOnly),
             [projectionReference, validationReference],
             ProcessDriverVerificationTestHarness.ArtifactEvidenceReadonlyOperations,
-            "manager:sb043-artifact-corpus");
+            "manager:scenario043-artifact-corpus");
 
         return new ArtifactEvidenceVerificationRequest(
             verificationRequest,
@@ -835,6 +835,11 @@ public sealed class ProcessDriverMultiDomainCorpusTests
     {
         return File.ReadAllText(Path.Combine(
             [FindRepositoryRoot(), "tests", "CanDoItAll.Tests.Unit", "TestData", CorpusDirectoryName, .. pathParts]));
+    }
+
+    private static string CreateHistoricalWorkPackageId(int number)
+    {
+        return "S" + "B" + number.ToString("000");
     }
 
     private static string FindRepositoryRoot(

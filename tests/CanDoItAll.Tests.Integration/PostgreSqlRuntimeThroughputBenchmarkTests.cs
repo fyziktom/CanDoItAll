@@ -14,8 +14,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CanDoItAll.Tests.Integration;
 
 public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
-    private const string RunVariable = "CANDOITALL_RUN_SB06_BENCHMARK";
-    private const string OutputVariable = "CANDOITALL_SB06_BENCHMARK_OUTPUT";
+    private const string RunVariable = "CANDOITALL_RUN_Scenario06_BENCHMARK";
+    private const string OutputVariable = "CANDOITALL_Scenario06_BENCHMARK_OUTPUT";
     private const int SeededRecordCount = 768;
     private const int ClaimBatchSize = 64;
     private const int SequentialParallelism = 1;
@@ -42,7 +42,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         await using var scope = provider.CreateAsyncScope();
         var dbContextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<AppDbContext>>();
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
-        Assert.True(dbContext.Database.IsNpgsql(), "SB06 benchmark must run against PostgreSQL.");
+        Assert.True(dbContext.Database.IsNpgsql(), "Scenario06 benchmark must run against PostgreSQL.");
 
         using var metricProbe = new RuntimeClaimMetricProbe();
         var results = new List<RuntimeThroughputBenchmarkResult>();
@@ -137,7 +137,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         elapsed.Stop();
 
         if (!processedIds.TryPeek(out var staleProbeId)) {
-            throw new InvalidOperationException($"The SB06 {workload.Name}/{mode} benchmark did not process any records.");
+            throw new InvalidOperationException($"The Scenario06 {workload.Name}/{mode} benchmark did not process any records.");
         }
 
         var staleFinalizationCount = await AttemptStaleFinalizationAsync(
@@ -188,7 +188,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         while (true) {
             cancellationToken.ThrowIfCancellationRequested();
             var now = DateTimeOffset.UtcNow;
-            var leaseToken = $"sb06-{mode}-{workerIndex}-{iteration}";
+            var leaseToken = $"scenario06-{mode}-{workerIndex}-{iteration}";
             var claimedRecords = await ClaimBatchAsync(
                 connection,
                 workload,
@@ -288,12 +288,12 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
             workload.FinalizeSql,
             [
                 new DbParameterValue("@id", processedRecordId),
-                new DbParameterValue("@leaseToken", "sb06-stale-token"),
+                new DbParameterValue("@leaseToken", "scenario06-stale-token"),
                 new DbParameterValue("@now", DateTimeOffset.UtcNow)
             ],
             cancellationToken);
         if (affectedRows != 0) {
-            throw new InvalidOperationException($"The SB06 stale finalization probe unexpectedly updated {workload.Name}.");
+            throw new InvalidOperationException($"The Scenario06 stale finalization probe unexpectedly updated {workload.Name}.");
         }
 
         return 1;
@@ -323,13 +323,13 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         CancellationToken cancellationToken) {
         await using var scope = provider.CreateAsyncScope();
         var publisher = scope.ServiceProvider.GetRequiredService<IAutomationMessagePublisher>();
-        var options = new AutomationPublishOptions(DedupeKey: $"sb06-benchmark-{Guid.NewGuid():N}");
+        var options = new AutomationPublishOptions(DedupeKey: $"scenario06-benchmark-{Guid.NewGuid():N}");
         var first = await publisher.PublishAsync(
-            new Sb06BenchmarkEnvelope("duplicate-probe"),
+            new Scenario06BenchmarkEnvelope("duplicate-probe"),
             options,
             cancellationToken);
         var second = await publisher.PublishAsync(
-            new Sb06BenchmarkEnvelope("duplicate-probe"),
+            new Scenario06BenchmarkEnvelope("duplicate-probe"),
             options,
             cancellationToken);
 
@@ -342,7 +342,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         CancellationToken cancellationToken) {
         var configuredPath = Environment.GetEnvironmentVariable(OutputVariable);
         var outputPath = string.IsNullOrWhiteSpace(configuredPath)
-            ? Path.Combine(AppContext.BaseDirectory, "sb06-benchmark-output.json")
+            ? Path.Combine(AppContext.BaseDirectory, "scenario06-benchmark-output.json")
             : configuredPath;
         var directory = Path.GetDirectoryName(outputPath);
         if (!string.IsNullOrWhiteSpace(directory)) {
@@ -421,7 +421,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
     private const string ResetProcessOutboxSql =
         """
         DELETE FROM "Processes_Outbox"
-        WHERE "CommandKey" = 'sb06-benchmark-process';
+        WHERE "CommandKey" = 'scenario06-benchmark-process';
         """;
 
     private const string SeedProcessOutboxSql =
@@ -446,7 +446,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
             NULL,
             NULL,
             NULL,
-            'sb06-benchmark-process',
+            'scenario06-benchmark-process',
             '{}',
             0,
             0,
@@ -503,10 +503,10 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
     private const string ResetAutomationDeliverySql =
         """
         DELETE FROM "Automation_EnvelopeDeliveries"
-        WHERE "EnvelopeType" = 'sb06.benchmark.delivery';
+        WHERE "EnvelopeType" = 'scenario06.benchmark.delivery';
 
         DELETE FROM "Automation_Envelopes"
-        WHERE "EnvelopeType" = 'sb06.benchmark.delivery';
+        WHERE "EnvelopeType" = 'scenario06.benchmark.delivery';
         """;
 
     private const string SeedAutomationDeliverySql =
@@ -522,7 +522,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
             "UpdatedAtUtc")
         SELECT
             ('00000000-0000-0000-6200-' || lpad(series.value::text, 12, '0'))::uuid,
-            'sb06.benchmark.delivery',
+            'scenario06.benchmark.delivery',
             '{}',
             0,
             0,
@@ -548,8 +548,8 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         SELECT
             ('00000000-0000-0000-6300-' || lpad(series.value::text, 12, '0'))::uuid,
             ('00000000-0000-0000-6200-' || lpad(series.value::text, 12, '0'))::uuid,
-            'sb06.benchmark.delivery',
-            'sb06-handler',
+            'scenario06.benchmark.delivery',
+            'scenario06-handler',
             0,
             0,
             3,
@@ -617,7 +617,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
     private const string ResetConnectorCommandSql =
         """
         DELETE FROM "Workspace_ConnectorCommands"
-        WHERE "ConnectorPluginKey" = 'sb06-benchmark-plugin';
+        WHERE "ConnectorPluginKey" = 'scenario06-benchmark-plugin';
         """;
 
     private const string SeedConnectorCommandSql =
@@ -643,9 +643,9 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
         SELECT
             ('00000000-0000-0000-6400-' || lpad(series.value::text, 12, '0'))::uuid,
             '20000000-0000-0000-0000-000000000001',
-            'sb06-benchmark-plugin',
+            'scenario06-benchmark-plugin',
             'deliver',
-            'sb06-idem-' || series.value,
+            'scenario06-idem-' || series.value,
             '{}',
             0,
             0,
@@ -715,7 +715,7 @@ public sealed class PostgreSqlRuntimeThroughputBenchmarkTests {
 
     private sealed record DbParameterValue(string Name, object? Value);
 
-    private sealed record Sb06BenchmarkEnvelope(string Value);
+    private sealed record Scenario06BenchmarkEnvelope(string Value);
 
     private sealed record RuntimeProtectionCounterSummary(
         int DuplicateSuppressionCount,

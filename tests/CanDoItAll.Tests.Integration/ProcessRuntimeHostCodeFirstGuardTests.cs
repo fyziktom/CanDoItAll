@@ -113,7 +113,7 @@ public sealed class ProcessRuntimeHostCodeFirstGuardTests
         [
             "ExplicitBaseline: HEAD 69e601b28a26",
             "CommandPolicy: conservative worktree fallback because no bundle-start SHA was recorded in the prepared bundle.",
-            "Decision: SB08 final closure is blocked by the code-first ratio gate under the conservative HEAD baseline."
+            "Decision: Scenario08 final closure is blocked by the code-first ratio gate under the conservative HEAD baseline."
         ]);
         var falseClosureFallback = ProcessRuntimeHostCodeFirstClosureReport.FromLines(
         [

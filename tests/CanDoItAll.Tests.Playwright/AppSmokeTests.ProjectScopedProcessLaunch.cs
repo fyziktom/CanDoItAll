@@ -13,7 +13,7 @@ using Microsoft.Playwright;
 namespace CanDoItAll.Tests.Playwright;
 
 public sealed partial class AppSmokeTests {
-    private const string Sb02TemplateName = "Business plan development";
+    private const string Scenario02TemplateName = "Business plan development";
     private const string ProjectStructureProcessDefinitionNodePrefix = "process-definition:";
     private const string ProjectStructureAssignmentAskHrTestId = "project-structure-process-assignment-ask-hr";
     private const string ProjectStructureAssignmentConfirmHrTestId = "project-structure-process-assignment-confirm-hr";
@@ -25,14 +25,14 @@ public sealed partial class AppSmokeTests {
     [Trait("Surface", "ProjectStructure")]
     public async Task Project_structure_process_template_launch_launches_approved_template_from_structure_context_and_reads_back_run() {
         var repoRoot = GetRepoRoot();
-        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-template-ui-live-e2e-runtime-readiness-sb02");
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-template-ui-live-e2e-runtime-readiness-scenario02");
         ResetDirectory(artifactsDir);
 
         using var agentClient = CreateProjectStructureAgentApiClient(
             fixture.BaseUrl,
-            "sb02-playwright-agent",
-            "SB02 Playwright",
-            "tests/process-template-ui-live-e2e-runtime-readiness-sb02");
+            "scenario02-playwright-agent",
+            "Scenario02 Playwright",
+            "tests/process-template-ui-live-e2e-runtime-readiness-scenario02");
         using var processClient = CreateProcessApiClient(fixture.BaseUrl);
         await using var runtimeServiceProvider = BuildSb02RuntimeServiceProvider();
         await EnsureSb02ProcessMockCatalogAsync(runtimeServiceProvider);
@@ -42,7 +42,7 @@ public sealed partial class AppSmokeTests {
             agentClient,
             "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
-                $"SB02 template launch project {suffix}",
+                $"Scenario02 template launch project {suffix}",
                 "Browser project-structure template launch proof",
                 "Verify a published project template can start from a project-structure node and open the durable run.",
                 "Execution",
@@ -53,14 +53,14 @@ public sealed partial class AppSmokeTests {
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString("D"),
-                "SB02 browser template launch proof",
+                "Scenario02 browser template launch proof",
                 15));
         var workNode = await PostJsonAndReadApiAsync<ProjectStructureNodeSummary>(
             agentClient,
             $"/api/project-structure/projects/{project.Id:D}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.WorkItem,
-                $"SB02 launch target {suffix}",
+                $"Scenario02 launch target {suffix}",
                 "Process execution target",
                 "Selected work item used for browser-visible template launch proof.",
                 $"project:{project.Id:D}",
@@ -93,11 +93,11 @@ public sealed partial class AppSmokeTests {
         var templateDialog = page.GetByTestId("processes-template-library-dialog");
         await templateDialog.WaitForAsync();
         await templateDialog.GetByPlaceholder("Search templates, roles, artifacts, governance, or evidence")
-            .FillAsync(Sb02TemplateName);
+            .FillAsync(Scenario02TemplateName);
         await page.GetByTestId("processes-template-library-item-business-plan-development").WaitForAsync();
         await page.GetByTestId("processes-template-library-item-business-plan-development").ClickAsync();
         await templateDialog.GetByRole(AriaRole.Heading, new() {
-            Name = Sb02TemplateName,
+            Name = Scenario02TemplateName,
             Exact = true
         }).WaitForAsync();
         await WaitForBodyTextAsync(page, project.Name, 30_000);
@@ -109,7 +109,7 @@ public sealed partial class AppSmokeTests {
         var definition = await WaitForProjectDefinitionAsync(
             processClient,
             project.Id,
-            Sb02TemplateName,
+            Scenario02TemplateName,
             candidate => candidate.StepCount > 0,
             30_000);
         Assert.Equal(project.Id, definition.ProjectId);
@@ -126,7 +126,7 @@ public sealed partial class AppSmokeTests {
         definition = await WaitForProjectDefinitionAsync(
             processClient,
             project.Id,
-            Sb02TemplateName,
+            Scenario02TemplateName,
             candidate => candidate.Id == definition.Id && candidate.HasPublishedVersion,
             30_000);
 
@@ -150,7 +150,7 @@ public sealed partial class AppSmokeTests {
         await WaitForCanvasRenderIdleAsync(page);
 
         var definitionNodeId = BuildProjectedProcessDefinitionNodeId(definition.Id);
-        await WaitForProjectedProcessDefinitionNodeAsync(page, definitionNodeId, Sb02TemplateName, 90_000);
+        await WaitForProjectedProcessDefinitionNodeAsync(page, definitionNodeId, Scenario02TemplateName, 90_000);
         await page.ScreenshotAsync(new() {
             Path = Path.Combine(artifactsDir, "02-project-template-linked-structure-large-desktop.png"),
             FullPage = false
@@ -173,7 +173,7 @@ public sealed partial class AppSmokeTests {
         await startDialog.WaitForAsync();
         var startDialogText = await startDialog.InnerTextAsync();
         Assert.Contains(workNode.Title, startDialogText, StringComparison.Ordinal);
-        Assert.Contains(Sb02TemplateName, startDialogText, StringComparison.Ordinal);
+        Assert.Contains(Scenario02TemplateName, startDialogText, StringComparison.Ordinal);
         await startDialog.ScreenshotAsync(new() {
             Path = Path.Combine(artifactsDir, "03-project-structure-start-confirm-large-desktop.png")
         });
@@ -190,7 +190,7 @@ public sealed partial class AppSmokeTests {
             Path = Path.Combine(artifactsDir, "04-project-structure-assignment-review-large-desktop.png")
         });
 
-        var expectedLaunchName = $"{workNode.Title} / {Sb02TemplateName}";
+        var expectedLaunchName = $"{workNode.Title} / {Scenario02TemplateName}";
         var launchPlan = await WaitForProjectLaunchPlanAsync(
             processClient,
             project.Id,
@@ -366,7 +366,7 @@ public sealed partial class AppSmokeTests {
 
         var page = await context.NewPageAsync();
         using var apiClient = CreateProcessApiClient(fixture.BaseUrl);
-        var projectName = $"SB010 Project {Guid.NewGuid():N}";
+        var projectName = $"Scenario010 Project {Guid.NewGuid():N}";
         var projectId = await CreateProjectAsync(page, projectName, "Execution");
 
         var response = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes");
@@ -418,7 +418,7 @@ public sealed partial class AppSmokeTests {
             candidate => candidate.Id == definition.Id && candidate.HasPublishedVersion,
             30_000);
 
-        var launchName = $"SB010 project launch {Guid.NewGuid():N}";
+        var launchName = $"Scenario010 project launch {Guid.NewGuid():N}";
         response = await page.GotoAsync($"{fixture.BaseUrl}/projects/{projectId:D}/processes?processId={definition.Id:D}");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected selected project process route to return 2xx, got {(int)response.Status}.");
@@ -583,7 +583,7 @@ public sealed partial class AppSmokeTests {
         var services = new ServiceCollection();
         var environment = new TestHostEnvironment(
             activeProfile.EnvironmentRootPath,
-            "CanDoItAll.Tests.Playwright.SB02ProcessRuntime");
+            "CanDoItAll.Tests.Playwright.Scenario02ProcessRuntime");
         var configuration = TestApplicationBootstrap.BuildConfiguration(
             activeProfile,
             new Dictionary<string, string?>
@@ -614,7 +614,7 @@ public sealed partial class AppSmokeTests {
         var environmentRoot = Path.GetFullPath(Path.Combine(profileRoot, "..", ".."));
 
         return new TestDatabaseProfile(
-            "playwright-sb02-runtime",
+            "playwright-scenario02-runtime",
             environmentRoot,
             profileRoot,
             TestDatabaseProviderKind.PostgreSql,
@@ -721,7 +721,7 @@ public sealed partial class AppSmokeTests {
                     dbContextFactory,
                     processesService,
                     runId,
-                    $"Process run {runId:D} failed before SB02 runtime completion."));
+                    $"Process run {runId:D} failed before Scenario02 runtime completion."));
             }
 
             await Task.Delay(100);
@@ -731,7 +731,7 @@ public sealed partial class AppSmokeTests {
             dbContextFactory,
             processesService,
             runId,
-            $"Timed out draining process outbox for SB02 run {runId:D}."));
+            $"Timed out draining process outbox for Scenario02 run {runId:D}."));
     }
 
     private static async Task<IReadOnlyList<ProcessOutboxRecord>> ListSb02RunOutboxRecordsAsync(

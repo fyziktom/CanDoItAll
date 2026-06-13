@@ -1,5 +1,7 @@
 using CanDoItAll.AgentFramework.Models;
 
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessDispatchCooperationMetadataResolver
@@ -124,7 +126,7 @@ internal static class ProcessDispatchCooperationMetadataResolver
 
     private static bool ContainsDevelopmentProfileSignal(string text)
     {
-        return ProcessImplementationStackRules.ContainsDevelopmentProfileSignal(text);
+        return SoftwareDeliveryContractRules.ContainsDevelopmentProfileSignal(text);
     }
 
     private static string BuildCooperationSummary(

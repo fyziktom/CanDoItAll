@@ -315,7 +315,7 @@ public sealed class LiveProcessRunOpenAiSmokeIntegrationTests
         ExecutionRunDetail executionDetail)
     {
         var builder = new StringBuilder();
-        builder.Append("SB02 live OpenAI process-run smoke failed. ");
+        builder.Append("Scenario02 live OpenAI process-run smoke failed. ");
         builder.Append("Classification target: provider-model-blocked/provider-model-override-invalid/provider-auth-blocked/provider-quota-blocked/PostgreSQL-blocked/finalizer-blocked/artifact-readback-blocked/runtime-failed. ");
         AppendDiagnostic(builder, "ProcessRunId", runId.ToString("D"));
         AppendDiagnostic(builder, "StepRunId", stepRunId.ToString("D"));

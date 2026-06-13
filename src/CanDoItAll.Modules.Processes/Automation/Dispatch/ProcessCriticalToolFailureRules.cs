@@ -1,3 +1,5 @@
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessCriticalToolFailureRules
@@ -38,7 +40,7 @@ internal static class ProcessCriticalToolFailureRules
         ArgumentNullException.ThrowIfNull(context);
 
         var toolName = ProcessToolReceiptFacts.NormalizeToolToken(context.Receipt.ToolName);
-        if (!ProcessImplementationStackRules.IsDotNetWorkspaceToolName(toolName) ||
+        if (!SoftwareDeliveryContractRules.IsDotNetWorkspaceToolName(toolName) ||
             context.RequiredToolNames.Contains(toolName, StringComparer.Ordinal))
         {
             return false;

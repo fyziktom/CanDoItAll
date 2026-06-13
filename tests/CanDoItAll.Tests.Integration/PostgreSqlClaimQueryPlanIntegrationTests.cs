@@ -114,7 +114,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
     }
 
     private static async Task WritePlanAsync(string planName, string plan) {
-        var directory = Environment.GetEnvironmentVariable("CANDOITALL_SB05_QUERY_PLAN_DIR");
+        var directory = Environment.GetEnvironmentVariable("CANDOITALL_Scenario05_QUERY_PLAN_DIR");
         if (string.IsNullOrWhiteSpace(directory)) {
             return;
         }
@@ -192,8 +192,8 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             "ConcurrencyToken")
         VALUES (
             '10000000-0000-0000-0000-000000000001',
-            'SB05 claim plan',
-            'sb05-claim-plan',
+            'Scenario05 claim plan',
+            'scenario05-claim-plan',
             '',
             '',
             '',
@@ -328,7 +328,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             '10000000-0000-0000-0000-000000000001',
             '10000000-0000-0000-0000-000000000002',
             0,
-            'SB05 claim plan run',
+            'Scenario05 claim plan run',
             'Active',
             'AssistedExecution',
             '',
@@ -429,7 +429,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             "UpdatedAtUtc")
         SELECT
             ('00000000-0000-0000-2000-' || lpad(series.value::text, 12, '0'))::uuid,
-            'sb05.claim-plan',
+            'scenario05.claim-plan',
             '{{}}',
             0,
             0,
@@ -455,7 +455,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
         SELECT
             ('00000000-0000-0000-3000-' || lpad(series.value::text, 12, '0'))::uuid,
             ('00000000-0000-0000-2000-' || lpad(series.value::text, 12, '0'))::uuid,
-            'sb05.claim-plan',
+            'scenario05.claim-plan',
             'handler',
             CASE
                 WHEN series.value % 17 = 0 THEN 3
@@ -500,7 +500,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
         SELECT
             ('00000000-0000-0000-7000-' || lpad(series.value::text, 12, '0'))::uuid,
             '20000000-0000-0000-0000-000000000001',
-            'sb05-plugin',
+            'scenario05-plugin',
             'deliver',
             'idem-' || series.value,
             '{{}}',
@@ -539,7 +539,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             LIMIT 64
         )
         UPDATE "Processes_Outbox" AS o
-        SET "LeaseToken" = 'sb05',
+        SET "LeaseToken" = 'scenario05',
             "LeaseExpiresAtUtc" = now() + interval '2 minutes',
             "UpdatedAtUtc" = now()
         FROM due
@@ -588,7 +588,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             "UpdatedAtUtc" = now(),
             "CompletedAtUtc" = NULL,
             "LockedAtUtc" = now(),
-            "LockToken" = 'sb05'
+            "LockToken" = 'scenario05'
         FROM due
         WHERE d."Id" = due."Id"
         RETURNING d."Id", d."LockToken", d."EnvelopeId";
@@ -608,7 +608,7 @@ public sealed class PostgreSqlClaimQueryPlanIntegrationTests {
             LIMIT 64
         )
         UPDATE "Workspace_ConnectorCommands" AS c
-        SET "LeaseToken" = 'sb05',
+        SET "LeaseToken" = 'scenario05',
             "LeaseExpiresAtUtc" = now() + interval '2 minutes',
             "UpdatedAtUtc" = now()
         FROM due

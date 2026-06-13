@@ -150,7 +150,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
             host.Client,
             "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
-                $"SB011 project {suffix}",
+                $"Scenario011 project {suffix}",
                 "Project-structure process start proof",
                 "Verify the process start endpoint preserves selected node context.",
                 "Execution",
@@ -161,14 +161,14 @@ public sealed class ProjectStructureAgentApiIntegrationTests
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString(),
-                "SB011 project-structure process start",
+                "Scenario011 project-structure process start",
                 15));
         var workNode = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.WorkItem,
-                $"SB011 customer onboarding {suffix}",
+                $"Scenario011 customer onboarding {suffix}",
                 "Process start target",
                 "Selected project-structure work item used as process launch context.",
                 $"project:{project.Id:D}",
@@ -199,7 +199,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                 RunHrMatch: false,
                 Execute: false,
                 IncludeLaunchPlan: true,
-                RequestedBy: "sb011-integration",
+                RequestedBy: "scenario011-integration",
                 LeaseToken: lease.LeaseToken));
         Assert.Equal(project.Id, started.ProjectId);
         Assert.Equal(workNode.Id, started.NodeId);
@@ -238,7 +238,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
             host.Client,
             "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
-                $"SB012 project {suffix}",
+                $"Scenario012 project {suffix}",
                 "Project-structure run context proof",
                 "Verify executed process starts preserve project/node context and expose run output.",
                 "Execution",
@@ -249,14 +249,14 @@ public sealed class ProjectStructureAgentApiIntegrationTests
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString(),
-                "SB012 project-structure process execution",
+                "Scenario012 project-structure process execution",
                 15));
         var workNode = await PostAndReadAsync<ProjectStructureNodeSummary>(
             host.Client,
             $"/api/project-structure/projects/{project.Id:D}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.WorkItem,
-                $"SB012 launch closure {suffix}",
+                $"Scenario012 launch closure {suffix}",
                 "Process execution target",
                 "Selected project-structure work item used as process run context.",
                 $"project:{project.Id:D}",
@@ -284,7 +284,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                 RunHrMatch: false,
                 Execute: true,
                 IncludeLaunchPlan: true,
-                RequestedBy: "sb012-integration",
+                RequestedBy: "scenario012-integration",
                 LeaseToken: lease.LeaseToken));
 
         Assert.Equal(project.Id, started.ProjectId);
@@ -300,7 +300,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         Assert.Equal(project.Id, started.LaunchPlan!.ProjectId);
 
         var runId = started.RunId!.Value;
-        var runOutputPath = $"output/scopes/project/{project.Id:D}/process-runs/{runId:D}/SB012RunOutput/closure-proof.md";
+        var runOutputPath = $"output/scopes/project/{project.Id:D}/process-runs/{runId:D}/Scenario012RunOutput/closure-proof.md";
         await RecordSb012RunOutputArtifactAsync(host, runId, runOutputPath);
 
         await using var scope = host.App.Services.CreateAsyncScope();
@@ -356,7 +356,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
 
         Assert.Equal(ProjectObjectType.ProcessRun, runNode.ObjectType);
         Assert.Equal($"/projects/{project.Id:D}/processes?processId={processDefinitionId:D}&runId={runId:D}", runNode.Route);
-        Assert.Contains("SB012RunOutput", outputNode.Title, StringComparison.Ordinal);
+        Assert.Contains("Scenario012RunOutput", outputNode.Title, StringComparison.Ordinal);
         Assert.Contains("Process run product output folder", outputNode.MetadataJson, StringComparison.Ordinal);
         Assert.Contains(
             readback.Links,
@@ -1260,14 +1260,14 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         var intakeStepId = Guid.NewGuid();
         return new ProcessDefinitionEditorModel {
             ProjectId = projectId,
-            Name = $"SB011 linked process {suffix}",
+            Name = $"Scenario011 linked process {suffix}",
             Summary = "Project-structure node start proof process.",
             ValueStatement = "Preserve selected project-structure node context through launch planning.",
             CustomerName = "Project structure API validation",
             OwnerName = "Process runtime validation",
             InterfaceContractSummary = "Accept a selected project-structure work item and create a durable launch plan.",
             GovernanceNotes = "The start API must not lose project or selected-node context.",
-            ChangeSummary = "Initial SB011 process-start proof definition.",
+            ChangeSummary = "Initial Scenario011 process-start proof definition.",
             GovernancePolicySummary = "Launch plans must preserve bridge context for downstream grounding.",
             ConstitutionRuleSummary = "Project-structure context remains serialized and parseable.",
             OperatingModeSummary = "Assisted execution from project-structure API.",
@@ -1283,7 +1283,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                     PreferredExecutorKind = "person",
                     IsRequired = true,
                     AllowsFallback = true,
-                    SnapshotSummary = "Delivery owner role for SB011."
+                    SnapshotSummary = "Delivery owner role for Scenario011."
                 }
             ],
             Steps =
@@ -1334,14 +1334,14 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         var closureStepId = Guid.NewGuid();
         return new ProcessDefinitionEditorModel {
             ProjectId = projectId,
-            Name = $"SB012 executable linked process {suffix}",
+            Name = $"Scenario012 executable linked process {suffix}",
             Summary = "Project-structure execution proof process.",
             ValueStatement = "Preserve selected project-structure node context through run creation.",
             CustomerName = "Project structure API validation",
             OwnerName = "Process runtime validation",
             InterfaceContractSummary = "Accept a selected project-structure work item and start an executable run.",
             GovernanceNotes = "The start API must preserve project, process definition, selected node, and parent node context.",
-            ChangeSummary = "Initial SB012 process-run closure proof definition.",
+            ChangeSummary = "Initial Scenario012 process-run closure proof definition.",
             GovernancePolicySummary = "Executed runs must retain bridge context for downstream grounding and output projection.",
             ConstitutionRuleSummary = "Project-structure context remains serialized, parseable, and visible in work briefs.",
             OperatingModeSummary = "Assisted execution from project-structure API.",
@@ -1357,7 +1357,7 @@ public sealed class ProjectStructureAgentApiIntegrationTests
                     PreferredExecutorKind = "person",
                     IsRequired = false,
                     AllowsFallback = false,
-                    SnapshotSummary = "Optional observer role for SB012."
+                    SnapshotSummary = "Optional observer role for Scenario012."
                 }
             ],
             Steps =
@@ -1399,10 +1399,10 @@ public sealed class ProjectStructureAgentApiIntegrationTests
         {
             ProcessRunId = runId,
             ArtifactKind = ProcessArtifactKind.Deliverable,
-            Title = "SB012 closure proof",
+            Title = "Scenario012 closure proof",
             TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
             SensitivityLevel = ProcessSensitivityLevel.Internal,
-            ProvenanceSummary = "Recorded by the SB012 project-structure run closure proof.",
+            ProvenanceSummary = "Recorded by the Scenario012 project-structure run closure proof.",
             AllowedFutureUsageSummary = "May be used to validate run-output projection.",
             ReviewSummary = "Process run output folder should surface in project structure.",
             ManagedStoragePath = managedStoragePath

@@ -1,63 +1,57 @@
-using CanDoItAll.AgentFramework.Core;
-using CanDoItAll.AgentFramework.Models;
 using System.Text.RegularExpressions;
 
-namespace CanDoItAll.Modules.Processes;
+namespace CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 
-internal static class ProcessConcreteProductPathRules
+public static class SoftwareDeliveryPathRules
 {
     private const string ExternalTargetAliasRoot = "external-target";
+
     private static readonly Regex WorkspacePathInToolRequestRegex = new(
         @"(?<path>[A-Za-z]:\\[^`""'\r\n\s]+|external-target[\\/][^\s`""']+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     private static readonly Regex ManagedWorkspacePathRegex = new(
         @"(?<path>(?:artifacts|output|integration-map|data)/(?:scopes/[^\s`""']+|[^\s`""']+))",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    internal static bool HasConcreteProductPath(ProcessAutomationToolExecutionReceipt receipt)
-    {
-        return ResolveWorkspacePathsFromReceipt(receipt)
-            .Any(IsConcreteProductPath);
-    }
-
-    internal static bool HasConcreteProductDeliverableOrSourcePath(ProcessAutomationToolExecutionReceipt receipt)
-    {
-        return ResolveWorkspacePathsFromReceipt(receipt)
-            .Any(IsConcreteProductDeliverableOrSourcePath);
-    }
-
-    internal static bool HasConcreteProductImplementationPath(
+    public static bool IsConcreteProductMutationReceipt(
+        bool requiresCurrentAttemptProductMutation,
         bool requiresSourceOrProjectImplementationProof,
-        ProcessAutomationToolExecutionReceipt receipt)
+        IReadOnlyList<string> allowedExternalTargetAliases,
+        SoftwareDeliveryToolReceiptSnapshot receipt)
+    {
+        return IsConcreteProductMutationReceipt(
+            requiresCurrentAttemptProductMutation,
+            requiresSourceOrProjectImplementationProof,
+            receipt) &&
+            IsWithinCurrentRunExternalMutationBoundary(allowedExternalTargetAliases, receipt);
+    }
+
+    public static bool HasConcreteProductPath(SoftwareDeliveryToolReceiptSnapshot receipt)
+    {
+        return receipt.WorkspacePaths.Any(IsConcreteProductPath);
+    }
+
+    public static bool HasConcreteProductDeliverableOrSourcePath(SoftwareDeliveryToolReceiptSnapshot receipt)
+    {
+        return receipt.WorkspacePaths.Any(IsConcreteProductDeliverableOrSourcePath);
+    }
+
+    public static bool HasConcreteProductImplementationPath(
+        bool requiresSourceOrProjectImplementationProof,
+        SoftwareDeliveryToolReceiptSnapshot receipt)
     {
         return requiresSourceOrProjectImplementationProof
             ? HasConcreteProductSourceOrProjectPath(receipt)
             : HasConcreteProductDeliverableOrSourcePath(receipt);
     }
 
-    internal static bool HasConcreteProductSourceOrProjectPath(ProcessAutomationToolExecutionReceipt receipt)
+    public static bool HasConcreteProductSourceOrProjectPath(SoftwareDeliveryToolReceiptSnapshot receipt)
     {
-        return ResolveWorkspacePathsFromReceipt(receipt)
-            .Any(IsConcreteProductSourceOrProjectPath);
+        return receipt.WorkspacePaths.Any(IsConcreteProductSourceOrProjectPath);
     }
 
-    internal static IReadOnlyList<string> ResolveWorkspacePathsFromReceipt(ProcessAutomationToolExecutionReceipt receipt)
-    {
-        var paths = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in ResolveWorkspacePathsFromToolRequest(receipt.RequestSummary))
-        {
-            paths.Add(path);
-        }
-
-        if (TryMapWorkspacePathForPrompt(receipt.WorkingDirectory, out var workingDirectory))
-        {
-            paths.Add(workingDirectory);
-        }
-
-        return paths.ToList();
-    }
-
-    internal static IReadOnlyList<string> ResolveWorkspacePathsFromToolRequest(string requestSummary)
+    public static IReadOnlyList<string> ResolveWorkspacePathsFromToolRequest(string requestSummary)
     {
         if (string.IsNullOrWhiteSpace(requestSummary))
         {
@@ -76,7 +70,7 @@ internal static class ProcessConcreteProductPathRules
 
         foreach (Match match in ManagedWorkspacePathRegex.Matches(requestSummary))
         {
-            var candidatePath = WorkspaceScopeDescriptor.NormalizeRelativePath(match.Groups["path"].Value);
+            var candidatePath = NormalizeRelativePath(match.Groups["path"].Value);
             if (IsManagedProcessRunProductOutputPath(candidatePath))
             {
                 paths.Add(candidatePath);
@@ -86,7 +80,7 @@ internal static class ProcessConcreteProductPathRules
         return paths.ToList();
     }
 
-    internal static bool TryMapWorkspacePathForPrompt(string path, out string promptPath)
+    public static bool TryMapWorkspacePathForPrompt(string path, out string promptPath)
     {
         promptPath = string.Empty;
         var normalized = path.Trim().TrimEnd(',', ';', '.', ')', ']', '}').Replace('\\', '/');
@@ -116,7 +110,7 @@ internal static class ProcessConcreteProductPathRules
         return true;
     }
 
-    internal static bool IsConcreteProductDeliverableOrSourcePath(string promptPath)
+    public static bool IsConcreteProductDeliverableOrSourcePath(string promptPath)
     {
         if (!IsConcreteProductPath(promptPath))
         {
@@ -126,13 +120,13 @@ internal static class ProcessConcreteProductPathRules
         return IsImplementationDeliverableOrSourceExtension(Path.GetExtension(promptPath));
     }
 
-    internal static bool IsConcreteProductSourceOrProjectPath(string promptPath)
+    public static bool IsConcreteProductSourceOrProjectPath(string promptPath)
     {
         return IsConcreteProductPath(promptPath) &&
                IsCodeOrProjectExtension(Path.GetExtension(promptPath));
     }
 
-    internal static bool IsImplementationDeliverableOrSourceExtension(string extension)
+    public static bool IsImplementationDeliverableOrSourceExtension(string extension)
     {
         return IsCodeOrProjectExtension(extension) ||
                extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
@@ -149,30 +143,9 @@ internal static class ProcessConcreteProductPathRules
                extension.Equals(".yml", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool IsCodeOrProjectExtension(string extension)
+    public static bool IsConcreteProductPath(string promptPath)
     {
-        return extension.Equals(".cs", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".razor", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".cshtml", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".css", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".jsx", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".ts", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".tsx", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".props", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".targets", StringComparison.OrdinalIgnoreCase) ||
-               extension.Equals(".json", StringComparison.OrdinalIgnoreCase);
-    }
-
-    internal static bool IsConcreteProductPath(string promptPath)
-    {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(promptPath);
+        var normalized = NormalizeRelativePath(promptPath);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return false;
@@ -191,7 +164,7 @@ internal static class ProcessConcreteProductPathRules
             return false;
         }
 
-        if (ProcessArtifactPathValidationRules.IsManagedRootSegment(segments[0]))
+        if (IsManagedRootSegment(segments[0]))
         {
             return IsManagedProcessRunProductOutputPath(segments);
         }
@@ -199,9 +172,9 @@ internal static class ProcessConcreteProductPathRules
         return !segments.Any(IsNonProductPathSegment);
     }
 
-    internal static bool IsManagedProcessRunProductOutputPath(string path)
+    public static bool IsManagedProcessRunProductOutputPath(string path)
     {
-        var normalized = WorkspaceScopeDescriptor.NormalizeRelativePath(path);
+        var normalized = NormalizeRelativePath(path);
         if (string.IsNullOrWhiteSpace(normalized))
         {
             return false;
@@ -211,7 +184,7 @@ internal static class ProcessConcreteProductPathRules
         return IsManagedProcessRunProductOutputPath(segments);
     }
 
-    internal static bool IsManagedProcessRunProductOutputPath(IReadOnlyList<string> segments)
+    public static bool IsManagedProcessRunProductOutputPath(IReadOnlyList<string> segments)
     {
         if (segments.Count == 0 ||
             !string.Equals(segments[0], "output", StringComparison.OrdinalIgnoreCase))
@@ -239,7 +212,7 @@ internal static class ProcessConcreteProductPathRules
             .All(segment => !IsManagedProcessRunNonProductPathSegment(segment));
     }
 
-    internal static bool IsManagedProcessRunNonProductPathSegment(string segment)
+    public static bool IsManagedProcessRunNonProductPathSegment(string segment)
     {
         return string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase) ||
@@ -247,12 +220,7 @@ internal static class ProcessConcreteProductPathRules
                string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool RequiresSourceOrProjectImplementationProof(bool containsRunnableApplicationContractSignal)
-    {
-        return containsRunnableApplicationContractSignal;
-    }
-
-    internal static bool IsExternalTargetAliasWithinManagedWorkspace(IReadOnlyList<string> segments)
+    public static bool IsExternalTargetAliasWithinManagedWorkspace(IReadOnlyList<string> segments)
     {
         var hasCanDoItAllControlPlanePrefix = false;
         for (var index = 0; index < segments.Count; index++)
@@ -277,20 +245,114 @@ internal static class ProcessConcreteProductPathRules
         return false;
     }
 
-    internal static bool IsExternalTargetNonProductPathSegment(string segment)
+    public static bool IsExternalTargetNonProductPathSegment(string segment)
     {
         return string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool IsNonProductPathSegment(string segment)
+    public static bool IsNonProductPathSegment(string segment)
     {
-        return ProcessArtifactPathValidationRules.IsManagedRootSegment(segment) ||
+        return IsManagedRootSegment(segment) ||
                string.Equals(segment, ".playwright-mcp", StringComparison.OrdinalIgnoreCase);
     }
 
-    internal static bool IsExternalTargetAliasPath(string normalizedRelativePath)
+    public static bool IsExternalTargetAliasPath(string normalizedRelativePath)
     {
         return string.Equals(normalizedRelativePath, ExternalTargetAliasRoot, StringComparison.OrdinalIgnoreCase) ||
                normalizedRelativePath.StartsWith(ExternalTargetAliasRoot + "/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string NormalizeRelativePath(string? path)
+    {
+        return string.IsNullOrWhiteSpace(path)
+            ? string.Empty
+            : path.Trim().Replace('\\', '/').Trim('/');
+    }
+
+    private static bool IsConcreteProductMutationReceipt(
+        bool requiresCurrentAttemptProductMutation,
+        bool requiresSourceOrProjectImplementationProof,
+        SoftwareDeliveryToolReceiptSnapshot receipt)
+    {
+        var toolName = SoftwareDeliveryEvidencePolicy.NormalizeToolToken(receipt.ToolName);
+        if (string.Equals(toolName, "workspace_write_file", StringComparison.Ordinal) ||
+            string.Equals(toolName, "workspace_append_file", StringComparison.Ordinal))
+        {
+            return requiresCurrentAttemptProductMutation
+                ? HasConcreteProductDeliverableOrSourcePath(receipt)
+                : HasConcreteProductImplementationPath(requiresSourceOrProjectImplementationProof, receipt);
+        }
+
+        return HasConcreteProductPath(receipt);
+    }
+
+    private static bool IsWithinCurrentRunExternalMutationBoundary(
+        IReadOnlyList<string> allowedExternalTargetAliases,
+        SoftwareDeliveryToolReceiptSnapshot receipt)
+    {
+        var allowedAliases = allowedExternalTargetAliases
+            .Select(NormalizeExternalTargetAlias)
+            .Where(alias => !string.IsNullOrWhiteSpace(alias))
+            .ToArray();
+        if (allowedAliases.Length == 0)
+        {
+            return true;
+        }
+
+        var externalTargetPaths = receipt.WorkspacePaths
+            .Select(NormalizeExternalTargetAlias)
+            .Where(IsExternalTargetAliasPath)
+            .ToArray();
+        if (externalTargetPaths.Length == 0)
+        {
+            return true;
+        }
+
+        return externalTargetPaths.Any(path => IsAliasCoveredByAny(path, allowedAliases));
+    }
+
+    public static bool IsCodeOrProjectExtension(string extension)
+    {
+        return extension.Equals(".cs", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".razor", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".sln", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".slnx", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".cshtml", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".css", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".jsx", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".ts", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".tsx", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".props", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".targets", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".json", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsManagedRootSegment(string segment)
+    {
+        return string.Equals(segment, "artifacts", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "output", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "integration-map", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(segment, "data", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeExternalTargetAlias(string? alias)
+    {
+        var normalized = NormalizeRelativePath(alias);
+        return normalized.StartsWith($"{ExternalTargetAliasRoot}/", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, ExternalTargetAliasRoot, StringComparison.OrdinalIgnoreCase)
+            ? normalized
+            : string.Empty;
+    }
+
+    private static bool IsAliasCoveredByAny(string alias, IReadOnlyCollection<string> roots)
+    {
+        return roots.Any(root =>
+            string.Equals(alias, root, StringComparison.OrdinalIgnoreCase) ||
+            alias.StartsWith(root.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -31,7 +31,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         await page.GetByTestId("agents-shell-open-crmhr").WaitForAsync();
         await page.GetByTestId("agents-shell-open-processes").WaitForAsync();
         await page.GetByTestId("agents-shell-open-scenarios").WaitForAsync();
-        await SaveFullPageScreenshotAsync(page, "sb10-agents-shell-desktop.png");
+        await SaveFullPageScreenshotAsync(page, "scenario10-agents-shell-desktop.png");
 
         await page.GetByTestId("agents-shell-open-scenarios").ClickAsync();
         await page.GetByTestId("scenario-card-sc04").WaitForAsync();
@@ -50,7 +50,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         }).ClickAsync();
         await page.GetByTestId("scenario-artifact-list").WaitForAsync();
         await ExpectTextContainsWithRefreshAsync(page, page.GetByTestId("scenario-artifact-list"), "approval-report.md", "scenario-refresh-button", attempts: 4, timeoutMsPerAttempt: 10_000);
-        await SaveFullPageScreenshotAsync(page, "sb11-scenarios-sc04.png");
+        await SaveFullPageScreenshotAsync(page, "scenario11-scenarios-sc04.png");
 
         await page.GetByTestId("agents-shell-tabs").GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
         {
@@ -63,7 +63,7 @@ public sealed partial class AgentFrameworkAuditProofTests
             Name = "Provider profiles"
         }).WaitForAsync();
         await ExpectTextContainsAsync(page.Locator("body"), "Scenario Harness Provider");
-        await SaveFullPageScreenshotAsync(page, "sb04-provider-bridge.png");
+        await SaveFullPageScreenshotAsync(page, "scenario04-provider-bridge.png");
 
         await page.GetByTestId("agents-shell-tabs").GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
         {
@@ -84,7 +84,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         }).ClickAsync();
         await WaitForTestIdWithRefreshAsync(page, "agents-governance-panel", refreshTestId: null, attempts: 2, timeoutMsPerAttempt: 15_000);
         await ExpectTextContainsAsync(page.Locator("body"), "approval-report.md");
-        await SaveFullPageScreenshotAsync(page, "sb05-agent-catalog-governance.png");
+        await SaveFullPageScreenshotAsync(page, "scenario05-agent-catalog-governance.png");
 
         await page.GetByTestId("agents-shell-tabs").GetByRole(AriaRole.Button, new LocatorGetByRoleOptions
         {
@@ -93,7 +93,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         }).ClickAsync();
         await page.SetViewportSizeAsync(1100, 900);
         await page.GetByTestId("agents-shell-tabs").WaitForAsync();
-        await SaveFullPageScreenshotAsync(page, "sb10-agents-shell-narrow.png");
+        await SaveFullPageScreenshotAsync(page, "scenario10-agents-shell-narrow.png");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 
@@ -223,7 +223,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         var artifactLedger = page.GetByTestId("processes-artifact-obligation-ledger");
         await ExpectTextContainsAsync(artifactLedger, seed.ArtifactTitle);
         await ExpectTextContainsAsync(artifactLedger, "Missing");
-        await SaveFullPageScreenshotAsync(page, "sb12-agent-recovery-artifact-ledger.png");
+        await SaveFullPageScreenshotAsync(page, "scenario12-agent-recovery-artifact-ledger.png");
 
         await runsTabs.GetByRole(AriaRole.Tab, new LocatorGetByRoleOptions
         {
@@ -253,9 +253,9 @@ public sealed partial class AgentFrameworkAuditProofTests
         }).ClickAsync();
         outboxLedger = page.GetByTestId("processes-automation-outbox-ledger");
         await ExpectTextContainsAsync(outboxLedger, "AGENT-STEP-RERUN");
-        await SaveFullPageScreenshotAsync(page, "sb12-agent-recovery-rerun-outbox.png");
+        await SaveFullPageScreenshotAsync(page, "scenario12-agent-recovery-rerun-outbox.png");
         await WriteProofMetadataAsync(
-            "sb12-agent-recovery-metadata.md",
+            "scenario12-agent-recovery-metadata.md",
             $"# Agent Recovery Browser Proof{Environment.NewLine}{Environment.NewLine}- Project id: `{seed.ProjectId:D}`{Environment.NewLine}- Definition id: `{seed.DefinitionId:D}`{Environment.NewLine}- Run id: `{seed.RunId:D}`{Environment.NewLine}- Step: `{seed.StepTitle}`{Environment.NewLine}- Required artifact: `{seed.ArtifactTitle}`");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
@@ -288,7 +288,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         await page.GetByTestId("crmhr-agent-summary-provider").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-provider"), "Scenario Harness Provider");
         await ExpectTextContainsAsync(page.GetByTestId("crmhr-agent-summary-owner"), seed.ManagerName);
-        await SaveFullPageScreenshotAsync(page, "sb06-crmhr-agent-binding.png");
+        await SaveFullPageScreenshotAsync(page, "scenario06-crmhr-agent-binding.png");
 
         await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}");
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();
@@ -304,7 +304,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         await WaitForTestIdWithRefreshAsync(page, "processes-launch-plan-detail", refreshTestId: null, attempts: 2, timeoutMsPerAttempt: 15_000);
         await SelectLaunchCandidateAsync(page, seed.BuilderRoleName, seed.BuilderAgentName);
         await SelectLaunchCandidateAsync(page, seed.ReviewerRoleName, seed.ReviewerAgentName);
-        await SaveFullPageScreenshotAsync(page, "sb07-process-launch-planning.png");
+        await SaveFullPageScreenshotAsync(page, "scenario07-process-launch-planning.png");
 
         await RegisterDomClickProbeAsync(page, "processes-launch-submit-approval-button", "launch-submit");
         await page.GetByTestId("processes-launch-submit-approval-button").ClickAsync();
@@ -335,7 +335,7 @@ public sealed partial class AgentFrameworkAuditProofTests
             .ClickAsync();
         await page.GetByTestId("collaboration-thread-title").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("collaboration-thread-title"), launchName);
-        await SaveFullPageScreenshotAsync(page, "sb08-launch-approval-thread.png");
+        await SaveFullPageScreenshotAsync(page, "scenario08-launch-approval-thread.png");
 
         await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}");
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();
@@ -371,7 +371,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         await page.GetByTestId("processes-direct-message-thread-card").WaitForAsync();
         await ExpectTextContainsAsync(page.GetByTestId("processes-direct-message-thread-card"), seed.BuilderRoleName);
         await ExpectTextContainsAsync(page.GetByTestId("processes-direct-message-thread-card"), "Workflow delivery is ready for reviewer validation after the generated build passed.");
-        await SaveFullPageScreenshotAsync(page, "sb11-workflow-direct-message.png");
+        await SaveFullPageScreenshotAsync(page, "scenario11-workflow-direct-message.png");
 
         await OpenRunStepsDialogAsync(page, reviewGateEvidence.RunId);
         await SetStepRunStatusAsync(page, seed.HandoffStepTitle, "Start");
@@ -380,7 +380,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         await CloseRunStepsDialogAsync(page);
 
         var finalEvidence = await WaitForWorkflowRunCompletionAsync(seed, launchName);
-        await WriteProofMetadataAsync("sb11-workflow-run-metadata.md", BuildWorkflowEvidenceMarkdown(seed, launchName, finalEvidence));
+        await WriteProofMetadataAsync("scenario11-workflow-run-metadata.md", BuildWorkflowEvidenceMarkdown(seed, launchName, finalEvidence));
 
         await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={seed.DefinitionId:D}&runId={finalEvidence.RunId:D}");
         await page.GetByTestId("processes-detail-tabs").WaitForAsync();
@@ -390,7 +390,7 @@ public sealed partial class AgentFrameworkAuditProofTests
         await CloseRunStepsDialogAsync(page);
         await ExpectTextContainsAsync(page.Locator("body"), "generation-report.md");
         await ExpectTextContainsAsync(page.Locator("body"), "review-report.md");
-        await SaveFullPageScreenshotAsync(page, "sb09-execution-observability.png");
+        await SaveFullPageScreenshotAsync(page, "scenario09-execution-observability.png");
         Assert.False(await page.Locator("#blazor-error-ui").IsVisibleAsync());
     }
 }

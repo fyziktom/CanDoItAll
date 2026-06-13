@@ -14,7 +14,7 @@ const string artifactPayload = """{"projection":[{"source":"file-write"}],"valid
 
 var evidence = new ProcessDriverEvidenceReference(
     ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-    "bundle://proof/sample/artifact-projection.json",
+    "artifact://proof/sample/artifact-projection.json",
     ProcessDriverEvidencePolicy.ComputeSha256(artifactPayload),
     ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
 var suppliedContent = ProcessDriverSuppliedEvidenceContentRules.CreateCoreDescriptorPayload(

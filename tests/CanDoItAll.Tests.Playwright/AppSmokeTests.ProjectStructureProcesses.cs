@@ -17,7 +17,7 @@ public sealed partial class AppSmokeTests
     public async Task Project_structure_process_run_output_opens_project_processes_from_output_folder_node()
     {
         var repoRoot = GetRepoRoot();
-        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "project-structure-run-output-sb012");
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "project-structure-run-output-scenario012");
         ResetDirectory(artifactsDir);
 
         using var agentClient = CreateProjectStructureAgentApiClient(fixture.BaseUrl);
@@ -27,7 +27,7 @@ public sealed partial class AppSmokeTests
             agentClient,
             "/api/project-structure/projects",
             new ProjectStructureProjectSaveRequest(
-                $"SB012 browser project {suffix}",
+                $"Scenario012 browser project {suffix}",
                 "Browser project-structure run output proof",
                 "Verify projected process run output folders can open the process workspace.",
                 "Execution",
@@ -38,14 +38,14 @@ public sealed partial class AppSmokeTests
             new ProjectStructureLeaseAcquireRequest(
                 ProjectStructureLeaseScopeKind.Project,
                 project.Id.ToString("D"),
-                "SB012 browser process run output proof",
+                "Scenario012 browser process run output proof",
                 15));
         var workNode = await PostJsonAndReadSb012ApiAsync<ProjectStructureNodeSummary>(
             agentClient,
             $"/api/project-structure/projects/{project.Id:D}/nodes",
             new ProjectStructureNodeCreateInput(
                 ProjectObjectType.WorkItem,
-                $"SB012 browser run output {suffix}",
+                $"Scenario012 browser run output {suffix}",
                 "Process execution target",
                 "Selected work item used for browser-visible run-output proof.",
                 $"project:{project.Id:D}",
@@ -74,7 +74,7 @@ public sealed partial class AppSmokeTests
                 RunHrMatch: false,
                 Execute: true,
                 IncludeLaunchPlan: true,
-                RequestedBy: "sb012-playwright",
+                RequestedBy: "scenario012-playwright",
                 LeaseToken: lease.LeaseToken));
 
         Assert.Equal("run-started", startResult.Stage);
@@ -85,7 +85,7 @@ public sealed partial class AppSmokeTests
             $"/api/processes/runs?definitionId={definitionId:D}&projectId={project.Id:D}&take=50");
         var run = Assert.Single(runs, candidate => candidate.Id == runId);
         Assert.Equal(project.Id, run.ProjectId);
-        var outputPath = $"output/scopes/project/{project.Id:D}/process-runs/{runId:D}/SB012BrowserOutput/index.html";
+        var outputPath = $"output/scopes/project/{project.Id:D}/process-runs/{runId:D}/Scenario012BrowserOutput/index.html";
         await PostJsonAndReadSb012ApiAsync<Guid>(
             processClient,
             "/api/processes/artifacts",
@@ -93,10 +93,10 @@ public sealed partial class AppSmokeTests
             {
                 ProcessRunId = runId,
                 ArtifactKind = ProcessArtifactKind.Deliverable,
-                Title = "SB012 browser output",
+                Title = "Scenario012 browser output",
                 TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
                 SensitivityLevel = ProcessSensitivityLevel.Internal,
-                ProvenanceSummary = "Recorded by SB012 browser output proof.",
+                ProvenanceSummary = "Recorded by Scenario012 browser output proof.",
                 AllowedFutureUsageSummary = "Validate projected process run output folder navigation.",
                 ReviewSummary = "Output folder should open the project process workspace.",
                 ManagedStoragePath = outputPath
@@ -129,7 +129,7 @@ public sealed partial class AppSmokeTests
         await WaitForInitializedCanvasHostAsync(page);
         await WaitForCanvasRenderIdleAsync(page);
 
-        var outputNode = await WaitForSb012OutputProjectionAsync(page, runId, "SB012BrowserOutput", 90_000);
+        var outputNode = await WaitForSb012OutputProjectionAsync(page, runId, "Scenario012BrowserOutput", 90_000);
         Assert.Equal($"process-run:{runId:D}", outputNode.ParentId);
         Assert.StartsWith("process-run-output:", outputNode.Id, StringComparison.Ordinal);
         await page.ScreenshotAsync(new()
@@ -331,9 +331,9 @@ public sealed partial class AppSmokeTests
 
     private static HttpClient CreateProjectStructureAgentApiClient(
         string baseUrl,
-        string agentId = "sb012-playwright-agent",
-        string agentName = "SB012 Playwright",
-        string branchName = "tests/project-structure-sb012")
+        string agentId = "scenario012-playwright-agent",
+        string agentName = "Scenario012 Playwright",
+        string branchName = "tests/project-structure-scenario012")
     {
         var client = CreateProcessApiClient(baseUrl);
         client.DefaultRequestHeaders.Add(ProjectStructureAgentHttpHeaders.AgentId, agentId);
@@ -361,14 +361,14 @@ public sealed partial class AppSmokeTests
         return new ProcessDefinitionEditorModel
         {
             ProjectId = projectId,
-            Name = $"SB012 browser output process {suffix}",
+            Name = $"Scenario012 browser output process {suffix}",
             Summary = "Browser-visible project-structure run output proof process.",
             ValueStatement = "Preserve project run context and expose output-folder navigation.",
             CustomerName = "Project structure browser validation",
             OwnerName = "Process runtime validation",
             InterfaceContractSummary = "Start from a selected project node and expose the run output folder.",
             GovernanceNotes = "Browser proof must open the process workspace from the projected output folder.",
-            ChangeSummary = "Initial SB012 browser proof definition.",
+            ChangeSummary = "Initial Scenario012 browser proof definition.",
             GovernancePolicySummary = "Executed runs keep project/node context and projected outputs.",
             ConstitutionRuleSummary = "Output-folder projection remains linked to the current run.",
             OperatingModeSummary = "Assisted execution from project-structure API.",
@@ -385,7 +385,7 @@ public sealed partial class AppSmokeTests
                     PreferredExecutorKind = "person",
                     IsRequired = false,
                     AllowsFallback = false,
-                    SnapshotSummary = "Optional observer role for SB012 browser proof."
+                    SnapshotSummary = "Optional observer role for Scenario012 browser proof."
                 }
             ],
             Steps =

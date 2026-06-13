@@ -13,8 +13,12 @@ public sealed class RepositoryNamingHygieneTests
         "DisplayName\\s*=\\s*\"(?<name>[^\"]+)\"",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
+    private static readonly Regex StringLiteralPattern = new(
+        "\"(?<value>(?:\\\\.|[^\"])*)\"",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Regex ForbiddenWorkPackageNamePattern = new(
-        "(SB[0-9]{2,3}|INV_[0-9]{3}|subbundle|bundle|maf[-_]processes|process[-_]runtime[-_]live[-_]openai)",
+        "(?<![A-Za-z])S" + "B[0-9]{2,3}(?![0-9])|INV" + "_[0-9]{3}|sub" + "bund" + "le|bund" + "le://|maf[-_]" + "processes|process[-_]" + "runtime[-_]live[-_]openai",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     [Fact]
@@ -28,7 +32,7 @@ public sealed class RepositoryNamingHygieneTests
 
         Assert.True(
             findings.Count == 0,
-            "Active test method or display names must use behavior language instead of work-package identifiers: " + string.Join(", ", findings));
+            "Active test method, display name, or string literal assertions must use behavior language instead of work-package identifiers: " + string.Join(", ", findings));
     }
 
     private static IEnumerable<string> EnumerateTestSourceFiles(string root)
@@ -86,31 +90,50 @@ public sealed class RepositoryNamingHygieneTests
         foreach (var line in File.ReadLines(path))
         {
             lineNumber++;
-            foreach (var name in ExtractNames(line))
+            foreach (var (kind, value) in ExtractScannableValues(line))
             {
-                var match = ForbiddenWorkPackageNamePattern.Match(name);
+                var match = ForbiddenWorkPackageNamePattern.Match(value);
                 if (!match.Success)
                 {
                     continue;
                 }
 
-                yield return $"{Path.GetRelativePath(root, path)}:{lineNumber} `{name}` matched `{match.Value}`";
+                yield return $"{Path.GetRelativePath(root, path)}:{lineNumber} {kind} `{Truncate(value)}` matched `{match.Value}`";
             }
         }
     }
 
-    private static IEnumerable<string> ExtractNames(string line)
+    private static IEnumerable<(string Kind, string Value)> ExtractScannableValues(string line)
     {
         var methodMatch = TestMethodPattern.Match(line);
         if (methodMatch.Success)
         {
-            yield return methodMatch.Groups["name"].Value;
+            yield return ("method", methodMatch.Groups["name"].Value);
         }
 
         foreach (Match displayNameMatch in DisplayNamePattern.Matches(line))
         {
-            yield return displayNameMatch.Groups["name"].Value;
+            yield return ("display name", displayNameMatch.Groups["name"].Value);
         }
+
+        foreach (Match stringLiteralMatch in StringLiteralPattern.Matches(line))
+        {
+            var value = stringLiteralMatch.Groups["value"].Value;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                continue;
+            }
+
+            yield return ("string", value);
+        }
+    }
+
+    private static string Truncate(string value)
+    {
+        const int maximumLength = 140;
+        return value.Length <= maximumLength
+            ? value
+            : value[..maximumLength] + "...";
     }
 
     private static bool ShouldSkipPhysicalPath(string path)

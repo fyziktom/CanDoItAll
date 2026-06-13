@@ -1001,7 +1001,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         var payload = new ProcessReadOnlyVerificationBatchPayload(
             runResult.RunId,
             completedStep.Id,
-            "process-manager:sb04-real-run-readback",
+            "process-manager:scenario04-real-run-readback",
             requestedAt,
             businessAnalysisPayloads: [CreateBusinessPayload()]);
         var facade = scope.ServiceProvider.GetRequiredService<IProcessManagerReadOnlyVerificationFacade>();
@@ -1037,11 +1037,11 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
         var status = await scope.ServiceProvider.GetRequiredService<IProcessVerificationRuntimeHostStatusService>()
             .GetStatusAsync(new ProcessVerificationRuntimeHostStatusRequest(
-                "sb04-real-run-status",
+                "scenario04-real-run-status",
                 "process-manager",
                 requestedAt));
 
-        Assert.Equal("sb04-real-run-status", status.CorrelationId);
+        Assert.Equal("scenario04-real-run-status", status.CorrelationId);
         Assert.Equal(ProcessVerificationRuntimeHostReadiness.Ready, status.Readiness);
         Assert.True(status.NoMutationPerformed);
         Assert.False(status.AllowsProcessMutation);
@@ -1058,7 +1058,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             runResult.RunId,
             completedStep.Id,
             "process-operator",
-            "SB04 dry-run readback for real process run",
+            "Scenario04 dry-run readback for real process run",
             [ProcessExecutionCapableDriverSurface.CommandExecution],
             [ProcessDriverOperation.ExecuteCommand],
             ProcessExecutionCapableDriverSandboxPolicy.DefaultBlockedDryRun,
@@ -2295,14 +2295,14 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             officeEvidencePayloads:
             [
                 CreateOfficePayload(
-                    evidenceUri: "bundle://proof/SB030/office-evidence.json",
+                    evidenceUri: "artifact://proof/scenario030/office-evidence.json",
                     evidencePayload: OfficeBatchEvidencePayload,
                     items: [CreateOfficeItem(), CreateOfficeDocumentItem()])
             ],
             businessAnalysisPayloads:
             [
                 CreateBusinessPayload(
-                    evidenceUri: "bundle://proof/SB030/business-analysis.json",
+                    evidenceUri: "artifact://proof/scenario030/business-analysis.json",
                     items: [CreateBusinessDeliverable(), CreateBusinessSupportingEvidence()])
             ]);
 
@@ -2335,7 +2335,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.True(officeObservation.Accepted);
         Assert.Equal(ProcessOfficeEvidenceSourceLane.OfficeEvidenceRead, officeObservation.SourceLane);
         Assert.Equal(ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact, officeEvidence.Kind);
-        Assert.Equal("bundle://proof/SB030/office-evidence.json", officeEvidence.Uri);
+        Assert.Equal("artifact://proof/scenario030/office-evidence.json", officeEvidence.Uri);
         Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(OfficeBatchEvidencePayload), officeEvidence.ContentHash);
         Assert.Null(officeEvidence.CoreDescriptorFamily);
         Assert.Contains(
@@ -2349,7 +2349,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         Assert.True(businessObservation.Accepted);
         Assert.Equal(ProcessBusinessAnalysisSourceLane.BusinessAnalysisRead, businessObservation.SourceLane);
         Assert.Equal(ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact, businessEvidence.Kind);
-        Assert.Equal("bundle://proof/SB030/business-analysis.json", businessEvidence.Uri);
+        Assert.Equal("artifact://proof/scenario030/business-analysis.json", businessEvidence.Uri);
         Assert.Equal(ProcessDriverEvidencePolicy.ComputeSha256(BusinessAnalysisPayload), businessEvidence.ContentHash);
         Assert.Null(businessEvidence.CoreDescriptorFamily);
         Assert.Contains(
@@ -2400,7 +2400,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             [
                 CreateOfficePayload(
                     requestedOperations: [ProcessDriverOperation.CallOfficeGraph],
-                    evidenceUri: "bundle://proof/SB030/office-graph-call-denied.json",
+                    evidenceUri: "artifact://proof/scenario030/office-graph-call-denied.json",
                     evidencePayload: OfficeBatchEvidencePayload,
                     items: [CreateOfficeItemWithSensitiveText()])
             ],
@@ -2408,11 +2408,11 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             [
                 CreateBusinessPayload(
                     requestedOperations: [ProcessDriverOperation.CallOfficeGraph],
-                    evidenceUri: "bundle://proof/SB030/business-external-call-denied.json",
+                    evidenceUri: "artifact://proof/scenario030/business-external-call-denied.json",
                     items: [CreateBusinessDeliverableWithSensitiveText(), CreateBusinessSupportingEvidence()]),
                 CreateBusinessPayload(
                     requestedOperations: [ProcessDriverOperation.MutateBusinessRecord],
-                    evidenceUri: "bundle://proof/SB030/business-record-mutation-denied.json",
+                    evidenceUri: "artifact://proof/scenario030/business-record-mutation-denied.json",
                     items: [CreateBusinessDeliverableWithSensitiveText(), CreateBusinessSupportingEvidence()])
             ]);
 
@@ -2540,7 +2540,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             Assert.NotEmpty(diagnostic.EvidenceReferences);
             Assert.All(
                 diagnostic.EvidenceReferences,
-                evidenceReference => Assert.StartsWith("bundle://", evidenceReference.Uri, StringComparison.Ordinal));
+                evidenceReference => Assert.StartsWith("artifact://", evidenceReference.Uri, StringComparison.Ordinal));
         });
     }
 
@@ -2584,7 +2584,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             summary => summary.Lane == ProcessDriverCapabilityScopeKind.BusinessAnalysisRead);
         Assert.All(
             envelope.EvidenceReferences,
-            evidenceReference => Assert.StartsWith("bundle://", evidenceReference.Uri, StringComparison.Ordinal));
+            evidenceReference => Assert.StartsWith("artifact://", evidenceReference.Uri, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -2650,8 +2650,8 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             transcriptPayloads: [CreateTranscriptPayload(sensitiveTranscript)],
             runtimeEvidencePayloads: [CreateRuntimePayload()],
             artifactEvidencePayloads: [CreateArtifactPayload()],
-            officeEvidencePayloads: [CreateOfficePayload(evidenceUri: "bundle://proof/SB035/office-evidence.json")],
-            businessAnalysisPayloads: [CreateBusinessPayload(evidenceUri: "bundle://proof/SB035/business-analysis.json")]);
+            officeEvidencePayloads: [CreateOfficePayload(evidenceUri: "artifact://proof/scenario035/office-evidence.json")],
+            businessAnalysisPayloads: [CreateBusinessPayload(evidenceUri: "artifact://proof/scenario035/business-analysis.json")]);
 
         var observation = orchestrator.Verify(payload);
         var aggregate = Assert.IsType<ProcessReadOnlyVerificationAggregateObservation>(
@@ -2708,7 +2708,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
                 ProcessDriverTranscriptLanguage.DotNet,
                 "dotnet",
                 "net10.0",
-                "bundle://proof/SB015/transcripts/process-supplied-transcript.txt",
+                "artifact://proof/scenario015/transcripts/process-supplied-transcript.txt",
                 transcriptText,
                 [ProcessDriverOperation.InspectExistingEvidence, ProcessDriverOperation.ReturnDiagnostics]));
     }
@@ -2724,7 +2724,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         return ProcessReadOnlyVerificationPayloadBuilder.CreateRuntimeEvidencePayload(
             new ProcessRuntimeEvidenceVerificationPayloadFacts(
                 CreateIdentity("process-consumer:runtime-readonly"),
-                "bundle://proof/SB015/runtime-evidence-consistency.json",
+                "artifact://proof/scenario015/runtime-evidence-consistency.json",
                 executionEvidence,
                 finalizerEvidence,
                 RetryDiagnostic: null,
@@ -2736,7 +2736,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
     private static ProcessArtifactEvidenceReadOnlyPayload CreateArtifactPayload(
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string projectionEvidenceUri = "bundle://proof/SB021/artifact-projection-evidence.json",
+        string projectionEvidenceUri = "artifact://proof/scenario021/artifact-projection-evidence.json",
         IReadOnlyList<ProcessArtifactProjectionLineageDescriptor>? projectionLineage = null,
         IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? projectionSourceOrder = null,
         IReadOnlyList<ProcessProviderNativeBrowserEvidenceDescriptor>? providerNativeBrowserEvidence = null,
@@ -2749,7 +2749,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
                 CreateIdentity("process-consumer:artifact-readonly"),
                 projectionEvidenceUri,
                 ArtifactEvidencePayload,
-                "bundle://proof/SB021/artifact-projection-validation.json",
+                "artifact://proof/scenario021/artifact-projection-validation.json",
                 ArtifactEvidencePayload,
                 projectionLineage ?? [CreateArtifactProjectionLineage()],
                 projectionSourceOrder ?? [ProcessArtifactProjectionEvidenceDescriptorRules.DescribeSourceOrder(ProcessCoreArtifactProjectionSourceKind.FileWrite)],
@@ -2762,7 +2762,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
     private static ProcessOfficeEvidenceReadOnlyPayload CreateOfficePayload(
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB024/office-evidence.json",
+        string evidenceUri = "artifact://proof/scenario024/office-evidence.json",
         string evidencePayload = OfficeEvidencePayload,
         IReadOnlyList<OfficeEvidenceItem>? items = null)
     {
@@ -2777,7 +2777,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
 
     private static ProcessBusinessAnalysisReadOnlyPayload CreateBusinessPayload(
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB024/business-analysis.json",
+        string evidenceUri = "artifact://proof/scenario024/business-analysis.json",
         string evidencePayload = BusinessAnalysisPayload,
         IReadOnlyList<BusinessAnalysisEvidenceItem>? items = null)
     {
@@ -2985,7 +2985,7 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
             businessAnalysisPayloads:
             [
                 CreateBusinessPayload(
-                    evidenceUri: "bundle://proof/SB033/business-analysis-manager-diagnostic.json",
+                    evidenceUri: "artifact://proof/scenario033/business-analysis-manager-diagnostic.json",
                     items: [CreateBusinessDeliverable(), CreateBusinessSupportingEvidence()])
             ]);
 
@@ -3179,17 +3179,17 @@ public sealed class ProcessDomainEvidenceReadOnlyAdapterTests
         {
             ProcessDriverCapabilityScopeKind.ArtifactEvidenceRead => CreateEvidenceReference(
                 ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-                "bundle://proof/SB027/artifact-observation.json",
+                "artifact://proof/scenario027/artifact-observation.json",
                 "artifact observation",
                 ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence),
             ProcessDriverCapabilityScopeKind.OfficeEvidenceRead => CreateEvidenceReference(
                 ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
-                "bundle://proof/SB027/office-observation.json",
+                "artifact://proof/scenario027/office-observation.json",
                 "office observation",
                 coreDescriptorFamily: null),
             ProcessDriverCapabilityScopeKind.BusinessAnalysisRead => CreateEvidenceReference(
                 ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
-                "bundle://proof/SB027/business-observation.json",
+                "artifact://proof/scenario027/business-observation.json",
                 "business observation",
                 coreDescriptorFamily: null),
             _ => throw new ArgumentOutOfRangeException(nameof(lane), lane, "Unsupported test lane.")

@@ -17,6 +17,6 @@
 
 ## Follow-up recommendations
 - Keep the template pack as the authored source of truth and treat the import envelope as a projection.
-- Run the corrective canvas-chrome subbundle before relying on toolbox chrome extensibility.
+- Run the corrective canvas-chrome workstream before relying on toolbox chrome extensibility.
 - Keep bundle validation in CI so dependency and artifact-input regressions are surfaced immediately.
 

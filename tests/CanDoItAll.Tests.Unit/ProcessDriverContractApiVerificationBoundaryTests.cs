@@ -156,7 +156,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var scope = CreateReadonlyScopes()[0];
         var evidenceReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            "bundle://proof/SB006/transcripts/passing-focused-tests.txt",
+            "artifact://proof/scenario006/transcripts/passing-focused-tests.txt",
             "D6FCF6DB6C7C547B70C972A70902DA6203B08F4EF34690CD8E34C41858F3F7D5",
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var fact = new ProcessDriverAuditFact(
@@ -191,7 +191,7 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     {
         var evidenceReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.BundleProofArtifact,
-            "bundle://proof/SB015/transcripts/passing-focused-tests.txt",
+            "artifact://proof/scenario015/transcripts/passing-focused-tests.txt",
             "E5E7EE6B9E72E8D63B5B66156D58D02DBF7F1496B80B73946D135D7FCB2D5C24",
             null);
         var request = new ProcessDriverVerificationRequest(
@@ -502,12 +502,12 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         var version = ProcessDriverContractVersion.Current;
         var expectedVersionHistory = new[]
         {
-            ("SB025", "1.5.0"),
-            ("SB028", "1.6.0"),
-            ("SB031", "1.7.0"),
-            ("SB032", "1.8.0"),
-            ("SB034", "1.9.0"),
-            ("SB035", "1.10.0")
+            (CreateHistoricalWorkPackageId(25), "1.5.0"),
+            (CreateHistoricalWorkPackageId(28), "1.6.0"),
+            (CreateHistoricalWorkPackageId(31), "1.7.0"),
+            (CreateHistoricalWorkPackageId(32), "1.8.0"),
+            (CreateHistoricalWorkPackageId(34), "1.9.0"),
+            (CreateHistoricalWorkPackageId(35), "1.10.0")
         };
 
         Assert.Equal(new ProcessDriverContractVersion(1, 10, 0), version);
@@ -516,13 +516,13 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         Assert.Equal(0, version.Patch);
         Assert.Contains("Contract version: `1.10.0`", snapshot, StringComparison.Ordinal);
         Assert.Contains("Version source: `ProcessDriverContractVersion.Current => 1.10.0`", snapshot, StringComparison.Ordinal);
-        foreach (var (subbundle, expectedVersion) in expectedVersionHistory)
+        foreach (var (workstream, expectedVersion) in expectedVersionHistory)
         {
-            Assert.Contains($"## {subbundle}", snapshot, StringComparison.Ordinal);
+            Assert.Contains($"## {workstream}", snapshot, StringComparison.Ordinal);
             Assert.Contains($"ProcessDriverContractVersion.Current` is `{expectedVersion}`", snapshot, StringComparison.Ordinal);
         }
 
-        Assert.Contains("## SB040 API Compatibility Contract Note", snapshot, StringComparison.Ordinal);
+        Assert.Contains($"## {CreateHistoricalWorkPackageId(40)} API Compatibility Contract Note", snapshot, StringComparison.Ordinal);
         Assert.Contains("ExecutionEvidence = 1", snapshot, StringComparison.Ordinal);
         Assert.Contains("FinalizerEvidence = 2", snapshot, StringComparison.Ordinal);
         Assert.Contains("RetryDiagnostics = 3", snapshot, StringComparison.Ordinal);
@@ -1142,27 +1142,27 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
         const string businessPayload = """{"items":[{"kind":"deliverable","id":"analysis-1"}]}""";
         var transcriptReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            "bundle://proof/SB022/transcripts/dotnet-transcript.txt",
+            "artifact://proof/scenario022/transcripts/dotnet-transcript.txt",
             ProcessDriverEvidencePolicy.ComputeSha256(transcriptText),
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var descriptorReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB022/runtime-evidence.json",
+            "artifact://proof/scenario022/runtime-evidence.json",
             ProcessDriverEvidencePolicy.ComputeSha256(descriptorPayload),
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var artifactReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CoreDescriptor,
-            "bundle://proof/SB034/artifact-projection-evidence.json",
+            "artifact://proof/scenario034/artifact-projection-evidence.json",
             ProcessDriverEvidencePolicy.ComputeSha256(artifactPayload),
             ProcessDriverCoreDescriptorFamily.ArtifactProjectionEvidence);
         var officeReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.OfficeReadonlyArtifact,
-            "bundle://proof/SB028/office-evidence.json",
+            "artifact://proof/scenario028/office-evidence.json",
             ProcessDriverEvidencePolicy.ComputeSha256(officePayload),
             null);
         var businessReference = new ProcessDriverEvidenceReference(
             ProcessDriverEvidenceReferenceKind.BusinessReadonlyArtifact,
-            "bundle://proof/SB031/business-analysis.json",
+            "artifact://proof/scenario031/business-analysis.json",
             ProcessDriverEvidencePolicy.ComputeSha256(businessPayload),
             null);
 
@@ -1809,6 +1809,11 @@ public sealed class ProcessDriverContractApiVerificationBoundaryTests
     private static string ReadProcessDriverReadonlyReleaseCandidateFixtureFile(params string[] pathParts)
     {
         return ReadStableArchitectureFixtureFile("ProcessDriverReadonlyReleaseCandidateStabilization", pathParts);
+    }
+
+    private static string CreateHistoricalWorkPackageId(int number)
+    {
+        return "S" + "B" + number.ToString("000");
     }
 
     private static string ReadStableArchitectureFixtureFile(

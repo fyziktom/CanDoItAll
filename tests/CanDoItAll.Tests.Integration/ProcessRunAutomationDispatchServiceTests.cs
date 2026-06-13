@@ -280,7 +280,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             "Deterministic routing diagnostic.",
             ProcessStepRunBlockState.ResolveRecoveryOptions(blockReasonCode),
             [],
-            EvidenceFingerprint: "sb10-router-positive",
+            EvidenceFingerprint: "scenario10-router-positive",
             HasNewEvidence: true));
 
         Assert.Equal(expectedAction, decision.NextAction);
@@ -293,7 +293,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
     {
         var recentAttempt = new ProcessRecoveryRoutingAttempt(
             ProcessStepRecoveryOption.FreshAgentSession,
-            "sb10-no-progress",
+            "scenario10-no-progress",
             DateTimeOffset.UtcNow.AddMinutes(-5));
 
         var decision = ProcessRecoveryRouter.Route(new ProcessRecoveryRoutingRequest(
@@ -302,7 +302,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
             "The same recovery attempt made no progress.",
             ProcessStepRunBlockState.ResolveRecoveryOptions(ProcessStepBlockReasonCode.NoProgress),
             [recentAttempt],
-            EvidenceFingerprint: "sb10-no-progress",
+            EvidenceFingerprint: "scenario10-no-progress",
             HasNewEvidence: false));
 
         Assert.Equal(ProcessStepRecoveryOption.HumanEscalation, decision.NextAction);
@@ -1901,7 +1901,7 @@ public sealed class ProcessRunAutomationDispatchServiceTests
         var priorExecutionRunId = Guid.NewGuid();
         var currentExecutionRunId = Guid.NewGuid();
         var signal = new ProcessRunAutomationDispatchService.NoProgressRetrySignal(
-            "sb09-no-progress-fingerprint",
+            "scenario09-no-progress-fingerprint",
             currentExecutionRunId,
             "tool-signature",
             "artifact-validation-fingerprint",
@@ -19118,7 +19118,7 @@ Ancestor path to the target work node:
             ArtifactKind = ProcessArtifactKind.Deliverable,
             Title = managerExpectation.Title,
             ManagedStoragePath = "artifacts/process-runs/current/manager-recovered-qa-packet.md",
-            ExternalReferenceKey = "manager-recovery-artifact|sha256:sb14",
+            ExternalReferenceKey = "manager-recovery-artifact|sha256:scenario14",
             ProjectionLineageJson = ProcessArtifactProjectionLineageJson.Serialize(
                 new ProcessArtifactProjectionLineage
                 {
@@ -19742,7 +19742,7 @@ Ancestor path to the target work node:
         Assert.Contains("Exact stale paths are omitted", directive, StringComparison.Ordinal);
         Assert.Contains("[stale external-target path omitted]", directive, StringComparison.Ordinal);
         Assert.DoesNotContain("external-target/C/programovani/dotnet/UnrelatedSample", directive, StringComparison.Ordinal);
-        Assert.Contains("Current grounded external-target root(s):", directive, StringComparison.Ordinal);
+        Assert.Contains("Current grounded target root(s):", directive, StringComparison.Ordinal);
         Assert.Contains("external-target/C/programovani/dotnet/ReadingTimeBudgeter", directive, StringComparison.Ordinal);
         Assert.Contains("Use only the current grounded product root and current-run artifacts", directive, StringComparison.Ordinal);
         Assert.Contains("project_structure_read now", directive, StringComparison.Ordinal);

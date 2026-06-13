@@ -301,7 +301,7 @@ public sealed class ApiIntegrationTests
             var runResult = await processesService.StartRunAsync(new ProcessRunStartRequest
             {
                 ProcessDefinitionId = definitionResult.Value,
-                RunName = "API SB12 upstream recovery health",
+                RunName = "API Scenario12 upstream recovery health",
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
                 TriggerReason = "Integration test"
             });

@@ -12,7 +12,7 @@ public sealed class ProcessDefinitionFormTests
         using var context = new TestContext();
         var issues = Enumerable.Range(1, 5)
             .Select(index => new ProcessDefinitionLintIssue(
-                $"processes.lint.sb10.issue-{index}",
+                $"processes.lint.scenario10.issue-{index}",
                 ProcessDefinitionLintSeverity.Warning,
                 $"Issue {index} message",
                 Guid.NewGuid(),
@@ -21,7 +21,7 @@ public sealed class ProcessDefinitionFormTests
             .ToList();
         var model = new ProcessDefinitionEditorModel
         {
-            Name = "SB10 lint issue display process",
+            Name = "Scenario10 lint issue display process",
             LintResult = new ProcessDefinitionLintResult(issues, ProcessDefinitionLintMode.Strict)
         };
 

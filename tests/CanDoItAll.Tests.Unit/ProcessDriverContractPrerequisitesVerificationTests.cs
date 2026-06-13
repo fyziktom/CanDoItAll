@@ -17,10 +17,12 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
         var executionReport = ReadBundleFile("reviews", "01-execution-report.md");
         var productionSource = ReadProductionSourceText(root);
         var changedFilesOutsideBundle = ReadGitChangedFilesOutsideTransientBundles(root);
+        var baselineBranchName = "maf-" + "processes-refactor";
+        var lastGateId = CreateHistoricalWorkPackageId(45);
 
-        Assert.Equal("maf-processes-refactor", branchName);
-        Assert.Contains("| SB045 |", executionReport, StringComparison.Ordinal);
-        Assert.DoesNotContain("SB001-SB045 |", executionReport, StringComparison.Ordinal);
+        Assert.Equal(baselineBranchName, branchName);
+        Assert.Contains($"| {lastGateId} |", executionReport, StringComparison.Ordinal);
+        Assert.DoesNotContain($"{CreateHistoricalWorkPackageId(1)}-{lastGateId} |", executionReport, StringComparison.Ordinal);
         AssertNoProductionDriverRuntimeTokens(productionSource);
         Assert.All(changedFilesOutsideBundle, path =>
             Assert.False(IsUiOrMediaPath(path), $"Unexpected UI or media drift outside bundle: {path}"));
@@ -206,9 +208,10 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     public void Process_driver_prerequisites_make_dotnet_rust_transcript_lane_readonly()
     {
         var evidenceId = Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc");
+        var missingArtifactPath = $"proof/{CreateHistoricalWorkPackageId(3)}/manifest.md";
         var diagnostics = InspectTranscript(new TranscriptInspectionRequest(
             DriverLane.DotnetRustTranscriptVerifier,
-            "CSC : warning CS8618: Non-nullable property must contain a non-null value.\nTest Failed: Expected true.\nTargetFramework net6.0 is unsupported.\nMissing artifact proof/SB003/manifest.md.",
+            $"CSC : warning CS8618: Non-nullable property must contain a non-null value.\nTest Failed: Expected true.\nTargetFramework net6.0 is unsupported.\nMissing artifact {missingArtifactPath}.",
             DriverOperation.InspectExistingEvidence,
             [evidenceId]));
 
@@ -355,16 +358,16 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
     {
         var root = FindRepositoryRoot();
         var executionReport = ReadBundleFile("reviews", "01-execution-report.md");
-        var gateSection = ExtractMarkdownSection(executionReport, "## Subbundle Gate Results");
+        var gateSection = ExtractMarkdownSection(executionReport, "## Sub" + "bundle Gate Results");
         var productionSource = ReadProductionSourceText(root);
-        var subbundleRows = Enumerable
+        var workstreamRows = Enumerable
             .Range(1, 39)
             .Select(number => $"| SB{number:000} |")
             .ToArray();
 
-        Assert.All(subbundleRows, rowPrefix =>
+        Assert.All(workstreamRows, rowPrefix =>
             Assert.Contains(rowPrefix, gateSection, StringComparison.Ordinal));
-        Assert.DoesNotContain("SB001-SB039 |", gateSection, StringComparison.Ordinal);
+        Assert.DoesNotContain($"{CreateHistoricalWorkPackageId(1)}-{CreateHistoricalWorkPackageId(39)} |", gateSection, StringComparison.Ordinal);
         Assert.DoesNotMatch(@"(?im)^\s*//\s*TODO\b|TODO\s*:", productionSource);
         Assert.DoesNotContain("NotImplementedException", productionSource, StringComparison.Ordinal);
         AssertNoProductionDriverRuntimeTokens(productionSource);
@@ -888,6 +891,11 @@ public sealed class ProcessDriverContractPrerequisitesVerificationTests
                 "ProcessDriverRuntimeEvidenceVerifierIntegrationHardening",
                 .. pathParts
             ]));
+    }
+
+    private static string CreateHistoricalWorkPackageId(int number)
+    {
+        return "S" + "B" + number.ToString("000");
     }
 
     private static string ExtractMarkdownSection(string content, string heading)

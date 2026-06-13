@@ -358,7 +358,7 @@ public sealed class ProcessDriverRuntimeEvidenceConsistencyAlphaTests
         ProcessNoProgressRetryDiagnosticDescriptor? noProgressDiagnostic = null,
         IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? projectionSourceOrder = null,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB018/runtime-evidence-consistency.json",
+        string evidenceUri = "artifact://proof/scenario018/runtime-evidence-consistency.json",
         Func<ProcessDriverEvidenceReference, ProcessDriverSuppliedEvidenceContent>? suppliedContentFactory = null)
     {
         const string suppliedPayload = "runtime-evidence-consistency";

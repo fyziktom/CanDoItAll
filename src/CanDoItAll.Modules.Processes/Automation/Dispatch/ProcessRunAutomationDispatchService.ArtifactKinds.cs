@@ -5,6 +5,7 @@ using CanDoItAll.Infrastructure.Persistence;
 using CanDoItAll.Infrastructure.Storage;
 using CanDoItAll.Modules.CrmHr;
 using CanDoItAll.Modules.Projects;
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using CanDoItAll.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -63,7 +64,7 @@ internal sealed partial class ProcessRunAutomationDispatchService
 
     private static bool IsCodeOrProjectExtension(string extension)
     {
-        return ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension);
+        return SoftwareDeliveryPathRules.IsCodeOrProjectExtension(extension);
     }
 
     private static bool IsImageExtension(string extension)

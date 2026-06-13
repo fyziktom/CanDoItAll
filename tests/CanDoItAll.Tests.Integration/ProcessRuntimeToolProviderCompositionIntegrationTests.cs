@@ -78,10 +78,10 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
                 [],
                 SuppressApprovalRequirements: false,
                 AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
-                RuntimeSessionKey: "sb04-runtime-smoke",
+                RuntimeSessionKey: "scenario04-runtime-smoke",
                 Tags: new Dictionary<string, string>
                 {
-                    ["proof"] = "SB04"
+                    ["proof"] = "Scenario04"
                 }),
             CancellationToken.None);
         var toolNames = tools
@@ -205,10 +205,10 @@ public sealed class ProcessRuntimeToolProviderCompositionIntegrationTests
                 [],
                 SuppressApprovalRequirements: false,
                 AgentRuntimeToolProviderPurpose.GovernedProcessAutomation,
-                RuntimeSessionKey: "sb07-runtime-smoke",
+                RuntimeSessionKey: "scenario07-runtime-smoke",
                 Tags: new Dictionary<string, string>
                 {
-                    ["proof"] = "SB07"
+                    ["proof"] = "Scenario07"
                 }),
             CancellationToken.None);
         var toolNames = tools

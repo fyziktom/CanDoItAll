@@ -30,6 +30,7 @@
     <Project Path="src/CanDoItAll.Processes.Drivers.ObservationAggregation/CanDoItAll.Processes.Drivers.ObservationAggregation.csproj" />
     <Project Path="src/CanDoItAll.Processes.Drivers.OfficeEvidence/CanDoItAll.Processes.Drivers.OfficeEvidence.csproj" />
     <Project Path="src/CanDoItAll.Processes.Drivers.RuntimeEvidence/CanDoItAll.Processes.Drivers.RuntimeEvidence.csproj" />
+    <Project Path="src/CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence/CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence.csproj" />
     <Project Path="src/CanDoItAll.Processes.Drivers.TranscriptVerification/CanDoItAll.Processes.Drivers.TranscriptVerification.csproj" />
     <Project Path="src/CanDoItAll.Processes.Drivers.VerificationGateway/CanDoItAll.Processes.Drivers.VerificationGateway.csproj" />
     <Project Path="src/CanDoItAll.Modules.Projects/CanDoItAll.Modules.Projects.csproj" />

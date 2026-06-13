@@ -121,11 +121,18 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         var allowedDriverConsumerFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "ProcessArtifactEvidenceReadOnlyAdapter.cs",
+            "ProcessArtifactExpectationResolver.cs",
+            "ProcessArtifactKindClassificationRules.cs",
+            "ProcessArtifactProjectionFacetImplementations.cs",
+            "ProcessArtifactQualityValidationRules.cs",
             "ProcessBusinessAnalysisReadOnlyAdapter.cs",
+            "ProcessCriticalToolFailureRules.cs",
+            "ProcessDispatchCooperationMetadataResolver.cs",
             "ProcessDryRunExecutionPipeline.cs",
             "ProcessDryRunExecutionHost.cs",
             "ProcessExecutionCapableDriverFutureGate.cs",
             "ProcessDriverObservationAggregationReadOnlyAdapter.cs",
+            "ProcessManagedArtifactPathClassificationRules.cs",
             "ProcessManagerReadOnlyVerificationCommandService.cs",
             "ProcessManagerReadOnlyVerificationProjection.cs",
             "ProcessManagerReadOnlyVerificationReadback.cs",
@@ -139,8 +146,16 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
             "ProcessReadOnlyVerificationOperationPolicy.cs",
             "ProcessReadOnlyVerificationPayloadBuilder.cs",
             "ProcessReadOnlyVerificationRequestFactory.cs",
+            "ProcessRunAutomationDispatchService.ArtifactKinds.cs",
+            "ProcessRunAutomationDispatchService.BrowserProof.cs",
+            "ProcessRunAutomationDispatchService.ExecutionPrompt.cs",
+            "ProcessRunAutomationDispatchService.ImplementationProof.cs",
+            "ProcessRunAutomationDispatchService.RecoveryDirective.cs",
+            "ProcessRunAutomationDispatchService.ToolValidation.cs",
             "ProcessRuntimeEvidenceVerificationObservationMapper.cs",
             "ProcessRuntimeEvidenceVerificationReadOnlyAdapter.cs",
+            "ProcessSoftwareDeliveryEvidenceFacade.cs",
+            "ProcessSoftwareDeliveryEvidenceMapper.cs",
             "ProcessTranscriptVerificationObservationMapper.cs",
             "ProcessTranscriptVerificationPreflightPolicy.cs",
             "ProcessTranscriptVerificationReadOnlyAdapter.cs",
@@ -222,7 +237,7 @@ public sealed class ProcessRuntimeEvidenceVerificationReadOnlyAdapterTests
         ProcessNoProgressRetryDiagnosticDescriptor? noProgressDiagnostic = null,
         IReadOnlyList<ProcessArtifactProjectionSourceOrderDescriptor>? projectionSourceOrder = null,
         IReadOnlyList<ProcessDriverOperation>? requestedOperations = null,
-        string evidenceUri = "bundle://proof/SB030/runtime-evidence-consistency.json")
+        string evidenceUri = "artifact://proof/scenario030/runtime-evidence-consistency.json")
     {
         var effectiveProjectionSourceOrder = projectionSourceOrder ?? [];
         var suppliedPayloadMaterial = CreateDescriptorPayloadMaterial(

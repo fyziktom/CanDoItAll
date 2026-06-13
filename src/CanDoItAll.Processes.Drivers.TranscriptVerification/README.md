@@ -13,7 +13,7 @@ This package verifies caller-supplied .NET and Rust transcript text. It is verif
 const string transcriptText = "Build succeeded.";
 
 var transcriptReference = new ProcessDriverTranscriptReference(
-    "bundle://proof/sample/dotnet-transcript.txt",
+    "artifact://proof/sample/dotnet-transcript.txt",
     ProcessDriverEvidencePolicy.ComputeSha256(transcriptText),
     ProcessDriverTranscriptLanguage.DotNet,
     "dotnet",

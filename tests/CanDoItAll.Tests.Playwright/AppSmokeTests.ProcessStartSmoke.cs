@@ -8,7 +8,7 @@ public sealed partial class AppSmokeTests {
     [Fact]
     public async Task Process_run_detail_recovery_large_screen_displays_blocked_recovery_and_artifact_readback() {
         var repoRoot = GetRepoRoot();
-        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-run-detail-recovery-sb030");
+        var artifactsDir = Path.Combine(repoRoot, "output", "playwright", "process-run-detail-recovery-scenario030");
         ResetDirectory(artifactsDir);
 
         await using var context = await fixture.Browser.NewContextAsync(new BrowserNewContextOptions {
@@ -27,7 +27,7 @@ public sealed partial class AppSmokeTests {
             BuildSb030RunDetailDefinition());
         await PostApiAsync(apiClient, $"/api/processes/definitions/{definitionId:D}/publish");
 
-        var runName = $"SB030 blocked run detail {Guid.NewGuid():N}";
+        var runName = $"Scenario030 blocked run detail {Guid.NewGuid():N}";
         var runId = await PostJsonAndReadApiAsync<Guid>(
             apiClient,
             "/api/processes/runs/start",
@@ -35,7 +35,7 @@ public sealed partial class AppSmokeTests {
                 ProcessDefinitionId = definitionId,
                 RunName = runName,
                 OperatingMode = ProcessOperatingMode.AssistedExecution,
-                TriggerReason = "SB030 Playwright run-detail recovery proof."
+                TriggerReason = "Scenario030 Playwright run-detail recovery proof."
             });
         var stepRun = Assert.Single(await ReadRequiredJsonAsync<IReadOnlyList<ProcessStepRunViewModel>>(
             apiClient,
@@ -49,7 +49,7 @@ public sealed partial class AppSmokeTests {
                 TargetStatus = ProcessStepRunStatus.Blocked,
                 Reason = "Required runtime evidence artifact was not produced for the selected run.",
                 BlockCause = ProcessStepBlockCause.OwnOutput,
-                DecidedBy = "sb030-playwright",
+                DecidedBy = "scenario030-playwright",
                 SuppressAutomationDispatch = true
             });
         var artifactId = await PostJsonAndReadApiAsync<Guid>(
@@ -58,14 +58,14 @@ public sealed partial class AppSmokeTests {
             new {
                 ArtifactExpectationId = artifactExpectation.ArtifactExpectationId,
                 ArtifactKind = ProcessArtifactKind.Evidence,
-                Title = "SB030 blocked recovery evidence",
+                Title = "Scenario030 blocked recovery evidence",
                 TrustStatus = ProcessArtifactTrustStatus.ReviewRequired,
                 SensitivityLevel = ProcessSensitivityLevel.Internal,
-                ProvenanceSummary = "Created by SB030 Playwright run-detail recovery proof.",
+                ProvenanceSummary = "Created by Scenario030 Playwright run-detail recovery proof.",
                 AllowedFutureUsageSummary = "Regression validation for run detail recovery UI.",
                 ReviewSummary = "Artifact readback should remain visible in the run evidence ledger.",
-                ManagedStoragePath = $"artifacts/playwright/sb030/{runId:D}/blocked-recovery-evidence.md",
-                ExternalReferenceKey = $"sb030-run-detail-recovery:{runId:D}"
+                ManagedStoragePath = $"artifacts/playwright/scenario030/{runId:D}/blocked-recovery-evidence.md",
+                ExternalReferenceKey = $"scenario030-run-detail-recovery:{runId:D}"
             });
 
         var apiDetail = await ReadRequiredJsonAsync<ProcessRunDetailApiProof>(
@@ -162,7 +162,7 @@ public sealed partial class AppSmokeTests {
         var artifactLedger = page.GetByTestId("processes-artifact-obligation-ledger");
         await artifactLedger.WaitForAsync();
         var artifactLedgerText = await artifactLedger.InnerTextAsync();
-        Assert.Contains("SB030 blocked recovery evidence", artifactLedgerText, StringComparison.Ordinal);
+        Assert.Contains("Scenario030 blocked recovery evidence", artifactLedgerText, StringComparison.Ordinal);
         Assert.Contains("Satisfied", artifactLedgerText, StringComparison.Ordinal);
         Assert.Contains($"Artifact record: {artifactId:D}", artifactLedgerText, StringComparison.Ordinal);
         await artifactLedger.ScreenshotAsync(new() {
@@ -232,7 +232,7 @@ public sealed partial class AppSmokeTests {
             candidate => candidate.Id == definition.Id && candidate.HasPublishedVersion,
             30_000);
 
-        var launchName = $"SB015 process start smoke {Guid.NewGuid():N}";
+        var launchName = $"Scenario015 process start smoke {Guid.NewGuid():N}";
         response = await page.GotoAsync($"{fixture.BaseUrl}/processes?processId={definition.Id:D}");
         Assert.NotNull(response);
         Assert.True(response!.Ok, $"Expected selected process route to return 2xx, got {(int)response.Status}.");
@@ -264,18 +264,18 @@ public sealed partial class AppSmokeTests {
             launchName,
             plan => plan.Status == ProcessLaunchPlanStatus.Draft,
             30_000);
-        await PostApiAsync(apiClient, $"/api/processes/launch-plans/{launchPlan.Id:D}/hr-match?requestedBy=sb015-playwright");
-        await PostApiAsync(apiClient, $"/api/processes/launch-plans/{launchPlan.Id:D}/submit-approval?requestedBy=sb015-playwright");
+        await PostApiAsync(apiClient, $"/api/processes/launch-plans/{launchPlan.Id:D}/hr-match?requestedBy=scenario015-playwright");
+        await PostApiAsync(apiClient, $"/api/processes/launch-plans/{launchPlan.Id:D}/submit-approval?requestedBy=scenario015-playwright");
         await PostJsonApiAsync(
             apiClient,
             "/api/processes/launch-plans/approval-decisions",
             new ProcessLaunchApprovalDecisionRequest {
                 LaunchPlanId = launchPlan.Id,
                 Status = ProcessLaunchApprovalStatus.Approved,
-                ResolutionSummary = "SB015 large-screen process-start smoke approved the UI-created launch plan.",
-                DecidedBy = "sb015-playwright"
+                ResolutionSummary = "Scenario015 large-screen process-start smoke approved the UI-created launch plan.",
+                DecidedBy = "scenario015-playwright"
             });
-        await PostApiAsync(apiClient, $"/api/processes/launch-plans/{launchPlan.Id:D}/provision?requestedBy=sb015-playwright");
+        await PostApiAsync(apiClient, $"/api/processes/launch-plans/{launchPlan.Id:D}/provision?requestedBy=scenario015-playwright");
         launchPlan = await WaitForLaunchPlanAsync(
             apiClient,
             definition.Id,
@@ -467,14 +467,14 @@ public sealed partial class AppSmokeTests {
         var roleId = Guid.NewGuid();
         var stepId = Guid.NewGuid();
         return new ProcessDefinitionEditorModel {
-            Name = "SB030 run detail recovery proof",
+            Name = "Scenario030 run detail recovery proof",
             Summary = "Browser-visible run detail proof for blocked recovery and artifacts.",
             ValueStatement = "Expose durable blocked-step recovery and artifact evidence in the process run UI.",
             CustomerName = "Process runtime validation",
             OwnerName = "Playwright",
             InterfaceContractSummary = "The run detail route must display typed step status, recovery options, and artifact ledger readback.",
             GovernanceNotes = "Created only by local Playwright validation.",
-            ChangeSummary = "Initial SB030 proof definition.",
+            ChangeSummary = "Initial Scenario030 proof definition.",
             GovernancePolicySummary = "Use public process API routes and the large-desktop browser surface.",
             ConstitutionRuleSummary = "Do not replace runtime state with report-only proof.",
             OperatingModeSummary = "Assisted execution.",
@@ -490,7 +490,7 @@ public sealed partial class AppSmokeTests {
                     PreferredExecutorKind = "person",
                     IsRequired = false,
                     AllowsFallback = false,
-                    SnapshotSummary = "SB030 runtime reviewer."
+                    SnapshotSummary = "Scenario030 runtime reviewer."
                 }
             ],
             Steps =
@@ -528,7 +528,7 @@ public sealed partial class AppSmokeTests {
                         new ProcessArtifactExpectationEditorModel {
                             Id = Guid.NewGuid(),
                             ArtifactKind = ProcessArtifactKind.Evidence,
-                            Title = "SB030 blocked recovery evidence",
+                            Title = "Scenario030 blocked recovery evidence",
                             IsRequired = true,
                             TrustRequirement = ProcessArtifactTrustRequirement.ReviewRequired,
                             SensitivityLevel = ProcessSensitivityLevel.Internal,

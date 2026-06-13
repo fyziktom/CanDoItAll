@@ -107,8 +107,8 @@ public sealed class BusinessPlanProcessPostgresIntegrationTests
         Assert.True(availability.IsAvailable, availability.Message);
         Assert.False(string.IsNullOrWhiteSpace(availability.ConnectionString));
 
-        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-business-plan-sb05-postgres");
-        var profile = testEnvironment.CreatePostgreSqlProfile("business-plan-sb05");
+        await using var testEnvironment = CanDoItAllTestEnvironment.Create("integration-business-plan-scenario05-postgres");
+        var profile = testEnvironment.CreatePostgreSqlProfile("business-plan-scenario05");
         await using var application = await ProcessTemplateAutomationTestSupport.CreateProcessMockEnabledApplicationAsync(
             new TestHarnessOptions
             {

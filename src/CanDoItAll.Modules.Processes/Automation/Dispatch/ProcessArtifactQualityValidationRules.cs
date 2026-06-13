@@ -1,3 +1,4 @@
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 using System.Text.RegularExpressions;
 
 namespace CanDoItAll.Modules.Processes;
@@ -255,7 +256,7 @@ internal static class ProcessArtifactQualityValidationRules
 
     private static bool ContainsExplicitImplementationTestRequest(string text)
     {
-        return ProcessImplementationStackRules.ContainsExplicitImplementationTestRequest(text);
+        return SoftwareDeliveryContractRules.ContainsExplicitImplementationTestRequest(text);
     }
 
     private static bool ContainsContractWord(string text, string word)

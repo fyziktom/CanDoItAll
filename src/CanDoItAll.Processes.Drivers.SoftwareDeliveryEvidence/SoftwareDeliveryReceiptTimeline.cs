@@ -1,17 +1,34 @@
-using CanDoItAll.AgentFramework.Core;
+namespace CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
 
-namespace CanDoItAll.Modules.Processes;
-
-internal static class ProcessImplementationReceiptTimeline
+public static class SoftwareDeliveryReceiptTimeline
 {
-    internal static ProcessAutomationToolExecutionReceipt? ResolveLatestImplementationProofReadReceipt(
+    public static readonly HashSet<string> ConcreteProductMutationToolNames =
+    [
+        "workspace_write_file",
+        "workspace_append_file",
+        "workspace_move_path",
+        "workspace_delete_path",
+        "workspace_create_directory"
+    ];
+
+    public static readonly HashSet<string> ConcreteProductSourceWriteToolNames =
+    [
+        "workspace_write_file",
+        "workspace_append_file",
+        "workspace_move_path"
+    ];
+
+    public static SoftwareDeliveryToolReceiptSnapshot? ResolveLatestImplementationProofReadReceipt(
         bool requiresSourceOrProjectImplementationProof,
-        IEnumerable<ProcessAutomationToolExecutionReceipt> successfulReceipts)
+        IEnumerable<SoftwareDeliveryToolReceiptSnapshot> successfulReceipts)
     {
         return successfulReceipts
-            .Where(receipt => string.Equals(ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName), "workspace_read_file", StringComparison.Ordinal))
-            .Where(ProcessConcreteProductPathRules.HasConcreteProductPath)
-            .Where(receipt => ProcessConcreteProductPathRules.HasConcreteProductImplementationPath(
+            .Where(receipt => string.Equals(
+                SoftwareDeliveryEvidencePolicy.NormalizeToolToken(receipt.ToolName),
+                "workspace_read_file",
+                StringComparison.Ordinal))
+            .Where(SoftwareDeliveryPathRules.HasConcreteProductPath)
+            .Where(receipt => SoftwareDeliveryPathRules.HasConcreteProductImplementationPath(
                 requiresSourceOrProjectImplementationProof,
                 receipt))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
@@ -19,30 +36,30 @@ internal static class ProcessImplementationReceiptTimeline
             .FirstOrDefault();
     }
 
-    internal static bool HasBuildValidationReceipt(IReadOnlyList<ProcessAutomationToolExecutionReceipt> successfulReceipts)
+    public static bool HasBuildValidationReceipt(IReadOnlyList<SoftwareDeliveryToolReceiptSnapshot> successfulReceipts)
     {
         return successfulReceipts.Any(receipt =>
         {
-            var toolName = ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName);
+            var toolName = SoftwareDeliveryEvidencePolicy.NormalizeToolToken(receipt.ToolName);
             return IsBuildValidationToolName(toolName);
         });
     }
 
-    internal static bool IsBuildValidationToolName(string normalizedToolName)
+    public static bool IsBuildValidationToolName(string normalizedToolName)
     {
         return normalizedToolName.EndsWith("_build", StringComparison.Ordinal) ||
                normalizedToolName.EndsWith("_test", StringComparison.Ordinal) ||
                normalizedToolName.EndsWith("_publish", StringComparison.Ordinal);
     }
 
-    internal static bool IsRunValidationToolName(string normalizedToolName)
+    public static bool IsRunValidationToolName(string normalizedToolName)
     {
         return normalizedToolName.EndsWith("_run", StringComparison.Ordinal);
     }
 
-    internal static ProcessAutomationToolExecutionReceipt? ResolveLatestRequiredImplementationValidationReceipt(
+    public static SoftwareDeliveryToolReceiptSnapshot? ResolveLatestRequiredImplementationValidationReceipt(
         IReadOnlySet<string> requiredToolNames,
-        IReadOnlyList<ProcessAutomationToolExecutionReceipt> successfulReceipts)
+        IReadOnlyList<SoftwareDeliveryToolReceiptSnapshot> successfulReceipts)
     {
         if (requiredToolNames.Count == 0)
         {
@@ -52,7 +69,7 @@ internal static class ProcessImplementationReceiptTimeline
         return successfulReceipts
             .Where(receipt =>
             {
-                var normalizedToolName = ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName);
+                var normalizedToolName = SoftwareDeliveryEvidencePolicy.NormalizeToolToken(receipt.ToolName);
                 return requiredToolNames.Contains(normalizedToolName) &&
                        IsImplementationValidationToolName(normalizedToolName);
             })
@@ -61,50 +78,35 @@ internal static class ProcessImplementationReceiptTimeline
             .FirstOrDefault();
     }
 
-    internal static ProcessAutomationToolExecutionReceipt? ResolveLatestReceipt(
-        IEnumerable<ProcessAutomationToolExecutionReceipt> receipts,
-        string normalizedToolName,
-        bool requireConcreteProductPath,
-        bool requireConcreteDeliverableOrSourcePath)
-    {
-        return ResolveLatestReceipt(
-            receipts,
-            toolName => string.Equals(toolName, normalizedToolName, StringComparison.Ordinal),
-            requireConcreteProductPath,
-            requireConcreteDeliverableOrSourcePath);
-    }
-
-    internal static ProcessAutomationToolExecutionReceipt? ResolveLatestReceipt(
-        IEnumerable<ProcessAutomationToolExecutionReceipt> receipts,
+    public static SoftwareDeliveryToolReceiptSnapshot? ResolveLatestReceipt(
+        IEnumerable<SoftwareDeliveryToolReceiptSnapshot> receipts,
         Func<string, bool> matchesToolName,
         bool requireConcreteProductPath,
         bool requireConcreteDeliverableOrSourcePath)
     {
         return receipts
-            .Where(receipt => matchesToolName(ProcessToolReceiptFacts.NormalizeToolToken(receipt.ToolName)))
-            .Where(receipt => !requireConcreteProductPath || ProcessConcreteProductPathRules.HasConcreteProductPath(receipt))
+            .Where(receipt => matchesToolName(SoftwareDeliveryEvidencePolicy.NormalizeToolToken(receipt.ToolName)))
+            .Where(receipt => !requireConcreteProductPath || SoftwareDeliveryPathRules.HasConcreteProductPath(receipt))
             .Where(receipt => !requireConcreteDeliverableOrSourcePath ||
-                              ProcessConcreteProductPathRules.HasConcreteProductDeliverableOrSourcePath(receipt))
+                              SoftwareDeliveryPathRules.HasConcreteProductDeliverableOrSourcePath(receipt))
             .OrderByDescending(receipt => receipt.CompletedAtUtc)
             .ThenByDescending(receipt => receipt.StartedAtUtc)
             .FirstOrDefault();
     }
 
-    internal static bool IsConcreteProductMutationToolName(
-        IReadOnlyCollection<string> concreteProductMutationToolNames,
-        string normalizedToolName)
+    public static bool IsConcreteProductMutationToolName(string normalizedToolName)
     {
-        return concreteProductMutationToolNames.Contains(normalizedToolName) ||
+        return ConcreteProductMutationToolNames.Contains(normalizedToolName) ||
                IsImplementationBootstrapToolName(normalizedToolName);
     }
 
-    internal static bool IsImplementationBootstrapToolName(string normalizedToolName)
+    public static bool IsImplementationBootstrapToolName(string normalizedToolName)
     {
         return normalizedToolName.StartsWith("workspace_", StringComparison.Ordinal) &&
                normalizedToolName.EndsWith("_new", StringComparison.Ordinal);
     }
 
-    internal static bool IsImplementationValidationToolName(string normalizedToolName)
+    public static bool IsImplementationValidationToolName(string normalizedToolName)
     {
         return normalizedToolName.EndsWith("_build", StringComparison.Ordinal) ||
                normalizedToolName.EndsWith("_test", StringComparison.Ordinal) ||
@@ -116,9 +118,9 @@ internal static class ProcessImplementationReceiptTimeline
                normalizedToolName.StartsWith("browser_", StringComparison.Ordinal);
     }
 
-    internal static bool IsReceiptAfter(
-        ProcessAutomationToolExecutionReceipt candidate,
-        ProcessAutomationToolExecutionReceipt baseline)
+    public static bool IsReceiptAfter(
+        SoftwareDeliveryToolReceiptSnapshot candidate,
+        SoftwareDeliveryToolReceiptSnapshot baseline)
     {
         return candidate.CompletedAtUtc > baseline.CompletedAtUtc ||
                candidate.CompletedAtUtc == baseline.CompletedAtUtc &&

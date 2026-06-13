@@ -1,3 +1,5 @@
+using CanDoItAll.Processes.Drivers.SoftwareDeliveryEvidence;
+
 namespace CanDoItAll.Modules.Processes;
 
 internal static class ProcessManagedArtifactPathClassificationRules
@@ -10,7 +12,7 @@ internal static class ProcessManagedArtifactPathClassificationRules
                string.Equals(extension, ".cshtml", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".fsproj", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".vbproj", StringComparison.OrdinalIgnoreCase) ||
-               ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension) ||
+               SoftwareDeliveryPathRules.IsCodeOrProjectExtension(extension) ||
                string.Equals(extension, ".json", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".css", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(extension, ".js", StringComparison.OrdinalIgnoreCase) ||
@@ -22,7 +24,7 @@ internal static class ProcessManagedArtifactPathClassificationRules
 
     public static bool IsLikelyProductDeliverableOrSourceFileName(string fileName)
     {
-        return ProcessConcreteProductPathRules.IsImplementationDeliverableOrSourceExtension(Path.GetExtension(fileName));
+        return SoftwareDeliveryPathRules.IsImplementationDeliverableOrSourceExtension(Path.GetExtension(fileName));
     }
 
     public static bool IsTextReadableManagedArtifactPath(string relativePath)
@@ -37,7 +39,7 @@ internal static class ProcessManagedArtifactPathClassificationRules
                extension.Equals(".csv", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".xml", StringComparison.OrdinalIgnoreCase) ||
                extension.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
-               ProcessConcreteProductPathRules.IsCodeOrProjectExtension(extension);
+               SoftwareDeliveryPathRules.IsCodeOrProjectExtension(extension);
     }
 
     public static bool IsVisualEvidenceAttachmentPath(string relativePath)

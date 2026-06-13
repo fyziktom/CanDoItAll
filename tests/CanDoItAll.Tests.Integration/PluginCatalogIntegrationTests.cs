@@ -498,7 +498,7 @@ public sealed class PluginCatalogIntegrationTests
         var request = new WorkflowRunStartRequest(
             definition.Id,
             definition.VersionId,
-            """{"projectId":"sb06","runContext":{"workflowNodeId":"plugin-step"}}""",
+            """{"projectId":"scenario06","runContext":{"workflowNodeId":"plugin-step"}}""",
             WorkflowRuntimeBackendKind.InProcess,
             SourceProcessRunId: null,
             SourceProcessAssignmentId: null)
@@ -508,7 +508,7 @@ public sealed class PluginCatalogIntegrationTests
                 new WorkflowPreviewSimulationStep(
                     node.Id,
                     descriptor.Id,
-                    "SB06 deterministic fake-mode proof",
+                    "Scenario06 deterministic fake-mode proof",
                     descriptor.Simulation.OutputTemplateJson)
             ])
         };
@@ -1152,7 +1152,7 @@ public sealed class PluginCatalogIntegrationTests
             "Deterministic plugin fake-mode test executor.",
             WorkflowExecutorCategoryKind.Data,
             string.IsNullOrWhiteSpace(icon.Value) ? "extension" : icon.Value,
-            "sb06-plugin-fake-mode",
+            "scenario06-plugin-fake-mode",
             WorkflowValueShape.Text,
             JsonShape(),
             "{\"type\":\"object\"}",
@@ -1173,7 +1173,7 @@ public sealed class PluginCatalogIntegrationTests
                 : permissionPolicy.RequiredCapabilities.HasFlag(WorkflowExecutorCapabilityFlags.ReadsExternalData)
                     ? WorkflowExecutorSideEffectDescriptor.ExternalRead("workflow-email-external-read/v1")
                     : WorkflowExecutorSideEffectDescriptor.None,
-            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("SB06 fake-mode preview proof."),
+            DeterministicTestMode = WorkflowExecutorDeterministicTestModeDescriptor.Supported("Scenario06 fake-mode preview proof."),
             Simulation = simulation
         };
 
@@ -1183,7 +1183,7 @@ public sealed class PluginCatalogIntegrationTests
         return new WorkflowDefinition(
             WorkflowId.New(),
             WorkflowVersionId.New(),
-            "SB06 plugin fake-mode workflow",
+            "Scenario06 plugin fake-mode workflow",
             "Verifies bundled plugin preview simulation without live external effects.",
             WorkflowLifecycleStatus.Draft,
             new WorkflowGraph(

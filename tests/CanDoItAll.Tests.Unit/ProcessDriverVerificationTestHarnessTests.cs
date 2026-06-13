@@ -18,7 +18,7 @@ public sealed class ProcessDriverVerificationTestHarnessTests
             ProcessDriverPermissionMode.ManagerReadonly);
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            "bundle://proof/SB016/transcripts/shared-harness.txt",
+            "artifact://proof/scenario016/transcripts/shared-harness.txt",
             "shared harness proof",
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
 
@@ -51,7 +51,7 @@ public sealed class ProcessDriverVerificationTestHarnessTests
             ProcessDriverEvidencePolicy.ComputeSha256("[redacted]"));
         var evidenceReference = ProcessDriverVerificationTestHarness.CreateEvidenceReference(
             ProcessDriverEvidenceReferenceKind.CommandTranscript,
-            "bundle://proof/SB017/transcripts/audit-redaction.txt",
+            "artifact://proof/scenario017/transcripts/audit-redaction.txt",
             "audit redaction",
             ProcessDriverCoreDescriptorFamily.ExecutionEvidence);
         var auditFact = new ProcessDriverAuditFact(

@@ -47,7 +47,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
             proofRoot,
             scenarios,
             "scenario-harness-results.json",
-            "InProcess deterministic workflow definitions; provider-specific runs are owned by subbundle 07.");
+            "InProcess deterministic workflow definitions; provider-specific runs are owned by workstream 07.");
 
         AssertScenarioHarnessResults(execution);
     }
@@ -89,7 +89,7 @@ public sealed class ProjectStructureWorkflowScenarioHarnessTests
                 proofRoot,
                 scenarios,
                 "scenario-harness-postgresql-results.json",
-                "InProcess deterministic workflow definitions on PostgreSQL; provider-specific runs are owned by subbundle 07.");
+                "InProcess deterministic workflow definitions on PostgreSQL; provider-specific runs are owned by workstream 07.");
 
             AssertScenarioHarnessResults(execution);
             Assert.Equal(TestDatabaseProviderKind.PostgreSql.ToString(), execution.DatabaseProvider);
